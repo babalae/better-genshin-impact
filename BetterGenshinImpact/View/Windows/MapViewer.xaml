@@ -32,6 +32,7 @@
         <SolidColorBrush x:Key="MapEditorCardBrush" Color="#D8172026" />
         <SolidColorBrush x:Key="MapEditorInsetBrush" Color="#99111822" />
         <SolidColorBrush x:Key="MapEditorStrokeBrush" Color="#33485761" />
+        <SolidColorBrush x:Key="MapEditorGridLineBrush" Color="#18252D" />
         <SolidColorBrush x:Key="MapEditorAccentBrush" Color="#23C8D2" />
         <SolidColorBrush x:Key="MapEditorWarningBrush" Color="#F1B44C" />
         <SolidColorBrush x:Key="MapEditorDangerBrush" Color="#EB5545" />
@@ -93,6 +94,14 @@
                        Text="{Binding DisplayName}" />
         </DataTemplate>
 
+        <DataTemplate x:Key="WaypointGridOptionTemplate">
+            <TextBlock HorizontalAlignment="Center"
+                       Foreground="{StaticResource MapEditorTextPrimaryBrush}"
+                       Text="{Binding DisplayName}"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+        </DataTemplate>
+
         <DataTemplate x:Key="MapEditorCombatScriptTemplate">
             <TextBlock Foreground="{StaticResource MapEditorTextPrimaryBrush}"
                        Text="{Binding Value}"
@@ -109,6 +118,7 @@
             <Setter Property="Padding" Value="10,0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="ToolTip" Value="{Binding ParameterHint}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBoxItem">
@@ -187,8 +197,81 @@
                                    AllowsTransparency="True"
                                    Focusable="False"
                                    IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                   Placement="Bottom"
-                                   PopupAnimation="Fade">
+                                   Placement="Bottom">
+                                <Border x:Name="DropDownBorder"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Margin="0,4,0,0"
+                                        Padding="2"
+                                        Background="#FF1A2025"
+                                        BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6">
+                                    <ScrollViewer CanContentScroll="True"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#6639DCEB" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Background" Value="#66111822" />
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+                                <Setter Property="Foreground" Value="#88C7D2DA" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WaypointGridComboBoxStyle"
+               BasedOn="{StaticResource MapEditorComboBoxStyle}"
+               TargetType="ComboBox">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Padding" Value="5,0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                <ContentPresenter x:Name="ContentSite"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  IsHitTestVisible="False"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Bottom">
                                 <Border x:Name="DropDownBorder"
                                         MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                         MaxHeight="{TemplateBinding MaxDropDownHeight}"
@@ -231,20 +314,33 @@
             <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
             <Setter Property="RowBackground" Value="#00172026" />
             <Setter Property="AlternatingRowBackground" Value="#141F2A31" />
+            <Setter Property="GridLinesVisibility" Value="None" />
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource MapEditorGridLineBrush}" />
+            <Setter Property="VerticalGridLinesBrush" Value="{StaticResource MapEditorGridLineBrush}" />
         </Style>
 
         <Style TargetType="DataGridCell">
             <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                    <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
             <Setter Property="Background" Value="#FF172026" />
-            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorGridLineBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="8,0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -293,6 +389,90 @@
             </Setter>
         </Style>
 
+        <Style x:Key="RecordedRouteListBoxItemStyle"
+               BasedOn="{StaticResource MapEditorListBoxItemStyle}"
+               TargetType="ListBoxItem">
+            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+            <Setter Property="ContextMenu">
+                <Setter.Value>
+                    <ContextMenu>
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.NewRecordingCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="新建路线"
+                                     Icon="{ui:SymbolIcon Add24}" />
+                        <Separator />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.OpenRecordedRoutePropertiesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="属性"
+                                     Icon="{ui:SymbolIcon Settings24}" />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.RenameRecordedRouteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="重命名"
+                                     Icon="{ui:SymbolIcon Edit24}" />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.CopyRecordedRouteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="复制"
+                                     Icon="{ui:SymbolIcon Copy24}" />
+                        <Separator Visibility="{Binding PlacementTarget.Tag.RecordedRouteSelectionActionSeparatorVisibility, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.SwitchToRecorderJsonEditorCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="JSON 编辑"
+                                     Icon="{ui:SymbolIcon ClipboardTask24}"
+                                     Visibility="{Binding PlacementTarget.Tag.SingleRecordedRouteSelectionVisibility, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.SplitRecordingByTeleportCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="按传送点拆分"
+                                     Icon="{ui:SymbolIcon BranchFork24}"
+                                     Visibility="{Binding PlacementTarget.Tag.SingleRecordedRouteSelectionVisibility, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.MergeRecordedRoutesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Header="合并路线"
+                                     Icon="{ui:SymbolIcon Archive24}"
+                                     Visibility="{Binding PlacementTarget.Tag.MultipleRecordedRouteSelectionVisibility, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <Separator />
+                        <ui:MenuItem Command="{Binding PlacementTarget.Tag.DeleteSelectedRecordedRouteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                     Foreground="{StaticResource MapEditorDangerBrush}"
+                                     Header="删除"
+                                     Icon="{ui:SymbolIcon Delete24}" />
+                    </ContextMenu>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="RecordedRouteListItemTemplate">
+            <Grid MinHeight="34">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="7"
+                         Height="7"
+                         Margin="0,0,8,0"
+                         VerticalAlignment="Center"
+                         Fill="{StaticResource MapEditorTextPrimaryBrush}"
+                         Visibility="{Binding UnsavedIndicatorVisibility}" />
+                <Grid Grid.Column="1"
+                      VerticalAlignment="Center">
+                    <TextBlock VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               Text="{Binding Name}"
+                               TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding RenameDisplayVisibility}" />
+                    <ui:TextBox Height="28"
+                                Padding="8,0"
+                                Loaded="RecordedRouteRenameTextBox_Loaded"
+                                LostFocus="RecordedRouteRenameTextBox_LostFocus"
+                                PreviewKeyDown="RecordedRouteRenameTextBox_PreviewKeyDown"
+                                Style="{StaticResource FormTextBoxStyle}"
+                                Text="{Binding EditingName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding RenameEditorVisibility}" />
+                </Grid>
+                <TextBlock Grid.Column="2"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Style="{StaticResource CaptionTextStyle}"
+                           Text="{Binding PointCountText}" />
+            </Grid>
+        </DataTemplate>
+
         <Style x:Key="WaypointGridTextStyle" TargetType="TextBlock">
             <Setter Property="Padding" Value="8,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -300,6 +480,12 @@
             <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="TextAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="WaypointCoordinateTextStyle" TargetType="TextBlock">
@@ -329,7 +515,90 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="ToolbarButtonStyle" TargetType="ui:Button">
+        <Style x:Key="MapEditorUiButtonBaseStyle" TargetType="ui:Button">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Background" Value="#242A30" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ui:Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                            <Grid x:Name="ContentPanel"
+                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter x:Name="IconPresenter"
+                                                  Margin="0,0,7,0"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Content="{TemplateBinding Icon}"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}" />
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  Grid.Column="1"
+                                                  HorizontalAlignment="Stretch"
+                                                  VerticalAlignment="Center"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  RecognizesAccessKey="True"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Appearance" Value="Transparent">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="BorderBrush" Value="Transparent" />
+                            </Trigger>
+                            <Trigger Property="Icon" Value="{x:Null}">
+                                <Setter TargetName="ContentPresenter" Property="Grid.Column" Value="0" />
+                                <Setter TargetName="ContentPresenter" Property="Grid.ColumnSpan" Value="2" />
+                                <Setter TargetName="IconPresenter" Property="Margin" Value="0" />
+                                <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="Content" Value="{x:Null}">
+                                <Setter TargetName="IconPresenter" Property="Grid.ColumnSpan" Value="2" />
+                                <Setter TargetName="IconPresenter" Property="Margin" Value="0" />
+                                <Setter TargetName="ContentPresenter" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#26313B" />
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#6639DCEB" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#B0147884" />
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style BasedOn="{StaticResource MapEditorUiButtonBaseStyle}" TargetType="ui:Button" />
+
+        <Style x:Key="ToolbarButtonStyle"
+               BasedOn="{StaticResource MapEditorUiButtonBaseStyle}"
+               TargetType="ui:Button">
             <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="42" />
             <Setter Property="Padding" Value="0" />
@@ -357,6 +626,135 @@
             <Setter Property="Foreground" Value="#D7E4EA" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="WaypointGridActionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#26313B" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#B0147884" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WaypointGridSelectorButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#26313B" />
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#6639DCEB" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#B0147884" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MapEditorSelectorButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Background" Value="{StaticResource MapEditorInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="24" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                <ui:SymbolIcon Grid.Column="1"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="14"
+                                               Foreground="{StaticResource MapEditorTextSecondaryBrush}"
+                                               Symbol="ChevronRight16" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#6639DCEB" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#B0147884" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="ModeSegmentButtonStyle" TargetType="Button">
@@ -559,23 +957,6 @@
                                          VerticalAlignment="Center"
                                          IsChecked="{Binding ShowTeleportPoints, Mode=TwoWay}" />
                     </Grid>
-                    <TextBlock Margin="0,14,0,0"
-                               FontWeight="SemiBold"
-                               Text="默认作者" />
-                    <ui:TextBox Margin="0,8,0,0"
-                                PlaceholderText="作者名称"
-                                Style="{StaticResource FormTextBoxStyle}"
-                                Text="{Binding DefaultRecordAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <ui:TextBox Margin="0,8,0,0"
-                                PlaceholderText="作者链接（可选）"
-                                Style="{StaticResource FormTextBoxStyle}"
-                                Text="{Binding DefaultRecordAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <ui:Button Margin="0,10,0,0"
-                               Height="32"
-                               HorizontalAlignment="Stretch"
-                               Command="{Binding ApplyDefaultAuthorCommand}"
-                               Content="应用到当前路线"
-                               Icon="{ui:SymbolIcon Person24}" />
                 </StackPanel>
             </Border>
         </Popup>
@@ -607,53 +988,82 @@
                                                    ShowTeleportPoints="{Binding ShowTeleportPoints}">
                         <controls:MapTileViewerControl.ContextMenu>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <ui:MenuItem Command="{Binding InsertWaypointOnSelectedRecorderEdgeFromMenuCommand}"
+                                             Header="插入新点"
+                                             Icon="{ui:SymbolIcon Add24}"
+                                             InputGestureText="Enter"
+                                             Visibility="{Binding MapEdgeContextMenuVisibility}" />
+                                <ui:MenuItem Command="{Binding FitSelectedRecorderEdgeCommand}"
+                                             Header="定位到插入点"
+                                             Icon="{ui:SymbolIcon Location24}"
+                                             Visibility="{Binding MapEdgeContextMenuVisibility}" />
+                                <ui:MenuItem Command="{Binding ReverseRecordedWaypointsCommand}"
+                                             Header="反转点位顺序"
+                                             Icon="{ui:SymbolIcon ArrowBidirectionalLeftRight24}"
+                                             Visibility="{Binding MapEdgeContextMenuVisibility}" />
+                                <ui:MenuItem Command="{Binding ClearSelectedRecorderEdgeSelectionCommand}"
+                                             Header="取消线段选择"
+                                             Icon="{ui:SymbolIcon Dismiss24}"
+                                             Visibility="{Binding MapEdgeContextMenuVisibility}" />
+                                <Separator Visibility="{Binding MapEdgeContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding RunRecordingFromWaypointCommand}"
                                              CommandParameter="{Binding SelectedRecordedWaypoint}"
                                              Header="从此点运行"
-                                             Icon="{ui:SymbolIcon Play24}" />
+                                             Icon="{ui:SymbolIcon Play24}"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding ToggleWaypointLockCommand}"
                                              CommandParameter="{Binding SelectedRecordedWaypoint}"
                                              Header="设为插入位置"
-                                             Icon="{ui:SymbolIcon Location24}" />
+                                             Icon="{ui:SymbolIcon Location24}"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding OpenWaypointAdvancedEditorCommand}"
                                              CommandParameter="{Binding SelectedRecordedWaypoint}"
                                              Header="高级信息"
-                                             Icon="{ui:SymbolIcon Settings24}" />
-                                <Separator />
+                                             Icon="{ui:SymbolIcon Settings24}"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
+                                <Separator Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding CopyWaypointSelectionCommand}"
                                              Header="复制选中"
                                              Icon="{ui:SymbolIcon Copy24}"
-                                             InputGestureText="Ctrl+C" />
+                                             InputGestureText="Ctrl+C"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding CutWaypointSelectionCommand}"
                                              Header="剪切选中"
                                              Icon="{ui:SymbolIcon Cut24}"
-                                             InputGestureText="Ctrl+X" />
+                                             InputGestureText="Ctrl+X"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding PasteWaypointSelectionCommand}"
                                              Header="粘贴到选中后"
                                              Icon="{ui:SymbolIcon ClipboardPaste24}"
-                                             InputGestureText="Ctrl+V" />
+                                             InputGestureText="Ctrl+V"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding DuplicateWaypointSelectionCommand}"
                                              Header="复制并插入"
                                              Icon="{ui:SymbolIcon CopyAdd24}"
-                                             InputGestureText="Ctrl+D" />
+                                             InputGestureText="Ctrl+D"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding DeleteWaypointSelectionCommand}"
                                              Foreground="{StaticResource MapEditorDangerBrush}"
                                              Header="删除选中"
                                              Icon="{ui:SymbolIcon Delete24}"
-                                             InputGestureText="Delete" />
-                                <Separator />
+                                             InputGestureText="Delete"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
+                                <Separator Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding MoveRecordedWaypointUpCommand}"
                                              CommandParameter="{Binding SelectedRecordedWaypoint}"
                                              Header="上移"
-                                             Icon="{ui:SymbolIcon ArrowUp24}" />
+                                             Icon="{ui:SymbolIcon ArrowUp24}"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding MoveRecordedWaypointDownCommand}"
                                              CommandParameter="{Binding SelectedRecordedWaypoint}"
                                              Header="下移"
-                                             Icon="{ui:SymbolIcon ArrowDown24}" />
-                                <Separator />
+                                             Icon="{ui:SymbolIcon ArrowDown24}"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
+                                <Separator Visibility="{Binding MapWaypointContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding ClearWaypointSelectionCommand}"
                                              Header="取消选择"
-                                             Icon="{ui:SymbolIcon Dismiss24}" />
+                                             Icon="{ui:SymbolIcon Dismiss24}"
+                                             Visibility="{Binding MapWaypointContextMenuVisibility}" />
                             </ContextMenu>
                         </controls:MapTileViewerControl.ContextMenu>
                     </controls:MapTileViewerControl>
@@ -800,7 +1210,8 @@
                     BorderThickness="1"
                     CornerRadius="6"
                     Visibility="{Binding SidePanelVisibility}">
-                <Grid Margin="10">
+                <Grid x:Name="SidePanelContentGrid"
+                      Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -810,42 +1221,13 @@
 
                     <Border Grid.Row="0" Style="{StaticResource PanelCardStyle}">
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="260" />
+                                <ColumnDefinition Width="12" />
                                 <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Border Width="48"
-                                    Height="48"
-                                    Margin="0,6,12,0"
-                                    VerticalAlignment="Top"
-                                    BorderBrush="#566C76"
-                                    BorderThickness="1"
-                                    CornerRadius="24">
-                                <ui:SymbolIcon HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               FontSize="28"
-                                               Foreground="#D9C99F"
-                                               Symbol="Location24" />
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Text="{Binding MapDisplayName}" />
-                                <TextBlock Margin="0,3,0,0"
-                                           Style="{StaticResource CaptionTextStyle}"
-                                           Text="实时追踪地图 / 路线录制编辑器" />
-                            </StackPanel>
-                            <Grid Grid.Row="1"
-                                  Grid.Column="0"
-                                  Grid.ColumnSpan="2"
-                                  Width="260"
-                                  Margin="0,12,0,0"
-                                  HorizontalAlignment="Left">
+                            <Grid Grid.Column="0" HorizontalAlignment="Stretch">
                                 <Border Padding="3"
                                         Background="{StaticResource MapEditorInsetBrush}"
                                         BorderBrush="{StaticResource MapEditorStrokeBrush}"
@@ -863,44 +1245,34 @@
                                     </UniformGrid>
                                 </Border>
                             </Grid>
-                            <StackPanel Grid.Row="0"
-                                        Grid.RowSpan="2"
-                                        Grid.Column="2"
-                                        VerticalAlignment="Top">
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                 <ui:Button Height="38"
                                            HorizontalAlignment="Stretch"
-                                           Command="{Binding RunRecordingCommand}"
-                                           Content="开始追踪"
-                                           Icon="{ui:SymbolIcon Play24}"
-                                           IsEnabled="{Binding CanRunTracking}" />
-                                <ui:Button Height="38"
-                                           Margin="0,8,0,0"
-                                           HorizontalAlignment="Stretch"
-                                           Command="{Binding ToggleRecordingCommand}"
-                                           Content="{Binding RecordingToggleText}"
-                                           ToolTip="{Binding RecordingToggleToolTip}">
+                                           Command="{Binding RunModeActionCommand}"
+                                           Content="{Binding ModeActionText}"
+                                           ToolTip="{Binding ModeActionToolTip}">
                                     <ui:Button.Icon>
                                         <ui:SymbolIcon>
                                             <ui:SymbolIcon.Style>
                                                 <Style TargetType="ui:SymbolIcon">
-                                                    <Setter Property="Symbol" Value="Record24" />
+                                                    <Setter Property="Symbol" Value="Play24" />
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsPathRecorderRecording}" Value="True">
-                                                            <Setter Property="Symbol" Value="Stop24" />
+                                                        <DataTrigger Binding="{Binding IsRecorderMode}" Value="True">
+                                                            <Setter Property="Symbol" Value="Record24" />
                                                         </DataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsRecorderMode}" Value="True" />
+                                                                <Condition Binding="{Binding IsPathRecorderRecording}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Symbol" Value="Stop24" />
+                                                        </MultiDataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </ui:SymbolIcon.Style>
                                         </ui:SymbolIcon>
                                     </ui:Button.Icon>
                                 </ui:Button>
-                                <TextBlock Height="22"
-                                           Margin="0,8,0,0"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Style="{StaticResource CaptionTextStyle}"
-                                           Text="{Binding RecordStatusText}"
-                                           TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -910,16 +1282,13 @@
                           Visibility="{Binding RecorderMainVisibility}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <Border MinHeight="214"
-                                Style="{StaticResource PanelCardStyle}">
+                        <Border Style="{StaticResource PanelCardStyle}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <StackPanel x:Name="RouteMenuBar"
@@ -959,7 +1328,8 @@
                                         </ui:DropDownButton.Flyout>
                                     </ui:DropDownButton>
 
-                                    <ui:DropDownButton Content="编辑(E)"
+                                    <ui:DropDownButton x:Name="EditMenuButton"
+                                                       Content="编辑(E)"
                                                        Style="{StaticResource MapEditorMenuButtonStyle}">
                                         <ui:DropDownButton.Flyout>
                                             <ContextMenu>
@@ -998,19 +1368,9 @@
                                                              Header="清空点位"
                                                              Icon="{ui:SymbolIcon Delete24}" />
                                                 <Separator />
-                                                <ui:MenuItem Command="{Binding AddPathPointFromTargetCommand}"
-                                                             Header="从目标点添加路径点"
-                                                             Icon="{ui:SymbolIcon LocationAdd24}" />
-                                                <ui:MenuItem Command="{Binding MergeRecordedRoutesCommand}"
-                                                             Header="合并路线列表"
-                                                             Icon="{ui:SymbolIcon Archive24}" />
-                                                <ui:MenuItem Command="{Binding SplitRecordingByTeleportCommand}"
-                                                             Header="按传送点拆分"
-                                                             Icon="{ui:SymbolIcon BranchFork24}" />
-                                                <ui:MenuItem Command="{Binding DeleteSelectedRecordedRouteCommand}"
-                                                             Foreground="{StaticResource MapEditorDangerBrush}"
-                                                             Header="删除选中路线"
-                                                             Icon="{ui:SymbolIcon Delete24}" />
+                                                <ui:MenuItem Command="{Binding OpenRecordAuthorManagerCommand}"
+                                                             Header="作者设置"
+                                                             Icon="{ui:SymbolIcon Person24}" />
                                                 <Separator />
                                                 <ui:MenuItem Command="{Binding SwitchToRecorderUiEditorCommand}"
                                                              Header="表单编辑"
@@ -1021,6 +1381,170 @@
                                             </ContextMenu>
                                         </ui:DropDownButton.Flyout>
                                     </ui:DropDownButton>
+
+                                    <Popup AllowsTransparency="True"
+                                           DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                           HorizontalOffset="-96"
+                                           IsOpen="{Binding IsRecordAuthorManagerOpen, Mode=TwoWay}"
+                                           Placement="Bottom"
+                                           PlacementTarget="{Binding ElementName=EditMenuButton}"
+                                           StaysOpen="False">
+                                        <Border Width="560"
+                                                MaxHeight="560"
+                                                Padding="14"
+                                                Background="#FF1A2025"
+                                                BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock FontWeight="SemiBold" Text="作者库" />
+                                                        <TextBlock Margin="0,4,0,0"
+                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                   Text="{Binding CommonRecordAuthorSummaryText}" />
+                                                    </StackPanel>
+                                                    <ui:Button Grid.Column="1"
+                                                               Width="104"
+                                                               Height="30"
+                                                               Command="{Binding ImportCommonRecordAuthorsFromLibraryCommand}"
+                                                               Content="导入作者库"
+                                                               Icon="{ui:SymbolIcon FolderOpen24}" />
+                                                    <ui:Button Grid.Column="3"
+                                                               Width="72"
+                                                               Height="30"
+                                                               Command="{Binding CloseRecordAuthorManagerCommand}"
+                                                               Content="关闭"
+                                                               Icon="{ui:SymbolIcon Dismiss24}" />
+                                                </Grid>
+
+                                                <Grid Grid.Row="1"
+                                                      Margin="0,12,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ComboBox Height="34"
+                                                              DisplayMemberPath="DisplayText"
+                                                              ItemsSource="{Binding CommonRecordAuthors}"
+                                                              SelectedItem="{Binding SelectedCommonRecordAuthor, Mode=TwoWay}"
+                                                              Style="{StaticResource MapEditorComboBoxStyle}"
+                                                              ToolTip="{Binding SelectedCommonRecordAuthor.DetailText}" />
+                                                    <ui:Button Grid.Column="2"
+                                                               Width="96"
+                                                               Height="34"
+                                                               Command="{Binding SetDefaultAuthorFromSelectedCommonCommand}"
+                                                               Content="设为默认"
+                                                               Icon="{ui:SymbolIcon Person24}" />
+                                                    <ui:Button Grid.Column="4"
+                                                               Width="72"
+                                                               Height="34"
+                                                               Command="{Binding DeleteCommonRecordAuthorCommand}"
+                                                               Content="删除"
+                                                               Foreground="{StaticResource MapEditorDangerBrush}"
+                                                               Icon="{ui:SymbolIcon Delete24}" />
+                                                </Grid>
+
+                                                <Border Grid.Row="2"
+                                                        Margin="0,12,0,0"
+                                                        Padding="12"
+                                                        Background="{StaticResource MapEditorInsetBrush}"
+                                                        BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="8" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <TextBlock FontWeight="SemiBold" Text="默认作者" />
+                                                        <Grid Grid.Row="2">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <ui:TextBox Height="34"
+                                                                        PlaceholderText="默认作者名称"
+                                                                        Style="{StaticResource FormTextBoxStyle}"
+                                                                        Text="{Binding DefaultRecordAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <ui:TextBox Grid.Column="2"
+                                                                        Height="34"
+                                                                        PlaceholderText="默认链接（可选）"
+                                                                        Style="{StaticResource FormTextBoxStyle}"
+                                                                        Text="{Binding DefaultRecordAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <ui:Button Grid.Column="4"
+                                                                       Width="96"
+                                                                       Height="34"
+                                                                       Command="{Binding AddDefaultAuthorToCommonCommand}"
+                                                                       Content="加入常用"
+                                                                       Icon="{ui:SymbolIcon Person24}" />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border Grid.Row="3"
+                                                        Margin="0,12,0,0"
+                                                        Padding="12"
+                                                        Background="{StaticResource MapEditorInsetBrush}"
+                                                        BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="8" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <TextBlock FontWeight="SemiBold" Text="新增常用作者" />
+                                                        <Grid Grid.Row="2">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="8" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <ui:TextBox Height="34"
+                                                                        PlaceholderText="作者名称"
+                                                                        Style="{StaticResource FormTextBoxStyle}"
+                                                                        Text="{Binding NewCommonAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <ui:TextBox Grid.Column="2"
+                                                                        Height="34"
+                                                                        PlaceholderText="链接"
+                                                                        Style="{StaticResource FormTextBoxStyle}"
+                                                                        Text="{Binding NewCommonAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <ui:Button Grid.Column="4"
+                                                                       Width="72"
+                                                                       Height="34"
+                                                                       Command="{Binding AddCustomCommonAuthorCommand}"
+                                                                       Content="添加"
+                                                                       Icon="{ui:SymbolIcon Add24}" />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </Popup>
 
                                     <ui:DropDownButton Content="选择(S)"
                                                        Style="{StaticResource MapEditorMenuButtonStyle}">
@@ -1037,10 +1561,15 @@
                                         </ui:DropDownButton.Flyout>
                                     </ui:DropDownButton>
 
-                                    <ui:DropDownButton Content="查看(V)"
+                                    <ui:DropDownButton x:Name="ViewMenuButton"
+                                                       Content="查看(V)"
                                                        Style="{StaticResource MapEditorMenuButtonStyle}">
                                         <ui:DropDownButton.Flyout>
                                             <ContextMenu>
+                                                <ui:MenuItem Command="{Binding OpenOperationLogCommand}"
+                                                             Header="操作日志"
+                                                             Icon="{ui:SymbolIcon Document24}" />
+                                                <Separator />
                                                 <ui:MenuItem Command="{Binding ToggleViewSettingsCommand}"
                                                              Header="视图设置"
                                                              Icon="{ui:SymbolIcon Settings24}" />
@@ -1074,8 +1603,100 @@
                                     </ui:DropDownButton>
                                 </StackPanel>
 
+                                <Popup AllowsTransparency="True"
+                                       DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                       HorizontalOffset="-160"
+                                       IsOpen="{Binding IsOperationLogOpen, Mode=TwoWay}"
+                                       Placement="Bottom"
+                                       PlacementTarget="{Binding ElementName=ViewMenuButton}"
+                                       StaysOpen="False">
+                                    <Border Width="440"
+                                            MaxHeight="480"
+                                            Padding="14"
+                                            Background="#FF1A2025"
+                                            BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="8" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock FontWeight="SemiBold" Text="操作日志" />
+                                                    <TextBlock Margin="0,4,0,0"
+                                                               Style="{StaticResource CaptionTextStyle}"
+                                                               Text="{Binding OperationLogCountText}" />
+                                                </StackPanel>
+                                                <ui:Button Grid.Column="1"
+                                                           Width="72"
+                                                           Height="30"
+                                                           Command="{Binding ClearOperationLogsCommand}"
+                                                           Content="清空"
+                                                           Icon="{ui:SymbolIcon Delete24}" />
+                                                <ui:Button Grid.Column="3"
+                                                           Width="72"
+                                                           Height="30"
+                                                           Command="{Binding CloseOperationLogCommand}"
+                                                           Content="关闭"
+                                                           Icon="{ui:SymbolIcon Dismiss24}" />
+                                            </Grid>
+
+                                            <Grid Grid.Row="1"
+                                                  Margin="0,12,0,0">
+                                                <TextBlock HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Style="{StaticResource CaptionTextStyle}"
+                                                           Text="暂无操作日志"
+                                                           Visibility="{Binding OperationLogEmptyVisibility}" />
+                                                <ListBox MaxHeight="400"
+                                                         ItemContainerStyle="{StaticResource MapEditorListBoxItemStyle}"
+                                                         ItemsSource="{Binding OperationLogs}"
+                                                         Style="{StaticResource MapEditorListBoxStyle}"
+                                                         Visibility="{Binding OperationLogListVisibility}">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid>
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="64" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock FontFamily="Consolas"
+                                                                           Foreground="{StaticResource MapEditorAccentBrush}"
+                                                                           Text="{Binding TimeText}" />
+                                                                <TextBlock Grid.Column="1"
+                                                                           FontWeight="SemiBold"
+                                                                           Text="{Binding Message}"
+                                                                           TextWrapping="Wrap" />
+                                                                <TextBlock Grid.Row="1"
+                                                                           Grid.Column="1"
+                                                                           Margin="0,4,0,0"
+                                                                           Style="{StaticResource CaptionTextStyle}"
+                                                                           Text="{Binding Context}"
+                                                                           TextWrapping="Wrap" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </Popup>
+
                                 <Grid Grid.Row="1"
-                                      Margin="0,10,0,0">
+                                      Margin="0,10,0,0"
+                                      Visibility="{Binding RecordedRouteListCollapsedVisibility}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -1085,49 +1706,47 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+                                    <Grid.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <ui:MenuItem Command="{Binding NewRecordingCommand}"
+                                                         Header="新建路线"
+                                                         Icon="{ui:SymbolIcon Add24}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     <TextBlock Style="{StaticResource SectionTitleStyle}" Text="路径列表" />
                                     <TextBlock Grid.Column="1"
+                                               Margin="0,0,72,0"
                                                VerticalAlignment="Center"
                                                Style="{StaticResource CaptionTextStyle}"
                                                Text="{Binding RecordedRouteCountText}" />
-                                    <ListBox Grid.Row="1"
+                                    <ui:Button Grid.Column="1"
+                                               Width="64"
+                                               Height="28"
+                                               HorizontalAlignment="Right"
+                                               Command="{Binding ToggleRecordedRouteListExpandedCommand}"
+                                               Content="{Binding RecordedRouteListToggleText}"
+                                               Icon="{ui:SymbolIcon PanelBottomExpand20}" />
+                                    <ListBox x:Name="CollapsedRecordedRouteListBox"
+                                             Grid.Row="1"
                                              Grid.ColumnSpan="2"
-                                             MaxHeight="136"
                                              Margin="0,8,0,0"
-                                             ItemContainerStyle="{StaticResource MapEditorListBoxItemStyle}"
-                                             ItemsSource="{Binding RecordedRoutes}"
-                                             SelectedItem="{Binding SelectedRecordedRoute, Mode=TwoWay}"
-                                             Style="{StaticResource MapEditorListBoxStyle}">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock FontWeight="SemiBold"
-                                                               Text="{Binding Name}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="1"
-                                                               Margin="8,0,0,0"
-                                                               Style="{StaticResource CaptionTextStyle}"
-                                                               Text="{Binding PointCountText}" />
-                                                    <TextBlock Grid.Row="1"
-                                                               Style="{StaticResource CaptionTextStyle}"
-                                                               Text="{Binding FileDisplayText}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Row="1"
-                                                               Grid.Column="1"
-                                                               Margin="8,0,0,0"
-                                                               Style="{StaticResource CaptionTextStyle}"
-                                                               Text="{Binding MapDisplayText}" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
+                                             ItemContainerStyle="{StaticResource RecordedRouteListBoxItemStyle}"
+                                             ItemTemplate="{StaticResource RecordedRouteListItemTemplate}"
+                                             ItemsSource="{Binding CollapsedRecordedRouteItems}"
+                                             MouseDoubleClick="RecordedRouteListBox_MouseDoubleClick"
+                                             PreviewMouseRightButtonDown="RecordedRouteListBox_PreviewMouseRightButtonDown"
+                                             SelectedItem="{Binding CollapsedRecordedRoute, Mode=OneWay}"
+                                             SelectionChanged="RecordedRouteListBox_SelectionChanged"
+                                             SelectionMode="Single"
+                                             Style="{StaticResource MapEditorListBoxStyle}"
+                                             Visibility="{Binding CollapsedRecordedRouteVisibility}">
+                                        <ListBox.ContextMenu>
+                                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                <ui:MenuItem Command="{Binding NewRecordingCommand}"
+                                                             Header="新建路线"
+                                                             Icon="{ui:SymbolIcon Add24}" />
+                                            </ContextMenu>
+                                        </ListBox.ContextMenu>
                                     </ListBox>
                                     <TextBlock Grid.Row="2"
                                                Grid.ColumnSpan="2"
@@ -1139,63 +1758,257 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="2"
-                                MinHeight="214"
-                                Style="{StaticResource PanelCardStyle}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="路线信息" />
-                                <Grid Margin="0,10,0,0">
+                        <Popup AllowsTransparency="True"
+                               DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                               IsOpen="{Binding IsRecordedRoutePropertiesOpen, Mode=TwoWay}"
+                               Placement="Center"
+                               PlacementTarget="{Binding ElementName=SidePanelContentGrid}"
+                               StaysOpen="False">
+                            <Border Width="560"
+                                    MaxHeight="720"
+                                    Padding="14"
+                                    Background="#FF1A2025"
+                                    BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6">
+                                <Grid>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="38" />
-                                        <RowDefinition Height="42" />
-                                        <RowDefinition Height="38" />
-                                        <RowDefinition Height="42" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="72" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
 
-                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Text="路线名称" />
-                                    <ui:TextBox Grid.Column="1"
-                                                PlaceholderText="未命名路线"
-                                                Style="{StaticResource FormTextBoxStyle}"
-                                                Text="{Binding RecordFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock FontWeight="SemiBold" Text="路线属性" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Style="{StaticResource CaptionTextStyle}"
+                                                       Text="{Binding RecordFilePathText}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <ui:Button Grid.Column="1"
+                                                   Width="72"
+                                                   Height="30"
+                                                   Command="{Binding CloseRecordedRoutePropertiesCommand}"
+                                                   Content="关闭"
+                                                   Icon="{ui:SymbolIcon Dismiss24}" />
+                                    </Grid>
 
-                                    <TextBlock Grid.Row="1"
-                                               Style="{StaticResource CaptionTextStyle}"
-                                               Text="描述" />
-                                    <ui:TextBox Grid.Row="1"
-                                                Grid.Column="1"
-                                                PlaceholderText="可选描述..."
-                                                Style="{StaticResource FormTextBoxStyle}"
-                                                Text="{Binding RecordDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ScrollViewer Grid.Row="1"
+                                                  Margin="0,12,0,0"
+                                                  MaxHeight="560"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="38" />
+                                            <RowDefinition Height="42" />
+                                            <RowDefinition Height="38" />
+                                            <RowDefinition Height="42" />
+                                            <RowDefinition Height="38" />
+                                            <RowDefinition Height="38" />
+                                            <RowDefinition Height="38" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="42" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="42" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Row="2"
-                                               Style="{StaticResource CaptionTextStyle}"
-                                               Text="匹配方式" />
-                                    <ComboBox Grid.Row="2"
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="路线名称" />
+                                        <ui:TextBox Grid.Column="1"
+                                                    PlaceholderText="未命名路线"
+                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                    Text="{Binding RecordFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <TextBlock Grid.Row="1"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="描述" />
+                                        <ui:TextBox Grid.Row="1"
+                                                    Grid.Column="1"
+                                                    PlaceholderText="可选描述..."
+                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                    Text="{Binding RecordDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <TextBlock Grid.Row="2"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="匹配方式" />
+                                        <ComboBox Grid.Row="2"
+                                                  Grid.Column="1"
+                                                  Height="36"
+                                                  ItemTemplate="{StaticResource MapEditorOptionTemplate}"
+                                                  ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
+                                                  ItemsSource="{Binding MapMatchMethodOptions}"
+                                                  SelectedValue="{Binding RecordMapMatchMethod, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  SelectedValuePath="Code"
+                                                  Style="{StaticResource MapEditorComboBoxStyle}" />
+
+                                        <TextBlock Grid.Row="3"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="标签" />
+                                        <ui:TextBox Grid.Row="3"
+                                                    Grid.Column="1"
+                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                    Text="{Binding RecordTagsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <TextBlock Grid.Row="4"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="版本" />
+                                        <ui:TextBox Grid.Row="4"
+                                                    Grid.Column="1"
+                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                    Text="{Binding RecordVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <TextBlock Grid.Row="5"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="怪物拾取" />
+                                        <CheckBox Grid.Row="5"
+                                                  Grid.Column="1"
+                                                  VerticalAlignment="Center"
+                                                  Content="区分怪物拾取"
+                                                  Foreground="{StaticResource MapEditorTextPrimaryBrush}"
+                                                  IsChecked="{Binding RecordEnableMonsterLootSplit, Mode=TwoWay}" />
+
+                                        <TextBlock Grid.Row="6"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="JSON" />
+                                        <ui:Button Grid.Row="6"
+                                                   Grid.Column="1"
+                                                   Height="34"
+                                                   HorizontalAlignment="Stretch"
+                                                   Command="{Binding SwitchToRecorderJsonEditorCommand}"
+                                                   Content="JSON 编辑"
+                                                   Icon="{ui:SymbolIcon ClipboardTask24}" />
+
+                                        <TextBlock Grid.Row="7"
+                                                   Margin="0,12,0,0"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="作者" />
+                                        <TextBlock Grid.Row="7"
+                                                   Grid.Column="1"
+                                                   Margin="0,12,0,0"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="{Binding RecordAuthorSummaryText}" />
+
+                                        <Grid Grid.Row="8"
                                               Grid.Column="1"
-                                              Height="36"
-                                              ItemTemplate="{StaticResource MapEditorOptionTemplate}"
-                                              ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
-                                              ItemsSource="{Binding MapMatchMethodOptions}"
-                                              SelectedValue="{Binding RecordMapMatchMethod, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              SelectedValuePath="Code"
-                                              Style="{StaticResource MapEditorComboBoxStyle}" />
+                                              Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox Height="34"
+                                                      DisplayMemberPath="DisplayText"
+                                                      ItemsSource="{Binding CommonRecordAuthors}"
+                                                      SelectedItem="{Binding SelectedCommonRecordAuthor, Mode=TwoWay}"
+                                                      Style="{StaticResource MapEditorComboBoxStyle}"
+                                                      ToolTip="{Binding SelectedCommonRecordAuthor.DetailText}" />
+                                            <ui:Button Grid.Column="2"
+                                                       Width="96"
+                                                       Height="34"
+                                                       Command="{Binding AddCommonRecordAuthorCommand}"
+                                                       Content="加入路线"
+                                                       Icon="{ui:SymbolIcon Person24}" />
+                                            <ui:Button Grid.Column="4"
+                                                       Width="88"
+                                                       Height="34"
+                                                       Command="{Binding AddRecordAuthorCommand}"
+                                                       Content="自定义"
+                                                       Icon="{ui:SymbolIcon Add24}" />
+                                            <ui:Button Grid.Column="6"
+                                                       Width="96"
+                                                       Height="34"
+                                                       Command="{Binding ApplyDefaultAuthorCommand}"
+                                                       Content="加入默认"
+                                                       Icon="{ui:SymbolIcon Person24}" />
+                                        </Grid>
 
-                                    <ui:Button x:Name="RecordAdvancedSettingsButton"
-                                               Grid.Row="3"
-                                               Grid.Column="1"
-                                               Margin="0,8,0,0"
-                                               Height="34"
-                                               HorizontalAlignment="Stretch"
-                                               Command="{Binding ToggleRecordAdvancedSettingsCommand}"
-                                               Content="高级信息"
-                                               Icon="{ui:SymbolIcon Settings24}" />
+                                        <Grid Grid.Row="9"
+                                              Grid.ColumnSpan="2"
+                                              Margin="0,10,0,0"
+                                              MinHeight="40">
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Style="{StaticResource CaptionTextStyle}"
+                                                       Text="暂无作者，点击自定义或从常用作者加入"
+                                                       Visibility="{Binding RecordAuthorEmptyVisibility}" />
+                                            <ScrollViewer MaxHeight="170"
+                                                          VerticalScrollBarVisibility="Auto"
+                                                          Visibility="{Binding RecordAuthorListVisibility}">
+                                                <ItemsControl ItemsSource="{Binding RecordAuthors}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,8">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="8" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="8" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <ui:TextBox Height="34"
+                                                                            PlaceholderText="作者名称"
+                                                                            Style="{StaticResource FormTextBoxStyle}"
+                                                                            Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                <ui:TextBox Grid.Column="2"
+                                                                            Height="34"
+                                                                            PlaceholderText="链接（可选）"
+                                                                            Style="{StaticResource FormTextBoxStyle}"
+                                                                            Text="{Binding Links, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                <ui:Button Grid.Column="4"
+                                                                           Width="36"
+                                                                           Height="34"
+                                                                           Command="{Binding DataContext.DeleteRecordAuthorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                           CommandParameter="{Binding}"
+                                                                           Foreground="{StaticResource MapEditorDangerBrush}"
+                                                                           Icon="{ui:SymbolIcon Delete24}"
+                                                                           ToolTip="删除作者" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Grid>
+                                    </ScrollViewer>
+
+                                    <Grid Grid.Row="2"
+                                          Margin="0,14,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:Button Grid.Column="1"
+                                                   Width="88"
+                                                   Height="32"
+                                                   Command="{Binding CopyRecordedRouteCommand}"
+                                                   Content="复制"
+                                                   Icon="{ui:SymbolIcon Copy24}" />
+                                        <ui:Button Grid.Column="3"
+                                                   Width="88"
+                                                   Height="32"
+                                                   Command="{Binding DeleteSelectedRecordedRouteCommand}"
+                                                   Content="删除"
+                                                   Foreground="{StaticResource MapEditorDangerBrush}"
+                                                   Icon="{ui:SymbolIcon Delete24}" />
+                                    </Grid>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
+                            </Border>
+                        </Popup>
 
                         <Popup AllowsTransparency="True"
                                DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
@@ -1350,79 +2163,190 @@
 
                         <Popup AllowsTransparency="True"
                                DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-                               HorizontalOffset="-250"
-                               IsOpen="{Binding IsRecordAdvancedSettingsOpen, Mode=TwoWay}"
-                               Placement="Bottom"
-                               PlacementTarget="{Binding ElementName=RecordAdvancedSettingsButton}"
+                               IsOpen="{Binding IsActionUsageEditorOpen, Mode=TwoWay}"
+                               Placement="Center"
+                               PlacementTarget="{Binding ElementName=SidePanelContentGrid}"
                                StaysOpen="False">
-                            <Border Width="320"
+                            <Border Width="520"
                                     Padding="14"
                                     Background="#FF1A2025"
                                     BorderBrush="{StaticResource MapEditorStrokeBrush}"
                                     BorderThickness="1"
                                     CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontWeight="SemiBold" Text="路线高级设置" />
-                                    <Grid Margin="0,12,0,0">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="38" />
-                                            <RowDefinition Height="38" />
-                                            <RowDefinition Height="38" />
-                                            <RowDefinition Height="38" />
-                                            <RowDefinition Height="38" />
-                                        </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock FontWeight="SemiBold" Text="编辑其他动作" />
+
+                                    <Grid Grid.Row="1"
+                                          Margin="0,12,0,0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="54" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="作者" />
-                                        <ui:TextBox Grid.Column="1"
-                                                    Style="{StaticResource FormTextBoxStyle}"
-                                                    Text="{Binding RecordAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Grid.Row="1"
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="260" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="常用动作" />
+                                        <TextBlock Grid.Column="2"
                                                    Style="{StaticResource CaptionTextStyle}"
-                                                   Text="链接" />
-                                        <ui:TextBox Grid.Row="1"
+                                                   Text="其他动作" />
+
+                                        <ListBox Grid.Row="1"
+                                                 Margin="0,8,0,0"
+                                                 ItemContainerStyle="{StaticResource MapEditorListBoxItemStyle}"
+                                                 ItemsSource="{Binding CommonActionUsageOptions}"
+                                                 SelectedItem="{Binding SelectedCommonActionUsageOption, Mode=TwoWay}"
+                                                 Style="{StaticResource MapEditorListBoxStyle}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <TextBlock FontWeight="SemiBold"
+                                                                   Text="{Binding DisplayName}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Margin="0,3,0,0"
+                                                                   FontFamily="Consolas"
+                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                   Text="{Binding DetailText}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                        <StackPanel Grid.Row="1"
                                                     Grid.Column="1"
-                                                    Style="{StaticResource FormTextBoxStyle}"
-                                                    Text="{Binding RecordAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Grid.Row="2"
-                                                   Style="{StaticResource CaptionTextStyle}"
-                                                   Text="标签" />
-                                        <ui:TextBox Grid.Row="2"
-                                                    Grid.Column="1"
-                                                    Style="{StaticResource FormTextBoxStyle}"
-                                                    Text="{Binding RecordTagsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Grid.Row="3"
-                                                   Style="{StaticResource CaptionTextStyle}"
-                                                   Text="版本" />
-                                        <ui:TextBox Grid.Row="3"
-                                                    Grid.Column="1"
-                                                    Style="{StaticResource FormTextBoxStyle}"
-                                                    Text="{Binding RecordVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Grid.Row="4"
-                                                   Style="{StaticResource CaptionTextStyle}"
-                                                   Text="怪物拾取" />
-                                        <CheckBox Grid.Row="4"
-                                                  Grid.Column="1"
-                                                  VerticalAlignment="Center"
-                                                  Content="区分怪物拾取"
-                                                  Foreground="{StaticResource MapEditorTextPrimaryBrush}"
-                                                  IsChecked="{Binding RecordEnableMonsterLootSplit, Mode=TwoWay}" />
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                            <ui:Button Width="38"
+                                                       Height="32"
+                                                       Command="{Binding MoveActionToRareCommand}"
+                                                       Icon="{ui:SymbolIcon ArrowRight24}"
+                                                       ToolTip="移到其他动作" />
+                                            <ui:Button Width="38"
+                                                       Height="32"
+                                                       Margin="0,8,0,0"
+                                                       Command="{Binding MoveActionToCommonCommand}"
+                                                       Icon="{ui:SymbolIcon ArrowLeft24}"
+                                                       ToolTip="移到常用动作" />
+                                        </StackPanel>
+
+                                        <ListBox Grid.Row="1"
+                                                 Grid.Column="2"
+                                                 Margin="0,8,0,0"
+                                                 ItemContainerStyle="{StaticResource MapEditorListBoxItemStyle}"
+                                                 ItemsSource="{Binding RareActionUsageOptions}"
+                                                 SelectedItem="{Binding SelectedRareActionUsageOption, Mode=TwoWay}"
+                                                 Style="{StaticResource MapEditorListBoxStyle}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <TextBlock FontWeight="SemiBold"
+                                                                   Text="{Binding DisplayName}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Margin="0,3,0,0"
+                                                                   FontFamily="Consolas"
+                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                   Text="{Binding DetailText}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
                                     </Grid>
-                                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
-                                        <ui:Button Command="{Binding SwitchToRecorderJsonEditorCommand}"
-                                                   Content="JSON 编辑"
-                                                   Icon="{ui:SymbolIcon ClipboardTask24}" />
-                                        <ui:Button Margin="8,0,0,0"
-                                                   Command="{Binding ApplyDefaultAuthorCommand}"
-                                                   Content="应用默认作者"
-                                                   Icon="{ui:SymbolIcon Person24}" />
+
+                                    <StackPanel Grid.Row="2"
+                                                Margin="0,12,0,0"
+                                                HorizontalAlignment="Right"
+                                                Orientation="Horizontal">
+                                        <ui:Button Width="88"
+                                                   Height="32"
+                                                   Command="{Binding CloseActionUsageEditorCommand}"
+                                                   Content="完成"
+                                                   Icon="{ui:SymbolIcon Checkmark24}" />
                                     </StackPanel>
-                                </StackPanel>
+                                </Grid>
                             </Border>
                         </Popup>
                     </Grid>
+
+                    <Border Grid.Row="2"
+                            Grid.RowSpan="2"
+                            Margin="0,8,0,0"
+                            Padding="12"
+                            Panel.ZIndex="20"
+                            Background="{StaticResource MapEditorPanelBrush}"
+                            BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Visibility="{Binding RecordedRouteListExpandedVisibility}">
+                        <Border.ContextMenu>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <ui:MenuItem Command="{Binding NewRecordingCommand}"
+                                             Header="新建路线"
+                                             Icon="{ui:SymbolIcon Add24}" />
+                            </ContextMenu>
+                        </Border.ContextMenu>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="路径列表" />
+                                    <TextBlock Margin="0,4,0,0"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               Text="{Binding RecordedRouteCountText}" />
+                                </StackPanel>
+                                <ui:Button Grid.Column="1"
+                                           Width="72"
+                                           Height="32"
+                                           Command="{Binding SelectAllRecordedRoutesCommand}"
+                                           Content="全选"
+                                           Icon="{ui:SymbolIcon SelectAllOn24}" />
+                                <ui:Button Grid.Column="3"
+                                           Width="72"
+                                           Height="32"
+                                           Command="{Binding ToggleRecordedRouteListExpandedCommand}"
+                                           Content="收起"
+                                           Icon="{ui:SymbolIcon PanelBottomContract20}" />
+                            </Grid>
+
+                            <ListBox x:Name="ExpandedRecordedRouteListBox"
+                                     Grid.Row="1"
+                                     Margin="0,12,0,0"
+                                     ItemContainerStyle="{StaticResource RecordedRouteListBoxItemStyle}"
+                                     ItemTemplate="{StaticResource RecordedRouteListItemTemplate}"
+                                     ItemsSource="{Binding RecordedRoutes}"
+                                     SelectionChanged="RecordedRouteListBox_SelectionChanged"
+                                     SelectionMode="Extended"
+                                     Style="{StaticResource MapEditorListBoxStyle}"
+                                     MouseDoubleClick="RecordedRouteListBox_MouseDoubleClick"
+                                     PreviewMouseRightButtonDown="RecordedRouteListBox_PreviewMouseRightButtonDown">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <ui:MenuItem Command="{Binding NewRecordingCommand}"
+                                                     Header="新建路线"
+                                                     Icon="{ui:SymbolIcon Add24}" />
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
+                            </ListBox>
+                        </Grid>
+                    </Border>
 
                     <Grid Grid.Row="2"
                           Visibility="{Binding RecorderUiEditorVisibility}">
@@ -1450,8 +2374,15 @@
                                 <StackPanel Grid.Column="1"
                                             Margin="16,0,0,0"
                                             Orientation="Horizontal">
+                                    <ui:Button Width="34"
+                                               Height="34"
+                                               Padding="0"
+                                               Command="{Binding FitSelectedRecordedWaypointsCommand}"
+                                               Icon="{ui:SymbolIcon ArrowAutofitUp24}"
+                                               ToolTip="缩放到选中点" />
                                     <ComboBox Width="112"
                                               Height="34"
+                                              Margin="8,0,0,0"
                                               ItemTemplate="{StaticResource MapEditorOptionTemplate}"
                                               ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
                                               ItemsSource="{Binding WaypointFilterDimensions}"
@@ -1679,7 +2610,7 @@
                                       CanUserAddRows="False"
                                       CanUserDeleteRows="False"
                                       ColumnHeaderHeight="32"
-                                      GridLinesVisibility="Horizontal"
+                                      GridLinesVisibility="None"
                                       HeadersVisibility="Column"
                                       IsReadOnly="True"
                                       ItemsSource="{Binding RecordedWaypointView}"
@@ -1692,6 +2623,10 @@
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow">
                                         <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource MapEditorGridLineBrush}" />
+                                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                        <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
                                         <Setter Property="ContextMenu">
                                             <Setter.Value>
                                                 <ContextMenu>
@@ -1745,6 +2680,21 @@
                                                 </ContextMenu>
                                             </Setter.Value>
                                         </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#24147884" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#B0147884" />
+                                                <Setter Property="BorderBrush" Value="#6639DCEB" />
+                                                <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                                            </Trigger>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Background" Value="#B0147884" />
+                                                <Setter Property="BorderBrush" Value="#6639DCEB" />
+                                                <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </DataGrid.RowStyle>
                                 <DataGrid.Columns>
@@ -1775,82 +2725,104 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTextColumn Width="74"
-                                                        Binding="{Binding TypeDisplayText}"
-                                                        ElementStyle="{StaticResource WaypointGridTextStyle}"
-                                                        Header="类型" />
-                                    <DataGridTextColumn Width="66"
-                                                        Binding="{Binding MoveModeDisplayText}"
-                                                        ElementStyle="{StaticResource WaypointGridTextStyle}"
-                                                        Header="移动" />
-                                    <DataGridTextColumn Width="*"
-                                                        MinWidth="80"
-                                                        Binding="{Binding ActionDisplayText}"
-                                                        ElementStyle="{StaticResource WaypointGridTextStyle}"
-                                                        Header="动作" />
-                                    <DataGridTemplateColumn Width="150" Header="操作">
+                                    <DataGridTemplateColumn Width="82" Header="类型">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox ItemTemplate="{StaticResource WaypointGridOptionTemplate}"
+                                                          ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
+                                                          ItemsSource="{Binding DataContext.WaypointTypeOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                          SelectedValue="{Binding Type, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          SelectedValuePath="Code"
+                                                          Style="{StaticResource WaypointGridComboBoxStyle}"
+                                                          ToolTip="点位类型" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Width="70" Header="移动">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox ItemTemplate="{StaticResource WaypointGridOptionTemplate}"
+                                                          ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
+                                                          ItemsSource="{Binding DataContext.MoveModeOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                          SelectedValue="{Binding MoveMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          SelectedValuePath="Code"
+                                                          Style="{StaticResource WaypointGridComboBoxStyle}"
+                                                          ToolTip="移动方式" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Width="*"
+                                                            MinWidth="92"
+                                                            Header="动作">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Click="WaypointActionSelectorButton_Click"
+                                                        Content="{Binding ActionDisplayText}"
+                                                        Style="{StaticResource WaypointGridSelectorButtonStyle}"
+                                                        ToolTip="{Binding ActionParameterHint}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Width="112" Header="操作">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
                                                             Orientation="Horizontal">
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.RunRecordingFromWaypointCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Icon="{ui:SymbolIcon Play24}"
-                                                               ToolTip="从此点运行" />
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Margin="1,0,0,0"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.ToggleWaypointLockCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Content="锁"
-                                                               FontSize="11"
-                                                               ToolTip="锁定插入位置" />
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Margin="1,0,0,0"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.OpenWaypointAdvancedEditorCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Icon="{ui:SymbolIcon Settings24}"
-                                                               ToolTip="扩展参数" />
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Margin="1,0,0,0"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.MoveRecordedWaypointUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Icon="{ui:SymbolIcon ArrowUp24}"
-                                                               ToolTip="上移" />
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Margin="1,0,0,0"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.MoveRecordedWaypointDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Icon="{ui:SymbolIcon ArrowDown24}"
-                                                               ToolTip="下移" />
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Margin="1,0,0,0"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.CopyRecordedWaypointCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Icon="{ui:SymbolIcon Copy24}"
-                                                               ToolTip="复制" />
-                                                    <ui:Button Width="20"
-                                                               Height="26"
-                                                               Margin="1,0,0,0"
-                                                               Padding="0"
-                                                               Command="{Binding DataContext.DeleteRecordedWaypointCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                               CommandParameter="{Binding}"
-                                                               Foreground="{StaticResource MapEditorDangerBrush}"
-                                                               Icon="{ui:SymbolIcon Delete24}"
-                                                               ToolTip="删除" />
+                                                    <Button Command="{Binding DataContext.ToggleWaypointLockCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource WaypointGridActionButtonStyle}"
+                                                            ToolTip="锁定插入位置：新增路线点会插入到该点之后">
+                                                        <ui:SymbolIcon FontSize="14"
+                                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}">
+                                                            <ui:SymbolIcon.Style>
+                                                                <Style TargetType="ui:SymbolIcon">
+                                                                    <Setter Property="Symbol" Value="LockOpen24" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                                            <Setter Property="Symbol" Value="LockClosed24" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </ui:SymbolIcon.Style>
+                                                        </ui:SymbolIcon>
+                                                    </Button>
+                                                    <Button Margin="1,0,0,0"
+                                                            Command="{Binding DataContext.OpenWaypointAdvancedEditorCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource WaypointGridActionButtonStyle}"
+                                                            ToolTip="扩展参数">
+                                                        <ui:SymbolIcon FontSize="14"
+                                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                       Symbol="Settings24" />
+                                                    </Button>
+                                                    <Button Margin="1,0,0,0"
+                                                            Command="{Binding DataContext.MoveRecordedWaypointUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource WaypointGridActionButtonStyle}"
+                                                            ToolTip="上移">
+                                                        <ui:SymbolIcon FontSize="14"
+                                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                       Symbol="ArrowUp24" />
+                                                    </Button>
+                                                    <Button Margin="1,0,0,0"
+                                                            Command="{Binding DataContext.MoveRecordedWaypointDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource WaypointGridActionButtonStyle}"
+                                                            ToolTip="下移">
+                                                        <ui:SymbolIcon FontSize="14"
+                                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                       Symbol="ArrowDown24" />
+                                                    </Button>
+                                                    <Button Margin="1,0,0,0"
+                                                            Command="{Binding DataContext.CopyRecordedWaypointCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource WaypointGridActionButtonStyle}"
+                                                            ToolTip="复制">
+                                                        <ui:SymbolIcon FontSize="14"
+                                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                       Symbol="Copy24" />
+                                                    </Button>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -1891,6 +2863,7 @@
                                                 <RowDefinition Height="38" />
                                                 <RowDefinition Height="42" />
                                                 <RowDefinition Height="42" />
+                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="70" />
@@ -1944,15 +2917,12 @@
                                             <TextBlock Grid.Row="2"
                                                        Style="{StaticResource CaptionTextStyle}"
                                                        Text="动作" />
-                                            <ComboBox Grid.Row="2"
-                                                      Grid.Column="1"
-                                                      Height="34"
-                                                      ItemTemplate="{StaticResource MapEditorOptionTemplate}"
-                                                      ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
-                                                      ItemsSource="{Binding DataContext.ActionOptions, RelativeSource={RelativeSource AncestorType=Border}}"
-                                                      SelectedValue="{Binding Action, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                      SelectedValuePath="Code"
-                                                      Style="{StaticResource MapEditorComboBoxStyle}" />
+                                            <Button Grid.Row="2"
+                                                    Grid.Column="1"
+                                                    Click="WaypointActionSelectorButton_Click"
+                                                    Content="{Binding ActionDisplayText}"
+                                                    Style="{StaticResource MapEditorSelectorButtonStyle}"
+                                                    ToolTip="{Binding ActionParameterHint}" />
                                             <TextBlock Grid.Row="2"
                                                        Grid.Column="3"
                                                        Style="{StaticResource CaptionTextStyle}"
@@ -1972,6 +2942,13 @@
                                                           Style="{StaticResource MapEditorComboBoxStyle}"
                                                           Visibility="{Binding CombatScriptParameterVisibility}" />
                                             </Grid>
+                                            <TextBlock Grid.Row="3"
+                                                       Grid.Column="4"
+                                                       Margin="0,1,0,0"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource MapEditorTextSecondaryBrush}"
+                                                       Text="{Binding ActionParameterHint}"
+                                                       TextWrapping="Wrap" />
                                         </Grid>
 
                                     </Grid>
@@ -2221,13 +3198,11 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Style="{StaticResource CaptionTextStyle}" Text="目标动作" />
-                                        <ComboBox Grid.Column="1"
-                                                  ItemTemplate="{StaticResource MapEditorOptionTemplate}"
-                                                  ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
-                                                  ItemsSource="{Binding ActionOptions}"
-                                                  SelectedValue="{Binding TargetAction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                  SelectedValuePath="Code"
-                                                  Style="{StaticResource MapEditorComboBoxStyle}" />
+                                        <Button Grid.Column="1"
+                                                Click="TargetActionSelectorButton_Click"
+                                                Content="{Binding TargetActionDisplayText}"
+                                                Style="{StaticResource MapEditorSelectorButtonStyle}"
+                                                ToolTip="{Binding TargetActionParameterHint}" />
                                     </Grid>
                                 </Grid>
                             </Border>

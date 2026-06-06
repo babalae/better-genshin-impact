@@ -4,6 +4,7 @@ using BetterGenshinImpact.ViewModel.Windows;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
@@ -14,17 +15,20 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Threading;
 
 namespace BetterGenshinImpact.View.Windows;
 
 public partial class MapViewer
 {
     private const double DefaultVisibleSideColumnWidth = 580;
+    private const double ActionSubmenuOverlap = 8;
 
     public MapViewerViewModel ViewModel { get; }
     private bool _isRecorderConnectionRegistered;
     private double _lastVisibleSideColumnWidth = DefaultVisibleSideColumnWidth;
     private bool _isApplyingSidePanelLayout;
+    private bool _suppressRecordedWaypointSelectionSync;
 
     public MapViewer(string mapName)
     {
@@ -60,6 +64,18 @@ public partial class MapViewer
                 RecordedWaypointGrid.SelectedItems.Clear();
                 ViewModel.SyncRecordedWaypointSelection(RecordedWaypointGrid.SelectedItems);
             }
+            else if (msg.PropertyName == "ClearRecordedWaypointRowsSelectionOnly")
+            {
+                _suppressRecordedWaypointSelectionSync = true;
+                try
+                {
+                    RecordedWaypointGrid.SelectedItems.Clear();
+                }
+                finally
+                {
+                    _suppressRecordedWaypointSelectionSync = false;
+                }
+            }
             else if (msg.PropertyName == "SelectRecordedWaypointRows" && msg.NewValue is IEnumerable<RecordedWaypointViewModel> selectedWaypoints)
             {
                 RecordedWaypointGrid.SelectedItems.Clear();
@@ -69,6 +85,12 @@ public partial class MapViewer
                 }
 
                 ViewModel.SyncRecordedWaypointSelection(RecordedWaypointGrid.SelectedItems);
+            }
+            else if (msg.PropertyName == "SelectAllRecordedRouteRows")
+            {
+                ViewModel.IsRecordedRouteListExpanded = true;
+                ExpandedRecordedRouteListBox.SelectAll();
+                ViewModel.SyncRecordedRouteSelection(ExpandedRecordedRouteListBox.SelectedItems);
             }
         });
     }
@@ -215,10 +237,109 @@ public partial class MapViewer
                 key,
                 modifiers,
                 RecordedWaypointGrid.SelectedItems,
+                GetActiveRecordedRouteSelectedItems(),
+                IsRecordedRouteListFocused(),
                 IsTextInputFocused()))
         {
             e.Handled = true;
         }
+    }
+
+    private IList GetActiveRecordedRouteSelectedItems()
+    {
+        if (CollapsedRecordedRouteListBox.IsKeyboardFocusWithin)
+        {
+            return CollapsedRecordedRouteListBox.SelectedItems;
+        }
+
+        return ExpandedRecordedRouteListBox.SelectedItems;
+    }
+
+    private bool IsRecordedRouteListFocused()
+    {
+        return ExpandedRecordedRouteListBox.IsKeyboardFocusWithin ||
+               CollapsedRecordedRouteListBox.IsKeyboardFocusWithin;
+    }
+
+    private void RecordedRouteListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox listBox)
+        {
+            ViewModel.SyncRecordedRouteSelection(listBox.SelectedItems);
+        }
+    }
+
+    private void RecordedRouteListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (FindVisualParent<TextBoxBase>(e.OriginalSource as DependencyObject) != null)
+        {
+            return;
+        }
+
+        if (FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject)?.DataContext is not RecordedRouteViewModel route)
+        {
+            return;
+        }
+
+        ViewModel.RenameRecordedRouteCommand.Execute(route);
+        e.Handled = true;
+    }
+
+    private void RecordedRouteRenameTextBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not TextBox textBox || textBox.DataContext is not RecordedRouteViewModel route || !route.IsRenaming)
+        {
+            return;
+        }
+
+        textBox.Focus();
+        textBox.SelectAll();
+    }
+
+    private void RecordedRouteRenameTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox { DataContext: RecordedRouteViewModel route })
+        {
+            ViewModel.CommitRecordedRouteRename(route, cancel: false);
+        }
+    }
+
+    private void RecordedRouteRenameTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox { DataContext: RecordedRouteViewModel route })
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            ViewModel.CommitRecordedRouteRename(route, cancel: false);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            ViewModel.CommitRecordedRouteRename(route, cancel: true);
+            e.Handled = true;
+        }
+    }
+
+    private void RecordedRouteListBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject) is not { } item ||
+            FindVisualParent<ListBox>(item) is not { } listBox)
+        {
+            return;
+        }
+
+        if (!item.IsSelected)
+        {
+            listBox.SelectedItems.Clear();
+            item.IsSelected = true;
+            listBox.SelectedItem = item.DataContext;
+        }
+
+        item.Focus();
+        ViewModel.SyncRecordedRouteSelection(listBox.SelectedItems);
     }
 
     private void MapEditorComboBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -228,13 +349,175 @@ public partial class MapViewer
             return;
         }
 
+        SelectDataGridRow(comboBox);
         comboBox.Focus();
         comboBox.IsDropDownOpen = true;
         e.Handled = true;
     }
 
+    private void WaypointActionSelectorButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.DataContext is not RecordedWaypointViewModel waypoint)
+        {
+            return;
+        }
+
+        SelectDataGridRow(element);
+        ViewModel.SelectedRecordedWaypoint = waypoint;
+        OpenActionSelectorMenu(element, option => waypoint.Action = option.Code);
+    }
+
+    private void TargetActionSelectorButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element)
+        {
+            return;
+        }
+
+        OpenActionSelectorMenu(element, option => ViewModel.TargetAction = option.Code);
+    }
+
+    private void OpenActionSelectorMenu(FrameworkElement placementTarget, Action<MapEditorOption> onSelected)
+    {
+        var menu = new ContextMenu
+        {
+            PlacementTarget = placementTarget,
+            Placement = PlacementMode.Bottom,
+            StaysOpen = false
+        };
+
+        var addedInlineCommonActions = false;
+        foreach (var group in ViewModel.ActionMenuGroups)
+        {
+            if (string.Equals(group.DisplayName, "常用动作", StringComparison.Ordinal))
+            {
+                foreach (var option in group.Options)
+                {
+                    menu.Items.Add(CreateActionMenuItem(option, onSelected));
+                    addedInlineCommonActions = true;
+                }
+
+                continue;
+            }
+
+            if (addedInlineCommonActions)
+            {
+                menu.Items.Add(new Separator());
+                addedInlineCommonActions = false;
+            }
+
+            var groupItem = CreateActionGroupMenuItem(group.DisplayName);
+            foreach (var option in group.Options)
+            {
+                groupItem.Items.Add(CreateActionMenuItem(option, onSelected));
+            }
+
+            if (group.CanEdit)
+            {
+                if (groupItem.Items.Count > 0)
+                {
+                    groupItem.Items.Add(new Separator());
+                }
+
+                var editItem = new MenuItem { Header = "编辑其他动作" };
+                editItem.Click += (_, _) => ViewModel.OpenActionUsageEditorCommand.Execute(null);
+                groupItem.Items.Add(editItem);
+            }
+
+            menu.Items.Add(groupItem);
+        }
+
+        placementTarget.ContextMenu = menu;
+        menu.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(placementTarget.ContextMenu, menu))
+            {
+                placementTarget.ContextMenu = null;
+            }
+        };
+        menu.IsOpen = true;
+    }
+
+    private static MenuItem CreateActionGroupMenuItem(string header)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            MinWidth = 136,
+            Padding = new Thickness(12, 0, 18, 0)
+        };
+
+        item.SubmenuOpened += (_, _) =>
+        {
+            item.Dispatcher.BeginInvoke(
+                new Action(() => AdjustActionSubmenuPlacement(item)),
+                DispatcherPriority.Loaded);
+        };
+
+        return item;
+    }
+
+    private static void AdjustActionSubmenuPlacement(MenuItem item)
+    {
+        var popup = item.Template?.FindName("PART_Popup", item) as Popup
+                    ?? FindVisualChild<Popup>(item);
+        if (popup == null)
+        {
+            return;
+        }
+
+        popup.PlacementTarget = item;
+        popup.Placement = PlacementMode.Right;
+        popup.HorizontalOffset = -ActionSubmenuOverlap;
+        popup.VerticalOffset = -2;
+    }
+
+    private static MenuItem CreateActionMenuItem(MapEditorOption option, Action<MapEditorOption> onSelected)
+    {
+        var item = new MenuItem
+        {
+            Header = option.DisplayName,
+            ToolTip = option.ParameterHint,
+            Tag = option
+        };
+        item.Click += (_, _) => onSelected(option);
+        return item;
+    }
+
+    private void SelectDataGridRow(DependencyObject source)
+    {
+        if (FindVisualParent<DataGridRow>(source) is not { } row ||
+            FindVisualParent<DataGrid>(source) is not { } grid)
+        {
+            return;
+        }
+
+        if (!row.IsSelected)
+        {
+            var modifiers = Keyboard.Modifiers;
+            if ((modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
+            {
+                grid.SelectedItems.Clear();
+            }
+
+            row.IsSelected = true;
+            grid.SelectedItem = row.Item;
+        }
+
+        row.Focus();
+        if (ReferenceEquals(grid, RecordedWaypointGrid))
+        {
+            ViewModel.SyncRecordedWaypointSelection(RecordedWaypointGrid.SelectedItems);
+        }
+    }
+
     private void RecordedWaypointGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressRecordedWaypointSelectionSync)
+        {
+            return;
+        }
+
         ViewModel.SyncRecordedWaypointSelection(RecordedWaypointGrid.SelectedItems);
     }
 
@@ -267,6 +550,33 @@ public partial class MapViewer
             }
 
             current = GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject? current)
+        where T : DependencyObject
+    {
+        if (current is not (Visual or Visual3D))
+        {
+            return null;
+        }
+
+        var count = VisualTreeHelper.GetChildrenCount(current);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(current, i);
+            if (child is T typed)
+            {
+                return typed;
+            }
+
+            var nested = FindVisualChild<T>(child);
+            if (nested != null)
+            {
+                return nested;
+            }
         }
 
         return null;

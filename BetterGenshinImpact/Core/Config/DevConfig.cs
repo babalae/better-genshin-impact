@@ -25,4 +25,12 @@ public partial class DevConfig : ObservableObject
     // 路线录制默认作者链接
     [ObservableProperty]
     private string _recordDefaultAuthorLinks = string.Empty;
+
+    // 路线录制常用作者
+    [ObservableProperty]
+    private string _recordCommonAuthorsJson = string.Empty;
+
+    // 路线录制动作菜单中的其他动作
+    [ObservableProperty]
+    private string _recordRareActionCodes = string.Empty;
 }

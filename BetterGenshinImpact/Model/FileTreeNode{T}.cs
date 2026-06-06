@@ -18,6 +18,9 @@ public partial class FileTreeNode<T> : ObservableObject
     [ObservableProperty]
     private bool _isExpanded = false;
 
+    [ObservableProperty]
+    private bool _isSelected = false;
+
     /// <summary>
     /// 界面上显示是文件夹
     /// </summary>
