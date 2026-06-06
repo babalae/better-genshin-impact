@@ -943,6 +943,9 @@
                                                              Header="合并导入"
                                                              Icon="{ui:SymbolIcon Archive24}"
                                                              InputGestureText="Ctrl+Shift+O" />
+                                                <ui:MenuItem Command="{Binding OpenLegacyRecorderEditorCommand}"
+                                                             Header="旧版录制编辑器"
+                                                             Icon="{ui:SymbolIcon ClipboardTask24}" />
                                                 <Separator />
                                                 <ui:MenuItem Command="{Binding SaveRecordingCommand}"
                                                              Header="保存"

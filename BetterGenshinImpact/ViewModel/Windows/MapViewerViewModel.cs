@@ -2058,6 +2058,22 @@ public partial class MapViewerViewModel : ObservableObject
         ImportRecordingsFromSystemDialog(mergeIntoCurrent: false, multiselect: true);
     }
 
+    [RelayCommand]
+    private void OpenLegacyRecorderEditor()
+    {
+        var mapName = string.IsNullOrWhiteSpace(MapName)
+            ? TaskContext.Instance().Config.DevConfig.RecordMapName
+            : MapName;
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            mapName = nameof(MapTypes.Teyvat);
+        }
+
+        TaskContext.Instance().Config.DevConfig.RecordMapName = mapName;
+        PathRecorder.Instance.OpenEditorInWebView(mapName);
+        RecordStatusText = "录制器：已打开旧版录制编辑器";
+    }
+
     private void ImportRecordingsFromSystemDialog(bool mergeIntoCurrent, bool multiselect)
     {
         if (!CanEditRecorder())
