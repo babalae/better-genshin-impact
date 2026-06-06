@@ -94,7 +94,7 @@ public class TaskRunner
         }
         catch (Exception e)
         {
-            if (IsTaskCanceledInside(e))
+            if (e is OperationCanceledException || IsTaskCanceledInside(e))
             {
                 if (RunnerContext.Instance.IsContinuousRunGroup)
                 {
@@ -188,11 +188,11 @@ public class TaskRunner
 
     private static bool IsTaskCanceledInside(Exception ex)
     {
-        var inner = ex.InnerException;
-        while (inner != null)
+        Exception? current = ex;
+        while (current != null)
         {
-            if (inner is OperationCanceledException) return true;
-            inner = inner.InnerException;
+            if (current is OperationCanceledException) return true;
+            current = current.InnerException;
         }
         return false;
     }
