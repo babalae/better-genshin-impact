@@ -16,7 +16,7 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
     public static readonly ActionEnum StopFlying = new("stop_flying", "下落攻击", ActionUseWaypointTypeEnum.Custom);
     
     /// <summary>Action specifying forced teleportation without delay. 当前点强制传送。</summary>
-    public static readonly ActionEnum ForceTp = new("force_tp", "当前点传送", ActionUseWaypointTypeEnum.Custom);
+    public static readonly ActionEnum ForceTp = new("force_tp", "强制传送", ActionUseWaypointTypeEnum.Custom);
     
     /// <summary>Action specifying continuous 'E' skill collection for Nahida. 纳西妲长按E技能收集。</summary>
     public static readonly ActionEnum NahidaCollect = new("nahida_collect", "纳西妲长按E收集", ActionUseWaypointTypeEnum.Custom);
