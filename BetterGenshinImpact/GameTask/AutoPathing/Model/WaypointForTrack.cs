@@ -24,7 +24,7 @@ public class WaypointForTrack : Waypoint
     public string MapMatchMethod { get; set; }
     
     //异常识别
-    public Misidentification Misidentification { get; set; } = new();
+    public new Misidentification Misidentification { get; set; } = new();
     
     //怪物标签
     public string MonsterTag { get; set; } ="";

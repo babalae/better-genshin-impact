@@ -172,10 +172,10 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 
             var materialName = task.GetMaterialName();
             var specialActions = task.Positions?
-                .Select(p => p.Action)
+                .Select(p => (string?)p.Action)
                 .Where(action => !string.IsNullOrEmpty(action))
                 .Distinct()
-                .ToList() ?? new List<string>();
+                .ToList() ?? new List<string?>();
 
             return basePathingConditionConfig.FilterPartyName(materialName, specialActions);
         }

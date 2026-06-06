@@ -37,7 +37,7 @@ public class Waypoint
         public Misidentification Misidentification { get; set; } = new();
         public string Description { get; set; } = "";
         //normal 小怪,elite 精英,legendary 传奇
-        public string MonsterTag { get; set; }
+        public string MonsterTag { get; set; } = string.Empty;
         public bool EnableMonsterLootSplit { get; set; } = false;
     }
 

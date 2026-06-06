@@ -74,6 +74,7 @@ public sealed class RouteNavigationGraphSnapshot
     private readonly Dictionary<string, List<RouteNavigationEdge>> _edgesByMap;
     private readonly Dictionary<string, List<RouteNavigationEdge>> _outgoingEdgesByNodeId;
     private readonly Dictionary<string, Dictionary<(int X, int Y), List<RouteNavigationNode>>> _nodeBucketsByMap;
+    private readonly Dictionary<string, Dictionary<(int X, int Y), List<RouteNavigationEdge>>> _edgeBucketsByMap;
     private readonly Dictionary<string, List<RouteGraphTeleportEntry>> _teleportsByMap;
     private readonly Dictionary<string, RouteGraphTeleportEntry> _teleportsByAnchorId;
 
@@ -103,6 +104,7 @@ public sealed class RouteNavigationGraphSnapshot
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
         _nodeBucketsByMap = BuildNodeBuckets(Nodes, nodeBucketSize);
+        _edgeBucketsByMap = BuildEdgeBuckets(Edges, nodeBucketSize, GetEdgePoints);
         Teleports = LoadTeleportEntries();
         _teleportsByMap = Teleports
             .GroupBy(t => RouteGraphGeometry.NormalizeMapName(t.MapName), StringComparer.OrdinalIgnoreCase)
@@ -146,6 +148,41 @@ public sealed class RouteNavigationGraphSnapshot
 
         return Nodes
             .Where(node => node.AnchorIds.Contains(anchorId))
+            .ToList();
+    }
+
+    public IReadOnlyList<RouteNavigationNode> FindResourceNodes(
+        string mapName,
+        string? resourceId,
+        string? resourceLabelId,
+        RouteGraphPoint fallbackPoint,
+        int limit,
+        double maxDistance = 0)
+    {
+        if (limit <= 0 || (string.IsNullOrWhiteSpace(resourceId) && string.IsNullOrWhiteSpace(resourceLabelId)))
+        {
+            return [];
+        }
+
+        var normalizedMapName = RouteGraphGeometry.NormalizeMapName(mapName);
+        if (!_nodesByMap.TryGetValue(normalizedMapName, out var mapNodes))
+        {
+            return [];
+        }
+
+        return mapNodes
+            .Where(node =>
+                (!string.IsNullOrWhiteSpace(resourceId) && node.ResourceIds.Contains(resourceId)) ||
+                (!string.IsNullOrWhiteSpace(resourceLabelId) && node.ResourceLabelIds.Contains(resourceLabelId)))
+            .Select(node => new
+            {
+                Node = node,
+                Distance = RouteGraphGeometry.Distance(fallbackPoint, new RouteGraphPoint(node.X, node.Y))
+            })
+            .Where(candidate => maxDistance <= 0 || candidate.Distance <= maxDistance)
+            .OrderBy(candidate => candidate.Distance)
+            .Take(limit)
+            .Select(candidate => candidate.Node)
             .ToList();
     }
 
@@ -245,13 +282,49 @@ public sealed class RouteNavigationGraphSnapshot
             return [];
         }
 
-        return edges
+        var searchEdges = ResolveSearchEdges(normalizedMapName, point, maxDistance, edges);
+
+        return searchEdges
             .Select(edge => TryProjectToEdge(edge, point, out var projection) ? projection : null)
             .Where(projection => projection != null && projection.Distance <= maxDistance)
             .OrderBy(projection => projection!.Distance)
             .Take(limit)
             .Cast<RouteGraphEdgeProjection>()
             .ToList();
+    }
+
+    private IEnumerable<RouteNavigationEdge> ResolveSearchEdges(
+        string normalizedMapName,
+        RouteGraphPoint point,
+        double maxDistance,
+        IReadOnlyList<RouteNavigationEdge> fallbackEdges)
+    {
+        if (maxDistance <= 0 || !_edgeBucketsByMap.TryGetValue(normalizedMapName, out var buckets))
+        {
+            return fallbackEdges;
+        }
+
+        var centerCell = GetCell(point.X, point.Y, _nodeBucketSize);
+        var cellRadius = Math.Max(0, (int)Math.Ceiling(maxDistance / _nodeBucketSize));
+        var result = new Dictionary<string, RouteNavigationEdge>(StringComparer.OrdinalIgnoreCase);
+        for (var dx = -cellRadius; dx <= cellRadius; dx++)
+        {
+            for (var dy = -cellRadius; dy <= cellRadius; dy++)
+            {
+                var key = (centerCell.X + dx, centerCell.Y + dy);
+                if (!buckets.TryGetValue(key, out var bucketEdges))
+                {
+                    continue;
+                }
+
+                foreach (var edge in bucketEdges)
+                {
+                    result.TryAdd(edge.EdgeId, edge);
+                }
+            }
+        }
+
+        return result.Values;
     }
 
     private bool TryProjectToEdge(RouteNavigationEdge edge, RouteGraphPoint point, out RouteGraphEdgeProjection projection)
@@ -359,6 +432,53 @@ public sealed class RouteNavigationGraphSnapshot
         return result;
     }
 
+    private static Dictionary<string, Dictionary<(int X, int Y), List<RouteNavigationEdge>>> BuildEdgeBuckets(
+        IReadOnlyList<RouteNavigationEdge> edges,
+        double bucketSize,
+        Func<RouteNavigationEdge, List<RouteGraphPoint>> edgePointResolver)
+    {
+        var result = new Dictionary<string, Dictionary<(int X, int Y), List<RouteNavigationEdge>>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var edge in edges)
+        {
+            var points = edgePointResolver(edge);
+            if (points.Count == 0)
+            {
+                continue;
+            }
+
+            var mapName = RouteGraphGeometry.NormalizeMapName(edge.MapName);
+            if (!result.TryGetValue(mapName, out var mapBuckets))
+            {
+                mapBuckets = new Dictionary<(int X, int Y), List<RouteNavigationEdge>>();
+                result[mapName] = mapBuckets;
+            }
+
+            var minX = points.Min(p => p.X);
+            var maxX = points.Max(p => p.X);
+            var minY = points.Min(p => p.Y);
+            var maxY = points.Max(p => p.Y);
+            var minCell = GetCell(minX, minY, bucketSize);
+            var maxCell = GetCell(maxX, maxY, bucketSize);
+
+            for (var x = minCell.X; x <= maxCell.X; x++)
+            {
+                for (var y = minCell.Y; y <= maxCell.Y; y++)
+                {
+                    var key = (x, y);
+                    if (!mapBuckets.TryGetValue(key, out var bucketEdges))
+                    {
+                        bucketEdges = [];
+                        mapBuckets[key] = bucketEdges;
+                    }
+
+                    bucketEdges.Add(edge);
+                }
+            }
+        }
+
+        return result;
+    }
+
     private static List<RouteGraphTeleportEntry> LoadTeleportEntries()
     {
         var result = new List<RouteGraphTeleportEntry>();
@@ -367,7 +487,7 @@ public sealed class RouteNavigationGraphSnapshot
             foreach (var scene in MapLazyAssets.Instance.ScenesDic.Values)
             {
                 var mapName = RouteGraphGeometry.NormalizeMapName(scene.MapName);
-                var map = MapManager.GetMap(mapName, null);
+                var map = MapManager.GetMap(mapName, string.Empty);
                 if (map == null)
                 {
                     continue;
