@@ -993,7 +993,8 @@ public class AutoBossTask : ISoloTask
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            _logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height}", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏可能无法正常使用自动首领功能 !",
+                gameScreenSize.Width, gameScreenSize.Height);
         }
     }
 
@@ -1240,7 +1241,7 @@ public class AutoBossTask : ISoloTask
     }
 
     /// <summary>
-    /// 按照 JS 脚本的方式反复按交互键，直到“接触征讨之花”从屏幕上消失。
+    /// 等待“接触征讨之花”出现后，持续按F直到从屏幕上消失。
     /// </summary>
     /// <param name="page">当前视觉定位页面。</param>
     /// <param name="rewardRect">“接触征讨之花”的 OCR 识别区域。</param>

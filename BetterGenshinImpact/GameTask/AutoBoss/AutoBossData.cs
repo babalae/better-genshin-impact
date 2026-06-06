@@ -32,7 +32,7 @@ public static class AutoBossData
         _supportedBossNames ??= CountryToBosses.Values.SelectMany(x => x).ToList();
 
     /// <summary>
-    /// 战斗后需要重新靠近交互点才能再次启动的 Boss。
+    /// 战斗后需要重新交互才能再次讨伐的 Boss。
     /// </summary>
     public static readonly HashSet<string> TalkToStartBosses =
     [
@@ -43,7 +43,8 @@ public static class AutoBossData
     ];
 
     /// <summary>
-    /// 需要使用强制传送和键鼠宏前往的 Boss。
+    /// 所在分层地图还不支持路径追踪的Boss
+    /// 暂时使用强制传送和键鼠宏寻路。
     /// </summary>
     public static readonly HashSet<string> NoPathingSupportBosses =
     [
@@ -53,7 +54,7 @@ public static class AutoBossData
     ];
 
     /// <summary>
-    /// 判断 Boss 是否在自动首领讨伐支持列表中。
+    /// 判断 Boss 是否在支持列表中。
     /// </summary>
     /// <param name="bossName">Boss 名称。</param>
     /// <returns>支持该 Boss 时返回 true。</returns>
@@ -63,7 +64,7 @@ public static class AutoBossData
     }
 
     /// <summary>
-    /// 判断 Boss 是否属于战后需要重新靠近交互点的类型。
+    /// 判断 Boss 是否需要重新交互。
     /// </summary>
     /// <param name="bossName">Boss 名称。</param>
     /// <returns>需要执行战后快速前往路线时返回 true。</returns>
@@ -73,7 +74,7 @@ public static class AutoBossData
     }
 
     /// <summary>
-    /// 判断 Boss 是否属于特殊前往路线类型。
+    /// 判断 Boss 是否不支持地图追踪。
     /// </summary>
     /// <param name="bossName">Boss 名称。</param>
     /// <returns>需要强制传送加键鼠宏路线时返回 true。</returns>

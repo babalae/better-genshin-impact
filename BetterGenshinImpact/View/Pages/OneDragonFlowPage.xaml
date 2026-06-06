@@ -1111,7 +1111,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="自动传送、战斗并领取征讨之花奖励"
+                                              Text="自动传送、战斗并领取奖励"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardExpander.Header>
@@ -1168,7 +1168,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="列表仅包含当前已适配路线的首领"
+                                              Text="部分首领因机制问题未添加"
                                               TextWrapping="Wrap" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                                        Grid.RowSpan="2"
