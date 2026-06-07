@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,6 +7,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -54,6 +56,9 @@ public partial class MapViewerViewModel : ObservableObject
     private const int CoordinateStorageDecimals = 4;
     private const int CoordinateDisplayDecimals = 2;
     private const int OperationLogLimit = 100;
+    private const int ClipboardRetryCount = 5;
+    private const int ClipboardRetryDelayMilliseconds = 50;
+    private const int ClipboardCannotOpenHResult = unchecked((int)0x800401D0);
     private const string NoRareActionCodesMarker = "__none";
     private static readonly string[] ElementalActionCodes =
     [
@@ -133,6 +138,12 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _isTopmost = TaskContext.Instance().Config.DevConfig.MapViewerTopmost;
 
     [ObservableProperty]
+    private bool _isMapMiniFollowWindowVisible = TaskContext.Instance().Config.DevConfig.MapMiniFollowVisible;
+
+    [ObservableProperty]
+    private bool _isMapMiniFollowTopmost = TaskContext.Instance().Config.DevConfig.MapMiniFollowTopmost;
+
+    [ObservableProperty]
     private bool _isFollowingCurrent = true;
 
     [ObservableProperty]
@@ -151,9 +162,6 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _isDebugMode = true;
 
     [ObservableProperty]
-    private bool _isViewSettingsOpen;
-
-    [ObservableProperty]
     private bool _isRecordedRoutePropertiesOpen;
 
     [ObservableProperty]
@@ -166,7 +174,7 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _isActionUsageEditorOpen;
 
     [ObservableProperty]
-    private bool _isRecordAuthorManagerOpen;
+    private bool _isRecorderPreferencesOpen;
 
     [ObservableProperty]
     private bool _isSidePanelVisible = true;
@@ -221,6 +229,9 @@ public partial class MapViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _mapClickEditModeText = "地图点击：追加点";
+
+    [ObservableProperty]
+    private double _recorderNudgeStep = 1.0;
 
     [ObservableProperty]
     private RecordedWaypointViewModel? _selectedRecordedWaypoint;
@@ -557,7 +568,26 @@ public partial class MapViewerViewModel : ObservableObject
 
     public string MapStatusText => $"模式：{(IsRecorderMode ? "录制" : "调试")} / {(IsFollowingCurrent ? "跟随" : "固定")}    缩放：{MapZoomText}";
 
+    public string MapMiniFollowTitleText => $"{(IsRecorderMode ? "录制" : "调试")} / {MapDisplayName}";
+
+    public string MapMiniFollowHotkeyText => FormatHotkeyText(TaskContext.Instance().Config.HotKeyConfig.MapMiniFollowWindowHotkey);
+
     public string FollowZoomText => $"{FollowZoom:F1}x";
+
+    public string MapClickEditModeToolTip => $"{MapClickEditModeText}（Tab 切换）";
+
+    public string RecorderNudgeStepText
+    {
+        get => RecorderNudgeStep.ToString("0.##", CultureInfo.InvariantCulture);
+        set
+        {
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                || double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out parsed))
+            {
+                RecorderNudgeStep = parsed;
+            }
+        }
+    }
 
     public string CurrentPositionDetailText => TrimDebugValue(CurrentPositionText, "当前位置：");
 
@@ -622,6 +652,8 @@ public partial class MapViewerViewModel : ObservableObject
 
     private Point2f? _lastPosition;
 
+    private string? _lastPositionMapName;
+
     private Point2f? _selectedTargetPoint;
 
     private Point2f? _selectedRecorderEdgePoint;
@@ -653,6 +685,8 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _isUpdatingWaypointFromMap;
 
     private bool _isRefreshingRouteDiagnosticsLite;
+
+    private bool _isSynchronizingMapName;
 
     private List<Waypoint> _currentRoutePoints = [];
 
@@ -697,7 +731,7 @@ public partial class MapViewerViewModel : ObservableObject
         {
             if (msg.PropertyName == "SendCurrentPosition")
             {
-                if (msg.NewValue is not Point2f point)
+                if (!TryGetTrackedPosition(msg.NewValue, out var point, out var positionMapName))
                 {
                     return;
                 }
@@ -709,18 +743,25 @@ public partial class MapViewerViewModel : ObservableObject
 
                 if (!ShouldRefreshMapBitmap())
                 {
-                    if (FollowRoutePlanningCurrentPosition)
+                    UIDispatcherHelper.BeginInvoke(() =>
                     {
-                        UIDispatcherHelper.BeginInvoke(() => UpdateRoutePlanningCurrentPosition(point));
-                    }
+                        SynchronizeTrackingMap(positionMapName);
+                        _lastPositionMapName = ResolvePositionMapName(positionMapName);
+                        if (FollowRoutePlanningCurrentPosition)
+                        {
+                            UpdateRoutePlanningCurrentPosition(point);
+                        }
+                    });
 
                     return;
                 }
 
                 UIDispatcherHelper.BeginInvoke(() =>
                 {
+                    SynchronizeTrackingMap(positionMapName);
+                    _lastPositionMapName = ResolvePositionMapName(positionMapName);
                     _lastPosition = point;
-                    CurrentPositionText = FormatCurrentPosition(point);
+                    CurrentPositionText = FormatCurrentPosition(point, _lastPositionMapName);
                     LastRefreshText = $"刷新：{DateTime.Now:HH:mm:ss}";
                     UpdateRoutePlanningCurrentPosition(point);
                 });
@@ -729,7 +770,7 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 Debug.WriteLine("更新当前追踪的路径图像");
                 var pathingTask = (PathingTask)msg.NewValue;
-                UpdateTaskSummary(pathingTask);
+                UIDispatcherHelper.BeginInvoke(() => UpdateTaskSummary(pathingTask));
             }
             else if (msg.PropertyName == "UpdateCurrentWaypoint" && msg.NewValue is WaypointForTrack waypoint)
             {
@@ -753,6 +794,14 @@ public partial class MapViewerViewModel : ObservableObject
                         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ResetMapView", new object(), new object()));
                     }
                 });
+            }
+            else if (msg.PropertyName == "ToggleMapMiniFollowWindow")
+            {
+                UIDispatcherHelper.BeginInvoke(ToggleMapMiniFollowWindow);
+            }
+            else if (msg.PropertyName == "RequestMapDisplaySnapshot")
+            {
+                UIDispatcherHelper.BeginInvoke(ReplayMapDisplaySnapshot);
             }
             else if (msg.PropertyName == "PreparePathRecorderStart")
             {
@@ -1226,6 +1275,24 @@ public partial class MapViewerViewModel : ObservableObject
     partial void OnUpdateSelectedPointOnMapClickChanged(bool value)
     {
         MapClickEditModeText = value ? "地图点击：更新选中点" : "地图点击：追加点";
+        OnPropertyChanged(nameof(MapClickEditModeToolTip));
+    }
+
+    partial void OnRecorderNudgeStepChanged(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+        {
+            RecorderNudgeStep = 1.0;
+            return;
+        }
+
+        if (value > 1000)
+        {
+            RecorderNudgeStep = 1000;
+            return;
+        }
+
+        OnPropertyChanged(nameof(RecorderNudgeStepText));
     }
 
     partial void OnSelectedRecordedWaypointChanged(RecordedWaypointViewModel? value)
@@ -1408,6 +1475,16 @@ public partial class MapViewerViewModel : ObservableObject
         TaskContext.Instance().Config.DevConfig.MapViewerTopmost = value;
     }
 
+    partial void OnIsMapMiniFollowWindowVisibleChanged(bool value)
+    {
+        TaskContext.Instance().Config.DevConfig.MapMiniFollowVisible = value;
+    }
+
+    partial void OnIsMapMiniFollowTopmostChanged(bool value)
+    {
+        TaskContext.Instance().Config.DevConfig.MapMiniFollowTopmost = value;
+    }
+
     partial void OnRecordFilePathTextChanged(string value)
     {
         RefreshRecorderSummaryProperties();
@@ -1431,8 +1508,14 @@ public partial class MapViewerViewModel : ObservableObject
 
     partial void OnIsPathRecorderRecordingChanged(bool value)
     {
+        if (value)
+        {
+            IsFollowingCurrent = true;
+        }
+
         OnPropertyChanged(nameof(RecordingToggleText));
         OnPropertyChanged(nameof(ModeActionText));
+        OnPropertyChanged(nameof(MapStatusText));
     }
 
     partial void OnTargetActionChanged(string value)
@@ -1479,6 +1562,7 @@ public partial class MapViewerViewModel : ObservableObject
     partial void OnMapNameChanged(string value)
     {
         MapDisplayName = GetMapDisplayName(value);
+        OnPropertyChanged(nameof(MapMiniFollowTitleText));
         if (!string.IsNullOrWhiteSpace(value))
         {
             TaskContext.Instance().Config.DevConfig.RecordMapName = value;
@@ -1486,7 +1570,11 @@ public partial class MapViewerViewModel : ObservableObject
 
         SelectedTargetText = "目标点：点击地图选择";
         _selectedTargetPoint = null;
-        ClearPathing();
+        if (!_isSynchronizingMapName && !_isSwitchingRecordedRoute)
+        {
+            ClearPathing();
+        }
+
         PublishRecordedRouteList();
         _ = RefreshRouteDiagnosticsLiteAsync();
     }
@@ -1503,6 +1591,62 @@ public partial class MapViewerViewModel : ObservableObject
 
             _lastMapBitmapRefreshUtc = now;
             return true;
+        }
+    }
+
+    private void SynchronizeTrackingMap(string? mapName)
+    {
+        var normalizedMapName = NormalizeKnownMapName(mapName);
+        if (string.IsNullOrWhiteSpace(normalizedMapName) ||
+            string.Equals(normalizedMapName, MapName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _isSynchronizingMapName = true;
+        try
+        {
+            MapName = normalizedMapName;
+        }
+        finally
+        {
+            _isSynchronizingMapName = false;
+        }
+    }
+
+    private string ResolvePositionMapName(string? mapName)
+    {
+        return NormalizeKnownMapName(mapName) ?? MapName;
+    }
+
+    private static string? NormalizeKnownMapName(string? mapName)
+    {
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<MapTypes>(mapName, true, out var mapType)
+            ? mapType.ToString()
+            : null;
+    }
+
+    private static bool TryGetTrackedPosition(object? value, out Point2f point, out string? mapName)
+    {
+        switch (value)
+        {
+            case TrackedMapPosition tracked:
+                point = tracked.ImagePosition;
+                mapName = tracked.MapName;
+                return true;
+            case Point2f legacyPoint:
+                point = legacyPoint;
+                mapName = null;
+                return true;
+            default:
+                point = default;
+                mapName = null;
+                return false;
         }
     }
 
@@ -1678,9 +1822,12 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleViewSettings()
+    private void ToggleMapClickEditMode()
     {
-        IsViewSettingsOpen = !IsViewSettingsOpen;
+        UpdateSelectedPointOnMapClick = !UpdateSelectedPointOnMapClick;
+        RecordStatusText = UpdateSelectedPointOnMapClick
+            ? "录制器：地图点击将更新选中点"
+            : "录制器：地图点击将追加点";
     }
 
     [RelayCommand]
@@ -1844,15 +1991,21 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenRecordAuthorManager()
+    private void OpenRecorderPreferences()
     {
-        IsRecordAuthorManagerOpen = true;
+        IsRecorderPreferencesOpen = true;
     }
 
     [RelayCommand]
-    private void CloseRecordAuthorManager()
+    private void CloseRecorderPreferences()
     {
-        IsRecordAuthorManagerOpen = false;
+        IsRecorderPreferencesOpen = false;
+    }
+
+    [RelayCommand]
+    private void ToggleMapMiniFollowWindow()
+    {
+        IsMapMiniFollowWindowVisible = !IsMapMiniFollowWindowVisible;
     }
 
     [RelayCommand]
@@ -2361,6 +2514,7 @@ public partial class MapViewerViewModel : ObservableObject
         IList selectedWaypointItems,
         IList selectedRouteItems,
         bool isRouteListFocused,
+        bool isMapFocused,
         bool isTextInputFocused)
     {
         if (!IsRecorderMode || IsJsonEditorMode)
@@ -2420,6 +2574,20 @@ public partial class MapViewerViewModel : ObservableObject
         if (isTextInputFocused)
         {
             return false;
+        }
+
+        if (modifiers == ModifierKeys.None && key == Key.Tab)
+        {
+            ToggleMapClickEditMode();
+            return true;
+        }
+
+        if (!isRouteListFocused
+            && modifiers == ModifierKeys.None
+            && (isMapFocused || HasRecorderNudgeSelection())
+            && TryGetRecorderNudgeDelta(key, RecorderNudgeStep, out var dx, out var dy))
+        {
+            return NudgeRecorderSelection(dx, dy);
         }
 
         if (isRouteListFocused)
@@ -2505,6 +2673,131 @@ public partial class MapViewerViewModel : ObservableObject
         return false;
     }
 
+    private bool HasRecorderNudgeSelection()
+    {
+        return HasSelectedRecorderEdge
+               || RecordedWaypoints.Any(i => i.IsSelected)
+               || (SelectedRecordedWaypoint != null && RecordedWaypoints.Contains(SelectedRecordedWaypoint));
+    }
+
+    private static bool TryGetRecorderNudgeDelta(Key key, double step, out double dx, out double dy)
+    {
+        dx = 0;
+        dy = 0;
+        step = double.IsNaN(step) || double.IsInfinity(step) || step <= 0 ? 1.0 : Math.Min(step, 1000);
+
+        switch (key)
+        {
+            case Key.Left:
+            case Key.A:
+                dx = step;
+                return true;
+            case Key.Right:
+            case Key.D:
+                dx = -step;
+                return true;
+            case Key.Up:
+            case Key.W:
+                dy = step;
+                return true;
+            case Key.Down:
+            case Key.S:
+                dy = -step;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private bool NudgeRecorderSelection(double dx, double dy)
+    {
+        if (!CanEditRecorder())
+        {
+            return false;
+        }
+
+        if (HasSelectedRecorderEdge)
+        {
+            return NudgeSelectedRecorderEdge(dx, dy);
+        }
+
+        var selected = GetSelectedRecordedWaypointsFromState();
+        if (selected.Count == 0)
+        {
+            return false;
+        }
+
+        _isUpdatingWaypointFromMap = true;
+        try
+        {
+            foreach (var waypoint in selected)
+            {
+                waypoint.X = RoundCoordinate(waypoint.X + dx);
+                waypoint.Y = RoundCoordinate(waypoint.Y + dy);
+            }
+        }
+        finally
+        {
+            _isUpdatingWaypointFromMap = false;
+        }
+
+        if (selected.Count == 1)
+        {
+            SelectedRecordedWaypoint = selected[0];
+        }
+
+        PublishRecorderPath();
+        PublishSelectedRecorderWaypoints(selected);
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectRecordedWaypointRows",
+            new object(),
+            selected));
+        RecordStatusText = selected.Count == 1
+            ? $"录制器：已微调第 {selected[0].Index} 点"
+            : $"录制器：已微调 {selected.Count} 个点";
+        return true;
+    }
+
+    private bool NudgeSelectedRecorderEdge(double dx, double dy)
+    {
+        if (_selectedRecorderEdgeInsertIndex <= 0
+            || _selectedRecorderEdgeInsertIndex >= RecordedWaypoints.Count
+            || _selectedRecorderEdgePoint == null)
+        {
+            ClearSelectedRecorderEdgeState(notifyMap: true);
+            RecordStatusText = "录制器：路线边已失效";
+            return true;
+        }
+
+        var start = RecordedWaypoints[_selectedRecorderEdgeInsertIndex - 1];
+        var end = RecordedWaypoints[_selectedRecorderEdgeInsertIndex];
+        _isUpdatingWaypointFromMap = true;
+        try
+        {
+            start.X = RoundCoordinate(start.X + dx);
+            start.Y = RoundCoordinate(start.Y + dy);
+            end.X = RoundCoordinate(end.X + dx);
+            end.Y = RoundCoordinate(end.Y + dy);
+        }
+        finally
+        {
+            _isUpdatingWaypointFromMap = false;
+        }
+
+        _selectedRecorderEdgePoint = new Point2f(
+            (float)RoundCoordinate(_selectedRecorderEdgePoint.Value.X + dx),
+            (float)RoundCoordinate(_selectedRecorderEdgePoint.Value.Y + dy));
+        PublishRecorderPath();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectRecorderRouteEdgeVisual",
+            new object(),
+            new RecorderRouteEdgeSelection(_selectedRecorderEdgeInsertIndex, _selectedRecorderEdgePoint.Value)));
+        RecordStatusText = $"录制器：已微调第 {start.Index}-{end.Index} 段";
+        return true;
+    }
+
     [RelayCommand]
     private void SwitchToRecorderUiEditor()
     {
@@ -2555,6 +2848,7 @@ public partial class MapViewerViewModel : ObservableObject
     private void PrepareForRecordingStart()
     {
         IsRecorderMode = true;
+        IsFollowingCurrent = true;
         IsTopmost = false;
         if (!string.IsNullOrWhiteSpace(MapName))
         {
@@ -2636,6 +2930,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         IsRecorderMode = true;
+        IsFollowingCurrent = true;
         RecordStatusText = "录制器：识别当前位置...";
         await Task.Run(() => PathRecorder.Instance.AddWaypoint());
         LoadRecorderTask(PathRecorder.Instance.CurrentTask);
@@ -3694,27 +3989,14 @@ public partial class MapViewerViewModel : ObservableObject
         _recordedRouteClipboardText = _recordedRouteClipboard.Count == 1
             ? _recordedRouteClipboard[0].ToJsonString()
             : $"[{string.Join(",", _recordedRouteClipboard.Select(i => i.ToJsonString()))}]";
-        try
-        {
-            System.Windows.Clipboard.SetText(_recordedRouteClipboardText);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        _ = TrySetClipboardText(_recordedRouteClipboardText);
     }
 
     private static List<PathingTask> ReadRoutesFromClipboard()
     {
         try
         {
-            if (!System.Windows.Clipboard.ContainsText())
-            {
-                return [];
-            }
-
-            var text = System.Windows.Clipboard.GetText();
-            if (string.IsNullOrWhiteSpace(text))
+            if (!TryGetClipboardText(out var text, out _) || string.IsNullOrWhiteSpace(text))
             {
                 return [];
             }
@@ -4764,6 +5046,36 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ReverseSelectedRecorderEdge()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (_selectedRecorderEdgeInsertIndex <= 0 || _selectedRecorderEdgeInsertIndex >= RecordedWaypoints.Count)
+        {
+            ClearSelectedRecorderEdgeState(notifyMap: true);
+            RecordStatusText = "录制器：路线边已失效";
+            return;
+        }
+
+        var startIndex = _selectedRecorderEdgeInsertIndex - 1;
+        var endIndex = _selectedRecorderEdgeInsertIndex;
+        RecordedWaypoints.Move(endIndex, startIndex);
+        ReindexRecordedWaypoints();
+        PublishRecorderPath();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectRecorderRouteEdgeVisual",
+            new object(),
+            new RecorderRouteEdgeSelection(_selectedRecorderEdgeInsertIndex, _selectedRecorderEdgePoint ?? new Point2f(
+                (float)((RecordedWaypoints[startIndex].X + RecordedWaypoints[endIndex].X) / 2),
+                (float)((RecordedWaypoints[startIndex].Y + RecordedWaypoints[endIndex].Y) / 2)))));
+        RecordStatusText = $"录制器：已反转第 {RecordedWaypoints[startIndex].Index}-{RecordedWaypoints[endIndex].Index} 点";
+    }
+
+    [RelayCommand]
     private void ReverseRecordedWaypoints()
     {
         if (!CanEditRecorder())
@@ -4946,14 +5258,7 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _recordedWaypointClipboard = selected.Select(i => i.ToWaypoint()).ToList();
         _recordedWaypointClipboardText = JsonSerializer.Serialize(_recordedWaypointClipboard, PathRecorder.JsonOptions);
-        try
-        {
-            System.Windows.Clipboard.SetText(_recordedWaypointClipboardText);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
+        _ = TrySetClipboardText(_recordedWaypointClipboardText);
     }
 
     private bool TryReadPathingTaskFromClipboard(out PathingTask task, out string? errorMessage)
@@ -4963,13 +5268,7 @@ public partial class MapViewerViewModel : ObservableObject
 
         try
         {
-            if (!System.Windows.Clipboard.ContainsText())
-            {
-                return false;
-            }
-
-            var text = System.Windows.Clipboard.GetText();
-            if (!LooksLikePathingTaskJson(text))
+            if (!TryGetClipboardText(out var text, out _) || !LooksLikePathingTaskJson(text))
             {
                 return false;
             }
@@ -5016,30 +5315,20 @@ public partial class MapViewerViewModel : ObservableObject
     private List<Waypoint> ReadWaypointsFromClipboard()
     {
         var clipboardHadText = false;
-        try
+        if (TryGetClipboardText(out var text, out clipboardHadText) && clipboardHadText)
         {
-            if (System.Windows.Clipboard.ContainsText())
+            try
             {
-                clipboardHadText = true;
-                var text = System.Windows.Clipboard.GetText();
-
-                try
+                var waypoints = JsonSerializer.Deserialize<List<Waypoint>>(text, PathRecorder.JsonOptions);
+                if (waypoints is { Count: > 0 })
                 {
-                    var waypoints = JsonSerializer.Deserialize<List<Waypoint>>(text, PathRecorder.JsonOptions);
-                    if (waypoints is { Count: > 0 })
-                    {
-                        return waypoints.Select(CloneWaypoint).ToList();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
+                    return waypoints.Select(CloneWaypoint).ToList();
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
         }
 
         if (clipboardHadText)
@@ -5051,6 +5340,76 @@ public partial class MapViewerViewModel : ObservableObject
                && _recordedWaypointClipboard is { Count: > 0 }
             ? _recordedWaypointClipboard.Select(CloneWaypoint).ToList()
             : [];
+    }
+
+    private static bool TryGetClipboardText(out string text, out bool clipboardHadText)
+    {
+        text = string.Empty;
+        clipboardHadText = false;
+
+        for (var attempt = 1; attempt <= ClipboardRetryCount; attempt++)
+        {
+            try
+            {
+                text = System.Windows.Clipboard.GetText();
+                clipboardHadText = !string.IsNullOrEmpty(text);
+                return true;
+            }
+            catch (ExternalException ex) when (IsClipboardCannotOpenException(ex) && attempt < ClipboardRetryCount)
+            {
+                Thread.Sleep(ClipboardRetryDelayMilliseconds);
+            }
+            catch (ExternalException ex) when (IsClipboardCannotOpenException(ex))
+            {
+                Debug.WriteLine($"OpenClipboard failed after {ClipboardRetryCount} retries: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TrySetClipboardText(string? text)
+    {
+        if (text == null)
+        {
+            return false;
+        }
+
+        for (var attempt = 1; attempt <= ClipboardRetryCount; attempt++)
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                return true;
+            }
+            catch (ExternalException ex) when (IsClipboardCannotOpenException(ex) && attempt < ClipboardRetryCount)
+            {
+                Thread.Sleep(ClipboardRetryDelayMilliseconds);
+            }
+            catch (ExternalException ex) when (IsClipboardCannotOpenException(ex))
+            {
+                Debug.WriteLine($"SetClipboardText failed after {ClipboardRetryCount} retries: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsClipboardCannotOpenException(ExternalException ex)
+    {
+        return ex.HResult == ClipboardCannotOpenHResult;
     }
 
     private void RemoveRecordedWaypoints(List<RecordedWaypointViewModel> selected)
@@ -5319,6 +5678,68 @@ public partial class MapViewerViewModel : ObservableObject
         SnapshotRecorderState(task);
     }
 
+    public void ReplayMapDisplaySnapshot()
+    {
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SetMapViewerRecorderMode",
+            new object(),
+            IsRecorderMode));
+
+        if (_lastPosition is { } currentPosition)
+        {
+            var currentMapName = ResolvePositionMapName(_lastPositionMapName);
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "SendCurrentPosition",
+                new object(),
+                new TrackedMapPosition(currentMapName, currentPosition)));
+        }
+
+        if (_selectedTargetPoint is { } targetPoint)
+        {
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "SelectPathingTargetPosition",
+                new object(),
+                targetPoint));
+        }
+
+        if (_currentRoutePoints.Count > 0)
+        {
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "UpdateCurrentPathing",
+                new object(),
+                BuildCurrentPathingSnapshot()));
+        }
+
+        if (IsRecorderMode)
+        {
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "UpdateRecorderPathing",
+                new object(),
+                BuildRecordedTask()));
+            PublishRecordedRouteList();
+            PublishSelectedRecorderWaypoints();
+        }
+    }
+
+    private PathingTask BuildCurrentPathingSnapshot()
+    {
+        return new PathingTask
+        {
+            Info = new PathingTaskInfo
+            {
+                Name = TaskName,
+                MapName = MapName,
+                Type = "pathing"
+            },
+            Positions = _currentRoutePoints.ToList()
+        };
+    }
+
     private void LoadRecorderTaskAsCurrentPathing(PathingTask task)
     {
         UpdateTaskSummary(task);
@@ -5372,6 +5793,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private void UpdateTaskSummary(PathingTask pathingTask)
     {
+        SynchronizeTrackingMap(pathingTask.Info.MapName);
         var points = pathingTask.Positions ?? [];
         _currentRoutePoints = points.ToList();
         _routeTotalDistance = EstimateDistance(_currentRoutePoints);
@@ -5709,12 +6131,13 @@ public partial class MapViewerViewModel : ObservableObject
         return waypoint is WaypointForTrack waypointForTrack ? waypointForTrack.GameY : waypoint.Y;
     }
 
-    private string FormatCurrentPosition(Point2f imagePoint)
+    private string FormatCurrentPosition(Point2f imagePoint, string? mapName = null)
     {
         try
         {
             var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-            var gamePoint = MapManager.GetMap(MapName, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(imagePoint);
+            var currentMapName = ResolvePositionMapName(mapName);
+            var gamePoint = MapManager.GetMap(currentMapName, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(imagePoint);
             if (gamePoint is { } point)
             {
                 return $"当前位置：{FormatCoordinate(point.X)}, {FormatCoordinate(point.Y)}";

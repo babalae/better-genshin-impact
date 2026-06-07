@@ -69,6 +69,18 @@
         </Style>
     </Window.Style>
 
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
+            <converters:BooleanOrToVisibilityConverter x:Key="BooleanOrToVisibilityConverter" />
+            <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
+            <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
+        </ResourceDictionary>
+    </Window.Resources>
+
     <AdornerDecorator ClipToBounds="True">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -92,10 +104,18 @@
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
                 <controls:MiniMapPointsCanvas x:Name="MiniMapPointsCanvasControl"
-                                              Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               PointsSource="{Binding MapPoints}"
                                               LabelsSource="{Binding MapPointLabels}"
+                                              RoutePointsSource="{Binding MiniMapRoutePoints}"
+                                              IsRouteOverlayEnabled="{Binding Config.MapMaskConfig.MiniMapRouteOverlayEnabled}"
+                                              Viewport="{Binding MiniMapViewport}"
                                               IsHitTestVisible="False">
+                    <controls:MiniMapPointsCanvas.Visibility>
+                        <MultiBinding Converter="{StaticResource BooleanOrToVisibilityConverter}">
+                            <Binding Path="Config.MapMaskConfig.MiniMapMaskEnabled" />
+                            <Binding Path="Config.MapMaskConfig.MiniMapRouteOverlayEnabled" />
+                        </MultiBinding>
+                    </controls:MiniMapPointsCanvas.Visibility>
                     <Canvas.Left>
                         <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
                             <Binding Path="MiniMapOverlayLeftRatio" />

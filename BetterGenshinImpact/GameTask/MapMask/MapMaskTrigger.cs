@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
@@ -12,6 +13,8 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.ViewModel;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Rect = System.Windows.Rect;
@@ -49,6 +52,8 @@ public class MapMaskTrigger : ITaskTrigger
     private const int RectDebounceThreshold = 3;
 
     private readonly NavigationInstance _navigationInstance = new();
+    private string _miniMapTrackingMapName = nameof(MapTypes.Teyvat);
+    private string _lastMiniMapComputeMapName = nameof(MapTypes.Teyvat);
 
     private sealed class PendingUiUpdate
     {
@@ -77,6 +82,23 @@ public class MapMaskTrigger : ITaskTrigger
     private ComputeWorkItem? _pendingMiniMapCompute;
     private int _miniMapWorkerRunning;
 
+    public MapMaskTrigger()
+    {
+        WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (_, msg) =>
+        {
+            if ((msg.PropertyName == "UpdateRecorderPathing" || msg.PropertyName == "UpdateCurrentPathing") &&
+                msg.NewValue is PathingTask task)
+            {
+                MapMaskRouteOverlayState.Set(task);
+                SetMiniMapTrackingMapName(task.Info?.MapName);
+            }
+            else if (msg.PropertyName == "ClearCurrentPathing")
+            {
+                MapMaskRouteOverlayState.Set(null);
+            }
+        });
+    }
+
     /// <summary>
     /// 初始化触发器状态，并在关闭时同步隐藏遮罩UI
     /// </summary>
@@ -102,6 +124,7 @@ public class MapMaskTrigger : ITaskTrigger
                     if (window.DataContext is MaskWindowViewModel vm)
                     {
                         vm.IsInBigMapUi = false;
+                        vm.ClearMiniMapTrackingViewport();
                     }
 
                     window.PointsCanvasControl.UpdateViewport(0, 0, 0, 0);
@@ -159,7 +182,8 @@ public class MapMaskTrigger : ITaskTrigger
             else
             {
                 // 主界面上展示小地图
-                if (_config.MiniMapMaskEnabled)
+                var shouldUpdateMiniMapOverlay = _config.MiniMapMaskEnabled || _config.MiniMapRouteOverlayEnabled;
+                if (shouldUpdateMiniMapOverlay)
                 {
                     if (Bv.IsInMainUi(region))
                     {
@@ -358,7 +382,14 @@ public class MapMaskTrigger : ITaskTrigger
         using var imageRegion = new ImageRegion(workItem.Mat, 0, 0);
         workItem.Mat = null;
 
-        var miniPoint = _navigationInstance.GetPositionStable(imageRegion, nameof(MapTypes.Teyvat), workItem.MapMatchingMethod);
+        var mapName = ResolveMiniMapTrackingMapName();
+        if (!string.Equals(_lastMiniMapComputeMapName, mapName, StringComparison.OrdinalIgnoreCase))
+        {
+            _navigationInstance.Reset();
+            _lastMiniMapComputeMapName = mapName;
+        }
+
+        var miniPoint = _navigationInstance.GetPositionStable(imageRegion, mapName, workItem.MapMatchingMethod);
         if (miniPoint != default)
         {
             double viewportSize = MapAssets.MimiMapRect1080P.Width / 3.0 * 10;
@@ -375,6 +406,43 @@ public class MapMaskTrigger : ITaskTrigger
         {
             QueueUiUpdate(new PendingUiUpdate { MiniMapViewport = new Rect(0, 0, 0, 0) });
         }
+    }
+
+    private void SetMiniMapTrackingMapName(string? mapName)
+    {
+        if (!TryNormalizeMapName(mapName, out var normalizedMapName))
+        {
+            return;
+        }
+
+        _miniMapTrackingMapName = normalizedMapName;
+    }
+
+    private string ResolveMiniMapTrackingMapName()
+    {
+        if (TryNormalizeMapName(_miniMapTrackingMapName, out var normalizedMapName))
+        {
+            return normalizedMapName;
+        }
+
+        if (TryNormalizeMapName(TaskContext.Instance().Config.DevConfig.RecordMapName, out normalizedMapName))
+        {
+            return normalizedMapName;
+        }
+
+        return nameof(MapTypes.Teyvat);
+    }
+
+    private static bool TryNormalizeMapName(string? mapName, out string normalizedMapName)
+    {
+        if (Enum.TryParse<MapTypes>(mapName, true, out var mapType))
+        {
+            normalizedMapName = mapType.ToString();
+            return true;
+        }
+
+        normalizedMapName = nameof(MapTypes.Teyvat);
+        return false;
     }
 
     /// <summary>
@@ -412,10 +480,12 @@ public class MapMaskTrigger : ITaskTrigger
                 if (window.DataContext is MaskWindowViewModel vmWhenDisabled)
                 {
                     vmWhenDisabled.IsInBigMapUi = false;
+                    vmWhenDisabled.ClearMiniMapTrackingViewport();
                 }
 
                 window.PointsCanvasControl.UpdateViewport(0, 0, 0, 0);
                 window.MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+
                 Interlocked.Exchange(ref _uiApplyScheduled, 0);
                 return;
             }
@@ -432,6 +502,11 @@ public class MapMaskTrigger : ITaskTrigger
 
             if (update.MiniMapViewport is { } miniMapViewport)
             {
+                if (IsEmptyViewport(miniMapViewport) && window.DataContext is MaskWindowViewModel vmForMiniMap)
+                {
+                    vmForMiniMap.ClearMiniMapTrackingViewport();
+                }
+
                 window.MiniMapPointsCanvasControl.UpdateViewport(miniMapViewport.X, miniMapViewport.Y, miniMapViewport.Width, miniMapViewport.Height);
             }
         }
@@ -441,5 +516,10 @@ public class MapMaskTrigger : ITaskTrigger
         {
             TryScheduleUiApply();
         }
+    }
+
+    private static bool IsEmptyViewport(Rect viewport)
+    {
+        return viewport.IsEmpty || viewport.Width <= 0 || viewport.Height <= 0;
     }
 }

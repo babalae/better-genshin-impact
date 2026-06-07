@@ -843,11 +843,11 @@
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
-                        <ui:SymbolIcon FontSize="18">
+                        <ui:SymbolIcon FontSize="20">
                             <ui:SymbolIcon.Style>
                                 <Style TargetType="ui:SymbolIcon">
                                     <Setter Property="Symbol" Value="PinOff28" />
-                                    <Setter Property="Foreground" Value="#9FB0C0" />
+                                    <Setter Property="Foreground" Value="#D7E4EA" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsTopmost}" Value="True">
                                             <Setter Property="Symbol" Value="Pin28" />
@@ -884,82 +884,9 @@
                             </ui:SymbolIcon.Style>
                         </ui:SymbolIcon>
                     </ui:Button>
-                    <ui:Button x:Name="TitleSettingsButton"
-                               Width="46"
-                               Height="32"
-                               Padding="0"
-                               Appearance="Transparent"
-                               Background="Transparent"
-                               BorderBrush="Transparent"
-                               Click="TitleSettingsButton_Click"
-                               CornerRadius="0"
-                               Focusable="False"
-                               Icon="{ui:SymbolIcon Settings16}"
-                               ToolTip="视图设置" />
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
-
-        <Popup Grid.Row="0"
-               AllowsTransparency="True"
-               DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-               HorizontalOffset="-274"
-               IsOpen="{Binding IsViewSettingsOpen, Mode=TwoWay}"
-               Placement="Bottom"
-               PlacementTarget="{Binding ElementName=TitleSettingsButton}"
-               StaysOpen="True">
-            <Border Width="320"
-                    Padding="14"
-                    Background="#FF1A2025"
-                    BorderBrush="{StaticResource MapEditorStrokeBrush}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    MouseLeave="ViewSettingsPopup_MouseLeave">
-                <StackPanel>
-                    <TextBlock FontWeight="SemiBold" Text="视图设置" />
-                    <Grid Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="跟随当前坐标" />
-                            <TextBlock Margin="0,4,0,0"
-                                       Style="{StaticResource CaptionTextStyle}"
-                                       Text="{Binding FollowHotkeyText, StringFormat=快捷键：{0}}" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         VerticalAlignment="Center"
-                                         IsChecked="{Binding IsFollowingCurrent, Mode=TwoWay}" />
-                    </Grid>
-                    <Grid Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="地图点更新模式" />
-                            <TextBlock Margin="0,4,0,0"
-                                       Style="{StaticResource CaptionTextStyle}"
-                                       Text="开启后点击地图更新选中路线点" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         VerticalAlignment="Center"
-                                         IsChecked="{Binding UpdateSelectedPointOnMapClick, Mode=TwoWay}" />
-                    </Grid>
-                    <Grid Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="显示传送点" />
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         VerticalAlignment="Center"
-                                         IsChecked="{Binding ShowTeleportPoints, Mode=TwoWay}" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </Popup>
 
         <Grid x:Name="MainLayoutGrid"
               Grid.Row="1"
@@ -984,6 +911,8 @@
                                                    HorizontalAlignment="Stretch"
                                                    VerticalAlignment="Stretch"
                                                    FollowZoom="{Binding FollowZoom}"
+                                                   IsPathRecorderRecording="{Binding IsPathRecorderRecording}"
+                                                   IsRecorderMode="{Binding IsRecorderMode}"
                                                    MapName="{Binding MapName}"
                                                    ShowTeleportPoints="{Binding ShowTeleportPoints}">
                         <controls:MapTileViewerControl.ContextMenu>
@@ -997,8 +926,8 @@
                                              Header="定位到插入点"
                                              Icon="{ui:SymbolIcon Location24}"
                                              Visibility="{Binding MapEdgeContextMenuVisibility}" />
-                                <ui:MenuItem Command="{Binding ReverseRecordedWaypointsCommand}"
-                                             Header="反转点位顺序"
+                                <ui:MenuItem Command="{Binding ReverseSelectedRecorderEdgeCommand}"
+                                             Header="反转线段两端"
                                              Icon="{ui:SymbolIcon ArrowBidirectionalLeftRight24}"
                                              Visibility="{Binding MapEdgeContextMenuVisibility}" />
                                 <ui:MenuItem Command="{Binding ClearSelectedRecorderEdgeSelectionCommand}"
@@ -1140,6 +1069,36 @@
                                                Foreground="#D7E4EA"
                                                Symbol="Dismiss24" />
                             </Button>
+                            <Rectangle Height="1"
+                                       Fill="#26313B"
+                                       Visibility="{Binding RecorderMainVisibility}" />
+                            <Button Command="{Binding ToggleMapClickEditModeCommand}"
+                                    ToolTip="{Binding MapClickEditModeToolTip}"
+                                    Visibility="{Binding RecorderMainVisibility}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MapToolButtonStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding UpdateSelectedPointOnMapClick}" Value="True">
+                                                <Setter Property="Background" Value="#B0147884" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <ui:SymbolIcon FontSize="18"
+                                               Symbol="Edit24">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Foreground" Value="#D7E4EA" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding UpdateSelectedPointOnMapClick}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                            </Button>
                         </StackPanel>
                     </Border>
 
@@ -1172,23 +1131,49 @@
                             Margin="18"
                             Padding="8,6"
                             Style="{StaticResource OverlayCardStyle}">
-                        <Grid Width="190">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center"
-                                       Style="{StaticResource CaptionTextStyle}"
-                                       Text="地图：" />
-                            <ComboBox Grid.Column="1"
-                                      Height="34"
-                                      ItemTemplate="{StaticResource MapEditorOptionTemplate}"
-                                      ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
-                                      ItemsSource="{Binding MapLayerOptions}"
-                                      SelectedValue="{Binding MapName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      SelectedValuePath="Code"
-                                      Style="{StaticResource MapEditorComboBoxStyle}" />
-                        </Grid>
+                        <StackPanel Width="214">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="地图：" />
+                                <ComboBox Grid.Column="1"
+                                          Height="34"
+                                          ItemTemplate="{StaticResource MapEditorOptionTemplate}"
+                                          ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
+                                          ItemsSource="{Binding MapLayerOptions}"
+                                          SelectedValue="{Binding MapName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="Code"
+                                          Style="{StaticResource MapEditorComboBoxStyle}" />
+                            </Grid>
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="跟随" />
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 VerticalAlignment="Center"
+                                                 IsChecked="{Binding IsFollowingCurrent, Mode=TwoWay}"
+                                                 ToolTip="{Binding FollowHotkeyText, StringFormat=跟随当前坐标（{0}）}" />
+                                <TextBlock Grid.Column="3"
+                                           VerticalAlignment="Center"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="传送点" />
+                                <ui:ToggleSwitch Grid.Column="4"
+                                                 VerticalAlignment="Center"
+                                                 IsChecked="{Binding ShowTeleportPoints, Mode=TwoWay}"
+                                                 ToolTip="显示传送点" />
+                            </Grid>
+                        </StackPanel>
                     </Border>
                 </Grid>
             </Border>
@@ -1368,9 +1353,9 @@
                                                              Header="清空点位"
                                                              Icon="{ui:SymbolIcon Delete24}" />
                                                 <Separator />
-                                                <ui:MenuItem Command="{Binding OpenRecordAuthorManagerCommand}"
-                                                             Header="作者设置"
-                                                             Icon="{ui:SymbolIcon Person24}" />
+                                                <ui:MenuItem Command="{Binding OpenRecorderPreferencesCommand}"
+                                                             Header="首选项"
+                                                             Icon="{ui:SymbolIcon Settings24}" />
                                                 <Separator />
                                                 <ui:MenuItem Command="{Binding SwitchToRecorderUiEditorCommand}"
                                                              Header="表单编辑"
@@ -1384,164 +1369,285 @@
 
                                     <Popup AllowsTransparency="True"
                                            DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-                                           HorizontalOffset="-96"
-                                           IsOpen="{Binding IsRecordAuthorManagerOpen, Mode=TwoWay}"
-                                           Placement="Bottom"
-                                           PlacementTarget="{Binding ElementName=EditMenuButton}"
+                                           IsOpen="{Binding IsRecorderPreferencesOpen, Mode=TwoWay}"
+                                           Placement="Center"
+                                           PlacementTarget="{Binding ElementName=MainLayoutGrid}"
                                            StaysOpen="False">
-                                        <Border Width="560"
-                                                MaxHeight="560"
-                                                Padding="14"
+                                        <Border Width="640"
+                                                MaxHeight="660"
+                                                Padding="16"
                                                 Background="#FF1A2025"
                                                 BorderBrush="{StaticResource MapEditorStrokeBrush}"
                                                 BorderThickness="1"
-                                                CornerRadius="6">
+                                                CornerRadius="8">
                                             <Grid>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
                                                 </Grid.RowDefinitions>
-
-                                                <Grid>
+                                                <Grid Margin="0,0,0,14">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="8" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
                                                     <StackPanel>
-                                                        <TextBlock FontWeight="SemiBold" Text="作者库" />
+                                                        <TextBlock FontSize="16"
+                                                                   FontWeight="SemiBold"
+                                                                   Text="首选项" />
                                                         <TextBlock Margin="0,4,0,0"
                                                                    Style="{StaticResource CaptionTextStyle}"
-                                                                   Text="{Binding CommonRecordAuthorSummaryText}" />
+                                                                   Text="录制编辑器的长期偏好和作者库维护" />
                                                     </StackPanel>
                                                     <ui:Button Grid.Column="1"
-                                                               Width="104"
-                                                               Height="30"
-                                                               Command="{Binding ImportCommonRecordAuthorsFromLibraryCommand}"
-                                                               Content="导入作者库"
-                                                               Icon="{ui:SymbolIcon FolderOpen24}" />
-                                                    <ui:Button Grid.Column="3"
-                                                               Width="72"
-                                                               Height="30"
-                                                               Command="{Binding CloseRecordAuthorManagerCommand}"
-                                                               Content="关闭"
+                                                               Width="32"
+                                                               Height="32"
+                                                               Padding="0"
+                                                               Appearance="Transparent"
+                                                               Background="#1F2830"
+                                                               BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                                               Command="{Binding CloseRecorderPreferencesCommand}"
                                                                Icon="{ui:SymbolIcon Dismiss24}" />
                                                 </Grid>
 
-                                                <Grid Grid.Row="1"
-                                                      Margin="0,12,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="8" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="8" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <ComboBox Height="34"
-                                                              DisplayMemberPath="DisplayText"
-                                                              ItemsSource="{Binding CommonRecordAuthors}"
-                                                              SelectedItem="{Binding SelectedCommonRecordAuthor, Mode=TwoWay}"
-                                                              Style="{StaticResource MapEditorComboBoxStyle}"
-                                                              ToolTip="{Binding SelectedCommonRecordAuthor.DetailText}" />
-                                                    <ui:Button Grid.Column="2"
-                                                               Width="96"
-                                                               Height="34"
-                                                               Command="{Binding SetDefaultAuthorFromSelectedCommonCommand}"
-                                                               Content="设为默认"
-                                                               Icon="{ui:SymbolIcon Person24}" />
-                                                    <ui:Button Grid.Column="4"
-                                                               Width="72"
-                                                               Height="34"
-                                                               Command="{Binding DeleteCommonRecordAuthorCommand}"
-                                                               Content="删除"
-                                                               Foreground="{StaticResource MapEditorDangerBrush}"
-                                                               Icon="{ui:SymbolIcon Delete24}" />
-                                                </Grid>
+                                                <ScrollViewer Grid.Row="1"
+                                                              MaxHeight="570"
+                                                              VerticalScrollBarVisibility="Auto">
+                                                    <StackPanel>
+                                                        <Border Padding="14"
+                                                                Background="{StaticResource MapEditorInsetBrush}"
+                                                                BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6">
+                                                            <Grid>
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="12" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="10" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="10" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                                <TextBlock FontWeight="SemiBold" Text="编辑偏好" />
 
-                                                <Border Grid.Row="2"
-                                                        Margin="0,12,0,0"
-                                                        Padding="12"
-                                                        Background="{StaticResource MapEditorInsetBrush}"
-                                                        BorderBrush="{StaticResource MapEditorStrokeBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="6">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="8" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-                                                        <TextBlock FontWeight="SemiBold" Text="默认作者" />
-                                                        <Grid Grid.Row="2">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="8" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="8" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <ui:TextBox Height="34"
-                                                                        PlaceholderText="默认作者名称"
-                                                                        Style="{StaticResource FormTextBoxStyle}"
-                                                                        Text="{Binding DefaultRecordAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                            <ui:TextBox Grid.Column="2"
-                                                                        Height="34"
-                                                                        PlaceholderText="默认链接（可选）"
-                                                                        Style="{StaticResource FormTextBoxStyle}"
-                                                                        Text="{Binding DefaultRecordAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                            <ui:Button Grid.Column="4"
-                                                                       Width="96"
-                                                                       Height="34"
-                                                                       Command="{Binding AddDefaultAuthorToCommonCommand}"
-                                                                       Content="加入常用"
-                                                                       Icon="{ui:SymbolIcon Person24}" />
-                                                        </Grid>
-                                                    </Grid>
-                                                </Border>
+                                                                <Grid Grid.Row="2">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="120" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel VerticalAlignment="Center">
+                                                                        <TextBlock Text="微调步长" />
+                                                                        <TextBlock Margin="0,4,16,0"
+                                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                                   Text="方向键 / WASD 每次移动的原神游戏坐标"
+                                                                                   TextWrapping="Wrap" />
+                                                                    </StackPanel>
+                                                                    <ui:TextBox Grid.Column="1"
+                                                                                Height="34"
+                                                                                HorizontalContentAlignment="Right"
+                                                                                Background="{StaticResource MapEditorInsetBrush}"
+                                                                                Foreground="{StaticResource MapEditorTextPrimaryBrush}"
+                                                                                Style="{StaticResource FormTextBoxStyle}"
+                                                                                Text="{Binding RecorderNudgeStepText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                                </Grid>
 
-                                                <Border Grid.Row="3"
-                                                        Margin="0,12,0,0"
-                                                        Padding="12"
-                                                        Background="{StaticResource MapEditorInsetBrush}"
-                                                        BorderBrush="{StaticResource MapEditorStrokeBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="6">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="8" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-                                                        <TextBlock FontWeight="SemiBold" Text="新增常用作者" />
-                                                        <Grid Grid.Row="2">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="8" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="8" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <ui:TextBox Height="34"
-                                                                        PlaceholderText="作者名称"
-                                                                        Style="{StaticResource FormTextBoxStyle}"
-                                                                        Text="{Binding NewCommonAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                            <ui:TextBox Grid.Column="2"
-                                                                        Height="34"
-                                                                        PlaceholderText="链接"
-                                                                        Style="{StaticResource FormTextBoxStyle}"
-                                                                        Text="{Binding NewCommonAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                            <ui:Button Grid.Column="4"
-                                                                       Width="72"
-                                                                       Height="34"
-                                                                       Command="{Binding AddCustomCommonAuthorCommand}"
-                                                                       Content="添加"
-                                                                       Icon="{ui:SymbolIcon Add24}" />
-                                                        </Grid>
-                                                    </Grid>
-                                                </Border>
+                                                                <Grid Grid.Row="4">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel VerticalAlignment="Center">
+                                                                        <TextBlock Text="地图点击更新选中点" />
+                                                                        <TextBlock Margin="0,4,16,0"
+                                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                                   Text="开启后点击地图会更新当前选中路线点；可用 Tab 快速切换"
+                                                                                   TextWrapping="Wrap" />
+                                                                    </StackPanel>
+                                                                    <ui:ToggleSwitch Grid.Column="1"
+                                                                                     VerticalAlignment="Center"
+                                                                                     IsChecked="{Binding UpdateSelectedPointOnMapClick, Mode=TwoWay}"
+                                                                                     ToolTip="{Binding MapClickEditModeToolTip}" />
+                                                                </Grid>
+
+                                                                <Grid Grid.Row="6">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel VerticalAlignment="Center">
+                                                                        <TextBlock Text="地图辅助显示" />
+                                                                        <TextBlock Margin="0,4,16,0"
+                                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                                   Text="这些开关也保留在地图右下角，方便录制时临时切换"
+                                                                                   TextWrapping="Wrap" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Grid.Column="1"
+                                                                                MinWidth="170">
+                                                                        <Grid>
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="*" />
+                                                                                <ColumnDefinition Width="Auto" />
+                                                                            </Grid.ColumnDefinitions>
+                                                                            <TextBlock VerticalAlignment="Center"
+                                                                                       Style="{StaticResource CaptionTextStyle}"
+                                                                                       Text="跟随当前坐标" />
+                                                                            <ui:ToggleSwitch Grid.Column="1"
+                                                                                             VerticalAlignment="Center"
+                                                                                             IsChecked="{Binding IsFollowingCurrent, Mode=TwoWay}"
+                                                                                             ToolTip="{Binding FollowHotkeyText, StringFormat=跟随当前坐标（{0}）}" />
+                                                                        </Grid>
+                                                                        <Grid Margin="0,8,0,0">
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="*" />
+                                                                                <ColumnDefinition Width="Auto" />
+                                                                            </Grid.ColumnDefinitions>
+                                                                            <TextBlock VerticalAlignment="Center"
+                                                                                       Style="{StaticResource CaptionTextStyle}"
+                                                                                       Text="显示传送点" />
+                                                                            <ui:ToggleSwitch Grid.Column="1"
+                                                                                             VerticalAlignment="Center"
+                                                                                             IsChecked="{Binding ShowTeleportPoints, Mode=TwoWay}"
+                                                                                             ToolTip="显示传送点" />
+                                                                        </Grid>
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Border>
+
+                                                        <Border Margin="0,12,0,0"
+                                                                Padding="14"
+                                                                Background="{StaticResource MapEditorInsetBrush}"
+                                                                BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6">
+                                                            <Grid>
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="12" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="12" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="12" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <StackPanel>
+                                                                        <TextBlock FontWeight="SemiBold" Text="作者偏好" />
+                                                                        <TextBlock Margin="0,4,16,0"
+                                                                                   Style="{StaticResource CaptionTextStyle}"
+                                                                                   Text="{Binding CommonRecordAuthorSummaryText}" />
+                                                                    </StackPanel>
+                                                                    <ui:Button Grid.Column="1"
+                                                                               Width="112"
+                                                                               Height="32"
+                                                                               Command="{Binding ImportCommonRecordAuthorsFromLibraryCommand}"
+                                                                               Content="导入作者库"
+                                                                               Icon="{ui:SymbolIcon FolderOpen24}" />
+                                                                </Grid>
+
+                                                                <Grid Grid.Row="2">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="8" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="8" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <ComboBox Height="34"
+                                                                              DisplayMemberPath="DisplayText"
+                                                                              ItemsSource="{Binding CommonRecordAuthors}"
+                                                                              SelectedItem="{Binding SelectedCommonRecordAuthor, Mode=TwoWay}"
+                                                                              Style="{StaticResource MapEditorComboBoxStyle}"
+                                                                              ToolTip="{Binding SelectedCommonRecordAuthor.DetailText}" />
+                                                                    <ui:Button Grid.Column="2"
+                                                                               Width="96"
+                                                                               Height="34"
+                                                                               Command="{Binding SetDefaultAuthorFromSelectedCommonCommand}"
+                                                                               Content="设为默认"
+                                                                               Icon="{ui:SymbolIcon Person24}" />
+                                                                    <ui:Button Grid.Column="4"
+                                                                               Width="72"
+                                                                               Height="34"
+                                                                               Command="{Binding DeleteCommonRecordAuthorCommand}"
+                                                                               Content="删除"
+                                                                               Foreground="{StaticResource MapEditorDangerBrush}"
+                                                                               Icon="{ui:SymbolIcon Delete24}" />
+                                                                </Grid>
+
+                                                                <Grid Grid.Row="4">
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto" />
+                                                                        <RowDefinition Height="8" />
+                                                                        <RowDefinition Height="Auto" />
+                                                                    </Grid.RowDefinitions>
+                                                                    <TextBlock FontWeight="SemiBold" Text="默认作者" />
+                                                                    <Grid Grid.Row="2">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="8" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="8" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ui:TextBox Height="34"
+                                                                                    PlaceholderText="默认作者名称"
+                                                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                                                    Text="{Binding DefaultRecordAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                        <ui:TextBox Grid.Column="2"
+                                                                                    Height="34"
+                                                                                    PlaceholderText="默认链接（可选）"
+                                                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                                                    Text="{Binding DefaultRecordAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                        <ui:Button Grid.Column="4"
+                                                                                   Width="96"
+                                                                                   Height="34"
+                                                                                   Command="{Binding AddDefaultAuthorToCommonCommand}"
+                                                                                   Content="加入常用"
+                                                                                   Icon="{ui:SymbolIcon Person24}" />
+                                                                    </Grid>
+                                                                </Grid>
+
+                                                                <Grid Grid.Row="6">
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto" />
+                                                                        <RowDefinition Height="8" />
+                                                                        <RowDefinition Height="Auto" />
+                                                                    </Grid.RowDefinitions>
+                                                                    <TextBlock FontWeight="SemiBold" Text="新增常用作者" />
+                                                                    <Grid Grid.Row="2">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="8" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="8" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ui:TextBox Height="34"
+                                                                                    PlaceholderText="作者名称"
+                                                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                                                    Text="{Binding NewCommonAuthorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                        <ui:TextBox Grid.Column="2"
+                                                                                    Height="34"
+                                                                                    PlaceholderText="链接"
+                                                                                    Style="{StaticResource FormTextBoxStyle}"
+                                                                                    Text="{Binding NewCommonAuthorLinks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                        <ui:Button Grid.Column="4"
+                                                                                   Width="72"
+                                                                                   Height="34"
+                                                                                   Command="{Binding AddCustomCommonAuthorCommand}"
+                                                                                   Content="添加"
+                                                                                   Icon="{ui:SymbolIcon Add24}" />
+                                                                    </Grid>
+                                                                </Grid>
+                                                            </Grid>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </ScrollViewer>
                                             </Grid>
                                         </Border>
                                     </Popup>
@@ -1570,9 +1676,12 @@
                                                              Header="操作日志"
                                                              Icon="{ui:SymbolIcon Document24}" />
                                                 <Separator />
-                                                <ui:MenuItem Command="{Binding ToggleViewSettingsCommand}"
-                                                             Header="视图设置"
-                                                             Icon="{ui:SymbolIcon Settings24}" />
+                                                <ui:MenuItem Header="地图小窗"
+                                                             Icon="{ui:SymbolIcon PanelRight24}"
+                                                             InputGestureText="{Binding MapMiniFollowHotkeyText}"
+                                                             IsCheckable="True"
+                                                             IsChecked="{Binding IsMapMiniFollowWindowVisible, Mode=TwoWay}" />
+                                                <Separator />
                                                 <ui:MenuItem Command="{Binding ToggleSidePanelCommand}"
                                                              Header="显示/隐藏侧栏"
                                                              Icon="{ui:SymbolIcon PanelRight24}" />
@@ -2379,8 +2488,8 @@
                                                Padding="0"
                                                Command="{Binding FitSelectedRecordedWaypointsCommand}"
                                                Icon="{ui:SymbolIcon ArrowAutofitUp24}"
-                                               ToolTip="缩放到选中点" />
-                                    <ComboBox Width="112"
+                                               ToolTip="缩放到选中点；地图选中后可用方向键 / WASD 微调" />
+                                    <ComboBox Width="104"
                                               Height="34"
                                               Margin="8,0,0,0"
                                               ItemTemplate="{StaticResource MapEditorOptionTemplate}"
@@ -2390,7 +2499,7 @@
                                               Style="{StaticResource MapEditorComboBoxStyle}" />
                                     <Grid Margin="8,0,0,0">
                                         <ui:Button x:Name="WaypointFilterButton"
-                                                   Width="150"
+                                                   Width="126"
                                                    Height="34"
                                                    HorizontalContentAlignment="Stretch"
                                                    Command="{Binding ToggleWaypointFilterPopupCommand}">
