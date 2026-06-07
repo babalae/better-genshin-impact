@@ -27,6 +27,7 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -51,6 +52,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
+    private readonly MapMiniFollowWindowController _mapMiniFollowWindowController;
+    private readonly MapMiniFollowViewModel _mapMiniFollowViewModel;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -58,10 +61,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
-    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
+    public HotKeyPageViewModel(
+        IConfigService configService,
+        ILogger<HotKeyPageViewModel> logger,
+        TaskSettingsPageViewModel taskSettingsPageViewModel,
+        MapMiniFollowWindowController mapMiniFollowWindowController,
+        MapMiniFollowViewModel mapMiniFollowViewModel)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
+        _mapMiniFollowWindowController = mapMiniFollowWindowController;
+        _mapMiniFollowViewModel = mapMiniFollowViewModel;
         // 获取配置
         Config = configService.Get();
 
@@ -702,7 +712,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.MapMiniFollowWindowHotkeyType,
             (_, _) =>
             {
-                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ToggleMapMiniFollowWindow", new object(), new object()));
+                _mapMiniFollowWindowController.Toggle();
             }
         ));
 
@@ -742,6 +752,54 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
 
                 _logger.LogWarning("路径记录器未启动，已忽略添加路径点快捷键");
+            }
+        ));
+
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "移除上一个路径点",
+            nameof(Config.HotKeyConfig.RemoveLastWaypointHotkey),
+            Config.HotKeyConfig.RemoveLastWaypointHotkey,
+            Config.HotKeyConfig.RemoveLastWaypointHotkeyType,
+            (_, _) =>
+            {
+                if (!CanUsePathRecorderRecordingHotkey("移除上一个路径点", pathRecorder))
+                {
+                    return;
+                }
+
+                Task.Run(() => pathRecorder.RemoveLastWaypoint());
+            }
+        ));
+
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "增大地图小窗缩放",
+            nameof(Config.HotKeyConfig.IncreaseMapMiniFollowZoomHotkey),
+            Config.HotKeyConfig.IncreaseMapMiniFollowZoomHotkey,
+            Config.HotKeyConfig.IncreaseMapMiniFollowZoomHotkeyType,
+            (_, _) =>
+            {
+                if (!CanUsePathRecorderRecordingHotkey("增大地图小窗缩放", pathRecorder))
+                {
+                    return;
+                }
+
+                AdjustMapMiniFollowZoom(increase: true);
+            }
+        ));
+
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "减小地图小窗缩放",
+            nameof(Config.HotKeyConfig.DecreaseMapMiniFollowZoomHotkey),
+            Config.HotKeyConfig.DecreaseMapMiniFollowZoomHotkey,
+            Config.HotKeyConfig.DecreaseMapMiniFollowZoomHotkeyType,
+            (_, _) =>
+            {
+                if (!CanUsePathRecorderRecordingHotkey("减小地图小窗缩放", pathRecorder))
+                {
+                    return;
+                }
+
+                AdjustMapMiniFollowZoom(increase: false);
             }
         ));
 
@@ -837,6 +895,28 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         {
             asyncRelayCommand.Execute(null);
         }
+    }
+
+    private bool CanUsePathRecorderRecordingHotkey(string functionName, PathRecorder pathRecorder)
+    {
+        if (pathRecorder.IsRecording)
+        {
+            return true;
+        }
+
+        _logger.LogWarning("路径记录器未启动，已忽略{FunctionName}快捷键", functionName);
+        return false;
+    }
+
+    private void AdjustMapMiniFollowZoom(bool increase)
+    {
+        UIDispatcherHelper.BeginInvoke(() =>
+        {
+            var zoom = increase
+                ? _mapMiniFollowViewModel.IncreaseFollowZoom()
+                : _mapMiniFollowViewModel.DecreaseFollowZoom();
+            _logger.LogInformation("地图小窗缩放已调整为 {Zoom:F1}x", zoom);
+        });
     }
 
     private string ToChinese(bool enabled)

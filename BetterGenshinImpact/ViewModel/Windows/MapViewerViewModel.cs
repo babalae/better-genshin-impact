@@ -138,12 +138,6 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _isTopmost = TaskContext.Instance().Config.DevConfig.MapViewerTopmost;
 
     [ObservableProperty]
-    private bool _isMapMiniFollowWindowVisible = TaskContext.Instance().Config.DevConfig.MapMiniFollowVisible;
-
-    [ObservableProperty]
-    private bool _isMapMiniFollowTopmost = TaskContext.Instance().Config.DevConfig.MapMiniFollowTopmost;
-
-    [ObservableProperty]
     private bool _isFollowingCurrent = true;
 
     [ObservableProperty]
@@ -400,6 +394,8 @@ public partial class MapViewerViewModel : ObservableObject
     public ObservableCollection<MapEditorOption> MapLayerOptions { get; } = new(
         Enum.GetValues<MapTypes>().Select(i => new MapEditorOption(i.ToString(), i.GetDescription())));
 
+    public MapMiniFollowViewModel MiniFollow { get; } = App.GetService<MapMiniFollowViewModel>()!;
+
     public ObservableCollection<MapEditorOption> MapMatchMethodOptions { get; } = new(
     [
         new MapEditorOption("TemplateMatch", "模板匹配"),
@@ -568,10 +564,6 @@ public partial class MapViewerViewModel : ObservableObject
 
     public string MapStatusText => $"模式：{(IsRecorderMode ? "录制" : "调试")} / {(IsFollowingCurrent ? "跟随" : "固定")}    缩放：{MapZoomText}";
 
-    public string MapMiniFollowTitleText => $"{(IsRecorderMode ? "录制" : "调试")} / {MapDisplayName}";
-
-    public string MapMiniFollowHotkeyText => FormatHotkeyText(TaskContext.Instance().Config.HotKeyConfig.MapMiniFollowWindowHotkey);
-
     public string FollowZoomText => $"{FollowZoom:F1}x";
 
     public string MapClickEditModeToolTip => $"{MapClickEditModeText}（Tab 切换）";
@@ -702,6 +694,7 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _graphProvider = new RouteNavigationGraphProvider(_routeSaveDir);
         _routeNavigationPlanner = new RouteNavigationPlanner(_graphProvider);
+        _ = App.GetService<MapMiniFollowWindowController>();
 
         if (string.IsNullOrEmpty(mapName))
         {
@@ -794,10 +787,6 @@ public partial class MapViewerViewModel : ObservableObject
                         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ResetMapView", new object(), new object()));
                     }
                 });
-            }
-            else if (msg.PropertyName == "ToggleMapMiniFollowWindow")
-            {
-                UIDispatcherHelper.BeginInvoke(ToggleMapMiniFollowWindow);
             }
             else if (msg.PropertyName == "RequestMapDisplaySnapshot")
             {
@@ -1475,16 +1464,6 @@ public partial class MapViewerViewModel : ObservableObject
         TaskContext.Instance().Config.DevConfig.MapViewerTopmost = value;
     }
 
-    partial void OnIsMapMiniFollowWindowVisibleChanged(bool value)
-    {
-        TaskContext.Instance().Config.DevConfig.MapMiniFollowVisible = value;
-    }
-
-    partial void OnIsMapMiniFollowTopmostChanged(bool value)
-    {
-        TaskContext.Instance().Config.DevConfig.MapMiniFollowTopmost = value;
-    }
-
     partial void OnRecordFilePathTextChanged(string value)
     {
         RefreshRecorderSummaryProperties();
@@ -1498,6 +1477,12 @@ public partial class MapViewerViewModel : ObservableObject
     partial void OnFollowZoomChanged(double value)
     {
         OnPropertyChanged(nameof(FollowZoomText));
+        MiniFollow.FollowZoom = value;
+    }
+
+    partial void OnShowTeleportPointsChanged(bool value)
+    {
+        MiniFollow.ShowTeleportPoints = value;
     }
 
     partial void OnRecordStatusTextChanged(string value)
@@ -1562,12 +1547,12 @@ public partial class MapViewerViewModel : ObservableObject
     partial void OnMapNameChanged(string value)
     {
         MapDisplayName = GetMapDisplayName(value);
-        OnPropertyChanged(nameof(MapMiniFollowTitleText));
         if (!string.IsNullOrWhiteSpace(value))
         {
             TaskContext.Instance().Config.DevConfig.RecordMapName = value;
         }
 
+        MiniFollow.MapName = value;
         SelectedTargetText = "目标点：点击地图选择";
         _selectedTargetPoint = null;
         if (!_isSynchronizingMapName && !_isSwitchingRecordedRoute)
@@ -2000,12 +1985,6 @@ public partial class MapViewerViewModel : ObservableObject
     private void CloseRecorderPreferences()
     {
         IsRecorderPreferencesOpen = false;
-    }
-
-    [RelayCommand]
-    private void ToggleMapMiniFollowWindow()
-    {
-        IsMapMiniFollowWindowVisible = !IsMapMiniFollowWindowVisible;
     }
 
     [RelayCommand]

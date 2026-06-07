@@ -502,7 +502,9 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
 
     public void UpdateViewport(double x, double y, double width, double height)
     {
-        var newRect = new Rect(x, y, width, height);
+        var newRect = IsInvalidViewport(x, y, width, height)
+            ? Rect.Empty
+            : new Rect(x, y, width, height);
         if (newRect.Equals(_viewportRect))
         {
             return;
@@ -510,6 +512,20 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
 
         _viewportRect = newRect;
         Refresh();
+    }
+
+    private static bool IsInvalidViewport(double x, double y, double width, double height)
+    {
+        return double.IsNaN(x) ||
+               double.IsNaN(y) ||
+               double.IsNaN(width) ||
+               double.IsNaN(height) ||
+               double.IsInfinity(x) ||
+               double.IsInfinity(y) ||
+               double.IsInfinity(width) ||
+               double.IsInfinity(height) ||
+               width <= 0 ||
+               height <= 0;
     }
 
     public void Refresh()

@@ -11,7 +11,7 @@
         ResizeMode="NoResize"
         ShowActivated="False"
         ShowInTaskbar="False"
-        Topmost="{Binding IsMapMiniFollowTopmost, Mode=TwoWay}"
+        Topmost="{Binding IsTopmost, Mode=TwoWay}"
         WindowStyle="None">
     <Border Background="#FF0F151A"
             BorderBrush="#6639DCEB"
@@ -44,7 +44,7 @@
                                FontSize="12"
                                FontWeight="SemiBold"
                                Foreground="#F3F7FA"
-                               Text="{Binding MapMiniFollowTitleText}"
+                               Text="{Binding TitleText}"
                                TextTrimming="CharacterEllipsis" />
                     <Button Grid.Column="1"
                             Width="28"
@@ -60,7 +60,7 @@
                                     <Setter Property="Foreground" Value="#B8C7D2" />
                                     <Setter Property="Symbol" Value="PinOff28" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsMapMiniFollowTopmost}" Value="True">
+                                        <DataTrigger Binding="{Binding IsTopmost}" Value="True">
                                             <Setter Property="Foreground" Value="#23C8D2" />
                                             <Setter Property="Symbol" Value="Pin28" />
                                         </DataTrigger>

@@ -1678,9 +1678,9 @@
                                                 <Separator />
                                                 <ui:MenuItem Header="地图小窗"
                                                              Icon="{ui:SymbolIcon PanelRight24}"
-                                                             InputGestureText="{Binding MapMiniFollowHotkeyText}"
+                                                             InputGestureText="{Binding MiniFollow.HotkeyText}"
                                                              IsCheckable="True"
-                                                             IsChecked="{Binding IsMapMiniFollowWindowVisible, Mode=TwoWay}" />
+                                                             IsChecked="{Binding MiniFollow.IsVisible, Mode=TwoWay}" />
                                                 <Separator />
                                                 <ui:MenuItem Command="{Binding ToggleSidePanelCommand}"
                                                              Header="显示/隐藏侧栏"

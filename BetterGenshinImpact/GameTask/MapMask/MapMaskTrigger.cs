@@ -95,6 +95,7 @@ public class MapMaskTrigger : ITaskTrigger
             else if (msg.PropertyName == "ClearCurrentPathing")
             {
                 MapMaskRouteOverlayState.Set(null);
+                ResetMiniMapTrackingMapName();
             }
         });
     }
@@ -182,7 +183,7 @@ public class MapMaskTrigger : ITaskTrigger
             else
             {
                 // 主界面上展示小地图
-                var shouldUpdateMiniMapOverlay = _config.MiniMapMaskEnabled || _config.MiniMapRouteOverlayEnabled;
+                var shouldUpdateMiniMapOverlay = _config.MiniMapMaskEnabled || HasActiveMiniMapRouteOverlay();
                 if (shouldUpdateMiniMapOverlay)
                 {
                     if (Bv.IsInMainUi(region))
@@ -379,6 +380,12 @@ public class MapMaskTrigger : ITaskTrigger
             return;
         }
 
+        if (!_config.MiniMapMaskEnabled && !HasActiveMiniMapRouteOverlay())
+        {
+            QueueUiUpdate(new PendingUiUpdate { MiniMapViewport = new Rect(0, 0, 0, 0) });
+            return;
+        }
+
         using var imageRegion = new ImageRegion(workItem.Mat, 0, 0);
         workItem.Mat = null;
 
@@ -412,10 +419,23 @@ public class MapMaskTrigger : ITaskTrigger
     {
         if (!TryNormalizeMapName(mapName, out var normalizedMapName))
         {
+            ResetMiniMapTrackingMapName();
             return;
         }
 
         _miniMapTrackingMapName = normalizedMapName;
+    }
+
+    private void ResetMiniMapTrackingMapName()
+    {
+        _miniMapTrackingMapName = TryNormalizeMapName(TaskContext.Instance().Config.DevConfig.RecordMapName, out var normalizedMapName)
+            ? normalizedMapName
+            : nameof(MapTypes.Teyvat);
+    }
+
+    private bool HasActiveMiniMapRouteOverlay()
+    {
+        return _config.MiniMapRouteOverlayEnabled && MapMaskRouteOverlayState.HasRoute;
     }
 
     private string ResolveMiniMapTrackingMapName()
