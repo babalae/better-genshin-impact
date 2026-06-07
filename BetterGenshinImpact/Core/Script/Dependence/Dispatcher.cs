@@ -194,7 +194,13 @@ public class Dispatcher
                 return null;
 
             case "AutoBoss":
-                await new AutoBossTask(new AutoBossParam()).Start(cancellationToken);
+                var autoBossConfig = TaskContext.Instance().Config.AutoBossConfig;
+                if (taskSettingsPageViewModel.GetFightStrategy(autoBossConfig.StrategyName, out var autoBossPath))
+                {
+                    return null;
+                }
+
+                await new AutoBossTask( new AutoBossParam(autoBossPath)).Start(cancellationToken);
                 return null;
 
             case "AutoFishing":
