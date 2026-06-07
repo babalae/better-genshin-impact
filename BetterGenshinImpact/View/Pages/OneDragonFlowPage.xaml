@@ -1083,6 +1083,257 @@
                         </StackPanel>
                     </ui:CardControl>
 
+                    <!--  自动首领讨伐  -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
+                        <TextBlock FontSize="14"
+                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   Text="自动首领讨伐" />
+                    </StackPanel>
+
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                        <ui:CardExpander.Icon>
+                            <ui:FontIcon Glyph="&#xe629;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardExpander.Icon>
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="自动首领讨伐配置"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="自动传送、战斗并领取奖励"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="选择战斗策略"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="仅用于首领讨伐，不覆盖其他策略设置"
+                                              TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.RowSpan="2"
+                                          Grid.Column="1"
+                                          Width="200"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                                          SelectedItem="{Binding Config.AutoBossConfig.StrategyName, Mode=TwoWay}">
+                                    <b:Interaction.Triggers>
+                                        <b:EventTrigger EventName="DropDownOpened">
+                                            <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                                   CommandParameter="Combat" />
+                                        </b:EventTrigger>
+                                    </b:Interaction.Triggers>
+                                </ComboBox>
+                            </Grid>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="选择首领"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="部分首领因机制问题未添加"
+                                              TextWrapping="Wrap" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                                       Grid.RowSpan="2"
+                                                       Grid.Column="1"
+                                                       Width="200"
+                                                       Margin="0,0,36,0"
+                                                       behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                                       ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
+                                                       SelectedCascadingItem="{Binding Config.AutoBossConfig.BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}" />
+                            </Grid>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="切换队伍"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="留空则不更换队伍"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            Width="200"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding Config.AutoBossConfig.TeamName, Mode=TwoWay}"
+                                            PlaceholderText="例如：首领队" />
+                            </Grid>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="指定讨伐次数"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="关闭时刷取至原粹树脂耗尽，开启后按成功领取奖励次数停止"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding Config.AutoBossConfig.SpecifyRunCount, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Border Margin="16,8,16,16"
+                                    BorderThickness="1"
+                                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                                    Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                    CornerRadius="8"
+                                    Visibility="{Binding Config.AutoBossConfig.SpecifyRunCount, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
+                                <StackPanel Margin="12">
+                                    <StackPanel Orientation="Horizontal"
+                                                Margin="0,8,0,12">
+                                        <ui:TextBlock Text="讨伐次数："
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,8,0" />
+                                        <ui:NumberBox Value="{Binding Config.AutoBossConfig.RunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="1"
+                                                      MaxDecimalPlaces="0"
+                                                      SmallChange="1"
+                                                      LargeChange="5"
+                                                      SpinButtonPlacementMode="Hidden"
+                                                      AcceptsExpression="False"
+                                                      Width="120" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Margin="0,0,0,12">
+                                        <ui:TextBlock Text="原粹不足时使用须臾树脂补充："
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,8,0" />
+                                        <ui:ToggleSwitch IsChecked="{Binding Config.AutoBossConfig.UseTransientResin, Mode=TwoWay}" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:TextBlock Text="原粹不足时使用脆弱树脂补充："
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,8,0" />
+                                        <ui:ToggleSwitch IsChecked="{Binding Config.AutoBossConfig.UseFragileResin, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="每轮讨伐后返回七天神像"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="开启后每次领奖后先回血，再重新前往首领"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding Config.AutoBossConfig.ReturnToStatueAfterEachRound, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="角色死亡后重试次数"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="战斗中存在角色死亡时，复活后重新讨伐当前首领"
+                                              TextWrapping="Wrap" />
+                                <ui:NumberBox Grid.Row="0"
+                                              Grid.RowSpan="2"
+                                              Grid.Column="1"
+                                              Width="120"
+                                              Margin="0,0,36,0"
+                                              Minimum="0"
+                                              MaxDecimalPlaces="0"
+                                              SmallChange="1"
+                                              LargeChange="3"
+                                              SpinButtonPlacementMode="Hidden"
+                                              AcceptsExpression="False"
+                                              Value="{Binding Config.AutoBossConfig.ReviveRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+
                     <!--  自动地脉花  -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
                         <TextBlock FontSize="14"

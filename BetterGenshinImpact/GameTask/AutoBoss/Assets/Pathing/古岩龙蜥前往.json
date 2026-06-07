@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "前往古岩龙蜥",
+    "type": "collect",
+    "author": "柒叶子",
+    "version": "1.0",
+    "description": "前往古岩龙蜥",
+    "bgi_version": "0.52.0",
+    "map_match_method": "TemplateMatch"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 1669.650390625,
+      "y": 341.86962890625,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 1674.890625,
+      "y": 345.15625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 1573.65234375,
+      "y": 254.67041015625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 1533.3095703125,
+      "y": 229.28857421875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 1485.296875,
+      "y": 208.9697265625,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": ""
+    }
+  ]
+}
