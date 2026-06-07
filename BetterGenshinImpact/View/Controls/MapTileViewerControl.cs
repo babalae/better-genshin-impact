@@ -123,6 +123,7 @@ public sealed class MapTileViewerControl : FrameworkElement
     private List<Point2f> _selectedRecorderPoints = [];
     private PathingTask? _currentPathingTask;
     private List<Point2f> _pathPoints = [];
+    private List<RecordedMapPoint> _currentPathPoints = [];
     private List<RecordedMapPoint> _recordedPoints = [];
     private List<List<RecordedMapPoint>> _recordedRouteGroups = [];
     private List<MapTeleportPoint> _teleportPoints = [];
@@ -340,6 +341,7 @@ public sealed class MapTileViewerControl : FrameworkElement
         {
             _currentPathingTask = null;
             _pathPoints = [];
+            _currentPathPoints = [];
             InvalidateVisual();
             return;
         }
@@ -434,8 +436,14 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private bool IsPositionForCurrentMap(string? mapName)
     {
-        return string.IsNullOrWhiteSpace(mapName) ||
-               string.Equals(mapName, MapName, StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            return true;
+        }
+
+        return TryNormalizeMapName(mapName, out var normalizedPositionMapName) &&
+               TryNormalizeMapName(MapName, out var normalizedCurrentMapName) &&
+               string.Equals(normalizedPositionMapName, normalizedCurrentMapName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetTrackedPosition(object? value, out Point2f point, out string? mapName)
@@ -544,6 +552,7 @@ public sealed class MapTileViewerControl : FrameworkElement
         control._teleportPoints = [];
         control._hoverTeleportPoint = null;
         control._pathPoints = [];
+        control._currentPathPoints = [];
         control.ClearTiles();
         control.InvalidateVisual();
     }
@@ -1077,20 +1086,20 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void DrawPath(DrawingContext dc)
     {
-        if (_pathPoints.Count < 2)
+        if (_currentPathPoints.Count < 2)
         {
             return;
         }
 
-        var geometry = new StreamGeometry();
-        using (var context = geometry.Open())
+        for (var i = 0; i < _currentPathPoints.Count - 1; i++)
         {
-            context.BeginFigure(MapToScreen(_pathPoints[0]), false, false);
-            context.PolyLineTo(_pathPoints.Skip(1).Select(MapToScreen).ToList(), true, false);
-        }
+            if (IsTeleportWaypoint(_currentPathPoints[i + 1].Type))
+            {
+                continue;
+            }
 
-        geometry.Freeze();
-        dc.DrawGeometry(null, _pathPen, geometry);
+            dc.DrawLine(_pathPen, MapToScreen(_currentPathPoints[i].Point), MapToScreen(_currentPathPoints[i + 1].Point));
+        }
     }
 
     private void DrawTeleportPoints(DrawingContext dc)
@@ -2145,23 +2154,32 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (_currentPathingTask?.Positions == null)
         {
             _pathPoints = [];
+            _currentPathPoints = [];
             return;
         }
 
         if (!IsPathingTaskForCurrentMap(_currentPathingTask))
         {
             _pathPoints = [];
+            _currentPathPoints = [];
             return;
         }
 
-        _pathPoints = _currentPathingTask.Positions.Select(ConvertToMapPoint).ToList();
+        _currentPathPoints = _currentPathingTask.Positions.Select(CreateRecordedMapPoint).ToList();
+        _pathPoints = _currentPathPoints.Select(point => point.Point).ToList();
     }
 
     private bool IsPathingTaskForCurrentMap(PathingTask pathingTask)
     {
-        // The active path is explicitly selected by the user. Route files can carry stale or
-        // coarse map metadata, so hiding the whole path here is worse than drawing it.
-        return true;
+        var taskMapName = pathingTask.Info?.MapName;
+        if (string.IsNullOrWhiteSpace(taskMapName))
+        {
+            return true;
+        }
+
+        return TryNormalizeMapName(taskMapName, out var normalizedTaskMapName) &&
+               TryNormalizeMapName(MapName, out var normalizedCurrentMapName) &&
+               string.Equals(normalizedTaskMapName, normalizedCurrentMapName, StringComparison.OrdinalIgnoreCase);
     }
 
     private RecordedMapPoint CreateRecordedMapPoint(Waypoint waypoint, int index)
@@ -2172,6 +2190,18 @@ public sealed class MapTileViewerControl : FrameworkElement
     private static bool IsTeleportWaypoint(string? type)
     {
         return string.Equals(type, WaypointType.Teleport.Code, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryNormalizeMapName(string? mapName, out string normalizedMapName)
+    {
+        if (Enum.TryParse<MapTypes>(mapName, true, out var mapType))
+        {
+            normalizedMapName = mapType.ToString();
+            return true;
+        }
+
+        normalizedMapName = string.Empty;
+        return false;
     }
 
     private Point2f ConvertGameCoordinateToImagePoint(Point2f point)

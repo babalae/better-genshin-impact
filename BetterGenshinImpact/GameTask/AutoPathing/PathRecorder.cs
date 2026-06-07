@@ -301,6 +301,24 @@ public class PathRecorder : Singleton<PathRecorder>
         PublishRecorderTask();
     }
 
+    public bool RemoveLastWaypoint()
+    {
+        if (_pathingTask.Positions.Count == 0)
+        {
+            TaskControl.Logger?.LogWarning("路径点记录为空，无法移除上一个点");
+            return false;
+        }
+
+        var waypoint = _pathingTask.Positions[^1];
+        _pathingTask.Positions.RemoveAt(_pathingTask.Positions.Count - 1);
+        TaskControl.Logger?.LogInformation(
+            "已移除上一个路径点({x},{y})",
+            FormatCoordinate(waypoint.X),
+            FormatCoordinate(waypoint.Y));
+        PublishRecorderTask();
+        return true;
+    }
+
     /// <summary>
     /// Flushes accumulated trajectory lists into persistent storage or delegating post-process rendering tasks to WebView frameworks.
     /// 将累加产生的移动轨迹列表刷新到底层持久性储存中或是指派WebView框架做后期重整。

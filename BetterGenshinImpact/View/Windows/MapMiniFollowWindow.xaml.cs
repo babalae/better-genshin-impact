@@ -18,9 +18,9 @@ public partial class MapMiniFollowWindow : Window
     private const double DefaultMargin = 18;
     private bool _isApplyingInitialLayout;
 
-    public MapViewerViewModel ViewModel { get; }
+    public MapMiniFollowViewModel ViewModel { get; }
 
-    public MapMiniFollowWindow(MapViewerViewModel viewModel)
+    public MapMiniFollowWindow(MapMiniFollowViewModel viewModel)
     {
         ViewModel = viewModel;
         DataContext = viewModel;
@@ -42,7 +42,7 @@ public partial class MapMiniFollowWindow : Window
             _isApplyingInitialLayout = false;
         }
 
-        ViewModel.ReplayMapDisplaySnapshot();
+        ViewModel.ReplayDisplaySnapshot();
     }
 
     private void ApplyScaledSize()
@@ -161,12 +161,12 @@ public partial class MapMiniFollowWindow : Window
 
     private void TopmostButton_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.IsMapMiniFollowTopmost = !ViewModel.IsMapMiniFollowTopmost;
+        ViewModel.IsTopmost = !ViewModel.IsTopmost;
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.IsMapMiniFollowWindowVisible = false;
+        ViewModel.IsVisible = false;
     }
 
     protected override void OnSourceInitialized(EventArgs e)

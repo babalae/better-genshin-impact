@@ -199,7 +199,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             try
             {
-                var mapName = ResolveTaskMapName(task);
+                var mapName = NormalizeKnownMapName(ResolveTaskMapName(task)) ?? nameof(MapTypes.Teyvat);
                 _miniMapRouteMapName = mapName;
                 var matchingMethod = ResolveTaskMapMatchingMethod(task);
                 var map = MapManager.GetMap(mapName, matchingMethod);
@@ -231,12 +231,12 @@ namespace BetterGenshinImpact.ViewModel
 
         private void ClearMiniMapRoute()
         {
-            if (MiniMapRoutePoints.Count == 0)
+            if (MiniMapRoutePoints.Count > 0)
             {
-                return;
+                MiniMapRoutePoints = [];
             }
 
-            MiniMapRoutePoints = [];
+            _miniMapRouteMapName = nameof(MapTypes.Teyvat);
             MiniMapViewport = Rect.Empty;
         }
 
@@ -253,6 +253,12 @@ namespace BetterGenshinImpact.ViewModel
 
             if (MiniMapRoutePoints.Count == 0)
             {
+                return;
+            }
+
+            if (!IsLastTrackedPositionForMiniMapRoute())
+            {
+                MiniMapViewport = Rect.Empty;
                 return;
             }
 
@@ -278,7 +284,19 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
+            if (!IsLastTrackedPositionForMiniMapRoute())
+            {
+                MiniMapViewport = Rect.Empty;
+                return;
+            }
+
             MiniMapViewport = CreateMiniMapViewport(point);
+        }
+
+        private bool IsLastTrackedPositionForMiniMapRoute()
+        {
+            return string.IsNullOrWhiteSpace(_lastTrackedMapName) ||
+                   string.Equals(_lastTrackedMapName, _miniMapRouteMapName, StringComparison.OrdinalIgnoreCase);
         }
 
         private static Rect CreateMiniMapViewport(Point2f point)
