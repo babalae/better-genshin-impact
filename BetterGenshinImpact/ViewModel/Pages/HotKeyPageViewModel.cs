@@ -786,7 +786,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RemoveLastWaypointHotkeyType,
             (_, _) =>
             {
-                if (!CanUsePathRecorderRecordingHotkey("移除上一个路径点", pathRecorder))
+                if (!CanUsePathRecorderModeHotkey("移除上一个路径点", pathRecorder))
                 {
                     return;
                 }
@@ -802,7 +802,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.IncreaseMapMiniFollowZoomHotkeyType,
             (_, _) =>
             {
-                if (!CanUsePathRecorderRecordingHotkey("增大地图小窗缩放", pathRecorder))
+                if (!CanUsePathRecorderModeHotkey("增大地图小窗缩放", pathRecorder))
                 {
                     return;
                 }
@@ -818,7 +818,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.DecreaseMapMiniFollowZoomHotkeyType,
             (_, _) =>
             {
-                if (!CanUsePathRecorderRecordingHotkey("减小地图小窗缩放", pathRecorder))
+                if (!CanUsePathRecorderModeHotkey("减小地图小窗缩放", pathRecorder))
                 {
                     return;
                 }
@@ -921,14 +921,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         }
     }
 
-    private bool CanUsePathRecorderRecordingHotkey(string functionName, PathRecorder pathRecorder)
+    private bool CanUsePathRecorderModeHotkey(string functionName, PathRecorder pathRecorder)
     {
-        if (pathRecorder.IsRecording)
+        if (pathRecorder.IsRecording || _mapMiniFollowViewModel.IsRecorderMode)
         {
             return true;
         }
 
-        _logger.LogWarning("路径记录器未启动，已忽略{FunctionName}快捷键", functionName);
+        _logger.LogWarning("当前不在路线录制模式，已忽略{FunctionName}快捷键", functionName);
         return false;
     }
 
