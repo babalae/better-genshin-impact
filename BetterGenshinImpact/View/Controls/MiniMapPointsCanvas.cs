@@ -28,13 +28,36 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
             typeof(MiniMapPointsCanvas),
             new PropertyMetadata(null, OnLabelsSourceChanged));
 
+    public static readonly DependencyProperty RoutePointsSourceProperty =
+        DependencyProperty.Register(
+            nameof(RoutePointsSource),
+            typeof(ObservableCollection<MaskMapRoutePoint>),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(null, OnRoutePointsSourceChanged));
+
+    public static readonly DependencyProperty IsRouteOverlayEnabledProperty =
+        DependencyProperty.Register(
+            nameof(IsRouteOverlayEnabled),
+            typeof(bool),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(true, OnRouteOverlayEnabledChanged));
+
+    public static readonly DependencyProperty ViewportProperty =
+        DependencyProperty.Register(
+            nameof(Viewport),
+            typeof(Rect),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(Rect.Empty, OnViewportChanged));
+
     private readonly VisualCollection _children;
     private readonly DrawingVisual _drawingVisual;
     private readonly Dictionary<string, Brush> _colorBrushCache;
     private int _refreshQueued;
 
     private ObservableCollection<MaskMapPoint>? _points;
+    private ObservableCollection<MaskMapRoutePoint>? _routePointsSource;
     private List<MaskMapPoint> _allPoints = new();
+    private List<MaskMapRoutePoint> _routePoints = new();
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
     private Rect _viewportRect = Rect.Empty;
 
@@ -48,6 +71,24 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     {
         get => (IEnumerable<MaskMapPointLabel>?)GetValue(LabelsSourceProperty);
         set => SetValue(LabelsSourceProperty, value);
+    }
+
+    public ObservableCollection<MaskMapRoutePoint>? RoutePointsSource
+    {
+        get => (ObservableCollection<MaskMapRoutePoint>?)GetValue(RoutePointsSourceProperty);
+        set => SetValue(RoutePointsSourceProperty, value);
+    }
+
+    public bool IsRouteOverlayEnabled
+    {
+        get => (bool)GetValue(IsRouteOverlayEnabledProperty);
+        set => SetValue(IsRouteOverlayEnabledProperty, value);
+    }
+
+    public Rect Viewport
+    {
+        get => (Rect)GetValue(ViewportProperty);
+        set => SetValue(ViewportProperty, value);
     }
 
     public MiniMapPointsCanvas()
@@ -72,6 +113,27 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     {
         var canvas = (MiniMapPointsCanvas)d;
         canvas.UpdateLabels(e.NewValue as IEnumerable<MaskMapPointLabel>);
+    }
+
+    private static void OnRoutePointsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var canvas = (MiniMapPointsCanvas)d;
+        canvas.UpdateRoutePoints(e.NewValue as ObservableCollection<MaskMapRoutePoint>);
+    }
+
+    private static void OnRouteOverlayEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        ((MiniMapPointsCanvas)d).Refresh();
+    }
+
+    private static void OnViewportChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is not Rect viewport)
+        {
+            return;
+        }
+
+        ((MiniMapPointsCanvas)d).UpdateViewport(viewport.X, viewport.Y, viewport.Width, viewport.Height);
     }
 
     protected override void OnVisualParentChanged(DependencyObject oldParent)
@@ -131,6 +193,12 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         Refresh();
     }
 
+    private void OnRoutePointsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        _routePoints = _routePointsSource?.ToList() ?? [];
+        Refresh();
+    }
+
     private void SubscribePoint(MaskMapPoint point)
     {
         if (point is INotifyPropertyChanged notifyPoint)
@@ -155,7 +223,8 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     private void RenderPoints()
     {
         using var dc = _drawingVisual.RenderOpen();
-        if (_allPoints.Count == 0 || _viewportRect.IsEmpty || _viewportRect.Width == 0)
+        var hasRoute = IsRouteOverlayEnabled && _routePoints.Count > 0;
+        if ((_allPoints.Count == 0 && !hasRoute) || _viewportRect.IsEmpty || _viewportRect.Width == 0)
         {
             return;
         }
@@ -185,6 +254,11 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
 
         var pointSide = Math.Max(8, Math.Min(16, side / 12.0));
 
+        if (hasRoute)
+        {
+            DrawRoute(dc, clipRect, scaleX, scaleY, side);
+        }
+
         foreach (var point in _allPoints)
         {
             if (!expandedViewport.Contains(point.ImageX, point.ImageY))
@@ -198,6 +272,75 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         }
 
         dc.Pop();
+    }
+
+    private void DrawRoute(DrawingContext dc, Rect clipRect, double scaleX, double scaleY, double side)
+    {
+        if (_routePoints.Count == 0)
+        {
+            return;
+        }
+
+        var outerBrush = new SolidColorBrush(Color.FromArgb(210, 6, 12, 18));
+        outerBrush.Freeze();
+        var routeBrush = new SolidColorBrush(Color.FromArgb(238, 54, 220, 230));
+        routeBrush.Freeze();
+        var markerFillBrush = new SolidColorBrush(Color.FromArgb(245, 255, 178, 72));
+        markerFillBrush.Freeze();
+        var markerBorderBrush = new SolidColorBrush(Color.FromArgb(240, 255, 255, 255));
+        markerBorderBrush.Freeze();
+
+        var outerPen = new Pen(outerBrush, Math.Max(3.4, side / 70.0));
+        outerPen.Freeze();
+        var routePen = new Pen(routeBrush, Math.Max(1.8, side / 120.0));
+        routePen.Freeze();
+        var markerPen = new Pen(markerBorderBrush, Math.Max(1.0, side / 180.0));
+        markerPen.Freeze();
+
+        for (var i = 0; i < _routePoints.Count - 1; i++)
+        {
+            var next = _routePoints[i + 1];
+            if (IsTeleportRoutePoint(next))
+            {
+                continue;
+            }
+
+            var start = ToLocalPoint(_routePoints[i], clipRect, scaleX, scaleY);
+            var end = ToLocalPoint(next, clipRect, scaleX, scaleY);
+            dc.DrawLine(outerPen, start, end);
+            dc.DrawLine(routePen, start, end);
+        }
+
+        var markerRadius = Math.Max(2.0, Math.Min(4.0, side / 85.0));
+        foreach (var point in _routePoints)
+        {
+            if (!IsInsideExpandedViewport(point, 24))
+            {
+                continue;
+            }
+
+            var center = ToLocalPoint(point, clipRect, scaleX, scaleY);
+            dc.DrawEllipse(markerFillBrush, markerPen, center, markerRadius, markerRadius);
+        }
+    }
+
+    private static bool IsTeleportRoutePoint(MaskMapRoutePoint point)
+    {
+        return string.Equals(point.Type, "teleport", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsInsideExpandedViewport(MaskMapRoutePoint point, double padding)
+    {
+        var viewport = _viewportRect;
+        viewport.Inflate(padding, padding);
+        return viewport.Contains(point.ImageX, point.ImageY);
+    }
+
+    private Point ToLocalPoint(MaskMapRoutePoint point, Rect clipRect, double scaleX, double scaleY)
+    {
+        return new Point(
+            clipRect.X + (point.ImageX - _viewportRect.X) * scaleX,
+            clipRect.Y + (point.ImageY - _viewportRect.Y) * scaleY);
     }
 
     private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
@@ -331,6 +474,27 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         {
             _labelMap.Clear();
             _colorBrushCache.Clear();
+        }
+
+        Refresh();
+    }
+
+    public void UpdateRoutePoints(ObservableCollection<MaskMapRoutePoint>? points)
+    {
+        if (_routePointsSource != null)
+        {
+            _routePointsSource.CollectionChanged -= OnRoutePointsCollectionChanged;
+        }
+
+        _routePointsSource = points;
+        if (_routePointsSource != null)
+        {
+            _routePointsSource.CollectionChanged += OnRoutePointsCollectionChanged;
+            _routePoints = _routePointsSource.ToList();
+        }
+        else
+        {
+            _routePoints.Clear();
         }
 
         Refresh();

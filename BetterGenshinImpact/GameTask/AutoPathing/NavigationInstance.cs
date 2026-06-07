@@ -1,5 +1,6 @@
 using System;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -71,8 +72,7 @@ public class NavigationInstance
             _captureTime = captureTime;
         }
 
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
-            "SendCurrentPosition", new object(), p));
+        PublishCurrentPosition(mapName, p);
 
         return p;
     }
@@ -124,10 +124,18 @@ public class NavigationInstance
             _captureTime = captureTime;
         }
 
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
-            "SendCurrentPosition", new object(), p));
+        PublishCurrentPosition(mapName, p);
 
         return p;
+    }
+
+    private void PublishCurrentPosition(string mapName, Point2f point)
+    {
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SendCurrentPosition",
+            new object(),
+            new TrackedMapPosition(mapName, point)));
     }
 
     /// <summary>

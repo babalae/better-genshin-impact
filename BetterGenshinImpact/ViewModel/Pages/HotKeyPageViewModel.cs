@@ -695,6 +695,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "实时追踪地图小窗显示/隐藏",
+            nameof(Config.HotKeyConfig.MapMiniFollowWindowHotkey),
+            Config.HotKeyConfig.MapMiniFollowWindowHotkey,
+            Config.HotKeyConfig.MapMiniFollowWindowHotkeyType,
+            (_, _) =>
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ToggleMapMiniFollowWindow", new object(), new object()));
+            }
+        ));
+
         var pathRecorder = PathRecorder.Instance;
 
         devDirectory.Children.Add(new HotKeySettingModel(

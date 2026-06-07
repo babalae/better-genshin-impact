@@ -1,0 +1,88 @@
+<Window x:Class="BetterGenshinImpact.View.Windows.MapMiniFollowWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="地图小窗"
+        Width="300"
+        Height="300"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="{Binding IsMapMiniFollowTopmost, Mode=TwoWay}"
+        WindowStyle="None">
+    <Border Background="#FF0F151A"
+            BorderBrush="#6639DCEB"
+            BorderThickness="1"
+            CornerRadius="8"
+            SnapsToDevicePixels="True">
+        <Grid ClipToBounds="True">
+            <controls:MapTileViewerControl FollowZoom="{Binding FollowZoom}"
+                                           IsCompactFollowView="True"
+                                           IsPathRecorderRecording="{Binding IsPathRecorderRecording}"
+                                           IsReadOnlyDisplay="True"
+                                           IsRecorderMode="{Binding IsRecorderMode}"
+                                           MapName="{Binding MapName}"
+                                           ShowTeleportPoints="{Binding ShowTeleportPoints}" />
+
+            <Border Height="34"
+                    VerticalAlignment="Top"
+                    Background="#D9111820"
+                    BorderBrush="#26313B"
+                    BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid Margin="10,0,6,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="#F3F7FA"
+                               Text="{Binding MapMiniFollowTitleText}"
+                               TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="1"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Click="TopmostButton_Click"
+                            ToolTip="小窗置顶">
+                        <ui:SymbolIcon FontSize="16">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="Foreground" Value="#B8C7D2" />
+                                    <Setter Property="Symbol" Value="PinOff28" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMapMiniFollowTopmost}" Value="True">
+                                            <Setter Property="Foreground" Value="#23C8D2" />
+                                            <Setter Property="Symbol" Value="Pin28" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                    </Button>
+                    <Button Grid.Column="3"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Click="CloseButton_Click"
+                            ToolTip="隐藏地图小窗">
+                        <ui:SymbolIcon FontSize="16"
+                                       Foreground="#D7E4EA"
+                                       Symbol="Dismiss24" />
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

@@ -49,6 +49,30 @@ public sealed class MapTileViewerControl : FrameworkElement
         typeof(MapTileViewerControl),
         new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty IsReadOnlyDisplayProperty = DependencyProperty.Register(
+        nameof(IsReadOnlyDisplay),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnDisplayModeChanged));
+
+    public static readonly DependencyProperty IsCompactFollowViewProperty = DependencyProperty.Register(
+        nameof(IsCompactFollowView),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnDisplayModeChanged));
+
+    public static readonly DependencyProperty IsRecorderModeProperty = DependencyProperty.Register(
+        nameof(IsRecorderMode),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnIsRecorderModeChanged));
+
+    public static readonly DependencyProperty IsPathRecorderRecordingProperty = DependencyProperty.Register(
+        nameof(IsPathRecorderRecording),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnIsPathRecorderRecordingChanged));
+
     private const int TileSize = 512;
     private readonly Dictionary<TileKey, BitmapSource> _tileCache = new();
     private readonly HashSet<TileKey> _pendingTiles = [];
@@ -97,12 +121,14 @@ public sealed class MapTileViewerControl : FrameworkElement
     private Point2f? _selectedRecorderPoint;
     private RecordedMapEdge? _selectedRecorderEdge;
     private List<Point2f> _selectedRecorderPoints = [];
+    private PathingTask? _currentPathingTask;
     private List<Point2f> _pathPoints = [];
     private List<RecordedMapPoint> _recordedPoints = [];
     private List<List<RecordedMapPoint>> _recordedRouteGroups = [];
     private List<MapTeleportPoint> _teleportPoints = [];
     private MapTeleportPoint? _hoverTeleportPoint;
     private bool _isRecorderMode;
+    private bool _isPathRecorderRecording;
     private bool _isDraggingRecorderPoint;
     private int _draggedRecorderPointIndex = -1;
 
@@ -119,7 +145,11 @@ public sealed class MapTileViewerControl : FrameworkElement
         ContextMenuOpening += OnContextMenuOpening;
         SizeChanged += (_, _) =>
         {
-            if (_followCurrentPosition && _currentPoint is { } point)
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+            }
+            else if (_followCurrentPosition && _currentPoint is { } point)
             {
                 CenterOn(point);
             }
@@ -133,35 +163,59 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void HandleMessage(PropertyChangedMessage<object> msg)
     {
-            if (msg.PropertyName == "SendCurrentPosition" && msg.NewValue is Point2f point)
+        if (msg.PropertyName == "SendCurrentPosition" &&
+            TryGetTrackedPosition(msg.NewValue, out var point, out var positionMapName))
+        {
+            if (point.X == 0 && point.Y == 0)
             {
-                if (point.X == 0 && point.Y == 0)
-                {
-                    return;
-                }
+                return;
+            }
 
-                _currentFeaturePoint = point;
-                _currentPoint = ConvertFeatureImageCoordinateToDisplayPoint(point);
-                if (_followCurrentPosition)
-                {
-                    CenterOn(_currentPoint.Value);
-                }
-
+            if (!IsPositionForCurrentMap(positionMapName))
+            {
                 InvalidateVisual();
+                return;
+            }
+
+            _currentFeaturePoint = point;
+            _currentPoint = ConvertFeatureImageCoordinateToDisplayPoint(point);
+            if (IsCompactFollowView)
+            {
+                CenterOn(_currentPoint.Value, useFollowZoom: true);
+            }
+            else if (_followCurrentPosition || _isPathRecorderRecording)
+            {
+                CenterOn(_currentPoint.Value);
+            }
+
+            InvalidateVisual();
             return;
         }
 
         if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is Point2f target)
         {
             _targetPoint = ConvertGameCoordinateToImagePoint(target);
+            if (IsCompactFollowView && !_isRecorderMode && _currentPoint == null)
+            {
+                CenterOn(_targetPoint.Value, useFollowZoom: true);
+            }
+
             InvalidateVisual();
             return;
         }
 
         if (msg.PropertyName == "UpdateCurrentPathing" && msg.NewValue is PathingTask pathingTask)
         {
-            _pathPoints = pathingTask.Positions.Select(ConvertToMapPoint).ToList();
-            if (_followCurrentPosition && _currentPoint is { } current)
+            _currentPathingTask = pathingTask;
+            RefreshCurrentPathingPoints();
+            if (IsCompactFollowView)
+            {
+                if (!_isRecorderMode)
+                {
+                    FocusCompactView();
+                }
+            }
+            else if (_followCurrentPosition && _currentPoint is { } current)
             {
                 CenterOn(current);
             }
@@ -178,6 +232,21 @@ public sealed class MapTileViewerControl : FrameworkElement
         {
             _recordedPoints = recorderTask.Positions.Select(CreateRecordedMapPoint).ToList();
             _selectedRecorderEdge = null;
+            if (IsCompactFollowView)
+            {
+                if (_isPathRecorderRecording && _currentPoint is { } current)
+                {
+                    CenterOn(current, useFollowZoom: true);
+                }
+                else
+                {
+                    FocusLatestRecordedPoint(selectLatest: true);
+                }
+            }
+            else if (_isPathRecorderRecording && _recordedPoints.Count > 0)
+            {
+                CenterOn(_currentPoint ?? _recordedPoints[^1].Point);
+            }
 
             InvalidateVisual();
             return;
@@ -198,6 +267,11 @@ public sealed class MapTileViewerControl : FrameworkElement
             _selectedRecorderEdge = null;
             _selectedRecorderPoint = ConvertGameCoordinateToImagePoint(recorderPoint);
             _selectedRecorderPoints = [_selectedRecorderPoint.Value];
+            if (IsCompactFollowView)
+            {
+                CenterOn(_selectedRecorderPoint.Value, useFollowZoom: true);
+            }
+
             InvalidateVisual();
             return;
         }
@@ -211,6 +285,10 @@ public sealed class MapTileViewerControl : FrameworkElement
             _selectedRecorderPoint = _selectedRecorderPoints.Count == 1
                 ? _selectedRecorderPoints[0]
                 : null;
+            if (IsCompactFollowView)
+            {
+                CenterOn(GetPointCenter(_selectedRecorderPoints), useFollowZoom: true);
+            }
 
             InvalidateVisual();
             return;
@@ -223,7 +301,14 @@ public sealed class MapTileViewerControl : FrameworkElement
                 .ToList();
             if (points.Count > 0)
             {
-                FitPoints(points);
+                if (IsCompactFollowView)
+                {
+                    CenterOn(GetPointCenter(points), useFollowZoom: true);
+                }
+                else
+                {
+                    FitPoints(points);
+                }
             }
 
             InvalidateVisual();
@@ -238,6 +323,12 @@ public sealed class MapTileViewerControl : FrameworkElement
             return;
         }
 
+        if (msg.PropertyName == "SelectRecorderRouteEdgeVisual" && msg.NewValue is RecorderRouteEdgeSelection edgeSelection)
+        {
+            SelectRecordedEdgeVisual(edgeSelection);
+            return;
+        }
+
         if (msg.PropertyName == "ClearSelectedRecorderEdge")
         {
             _selectedRecorderEdge = null;
@@ -247,6 +338,7 @@ public sealed class MapTileViewerControl : FrameworkElement
 
         if (msg.PropertyName == "ClearCurrentPathing")
         {
+            _currentPathingTask = null;
             _pathPoints = [];
             InvalidateVisual();
             return;
@@ -278,6 +370,13 @@ public sealed class MapTileViewerControl : FrameworkElement
 
         if (msg.PropertyName == "SetMapFollowCurrent" && msg.NewValue is bool followCurrent)
         {
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+                InvalidateVisual();
+                return;
+            }
+
             SetFollowCurrentPosition(followCurrent, false);
             if (_followCurrentPosition && _currentPoint is { } current)
             {
@@ -291,25 +390,70 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (msg.PropertyName == "SetMapViewerRecorderMode" && msg.NewValue is bool recorderMode)
         {
             _isRecorderMode = recorderMode;
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+            }
+
             InvalidateVisual();
             return;
         }
 
         if (msg.PropertyName == "MapZoomIn")
         {
+            if (IsCompactFollowView)
+            {
+                return;
+            }
+
             ZoomAroundCenter(1.25);
             return;
         }
 
         if (msg.PropertyName == "MapZoomOut")
         {
+            if (IsCompactFollowView)
+            {
+                return;
+            }
+
             ZoomAroundCenter(0.8);
             return;
         }
 
         if (msg.PropertyName == "MapToggleZoom")
         {
+            if (IsCompactFollowView)
+            {
+                return;
+            }
+
             ToggleZoomAroundCenter();
+        }
+    }
+
+    private bool IsPositionForCurrentMap(string? mapName)
+    {
+        return string.IsNullOrWhiteSpace(mapName) ||
+               string.Equals(mapName, MapName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetTrackedPosition(object? value, out Point2f point, out string? mapName)
+    {
+        switch (value)
+        {
+            case TrackedMapPosition tracked:
+                point = tracked.ImagePosition;
+                mapName = tracked.MapName;
+                return true;
+            case Point2f legacyPoint:
+                point = legacyPoint;
+                mapName = null;
+                return true;
+            default:
+                point = default;
+                mapName = null;
+                return false;
         }
     }
 
@@ -340,6 +484,30 @@ public sealed class MapTileViewerControl : FrameworkElement
     {
         get => (bool)GetValue(ShowTeleportPointsProperty);
         set => SetValue(ShowTeleportPointsProperty, value);
+    }
+
+    public bool IsReadOnlyDisplay
+    {
+        get => (bool)GetValue(IsReadOnlyDisplayProperty);
+        set => SetValue(IsReadOnlyDisplayProperty, value);
+    }
+
+    public bool IsCompactFollowView
+    {
+        get => (bool)GetValue(IsCompactFollowViewProperty);
+        set => SetValue(IsCompactFollowViewProperty, value);
+    }
+
+    public bool IsRecorderMode
+    {
+        get => (bool)GetValue(IsRecorderModeProperty);
+        set => SetValue(IsRecorderModeProperty, value);
+    }
+
+    public bool IsPathRecorderRecording
+    {
+        get => (bool)GetValue(IsPathRecorderRecordingProperty);
+        set => SetValue(IsPathRecorderRecordingProperty, value);
     }
 
     protected override void OnRender(DrawingContext drawingContext)
@@ -375,6 +543,7 @@ public sealed class MapTileViewerControl : FrameworkElement
         control._loadingMapName = string.Empty;
         control._teleportPoints = [];
         control._hoverTeleportPoint = null;
+        control._pathPoints = [];
         control.ClearTiles();
         control.InvalidateVisual();
     }
@@ -386,9 +555,73 @@ public sealed class MapTileViewerControl : FrameworkElement
             return;
         }
 
-        if (control._followCurrentPosition && control._currentPoint is { } current)
+        if (control.IsCompactFollowView)
+        {
+            control.FocusCompactView();
+        }
+        else if (control._followCurrentPosition && control._currentPoint is { } current)
         {
             control.CenterOn(current);
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private static void OnDisplayModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control.Cursor = control.IsReadOnlyDisplay ? Cursors.Arrow : Cursors.Hand;
+        if (control.IsCompactFollowView)
+        {
+            control._followCurrentPosition = true;
+            control.FocusCompactView();
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private static void OnIsRecorderModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control._isRecorderMode = e.NewValue is true;
+        if (control.IsCompactFollowView)
+        {
+            control.FocusCompactView();
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private static void OnIsPathRecorderRecordingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control._isPathRecorderRecording = e.NewValue is true;
+        if (control._isPathRecorderRecording)
+        {
+            if (control.IsCompactFollowView)
+            {
+                control.FocusCompactView();
+            }
+            else if (control._currentPoint is { } current)
+            {
+                control.CenterOn(current);
+            }
+            else if (control._recordedPoints.Count > 0)
+            {
+                control.CenterOn(control._recordedPoints[^1].Point);
+            }
         }
 
         control.InvalidateVisual();
@@ -468,7 +701,13 @@ public sealed class MapTileViewerControl : FrameworkElement
                 _currentPoint = ConvertFeatureImageCoordinateToDisplayPoint(featurePoint);
             }
 
-            if (_followCurrentPosition && _currentPoint is { } current)
+            RefreshCurrentPathingPoints();
+
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+            }
+            else if (_followCurrentPosition && _currentPoint is { } current)
             {
                 CenterOn(current);
             }
@@ -1118,6 +1357,12 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void OnContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
+        if (IsReadOnlyDisplay)
+        {
+            e.Handled = true;
+            return;
+        }
+
         var position = Mouse.GetPosition(this);
         if (!TrySelectRecordedPointForContextMenu(position) &&
             !TrySelectRecordedEdgeForContextMenu(position))
@@ -1168,6 +1413,11 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (IsReadOnlyDisplay)
+        {
+            return;
+        }
+
         Focus();
         _isDragging = true;
         _dragExceeded = false;
@@ -1200,6 +1450,11 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (IsReadOnlyDisplay)
+        {
+            return;
+        }
+
         if (!_isDragging)
         {
             return;
@@ -1252,6 +1507,12 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (IsReadOnlyDisplay)
+        {
+            Cursor = Cursors.Arrow;
+            return;
+        }
+
         if (!_isDragging)
         {
             UpdateHoveredTeleport(e.GetPosition(this));
@@ -1294,6 +1555,11 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        if (IsReadOnlyDisplay)
+        {
+            return;
+        }
+
         if (!HasMapImage())
         {
             return;
@@ -1464,6 +1730,79 @@ public sealed class MapTileViewerControl : FrameworkElement
         PublishZoom();
     }
 
+    private void FocusCompactView()
+    {
+        if (!IsCompactFollowView || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        if (_isRecorderMode)
+        {
+            if (_selectedRecorderPoints.Count > 0)
+            {
+                CenterOn(GetPointCenter(_selectedRecorderPoints), useFollowZoom: true);
+                return;
+            }
+
+            if (FocusLatestRecordedPoint(selectLatest: false))
+            {
+                return;
+            }
+        }
+
+        if (_currentPoint is { } current)
+        {
+            CenterOn(current, useFollowZoom: true);
+            return;
+        }
+
+        if (_targetPoint is { } target)
+        {
+            CenterOn(target, useFollowZoom: true);
+            return;
+        }
+
+        if (_pathPoints.Count > 0)
+        {
+            CenterOn(GetPointCenter(_pathPoints), useFollowZoom: true);
+            return;
+        }
+
+        CenterOn(ConvertGameCoordinateToImagePoint(new Point2f(0, 0)), useFollowZoom: true);
+    }
+
+    private bool FocusLatestRecordedPoint(bool selectLatest)
+    {
+        if (!IsCompactFollowView || _recordedPoints.Count == 0)
+        {
+            return false;
+        }
+
+        var latest = _recordedPoints[^1].Point;
+        if (selectLatest)
+        {
+            _selectedRecorderEdge = null;
+            _selectedRecorderPoint = latest;
+            _selectedRecorderPoints = [latest];
+        }
+
+        CenterOn(latest, useFollowZoom: true);
+        return true;
+    }
+
+    private static Point2f GetPointCenter(IReadOnlyList<Point2f> points)
+    {
+        if (points.Count == 0)
+        {
+            return new Point2f(0, 0);
+        }
+
+        return new Point2f(
+            (float)points.Average(point => point.X),
+            (float)points.Average(point => point.Y));
+    }
+
     private void CenterOn(Point2f point, bool useFollowZoom = false)
     {
         if (ActualWidth <= 0 || ActualHeight <= 0)
@@ -1482,6 +1821,11 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void PublishZoom()
     {
+        if (IsCompactFollowView)
+        {
+            return;
+        }
+
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateMapZoom", new object(), _zoom));
     }
 
@@ -1658,6 +2002,28 @@ public sealed class MapTileViewerControl : FrameworkElement
         InvalidateVisual();
     }
 
+    private void SelectRecordedEdgeVisual(RecorderRouteEdgeSelection edgeSelection)
+    {
+        var endIndex = edgeSelection.InsertIndex;
+        var startIndex = endIndex - 1;
+        if (startIndex < 0 || endIndex >= _recordedPoints.Count)
+        {
+            _selectedRecorderEdge = null;
+            InvalidateVisual();
+            return;
+        }
+
+        _selectedRecorderPoint = null;
+        _selectedRecorderPoints = [];
+        _selectedRecorderEdge = new RecordedMapEdge(
+            startIndex,
+            endIndex,
+            _recordedPoints[startIndex].Point,
+            _recordedPoints[endIndex].Point,
+            ConvertGameCoordinateToImagePoint(edgeSelection.Point));
+        InvalidateVisual();
+    }
+
     private static WpfPoint ProjectPointToSegment(WpfPoint point, WpfPoint start, WpfPoint end)
     {
         var dx = end.X - start.X;
@@ -1772,6 +2138,30 @@ public sealed class MapTileViewerControl : FrameworkElement
     private Point2f ConvertToMapPoint(Waypoint waypoint)
     {
         return ConvertGameCoordinateToImagePoint(new Point2f((float)waypoint.X, (float)waypoint.Y));
+    }
+
+    private void RefreshCurrentPathingPoints()
+    {
+        if (_currentPathingTask?.Positions == null)
+        {
+            _pathPoints = [];
+            return;
+        }
+
+        if (!IsPathingTaskForCurrentMap(_currentPathingTask))
+        {
+            _pathPoints = [];
+            return;
+        }
+
+        _pathPoints = _currentPathingTask.Positions.Select(ConvertToMapPoint).ToList();
+    }
+
+    private bool IsPathingTaskForCurrentMap(PathingTask pathingTask)
+    {
+        // The active path is explicitly selected by the user. Route files can carry stale or
+        // coarse map metadata, so hiding the whole path here is worse than drawing it.
+        return true;
     }
 
     private RecordedMapPoint CreateRecordedMapPoint(Waypoint waypoint, int index)

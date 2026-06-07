@@ -265,4 +265,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _mapViewerFollowHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 实时追踪地图小窗显示/隐藏
+    [ObservableProperty]
+    private string _mapMiniFollowWindowHotkey = "Ctrl + Shift + M";
+
+    [ObservableProperty]
+    private string _mapMiniFollowWindowHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
 }

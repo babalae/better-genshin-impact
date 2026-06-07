@@ -138,46 +138,57 @@ public class TeleportWaypointStrategy : IWaypointStrategy
             return false;
         }
 
-        await tpTask.OpenBigMapUi();
-        
-        bool changeBigMap = false;
         string? adventurersGuildCountry = TaskContext.Instance().Config?.OtherConfig?.AutoFetchDispatchAdventurersGuildCountry;
         
         var runnerContext = RunnerContext.Instance;
-        if (!runnerContext.isAutoFetchDispatch
-            && !string.IsNullOrEmpty(adventurersGuildCountry)
-            && adventurersGuildCountry != "无")
+        if (runnerContext.isAutoFetchDispatch ||
+            string.IsNullOrEmpty(adventurersGuildCountry) ||
+            adventurersGuildCountry == "无")
         {
-            executor._lastGetExpeditionRewardsTime = DateTime.UtcNow;
-
-            if (TryDetectExpeditionRewards())
-            {
-                if (!runnerContext.TryBeginAutoFetchDispatch())
-                {
-                    return false;
-                }
-
-                changeBigMap = true;
-                Logger.LogInformation("开始自动领取派遣任务！");
-                try
-                {
-                    await runnerContext.StopAutoPickRunTask(
-                        async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, executor.ct, null, true),
-                        5);
-                    Logger.LogInformation("自动领取派遣结束，回归原任务！");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "异常发生在自动派遣领取过程中，继续执行主任务");
-                }
-                finally
-                {
-                    runnerContext.EndAutoFetchDispatch();
-                }
-            }
+            return false;
         }
 
-        return changeBigMap;
+        await tpTask.OpenBigMapUi();
+        executor._lastGetExpeditionRewardsTime = DateTime.UtcNow;
+
+        if (!TryDetectExpeditionRewards())
+        {
+            return false;
+        }
+
+        if (!runnerContext.TryBeginAutoFetchDispatch())
+        {
+            return false;
+        }
+
+        Logger.LogInformation("开始自动领取派遣任务！");
+        try
+        {
+            await new ReturnMainUiTask().Start(executor.ct);
+            await runnerContext.StopAutoPickRunTask(
+                async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, executor.ct, null, true),
+                5);
+            await new ReturnMainUiTask().Start(executor.ct);
+            Logger.LogInformation("自动领取派遣结束，回归原任务！");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "异常发生在自动派遣领取过程中，继续执行主任务");
+            try
+            {
+                await new ReturnMainUiTask().Start(executor.ct);
+            }
+            catch (Exception returnEx)
+            {
+                Logger.LogWarning(returnEx, "自动派遣异常后返回主界面失败，继续执行主任务");
+            }
+        }
+        finally
+        {
+            runnerContext.EndAutoFetchDispatch();
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -29,6 +29,8 @@ public partial class MapViewer
     private double _lastVisibleSideColumnWidth = DefaultVisibleSideColumnWidth;
     private bool _isApplyingSidePanelLayout;
     private bool _suppressRecordedWaypointSelectionSync;
+    private MapMiniFollowWindow? _mapMiniFollowWindow;
+    private bool _preserveMiniFollowVisibleStateOnClose;
 
     public MapViewer(string mapName)
     {
@@ -98,6 +100,8 @@ public partial class MapViewer
     private void MapViewer_Loaded(object sender, RoutedEventArgs e)
     {
         ApplySidePanelLayout(captureVisibleWidth: false);
+        ApplyMapMiniFollowWindowState();
+        ViewModel.ReplayMapDisplaySnapshot();
     }
 
     private void MapViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -118,6 +122,67 @@ public partial class MapViewer
         if (e.PropertyName == nameof(MapViewerViewModel.IsSidePanelVisible))
         {
             ApplySidePanelLayout(captureVisibleWidth: !ViewModel.IsSidePanelVisible);
+        }
+        else if (e.PropertyName == nameof(MapViewerViewModel.IsMapMiniFollowWindowVisible))
+        {
+            ApplyMapMiniFollowWindowState();
+        }
+    }
+
+    private void ApplyMapMiniFollowWindowState()
+    {
+        if (ViewModel.IsMapMiniFollowWindowVisible)
+        {
+            ShowMapMiniFollowWindow();
+        }
+        else
+        {
+            CloseMapMiniFollowWindow(preserveVisibleState: false);
+        }
+    }
+
+    private void ShowMapMiniFollowWindow()
+    {
+        if (_mapMiniFollowWindow is { IsVisible: true })
+        {
+            ViewModel.ReplayMapDisplaySnapshot();
+            return;
+        }
+
+        _mapMiniFollowWindow = new MapMiniFollowWindow(ViewModel);
+        _mapMiniFollowWindow.Closed += MapMiniFollowWindow_Closed;
+        _mapMiniFollowWindow.Show();
+    }
+
+    private void CloseMapMiniFollowWindow(bool preserveVisibleState)
+    {
+        if (_mapMiniFollowWindow == null)
+        {
+            return;
+        }
+
+        _preserveMiniFollowVisibleStateOnClose = preserveVisibleState;
+        try
+        {
+            _mapMiniFollowWindow.Close();
+        }
+        finally
+        {
+            _preserveMiniFollowVisibleStateOnClose = false;
+        }
+    }
+
+    private void MapMiniFollowWindow_Closed(object? sender, EventArgs e)
+    {
+        if (_mapMiniFollowWindow != null)
+        {
+            _mapMiniFollowWindow.Closed -= MapMiniFollowWindow_Closed;
+        }
+
+        _mapMiniFollowWindow = null;
+        if (!_preserveMiniFollowVisibleStateOnClose && ViewModel.IsMapMiniFollowWindowVisible)
+        {
+            ViewModel.IsMapMiniFollowWindowVisible = false;
         }
     }
 
@@ -239,6 +304,7 @@ public partial class MapViewer
                 RecordedWaypointGrid.SelectedItems,
                 GetActiveRecordedRouteSelectedItems(),
                 IsRecordedRouteListFocused(),
+                TileMap.IsKeyboardFocusWithin,
                 IsTextInputFocused()))
         {
             e.Handled = true;
@@ -622,19 +688,9 @@ public partial class MapViewer
             : BindingOperations.GetBindingExpression(current, textProperty);
     }
 
-    private void TitleSettingsButton_Click(object sender, RoutedEventArgs e)
-    {
-        ViewModel.IsViewSettingsOpen = !ViewModel.IsViewSettingsOpen;
-    }
-
     private void TitleTopmostButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.IsTopmost = !ViewModel.IsTopmost;
-    }
-
-    private void ViewSettingsPopup_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        ViewModel.IsViewSettingsOpen = false;
     }
 
     private void MapViewer_Closing(object? sender, CancelEventArgs e)
@@ -645,6 +701,7 @@ public partial class MapViewer
             return;
         }
 
+        CloseMapMiniFollowWindow(preserveVisibleState: true);
         WeakReferenceMessenger.Default.UnregisterAll(this);
         WeakReferenceMessenger.Default.UnregisterAll(ViewModel);
     }

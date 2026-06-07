@@ -4,6 +4,9 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Overlay;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.MapMask;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -23,6 +26,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Model.MaskMap;
+using OpenCvSharp;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
@@ -68,6 +72,10 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
+        [ObservableProperty] private ObservableCollection<MaskMapRoutePoint> _miniMapRoutePoints = [];
+
+        [ObservableProperty] private Rect _miniMapViewport = Rect.Empty;
+
         [ObservableProperty] private bool _isMapPointsLoading;
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
@@ -111,6 +119,9 @@ namespace BetterGenshinImpact.ViewModel
         private int _mapLabelItemsLoadVersion;
         private int _mapPointsLoadVersion;
         private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
+        private Point2f? _lastTrackedImagePosition;
+        private string? _lastTrackedMapName;
+        private string _miniMapRouteMapName = nameof(MapTypes.Teyvat);
 
         public MaskWindowViewModel()
         {
@@ -120,7 +131,176 @@ namespace BetterGenshinImpact.ViewModel
                 {
                     UIDispatcherHelper.Invoke(RefreshSettings);
                 }
+                else if (msg.PropertyName == "UpdateRecorderPathing" && msg.NewValue is PathingTask recorderTask)
+                {
+                    MapMaskRouteOverlayState.Set(recorderTask);
+                    UIDispatcherHelper.BeginInvoke(() => UpdateMiniMapRoute(recorderTask));
+                }
+                else if (msg.PropertyName == "UpdateCurrentPathing" && msg.NewValue is PathingTask currentTask)
+                {
+                    MapMaskRouteOverlayState.Set(currentTask);
+                    UIDispatcherHelper.BeginInvoke(() => UpdateMiniMapRoute(currentTask));
+                }
+                else if (msg.PropertyName == "ClearCurrentPathing")
+                {
+                    MapMaskRouteOverlayState.Set(null);
+                    UIDispatcherHelper.BeginInvoke(ClearMiniMapRoute);
+                }
+                else if (msg.PropertyName == "SendCurrentPosition" &&
+                         TryGetTrackedPosition(msg.NewValue, out var point, out var mapName))
+                {
+                    UIDispatcherHelper.BeginInvoke(() => UpdateMiniMapViewportFromTrackedPosition(point, mapName));
+                }
             });
+        }
+
+        private void UpdateMiniMapRoute(PathingTask task)
+        {
+            try
+            {
+                var mapName = ResolveTaskMapName(task);
+                _miniMapRouteMapName = mapName;
+                var matchingMethod = ResolveTaskMapMatchingMethod(task);
+                var map = MapManager.GetMap(mapName, matchingMethod);
+                var routePoints = task.Positions
+                    .Select(waypoint =>
+                    {
+                        var imagePoint = map.ConvertGenshinMapCoordinatesToImageCoordinates(
+                            new Point2f((float)waypoint.X, (float)waypoint.Y));
+                        return new MaskMapRoutePoint(imagePoint.X, imagePoint.Y, waypoint.Type ?? string.Empty);
+                    })
+                    .ToList();
+
+                MiniMapRoutePoints = new ObservableCollection<MaskMapRoutePoint>(routePoints);
+                if (_lastTrackedImagePosition is { })
+                {
+                    RefreshMiniMapViewportFromLastTrackedPosition();
+                }
+                else
+                {
+                    MiniMapViewport = Rect.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "刷新小地图路线叠层失败");
+                ClearMiniMapRoute();
+            }
+        }
+
+        private void ClearMiniMapRoute()
+        {
+            if (MiniMapRoutePoints.Count == 0)
+            {
+                return;
+            }
+
+            MiniMapRoutePoints = [];
+            MiniMapViewport = Rect.Empty;
+        }
+
+        private void UpdateMiniMapViewportFromTrackedPosition(Point2f point, string? mapName)
+        {
+            if (point == default || point.X == 0 && point.Y == 0)
+            {
+                ClearMiniMapViewport();
+                return;
+            }
+
+            _lastTrackedImagePosition = point;
+            _lastTrackedMapName = NormalizeKnownMapName(mapName);
+
+            if (MiniMapRoutePoints.Count == 0)
+            {
+                return;
+            }
+
+            MiniMapViewport = CreateMiniMapViewport(point);
+        }
+
+        public void ClearMiniMapTrackingViewport()
+        {
+            ClearMiniMapViewport();
+        }
+
+        private void ClearMiniMapViewport()
+        {
+            _lastTrackedImagePosition = null;
+            _lastTrackedMapName = null;
+            MiniMapViewport = Rect.Empty;
+        }
+
+        private void RefreshMiniMapViewportFromLastTrackedPosition()
+        {
+            if (_lastTrackedImagePosition is not { } point)
+            {
+                return;
+            }
+
+            MiniMapViewport = CreateMiniMapViewport(point);
+        }
+
+        private static Rect CreateMiniMapViewport(Point2f point)
+        {
+            double viewportSize = MapAssets.MimiMapRect1080P.Width / 3.0 * 10;
+            return new Rect(
+                point.X - viewportSize / 2.0,
+                point.Y - viewportSize / 2.0,
+                viewportSize,
+                viewportSize);
+        }
+
+        private static string ResolveTaskMapName(PathingTask task)
+        {
+            var mapName = task.Info?.MapName;
+            if (string.IsNullOrWhiteSpace(mapName))
+            {
+                return nameof(MapTypes.Teyvat);
+            }
+
+            return mapName;
+        }
+
+        private static string ResolveTaskMapMatchingMethod(PathingTask task)
+        {
+            var matchingMethod = task.Info?.MapMatchMethod;
+            if (string.IsNullOrWhiteSpace(matchingMethod))
+            {
+                return TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+            }
+
+            return matchingMethod;
+        }
+
+        private static string? NormalizeKnownMapName(string? mapName)
+        {
+            if (string.IsNullOrWhiteSpace(mapName))
+            {
+                return null;
+            }
+
+            return Enum.TryParse<MapTypes>(mapName, true, out var mapType)
+                ? mapType.ToString()
+                : null;
+        }
+
+        private static bool TryGetTrackedPosition(object? value, out Point2f point, out string? mapName)
+        {
+            switch (value)
+            {
+                case TrackedMapPosition tracked:
+                    point = tracked.ImagePosition;
+                    mapName = tracked.MapName;
+                    return true;
+                case Point2f legacyPoint:
+                    point = legacyPoint;
+                    mapName = null;
+                    return true;
+                default:
+                    point = default;
+                    mapName = null;
+                    return false;
+            }
         }
 
         private void InitializeStatusList()
@@ -139,8 +319,25 @@ namespace BetterGenshinImpact.ViewModel
         private void OnLoaded()
         {
             RefreshSettings();
+            RestoreMiniMapRouteSnapshot();
             InitializeStatusList();
             InitFps();
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "RequestMapDisplaySnapshot",
+                new object(),
+                new object()));
+        }
+
+        private void RestoreMiniMapRouteSnapshot()
+        {
+            var task = MapMaskRouteOverlayState.Get();
+            if (task == null)
+            {
+                return;
+            }
+
+            UpdateMiniMapRoute(task);
         }
 
         [RelayCommand]

@@ -10,6 +10,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
@@ -17,11 +18,13 @@ using System.Web;
 using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Web.WebView2.Core;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -37,6 +40,8 @@ public class PathRecorder : Singleton<PathRecorder>
     private WebpageWindow? _webWindow;
     private bool _isRecording;
     private int _wpfEditorConnectionCount;
+    private CancellationTokenSource? _currentPositionPublisherCts;
+    private readonly object _positionResolveLock = new();
 
     /// <summary>
     /// Default serialization format bounds ignoring null payloads strictly mapped to lowercase snake_case schemas.
@@ -94,6 +99,77 @@ public class PathRecorder : Singleton<PathRecorder>
         return mapName;
     }
 
+    private bool TryResolveCurrentImagePosition(
+        ImageRegion screen,
+        string matchingMethod,
+        out string resolvedMapName,
+        out ISceneMap mapBase,
+        out Point2f imagePosition)
+    {
+        lock (_positionResolveLock)
+        {
+            var preferredMapName = GetMapName();
+            if (TryGetCurrentImagePosition(screen, preferredMapName, matchingMethod, out mapBase, out imagePosition))
+            {
+                resolvedMapName = preferredMapName;
+                return true;
+            }
+
+            if (!string.Equals(preferredMapName, nameof(MapTypes.Teyvat), StringComparison.OrdinalIgnoreCase) &&
+                TryGetCurrentImagePosition(screen, nameof(MapTypes.Teyvat), matchingMethod, out mapBase, out imagePosition, resetNavigation: true))
+            {
+                resolvedMapName = nameof(MapTypes.Teyvat);
+                TaskContext.Instance().Config.DevConfig.RecordMapName = resolvedMapName;
+                TaskControl.Logger?.LogWarning(
+                    "当前记录地图层级 {MapName} 与识别结果不匹配，已回退到提瓦特大陆",
+                    preferredMapName);
+                return true;
+            }
+
+            resolvedMapName = preferredMapName;
+            mapBase = null!;
+            imagePosition = default;
+            return false;
+        }
+    }
+
+    private static bool TryGetCurrentImagePosition(
+        ImageRegion screen,
+        string mapName,
+        string matchingMethod,
+        out ISceneMap mapBase,
+        out Point2f imagePosition,
+        bool resetNavigation = false)
+    {
+        mapBase = MapManager.GetMap(mapName, matchingMethod);
+        if (resetNavigation)
+        {
+            Navigation.Reset();
+        }
+
+        imagePosition = Navigation.GetPositionStable(screen, mapName, matchingMethod);
+        return IsValidImagePosition(mapBase, imagePosition);
+    }
+
+    private static bool IsValidImagePosition(ISceneMap mapBase, Point2f imagePosition)
+    {
+        if (imagePosition == default)
+        {
+            return false;
+        }
+
+        if (mapBase is not SceneBaseMap sceneMap)
+        {
+            return true;
+        }
+
+        const float tolerance = 32f;
+        return imagePosition.X >= -tolerance &&
+               imagePosition.Y >= -tolerance &&
+               imagePosition.X <= sceneMap.MapSize.Width + tolerance &&
+               imagePosition.Y <= sceneMap.MapSize.Height + tolerance;
+    }
+
     /// <summary>
     /// Originates a recording trajectory bootstrapping spatial engines with zero-point teleport contexts.
     /// 开启录制轨迹，使用初始传送锚点及零点计算环境来引导空间追踪引擎。
@@ -132,11 +208,9 @@ public class PathRecorder : Singleton<PathRecorder>
             return CancelStart("路径点记录启动失败：无法获取游戏截图");
         }
 
-        var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
-        var mapBase = MapManager.GetMap(GetMapName(), matchingMethod);
-        if (mapBase == null)
+        if (!TryResolveCurrentImagePosition(screen, matchingMethod, out var resolvedMapName, out var mapBase, out var position))
         {
-            return CancelStart("路径点记录启动失败：无法加载地图");
+            return CancelStart("路径点记录启动失败：未识别到当前位置");
         }
         
         var nullablePosition = mapBase.ConvertImageCoordinatesToGenshinMapCoordinates(position);
@@ -149,6 +223,8 @@ public class PathRecorder : Singleton<PathRecorder>
         {
             position = nullablePosition.Value;
         }
+
+        _pathingTask.Info.MapName = resolvedMapName;
         
         waypoint.X = RoundCoordinate(position.X);
         waypoint.Y = RoundCoordinate(position.Y);
@@ -167,6 +243,7 @@ public class PathRecorder : Singleton<PathRecorder>
         }
 
         PublishRecorderTask();
+        StartCurrentPositionPublisher(matchingMethod);
         return true;
     }
 
@@ -184,9 +261,11 @@ public class PathRecorder : Singleton<PathRecorder>
         var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
         if (string.IsNullOrEmpty(matchingMethod)) return;
 
-        var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
-        var mapBase = MapManager.GetMap(GetMapName(), matchingMethod);
-        if (mapBase == null) return;
+        if (!TryResolveCurrentImagePosition(screen, matchingMethod, out var resolvedMapName, out var mapBase, out var position))
+        {
+            TaskControl.Logger?.LogWarning("未识别到当前位置！");
+            return;
+        }
         
         var nullablePosition = mapBase.ConvertImageCoordinatesToGenshinMapCoordinates(position);
         
@@ -199,6 +278,8 @@ public class PathRecorder : Singleton<PathRecorder>
         {
             position = nullablePosition.Value;
         }
+
+        _pathingTask.Info.MapName = resolvedMapName;
 
         waypoint.X = RoundCoordinate(position.X);
         waypoint.Y = RoundCoordinate(position.Y);
@@ -226,6 +307,7 @@ public class PathRecorder : Singleton<PathRecorder>
     /// </summary>
     public void Save()
     {
+        StopCurrentPositionPublisher();
         if (!HasActiveEditor)
         {
             var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
@@ -289,6 +371,7 @@ public class PathRecorder : Singleton<PathRecorder>
     private bool CancelStart(string message)
     {
         TaskControl.Logger?.LogWarning(message);
+        StopCurrentPositionPublisher();
         _isRecording = false;
         PublishRecorderTask();
         return false;
@@ -298,6 +381,48 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
             this, "UpdateRecorderPathing", new object(), _pathingTask));
+    }
+
+    private void StartCurrentPositionPublisher(string matchingMethod)
+    {
+        StopCurrentPositionPublisher();
+        _currentPositionPublisherCts = new CancellationTokenSource();
+        var token = _currentPositionPublisherCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    RefreshCurrentPositionSnapshot(matchingMethod);
+                    await Task.Delay(750, token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                TaskControl.Logger?.LogDebug(ex, "录制器当前位置刷新已停止");
+            }
+        }, token);
+    }
+
+    private void StopCurrentPositionPublisher()
+    {
+        var cts = Interlocked.Exchange(ref _currentPositionPublisherCts, null);
+        cts?.Cancel();
+    }
+
+    private void RefreshCurrentPositionSnapshot(string matchingMethod)
+    {
+        var screen = TaskControl.CaptureToRectArea();
+        if (screen == null)
+        {
+            return;
+        }
+
+        TryResolveCurrentImagePosition(screen, matchingMethod, out _, out _, out _);
     }
 
     private static double RoundCoordinate(double value)
