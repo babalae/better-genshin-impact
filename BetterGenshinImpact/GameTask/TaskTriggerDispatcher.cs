@@ -16,6 +16,8 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Model;
+using BetterGenshinImpact.Service.Model.OverlayMetric;
 using Vanara.PInvoke;
 using Rect = OpenCvSharp.Rect;
 
@@ -214,11 +216,7 @@ namespace BetterGenshinImpact.GameTask
         public void Tick(object? sender, EventArgs e)
         {
             var hasLock = false;
-            var shouldRecordMetrics = false;
-            var tickStart = 0L;
-            var processingCostMs = 0d;
-            var captureCostMs = 0d;
-            var triggerCostMs = 0d;
+            var tickMetrics = new DispatcherTickMetrics();
             try
             {
                 // 上一帧还没处理完时只记录跳过次数，不等待锁；等待时间不应混入本轮处理耗时。
@@ -360,12 +358,10 @@ namespace BetterGenshinImpact.GameTask
 
                 var speedTimer = new SpeedTimer();
                 // 从真正开始截图处计时，前面的窗口状态检查不计入 BetterGI 本轮处理耗时。
-                tickStart = Stopwatch.GetTimestamp();
-                shouldRecordMetrics = true;
-                var captureStart = tickStart;
+                tickMetrics.Begin();
                 // 捕获游戏画面
                 var bitmap = GameCapture.Capture();
-                captureCostMs = Stopwatch.GetElapsedTime(captureStart).TotalMilliseconds;
+                tickMetrics.EndCapture();
                 speedTimer.Record("截图");
 
                 if (bitmap == null)
@@ -429,7 +425,7 @@ namespace BetterGenshinImpact.GameTask
                                 // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
                                 var triggerStart = Stopwatch.GetTimestamp();
                                 trigger.OnCapture(content);
-                                triggerCostMs += Stopwatch.GetElapsedTime(triggerStart).TotalMilliseconds;
+                                tickMetrics.AddTriggerCost(triggerStart);
                                 speedTimer.Record(trigger.Name);
                             }
                         }
@@ -442,10 +438,7 @@ namespace BetterGenshinImpact.GameTask
             }
             finally
             {
-                if (shouldRecordMetrics)
-                {
-                    processingCostMs = Stopwatch.GetElapsedTime(tickStart).TotalMilliseconds;
-                }
+                tickMetrics.EndProcessing();
 
                 if ((DateTime.Now - _prevManualGc).TotalSeconds > 2)
                 {
@@ -458,13 +451,10 @@ namespace BetterGenshinImpact.GameTask
                     Monitor.Exit(_locker);
                 }
 
-                if (shouldRecordMetrics)
+                if (tickMetrics.IsEnabled)
                 {
                     // 释放调度锁后再发布指标，避免 UI 订阅回调参与实时触发器锁竞争。
-                    _metricsService?.RecordDispatcherTick(
-                        processingCostMs,
-                        captureCostMs,
-                        triggerCostMs);
+                    tickMetrics.Publish(_metricsService);
                 }
             }
         }

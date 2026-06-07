@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BetterGenshinImpact.Service;
+namespace BetterGenshinImpact.Service.Model.OverlayMetric;
 
 public sealed record OverlayMetricDisplayItem(string Name, string Value)
 {
