@@ -684,8 +684,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "实时追踪地图跟随开关",
+            nameof(Config.HotKeyConfig.MapViewerFollowHotkey),
+            Config.HotKeyConfig.MapViewerFollowHotkey,
+            Config.HotKeyConfig.MapViewerFollowHotkeyType,
+            (_, _) =>
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ToggleMapFollowCurrent", new object(), new object()));
+            }
+        ));
+
         var pathRecorder = PathRecorder.Instance;
-        var pathRecording = false;
 
         devDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止路径记录器",
@@ -694,16 +704,16 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.PathRecorderHotkeyType,
             (_, _) =>
             {
-                if (pathRecording)
+                if (pathRecorder.IsRecording)
                 {
                     pathRecorder.Save();
                 }
                 else
                 {
+                    WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                        this, "PreparePathRecorderStart", new object(), new object()));
                     Task.Run(() => { pathRecorder.Start(); });
                 }
-
-                pathRecording = !pathRecording;
             }
         ));
 
@@ -714,11 +724,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AddWaypointHotkeyType,
             (_, _) =>
             {
-                if (pathRecording)
+                if (pathRecorder.IsRecording)
                 {
                     Task.Run(() => { pathRecorder.AddWaypoint(); });
-
+                    return;
                 }
+
+                _logger.LogWarning("路径记录器未启动，已忽略添加路径点快捷键");
             }
         ));
 

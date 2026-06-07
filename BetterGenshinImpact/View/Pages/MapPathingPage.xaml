@@ -75,7 +75,8 @@
                            Icon="{ui:SymbolIcon Settings24}" />
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenDevToolsCommand}"
-                           Content="开发者工具" />
+                           Content="开发工具"
+                           Icon="{ui:SymbolIcon Code24}" />
             </StackPanel>
 
             <Separator Grid.Row="3"

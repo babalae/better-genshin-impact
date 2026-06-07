@@ -1,4 +1,5 @@
 ﻿using ICSharpCode.AvalonEdit;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,14 +15,31 @@ public class CodeBox : TextEditor
     }
 
     public static readonly DependencyProperty CodeProperty =
-        DependencyProperty.Register(nameof(Code), typeof(string), typeof(CodeBox), new PropertyMetadata(string.Empty, OnTextChange));
+        DependencyProperty.Register(
+            nameof(Code),
+            typeof(string),
+            typeof(CodeBox),
+            new FrameworkPropertyMetadata(
+                string.Empty,
+                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+                OnTextChange));
 
     private static void OnTextChange(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is TextEditor editor)
         {
-            editor.Text = (e.NewValue as string)!;
+            var text = e.NewValue as string ?? string.Empty;
+            if (editor.Text != text)
+            {
+                editor.Text = text;
+            }
         }
+    }
+
+    protected override void OnTextChanged(EventArgs e)
+    {
+        base.OnTextChanged(e);
+        SetCurrentValue(CodeProperty, Text);
     }
 
     public bool LineWrap

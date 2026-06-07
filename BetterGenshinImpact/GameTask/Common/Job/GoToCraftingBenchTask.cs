@@ -213,17 +213,23 @@ public class GoToCraftingBenchTask
             throw new Exception("地图追踪文件加载失败");
         }
 
-        var pathingTask = new PathExecutor(ct)
+        var tasks = task.SplitTasks();
+
+        foreach (var chunk in tasks)
         {
-            PartyConfig = new PathingPartyConfig
+            var pathingTask = new PathExecutor(ct)
             {
-                Enabled = true,
-                AutoSkipEnabled = true,
-                AutoRunEnabled = country != "枫丹",
-            },
-            EndAction = region => Bv.FindFAndPress(region, text: this.craftLocalizedString)
-        };
-        await pathingTask.Pathing(task);
+                PartyConfig = new PathingPartyConfig
+                {
+                    Enabled = true,
+                    AutoSkipEnabled = true,
+                    AutoRunEnabled = country != "枫丹",
+                },
+                EndAction = region => Bv.FindFAndPress(region, text: this.craftLocalizedString)
+            };
+            await pathingTask.Pathing(chunk);
+            if (!pathingTask.SuccessEnd) break;
+        }
 
         await Delay(700, ct);
         

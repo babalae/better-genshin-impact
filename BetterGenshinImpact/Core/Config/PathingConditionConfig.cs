@@ -38,6 +38,10 @@ public partial class PathingConditionConfig : ObservableObject
     [ObservableProperty]
     private bool _autoEatEnabled = false;
 
+    // 启用路线遥测记录
+    [ObservableProperty]
+    private bool _enableRouteTelemetry = false;
+
     public static PathingConditionConfig Default => new()
     {
         AvatarConditions =

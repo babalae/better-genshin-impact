@@ -1,0 +1,140 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.WaypointAdvancedEditorWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+                 Title="高级参数"
+                 Width="680"
+                 Height="500"
+                 MinWidth="600"
+                 MinHeight="440"
+                 d:DataContext="{d:DesignInstance Type=windows:RecordedWaypointViewModel}"
+                 ExtendsContentIntoTitleBar="True"
+                 ResizeMode="CanResize"
+                 WindowBackdropType="Mica"
+                 WindowStartupLocation="CenterOwner"
+                 WindowStyle="SingleBorderWindow"
+                 mc:Ignorable="d">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="高级参数" />
+
+        <Border Grid.Row="1"
+                Margin="16"
+                Padding="16"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="96" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.ColumnSpan="2"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Text="{Binding Index, StringFormat=第 {0} 个路线点}" />
+
+                <TextBlock Grid.Row="1"
+                           Margin="0,16,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="描述" />
+                <ui:TextBox Grid.Row="1"
+                            Grid.Column="1"
+                            Margin="0,16,0,0"
+                            MinHeight="34"
+                            Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                <TextBlock Grid.Row="2"
+                           Margin="0,10,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="怪物标签" />
+                <ComboBox Grid.Row="2"
+                          Grid.Column="1"
+                          Height="34"
+                          Margin="0,10,0,0"
+                          SelectedValue="{Binding MonsterTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Content="无" Tag="" />
+                    <ComboBoxItem Content="小怪" Tag="normal" />
+                    <ComboBoxItem Content="精英" Tag="elite" />
+                    <ComboBoxItem Content="传奇" Tag="legendary" />
+                </ComboBox>
+
+                <TextBlock Grid.Row="3"
+                           Margin="0,10,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="异常识别" />
+                <StackPanel Grid.Row="3"
+                            Grid.Column="1"
+                            Margin="0,10,0,0"
+                            Orientation="Horizontal">
+                    <CheckBox VerticalAlignment="Center"
+                              Content="未识别"
+                              IsChecked="{Binding MisidentificationUnrecognized, Mode=TwoWay}" />
+                    <CheckBox Margin="18,0,0,0"
+                              VerticalAlignment="Center"
+                              Content="路径过远"
+                              IsChecked="{Binding MisidentificationPathTooFar, Mode=TwoWay}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="4"
+                           Margin="0,10,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="处理方式" />
+                <ComboBox Grid.Row="4"
+                          Grid.Column="1"
+                          Height="34"
+                          Margin="0,10,0,0"
+                          SelectedValue="{Binding MisidentificationHandlingMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Content="取上一个识别到的点位置" Tag="previousDetectedPoint" />
+                    <ComboBoxItem Content="大地图识别" Tag="mapRecognition" />
+                </ComboBox>
+
+                <Grid Grid.Row="5"
+                      Grid.Column="1"
+                      Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox Grid.Column="0"
+                              VerticalAlignment="Center"
+                              Content="此点位区分怪物拾取"
+                              IsChecked="{Binding EnableMonsterLootSplit, Mode=TwoWay}" />
+                </Grid>
+
+                <ui:Button Grid.Row="6"
+                           Grid.ColumnSpan="2"
+                           Width="96"
+                           Height="34"
+                           Margin="0,18,0,0"
+                           HorizontalAlignment="Right"
+                           Click="CloseButton_Click"
+                           Content="完成"
+                           Icon="{ui:SymbolIcon Checkmark24}" />
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

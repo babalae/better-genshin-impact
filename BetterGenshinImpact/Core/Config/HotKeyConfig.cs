@@ -258,4 +258,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _mapMaskEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 实时追踪地图跟随当前坐标开关
+    [ObservableProperty]
+    private string _mapViewerFollowHotkey = "";
+
+    [ObservableProperty]
+    private string _mapViewerFollowHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

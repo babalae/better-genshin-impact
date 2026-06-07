@@ -90,6 +90,11 @@ public class EngineExtend
 
         engine.AddHostObject("host", new CustomHostFunctions());
 
+        // 自动为当前 JS 环境注册生命周期管理与暂停状态读取
+        var jsSuspendHook = new JsScriptSuspendHook();
+        GameTask.RunnerContext.Instance.SuspendableDictionary["DefaultJsEnvironment"] = jsSuspendHook;
+        engine.AddHostObject("suspendState", jsSuspendHook);
+
         // HTML 遮罩
         engine.AddHostObject("htmlMask", new HtmlMask(workDir));
 

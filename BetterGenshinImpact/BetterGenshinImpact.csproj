@@ -35,6 +35,7 @@
 		<Resource Include="Resources\Images\*.png" />
 		<Resource Include="Resources\Images\*.ico" />
 		<Resource Include="Resources\Fonts\*.ttf" />
+		<Resource Include="Resources\Data\*.json" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -218,11 +219,6 @@
 
 	<ItemGroup>
 	  <Page Update="View\Windows\WelcomeDialog.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	    <XamlRuntime>Wpf</XamlRuntime>
-	    <SubType>Designer</SubType>
-	  </Page>
-	  <Page Update="View\Windows\MapPathingDevWindow.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	    <XamlRuntime>Wpf</XamlRuntime>
 	    <SubType>Designer</SubType>
