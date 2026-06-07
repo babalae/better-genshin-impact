@@ -2,6 +2,7 @@
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -20,6 +21,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -102,27 +104,32 @@ public class PathRecorder : Singleton<PathRecorder>
     private bool TryResolveCurrentImagePosition(
         ImageRegion screen,
         string matchingMethod,
+        bool allowMapAutoDetect,
         out string resolvedMapName,
         out ISceneMap mapBase,
         out Point2f imagePosition)
     {
         lock (_positionResolveLock)
         {
-            var preferredMapName = GetMapName();
+            var preferredMapName = allowMapAutoDetect || string.IsNullOrWhiteSpace(_pathingTask.Info?.MapName)
+                ? GetMapName()
+                : _pathingTask.Info.MapName;
             if (TryGetCurrentImagePosition(screen, preferredMapName, matchingMethod, out mapBase, out imagePosition))
             {
                 resolvedMapName = preferredMapName;
                 return true;
             }
 
-            if (!string.Equals(preferredMapName, nameof(MapTypes.Teyvat), StringComparison.OrdinalIgnoreCase) &&
-                TryGetCurrentImagePosition(screen, nameof(MapTypes.Teyvat), matchingMethod, out mapBase, out imagePosition, resetNavigation: true))
+            if (allowMapAutoDetect &&
+                TryDetectCurrentMap(screen, preferredMapName, matchingMethod, out var detectedMapName) &&
+                TryGetCurrentImagePosition(screen, detectedMapName, matchingMethod, out mapBase, out imagePosition, resetNavigation: true))
             {
-                resolvedMapName = nameof(MapTypes.Teyvat);
+                resolvedMapName = detectedMapName;
                 TaskContext.Instance().Config.DevConfig.RecordMapName = resolvedMapName;
-                TaskControl.Logger?.LogWarning(
-                    "当前记录地图层级 {MapName} 与识别结果不匹配，已回退到提瓦特大陆",
-                    preferredMapName);
+                TaskControl.Logger?.LogInformation(
+                    "当前记录地图层级 {MapName} 与识别结果不匹配，已自动切换到 {DetectedMapName}",
+                    preferredMapName,
+                    MapTypesExtensions.ParseFromName(detectedMapName).GetDescription());
                 return true;
             }
 
@@ -148,6 +155,50 @@ public class PathRecorder : Singleton<PathRecorder>
         }
 
         imagePosition = Navigation.GetPositionStable(screen, mapName, matchingMethod);
+        return IsValidImagePosition(mapBase, imagePosition);
+    }
+
+    private static bool TryDetectCurrentMap(
+        ImageRegion screen,
+        string preferredMapName,
+        string matchingMethod,
+        out string detectedMapName)
+    {
+        detectedMapName = string.Empty;
+        foreach (var mapType in Enum.GetValues<MapTypes>())
+        {
+            var candidateMapName = mapType.ToString();
+            if (string.Equals(candidateMapName, preferredMapName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (TryGetCurrentImagePositionSilently(screen, candidateMapName, matchingMethod, out _, out _))
+            {
+                detectedMapName = candidateMapName;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetCurrentImagePositionSilently(
+        ImageRegion screen,
+        string mapName,
+        string matchingMethod,
+        out ISceneMap mapBase,
+        out Point2f imagePosition)
+    {
+        mapBase = MapManager.GetMap(mapName, matchingMethod);
+        imagePosition = default;
+        if (screen.SrcMat == null || screen.SrcMat.IsDisposed)
+        {
+            return false;
+        }
+
+        using var colorMat = new Mat(screen.SrcMat, MapAssets.Instance.MimiMapRect);
+        imagePosition = mapBase.GetMiniMapPosition(colorMat);
         return IsValidImagePosition(mapBase, imagePosition);
     }
 
@@ -208,7 +259,7 @@ public class PathRecorder : Singleton<PathRecorder>
             return CancelStart("路径点记录启动失败：无法获取游戏截图");
         }
 
-        if (!TryResolveCurrentImagePosition(screen, matchingMethod, out var resolvedMapName, out var mapBase, out var position))
+        if (!TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: true, out var resolvedMapName, out var mapBase, out var position))
         {
             return CancelStart("路径点记录启动失败：未识别到当前位置");
         }
@@ -261,7 +312,7 @@ public class PathRecorder : Singleton<PathRecorder>
         var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
         if (string.IsNullOrEmpty(matchingMethod)) return;
 
-        if (!TryResolveCurrentImagePosition(screen, matchingMethod, out var resolvedMapName, out var mapBase, out var position))
+        if (!TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: false, out var resolvedMapName, out var mapBase, out var position))
         {
             TaskControl.Logger?.LogWarning("未识别到当前位置！");
             return;
@@ -440,7 +491,7 @@ public class PathRecorder : Singleton<PathRecorder>
             return;
         }
 
-        TryResolveCurrentImagePosition(screen, matchingMethod, out _, out _, out _);
+        TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: false, out _, out _, out _);
     }
 
     private static double RoundCoordinate(double value)
