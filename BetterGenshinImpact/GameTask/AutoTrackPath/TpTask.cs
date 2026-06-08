@@ -3143,7 +3143,6 @@ public class TpTask
     private List<MapChooseCandidate> GetMapChooseCandidates(ImageRegion imageRegion)
     {
         var candidates = new List<MapChooseCandidate>();
-        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
         const double threshold = 0.65;
 
         for (var i = 0; i < _assets.MapChooseIconGreyMatList.Count; i++)
@@ -3174,9 +3173,11 @@ public class TpTask
                 using var textRa = imageRegion.DeriveCrop(textRect);
                 using var textRegion = textRa.Find(new RecognitionObject
                 {
-                    RecognitionType = isHdrCapture ? RecognitionTypes.Ocr : RecognitionTypes.ColorRangeAndOcr,
-                    LowerColor = new Scalar(249, 249, 249), // 只取白色文字
-                    UpperColor = new Scalar(255, 255, 255),
+                    // RecognitionType = RecognitionTypes.Ocr,
+                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
+                    ColorConversionCode = ColorConversionCodes.BGR2HLS,
+                    LowerColor = new Scalar(0, 245, 0),
+                    UpperColor = new Scalar(180, 255, 15),
                 });
                 var text = CleanCandidateText(textRegion.Text);
                 if (string.IsNullOrEmpty(text) || text.Length == 1)
