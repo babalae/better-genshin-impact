@@ -31,7 +31,7 @@ public class MeowNotifier : INotifier
 
     public async Task SendAsync(BaseNotificationData content)
     {
-        if (string.IsNullOrEmpty(_nickname))
+        if (string.IsNullOrWhiteSpace(_nickname))
         {
             throw new NotifierException("MeoW 昵称为空");
         }
@@ -39,7 +39,7 @@ public class MeowNotifier : INotifier
         try
         {
             var url = BuildUrl();
-            var response = await _httpClient.PostAsync(url, BuildContent(content));
+            using var response = await _httpClient.PostAsync(url, BuildContent(content));
 
             if (!response.IsSuccessStatusCode)
             {
