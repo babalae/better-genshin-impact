@@ -729,16 +729,15 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OnAddJsScript()
     {
-        var list = LoadAllJsScriptProjects();
-        var stackPanel = CreateJsScriptSelectionPanel(list, typeof(CheckBox));
-
-        var result = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", stackPanel, new Size(500, 600));
-        if (!string.IsNullOrEmpty(result))
-        {
-            AddSelectedJsScripts((StackPanel)stackPanel.Content);
-        }
+        AddJsScriptsInternal(false);
     }
 
+    [RelayCommand]
+    private void OnAddTopJsScript()
+    {
+        AddJsScriptsInternal(true);
+    }
+    
     internal static ScrollViewer CreateJsScriptSelectionPanel(List<ScriptProject> list, Type selectType)
     {
         var stackPanel = new StackPanel();
@@ -826,19 +825,50 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private void AddSelectedJsScripts(StackPanel stackPanel)
+    private void AddJsScriptsInternal(bool addTop)
+    {
+        var list = LoadAllJsScriptProjects();
+        var stackPanel = CreateJsScriptSelectionPanel(list, typeof(CheckBox));
+        
+        var result = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", stackPanel, new Size(500, 600));
+        
+        if (!string.IsNullOrEmpty(result))
+        {
+            AddSelectedJsScripts((StackPanel)stackPanel.Content, addTop);
+        }
+    }
+    
+    private void AddSelectedJsScripts(StackPanel stackPanel,bool addTop=false)
     {
         foreach (var child in stackPanel.Children)
         {
             if (child is CheckBox { IsChecked: true } checkBox && checkBox.Tag is string folderName)
             {
-                SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+                if (addTop)
+                {
+                    SelectedScriptGroup?.AddTopProject(new ScriptGroupProject(new ScriptProject(folderName)));
+                }
+                else
+                {
+                    SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+                }
             }
         }
     }
-
+    
     [RelayCommand]
     private void OnAddKmScript()
+    {
+        AddKmScriptInternal(false);
+    }
+    
+    [RelayCommand]
+    private void OnAddTopKmScript()
+    {
+        AddKmScriptInternal(true);
+    }
+    
+    private void AddKmScriptInternal(bool addTop= false)
     {
         var list = LoadAllKmScripts();
         var combobox = new ComboBox
@@ -854,32 +884,63 @@ public partial class ScriptControlViewModel : ViewModel
         var str = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
         if (!string.IsNullOrEmpty(str))
         {
-            SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildKeyMouseProject(str));
+            ScriptGroupProject buildKeyMouseProject = ScriptGroupProject.BuildKeyMouseProject(str);
+            if (addTop)
+            {
+                SelectedScriptGroup?.AddTopProject(buildKeyMouseProject);
+            }else
+            {
+                SelectedScriptGroup?.AddProject(buildKeyMouseProject);
+            }
         }
     }
-
+    
     [RelayCommand]
     private void OnAddShell()
+    {
+        AddShellInternal(false);
+    }
+    [RelayCommand]
+    private void OnAddTopShell()
+    {
+        AddShellInternal(true);
+    }
+    private void AddShellInternal(bool addTop= false)
     {
         var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点", "请输入需要执行的shell");
         if (!string.IsNullOrEmpty(str))
         {
-            SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildShellProject(str));
+            ScriptGroupProject scriptGroupProject = ScriptGroupProject.BuildShellProject(str);
+            if (addTop)
+            {
+                SelectedScriptGroup?.AddTopProject(scriptGroupProject);
+            }
+            else
+            {
+                SelectedScriptGroup?.AddProject(scriptGroupProject);
+            }
         }
+    }
+    
+    [RelayCommand]
+    private async Task OnAddTopPathing()
+    {
+        await AddPathingInternal(true);
     }
 
     [RelayCommand]
     private async Task OnAddPathing()
     {
+        await AddPathingInternal(false);
+    }
+
+    private async Task AddPathingInternal(bool addTop)
+    {
         try
         {
-            // 在后台线程中加载数据
             var root = await Task.Run(() => FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath));
-
-            // 异步创建选择面板
             var stackPanel = await CreatePathingScriptSelectionPanelAsync(root.Children);
 
-            // 显示选择对话框
             var result = PromptDialog.Prompt(
                 "请选择需要添加的地图追踪任务",
                 "请选择需要添加的地图追踪任务",
@@ -892,7 +953,7 @@ public partial class ScriptControlViewModel : ViewModel
 
             if (!string.IsNullOrEmpty(result))
             {
-                AddSelectedPathingScripts((StackPanel)stackPanel.Content);
+                AddSelectedPathingScripts((StackPanel)stackPanel.Content, addTop);
             }
         }
         catch (Exception ex)
@@ -901,7 +962,7 @@ public partial class ScriptControlViewModel : ViewModel
             _logger.LogError(ex, "加载地图追踪任务时发生错误");
         }
     }
-
+    
     // 添加防抖计时器字段
     private DispatcherTimer? _debounceTimer;
     private const int DebounceDelayMs = 300;
@@ -1502,7 +1563,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private void AddSelectedPathingScripts(StackPanel stackPanel)
+    private void AddSelectedPathingScripts(StackPanel stackPanel,bool addTop = false)
     {
         foreach (var child in stackPanel.Children)
         {
@@ -1510,14 +1571,22 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 var fileInfo = new FileInfo(filePath);
                 if (!fileInfo.Attributes.HasFlag(FileAttributes.Directory))
-                {
+                {   
                     var relativePath = Path.GetRelativePath(MapPathingViewModel.PathJsonPath, fileInfo.Directory!.FullName);
-                    SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, relativePath));
+                    ScriptGroupProject buildPathingProject = ScriptGroupProject.BuildPathingProject(fileInfo.Name, relativePath);
+                    if (addTop)
+                    {
+                        SelectedScriptGroup?.AddTopProject(buildPathingProject);
+                    }
+                    else
+                    {
+                        SelectedScriptGroup?.AddProject(buildPathingProject);
+                    }
                 }
             }
             else if (child is Expander { Content: StackPanel nestedStackPanel })
             {
-                AddSelectedPathingScripts(nestedStackPanel);
+                AddSelectedPathingScripts(nestedStackPanel, addTop);
             }
         }
     }
