@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using Windows.System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
@@ -25,8 +26,11 @@ using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Platform.Wine;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Converters;
 using BetterGenshinImpact.View.Pages;
@@ -48,6 +52,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private readonly INavigationService _navigationService;
 
     private readonly NotificationService _notificationService;
+    private readonly CustomHtmlMaskService _customHtmlMaskService;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     private string _selectedArea = string.Empty;
@@ -64,16 +69,18 @@ public partial class CommonSettingsPageViewModel : ViewModel
     ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
-        NotificationService notificationService)
+        NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService)
     {
         Config = configService.Get();
         Config.MaskWindowConfig.EnsureOverlayMetricItems();
         Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
         _navigationService = navigationService;
         _notificationService = notificationService;
+        _customHtmlMaskService = customHtmlMaskService;
         // 设置页需要可绑定对象，避免把 Dictionary<string, bool> 直接暴露给 XAML 并丢失固定枚举顺序。
         OverlayMetricItems = new ObservableCollection<OverlayMetricSettingItem>(
             OverlayMetricItemDefaults.AllItems.Select(item => new OverlayMetricSettingItem(Config.MaskWindowConfig, item, OnRefreshMaskSettings)));
+        OverlayStyleSettingGroups = OverlayStyleSettingGroup.Create(Config.MaskWindowConfig, OnOverlayStyleChanged);
         InitializeCountries();
         InitializeMiyousheCookie();
         // 初始化OCR模型选择
@@ -82,6 +89,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
     public ObservableCollection<OverlayMetricSettingItem> OverlayMetricItems { get; }
+    public ObservableCollection<OverlayStyleSettingGroup> OverlayStyleSettingGroups { get; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
 
@@ -299,6 +307,37 @@ public partial class CommonSettingsPageViewModel : ViewModel
             new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
+    private void OnOverlayStyleChanged()
+    {
+        MaskWindow.InstanceNullable()?.Refresh();
+        OnRefreshMaskSettings();
+    }
+
+    [RelayCommand]
+    private void OnResetOverlayStyle()
+    {
+        Config.MaskWindowConfig.ResetOverlayStyle();
+        foreach (var group in OverlayStyleSettingGroups)
+        {
+            group.RefreshFromConfig();
+        }
+
+        OnOverlayStyleChanged();
+    }
+
+    [RelayCommand]
+    private void OnOpenCustomHtmlMaskEditor()
+    {
+        CustomHtmlMaskEditorWindow.ShowEditor(_customHtmlMaskService, Config.MaskWindowConfig);
+    }
+
+    [RelayCommand]
+    private void OnOpenCustomHtmlMaskFolder()
+    {
+        Directory.CreateDirectory(_customHtmlMaskService.DirectoryPath);
+        Process.Start("explorer.exe", _customHtmlMaskService.DirectoryPath);
+    }
+
     [RelayCommand]
     private void OnResetMaskOverlayLayout()
     {
@@ -454,6 +493,423 @@ public partial class CommonSettingsPageViewModel : ViewModel
         Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
+}
+
+// 只服务于设置页：把遮罩显示开关、样式配置和辅助入口组织成折叠分组。
+public sealed class OverlayStyleSettingGroup : ObservableObject
+{
+    private readonly MaskWindowConfig? _config;
+    private readonly System.Reflection.PropertyInfo? _switchProperty;
+    private readonly Action? _onSwitchChanged;
+
+    public OverlayStyleSettingGroup(string name, string description, OverlayStyleSettingGroupKind kind, IEnumerable<OverlayStyleSettingItem> items,
+        MaskWindowConfig? config = null, string? switchPropertyName = null, Action? onSwitchChanged = null)
+    {
+        Name = name;
+        Description = description;
+        Kind = kind;
+        Items = new ObservableCollection<OverlayStyleSettingItem>(items);
+        _config = config;
+        _switchProperty = switchPropertyName == null
+            ? null
+            : typeof(MaskWindowConfig).GetProperty(switchPropertyName)
+              ?? throw new ArgumentException($"Unknown mask switch property: {switchPropertyName}", nameof(switchPropertyName));
+        _onSwitchChanged = onSwitchChanged;
+    }
+
+    public string Name { get; }
+
+    public string Description { get; }
+
+    public OverlayStyleSettingGroupKind Kind { get; }
+
+    public bool IsLogGroup => Kind == OverlayStyleSettingGroupKind.Log;
+
+    public bool IsMetricsGroup => Kind == OverlayStyleSettingGroupKind.Metrics;
+
+    public bool IsCustomHtmlGroup => Kind == OverlayStyleSettingGroupKind.CustomHtml;
+
+    public bool HasSwitch => _switchProperty != null;
+
+    public bool SwitchValue
+    {
+        get => _config != null && _switchProperty?.GetValue(_config) is true;
+        set
+        {
+            if (_config == null || _switchProperty == null || SwitchValue == value)
+            {
+                return;
+            }
+
+            _switchProperty.SetValue(_config, value);
+            OnPropertyChanged();
+            _onSwitchChanged?.Invoke();
+        }
+    }
+
+    public ObservableCollection<OverlayStyleSettingItem> Items { get; }
+
+    public void RefreshFromConfig()
+    {
+        foreach (var item in Items)
+        {
+            item.RefreshFromConfig();
+        }
+
+        OnPropertyChanged(nameof(SwitchValue));
+    }
+
+    public static ObservableCollection<OverlayStyleSettingGroup> Create(MaskWindowConfig config, Action onChanged)
+    {
+        return
+        [
+            new OverlayStyleSettingGroup("日志遮罩", "显示运行日志，方便查看当前任务执行到哪一步。", OverlayStyleSettingGroupKind.Log, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBackgroundColor), "日志区域背景色", "日志窗口底色。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBorderColor), "日志区域边框颜色", "日志窗口边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogPanelBorderThickness), "日志区域边框粗细", "日志窗口边框线宽。填 0 表示不显示边框。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogTextColor), "日志文字颜色", "日志内容的文字颜色。浅", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogFontSize), "日志文字大小", "日志内容字号。", onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.LogShadowEnabled), "显示日志阴影", "开启后文字和区域更容易从游戏背景中区分出来。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogShadowColor), "日志阴影颜色", "日志阴影颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowOpacity), "日志阴影透明度", "日志阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowBlurRadius), "日志阴影模糊半径", "日志阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            ], config, nameof(MaskWindowConfig.ShowLogBox), onChanged),
+            new OverlayStyleSettingGroup("状态遮罩", "显示实时任务的启用状态，用来快速确认当前有哪些功能正在工作。", OverlayStyleSettingGroupKind.Status, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusPanelBackgroundColor), "任务状态栏背景色", "状态栏底色。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusPanelBorderColor), "任务状态栏边框颜色", "状态栏边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusPanelBorderThickness), "任务状态栏边框粗细", "状态栏边框线宽。填 0 表示不显示边框。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusDisabledTextColor), "未启用状态文字颜色", "任务未启用时图标和文字的颜色。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusEnabledTextColor), "已启用状态文字颜色", "任务启用时图标和文字的颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusFontSize), "状态文字大小", "状态栏字号。", onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.StatusShadowEnabled), "显示状态栏阴影", "开启后状态栏在复杂背景上更容易看清。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusShadowColor), "状态栏阴影颜色", "状态栏阴影颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowOpacity), "状态栏阴影透明度", "状态栏阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowBlurRadius), "状态栏阴影模糊半径", "状态栏阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            ], config, nameof(MaskWindowConfig.ShowStatus), onChanged),
+            new OverlayStyleSettingGroup("性能指标遮罩", "显示帧率、处理耗时和硬件占用等运行指标。", OverlayStyleSettingGroupKind.Metrics, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBackgroundColor), "指标栏背景色", "指标栏底色。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBorderColor), "指标栏边框颜色", "指标栏边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsPanelBorderThickness), "指标栏边框粗细", "指标栏边框线宽。填 0 表示不显示边框。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsTextColor), "指标文字颜色", "指标文字颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsFontSize), "指标文字大小", "指标栏字号。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsLineHeight), "指标单行高度", "每一行指标占用的高度。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsItemWidth), "单个指标项宽度", "每个指标项占用的宽度。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsNameColumnWidth), "指标名称列宽度", "指标名称这一列的宽度。", onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.MetricsShadowEnabled), "显示指标栏阴影", "开启后指标栏在复杂背景上更容易看清。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsShadowColor), "指标栏阴影颜色", "指标栏阴影颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowOpacity), "指标栏阴影透明度", "指标栏阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowBlurRadius), "指标栏阴影模糊半径", "指标栏阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            ], config, nameof(MaskWindowConfig.ShowOverlayMetrics), onChanged),
+            new OverlayStyleSettingGroup("方位遮罩", "在小地图周围显示东、南、西、北文字，辅助判断朝向。", OverlayStyleSettingGroupKind.Direction, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionTextColor), "方位文字颜色", "小地图周围方位文字的颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionFontSize), "方位文字大小", "小地图方位文字字号。", onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.DirectionShadowEnabled), "显示方位文字阴影", "开启后方位文字在复杂背景上更容易看清。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionShadowColor), "方位文字阴影颜色", "方位文字阴影颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowOpacity), "方位文字阴影透明度", "方位文字阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowBlurRadius), "方位文字阴影模糊半径", "方位文字阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            ], config, nameof(MaskWindowConfig.DirectionsEnabled), onChanged),
+            new OverlayStyleSettingGroup("全局遮罩", "控制整个遮罩窗口的通用显示效果。", OverlayStyleSettingGroupKind.Global, CreateGlobalItems(config, onChanged)),
+            new OverlayStyleSettingGroup("识别结果遮罩", "显示图像识别的框线和文字。", OverlayStyleSettingGroupKind.Recognition, [
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.RecognitionUseDrawableStyle), "统一识别框线颜色", "关闭时保留任务自己指定的颜色；开启后使用下面设置的统一颜色。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionRectStrokeColor), "识别矩形边框颜色", "开启统一颜色后，识别矩形框使用的颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionRectStrokeThickness), "识别矩形线宽", "开启统一颜色后，识别矩形框的线宽。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionLineStrokeColor), "识别线条颜色", "开启统一颜色后，识别线条使用的颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionLineStrokeThickness), "识别线条线宽", "开启统一颜色后，识别线条的线宽。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionTextColor), "识别文字颜色", "普通识别结果文字的颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionTextFontSize), "识别文字大小", "普通识别结果文字的基础字号。", onChanged),
+            ], config, nameof(MaskWindowConfig.DisplayRecognitionResultsOnMask), onChanged),
+            new OverlayStyleSettingGroup("自定义 HTML 遮罩", "用 HTML 制作遮罩。", OverlayStyleSettingGroupKind.CustomHtml, [
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.CustomHtmlMaskClickThrough), "HTML 遮罩鼠标穿透", "开启后鼠标可穿透遮罩；关闭后 HTML 内容可以接收点击和输入。", onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.CustomHtmlMaskAutoReloadOnSave), "保存后自动刷新 HTML", "开启后保存 HTML 会立即刷新已经打开的自定义遮罩。", onChanged),
+            ], config, nameof(MaskWindowConfig.CustomHtmlMaskEnabled), onChanged),
+        ];
+    }
+
+    private static IEnumerable<OverlayStyleSettingItem> CreateGlobalItems(MaskWindowConfig config, Action onChanged)
+    {
+        yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.TextOpacity), "遮罩文字透明度", "调整遮罩上所有文字的透明度，1 表示完全不透明，0 表示完全透明。", 0, 1, 0.1, onChanged);
+        yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.OverlayWindowBackgroundColor), "主遮罩窗口背景色", "遮罩窗口本身的背景色。", onChanged);
+
+        if (WinePlatformAddon.IsRunningOnWine)
+        {
+            yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.WineOverlayBackgroundColor), "Wine 兼容背景色", "仅在 Wine 环境下使用的兼容背景色。", onChanged);
+        }
+    }
+}
+
+public sealed class OverlayStyleSettingItem : ObservableObject
+{
+    private static readonly IReadOnlyList<OverlayStyleColorOption> BaseColorOptions =
+    [
+        new("透明", MaskWindowConfig.DefaultTransparentColor),
+        new("几乎透明黑色", MaskWindowConfig.DefaultOverlayWindowBackgroundColor),
+        new("半透明黑色", MaskWindowConfig.DefaultPanelBorderColor),
+        new("浅灰色", "LightGray"),
+        new("白色", "White"),
+        new("黑色", "Black"),
+        new("纯黑色", MaskWindowConfig.DefaultShadowColor),
+        new("浅绿色", "LightGreen"),
+        new("绿色", "Green"),
+        new("红色", "Red"),
+        new("橙色", "Orange"),
+        new("黄色", "Yellow"),
+        new("天蓝色", "DeepSkyBlue"),
+        new("蓝色", "DodgerBlue"),
+        new("紫色", "Purple"),
+        new("粉色", "HotPink")
+    ];
+
+    private static readonly OverlayStyleColorOption WineColorOption =
+        new("Wine 兼容半透明黑色", MaskWindowConfig.DefaultWineOverlayBackgroundColor);
+
+    private readonly MaskWindowConfig _config;
+    private readonly System.Reflection.PropertyInfo _property;
+    private readonly Action _onChanged;
+
+    private OverlayStyleSettingItem(MaskWindowConfig config, string propertyName, string displayName, string description, OverlayStyleSettingKind kind, Action onChanged)
+    {
+        _config = config;
+        _property = typeof(MaskWindowConfig).GetProperty(propertyName)
+                    ?? throw new ArgumentException($"Unknown mask style property: {propertyName}", nameof(propertyName));
+        _onChanged = onChanged;
+        DisplayName = displayName;
+        Description = description;
+        Kind = kind;
+    }
+
+    public string DisplayName { get; }
+
+    public string Description { get; }
+
+    public OverlayStyleSettingKind Kind { get; }
+
+    public bool IsText => Kind == OverlayStyleSettingKind.Text;
+
+    public bool IsColor => Kind == OverlayStyleSettingKind.Color;
+
+    public bool IsNumber => Kind == OverlayStyleSettingKind.Number;
+
+    public bool IsSlider => Kind == OverlayStyleSettingKind.Slider;
+
+    public bool IsBool => Kind == OverlayStyleSettingKind.Bool;
+
+    public double SliderMinimum { get; private init; }
+
+    public double SliderMaximum { get; private init; }
+
+    public double SliderTickFrequency { get; private init; }
+
+    public string TextValue
+    {
+        get => FormatValue(_property.GetValue(_config));
+        set
+        {
+            if (Kind == OverlayStyleSettingKind.Bool || Kind == OverlayStyleSettingKind.Color || Kind == OverlayStyleSettingKind.Slider || !TrySetValue(value))
+            {
+                return;
+            }
+
+            OnPropertyChanged();
+            _onChanged();
+        }
+    }
+
+    public IReadOnlyList<OverlayStyleColorOption> ColorOptions
+    {
+        get
+        {
+            var commonColorOptions = GetCommonColorOptions();
+            var currentValue = FormatValue(_property.GetValue(_config));
+            if (string.IsNullOrWhiteSpace(currentValue)
+                || commonColorOptions.Any(option => string.Equals(option.Value, currentValue, StringComparison.OrdinalIgnoreCase)))
+            {
+                return commonColorOptions;
+            }
+
+            return [.. commonColorOptions, new OverlayStyleColorOption($"当前自定义颜色（{currentValue}）", currentValue)];
+        }
+    }
+
+    public string ColorValue
+    {
+        get => FormatValue(_property.GetValue(_config));
+        set
+        {
+            if (Kind != OverlayStyleSettingKind.Color
+                || string.IsNullOrWhiteSpace(value)
+                || string.Equals(ColorValue, value, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _property.SetValue(_config, value);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ColorOptions));
+            _onChanged();
+        }
+    }
+
+    public bool BoolValue
+    {
+        get => _property.GetValue(_config) is true;
+        set
+        {
+            if (Kind != OverlayStyleSettingKind.Bool || BoolValue == value)
+            {
+                return;
+            }
+
+            _property.SetValue(_config, value);
+            OnPropertyChanged();
+            _onChanged();
+        }
+    }
+
+    public double SliderValue
+    {
+        get => _property.GetValue(_config) is double value ? value : 0;
+        set
+        {
+            if (Kind != OverlayStyleSettingKind.Slider || Math.Abs(SliderValue - value) < 0.0001)
+            {
+                return;
+            }
+
+            _property.SetValue(_config, value);
+            OnPropertyChanged();
+            _onChanged();
+        }
+    }
+
+    public static OverlayStyleSettingItem Text(MaskWindowConfig config, string propertyName, string displayName, string description, Action onChanged)
+    {
+        return new OverlayStyleSettingItem(config, propertyName, displayName, description, OverlayStyleSettingKind.Text, onChanged);
+    }
+
+    public static OverlayStyleSettingItem Color(MaskWindowConfig config, string propertyName, string displayName, string description, Action onChanged)
+    {
+        return new OverlayStyleSettingItem(config, propertyName, displayName, description, OverlayStyleSettingKind.Color, onChanged);
+    }
+
+    public static OverlayStyleSettingItem Number(MaskWindowConfig config, string propertyName, string displayName, string description, Action onChanged)
+    {
+        return new OverlayStyleSettingItem(config, propertyName, displayName, description, OverlayStyleSettingKind.Number, onChanged);
+    }
+
+    public static OverlayStyleSettingItem Slider(MaskWindowConfig config, string propertyName, string displayName, string description, double minimum, double maximum, double tickFrequency, Action onChanged)
+    {
+        return new OverlayStyleSettingItem(config, propertyName, displayName, description, OverlayStyleSettingKind.Slider, onChanged)
+        {
+            SliderMinimum = minimum,
+            SliderMaximum = maximum,
+            SliderTickFrequency = tickFrequency
+        };
+    }
+
+    public static OverlayStyleSettingItem Bool(MaskWindowConfig config, string propertyName, string displayName, string description, Action onChanged)
+    {
+        return new OverlayStyleSettingItem(config, propertyName, displayName, description, OverlayStyleSettingKind.Bool, onChanged);
+    }
+
+    public void RefreshFromConfig()
+    {
+        OnPropertyChanged(nameof(TextValue));
+        OnPropertyChanged(nameof(ColorOptions));
+        OnPropertyChanged(nameof(ColorValue));
+        OnPropertyChanged(nameof(BoolValue));
+        OnPropertyChanged(nameof(SliderValue));
+    }
+
+    private bool TrySetValue(string value)
+    {
+        if (_property.PropertyType == typeof(string))
+        {
+            _property.SetValue(_config, value ?? string.Empty);
+            return true;
+        }
+
+        if (_property.PropertyType == typeof(double)
+            && (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var invariantValue)
+                || double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out invariantValue)))
+        {
+            _property.SetValue(_config, invariantValue);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string FormatValue(object? value)
+    {
+        return value switch
+        {
+            double number => number.ToString("0.###", CultureInfo.InvariantCulture),
+            string text => text,
+            null => string.Empty,
+            _ => value.ToString() ?? string.Empty
+        };
+    }
+
+    private static IReadOnlyList<OverlayStyleColorOption> GetCommonColorOptions()
+    {
+        return WinePlatformAddon.IsRunningOnWine ? [.. BaseColorOptions, WineColorOption] : BaseColorOptions;
+    }
+}
+
+public sealed class OverlayStyleColorOption
+{
+    private static readonly BrushConverter BrushConverter = new();
+
+    public OverlayStyleColorOption(string displayName, string value)
+    {
+        DisplayName = displayName;
+        Value = value;
+        SwatchBrush = CreateSwatchBrush(value);
+    }
+
+    public string DisplayName { get; }
+
+    public string Value { get; }
+
+    public Brush SwatchBrush { get; }
+
+    private static Brush CreateSwatchBrush(string value)
+    {
+        try
+        {
+            if (BrushConverter.ConvertFromString(value) is Brush brush)
+            {
+                brush.Freeze();
+                return brush;
+            }
+        }
+        catch
+        {
+            // 历史配置可能存在手动填写的无效颜色，色块失败时不影响下拉项显示。
+        }
+
+        return Brushes.Transparent;
+    }
+}
+
+public enum OverlayStyleSettingGroupKind
+{
+    Global,
+    Log,
+    Status,
+    Metrics,
+    Direction,
+    Recognition,
+    CustomHtml
+}
+
+public enum OverlayStyleSettingKind
+{
+    Text,
+    Color,
+    Number,
+    Slider,
+    Bool
 }
 
 // 只服务于设置页：把固定指标枚举、显示文案和配置字典中的开关包装成复选框可双向绑定的对象。

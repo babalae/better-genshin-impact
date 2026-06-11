@@ -27,6 +27,22 @@
     <Window.DataContext>
         <viewModel:MaskWindowViewModel />
     </Window.DataContext>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
+            <converters:ColorStringToBrushConverter x:Key="ColorStringToBrushConverter" />
+            <converters:ColorStringToColorConverter x:Key="ColorStringToColorConverter" />
+            <converters:ShadowOpacityConverter x:Key="ShadowOpacityConverter" />
+            <converters:EnabledColorBrushConverter x:Key="EnabledColorBrushConverter" />
+            <converters:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter" />
+            <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
+            <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
+        </ResourceDictionary>
+    </Window.Resources>
+
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
@@ -37,7 +53,7 @@
     </b:Interaction.Triggers>
 
     <Window.Background>
-        <SolidColorBrush Opacity="0.00001" Color="Transparent" />
+        <SolidColorBrush Color="{Binding Config.MaskWindowConfig.OverlayWindowBackgroundColor, Converter={StaticResource ColorStringToColorConverter}, ConverterParameter=#01000000}" />
     </Window.Background>
     <Window.Style>
         <Style TargetType="Window">
@@ -50,19 +66,6 @@
             </Setter>
         </Style>
     </Window.Style>
-
-
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-            <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
-            <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
-            <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
-        </ResourceDictionary>
-    </Window.Resources>
-
 
     <AdornerDecorator ClipToBounds="True">
         <Grid>
@@ -119,9 +122,9 @@
 
                 <overlay:AdjustableOverlayItem x:Name="StatusWrapper"
                                                Padding="4,2"
-                                               Background="#00000000"
-                                               BorderBrush="#33000000"
-                                               BorderThickness="0"
+                                               Background="{Binding Config.MaskWindowConfig.StatusPanelBackgroundColor, Converter={StaticResource ColorStringToBrushConverter}}"
+                                               BorderBrush="{Binding Config.MaskWindowConfig.StatusPanelBorderColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=#33000000}"
+                                               BorderThickness="{Binding Config.MaskWindowConfig.StatusPanelBorderThickness}"
                                                MinWidth="160"
                                                MinHeight="24"
                                                IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
@@ -161,7 +164,16 @@
                         </b:EventTrigger>
                     </b:Interaction.Triggers>
                     <overlay:AdjustableOverlayItem.Effect>
-                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" Color="LightGray" />
+                        <DropShadowEffect BlurRadius="{Binding Config.MaskWindowConfig.StatusShadowBlurRadius}"
+                                          ShadowDepth="0"
+                                          Color="{Binding Config.MaskWindowConfig.StatusShadowColor, Converter={StaticResource ColorStringToColorConverter}, ConverterParameter=LightGray}">
+                            <DropShadowEffect.Opacity>
+                                <MultiBinding Converter="{StaticResource ShadowOpacityConverter}">
+                                    <Binding Path="Config.MaskWindowConfig.StatusShadowEnabled" />
+                                    <Binding Path="Config.MaskWindowConfig.StatusShadowOpacity" />
+                                </MultiBinding>
+                            </DropShadowEffect.Opacity>
+                        </DropShadowEffect>
                     </overlay:AdjustableOverlayItem.Effect>
                     <ui:ListView ItemsSource="{Binding StatusList}"
                                  Background="Transparent"
@@ -187,28 +199,16 @@
                                         </Style>
                                     </StackPanel.Resources>
                                     <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
-                                               FontSize="12"
+                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.StatusFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="{x:Type TextBlock}">
-                                                <Setter Property="Foreground">
-                                                    <Setter.Value>
-                                                        <SolidColorBrush Color="LightGray"
-                                                                         Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="True">
-                                                        <Setter Property="Foreground">
-                                                            <Setter.Value>
-                                                                <SolidColorBrush Color="LightGreen"
-                                                                        Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
+                                        <TextBlock.Foreground>
+                                            <MultiBinding Converter="{StaticResource EnabledColorBrushConverter}">
+                                                <Binding Path="IsEnabled" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusDisabledTextColor" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusEnabledTextColor" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.Foreground>
                                     </TextBlock>
                                 </StackPanel>
                             </DataTemplate>
@@ -218,9 +218,9 @@
 
                 <overlay:AdjustableOverlayItem x:Name="LogTextBoxWrapper"
                                                Padding="0"
-                                               Background="#00000000"
-                                               BorderBrush="#33000000"
-                                               BorderThickness="0"
+                                               Background="{Binding Config.MaskWindowConfig.LogPanelBackgroundColor, Converter={StaticResource ColorStringToBrushConverter}}"
+                                               BorderBrush="{Binding Config.MaskWindowConfig.LogPanelBorderColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=#33000000}"
+                                               BorderThickness="{Binding Config.MaskWindowConfig.LogPanelBorderThickness}"
                                                MinWidth="240"
                                                MinHeight="80"
                                                IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
@@ -260,20 +260,27 @@
                         </b:EventTrigger>
                     </b:Interaction.Triggers>
                     <overlay:AdjustableOverlayItem.Effect>
-                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
+                        <DropShadowEffect BlurRadius="{Binding Config.MaskWindowConfig.LogShadowBlurRadius}"
+                                          ShadowDepth="0"
+                                          Color="{Binding Config.MaskWindowConfig.LogShadowColor, Converter={StaticResource ColorStringToColorConverter}, ConverterParameter=#FF000000}">
+                            <DropShadowEffect.Opacity>
+                                <MultiBinding Converter="{StaticResource ShadowOpacityConverter}">
+                                    <Binding Path="Config.MaskWindowConfig.LogShadowEnabled" />
+                                    <Binding Path="Config.MaskWindowConfig.LogShadowOpacity" />
+                                </MultiBinding>
+                            </DropShadowEffect.Opacity>
+                        </DropShadowEffect>
                     </overlay:AdjustableOverlayItem.Effect>
                     <RichTextBox x:Name="LogTextBox"
                                  Padding="0,5,0,0"
-                                 Background="Transparent"
+                                 Background="{Binding Config.MaskWindowConfig.LogPanelBackgroundColor, Converter={StaticResource ColorStringToBrushConverter}}"
                                  BorderThickness="0"
-                                 FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                 FontSize="12"
+                                 FontFamily="{Binding Config.MaskWindowConfig.LogFontFamily}"
+                                 FontSize="{Binding Config.MaskWindowConfig.LogFontSize}"
+                                 Foreground="{Binding Config.MaskWindowConfig.LogTextColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=LightGray}"
                                  IsHitTestVisible="False"
                                  VerticalScrollBarVisibility="Hidden"
                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}">
-                        <RichTextBox.Foreground>
-                            <SolidColorBrush Color="LightGray" />
-                        </RichTextBox.Foreground>
                         <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}"
                                         FontSize="{Binding FontSize, ElementName=LogTextBox}">
                             <Paragraph>
@@ -292,9 +299,9 @@
                 <!-- 指标栏复用可拖拽容器；单项固定宽度，只允许在指标之间换行，避免中文标签被拆开。 -->
                 <overlay:AdjustableOverlayItem x:Name="MetricsWrapper"
                                                Padding="4,2"
-                                               Background="#00000000"
-                                               BorderBrush="#00000000"
-                                               BorderThickness="0"
+                                               Background="{Binding Config.MaskWindowConfig.MetricsPanelBackgroundColor, Converter={StaticResource ColorStringToBrushConverter}}"
+                                               BorderBrush="{Binding Config.MaskWindowConfig.MetricsPanelBorderColor, Converter={StaticResource ColorStringToBrushConverter}}"
+                                               BorderThickness="{Binding Config.MaskWindowConfig.MetricsPanelBorderThickness}"
                                                MinWidth="260"
                                                MinHeight="24"
                                                IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
@@ -336,7 +343,16 @@
                         </b:EventTrigger>
                     </b:Interaction.Triggers>
                     <overlay:AdjustableOverlayItem.Effect>
-                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
+                        <DropShadowEffect BlurRadius="{Binding Config.MaskWindowConfig.MetricsShadowBlurRadius}"
+                                          ShadowDepth="0"
+                                          Color="{Binding Config.MaskWindowConfig.MetricsShadowColor, Converter={StaticResource ColorStringToColorConverter}, ConverterParameter=#FF000000}">
+                            <DropShadowEffect.Opacity>
+                                <MultiBinding Converter="{StaticResource ShadowOpacityConverter}">
+                                    <Binding Path="Config.MaskWindowConfig.MetricsShadowEnabled" />
+                                    <Binding Path="Config.MaskWindowConfig.MetricsShadowOpacity" />
+                                </MultiBinding>
+                            </DropShadowEffect.Opacity>
+                        </DropShadowEffect>
                     </overlay:AdjustableOverlayItem.Effect>
                     <ItemsControl HorizontalAlignment="Stretch"
                                   VerticalAlignment="Top"
@@ -347,28 +363,30 @@
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <!-- 列宽和设置页的三列顺序保持一致，拖窄后也按完整指标项折行。 -->
-                                <WrapPanel ItemWidth="116" ItemHeight="16" />
+                                <WrapPanel ItemWidth="{Binding DataContext.Config.MaskWindowConfig.MetricsItemWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           ItemHeight="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Width="116" Height="16">
+                                <Grid Width="{Binding DataContext.Config.MaskWindowConfig.MetricsItemWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      Height="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="68" />
+                                        <ColumnDefinition Width="{Binding DataContext.Config.MaskWindowConfig.MetricsNameColumnWidth, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource DoubleToGridLengthConverter}}" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
-                                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                               FontSize="12"
-                                               Foreground="LightGray"
-                                               LineHeight="15"
+                                               FontFamily="{Binding DataContext.Config.MaskWindowConfig.MetricsFontFamily, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.MetricsFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Foreground="{Binding DataContext.Config.MaskWindowConfig.MetricsTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=LightGray}"
+                                               LineHeight="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}"
                                                TextWrapping="NoWrap" />
                                     <TextBlock Grid.Column="1"
-                                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                               FontSize="12"
-                                               Foreground="LightGray"
-                                               LineHeight="15"
+                                               FontFamily="{Binding DataContext.Config.MaskWindowConfig.MetricsFontFamily, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.MetricsFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Foreground="{Binding DataContext.Config.MaskWindowConfig.MetricsTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=LightGray}"
+                                               LineHeight="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Value}"
                                                TextTrimming="CharacterEllipsis"
                                                TextWrapping="NoWrap" />
@@ -447,59 +465,64 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid.Effect>
-                        <DropShadowEffect Opacity="0.4" BlurRadius="8" ShadowDepth="0" />
+                        <DropShadowEffect BlurRadius="{Binding Config.MaskWindowConfig.DirectionShadowBlurRadius}"
+                                          ShadowDepth="0"
+                                          Color="{Binding Config.MaskWindowConfig.DirectionShadowColor, Converter={StaticResource ColorStringToColorConverter}, ConverterParameter=#FF000000}">
+                            <DropShadowEffect.Opacity>
+                                <MultiBinding Converter="{StaticResource ShadowOpacityConverter}">
+                                    <Binding Path="Config.MaskWindowConfig.DirectionShadowEnabled" />
+                                    <Binding Path="Config.MaskWindowConfig.DirectionShadowOpacity" />
+                                </MultiBinding>
+                            </DropShadowEffect.Opacity>
+                        </DropShadowEffect>
                     </Grid.Effect>
                     <TextBlock Grid.Column="0"
                                Grid.Row="2"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Margin="-24,0,0,0"
-                               FontSize="34"
+                               FontSize="{Binding Config.MaskWindowConfig.DirectionFontSize}"
+                               Foreground="{Binding Config.MaskWindowConfig.DirectionTextColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=White}"
+                               Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Text="西">
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
-                        </TextBlock.Foreground>
                     </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="4"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Margin="0,0,0,-24"
-                               FontSize="34"
+                               FontSize="{Binding Config.MaskWindowConfig.DirectionFontSize}"
+                               Foreground="{Binding Config.MaskWindowConfig.DirectionTextColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=White}"
+                               Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Text="南">
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
-                        </TextBlock.Foreground>
                     </TextBlock>
                     <TextBlock Grid.Column="4"
                                Grid.Row="2"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Margin="0,0,-24,0"
-                               FontSize="34"
+                               FontSize="{Binding Config.MaskWindowConfig.DirectionFontSize}"
+                               Foreground="{Binding Config.MaskWindowConfig.DirectionTextColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=White}"
+                               Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Text="东">
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
-                        </TextBlock.Foreground>
                     </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="0"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Margin="0,-24,0,0"
-                               FontSize="34"
+                               FontSize="{Binding Config.MaskWindowConfig.DirectionFontSize}"
+                               Foreground="{Binding Config.MaskWindowConfig.DirectionTextColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=White}"
+                               Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Text="北">
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
-                        </TextBlock.Foreground>
                     </TextBlock>
                 </Grid>
             </Viewbox>
@@ -526,18 +549,17 @@
             <!--  用于支持wine  -->
             <Border Grid.Row="0" Grid.Column="0"
                     Grid.RowSpan="4" Grid.ColumnSpan="6"
-                    IsHitTestVisible="False">
+                    IsHitTestVisible="False"
+                    Background="{Binding Config.MaskWindowConfig.WineOverlayBackgroundColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=#11000000}">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed" />
-                        <Setter Property="Background" Value="Transparent" />
 
                         <Style.Triggers>
                             <DataTrigger
                                 Binding="{Binding Source={x:Static platform:WinePlatformAddon.IsRunningOnWine}}"
                                 Value="True">
                                 <Setter Property="Visibility" Value="Visible" />
-                                <Setter Property="Background" Value="#11000000" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
