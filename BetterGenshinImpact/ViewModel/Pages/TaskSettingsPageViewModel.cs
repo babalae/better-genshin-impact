@@ -427,8 +427,17 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
-        await new TaskRunner()
-            .RunSoloTaskAsync(new AutoFightTask(param));
+        if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            await new TaskRunner()
+                .RunSoloTaskAsync(new AutoFightJsonTask(param));
+        }
+        else
+        {
+            await new TaskRunner()
+                .RunSoloTaskAsync(new AutoFightTask(param));
+        }
+
         SwitchAutoFightEnabled = false;
     }
 
@@ -466,10 +475,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
             return true;
         }
 
-        path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
         if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
+        }
+        else
+        {
+            (path, _) = AutoFightParam.ResolveStrategyPath(strategyName);
         }
 
         if (!File.Exists(path) && !Directory.Exists(path))
