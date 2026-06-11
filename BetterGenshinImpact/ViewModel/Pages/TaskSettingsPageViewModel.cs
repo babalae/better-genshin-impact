@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Factory;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -427,18 +428,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
-        if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        try
         {
+            var factory = CombatTaskFactoryProvider.GetFactory(path);
             await new TaskRunner()
-                .RunSoloTaskAsync(new AutoFightJsonTask(param));
+                .RunSoloTaskAsync(factory.CreateTask(param));
         }
-        else
+        finally
         {
-            await new TaskRunner()
-                .RunSoloTaskAsync(new AutoFightTask(param));
+            SwitchAutoFightEnabled = false;
         }
-
-        SwitchAutoFightEnabled = false;
     }
 
     [RelayCommand]

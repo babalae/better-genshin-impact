@@ -372,7 +372,11 @@ public class ConditionEvaluator
                 if (ownRa) ra.Dispose();
             }
         }
-        catch { return false; }
+        catch (Exception e)
+        {
+            Logger.LogWarning("[低血检测] 异常：{Msg}", e.Message);
+            return false;
+        }
     }
 
     /// <summary>

@@ -35,7 +35,7 @@ public class AutoFightJsonTask : ISoloTask
     private readonly JsonCombatStrategy _strategy;
     private CancellationToken _ct;
 
-    private readonly BgiYoloPredictor _predictor;
+    private readonly BgiYoloPredictor? _predictor;
     private DateTime _lastFightFlagTime = DateTime.Now;
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
@@ -486,8 +486,11 @@ public class AutoFightJsonTask : ISoloTask
         await Delay(detectDelayTime, _ct);
 
         using var ra = CaptureToRectArea();
-        var b3 = ra.SrcMat.At<Vec3b>(50, 790);
-        var whiteTile = ra.SrcMat.At<Vec3b>(50, 768);
+        var scaleX = (int)(790 * _assetScale * _dpi);
+        var scaleY = (int)(50 * _assetScale * _dpi);
+        var b3 = ra.SrcMat.At<Vec3b>(scaleY, scaleX);
+        var whiteTileX = (int)(768 * _assetScale * _dpi);
+        var whiteTile = ra.SrcMat.At<Vec3b>(scaleY, whiteTileX);
         Simulation.SendInput.SimulateAction(GIActions.Drop);
 
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
@@ -618,6 +621,7 @@ public class AutoFightJsonTask : ISoloTask
                     if (attempt == 5 && !enterGameAppear)
                     {
                         Logger.LogWarning("换队拾取：读取队伍名称失败，跳过换队拾取步骤");
+                        return;
                     }
                 }
             }
@@ -807,7 +811,7 @@ public class AutoFightJsonTask : ISoloTask
                 }
                 catch (Exception e)
                 {
-                    Logger.LogInformation("恢复原队伍失败，跳过此步骤！");
+                    Logger.LogWarning("恢复原队伍失败，跳过此步骤！{Msg}", e.Message);
                 }
             }
         }

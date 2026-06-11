@@ -43,6 +43,18 @@ public static class JsonCombatStrategyParser
             throw new InvalidOperationException("JSON 战斗策略反序列化失败");
         }
 
+        if (strategy.Info == null)
+        {
+            Logger.LogError("JSON 战斗策略缺少 Info 节点");
+            throw new InvalidOperationException("JSON 战斗策略缺少 Info 节点");
+        }
+
+        if (strategy.Actions == null || strategy.Actions.Count == 0)
+        {
+            Logger.LogError("JSON 战斗策略缺少 Actions 节点或动作为空");
+            throw new InvalidOperationException("JSON 战斗策略中未定义任何动作");
+        }
+
         // 校验 action index 唯一性
         ValidateActions(strategy.Actions);
 

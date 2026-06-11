@@ -67,8 +67,9 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
 
             if (ext != null)
             {
-                var strategyName = file.Replace(folder, "").Replace(ext, "");
-                if (strategyName.StartsWith('\\'))
+                var relativePath = Path.GetRelativePath(folder, file);
+                var strategyName = Path.GetFileNameWithoutExtension(relativePath);
+                if (strategyName.StartsWith('\\') || strategyName.StartsWith('/'))
                 {
                     strategyName = strategyName[1..];
                 }

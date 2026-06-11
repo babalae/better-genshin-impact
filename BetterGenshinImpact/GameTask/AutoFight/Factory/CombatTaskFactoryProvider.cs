@@ -31,6 +31,7 @@ public static class CombatTaskFactoryProvider
     /// </summary>
     public static ICombatTaskFactory GetFactory(string strategyPath)
     {
+        strategyPath ??= string.Empty;
         var factory = _factories.FirstOrDefault(f => f.CanHandle(strategyPath));
         if (factory == null)
         {
