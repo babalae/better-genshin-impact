@@ -331,6 +331,36 @@ public class AutoFightJsonTask : ISoloTask
 
                         // 执行动作
                         await ExecuteAction(combatScenes, action);
+
+                        // 确保E技能释放成功
+                        if (action.EnsureCast)
+                        {
+                            var characterName = string.IsNullOrEmpty(action.Character)
+                                ? CombatScriptParser.CurrentAvatarName
+                                : action.Character;
+                            var avatar = combatScenes.SelectAvatar(characterName);
+                            if (avatar != null)
+                            {
+                                var imageAfterAction = CaptureToRectArea();
+                                var retry = 5;
+                                while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                {
+                                    Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
+                                    // 防止在纳塔飞天或爬墙
+                                    Simulation.ReleaseAllKey();
+                                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                    await Delay(200, _ct);
+                                    // 重新执行整个动作
+                                    await ExecuteAction(combatScenes, action);
+                                    imageAfterAction = CaptureToRectArea();
+                                    await Task.Delay(30, _ct);
+                                    retry--;
+                                }
+                                imageAfterAction.Dispose();
+                            }
+                        }
+
                         evaluator.UpdateLastExecTime(action.Index);
                         lastExecutedAction = action;
                         anyExecuted = true;
@@ -451,6 +481,10 @@ public class AutoFightJsonTask : ISoloTask
         {
             Logger.LogError("自动战斗：{Name} 执行失败：{Msg}", action.Name, e.Message);
         }
+        finally
+        {
+            Simulation.ReleaseAllKey();
+        }
     }
 
     /// <summary>
@@ -507,8 +541,15 @@ public class AutoFightJsonTask : ISoloTask
         {
             Task.Run(() =>
             {
-                var bloodLower = new Scalar(255, 90, 90);
-                MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                try
+                {
+                    var bloodLower = new Scalar(255, 90, 90);
+                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
+                }
             }, _ct);
         }
 
@@ -693,7 +734,7 @@ public class AutoFightJsonTask : ISoloTask
                 }
                 catch (Exception e)
                 {
-                    Logger.LogInformation("切换队伍异常，跳过此步骤！");
+                    Logger.LogWarning("切换队伍异常，跳过此步骤！{Msg}", e.Message);
                 }
             }
 

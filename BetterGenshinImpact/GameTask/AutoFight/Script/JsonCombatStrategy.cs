@@ -42,6 +42,11 @@ public class JsonAction
     public string Action { get; set; } = string.Empty;
     public JsonCondition Condition { get; set; } = new();
     public int Index { get; set; }
+
+    /// <summary>
+    /// 动作执行后确保E技能进入冷却（释放成功），至多重试3次
+    /// </summary>
+    public bool EnsureCast { get; set; } = false;
 }
 
 /// <summary>
