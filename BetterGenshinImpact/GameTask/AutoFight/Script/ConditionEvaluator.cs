@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// <summary>
 /// 条件表达式求值器
 /// 支持语法：||, &&, !, (), 函数调用
-/// 支持函数：last-exec, q-ready, low-hp, battle-time
+/// 支持函数：last-exec, q-ready, low-hp, battle-time, in-party
 /// </summary>
 public class ConditionEvaluator
 {
@@ -290,6 +290,7 @@ public class ConditionEvaluator
             "q-ready" => EvalQReady(args),
             "low-hp" => EvalLowHp(),
             "battle-time" => EvalBattleTime(args),
+            "in-party" => EvalInParty(args),
             _ => throw new InvalidOperationException($"未知条件函数：{name}")
         };
     }
@@ -390,6 +391,18 @@ public class ConditionEvaluator
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
         var elapsed = (DateTime.Now - _battleStartTime).TotalMilliseconds;
         return greater ? elapsed > timeMs : elapsed < timeMs;
+    }
+
+    /// <summary>
+    /// 判断指定角色是否在当前队伍中
+    /// </summary>
+    private bool EvalInParty(List<AstNode> args)
+    {
+        if (args.Count < 1 || !(args[0] is FuncCallNode f) || f.Args.Count != 0)
+            return false;
+
+        var targetName = f.Name;
+        return _combatScenes.SelectAvatar(targetName) != null;
     }
 
     private static double EvalNumber(AstNode node)
