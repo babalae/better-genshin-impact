@@ -1,5 +1,6 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Factory;
 using BetterGenshinImpact.GameTask.Common;
 using System;
 using System.IO;
@@ -56,8 +57,9 @@ internal class AutoFightHandler : IActionHandler
                    //禁止自动拾取，除了关闭配置拾取外，连自动拾取都关掉
                    if (taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
                    {
+                       var factory = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
                        await RunnerContext.Instance.StopAutoPickRunTask(
-                           async () => await new AutoFightTask(taskParams).Start(ct),
+                           async () => await factory.CreateTask(taskParams).Start(ct),
                            5);
                        return;
                    }
@@ -67,7 +69,8 @@ internal class AutoFightHandler : IActionHandler
             
         }
         
-        var fightSoloTask = new AutoFightTask(taskParams);
+        var factory2 = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
+        var fightSoloTask = factory2.CreateTask(taskParams);
         await fightSoloTask.Start(ct);
     }
 
@@ -79,13 +82,13 @@ internal class AutoFightHandler : IActionHandler
 
     private string GetFightStrategy(AutoFightConfig config)
     {
-        var path = Global.Absolute(@"User\AutoFight\" + config.StrategyName + ".txt");
         if ("根据队伍自动选择".Equals(config.StrategyName) || string.IsNullOrEmpty(config.StrategyName))
         {
-            path = Global.Absolute(@"User\AutoFight\");
+            return Global.Absolute(@"User\AutoFight\");
         }
 
-        if (!File.Exists(path) && !Directory.Exists(path))
+        var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
+        if (!File.Exists(path))
         {
             throw new Exception("战斗策略文件不存在");
         }

@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Factory;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -427,9 +428,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
-        await new TaskRunner()
-            .RunSoloTaskAsync(new AutoFightTask(param));
-        SwitchAutoFightEnabled = false;
+        try
+        {
+            var factory = CombatTaskFactoryProvider.GetFactory(path);
+            await new TaskRunner()
+                .RunSoloTaskAsync(factory.CreateTask(param));
+        }
+        finally
+        {
+            SwitchAutoFightEnabled = false;
+        }
     }
 
     [RelayCommand]
@@ -466,10 +474,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
             return true;
         }
 
-        path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
         if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
+        }
+        else
+        {
+            (path, _) = AutoFightParam.ResolveStrategyPath(strategyName);
         }
 
         if (!File.Exists(path) && !Directory.Exists(path))
