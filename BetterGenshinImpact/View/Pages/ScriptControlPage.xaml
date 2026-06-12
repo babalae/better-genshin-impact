@@ -230,10 +230,14 @@
                     <ui:DropDownButton Content="添加" Icon="{ui:SymbolIcon Add24}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu> 
-                                <MenuItem Header="JS脚本" Command="{Binding AddJsScriptCommand}" />
-                                <MenuItem Header="地图追踪任务" Command="{Binding AddPathingCommand}" />
-                                <MenuItem Header="键鼠脚本" Command="{Binding AddKmScriptCommand}" />
-                                <MenuItem Header="Shell" Command="{Binding AddShellCommand}" />
+                                <MenuItem Header="JS脚本(末尾)" Command="{Binding AddJsScriptCommand}" />
+                                <MenuItem Header="JS脚本(顶部)" Command="{Binding AddTopJsScriptCommand}" />
+                                <MenuItem Header="地图追踪任务(末尾)" Command="{Binding AddPathingCommand}"/>
+                                <MenuItem Header="地图追踪任务(顶部)" Command="{Binding AddTopPathingCommand}"/>
+                                <MenuItem Header="键鼠脚本(末尾)" Command="{Binding AddKmScriptCommand}" />
+                                <MenuItem Header="键鼠脚本(顶部)" Command="{Binding AddTopKmScriptCommand}" />
+                                <MenuItem Header="Shell(末尾)" Command="{Binding AddShellCommand}" />
+                                <MenuItem Header="Shell(顶部)" Command="{Binding AddTopShellCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>

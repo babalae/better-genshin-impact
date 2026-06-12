@@ -66,4 +66,10 @@ public partial class ScriptGroup : ObservableObject
         project.GroupInfo = this;
         Projects.Add(project);
     }
+    
+    public void AddTopProject(ScriptGroupProject project)
+    {
+        project.GroupInfo = this;
+        Projects.Insert(0, project);
+    }
 }
