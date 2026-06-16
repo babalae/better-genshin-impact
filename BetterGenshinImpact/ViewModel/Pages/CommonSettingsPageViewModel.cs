@@ -567,7 +567,7 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBackgroundColor), "日志区域背景色", "日志窗口底色。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBorderColor), "日志区域边框颜色", "日志窗口边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogPanelBorderThickness), "日志区域边框粗细", "日志窗口边框线宽。填 0 表示不显示边框。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogTextColor), "日志文字颜色", "日志内容的文字颜色。浅", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogTextColor), "日志文字颜色", "日志内容的文字颜色。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogFontSize), "日志文字大小", "日志内容字号。", onChanged),
                 OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.LogShadowEnabled), "显示日志阴影", "开启后文字和区域更容易从游戏背景中区分出来。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogShadowColor), "日志阴影颜色", "日志阴影颜色。", onChanged),

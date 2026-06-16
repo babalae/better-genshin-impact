@@ -415,6 +415,17 @@ public partial class MaskWindowConfig : ObservableObject
         {
             OverlayMetricItems.Remove(key);
         }
+
+        if (ShowFps)
+        {
+            ShowOverlayMetrics = true;
+            foreach (var item in OverlayMetricItemDefaults.AllItems)
+            {
+                OverlayMetricItems[item.ToString()] = item == OverlayMetricItem.GameFps;
+            }
+
+            ShowFps = false;
+        }
     }
 
     public bool IsOverlayMetricEnabled(OverlayMetricItem item)

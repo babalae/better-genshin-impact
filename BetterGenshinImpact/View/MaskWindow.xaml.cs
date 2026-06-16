@@ -565,7 +565,7 @@ public partial class MaskWindow : Window
                             }
                             else
                             {
-                                double defaultFontSize = (Math.Max(0, maskConfig.RecognitionTextFontSize) * scaleTo1080) / pixelsPerDip;
+                                double defaultFontSize = (Math.Max(1, maskConfig.RecognitionTextFontSize) * scaleTo1080) / pixelsPerDip;
                                 drawingContext.DrawText(new FormattedText(drawable.Text,
                                     CultureInfo.GetCultureInfo("zh-cn"),
                                     FlowDirection.LeftToRight,

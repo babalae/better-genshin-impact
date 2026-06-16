@@ -151,7 +151,7 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Grid Margin="16" Visibility="Collapsed">
+                <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
