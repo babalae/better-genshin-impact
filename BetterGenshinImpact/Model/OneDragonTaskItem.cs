@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
@@ -110,6 +111,32 @@ public partial class OneDragonTaskItem : ObservableObject
                         SundaySelectedValue = sundaySelectedValue
                     };
                     await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
+                };
+                break;
+            case "自动首领讨伐":
+                Action = async () =>
+                {
+                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoBossConfig.StrategyName))
+                    {
+                        TaskContext.Instance().Config.AutoBossConfig.StrategyName = "根据队伍自动选择";
+                    }
+
+                    var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoBossConfig.StrategyName, out var path))
+                    {
+                        TaskControl.Logger.LogError("自动首领讨伐战斗策略{Msg}，跳过", "未配置");
+                        return;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(TaskContext.Instance().Config.AutoBossConfig.BossName))
+                    {
+                        TaskControl.Logger.LogError("一条龙配置内{Msg}需要讨伐的首领，跳过", "未选择");
+                        return;
+                    }
+
+                    AutoBossParam param = new AutoBossParam(path);
+                    param.SetAutoBossConfig(TaskContext.Instance().Config.AutoBossConfig);
+                    await new AutoBossTask(param).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "自动幽境危战":

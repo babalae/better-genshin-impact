@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -37,7 +38,24 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
 
     public string Name => "自动剧情";
-    public bool IsEnabled { get; set; }
+    private bool _isEnabled;
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (_isEnabled == value)
+            {
+                return;
+            }
+
+            _isEnabled = value;
+            if (!value)
+            {
+                ReleaseChooseOptionWait("触发器关闭");
+            }
+        }
+    }
     public int Priority => 20;
     public bool IsExclusive => false;
     
@@ -55,6 +73,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private readonly AutoSkipAssets _autoSkipAssets;
 
     private readonly AutoSkipConfig _config;
+    private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter = new();
 
     /// <summary>
     /// 不自动点击的选项，优先级低于橙色文字点击
@@ -162,24 +181,49 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private DateTime _prevClickTime = DateTime.MinValue;
     private DateTime _prevBringToFrontTime = DateTime.MinValue;
+    private DateTime _chooseOptionDelayUntil = DateTime.MinValue;
+    private DateTime _chooseOptionWaitRecheckUntil = DateTime.MinValue;
     private bool _pendingBringToFront;
 
     public void OnCapture(CaptureContent content)
     {
-        if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
+        RefreshOperationMode();
+        if (!_config.AutoWaitDialogueOptionVoiceEnabled)
         {
-            return;
+            if (_dialogueOptionAudioWaiter.IsWaiting)
+            {
+                CancelChooseOptionWait("人声检测配置关闭");
+            }
+
+            _dialogueOptionAudioWaiter.ReleaseDetector();
         }
-        UseBackgroundOperation = IsBackgroundRunning && !SystemControl.IsGenshinImpactActive();
-
-        _prevExecute = DateTime.Now;
-
-        GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
 
         var isPlaying = content.CurrentGameUiCategory == GameUiCategory.Talk
                         || Bv.IsInTalkUi(content.CaptureRectArea); // 播放中
+
+        if (IsChooseOptionWaiting())
+        {
+            if (!HasDialogueAdvanceTarget(content.CaptureRectArea, isPlaying))
+            {
+                CancelChooseOptionWait("对话或选项已变化");
+            }
+            else
+            {
+                UpdateChooseOptionWait();
+                return;
+            }
+        }
+
+        if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
+        {
+            return;
+        }
+
+        _prevExecute = DateTime.Now;
+
+        GetDailyRewardsEsc(_config, content);
 
         if (isPlaying && UseBackgroundOperation)
         {
@@ -487,7 +531,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
         if (isInChat)
         {
-            Thread.Sleep(_config.AfterChooseOptionSleepDelay);
+            if (!PrepareBeforeChooseOption())
+            {
+                return true;
+            }
+
             var fKey = AutoPickAssets.Instance.PickVk;
             if (_config.IsClickFirstChatOption())
             {
@@ -536,7 +584,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
             using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
             if (!exclamationIconRa.IsEmpty())
             {
-                Thread.Sleep(_config.AfterChooseOptionSleepDelay);
+                if (!PrepareBeforeChooseOption())
+                {
+                    return true;
+                }
+
                 exclamationIconRa.Click();
                 AutoSkipLog("点击感叹号选项");
                 return true;
@@ -604,7 +656,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         {
                             if (item.Text.Contains(customOption))  
                             {
-                                ClickOcrRegion(item);
+                                if (!ClickOcrRegion(item))
+                                {
+                                    return true;
+                                }
+
                                 return true;  
                             }  
                         }  
@@ -624,7 +680,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         // 选择关键词
                         if (_selectList.Any(s => item.Text.Contains(s)))
                         {
-                            ClickOcrRegion(item);
+                            if (!ClickOcrRegion(item))
+                            {
+                                return true;
+                            }
+
                             return true;
                         }
 
@@ -643,7 +703,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         {
                             if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
                             {
-                                ClickOcrRegion(item, "每日委托");
+                                if (!ClickOcrRegion(item, "每日委托"))
+                                {
+                                    return true;
+                                }
+
                                 TaskControl.Sleep(800);
                                 
                                 // 6.2 每日提示确认
@@ -658,7 +722,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
                             }
                             else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
                             {
-                                ClickOcrRegion(item, "探索派遣");
+                                if (!ClickOcrRegion(item, "探索派遣"))
+                                {
+                                    return true;
+                                }
+
                                 Thread.Sleep(800); // 等待探索派遣界面打开
                                 new OneKeyExpeditionTask().Run(_autoSkipAssets);
                             }
@@ -667,7 +735,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 && !item.Text.Contains("探索")
                                 && !item.Text.Contains("派遣"))
                             {
-                                ClickOcrRegion(item);
+                                if (!ClickOcrRegion(item))
+                                {
+                                    return true;
+                                }
                             }
 
                             return true;
@@ -697,8 +768,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     clickRegion = rs[random.Next(0, rs.Count)];
                 }
 
-                ClickOcrRegion(clickRegion);
-                AutoSkipLog(clickRegion.Text);
+                if (!ClickOcrRegion(clickRegion))
+                {
+                    return true;
+                }
             }
             else
             {
@@ -709,8 +782,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 没OCR到文字，直接选择气泡选项
-                Thread.Sleep(_config.AfterChooseOptionSleepDelay);
-                ClickOcrRegion(clickRect);
+                if (!ClickOcrRegion(clickRect))
+                {
+                    return true;
+                }
+
                 var msg = _config.IsClickFirstChatOption() ? "第一个" : "最后一个";
                 AutoSkipLog($"点击{msg}气泡选项");
             }
@@ -731,13 +807,17 @@ public partial class AutoSkipTrigger : ITaskTrigger
         return false;
     }
 
-    private void ClickOcrRegion(Region region, string optionType = "")
+    private bool ClickOcrRegion(Region region, string optionType = "")
     {
         if (string.IsNullOrEmpty(optionType))
         {
-            Thread.Sleep(_config.AfterChooseOptionSleepDelay);
+            if (!PrepareBeforeChooseOption())
+            {
+                return false;
+            }
         }
 
+        RefreshOperationMode();
         if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
         {
             region.BackgroundClick();
@@ -748,6 +828,133 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
 
         AutoSkipLog(region.Text);
+        return true;
+    }
+
+    private bool PrepareBeforeChooseOption()
+    {
+        RefreshOperationMode();
+        if (DateTime.Now <= _chooseOptionWaitRecheckUntil)
+        {
+            return true;
+        }
+
+        if (IsChooseOptionWaiting())
+        {
+            return false;
+        }
+
+        if (_config.AutoWaitDialogueOptionVoiceEnabled)
+        {
+            var waitingStarted = _dialogueOptionAudioWaiter.Start(
+                Math.Clamp(_config.DialogueOptionVoiceMaxWaitSeconds, 0, 600) * 1000,
+                _config.AfterChooseOptionSleepDelay,
+                _logger);
+
+            return !waitingStarted;
+        }
+
+        if (_config.AfterChooseOptionSleepDelay > 0)
+        {
+            _chooseOptionDelayUntil = DateTime.Now.AddMilliseconds(_config.AfterChooseOptionSleepDelay);
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool UpdateChooseOptionWait()
+    {
+        var waitCompleted = false;
+        if (_dialogueOptionAudioWaiter.IsWaiting && _dialogueOptionAudioWaiter.Update(_logger))
+        {
+            waitCompleted = true;
+        }
+
+        if (_chooseOptionDelayUntil != DateTime.MinValue && DateTime.Now >= _chooseOptionDelayUntil)
+        {
+            _chooseOptionDelayUntil = DateTime.MinValue;
+            waitCompleted = true;
+        }
+
+        if (!waitCompleted)
+        {
+            return false;
+        }
+
+        RefreshOperationMode();
+        _chooseOptionWaitRecheckUntil = DateTime.Now.AddMilliseconds(1200);
+        _logger.LogDebug("自动剧情：选项等待结束，放弃本轮旧识别结果，等待下一帧重新判断选项与前后台状态");
+        return true;
+    }
+
+    private bool IsChooseOptionWaiting()
+    {
+        return _dialogueOptionAudioWaiter.IsWaiting || _chooseOptionDelayUntil != DateTime.MinValue;
+    }
+
+    private void CancelChooseOptionWait(string reason)
+    {
+        if (!IsChooseOptionWaiting())
+        {
+            return;
+        }
+
+        _dialogueOptionAudioWaiter.Cancel();
+        _chooseOptionDelayUntil = DateTime.MinValue;
+        _chooseOptionWaitRecheckUntil = DateTime.MinValue;
+        _logger.LogDebug("自动剧情：选项等待取消，原因：{Reason}", reason);
+    }
+
+    private void ReleaseChooseOptionWait(string reason)
+    {
+        var hadWait = IsChooseOptionWaiting();
+        _dialogueOptionAudioWaiter.Cancel();
+        _dialogueOptionAudioWaiter.ReleaseDetector();
+        _chooseOptionDelayUntil = DateTime.MinValue;
+        _chooseOptionWaitRecheckUntil = DateTime.MinValue;
+        if (hadWait)
+        {
+            _logger.LogDebug("自动剧情：选项等待取消，原因：{Reason}", reason);
+        }
+    }
+
+    private bool HasDialogueOption(ImageRegion region)
+    {
+        using var chatOptionResult = region.Find(_autoSkipAssets.OptionIconRo);
+        if (chatOptionResult.IsExist())
+        {
+            return true;
+        }
+
+        using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+        if (pickRa.IsExist())
+        {
+            return true;
+        }
+
+        using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
+        return !exclamationIconRa.IsEmpty();
+    }
+
+    private bool HasDialogueAdvanceTarget(ImageRegion region, bool isPlaying)
+    {
+        if (isPlaying && HasDialogueOption(region))
+        {
+            return true;
+        }
+
+        if (Bv.IsInMainUi(region))
+        {
+            return false;
+        }
+
+        return TryHandleBottomTriangle(region, (_, _, _) => { });
+    }
+
+    private void RefreshOperationMode()
+    {
+        UseBackgroundOperation = IsBackgroundRunning && !SystemControl.IsGenshinImpactActive();
     }
 
     private void HangoutOptionClick(HangoutOption option)
@@ -830,9 +1037,35 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {  
             return;  
         }  
-        //屏幕底部中间，实心三角的位置
+
+        TryHandleBottomTriangle(content.CaptureRectArea, (croppedRegion, triangleRect, area) =>
+        {
+            if (!PrepareBeforeChooseOption())
+            {
+                return;
+            }
+
+            using var triangleRegion = croppedRegion.Derive(triangleRect);
+            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            {
+                triangleRegion.BackgroundClick();
+            }
+            else
+            {
+                triangleRegion.Click();
+            }
+
+            _prevCloseItemTime = DateTime.Now;
+            _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形", area);
+            _prevPlayingTime = DateTime.Now; // 此时认为还在自动剧情
+        });
+    }
+
+    private bool TryHandleBottomTriangle(ImageRegion captureRegion, Action<ImageRegion, Rect, double> onFound)
+    {
+        // 屏幕底部中间，实心三角的位置
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
-        using var croppedRegion = content.CaptureRectArea.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
+        using var croppedRegion = captureRegion.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
 
         using var hsv = new Mat();
         Cv2.CvtColor(croppedRegion.SrcMat, hsv, ColorConversionCodes.BGR2HSV);
@@ -853,19 +1086,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
             
             if (area < 10 || area > 50 || approx.Length != 3) continue; 
 
-            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
-            {
-                croppedRegion.Derive(Cv2.BoundingRect(approx)).BackgroundClick();
-            }
-            else
-            {
-                croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
-            }
-            _prevCloseItemTime = DateTime.Now;
-            _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
-            _prevPlayingTime  = DateTime.Now; // 此时认为还在自动剧情
-            return;
+            onFound(croppedRegion, Cv2.BoundingRect(approx), area);
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>

@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.GameCapture;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -246,6 +247,7 @@ public class TpTask
             // 直接切换地区
             await SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
         }
+
         await Delay(50, ct);
 
 
@@ -336,6 +338,7 @@ public class TpTask
                 Logger.LogInformation("传送完成，返回主界面");
                 return;
             }
+
             //增加容错，小概率情况下碰到，前面点击传送失败
             capture.Find(_assets.TeleportButtonRo, rg => rg.Click());
             await Delay(delayMs, ct);
@@ -514,9 +517,9 @@ public class TpTask
                 catch (MapPositionNotRecognizedException)
                 {
                     Logger.LogDebug("缩放后依然失败，尝试强制跃迁...");
-                    await ForceJumpToTargetArea(x, y, mapName); 
+                    await ForceJumpToTargetArea(x, y, mapName);
                     await Delay(300, ct);
-                    
+
                     try
                     {
                         mapCenterPoint = GetPositionFromBigMap(mapName);
@@ -531,9 +534,9 @@ public class TpTask
             else
             {
                 Logger.LogDebug("缩放已在最佳区间附近，直接尝试强制跃迁...");
-                await ForceJumpToTargetArea(x, y, mapName); 
+                await ForceJumpToTargetArea(x, y, mapName);
                 await Delay(300, ct);
-                
+
                 try
                 {
                     mapCenterPoint = GetPositionFromBigMap(mapName);
@@ -609,11 +612,11 @@ public class TpTask
             try
             {
                 var newCenterPoint = GetPositionFromBigMap(mapName); // 随循环更新的地图中心
-                
+
                 // 计算识别坐标与预测坐标的偏差
                 double jumpDistance = Math.Sqrt(Math.Pow(newCenterPoint.X - predictedPoint.X, 2) + Math.Pow(newCenterPoint.Y - predictedPoint.Y, 2));
                 double expectedMoveLen = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY) * currentZoomLevel / _tpConfig.MapScaleFactor;
-                
+
                 // 如果实际识别坐标产生超出物理可能的远距离跳跃 (比如原本只移动了50单位，但是坐标跳跃了300单位以上)
                 // 则判定为低特征区域产生的误识别（假阳性），抛出异常进入下面的盲走抓取逻辑
                 if (jumpDistance > Math.Max(200, expectedMoveLen * 2))
@@ -628,7 +631,7 @@ public class TpTask
             catch (MapPositionNotRecognizedException)
             {
                 exceptionTimes++;
-                if (exceptionTimes > 5) 
+                if (exceptionTimes > 5)
                 {
                     throw new Exception("多次中心点识别失败或异常，惯性推算失效，重新传送");
                 }
@@ -815,7 +818,7 @@ public class TpTask
                 {
                     rect = default; // 发生异常视为识别失败
                 }
-                
+
                 if (rect == default)
                 {
                     // 滚轮调整后再次识别
@@ -1041,7 +1044,7 @@ public class TpTask
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
         await Delay(50, ct);
-        if (hasTeleportButton) return;   // 可以传送了，结束
+        if (hasTeleportButton) return; // 可以传送了，结束
         // 3. 没点出传送按钮，且不存在外部地图关闭按钮
         // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表
         var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
@@ -1095,9 +1098,11 @@ public class TpTask
     private bool CheckMapChooseIcon(ImageRegion imageRegion)
     {
         var hasMapChooseIcon = false;
+        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
 
         // 全匹配一遍
-        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(imageRegion.CacheGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
+        using var mapChooseIconRoi = imageRegion.CacheGreyMat[_assets.MapChooseIconRoi].Clone();
+        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList, isHdrCapture ? 0.7 : 0.8);
         // 按高度排序
         if (rResultList.Count > 0)
         {
@@ -1109,8 +1114,7 @@ public class TpTask
                 using var ra = imageRegion.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y - 8, 200, iconRect.Height + 16);
                 using var textRegion = ra.Find(new RecognitionObject
                 {
-                    // RecognitionType = RecognitionTypes.Ocr,
-                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
+                    RecognitionType = isHdrCapture ? RecognitionTypes.Ocr : RecognitionTypes.ColorRangeAndOcr,
                     LowerColor = new Scalar(249, 249, 249), // 只取白色文字
                     UpperColor = new Scalar(255, 255, 255),
                 });
@@ -1154,6 +1158,11 @@ public class TpTask
 
 public class MapPositionNotRecognizedException : Exception
 {
-    public MapPositionNotRecognizedException(string message) : base(message) { }
-    public MapPositionNotRecognizedException(string message, Exception innerException) : base(message, innerException) { }
+    public MapPositionNotRecognizedException(string message) : base(message)
+    {
+    }
+
+    public MapPositionNotRecognizedException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
 }

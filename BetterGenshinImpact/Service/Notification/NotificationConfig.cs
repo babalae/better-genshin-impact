@@ -286,4 +286,19 @@ public partial class NotificationConfig : ObservableObject
     ///     ServerChan SendKey
     /// </summary>
     [ObservableProperty] private string _serverChanSendKey = string.Empty;
+
+    /// <summary>
+    ///     MeoW通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _meowNotificationEnabled;
+
+    /// <summary>
+    ///     MeoW用户昵称
+    /// </summary>
+    [ObservableProperty] private string _meowNickname = string.Empty;
+
+    /// <summary>
+    ///     MeoW消息标题（可选，路径参数）
+    /// </summary>
+    [ObservableProperty] private string _meowTitle = string.Empty;
 }

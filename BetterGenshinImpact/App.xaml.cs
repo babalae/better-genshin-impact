@@ -84,7 +84,7 @@ public partial class App : Application
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
                     .MinimumLevel.Override("Quartz", LogEventLevel.Information);
-                if (all.MaskWindowConfig.MaskEnabled)
+                if (all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true })
                 {
                     loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
@@ -179,6 +179,7 @@ public partial class App : Application
                 // services.AddSingleton<TcgViewModel>();
 
                 // My Services
+                services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
@@ -247,6 +248,7 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.Normal;
         // Wine 平台适配
         WinePlatformAddon.ApplyApplicationConfig();
         base.OnStartup(e);

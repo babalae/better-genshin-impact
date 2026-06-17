@@ -11,6 +11,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
@@ -74,6 +75,7 @@ public class EngineExtend
         engine.AddHostType("ServerTime", typeof(ServerTime));
         
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
+        engine.AddHostType("AutoBossParam", typeof(AutoBossParam));
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
@@ -96,7 +98,7 @@ public class EngineExtend
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
         // https://github.com/microsoft/ClearScript/blob/master/ClearScriptTest/V8ModuleTest.cs
-        engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading | DocumentAccessFlags.AllowCategoryMismatch;
+        engine.DocumentSettings.AccessFlags = DocumentAccessFlags.AllowCategoryMismatch;
         if (searchPaths != null)
         {
             var normalizedPaths = new List<string>();

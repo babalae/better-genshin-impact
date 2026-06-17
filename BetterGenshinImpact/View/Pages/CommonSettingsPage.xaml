@@ -206,7 +206,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="开启后可以拖拽调整日志与状态栏位置，并调整大小"
+                                  Text="开启后可以拖拽调整日志、状态栏与指标栏位置，并调整大小"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -275,19 +275,54 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示游戏FPS（实验功能）"
+                                  Text="显示遮罩指标栏"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改设置后重启生效，可能存在使游戏崩溃的BUG"
+                                  Text="显示游戏帧率、处理耗时和硬件占用，指标项可单独选择"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.MaskWindowConfig.ShowFps, Mode=TwoWay}" />
+                                     IsChecked="{Binding Config.MaskWindowConfig.ShowOverlayMetrics, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Unchecked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ui:ToggleSwitch>
                 </Grid>
+                <!-- 固定三行三列，顺序来自 OverlayMetricItemDefaults.AllItems，与遮罩实际展示顺序一致。 -->
+                <ItemsControl Margin="48,0,52,12"
+                              ItemsSource="{Binding OverlayMetricItems}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="3" Rows="3" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Width="132"
+                                      Height="28"
+                                      HorizontalAlignment="Left"
+                                      HorizontalContentAlignment="Left"
+                                      VerticalContentAlignment="Center"
+                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                      ToolTip="{Binding ToolTipText}">
+                                <ui:TextBlock Margin="4,0,0,0"
+                                              FontTypography="Body"
+                                              Text="{Binding DisplayName}"
+                                              TextTrimming="CharacterEllipsis"
+                                              TextWrapping="NoWrap" />
+                            </CheckBox>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

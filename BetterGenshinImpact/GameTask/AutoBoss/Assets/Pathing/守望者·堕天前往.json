@@ -1,0 +1,58 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "https://github.com/1004452714",
+        "name": "DarkFlameMaster"
+      }
+    ],
+    "bgi_version": "0.52.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1775791356948,
+    "map_match_method": "SIFT",
+    "map_name": "Teyvat",
+    "name": "守望者・堕天",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "fly",
+      "type": "teleport",
+      "x": -227.951171875,
+      "y": 4109.8828125
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 2,
+      "move_mode": "fly",
+      "type": "path",
+      "x": -229.71484375,
+      "y": 4114.32080078125
+    },
+    {
+      "action": "stop_flying",
+      "action_params": "",
+      "id": 3,
+      "move_mode": "walk",
+      "type": "path",
+      "x": -250.228515625,
+      "y": 4167.486328125
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 4,
+      "move_mode": "run",
+      "type": "path",
+      "x": -261.037109375,
+      "y": 4195.42529296875
+    }
+  ]
+}

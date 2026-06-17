@@ -21,6 +21,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using BetterGenshinImpact.Core.Script.Project;
@@ -44,6 +45,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         new("合成树脂"),
         // new ("每日委托"),
         new("自动秘境"),
+        new ("自动首领讨伐"),
         new ("自动幽境危战"),
         new ("自动地脉花"),
         new("领取每日奖励"),
@@ -77,6 +79,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             new() { Name = "领取邮件" },
             new() { Name = "合成树脂" },
             new() { Name = "自动秘境" },
+            new() { Name = "自动首领讨伐" },
             new() { Name = "自动幽境危战" },
             new() { Name = "自动地脉花" },
             new() { Name = "领取每日奖励" },
@@ -238,11 +241,15 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private List<string> _secretTreasureObjectList = ["布匹","须臾树脂","大英雄的经验","流浪者的经验","精锻用魔矿","摩拉","祝圣精华","祝圣油膏"];
     
     [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["地图传送", "尘歌壶道具"];
+
+    [ObservableProperty] private AutoFightViewModel? _autoFightViewModel;
     
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
     {
+        AutoFightViewModel = new AutoFightViewModel(Config);
+
         ConfigList.CollectionChanged += (sender, e) =>
         {
             if (e.NewItems != null)
@@ -426,6 +433,12 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         SaveConfig();
         Toast.Information("排序已保存");
+    }
+
+    [RelayCommand]
+    private void OnStrategyDropDownOpened(string type)
+    {
+        AutoFightViewModel?.OnStrategyDropDownOpened(type);
     }
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)

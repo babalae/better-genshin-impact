@@ -40,3 +40,6 @@ __pycache__/
 !.trae/rules/**
 !.trae/skills/
 !.trae/skills/**
+
+# Claude
+.claude/*

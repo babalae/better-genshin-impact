@@ -9,7 +9,7 @@ using Microsoft.ClearScript.JavaScript;
 
 namespace BetterGenshinImpact.Core.Script
 {
-    public class PackageDocumentLoader : DocumentLoader
+    public class PackageDocumentLoader : DefaultDocumentLoader
     {
         private readonly string _scriptRootPath;
 
@@ -22,21 +22,42 @@ namespace BetterGenshinImpact.Core.Script
         {
             string? targetPath = ResolvePhysicalPath(settings, sourceInfo, specifier);
 
+            // ResolvePhysicalPath 可能因 sourceInfo 为空而失败，直接从脚本根目录兜底
             if (targetPath == null || !File.Exists(targetPath))
             {
-                return await Default.LoadDocumentAsync(settings, sourceInfo, specifier, category, contextCallback);
+                var stripped = Regex.Replace(specifier, @"^(?:\.\.?/)+", "");
+                if (!Path.IsPathRooted(stripped))
+                {
+                    var fullPath = Path.GetFullPath(Path.Combine(_scriptRootPath, stripped));
+                    if (fullPath.StartsWith(_scriptRootPath, StringComparison.OrdinalIgnoreCase)
+                        && File.Exists(fullPath))
+                    {
+                        targetPath = fullPath;
+                    }
+                }
+            }
+
+            if (targetPath == null || !File.Exists(targetPath))
+            {
+                throw new FileNotFoundException($"无法解析模块导入路径: '{specifier}'", specifier);
             }
 
             // 处理 JS 文件的重写
             if (Path.GetExtension(targetPath).ToLower() == ".js")
             {
+                var uri = new Uri(targetPath);
+
+                // 检查缓存
+                var cached = GetCachedDocument(uri);
+                if (cached != null) return cached;
+
                 string content = await File.ReadAllTextAsync(targetPath);
                 string processedCode = RewriteScriptCode(content, targetPath);
-                var documentInfo = new DocumentInfo(new Uri(targetPath)) { Category = ModuleCategory.Standard };
-                return new StringDocument(documentInfo, processedCode);
+                var documentInfo = new DocumentInfo(uri) { Category = ModuleCategory.Standard };
+                return CacheDocument(new StringDocument(documentInfo, processedCode), false);
             }
 
-            return await Default.LoadDocumentAsync(settings, sourceInfo, specifier, category, contextCallback);
+            throw new FileNotFoundException($"不支持的模块导入类型: '{specifier}' (仅支持 .js 文件)", specifier);
         }
 
         /// <summary>
@@ -54,11 +75,9 @@ namespace BetterGenshinImpact.Core.Script
             {
                 string importPart = match.Groups[1].Value.Trim();
                 string quote = match.Groups[2].Value;
-                string rawPath = match.Groups[3].Value;
-
-                string path = rawPath.Replace("../../../packages", "packages");
+                string path = match.Groups[3].Value.Replace("../../../packages", "packages");
                 string? resourceFullPath = ResolvePathInternal(null, currentFilePath, path);
-                
+
                 if (resourceFullPath != null && File.Exists(resourceFullPath))
                 {
                     string normalizedPath = Path.GetRelativePath(_scriptRootPath, resourceFullPath).Replace("\\", "/");
@@ -88,7 +107,24 @@ namespace BetterGenshinImpact.Core.Script
 
         private string? ResolvePhysicalPath(DocumentSettings settings, DocumentInfo? sourceInfo, string specifier)
         {
-            return ResolvePathInternal(settings.SearchPath, sourceInfo?.Name, specifier);
+            string? referrer = null;
+            if (sourceInfo.HasValue)
+            {
+                var sourceUri = sourceInfo.Value.Uri;
+                if (sourceUri != null && sourceUri.IsAbsoluteUri && sourceUri.IsFile)
+                {
+                    referrer = sourceUri.LocalPath;
+                }
+                else if (!string.IsNullOrEmpty(sourceInfo.Value.Name))
+                {
+                    if (Uri.TryCreate(sourceInfo.Value.Name, UriKind.Absolute, out var nameUri) && nameUri.IsFile)
+                    {
+                        referrer = nameUri.LocalPath;
+                    }
+                }
+            }
+
+            return ResolvePathInternal(settings.SearchPath, referrer, specifier);
         }
 
         private string? ResolvePathInternal(string? searchPath, string? referrer, string specifier)
@@ -96,6 +132,12 @@ namespace BetterGenshinImpact.Core.Script
             if (specifier.StartsWith("packages/", StringComparison.OrdinalIgnoreCase))
             {
                 return ProbeFile(Path.Combine(_scriptRootPath, specifier));
+            }
+
+            var packagesMatch = Regex.Match(specifier, @"^(?:\.\.\/)+(packages/.*)$");
+            if (packagesMatch.Success)
+            {
+                return ProbeFile(Path.Combine(_scriptRootPath, packagesMatch.Groups[1].Value));
             }
 
             if (specifier.StartsWith("."))
@@ -128,8 +170,9 @@ namespace BetterGenshinImpact.Core.Script
         {
             try
             {
-                if (File.Exists(path)) return path;
-                if (File.Exists(path + ".js")) return path + ".js";
+                var normalized = Path.GetFullPath(path);
+                if (File.Exists(normalized)) return normalized;
+                if (File.Exists(normalized + ".js")) return normalized + ".js";
             }
             catch { }
             return null;

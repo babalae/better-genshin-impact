@@ -1,13 +1,17 @@
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Service.Notification.Model;
-using System.Collections.Generic;
 using BetterGenshinImpact.Service.Notification;
-using System;
+using BetterGenshinImpact.Service.Notification.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -21,7 +25,7 @@ public class WebhookNotifier : INotifier
     private string SendTo { get; set; }
 
     private readonly HttpClient _httpClient;
-    
+
     private readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -40,7 +44,7 @@ public class WebhookNotifier : INotifier
         {
             throw new NotifierException("Webhook 地址为空");
         }
-        
+
         try
         {
             var response = await _httpClient.PostAsync(Endpoint, TransformData(content));
@@ -63,14 +67,14 @@ public class WebhookNotifier : INotifier
     private StringContent TransformData(BaseNotificationData notificationData)
     {
         // 使用 SendTo 属性来设置 send_to 字段，并将 notification_data 的内容合并到外层字典
-        var dataToSend = new Dictionary<string, object>
+        var dataToSend = new Dictionary<string, object?>
         {
             { "send_to", SendTo },
             { "event", notificationData.Event },
             { "result", notificationData.Result },
             { "timestamp", notificationData.Timestamp },
-            // 修改截图数据的处理方式，先转换为字节数组再进行Base64编码
-            { "screenshot", notificationData.Screenshot != null ? ConvertToBase64(notificationData.Screenshot) : null },
+            // 修改截图数据的处理方式，先转换为字节数组再进行 Base64 编码
+            { "screenshot", ConvertToBase64(notificationData.Screenshot) },
             { "message", notificationData.Message },
             { "data", notificationData.Data }
         };
@@ -79,16 +83,17 @@ public class WebhookNotifier : INotifier
 
         return new StringContent(serializedData, Encoding.UTF8, "application/json");
     }
-    
-    // 添加新的辅助方法，用于将图像转换为Base64字符串
-    private string ConvertToBase64(object imageObj)
+
+    // 添加新的辅助方法，用于将图像转换为 Base64 字符串
+    private static string? ConvertToBase64(Image<Rgb24>? imageObj)
     {
-        if (imageObj is byte[] byteArray)
+        if (imageObj == null)
         {
-            return Convert.ToBase64String(byteArray);
+            return null;
         }
-        // 如果是ImageSharp图像对象，需要先转换为字节数组
-        // 这里假设使用PNG格式编码
-        return null; // 或者根据实际需要处理其他图像类型
+
+        using var ms = new MemoryStream();
+        imageObj.Save(ms, new JpegEncoder());
+        return Convert.ToBase64String(ms.ToArray());
     }
 }
