@@ -177,6 +177,60 @@
 
             <ui:NavigationView.ContentOverlay>
                 <Grid>
+                    <!-- 兑换码更新通知卡片 -->
+                    <Border CornerRadius="8"
+                            MinWidth="240"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="0,8,12,0"
+                            Cursor="Hand"
+                            Visibility="{Binding IsRedeemCodeInfoBarOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"
+                            MouseLeftButtonDown="OnRedeemCodeInfoBarClick">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="2" BlurRadius="16"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="4"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0"
+                                    Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                    CornerRadius="4,0,0,4"/>
+                            <Border Grid.Column="1"
+                                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                    CornerRadius="0"
+                                    Padding="14,12">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="🎁 有新的兑换码可用"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="点击查看详情"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Margin="0,4,0,0"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- 右侧关闭按钮区域 -->
+                            <Border Grid.Column="2"
+                                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                    CornerRadius="0,4,4,0"
+                                    Padding="6,0,8,0">
+                                <ui:Button Width="28" Height="28"
+                                           Padding="0"
+                                           VerticalAlignment="Center"
+                                           Background="Transparent"
+                                           BorderBrush="Transparent"
+                                           CornerRadius="4"
+                                           Icon="{ui:SymbolIcon Dismiss16}"
+                                           Command="{Binding DismissRedeemCodeCommand}"
+                                           ToolTip="关闭" />
+                            </Border>
+                        </Grid>
+                    </Border>
                     <ui:SnackbarPresenter x:Name="SnackbarPresenter" />
                 </Grid>
             </ui:NavigationView.ContentOverlay>
