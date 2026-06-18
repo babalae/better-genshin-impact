@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -244,9 +245,62 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     public static void LogScreenResolution()
     {
-        AssertUtils.CheckGameResolution("自动音游");
+        CheckAutoMusicGameResolution();
 
         Logger.LogInformation("{Name}：回到游戏主界面时记得关闭自动音游任务！", "千音雅集");
         Logger.LogWarning("{Name}：默认的样式“轻漾涟漪”是{No}的！需要手动完成几首曲目获得{Money}千音币后兑换并使用胡桃样式“{Hutao}”！", "千音雅集", "不可用", 600, "疏影引蝶映梅红");
+    }
+
+    public static RECT GetEffectiveGameScreenSizeFromRawCaptureRect(RECT rawCaptureRect)
+    {
+        var contentSpace = CaptureGeometry.FromRawCaptureRect(rawCaptureRect).ContentSpace;
+        return new RECT(0, 0, contentSpace.Width, contentSpace.Height);
+    }
+
+    public static RECT GetEffectiveGameScreenSizeFromSystemInfo(ISystemInfo systemInfo)
+    {
+        return systemInfo.GameScreenSize;
+    }
+
+    private static void CheckAutoMusicGameResolution()
+    {
+        var (effectiveGameScreenSize, rawCaptureRect, source) = ResolveAutoMusicGameResolution();
+        if (!AssertUtils.IsGameResolution16X9(effectiveGameScreenSize))
+        {
+            Logger.LogError(
+                "游戏窗口分辨率不是 16:9 ！当前有效内容区为 {Width}x{Height}，原始捕获区域为 {RawWidth}x{RawHeight}，来源 {Source}，非 16:9 分辨率的游戏无法正常使用自动音游功能 !",
+                effectiveGameScreenSize.Width,
+                effectiveGameScreenSize.Height,
+                rawCaptureRect.Width,
+                rawCaptureRect.Height,
+                source);
+            throw new Exception("游戏窗口分辨率不是 16:9");
+        }
+
+        if (rawCaptureRect.Width != effectiveGameScreenSize.Width || rawCaptureRect.Height != effectiveGameScreenSize.Height)
+        {
+            Logger.LogInformation(
+                "自动音游使用有效内容区 {Width}x{Height}（原始捕获 {RawWidth}x{RawHeight}，来源 {Source}）",
+                effectiveGameScreenSize.Width,
+                effectiveGameScreenSize.Height,
+                rawCaptureRect.Width,
+                rawCaptureRect.Height,
+                source);
+        }
+    }
+
+    private static (RECT EffectiveGameScreenSize, RECT RawCaptureRect, string Source) ResolveAutoMusicGameResolution()
+    {
+        var taskContext = TaskContext.Instance();
+        if (taskContext is { IsInitialized: true, SystemInfo: not null })
+        {
+            var systemInfo = taskContext.SystemInfo;
+            var rawCaptureRect = systemInfo.CaptureGeometry?.RawCaptureRect
+                                 ?? new RECT(0, 0, systemInfo.GameScreenSize.Width, systemInfo.GameScreenSize.Height);
+            return (GetEffectiveGameScreenSizeFromSystemInfo(systemInfo), rawCaptureRect, "SystemInfo");
+        }
+
+        var rawCaptureRectFromWindow = SystemControl.GetCaptureRect(taskContext.GameHandle);
+        return (GetEffectiveGameScreenSizeFromRawCaptureRect(rawCaptureRectFromWindow), rawCaptureRectFromWindow, "RawCaptureRect");
     }
 }

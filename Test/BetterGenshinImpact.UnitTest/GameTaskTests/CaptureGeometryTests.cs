@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -62,6 +63,26 @@ public class CaptureGeometryTests
         var systemInfo = new FakeSystemInfo(new RECT(0, 0, 1920, 1080), 1);
 
         RunWithInitializedSystemInfo(systemInfo, () => AssertUtils.CheckGameResolution("自动音游"));
+    }
+
+    [Fact]
+    public void AutoMusicGameResolution_UsesSystemInfoContentSize()
+    {
+        var systemInfo = new FakeSystemInfo(new RECT(0, 0, 2560, 1600), 1);
+
+        var effectiveGameScreenSize = AutoMusicGameTask.GetEffectiveGameScreenSizeFromSystemInfo(systemInfo);
+
+        Assert.Equal(new RECT(0, 0, 2560, 1440), effectiveGameScreenSize);
+        Assert.True(AssertUtils.IsGameResolution16X9(effectiveGameScreenSize));
+    }
+
+    [Fact]
+    public void AutoMusicGameResolution_CalculatesContentSizeFromRawCaptureRect()
+    {
+        var effectiveGameScreenSize = AutoMusicGameTask.GetEffectiveGameScreenSizeFromRawCaptureRect(new RECT(0, 0, 2560, 1600));
+
+        Assert.Equal(new RECT(0, 0, 2560, 1440), effectiveGameScreenSize);
+        Assert.True(AssertUtils.IsGameResolution16X9(effectiveGameScreenSize));
     }
 
     [Fact]
