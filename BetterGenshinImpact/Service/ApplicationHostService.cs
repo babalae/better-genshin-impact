@@ -45,17 +45,29 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     }
 
     /// <summary>
-    /// Handles command line activation for both first launch and subsequent single-instance launches.
+    /// Handles first launch with the original page-loaded flow, and subsequent single-instance activations explicitly.
     /// </summary>
     private async Task HandleActivationAsync(CommandLineOptions cmdOptions, bool isSingleInstanceActivation)
     {
         EnsureNavigationWindow();
 
-        QueueActivationAction(async () => await RunActivationAsync(cmdOptions, isSingleInstanceActivation));
+        if (isSingleInstanceActivation)
+        {
+            QueueActivationAction(async () => await RunSingleInstanceActivationAsync(cmdOptions));
+        }
+        else
+        {
+            QueueActivationAction(() =>
+            {
+                RunFirstLaunchActivation(cmdOptions);
+                return Task.CompletedTask;
+            });
+        }
+
         await Task.CompletedTask;
     }
 
-    private async Task RunActivationAsync(CommandLineOptions cmdOptions, bool isSingleInstanceActivation)
+    private void RunFirstLaunchActivation(CommandLineOptions cmdOptions)
     {
         if (cmdOptions.HasTaskArgs)
         {
@@ -72,14 +84,6 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
             {
                 case CommandLineAction.StartOneDragon:
                     _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
-                    if (isSingleInstanceActivation)
-                    {
-                        OneDragonFlowViewModel? oneDragon = App.GetService<OneDragonFlowViewModel>();
-                        if (oneDragon != null)
-                        {
-                            await oneDragon.StartFromCommandLineOptionsAsync(cmdOptions);
-                        }
-                    }
                     break;
 
                 case CommandLineAction.StartGroups:
@@ -87,10 +91,7 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                     if (cmdOptions.GroupNames.Length > 0)
                     {
                         var scheduler = App.GetService<ScriptControlViewModel>();
-                        if (scheduler != null)
-                        {
-                            await scheduler.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
-                        }
+                        scheduler?.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
                     }
                     break;
 
@@ -99,20 +100,12 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                     if (cmdOptions.GroupNames.Length > 0)
                     {
                         var scheduler = App.GetService<ScriptControlViewModel>();
-                        if (scheduler != null)
-                        {
-                            await scheduler.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
-                        }
+                        scheduler?.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
                     }
                     break;
 
                 case CommandLineAction.Start:
                     _ = _navigationWindow.Navigate(typeof(HomePage));
-                    HomePageViewModel? home = App.GetService<HomePageViewModel>();
-                    if (home != null)
-                    {
-                        await home.OnStartTriggerAsync();
-                    }
                     break;
             }
         }
@@ -122,6 +115,67 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
         }
     }
 
+    private async Task RunSingleInstanceActivationAsync(CommandLineOptions cmdOptions)
+    {
+        if (!cmdOptions.HasTaskArgs)
+        {
+            return;
+        }
+
+        _ = _navigationWindow!.Navigate(typeof(HomePage));
+
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+        if (scriptConfig.AutoUpdateBeforeCommandLineRun)
+        {
+            ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
+                Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+        }
+
+        switch (cmdOptions.Action)
+        {
+            case CommandLineAction.StartOneDragon:
+                _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+                OneDragonFlowViewModel? oneDragon = App.GetService<OneDragonFlowViewModel>();
+                if (oneDragon != null)
+                {
+                    await oneDragon.StartFromCommandLineOptionsAsync(cmdOptions);
+                }
+                break;
+
+            case CommandLineAction.StartGroups:
+                _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                if (cmdOptions.GroupNames.Length > 0)
+                {
+                    var scheduler = App.GetService<ScriptControlViewModel>();
+                    if (scheduler != null)
+                    {
+                        await scheduler.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                    }
+                }
+                break;
+
+            case CommandLineAction.TaskProgress:
+                _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                if (cmdOptions.GroupNames.Length > 0)
+                {
+                    var scheduler = App.GetService<ScriptControlViewModel>();
+                    if (scheduler != null)
+                    {
+                        await scheduler.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                    }
+                }
+                break;
+
+            case CommandLineAction.Start:
+                _ = _navigationWindow.Navigate(typeof(HomePage));
+                HomePageViewModel? home = App.GetService<HomePageViewModel>();
+                if (home != null)
+                {
+                    await home.OnStartTriggerAsync();
+                }
+                break;
+        }
+    }
     private void EnsureNavigationWindow()
     {
         _navigationWindow ??= (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
