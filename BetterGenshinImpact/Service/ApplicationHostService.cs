@@ -57,17 +57,13 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
         }
         else
         {
-            QueueActivationAction(() =>
-            {
-                RunFirstLaunchActivation(cmdOptions);
-                return Task.CompletedTask;
-            });
+            QueueActivationAction(async () => await RunFirstLaunchActivationAsync(cmdOptions));
         }
 
         await Task.CompletedTask;
     }
 
-    private void RunFirstLaunchActivation(CommandLineOptions cmdOptions)
+    private async Task RunFirstLaunchActivationAsync(CommandLineOptions cmdOptions)
     {
         if (cmdOptions.HasTaskArgs)
         {
@@ -91,7 +87,10 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                     if (cmdOptions.GroupNames.Length > 0)
                     {
                         var scheduler = App.GetService<ScriptControlViewModel>();
-                        scheduler?.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                        if (scheduler != null)
+                        {
+                            await scheduler.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                        }
                     }
                     break;
 
@@ -100,7 +99,10 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                     if (cmdOptions.GroupNames.Length > 0)
                     {
                         var scheduler = App.GetService<ScriptControlViewModel>();
-                        scheduler?.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                        if (scheduler != null)
+                        {
+                            await scheduler.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                        }
                     }
                     break;
 
