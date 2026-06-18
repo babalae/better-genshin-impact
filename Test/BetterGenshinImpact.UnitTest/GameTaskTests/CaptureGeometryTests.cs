@@ -86,6 +86,21 @@ public class CaptureGeometryTests
     }
 
     [Fact]
+    public void UpdateCaptureGeometry_IgnoresInvalidRawCaptureRect()
+    {
+        var systemInfo = new FakeSystemInfo(new RECT(0, 0, 2560, 1600), 1);
+        var originalGeometry = systemInfo.CaptureGeometry;
+
+        systemInfo.UpdateCaptureGeometry(new RECT(0, 0, 0, 0));
+
+        Assert.Same(originalGeometry, systemInfo.CaptureGeometry);
+        Assert.Equal(new RECT(0, 0, 2560, 1440), systemInfo.GameScreenSize);
+        Assert.Equal(new RECT(0, 80, 2560, 1520), systemInfo.CaptureAreaRect);
+        Assert.Equal(1, systemInfo.AssetScale);
+        Assert.Equal(new Rect(0, 0, 1920, 1080), systemInfo.ScaleMax1080PCaptureRect);
+    }
+
+    [Fact]
     public void IsGameResolution16X9_ReturnsFalseWhenDerivedContentSizeIsNot16x9()
     {
         var systemInfo = new FakeSystemInfo(new RECT(0, 0, 1000, 1000), 1);

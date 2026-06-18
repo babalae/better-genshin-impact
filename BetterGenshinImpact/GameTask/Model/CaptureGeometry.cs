@@ -24,6 +24,12 @@ public sealed class CaptureGeometry
 
     public Rect ContentSpace { get; }
 
+    public bool HasValidContentSpace =>
+        CaptureSpace.Width > 0
+        && CaptureSpace.Height > 0
+        && ContentSpace.Width > 0
+        && ContentSpace.Height > 0;
+
     public static CaptureGeometry FromRawCaptureRect(RECT rawCaptureRect)
     {
         var captureSpace = new Rect(0, 0, rawCaptureRect.Width, rawCaptureRect.Height);

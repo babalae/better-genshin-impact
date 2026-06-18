@@ -468,7 +468,13 @@ namespace BetterGenshinImpact.GameTask
         {
             var hWnd = TaskContext.Instance().GameHandle;
             var currentRect = SystemControl.GetCaptureRect(hWnd);
-            if (_gameRect == RECT.Empty)
+            if (SizeIsInvalid(currentRect))
+            {
+                _logger.LogDebug("跳过无效游戏窗口捕获区域同步: {W}x{H}", currentRect.Width, currentRect.Height);
+                return true;
+            }
+
+            if (_gameRect == RECT.Empty || SizeIsInvalid(_gameRect))
             {
                 _gameRect = new RECT(currentRect);
             }
@@ -476,7 +482,7 @@ namespace BetterGenshinImpact.GameTask
             {
                 // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 不支持 需要考虑的问题太多了
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
-                    && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
+                    && !SizeIsInvalid(_gameRect) && !SizeIsInvalid(currentRect))
                 {
                     _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
                     UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
@@ -494,9 +500,9 @@ namespace BetterGenshinImpact.GameTask
             return false;
         }
 
-        private bool SizeIsZero(RECT rect)
+        private bool SizeIsInvalid(RECT rect)
         {
-            return rect.Width == 0 || rect.Height == 0;
+            return rect.Width <= 0 || rect.Height <= 0;
         }
 
         private void WinEventCallback(User32.HWINEVENTHOOK hWinEventHook, uint @event, HWND hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)

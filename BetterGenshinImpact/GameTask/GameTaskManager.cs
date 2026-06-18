@@ -17,7 +17,9 @@ using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -31,6 +33,8 @@ namespace BetterGenshinImpact.GameTask;
 
 internal class GameTaskManager
 {
+    private static readonly ILogger<GameTaskManager> Logger = App.GetLogger<GameTaskManager>();
+
     public static ConcurrentDictionary<string, ITaskTrigger>? TriggerDictionary { get; set; }
 
     /// <summary>
@@ -189,12 +193,34 @@ internal class GameTaskManager
             throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
         }
 
-        var mat = Mat.FromStream(File.OpenRead(filePath), flags);
+        using var assetStream = File.OpenRead(filePath);
+        var mat = Mat.FromStream(assetStream, flags);
+        if (mat.Empty())
+        {
+            throw new InvalidDataException($"读取素材图片失败: {filePath}");
+        }
+
         if (systemInfo.GameScreenSize.Width != 1920)
         {
-            mat = ResizeHelper.Resize(mat, systemInfo.AssetScale);
+            var assetScale = systemInfo.AssetScale;
+            if (!IsValidScale(assetScale))
+            {
+                Logger.LogWarning(
+                    "素材缩放比例无效，使用 1 跳过缩放。当前内容尺寸: {W}x{H}, AssetScale: {AssetScale}",
+                    systemInfo.GameScreenSize.Width,
+                    systemInfo.GameScreenSize.Height,
+                    assetScale);
+                assetScale = 1;
+            }
+
+            mat = ResizeHelper.Resize(mat, assetScale);
         }
 
         return mat;
+    }
+
+    private static bool IsValidScale(double scale)
+    {
+        return scale > 0 && !double.IsNaN(scale) && !double.IsInfinity(scale);
     }
 }

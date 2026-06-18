@@ -33,7 +33,13 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
 
         public void UpdateCaptureGeometry(RECT rawCaptureRect)
         {
-            CaptureGeometry = BetterGenshinImpact.GameTask.Model.CaptureGeometry.FromRawCaptureRect(rawCaptureRect);
+            var geometry = BetterGenshinImpact.GameTask.Model.CaptureGeometry.FromRawCaptureRect(rawCaptureRect);
+            if (!geometry.HasValidContentSpace)
+            {
+                return;
+            }
+
+            CaptureGeometry = geometry;
             CaptureAreaRect = CaptureGeometry.ContentRect;
             GameScreenSize = new RECT(0, 0, CaptureGeometry.ContentSpace.Width, CaptureGeometry.ContentSpace.Height);
 
