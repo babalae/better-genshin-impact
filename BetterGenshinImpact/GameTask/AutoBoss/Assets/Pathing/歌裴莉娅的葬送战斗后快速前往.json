@@ -1,0 +1,43 @@
+{
+  "info": {
+    "name": "冰封组曲快速前往",
+    "type": "collect",
+    "authors": [],
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1755781802879,
+    "enable_monster_loot_split": false,
+    "map_match_method": ""
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 3805.1650390625,
+      "y": 3592.691650390625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 3787.48046875,
+      "y": 3572.779541015625,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },{
+      "id": 13,
+      "x": 3787.8408203125,
+      "y": 3571.67578125,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "keypress(F),wait(3),click,wait(2),keypress(F),wait(6)"
+    }
+  ]
+}

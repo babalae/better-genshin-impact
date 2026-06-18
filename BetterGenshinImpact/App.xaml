@@ -25,6 +25,7 @@
                               Opacity="0.35"
                               Color="#000000" />
             <bgivc:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
+            <bgivc:AutoBossNameToCascadingItemConverter x:Key="AutoBossNameConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:BooleanToEnableTextConverter x:Key="BooleanToEnableTextConverter" />

@@ -117,7 +117,7 @@ private async Task<StateHandlerResult> HandleEventMenu(BvPage page)
 
 | 返回值 | 框架行为 | 典型场景 |
 | --- | --- | --- |
-| `Success` | 动作完成，框架等待当前状态的邻接状态出现；若转场超时，会占用当前状态的 retry 预算 | 点击按钮、发送交互键后等待页面切换 |
+| `Success` | 动作完成，框架等待当前状态的邻接状态出现；如果源状态在动作生效窗口内持续可见，会触发当前状态 retry | 点击按钮、发送交互键后等待页面切换 |
 | `Wait` | 不计 retry，直接进入下一轮检测 | 加载中、动画中、当前状态无需动作 |
 | `Retry` | 当前状态 retry 次数加一，超限后抛异常 | 按钮没找到、OCR 暂时失败、动作没法确认 |
 | `Fail` | 立即抛异常 | 配置错误、关键条件不满足、无法恢复 |
@@ -155,7 +155,7 @@ RegisterStateTransitions(
 - 当前状态有邻接关系时，框架只检测邻接状态。
 - 每个注册的状态转移必须至少有一个邻接状态；结束节点不要注册状态转移。
 - 邻接状态不能包含自身，注册时会直接抛异常。
-- 如果需要在同一页面重试，不要写自环，应该让 Handler 返回 `Retry` 或 `Success` 后转场超时进入 retry。
+- 如果需要在同一页面重试，不要写自环，应该让 Handler 返回 `Retry`，或让 `Success` 后的源状态保持超时触发 retry。
 - `Success` 状态必须有合理的下一跳，否则等待邻接状态会失败并消耗 retry。
 
 候选状态顺序会影响检测优先级。更具体、更不容易误判的状态应放在前面。
@@ -207,7 +207,7 @@ private async Task<StateHandlerResult> HandleTargetPage(BvPage page)
 retry 预算会被两类事件消耗：
 
 - Handler 返回 `Retry`。
-- Handler 返回 `Success`，但等待邻接状态转换超时。
+- Handler 返回 `Success` 后，源状态持续可见并达到动作生效窗口上限。
 
 状态变化后 retry 计数和 retry 计时都会重置。
 
@@ -227,13 +227,22 @@ retry 预算会被两类事件消耗：
 
 例如“找不到活动入口”和“交互秘境入口后没法确认是否已经选中”属于同一类问题：动作可重复，但最终只能靠后续状态检测确认。这类节点更适合设置 `RetryTimeout`。
 
-## 转场超时
+## 转场等待
 
-`DefaultTransitionTimeout` 表示：Handler 返回 `Success` 后，如果仍然停留在原状态，最多等多久。默认是 3000ms。
+`DefaultTransitionTimeout` 表示：Handler 返回 `Success` 后，源状态持续可见多久才认为本次动作没有生效。默认是 3000ms。达到这个窗口上限后，状态机会触发当前状态 retry。
 
-`DefaultIntermediateTransitionTimeout` 表示：如果界面已经离开原状态，但还没到任何邻接目标，最多允许中间态持续多久。默认是 120000ms。这个设计是为了避免游戏加载、传送、黑屏等中间态被短转场超时误判。
+`DefaultIntermediateTransitionTimeout` 表示：如果界面已经离开源状态，但还没到任何邻接目标，最多允许中间态持续多久。默认是 120000ms。这个设计是为了避免游戏加载、传送、黑屏等中间态被短动作窗口误判成当前状态 retry。
 
-可以在节点上覆盖转场超时：
+转场等待会按 `DefaultDetectionInterval` 持续轮询“邻接目标状态 + 源状态”，不会做全量状态检测。这样可以避免 `MainWorld` 这类宽泛状态在秘境入口、地图等场景误命中，导致当前节点本该 retry 的动作被误判成中间态。
+
+等待期间按下面的规则计时：
+
+- 检测到邻接目标状态：立即转换成功。
+- 检测到源状态：说明动作还没有触发转场，动作生效窗口继续计时，中间态长超时重置。
+- 源状态和邻接目标都没检测到：说明可能处于加载、黑屏、动画等中间态，动作生效窗口重置，中间态长超时继续计时。
+- 中间态长超时：直接抛出中间态转换超时异常，不计入当前源状态的 retry 预算。
+
+可以在节点上覆盖动作生效窗口：
 
 ```csharp
 [StateHandler(MyState.TeleportMap, TransitionTimeout = 10000)]
@@ -264,7 +273,7 @@ if (CurrentStateRetryCount > 3)
 | `CurrentStateRetryTimeout` | 当前状态的时间上限，使用次数策略时为 null |
 | `CurrentStateRetryUsesTimeout` | 当前状态是否使用时间策略 |
 | `CurrentStateRetryInterval` | 当前状态 retry 后的循环间隔 |
-| `CurrentStateTransitionTimeout` | 当前状态等待邻接状态的转场超时 |
+| `CurrentStateTransitionTimeout` | 仅在当前状态 Handler 返回 `Success` 后生效；从 `Success` 返回后开始计时，源状态持续可见超过此时长会触发 retry |
 
 这些属性都是只读保护属性，节点不能直接改框架内部计数。
 

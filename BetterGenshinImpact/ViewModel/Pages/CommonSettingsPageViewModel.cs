@@ -67,8 +67,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
         NotificationService notificationService)
     {
         Config = configService.Get();
+        Config.MaskWindowConfig.EnsureOverlayMetricItems();
+        Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
         _navigationService = navigationService;
         _notificationService = notificationService;
+        // 设置页需要可绑定对象，避免把 Dictionary<string, bool> 直接暴露给 XAML 并丢失固定枚举顺序。
+        OverlayMetricItems = new ObservableCollection<OverlayMetricSettingItem>(
+            OverlayMetricItemDefaults.AllItems.Select(item => new OverlayMetricSettingItem(Config.MaskWindowConfig, item, OnRefreshMaskSettings)));
         InitializeCountries();
         InitializeMiyousheCookie();
         // 初始化OCR模型选择
@@ -76,6 +81,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     public AllConfig Config { get; set; }
+    public ObservableCollection<OverlayMetricSettingItem> OverlayMetricItems { get; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
 
@@ -307,6 +313,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
         c.LogTextBoxWidthRatio = 477.0 / 1920;
         c.LogTextBoxHeightRatio = 188.0 / 1080;
 
+        c.ResetOverlayMetricsLayout();
+
         OnRefreshMaskSettings();
     }
 
@@ -445,5 +453,44 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
+    }
+}
+
+// 只服务于设置页：把固定指标枚举、显示文案和配置字典中的开关包装成复选框可双向绑定的对象。
+public sealed class OverlayMetricSettingItem : ObservableObject
+{
+    private readonly MaskWindowConfig _config;
+    private readonly Action _onChanged;
+    private bool _isEnabled;
+
+    public OverlayMetricSettingItem(MaskWindowConfig config, OverlayMetricItem item, Action onChanged)
+    {
+        _config = config;
+        _onChanged = onChanged;
+        Item = item;
+        DisplayName = OverlayMetricItemDefaults.GetDisplayName(item);
+        ToolTipText = OverlayMetricItemDefaults.GetToolTipText(item);
+        _isEnabled = config.IsOverlayMetricEnabled(item);
+    }
+
+    public OverlayMetricItem Item { get; }
+
+    public string DisplayName { get; }
+
+    public string ToolTipText { get; }
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (!SetProperty(ref _isEnabled, value))
+            {
+                return;
+            }
+
+            _config.SetOverlayMetricEnabled(Item, value);
+            _onChanged();
+        }
     }
 }

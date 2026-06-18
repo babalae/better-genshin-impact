@@ -27,6 +27,8 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Model.MaskMap;
 using OpenCvSharp;
+using BetterGenshinImpact.Service.Model;
+using BetterGenshinImpact.Service.Model.OverlayMetric;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
@@ -45,6 +47,14 @@ namespace BetterGenshinImpact.ViewModel
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private string _fps = "0";
+
+        [ObservableProperty] private string _overlayMetricsText = string.Empty;
+
+        [ObservableProperty] private IReadOnlyList<OverlayMetricDisplayItem> _overlayMetricDisplayItems = [];
+
+        public bool HasOverlayMetricsText => OverlayMetricDisplayItems.Count > 0;
+
+        public bool IsOverlayMetricsVisible => Config?.MaskWindowConfig.ShowOverlayMetrics == true && HasOverlayMetricsText;
         
         [ObservableProperty] private double _maskWindowWidth;
 
@@ -122,6 +132,9 @@ namespace BetterGenshinImpact.ViewModel
         private Point2f? _lastTrackedImagePosition;
         private string? _lastTrackedMapName;
         private string _miniMapRouteMapName = nameof(MapTypes.Teyvat);
+        private readonly OverlayMetricsService? _overlayMetricsService = App.GetService<OverlayMetricsService>();
+        private bool _metricsSubscribed;
+        private bool _fpsStarted;
 
         public MaskWindowViewModel()
         {
@@ -339,7 +352,7 @@ namespace BetterGenshinImpact.ViewModel
             RefreshSettings();
             RestoreMiniMapRouteSnapshot();
             InitializeStatusList();
-            InitFps();
+            InitMetrics();
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
                 this,
                 "RequestMapDisplaySnapshot",
@@ -420,11 +433,15 @@ namespace BetterGenshinImpact.ViewModel
             InitConfig();
             if (Config != null)
             {
+                Config.MaskWindowConfig.EnsureOverlayMetricItems();
+                Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
                 OnPropertyChanged(nameof(Config));
+                OnPropertyChanged(nameof(IsOverlayMetricsVisible));
             }
 
             SyncSelectedMapPointApiProviderFromConfig();
             SyncSelectedHoYoLabLanguageFromConfig();
+            InitMetrics();
         }
 
         /// <summary>
@@ -555,14 +572,43 @@ namespace BetterGenshinImpact.ViewModel
             }
         }
 
-        private void InitFps()
+        private void InitMetrics()
         {
-            if (Config!.MaskWindowConfig.ShowFps)
+            if (_overlayMetricsService != null && !_metricsSubscribed)
             {
+                _overlayMetricsService.MetricsUpdated += OverlayMetricsServiceOnMetricsUpdated;
+                _metricsSubscribed = true;
+                OverlayMetricDisplayItems = _overlayMetricsService.CurrentSnapshot.Items;
+                OverlayMetricsText = _overlayMetricsService.CurrentSnapshot.CombinedText;
+            }
+
+            if (Config?.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true && !_fpsStarted)
+            {
+                // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动一次，避免无意义后台采样。
+                _fpsStarted = true;
                 nint targetHWnd = TaskContext.Instance().GameHandle;
                 _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
-                Task.Run(async () => { await FpsInspector.StartForeverAsync(new FpsRequest(pid), (result) => { Fps = $"{result.Fps:0}"; }); });
+                Task.Run(async () =>
+                {
+                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), result =>
+                    {
+                        Fps = $"{result.Fps:0}";
+                        _overlayMetricsService?.UpdateGameFps(result.Fps);
+                    });
+                });
             }
+
+            _overlayMetricsService?.Refresh();
+        }
+
+        private void OverlayMetricsServiceOnMetricsUpdated(object? sender, OverlayMetricsSnapshot snapshot)
+        {
+            // OverlayMetricsService 可能在计时器线程发布事件，绑定集合必须切回 UI 线程更新。
+            UIDispatcherHelper.Invoke(() =>
+            {
+                OverlayMetricDisplayItems = snapshot.Items;
+                OverlayMetricsText = snapshot.CombinedText;
+            });
         }
 
         [RelayCommand]
@@ -602,6 +648,12 @@ namespace BetterGenshinImpact.ViewModel
                     Config.MaskWindowConfig.StatusListWidthRatio = widthRatio;
                     Config.MaskWindowConfig.StatusListHeightRatio = heightRatio;
                     break;
+                case "Metrics":
+                    Config.MaskWindowConfig.MetricsLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.MetricsTopRatio = topRatio;
+                    Config.MaskWindowConfig.MetricsWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.MetricsHeightRatio = heightRatio;
+                    break;
             }
         }
 
@@ -638,6 +690,17 @@ namespace BetterGenshinImpact.ViewModel
                 > 1 => 1,
                 _ => ratio
             };
+        }
+
+        partial void OnOverlayMetricsTextChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsOverlayMetricsVisible));
+        }
+
+        partial void OnOverlayMetricDisplayItemsChanged(IReadOnlyList<OverlayMetricDisplayItem> value)
+        {
+            OnPropertyChanged(nameof(HasOverlayMetricsText));
+            OnPropertyChanged(nameof(IsOverlayMetricsVisible));
         }
 
         partial void OnIsInBigMapUiChanged(bool value)
