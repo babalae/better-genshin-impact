@@ -38,6 +38,7 @@ using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask.AutoDomain.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -45,7 +46,7 @@ using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainTask : ISoloTask
+public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 {
     public string Name => "自动秘境";
 
@@ -56,6 +57,7 @@ public class AutoDomainTask : ISoloTask
     private readonly AutoDomainConfig _config;
 
     private readonly CombatScriptBag _combatScriptBag;
+    private readonly Dictionary<string, int> _rewardSummary = new();
 
     private CancellationToken _ct;
 
@@ -109,9 +111,12 @@ public class AutoDomainTask : ISoloTask
         return RecognitionObject.OcrMatch(x, y, width, height, targetText);
     }
 
-    public async Task Start(CancellationToken ct)
+    Task ISoloTask.Start(CancellationToken ct) => Start(ct);
+
+    public async Task<Dictionary<string, int>> Start(CancellationToken ct)
     {
         _ct = ct;
+        _rewardSummary.Clear();
 
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
@@ -153,6 +158,7 @@ public class AutoDomainTask : ISoloTask
 
         await ArtifactSalvage();
         Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
+        return new Dictionary<string, int>(_rewardSummary);
     }
 
     private async Task DoDomain()
@@ -1206,6 +1212,7 @@ public class AutoDomainTask : ISoloTask
         Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
 
         Sleep(1000, _ct);
+        TryRecognizeRewardResult();
 
         for (var i = 0; i < 30; i++)
         {
@@ -1260,6 +1267,37 @@ public class AutoDomainTask : ISoloTask
         }
 
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
+    }
+
+    private void TryRecognizeRewardResult()
+    {
+        if (!_taskParam.RewardRecognitionEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            // 使用多页识别（自动检测是否需要翻页）
+            Logger.LogInformation("自动秘境：开始奖励识别");
+            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage();
+
+            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
+
+            if (rewards.Count > 0)
+            {
+                Logger.LogInformation("自动秘境：本轮奖励识别结果 {Rewards}",
+                    string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
+            }
+            else
+            {
+                Logger.LogWarning("自动秘境：本轮奖励识别结果为空");
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Logger.LogWarning(e, "自动秘境：奖励识别失败，已跳过本轮奖励汇总");
+        }
     }
 
     private async Task ExitDomain()
