@@ -107,7 +107,9 @@ public partial class MaskWindow : Window
 
     public void RefreshPositionForNormal()
     {
-        var currentRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
+        var currentRect = TaskContext.Instance().IsInitialized
+            ? TaskContext.Instance().SystemInfo.CaptureAreaRect
+            : SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
 
         Invoke(() =>
         {

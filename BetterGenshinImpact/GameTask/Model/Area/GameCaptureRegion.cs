@@ -58,26 +58,6 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
     // }
 
     /// <summary>
-    /// 游戏窗口初始截图大于1080P的统一转换到1080P
-    /// </summary>
-    /// <returns></returns>
-    public ImageRegion DeriveTo1080P()
-    {
-        if (Width <= 1920)
-        {
-            return this;
-        }
-
-        var scale = Width / 1920d;
-
-        var newMat = new Mat();
-        Cv2.Resize(SrcMat, newMat, new Size(1920, Height / scale));
-        Dispose();
-        return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
-        // return new ImageRegion(newMat, 0, 0, this, new TranslationConverter(0, 0));
-    }
-
-    /// <summary>
     /// 静态方法,在游戏窗体捕获区域维度进行点击
     /// </summary>
     /// <param name="posFunc">
@@ -88,25 +68,25 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
     /// </param>
     public static void GameRegionClick(Func<Size, double, (double, double)> posFunc)
     {
-        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var (cx, cy) = posFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
-        DesktopRegion.DesktopRegionClick(captureAreaRect.X + cx, captureAreaRect.Y + cy);
+        var contentRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var scaleTo1080P = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (cx, cy) = posFunc(new Size(contentRect.Width, contentRect.Height), scaleTo1080P);
+        DesktopRegion.DesktopRegionClick(contentRect.X + cx, contentRect.Y + cy);
     }
 
     public static void GameRegionMove(Func<Size, double, (double, double)> posFunc)
     {
-        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var (cx, cy) = posFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
-        DesktopRegion.DesktopRegionMove(captureAreaRect.X + cx, captureAreaRect.Y + cy);
+        var contentRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var scaleTo1080P = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (cx, cy) = posFunc(new Size(contentRect.Width, contentRect.Height), scaleTo1080P);
+        DesktopRegion.DesktopRegionMove(contentRect.X + cx, contentRect.Y + cy);
     }
 
     public static void GameRegionMoveBy(Func<Size, double, (double, double)> deltaFunc)
     {
-        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var (dx, dy) = deltaFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
+        var contentRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var scaleTo1080P = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (dx, dy) = deltaFunc(new Size(contentRect.Width, contentRect.Height), scaleTo1080P);
         DesktopRegion.DesktopRegionMoveBy(dx, dy);
     }
 

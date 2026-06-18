@@ -18,35 +18,36 @@ namespace BetterGenshinImpact.GameTask.Model
         /// <summary>
         /// 游戏窗口内分辨率
         /// </summary>
-        public RECT GameScreenSize { get; }
+        public RECT GameScreenSize { get; private set; }
 
         /// <summary>
         /// 以1080P为标准的素材缩放比例,不会大于1
         /// 与 ZoomOutMax1080PRatio 相等
         /// </summary>
-        public double AssetScale { get; } = 1;
+        public double AssetScale { get; private set; } = 1;
 
         /// <summary>
         /// 游戏区域比1080P缩小的比例
         /// 最大值为1
         /// </summary>
-        public double ZoomOutMax1080PRatio { get; } = 1;
+        public double ZoomOutMax1080PRatio { get; private set; } = 1;
 
         /// <summary>
         /// 捕获游戏区域缩放至1080P的比例
         /// </summary>
-        public double ScaleTo1080PRatio { get; }
+        public double ScaleTo1080PRatio { get; private set; }
 
         /// <summary>
-        /// 捕获窗口区域 和实际游戏画面一致
-        /// CaptureAreaRect = GameScreenSize or GameWindowRect
+        /// 捕获内容区，排除全屏黑边后和实际游戏画面一致
         /// </summary>
-        public RECT CaptureAreaRect { get; set; }
+        public RECT CaptureAreaRect { get; private set; }
 
         /// <summary>
-        /// 捕获窗口区域 大于1080P则为1920x1080
+        /// 捕获内容区，大于1080P则为1920x1080
         /// </summary>
-        public Rect ScaleMax1080PCaptureRect { get; set; }
+        public Rect ScaleMax1080PCaptureRect { get; private set; }
+
+        public CaptureGeometry CaptureGeometry { get; private set; } = null!;
 
         public Process GameProcess { get; }
 
@@ -72,31 +73,37 @@ namespace BetterGenshinImpact.GameTask.Model
                 throw new ArgumentException("游戏窗口不能最小化");
             }
 
-            // 注意截图区域要和游戏窗口实际区域一致
-            // todo 窗口移动后？
-            GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
+            UpdateCaptureGeometry(SystemControl.GetCaptureRect(hWnd));
             if (GameScreenSize.Width < 800 || GameScreenSize.Height < 600)
             {
                 throw new ArgumentException("游戏窗口分辨率不得小于 800x600 ！");
             }
+        }
 
-            // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
+        public void UpdateCaptureGeometry(RECT rawCaptureRect)
+        {
+            CaptureGeometry = BetterGenshinImpact.GameTask.Model.CaptureGeometry.FromRawCaptureRect(rawCaptureRect);
+            CaptureAreaRect = CaptureGeometry.ContentRect;
+            GameScreenSize = new RECT(0, 0, CaptureGeometry.ContentSpace.Width, CaptureGeometry.ContentSpace.Height);
+
+            AssetScale = 1;
+            ZoomOutMax1080PRatio = 1;
             if (GameScreenSize.Width < 1920)
             {
                 ZoomOutMax1080PRatio = GameScreenSize.Width / 1920d;
                 AssetScale = ZoomOutMax1080PRatio;
             }
+
             ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
 
-            CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
-            if (CaptureAreaRect.Width > 1920)
+            if (GameScreenSize.Width > 1920)
             {
-                var scale = CaptureAreaRect.Width / 1920d;
-                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, 1920, (int)(CaptureAreaRect.Height / scale));
+                var scale = GameScreenSize.Width / 1920d;
+                ScaleMax1080PCaptureRect = new Rect(0, 0, 1920, (int)(GameScreenSize.Height / scale));
             }
             else
             {
-                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width, CaptureAreaRect.Height);
+                ScaleMax1080PCaptureRect = new Rect(0, 0, GameScreenSize.Width, GameScreenSize.Height);
             }
         }
     }

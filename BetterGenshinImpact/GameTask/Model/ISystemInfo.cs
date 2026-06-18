@@ -36,15 +36,18 @@ namespace BetterGenshinImpact.GameTask.Model
         public double ScaleTo1080PRatio { get; }
 
         /// <summary>
-        /// 捕获窗口区域 和实际游戏画面一致
-        /// CaptureAreaRect = GameScreenSize or GameWindowRect
+        /// 捕获内容区，排除全屏黑边后和实际游戏画面一致
         /// </summary>
-        public RECT CaptureAreaRect { get; set; }
+        public RECT CaptureAreaRect { get; }
 
         /// <summary>
-        /// 捕获窗口区域 大于1080P则为1920x1080
+        /// 捕获内容区，大于1080P则为1920x1080
         /// </summary>
-        public Rect ScaleMax1080PCaptureRect { get; set; }
+        public Rect ScaleMax1080PCaptureRect { get; }
+
+        public CaptureGeometry CaptureGeometry { get; }
+
+        public void UpdateCaptureGeometry(RECT rawCaptureRect);
 
         public Process GameProcess { get; }
 

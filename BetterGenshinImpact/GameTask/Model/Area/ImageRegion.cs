@@ -96,6 +96,22 @@ public class ImageRegion : Region
         return DeriveCrop(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
+    /// <summary>
+    /// 游戏内容区大于 1080P 标准宽度时统一缩放到 1920 宽。
+    /// </summary>
+    public ImageRegion DeriveTo1080P()
+    {
+        if (Width <= 1920)
+        {
+            return this;
+        }
+
+        var scale = Width / 1920d;
+        var newMat = new Mat();
+        Cv2.Resize(SrcMat, newMat, new OpenCvSharp.Size(1920, (int)Math.Round(Height / scale)));
+        return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
+    }
+
     // public ImageRegion Derive(Mat mat, int x, int y)
     // {
     //     return new ImageRegion(mat, x, y, this, new TranslationConverter(x, y));

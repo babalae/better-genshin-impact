@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
@@ -211,6 +212,7 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        DpiAwarenessInitializer.InitializeSystemAware();
         Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.Normal;
         // Wine 平台适配
         WinePlatformAddon.ApplyApplicationConfig();

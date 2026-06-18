@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
@@ -484,7 +485,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 _gameRect = new RECT(currentRect);
-                TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
+                TaskContext.Instance().SystemInfo.UpdateCaptureGeometry(currentRect);
                 MaskWindow.Instance().RefreshPosition();
                 HtmlMaskWindow.UpdateAllPositions();
                 return true;
@@ -543,11 +544,13 @@ namespace BetterGenshinImpact.GameTask
                 var savePath = Global.Absolute($@"log\screenshot\{name}");
                 if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
                 {
+                    var geometry = TaskContext.Instance().SystemInfo.CaptureGeometry;
                     var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                    var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
-                        (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
+                    var rect = new Rect(
+                        (int)(geometry.ContentSpace.X + geometry.ContentSpace.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
+                        (int)(geometry.ContentSpace.Y + geometry.ContentSpace.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
                         (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
-                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale)).ClampTo(mat);
                     mat.Rectangle(rect, Scalar.White, -1);
                     Cv2.ImWrite(savePath, mat);
                 }

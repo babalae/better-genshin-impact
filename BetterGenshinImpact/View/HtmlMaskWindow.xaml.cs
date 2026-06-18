@@ -432,7 +432,9 @@ public partial class HtmlMaskWindow : Window
             var gameHandle = TaskContext.Instance().GameHandle;
             if (gameHandle == IntPtr.Zero) return;
 
-            var currentRect = SystemControl.GetCaptureRect(gameHandle);
+            var currentRect = TaskContext.Instance().IsInitialized
+                ? TaskContext.Instance().SystemInfo.CaptureAreaRect
+                : SystemControl.GetCaptureRect(gameHandle);
             if (currentRect.Width <= 0 || currentRect.Height <= 0) return;
 
             var dpiScale = DpiHelper.GetScale(gameHandle);
