@@ -481,8 +481,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 {
                     if (v2 > v1)
                     {
-                        RedeemCodeButtonForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E9BFA"));
-                        _redeemCodeUpdateNewVersion = txt;
+                        // 持久化新版本号，下次启动不再弹窗
+                        Config.CommonConfig.RedeemCodeFeedsUpdateVersion = txt;
+                        // 重置按钮为默认前景色
+                        UpdateRedeemCodeButtonDefaultForeground();
+                        // 自动弹出兑换码窗口
+                        var feedWindow = new FeedWindow(new FeedWindowViewModel());
+                        feedWindow.Show();
                     }
                 }
             }
