@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -288,6 +289,20 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 应用上次保存的主题
         ApplyTheme(Config.CommonConfig.CurrentThemeType);
 
+        // 版本是否运行过
+        if (Config.CommonConfig.RunForVersion != Global.Version)
+        {
+            ModifyFolderSecurity();
+
+            // alpha 版本用户每次升级后默认切换到 V6 OCR 模型
+            if (Global.Version.Contains("alpha", StringComparison.OrdinalIgnoreCase)
+                && Config.OtherConfig.OcrConfig.PaddleOcrModelConfig != PaddleOcrModelConfig.V6)
+            {
+                Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = PaddleOcrModelConfig.V6;
+            }
+
+            Config.CommonConfig.RunForVersion = Global.Version;
+        }
 
         // 预热OCR
         await OcrPreheating();
@@ -318,13 +333,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Config.CommonConfig.IsFirstRun = false;
         }
 
-        // 版本是否运行过
-        if (Config.CommonConfig.RunForVersion != Global.Version)
-        {
-            ModifyFolderSecurity();
-            Config.CommonConfig.RunForVersion = Global.Version;
-        }
-
         OnceRun();
 
         // 检查更新
@@ -350,7 +358,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 清理临时目录
         TempManager.CleanUp();
     }
-
 
     private void ModifyFolderSecurity()
     {
