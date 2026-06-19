@@ -70,14 +70,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             _redeemCodeDismissCts?.Cancel();
             _redeemCodeDismissCts?.Dispose();
             _redeemCodeDismissCts = null;
-
-            if (_redeemCodeUpdateNewVersion != null)
-            {
-                // 卡片被关闭，标记已读，下次更新前不再提示
-                Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
-                UpdateRedeemCodeButtonDefaultForeground();
-                _redeemCodeUpdateNewVersion = null;
-            }
         }
     }
 
