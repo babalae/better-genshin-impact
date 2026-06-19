@@ -7,6 +7,7 @@ public enum PaddleOcrModelConfig
     V4 = 7,
     V4En = 3,
     V5 = 1,
+    V6 = 8,
     V5Latin = 4,
     V5Eslav = 5,
     V5Korean = 6,
