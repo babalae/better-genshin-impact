@@ -101,7 +101,7 @@ public class PaddleOcrService : IOcrService, IDisposable
                 recognitionModel,
                 recognitionVersion,
                 recLabel ?? (() => DefaultRecLabelFunc(recognitionModel)),
-                TestImagePath);
+                preHeatImagePath ?? TestImagePath);
         }
 
         public (Det, Rec) Build(BgiOnnxFactory onnxFactory)
@@ -129,6 +129,12 @@ public class PaddleOcrService : IOcrService, IDisposable
             OcrVersionConfig.PpOcrV5,
             BgiOnnxModel.PaddleOcrRecV5,
             OcrVersionConfig.PpOcrV5);
+
+        public static readonly PaddleOcrModelType V6 = Create(
+            BgiOnnxModel.PaddleOcrDetV6,
+            OcrVersionConfig.PpOcrV6,
+            BgiOnnxModel.PaddleOcrRecV6,
+            OcrVersionConfig.PpOcrV6);
 
         public static readonly PaddleOcrModelType V5Latin = Create(
             BgiOnnxModel.PaddleOcrDetV5,
