@@ -1055,7 +1055,8 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
                     for (int j = 0; j < 5; j++)
                     {
-                        foundTeam.Click();
+                        // 点击队伍名称右侧区域，避免面板关闭后重复点击落到左侧 Boss 图标。
+                        foundTeam.ClickTo(foundTeam.Width / 2 + 250, foundTeam.Height / 2);
                         await Delay(200, _ct);
                     }
                     Logger.LogInformation($"{Name}：已选择队伍 {fightTeamName}");
