@@ -53,11 +53,6 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         App.GetService<NotifyIconViewModel>()?.ShowOrHide();
     }
 
-    private void OnRedeemCodeInfoBarClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        ViewModel.OpenFeedCommand.Execute(null);
-    }
-
     public INavigationView GetNavigation() => RootNavigation;
 
     public bool Navigate(Type pageType) => RootNavigation.Navigate(pageType);

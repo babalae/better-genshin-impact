@@ -26,6 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -57,16 +58,26 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     private string? _redeemCodeUpdateNewVersion;
 
+    private CancellationTokenSource? _redeemCodeDismissCts;
+
     [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
 
     partial void OnIsRedeemCodeInfoBarOpenChanged(bool value)
     {
-        if (!value && _redeemCodeUpdateNewVersion != null)
+        if (!value)
         {
-            // InfoBar 被关闭，标记已读，下次更新前不再提示
-            Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
-            UpdateRedeemCodeButtonDefaultForeground();
-            _redeemCodeUpdateNewVersion = null;
+            // 取消自动消失计时器
+            _redeemCodeDismissCts?.Cancel();
+            _redeemCodeDismissCts?.Dispose();
+            _redeemCodeDismissCts = null;
+
+            if (_redeemCodeUpdateNewVersion != null)
+            {
+                // 卡片被关闭，标记已读，下次更新前不再提示
+                Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
+                UpdateRedeemCodeButtonDefaultForeground();
+                _redeemCodeUpdateNewVersion = null;
+            }
         }
     }
 
@@ -262,12 +273,19 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         IsRedeemCodeInfoBarOpen = false;
     }
 
-    private async Task AutoDismissRedeemCodeCardAsync()
+    private async Task AutoDismissRedeemCodeCardAsync(CancellationToken ct)
     {
-        await Task.Delay(TimeSpan.FromSeconds(20));
-        if (IsRedeemCodeInfoBarOpen)
+        try
         {
-            IsRedeemCodeInfoBarOpen = false;
+            await Task.Delay(TimeSpan.FromSeconds(20), ct);
+            if (IsRedeemCodeInfoBarOpen)
+            {
+                IsRedeemCodeInfoBarOpen = false;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 计时器被取消（用户手动关闭卡片），无需处理
         }
     }
 
@@ -517,8 +535,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                         _redeemCodeUpdateNewVersion = txt;
                         // 显示通知卡片
                         IsRedeemCodeInfoBarOpen = true;
-                        // 20 秒后自动消失
-                        _ = AutoDismissRedeemCodeCardAsync();
+                        // 取消旧计时器，启动新的自动消失计时器
+                        _redeemCodeDismissCts?.Cancel();
+                        _redeemCodeDismissCts?.Dispose();
+                        _redeemCodeDismissCts = new CancellationTokenSource();
+                        _ = AutoDismissRedeemCodeCardAsync(_redeemCodeDismissCts.Token);
                     }
                 }
             }
