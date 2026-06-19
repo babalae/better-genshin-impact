@@ -1,0 +1,288 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.WaypointCustomFieldPickerWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+                 Title="自定义字段"
+                 Width="680"
+                 Height="560"
+                 MinWidth="620"
+                 MinHeight="480"
+                 d:DataContext="{d:DesignInstance Type=windows:RecordedWaypointViewModel}"
+                 ExtendsContentIntoTitleBar="True"
+                 ResizeMode="CanResize"
+                 WindowBackdropType="Mica"
+                 WindowStartupLocation="CenterOwner"
+                 WindowStyle="SingleBorderWindow"
+                 mc:Ignorable="d">
+    <ui:FluentWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="MapEditorDialogResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        </ResourceDictionary>
+    </ui:FluentWindow.Resources>
+
+    <Grid Background="{StaticResource MapEditorPanelBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="自定义字段" />
+
+        <Border Grid.Row="1"
+                Style="{StaticResource DevToolDialogContentStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Border Style="{StaticResource DevToolDialogCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Style="{StaticResource DevToolDialogSectionTitleStyle}"
+                                       Text="已保存字段" />
+
+                            <Grid Grid.Row="1"
+                                  Margin="0,10,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="48" />
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="72" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1"
+                                           Style="{StaticResource DevToolDialogCaptionStyle}"
+                                           Text="显示名称" />
+                                <TextBlock Grid.Column="2"
+                                           Style="{StaticResource DevToolDialogCaptionStyle}"
+                                           Text="实际字段名" />
+                                <TextBlock Grid.Column="3"
+                                           Style="{StaticResource DevToolDialogCaptionStyle}"
+                                           Text="类型" />
+                                <TextBlock Grid.Column="4"
+                                           Style="{StaticResource DevToolDialogCaptionStyle}"
+                                           Text="选项候选" />
+                                <TextBlock Grid.Column="5"
+                                           Style="{StaticResource DevToolDialogCaptionStyle}"
+                                           Text="状态" />
+                            </Grid>
+
+                            <Grid Grid.Row="2">
+                                <TextBlock Margin="0,8,0,0"
+                                           Style="{StaticResource DevToolDialogCaptionStyle}"
+                                           Text="还没有保存的字段。可以在下方添加新字段，或从未预定义字段点“收藏”。"
+                                           Visibility="{Binding AvailableCustomFieldOptionsEmptyVisibility}" />
+
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding AvailableCustomFieldOptions}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,6"
+                                                        Padding="0,8"
+                                                        Style="{StaticResource DevToolDialogInsetCardStyle}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="48" />
+                                                            <ColumnDefinition Width="150" />
+                                                            <ColumnDefinition Width="150" />
+                                                            <ColumnDefinition Width="90" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="72" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox Margin="8,0,0,0"
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Center"
+                                                                  MinWidth="24"
+                                                                  MinHeight="24"
+                                                                  IsEnabled="{Binding IsSelectable}"
+                                                                  IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                  ToolTip="{Binding FieldToolTip}" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Style="{StaticResource DevToolDialogValueStyle}"
+                                                                   FontWeight="SemiBold"
+                                                                   Text="{Binding DisplayName}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="2"
+                                                                   Style="{StaticResource DevToolDialogCaptionStyle}"
+                                                                   Text="{Binding Name}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="3"
+                                                                   Style="{StaticResource DevToolDialogValueStyle}"
+                                                                   Text="{Binding ValueTypeDisplayName}" />
+                                                        <TextBlock Grid.Column="4"
+                                                                   Style="{StaticResource DevToolDialogCaptionStyle}"
+                                                                   Text="{Binding OptionSummary}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="5"
+                                                                   Style="{StaticResource DevToolDialogCaptionStyle}"
+                                                                   Text="{Binding StatusText}" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1"
+                            Margin="0,14,0,0"
+                            Style="{StaticResource DevToolDialogCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="96" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.ColumnSpan="2"
+                                       Style="{StaticResource DevToolDialogSectionTitleStyle}"
+                                       Text="添加新字段" />
+
+                            <TextBlock Grid.Row="1"
+                                       Margin="0,12,12,0"
+                                       Style="{StaticResource DevToolDialogCaptionStyle}"
+                                       Text="字段名称"
+                                       ToolTip="实际字段名会写入 pointExtParams；显示名称仅用于编辑器展示。" />
+                            <Grid Grid.Row="1"
+                                  Grid.Column="1"
+                                  Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="120" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBox MinHeight="34"
+                                            PlaceholderText="显示名称，例如：等级"
+                                            Text="{Binding NewCustomFieldDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            ToolTip="编辑器里显示的名字，可以和实际字段名不同。" />
+                                <ui:TextBox Grid.Column="2"
+                                            MinHeight="34"
+                                            PlaceholderText="实际字段名，例如：level"
+                                            Text="{Binding NewCustomFieldName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            ToolTip="写入 pointExtParams 的实际 key，不建议使用中文或空格。" />
+                                <ComboBox Grid.Column="4"
+                                          Height="34"
+                                          DisplayMemberPath="DisplayName"
+                                          ItemsSource="{Binding CustomFieldTypeChoices}"
+                                          SelectedValue="{Binding NewCustomFieldValueType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="Code"
+                                          ToolTip="字段类型只能从预设类型中选择。" />
+                            </Grid>
+
+                            <TextBlock Grid.Row="2"
+                                       Margin="0,10,12,0"
+                                       Style="{StaticResource DevToolDialogCaptionStyle}"
+                                       Text="选项候选"
+                                       Visibility="{Binding NewCustomFieldOptionValuesVisibility}" />
+                            <Grid Grid.Row="2"
+                                  Grid.Column="1"
+                                  Margin="0,10,0,0"
+                                  Visibility="{Binding NewCustomFieldOptionValuesVisibility}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="34" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBox MinHeight="34"
+                                            PlaceholderText="输入一个候选值"
+                                            Text="{Binding NewCustomFieldOptionDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            ToolTip="输入一个候选值后点击加号加入列表。" />
+                                <ui:Button Grid.Column="2"
+                                           Width="34"
+                                           Height="34"
+                                           Command="{Binding AddNewCustomFieldOptionValueCommand}"
+                                           Icon="{ui:SymbolIcon Add24}"
+                                           ToolTip="加入候选项" />
+                            </Grid>
+
+                            <ItemsControl Grid.Row="3"
+                                          Grid.Column="1"
+                                          Margin="0,8,0,0"
+                                          ItemsSource="{Binding NewCustomFieldOptionValues}"
+                                          Visibility="{Binding NewCustomFieldOptionValuesVisibility}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,6,6"
+                                                Padding="8,4"
+                                                Style="{StaticResource DevToolDialogInsetCardStyle}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock VerticalAlignment="Center"
+                                                           Text="{Binding DisplayName}" />
+                                                <ui:Button Width="24"
+                                                           Height="24"
+                                                           Margin="6,0,0,0"
+                                                           Command="{Binding DataContext.RemoveNewCustomFieldOptionValueCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                           CommandParameter="{Binding}"
+                                                           Icon="{ui:SymbolIcon Dismiss24}"
+                                                           ToolTip="删除候选项" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ui:Button Grid.Row="4"
+                                       Grid.Column="1"
+                                       MinWidth="88"
+                                       Height="34"
+                                       Margin="0,10,0,0"
+                                       HorizontalAlignment="Right"
+                                       Command="{Binding AddCustomFieldDefinitionCommand}"
+                                       Content="添加字段" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <StackPanel Grid.Row="1"
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+                    <ui:Button MinWidth="80"
+                               Height="34"
+                               Click="CancelButton_Click"
+                               Content="取消" />
+                    <ui:Button MinWidth="80"
+                               Height="34"
+                               Margin="8,0,0,0"
+                               Click="ImportButton_Click"
+                               Content="导入"
+                               Icon="{ui:SymbolIcon Checkmark24}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

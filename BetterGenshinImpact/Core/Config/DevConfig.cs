@@ -48,4 +48,8 @@ public partial class DevConfig : ObservableObject
     // 路线录制动作菜单中的其他动作
     [ObservableProperty]
     private string _recordRareActionCodes = string.Empty;
+
+    // 路线点自定义高级字段定义
+    [ObservableProperty]
+    private string _recordWaypointCustomFieldDefinitionsJson = string.Empty;
 }

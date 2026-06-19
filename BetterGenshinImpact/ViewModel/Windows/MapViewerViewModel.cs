@@ -1012,9 +1012,7 @@ public partial class MapViewerViewModel : ObservableObject
             or nameof(RecordedWaypointViewModel.Description)
             or nameof(RecordedWaypointViewModel.MonsterTag)
             or nameof(RecordedWaypointViewModel.EnableMonsterLootSplit)
-            or nameof(RecordedWaypointViewModel.MisidentificationTypesText)
-            or nameof(RecordedWaypointViewModel.MisidentificationHandlingMode)
-            or nameof(RecordedWaypointViewModel.MisidentificationArrivalTime))
+            or nameof(RecordedWaypointViewModel.CustomFields))
         {
             if (_isUpdatingWaypointFromMap)
             {
@@ -6816,11 +6814,62 @@ public sealed class CommonRecordAuthorStoreItem
 
 public partial class RecordedWaypointViewModel : ObservableObject
 {
+    private static readonly HashSet<string> ReservedExtParamFieldNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Waypoint.X),
+        nameof(Waypoint.Y),
+        nameof(Waypoint.Type),
+        nameof(Waypoint.MoveMode),
+        nameof(Waypoint.Action),
+        nameof(Waypoint.ActionParams),
+        nameof(Waypoint.Items),
+        nameof(Waypoint.PointExtParams),
+        nameof(Waypoint.ExtParams.Description),
+        nameof(Waypoint.ExtParams.MonsterTag),
+        nameof(Waypoint.ExtParams.EnableMonsterLootSplit),
+        nameof(Waypoint.ExtParams.Misidentification),
+        "x",
+        "y",
+        "type",
+        "moveMode",
+        "action",
+        "actionParams",
+        "items",
+        "pointExtParams",
+        "description",
+        "monsterTag",
+        "enableMonsterLootSplit",
+        "misidentification"
+    };
+
+    public static IReadOnlyList<MapEditorOption> CustomFieldTypeOptions { get; } =
+    [
+        new("string", "字符串"),
+        new("number", "数字"),
+        new("option", "字符串选项"),
+        new("boolean", "布尔")
+    ];
+
+    public static string GetCustomFieldValueTypeDisplayName(string? valueType)
+    {
+        if (string.Equals(valueType, "option", StringComparison.OrdinalIgnoreCase))
+        {
+            return "字符串";
+        }
+
+        return CustomFieldTypeOptions
+            .FirstOrDefault(i => string.Equals(i.Code, valueType, StringComparison.OrdinalIgnoreCase))
+            ?.DisplayName ?? valueType ?? string.Empty;
+    }
+
+    private static readonly JsonSerializerOptions CustomFieldDefinitionJsonOptions = new()
+    {
+        WriteIndented = false
+    };
+
     private readonly Dictionary<string, JsonElement>? _extensionData;
 
     private readonly Dictionary<string, JsonElement>? _extParamsExtensionData;
-
-    private readonly Dictionary<string, JsonElement>? _misidentificationExtensionData;
 
     [ObservableProperty]
     private int _index;
@@ -6859,30 +6908,33 @@ public partial class RecordedWaypointViewModel : ObservableObject
     private bool _isLocked;
 
     [ObservableProperty]
-    private string _misidentificationTypesText = "unrecognized";
-
-    [ObservableProperty]
-    private string _misidentificationHandlingMode = "previousDetectedPoint";
-
-    [ObservableProperty]
-    private int _misidentificationArrivalTime;
-
-    [ObservableProperty]
     private string _actionParameterHint = "动作参数";
 
-    public bool MisidentificationUnrecognized
-    {
-        get => HasMisidentificationType("unrecognized");
-        set => SetMisidentificationType("unrecognized", value);
-    }
+    [ObservableProperty]
+    private bool _isCustomFieldPickerOpen;
 
-    public bool MisidentificationPathTooFar
-    {
-        get => HasMisidentificationType("pathTooFar");
-        set => SetMisidentificationType("pathTooFar", value);
-    }
+    [ObservableProperty]
+    private string _newCustomFieldName = string.Empty;
 
-    public bool IsMisidentificationArrivalTimeEnabled => string.Equals(MisidentificationHandlingMode, "scheduledArrival", StringComparison.OrdinalIgnoreCase);
+    [ObservableProperty]
+    private string _newCustomFieldDisplayName = string.Empty;
+
+    [ObservableProperty]
+    private string _newCustomFieldValueType = "string";
+
+    [ObservableProperty]
+    private string _newCustomFieldOptionValuesText = string.Empty;
+
+    [ObservableProperty]
+    private string _newCustomFieldOptionDraft = string.Empty;
+
+    public ObservableCollection<WaypointCustomFieldViewModel> CustomFields { get; } = [];
+
+    public ObservableCollection<WaypointCustomFieldDefinitionOptionViewModel> AvailableCustomFieldOptions { get; } = [];
+
+    public ObservableCollection<MapEditorOption> NewCustomFieldOptionValues { get; } = [];
+
+    public IReadOnlyList<MapEditorOption> CustomFieldTypeChoices => CustomFieldTypeOptions;
 
     public string CoordinateText => $"{MapViewerViewModel.FormatCoordinate(X)}, {MapViewerViewModel.FormatCoordinate(Y)}";
 
@@ -6936,11 +6988,25 @@ public partial class RecordedWaypointViewModel : ObservableObject
             ? System.Windows.Visibility.Collapsed
             : System.Windows.Visibility.Visible;
 
+    public System.Windows.Visibility AdvancedMonsterTypeVisibility =>
+        EnableMonsterLootSplit
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility NewCustomFieldOptionValuesVisibility =>
+        string.Equals(NewCustomFieldValueType, "option", StringComparison.OrdinalIgnoreCase)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility AvailableCustomFieldOptionsEmptyVisibility =>
+        AvailableCustomFieldOptions.Count == 0
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+
     public RecordedWaypointViewModel(Waypoint waypoint)
     {
         _extensionData = waypoint.ExtensionData;
         _extParamsExtensionData = waypoint.PointExtParams?.ExtensionData;
-        _misidentificationExtensionData = waypoint.PointExtParams?.Misidentification?.ExtensionData;
         X = MapViewerViewModel.RoundCoordinate(waypoint.X);
         Y = MapViewerViewModel.RoundCoordinate(waypoint.Y);
         Type = string.IsNullOrWhiteSpace(waypoint.Type) ? WaypointType.Path.Code : waypoint.Type;
@@ -6950,9 +7016,7 @@ public partial class RecordedWaypointViewModel : ObservableObject
         Description = waypoint.PointExtParams?.Description ?? string.Empty;
         MonsterTag = waypoint.PointExtParams?.MonsterTag ?? string.Empty;
         EnableMonsterLootSplit = waypoint.PointExtParams?.EnableMonsterLootSplit ?? false;
-        MisidentificationTypesText = MapViewerViewModel.JoinExtTypes(waypoint.PointExtParams?.Misidentification?.Type);
-        MisidentificationHandlingMode = waypoint.PointExtParams?.Misidentification?.HandlingMode ?? "previousDetectedPoint";
-        MisidentificationArrivalTime = waypoint.PointExtParams?.Misidentification?.ArrivalTime ?? 0;
+        InitializeCustomFields();
         RefreshActionParameterHint();
     }
 
@@ -6996,49 +7060,407 @@ public partial class RecordedWaypointViewModel : ObservableObject
         }
     }
 
-    partial void OnMisidentificationTypesTextChanged(string value)
+    partial void OnEnableMonsterLootSplitChanged(bool value)
     {
-        OnPropertyChanged(nameof(MisidentificationUnrecognized));
-        OnPropertyChanged(nameof(MisidentificationPathTooFar));
+        OnPropertyChanged(nameof(AdvancedMonsterTypeVisibility));
     }
 
-    partial void OnMisidentificationHandlingModeChanged(string value)
+    partial void OnNewCustomFieldValueTypeChanged(string value)
     {
-        OnPropertyChanged(nameof(IsMisidentificationArrivalTimeEnabled));
-    }
-
-    private bool HasMisidentificationType(string type)
-    {
-        return GetMisidentificationTypes()
-            .Any(i => string.Equals(i, type, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void SetMisidentificationType(string type, bool value)
-    {
-        var types = GetMisidentificationTypes()
-            .Where(i => !string.Equals(i, type, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        if (value)
-        {
-            types.Add(type);
-        }
-
-        MisidentificationTypesText = MapViewerViewModel.JoinExtTypes(types.Distinct(StringComparer.OrdinalIgnoreCase));
-    }
-
-    private string[] GetMisidentificationTypes()
-    {
-        if (string.IsNullOrWhiteSpace(MisidentificationTypesText))
-        {
-            return [];
-        }
-
-        return MapViewerViewModel.SplitExtTypes(MisidentificationTypesText);
+        OnPropertyChanged(nameof(NewCustomFieldOptionValuesVisibility));
     }
 
     private void RefreshActionParameterHint()
     {
         ActionParameterHint = MapViewerViewModel.GetActionParameterHint(Action);
+    }
+
+    private void InitializeCustomFields()
+    {
+        CustomFields.CollectionChanged += OnCustomFieldsCollectionChanged;
+
+        var definitionsByName = LoadCustomFieldDefinitions()
+            .Where(i => !string.IsNullOrWhiteSpace(i.Name))
+            .GroupBy(i => i.Name, StringComparer.Ordinal)
+            .ToDictionary(i => i.Key, i => i.First(), StringComparer.Ordinal);
+
+        foreach (var item in _extParamsExtensionData ?? [])
+        {
+            if (ReservedExtParamFieldNames.Contains(item.Key))
+            {
+                continue;
+            }
+
+            definitionsByName.TryGetValue(item.Key, out var definition);
+            AddCustomField(
+                item.Key,
+                FormatCustomFieldValue(item.Value),
+                string.IsNullOrWhiteSpace(definition?.ValueType) ? InferCustomFieldType(item.Value) : definition.ValueType,
+                definition?.OptionValuesText ?? string.Empty);
+        }
+    }
+
+    private static string FormatCustomFieldValue(JsonElement element)
+    {
+        return element.ValueKind == JsonValueKind.String
+            ? element.GetString() ?? string.Empty
+            : element.GetRawText();
+    }
+
+    private static string InferCustomFieldType(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Number => "number",
+            JsonValueKind.True or JsonValueKind.False => "boolean",
+            _ => "string"
+        };
+    }
+
+    [RelayCommand]
+    private void AddNewCustomFieldOptionValue()
+    {
+        var value = NewCustomFieldOptionDraft.Trim();
+        if (string.IsNullOrWhiteSpace(value)
+            || NewCustomFieldOptionValues.Any(i => string.Equals(i.Code, value, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        NewCustomFieldOptionValues.Add(new MapEditorOption(value, value));
+        RefreshNewCustomFieldOptionValuesText();
+        NewCustomFieldOptionDraft = string.Empty;
+    }
+
+    [RelayCommand]
+    private void RemoveNewCustomFieldOptionValue(MapEditorOption? option)
+    {
+        if (option == null)
+        {
+            return;
+        }
+
+        NewCustomFieldOptionValues.Remove(option);
+        RefreshNewCustomFieldOptionValuesText();
+    }
+
+    private void RefreshNewCustomFieldOptionValuesText()
+    {
+        NewCustomFieldOptionValuesText = string.Join(",", NewCustomFieldOptionValues.Select(i => i.Code));
+    }
+
+    private void ClearCustomFieldDefinitionForm()
+    {
+        NewCustomFieldName = string.Empty;
+        NewCustomFieldDisplayName = string.Empty;
+        NewCustomFieldValueType = "string";
+        NewCustomFieldOptionDraft = string.Empty;
+        ReplaceNewCustomFieldOptionValues(string.Empty);
+    }
+
+    private void ReplaceNewCustomFieldOptionValues(string? valuesText)
+    {
+        NewCustomFieldOptionValues.Clear();
+        foreach (var item in WaypointCustomFieldViewModel.SplitOptionValues(valuesText))
+        {
+            NewCustomFieldOptionValues.Add(new MapEditorOption(item, item));
+        }
+
+        RefreshNewCustomFieldOptionValuesText();
+    }
+
+    [RelayCommand]
+    private void AddCustomFieldDefinition()
+    {
+        var name = NewCustomFieldName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        if (ReservedExtParamFieldNames.Contains(name))
+        {
+            ThemedMessageBox.Error(
+                $"“{name}” 是路线点默认字段，不能作为自定义字段添加。",
+                "字段名不可用",
+                MessageBoxButton.OK,
+                MessageBoxResult.OK);
+            return;
+        }
+
+        var definitions = LoadCustomFieldDefinitions()
+            .Where(i => !string.IsNullOrWhiteSpace(i.Name))
+            .Where(i => !ReservedExtParamFieldNames.Contains(i.Name))
+            .GroupBy(i => i.Name, StringComparer.Ordinal)
+            .Select(i => i.First())
+            .ToList();
+
+        var valueType = string.IsNullOrWhiteSpace(NewCustomFieldValueType) ? "string" : NewCustomFieldValueType;
+        var optionValuesText = string.Equals(valueType, "option", StringComparison.OrdinalIgnoreCase)
+            ? NewCustomFieldOptionValuesText.Trim()
+            : string.Empty;
+        var existing = definitions.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.Ordinal));
+        if (existing != null)
+        {
+            existing.DisplayName = string.IsNullOrWhiteSpace(NewCustomFieldDisplayName) ? name : NewCustomFieldDisplayName.Trim();
+            existing.ValueType = valueType;
+            existing.OptionValuesText = optionValuesText;
+        }
+        else
+        {
+            definitions.Add(new WaypointCustomFieldDefinition
+            {
+                Name = name,
+                DisplayName = string.IsNullOrWhiteSpace(NewCustomFieldDisplayName) ? name : NewCustomFieldDisplayName.Trim(),
+                ValueType = valueType,
+                OptionValuesText = optionValuesText
+            });
+        }
+        SaveCustomFieldDefinitions(definitions);
+        ApplyCustomFieldDefinition(name);
+        RefreshAvailableCustomFieldOptions();
+
+        var added = AvailableCustomFieldOptions.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.Ordinal));
+        if (added != null)
+        {
+            added.IsSelected = true;
+        }
+
+        ClearCustomFieldDefinitionForm();
+    }
+
+    [RelayCommand]
+    private void PrepareCustomFieldDefinition(WaypointCustomFieldViewModel? field)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        NewCustomFieldName = field.Name;
+        NewCustomFieldDisplayName = field.DisplayName;
+        NewCustomFieldValueType = field.ValueType;
+        ReplaceNewCustomFieldOptionValues(field.OptionValuesText);
+        IsCustomFieldPickerOpen = true;
+        RefreshAvailableCustomFieldOptions();
+    }
+
+    [RelayCommand]
+    private void OpenCustomFieldPicker()
+    {
+        ClearCustomFieldDefinitionForm();
+        RefreshAvailableCustomFieldOptions();
+        IsCustomFieldPickerOpen = true;
+    }
+
+    [RelayCommand]
+    private void ConfirmAddSelectedCustomFields()
+    {
+        foreach (var option in AvailableCustomFieldOptions.Where(i => i.IsSelected && !i.IsImported).ToList())
+        {
+            AddCustomField(option.Name, option.DisplayName, string.Empty, option.ValueType, option.OptionValuesText, true);
+        }
+
+        IsCustomFieldPickerOpen = false;
+        RefreshAvailableCustomFieldOptions();
+        OnPropertyChanged(nameof(CustomFields));
+    }
+
+    [RelayCommand]
+    private void CancelAddCustomFields()
+    {
+        IsCustomFieldPickerOpen = false;
+    }
+
+    [RelayCommand]
+    private void RemoveCustomField(WaypointCustomFieldViewModel? field)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        field.PropertyChanged -= OnCustomFieldPropertyChanged;
+        CustomFields.Remove(field);
+        RefreshAvailableCustomFieldOptions();
+        OnPropertyChanged(nameof(CustomFields));
+    }
+
+    private void AddCustomField(string name, string value, string valueType, string optionValuesText)
+    {
+        var definition = LoadCustomFieldDefinitions()
+            .FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.Ordinal));
+        AddCustomField(
+            name,
+            string.IsNullOrWhiteSpace(definition?.DisplayName) ? name : definition.DisplayName,
+            value,
+            string.IsNullOrWhiteSpace(definition?.ValueType) ? valueType : definition.ValueType,
+            definition?.OptionValuesText ?? optionValuesText,
+            definition != null);
+    }
+
+    private void AddCustomField(string name, string displayName, string value, string valueType, string optionValuesText, bool isDefined)
+    {
+        var field = new WaypointCustomFieldViewModel(name, displayName, value, valueType, optionValuesText, isDefined);
+        field.RefreshOptionValues();
+        CustomFields.Add(field);
+    }
+
+    private void ApplyCustomFieldDefinition(string name)
+    {
+        var definition = LoadCustomFieldDefinitions()
+            .FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.Ordinal));
+        if (definition == null)
+        {
+            return;
+        }
+
+        foreach (var field in CustomFields.Where(i => string.Equals(i.Name, name, StringComparison.Ordinal)))
+        {
+            field.DisplayName = string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.Name : definition.DisplayName;
+            field.ValueType = string.IsNullOrWhiteSpace(definition.ValueType) ? field.ValueType : definition.ValueType;
+            field.OptionValuesText = definition.OptionValuesText ?? string.Empty;
+            field.IsDefined = true;
+        }
+    }
+
+    private void OnCustomFieldsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (WaypointCustomFieldViewModel field in e.OldItems)
+            {
+                field.PropertyChanged -= OnCustomFieldPropertyChanged;
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (WaypointCustomFieldViewModel field in e.NewItems)
+            {
+                field.PropertyChanged += OnCustomFieldPropertyChanged;
+            }
+        }
+
+        OnPropertyChanged(nameof(CustomFields));
+    }
+
+    private void OnCustomFieldPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(CustomFields));
+    }
+
+    private void RefreshAvailableCustomFieldOptions()
+    {
+        foreach (var option in AvailableCustomFieldOptions)
+        {
+            option.PropertyChanged -= OnAvailableCustomFieldOptionPropertyChanged;
+        }
+
+        AvailableCustomFieldOptions.Clear();
+        var importedNames = CustomFields
+            .Select(i => i.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var definition in LoadCustomFieldDefinitions()
+                     .Where(i => !string.IsNullOrWhiteSpace(i.Name))
+                     .Where(i => !ReservedExtParamFieldNames.Contains(i.Name))
+                     .GroupBy(i => i.Name, StringComparer.Ordinal)
+                     .Select(i => i.First()))
+        {
+            var isImported = importedNames.Contains(definition.Name);
+            var option = new WaypointCustomFieldDefinitionOptionViewModel(
+                definition.Name,
+                string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.Name : definition.DisplayName,
+                string.IsNullOrWhiteSpace(definition.ValueType) ? "string" : definition.ValueType,
+                definition.OptionValuesText ?? string.Empty,
+                isImported);
+            option.PropertyChanged += OnAvailableCustomFieldOptionPropertyChanged;
+            AvailableCustomFieldOptions.Add(option);
+        }
+
+        OnPropertyChanged(nameof(AvailableCustomFieldOptions));
+        OnPropertyChanged(nameof(AvailableCustomFieldOptionsEmptyVisibility));
+    }
+
+    private void OnAvailableCustomFieldOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(AvailableCustomFieldOptions));
+    }
+
+    private static List<WaypointCustomFieldDefinition> LoadCustomFieldDefinitions()
+    {
+        var json = TaskContext.Instance().Config.DevConfig.RecordWaypointCustomFieldDefinitionsJson;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<WaypointCustomFieldDefinition>>(json, CustomFieldDefinitionJsonOptions) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static void SaveCustomFieldDefinitions(List<WaypointCustomFieldDefinition> definitions)
+    {
+        TaskContext.Instance().Config.DevConfig.RecordWaypointCustomFieldDefinitionsJson =
+            definitions.Count == 0 ? string.Empty : JsonSerializer.Serialize(definitions, CustomFieldDefinitionJsonOptions);
+    }
+
+    private Dictionary<string, JsonElement>? BuildCustomFieldExtensionData()
+    {
+        var result = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var field in CustomFields)
+        {
+            var name = field.Name.Trim();
+            if (string.IsNullOrWhiteSpace(name) || ReservedExtParamFieldNames.Contains(name))
+            {
+                continue;
+            }
+
+            result[name] = ParseCustomFieldValue(field);
+        }
+
+        return result.Count == 0 ? null : result;
+    }
+
+    private static JsonElement ParseCustomFieldValue(WaypointCustomFieldViewModel field)
+    {
+        var value = field.Value ?? string.Empty;
+        if (string.Equals(field.ValueType, "number", StringComparison.OrdinalIgnoreCase)
+            && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+        {
+            return JsonSerializer.SerializeToElement(number);
+        }
+
+        if (string.Equals(field.ValueType, "option", StringComparison.OrdinalIgnoreCase))
+        {
+            return JsonSerializer.SerializeToElement(value);
+        }
+
+        if (string.Equals(field.ValueType, "boolean", StringComparison.OrdinalIgnoreCase))
+        {
+            return JsonSerializer.SerializeToElement(field.BoolValue);
+        }
+
+        if (!string.Equals(field.ValueType, "string", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(value))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(value);
+                return document.RootElement.Clone();
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return JsonSerializer.SerializeToElement(value);
     }
 
     public Waypoint ToWaypoint()
@@ -7054,20 +7476,199 @@ public partial class RecordedWaypointViewModel : ObservableObject
             ActionParams = string.IsNullOrWhiteSpace(ActionParams) ? null : ActionParams,
             PointExtParams = new Waypoint.ExtParams
             {
-                ExtensionData = _extParamsExtensionData,
+                ExtensionData = BuildCustomFieldExtensionData(),
                 Description = Description ?? string.Empty,
                 MonsterTag = MonsterTag ?? string.Empty,
-                EnableMonsterLootSplit = EnableMonsterLootSplit,
-                Misidentification = new Waypoint.Misidentification
-                {
-                    ExtensionData = _misidentificationExtensionData,
-                    Type = MapViewerViewModel.SplitExtTypes(MisidentificationTypesText).ToList(),
-                    HandlingMode = string.IsNullOrWhiteSpace(MisidentificationHandlingMode)
-                        ? "previousDetectedPoint"
-                        : MisidentificationHandlingMode,
-                    ArrivalTime = MisidentificationArrivalTime
-                }
+                EnableMonsterLootSplit = EnableMonsterLootSplit
             }
         };
     }
+}
+
+public sealed class WaypointCustomFieldDefinition
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string DisplayName { get; set; } = string.Empty;
+
+    public string ValueType { get; set; } = "string";
+
+    public string OptionValuesText { get; set; } = string.Empty;
+}
+
+public partial class WaypointCustomFieldViewModel(
+    string name,
+    string displayName,
+    string value,
+    string valueType,
+    string optionValuesText,
+    bool isDefined) : ObservableObject
+{
+    [ObservableProperty]
+    private string _name = name;
+
+    [ObservableProperty]
+    private string _displayName = string.IsNullOrWhiteSpace(displayName) ? name : displayName;
+
+    [ObservableProperty]
+    private string _value = value;
+
+    [ObservableProperty]
+    private string _valueType = string.IsNullOrWhiteSpace(valueType) ? "string" : valueType;
+
+    [ObservableProperty]
+    private string _optionValuesText = optionValuesText;
+
+    [ObservableProperty]
+    private bool _isDefined = isDefined;
+
+    public IReadOnlyList<MapEditorOption> TypeOptions => RecordedWaypointViewModel.CustomFieldTypeOptions;
+
+    public ObservableCollection<MapEditorOption> OptionValues { get; } = [];
+
+    public string ValueTypeDisplayName => RecordedWaypointViewModel.GetCustomFieldValueTypeDisplayName(ValueType);
+
+    public System.Windows.Visibility TextValueVisibility =>
+        string.Equals(ValueType, "option", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(ValueType, "boolean", StringComparison.OrdinalIgnoreCase)
+            ? System.Windows.Visibility.Collapsed
+            : System.Windows.Visibility.Visible;
+
+    public System.Windows.Visibility OptionValueVisibility =>
+        string.Equals(ValueType, "option", StringComparison.OrdinalIgnoreCase)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility BooleanValueVisibility =>
+        string.Equals(ValueType, "boolean", StringComparison.OrdinalIgnoreCase)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility UndefinedFieldVisibility =>
+        IsDefined ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+
+    public string FieldToolTip => IsDefined
+        ? $"实际字段名：{Name}"
+        : $"未预定义字段，实际字段名：{Name}";
+
+    partial void OnIsDefinedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(UndefinedFieldVisibility));
+        OnPropertyChanged(nameof(FieldToolTip));
+    }
+
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(FieldToolTip));
+    }
+
+    partial void OnDisplayNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(FieldToolTip));
+    }
+
+    partial void OnValueTypeChanged(string value)
+    {
+        if (string.Equals(value, "option", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(OptionValuesText))
+        {
+            OptionValuesText = Value;
+        }
+
+        OnPropertyChanged(nameof(ValueTypeDisplayName));
+        OnPropertyChanged(nameof(TextValueVisibility));
+        OnPropertyChanged(nameof(OptionValueVisibility));
+        OnPropertyChanged(nameof(BooleanValueVisibility));
+        OnPropertyChanged(nameof(BoolValue));
+        RefreshOptionValues();
+    }
+
+    public bool BoolValue
+    {
+        get => bool.TryParse(Value, out var parsed) && parsed;
+        set
+        {
+            var newValue = value ? "true" : "false";
+            if (Value == newValue)
+            {
+                return;
+            }
+
+            Value = newValue;
+            OnPropertyChanged();
+        }
+    }
+
+    partial void OnValueChanged(string value)
+    {
+        OnPropertyChanged(nameof(BoolValue));
+    }
+
+    partial void OnOptionValuesTextChanged(string value)
+    {
+        RefreshOptionValues();
+    }
+
+    public void RefreshOptionValues()
+    {
+        OptionValues.Clear();
+        foreach (var item in SplitOptionValues(OptionValuesText))
+        {
+            OptionValues.Add(new MapEditorOption(item, item));
+        }
+    }
+
+    public static IEnumerable<string> SplitOptionValues(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return value.Split([',', '，', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal);
+    }
+}
+
+public partial class WaypointCustomFieldDefinitionOptionViewModel(
+    string name,
+    string displayName,
+    string valueType,
+    string optionValuesText,
+    bool isImported) : ObservableObject
+{
+    public string Name { get; } = name;
+
+    public string DisplayName { get; } = string.IsNullOrWhiteSpace(displayName) ? name : displayName;
+
+    public string ValueType { get; } = string.IsNullOrWhiteSpace(valueType) ? "string" : valueType;
+
+    public string OptionValuesText { get; } = optionValuesText;
+
+    public bool IsImported { get; } = isImported;
+
+    public bool IsSelectable => !IsImported;
+
+    public string ValueTypeDisplayName => RecordedWaypointViewModel.GetCustomFieldValueTypeDisplayName(ValueType);
+
+    public string Summary
+    {
+        get
+        {
+            return IsImported ? $"{ValueTypeDisplayName} · 已导入" : ValueTypeDisplayName;
+        }
+    }
+
+    public string OptionSummary => string.Equals(ValueType, "option", StringComparison.OrdinalIgnoreCase)
+        && !string.IsNullOrWhiteSpace(OptionValuesText)
+            ? OptionValuesText
+            : string.Empty;
+
+    public string StatusText => IsImported ? "已导入" : "可导入";
+
+    public string FieldToolTip => string.Equals(DisplayName, Name, StringComparison.Ordinal)
+        ? Summary
+        : $"{Summary} · {Name}";
+
+    [ObservableProperty]
+    private bool _isSelected = isImported;
 }

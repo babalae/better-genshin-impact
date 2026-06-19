@@ -17,7 +17,16 @@
                  WindowStartupLocation="CenterOwner"
                  WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">
-    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+    <ui:FluentWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="MapEditorDialogResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        </ResourceDictionary>
+    </ui:FluentWindow.Resources>
+
+    <Grid Background="{StaticResource MapEditorPanelBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -26,110 +35,202 @@
         <ui:TitleBar Grid.Row="0" Title="高级参数" />
 
         <Border Grid.Row="1"
-                Margin="16"
-                Padding="16"
-                Background="{DynamicResource ControlFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
+                Style="{StaticResource DevToolDialogContentStyle}">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="96" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.ColumnSpan="2"
-                           FontSize="16"
-                           FontWeight="SemiBold"
-                           Text="{Binding Index, StringFormat=第 {0} 个路线点}" />
+                <ScrollViewer Grid.Row="0"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="96" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="1"
-                           Margin="0,16,12,0"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="描述" />
-                <ui:TextBox Grid.Row="1"
-                            Grid.Column="1"
-                            Margin="0,16,0,0"
-                            MinHeight="34"
-                            Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Grid.ColumnSpan="2"
+                                   Style="{StaticResource DevToolDialogSectionTitleStyle}"
+                                   Text="{Binding Index, StringFormat=第 {0} 个路线点}" />
 
-                <TextBlock Grid.Row="2"
-                           Margin="0,10,12,0"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="怪物标签" />
-                <ComboBox Grid.Row="2"
-                          Grid.Column="1"
-                          Height="34"
-                          Margin="0,10,0,0"
-                          SelectedValue="{Binding MonsterTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                          SelectedValuePath="Tag">
-                    <ComboBoxItem Content="无" Tag="" />
-                    <ComboBoxItem Content="小怪" Tag="normal" />
-                    <ComboBoxItem Content="精英" Tag="elite" />
-                    <ComboBoxItem Content="传奇" Tag="legendary" />
-                </ComboBox>
+                        <TextBlock Grid.Row="1"
+                                   Margin="0,16,12,0"
+                                   Style="{StaticResource DevToolDialogCaptionStyle}"
+                                   Text="描述"
+                                   ToolTip="仅作为路线点备注，方便维护路线，不参与自动寻路判断。" />
+                        <ui:TextBox Grid.Row="1"
+                                    Grid.Column="1"
+                                    Margin="0,16,0,0"
+                                    MinHeight="34"
+                                    PlaceholderText="备注这个点的用途，例如进入战斗、绕开障碍、靠近采集物"
+                                    Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    ToolTip="仅作为路线点备注，方便维护路线，不参与自动寻路判断。" />
 
-                <TextBlock Grid.Row="3"
-                           Margin="0,10,12,0"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="异常识别" />
-                <StackPanel Grid.Row="3"
-                            Grid.Column="1"
-                            Margin="0,10,0,0"
-                            Orientation="Horizontal">
-                    <CheckBox VerticalAlignment="Center"
-                              Content="未识别"
-                              IsChecked="{Binding MisidentificationUnrecognized, Mode=TwoWay}" />
-                    <CheckBox Margin="18,0,0,0"
-                              VerticalAlignment="Center"
-                              Content="路径过远"
-                              IsChecked="{Binding MisidentificationPathTooFar, Mode=TwoWay}" />
-                </StackPanel>
+                        <Grid Grid.Row="2"
+                              Grid.ColumnSpan="2"
+                              Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="96" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="72" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource DevToolDialogCaptionStyle}"
+                                       Text="拾取分类"
+                                       ToolTip="开启后，拾取流程会结合怪物类型判断战斗后掉落。" />
+                            <CheckBox Grid.Column="2"
+                                      VerticalAlignment="Center"
+                                      Content="区分怪物拾取"
+                                      IsChecked="{Binding EnableMonsterLootSplit, Mode=TwoWay}"
+                                      ToolTip="开启后才需要选择怪物类型；关闭时怪物类型不会参与拾取判断。" />
+                            <TextBlock Grid.Column="4"
+                                       Style="{StaticResource DevToolDialogCaptionStyle}"
+                                       Text="类型"
+                                       ToolTip="只有开启“区分怪物拾取”后，拾取逻辑才会使用这个标签。"
+                                       Visibility="{Binding AdvancedMonsterTypeVisibility}" />
+                            <ComboBox Grid.Column="6"
+                                      Height="34"
+                                      SelectedValue="{Binding MonsterTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Tag"
+                                      ToolTip="只有开启“区分怪物拾取”后，拾取逻辑才会使用这个标签。"
+                                      Visibility="{Binding AdvancedMonsterTypeVisibility}">
+                                <ComboBoxItem Content="无" Tag="" />
+                                <ComboBoxItem Content="小怪" Tag="normal" />
+                                <ComboBoxItem Content="精英" Tag="elite" />
+                                <ComboBoxItem Content="传奇" Tag="legendary" />
+                            </ComboBox>
+                        </Grid>
 
-                <TextBlock Grid.Row="4"
-                           Margin="0,10,12,0"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="处理方式" />
-                <ComboBox Grid.Row="4"
-                          Grid.Column="1"
-                          Height="34"
-                          Margin="0,10,0,0"
-                          SelectedValue="{Binding MisidentificationHandlingMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                          SelectedValuePath="Tag">
-                    <ComboBoxItem Content="取上一个识别到的点位置" Tag="previousDetectedPoint" />
-                    <ComboBoxItem Content="大地图识别" Tag="mapRecognition" />
-                </ComboBox>
+                        <Border Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                Margin="0,14,0,0"
+                                Style="{StaticResource DevToolDialogCardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
 
-                <Grid Grid.Row="5"
-                      Grid.Column="1"
-                      Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <CheckBox Grid.Column="0"
-                              VerticalAlignment="Center"
-                              Content="此点位区分怪物拾取"
-                              IsChecked="{Binding EnableMonsterLootSplit, Mode=TwoWay}" />
-                </Grid>
+                                <TextBlock Style="{StaticResource DevToolDialogSectionTitleStyle}"
+                                           Text="自定义字段"
+                                           ToolTip="字段名、类型和候选项会在不同路线点之间共享；字段值保存到当前路线点 pointExtParams 中。" />
+                                <ui:Button Grid.Column="1"
+                                           MinWidth="82"
+                                           Height="30"
+                                           Click="OpenCustomFieldPickerButton_Click"
+                                           Content="新增"
+                                           Icon="{ui:SymbolIcon Add24}" />
 
-                <ui:Button Grid.Row="6"
-                           Grid.ColumnSpan="2"
+                                <ScrollViewer Grid.Row="1"
+                                              Grid.ColumnSpan="2"
+                                              Margin="0,8,0,0"
+                                              MaxHeight="150"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding CustomFields}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="82" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="54" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="34" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Grid ToolTip="{Binding FieldToolTip}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Style="{StaticResource DevToolDialogValueStyle}"
+                                                                   FontWeight="SemiBold"
+                                                                   Text="{Binding DisplayName}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Margin="6,0,0,0"
+                                                                   Padding="4,1"
+                                                                   VerticalAlignment="Center"
+                                                                   Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                   Text="未预定义"
+                                                                   Visibility="{Binding UndefinedFieldVisibility}" />
+                                                    </Grid>
+                                                    <TextBlock Grid.Column="2"
+                                                               Style="{StaticResource DevToolDialogCaptionStyle}"
+                                                               Text="{Binding ValueTypeDisplayName}"
+                                                               ToolTip="字段值类型由共享字段定义决定。" />
+                                                    <Grid Grid.Column="4">
+                                                        <ui:TextBox MinHeight="32"
+                                                                    PlaceholderText="字段值"
+                                                                    Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    ToolTip="字符串按文本保存；数字会按数字保存。"
+                                                                    Visibility="{Binding TextValueVisibility}" />
+                                                        <ComboBox Height="32"
+                                                                  DisplayMemberPath="DisplayName"
+                                                                  ItemsSource="{Binding OptionValues}"
+                                                                  SelectedValue="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                  SelectedValuePath="Code"
+                                                                  ToolTip="从候选项中选择字段值。"
+                                                                  Visibility="{Binding OptionValueVisibility}" />
+                                                        <CheckBox VerticalAlignment="Center"
+                                                                  Content="启用"
+                                                                  IsChecked="{Binding BoolValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                  ToolTip="布尔字段值。"
+                                                                  Visibility="{Binding BooleanValueVisibility}" />
+                                                    </Grid>
+                                                    <ui:Button Grid.Column="6"
+                                                               MinWidth="54"
+                                                               Height="32"
+                                                               Click="PrepareCustomFieldDefinitionButton_Click"
+                                                               Tag="{Binding}"
+                                                               Content="收藏"
+                                                               ToolTip="加入共享字段库，并配置显示名、类型和候选项。"
+                                                               Visibility="{Binding UndefinedFieldVisibility}" />
+                                                    <ui:Button Grid.Column="8"
+                                                               Width="32"
+                                                               Height="32"
+                                                               Command="{Binding DataContext.RemoveCustomFieldCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                               CommandParameter="{Binding}"
+                                                               Icon="{ui:SymbolIcon Delete24}"
+                                                               ToolTip="删除字段" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+
+                <ui:Button Grid.Row="1"
                            Width="96"
                            Height="34"
-                           Margin="0,18,0,0"
+                           Margin="0,12,0,0"
                            HorizontalAlignment="Right"
                            Click="CloseButton_Click"
                            Content="完成"
