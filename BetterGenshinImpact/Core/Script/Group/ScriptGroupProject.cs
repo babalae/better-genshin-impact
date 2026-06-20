@@ -220,7 +220,8 @@ public partial class ScriptGroupProject : ObservableObject
             CleanInvalidSettingsValues();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
-            await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
+            var runtimeSettings = CloneJsScriptSettingsObject(JsScriptSettingsObject);
+            await Project.ExecuteAsync(runtimeSettings, pathingPartyConfig);
         }
         else if (Type == "KeyMouse")
         {
@@ -338,6 +339,28 @@ public partial class ScriptGroupProject : ObservableObject
     partial void OnScheduleChanged(string value)
     {
         OnPropertyChanged(nameof(ScheduleDesc));
+    }
+
+    /// <summary>
+    /// 创建 JS 脚本运行期配置副本，避免脚本修改 settings 时污染配置组对象。
+    /// </summary>
+    private static ExpandoObject CloneJsScriptSettingsObject(ExpandoObject source)
+    {
+        var clone = new ExpandoObject();
+        var sourceDict = (IDictionary<string, object?>)source;
+        var cloneDict = (IDictionary<string, object?>)clone;
+
+        foreach (var (key, value) in sourceDict)
+        {
+            cloneDict[key] = value switch
+            {
+                List<string> stringList => new List<string>(stringList),
+                List<object> objectList => new List<object>(objectList),
+                _ => value
+            };
+        }
+
+        return clone;
     }
 
     /// <summary>
