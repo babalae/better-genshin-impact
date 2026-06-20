@@ -346,18 +346,27 @@ public partial class ScriptGroupProject : ObservableObject
     /// </summary>
     private static ExpandoObject CloneJsScriptSettingsObject(ExpandoObject source)
     {
+        static object? CloneValue(object? value)
+        {
+            return value switch
+            {
+                null => null,
+                string => value,
+                ValueType => value,
+                ExpandoObject expandoObject => CloneJsScriptSettingsObject(expandoObject),
+                List<string> stringList => new List<string>(stringList),
+                List<object> objectList => objectList.Select(CloneValue).ToList(),
+                _ => value
+            };
+        }
+
         var clone = new ExpandoObject();
         var sourceDict = (IDictionary<string, object?>)source;
         var cloneDict = (IDictionary<string, object?>)clone;
 
         foreach (var (key, value) in sourceDict)
         {
-            cloneDict[key] = value switch
-            {
-                List<string> stringList => new List<string>(stringList),
-                List<object> objectList => new List<object>(objectList),
-                _ => value
-            };
+            cloneDict[key] = CloneValue(value);
         }
 
         return clone;
