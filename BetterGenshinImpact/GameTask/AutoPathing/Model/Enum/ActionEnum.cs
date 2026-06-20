@@ -71,6 +71,9 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
     /// <summary>Action indicating aggregated material pickup. 聚集材料的拾取操作。</summary>
     public static readonly ActionEnum PickUpCollect = new("pick_up_collect", "聚集材料", ActionUseWaypointTypeEnum.Custom);
 
+    /// <summary>Action indicating an interactable in-world teleport. 场景内交互传送。</summary>
+    public static readonly ActionEnum InteractTeleport = new("interact_teleport", "交互传送", ActionUseWaypointTypeEnum.Custom);
+
     /// <summary>
     /// Gets all registered action enumeration values.
     /// 获取所有已注册的动作枚举值集合。彻底修复先前只 yield 返回一个值的荒谬漏洞。
@@ -99,6 +102,7 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
             yield return SetTime;
             yield return UseGadget;
             yield return PickUpCollect;
+            yield return InteractTeleport;
         }
     }
 

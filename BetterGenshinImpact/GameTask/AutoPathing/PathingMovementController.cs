@@ -39,6 +39,7 @@ public class PathingMovementController
     private const int MAX_PID_CONSECUTIVE_COUNT = 10;
     private const int MAX_STUCK_TRAP_COUNT = 2;
     private const int MAX_INERTIAL_RETRY_COUNT = 50;
+    private const int NAVIGATION_BREAK_MINIMAP_GRACE_SECONDS = 15;
     private const float SMOOTH_RADIUS = 6.0f;
 
     private readonly CancellationToken _ct;
@@ -53,6 +54,7 @@ public class PathingMovementController
     private readonly Movement.StuckDetector _stuckDetector = new();
     private readonly Movement.InertialTracker _inertialTracker = new();
     private readonly List<IMoveModeHandler> _moveModeHandlers;
+    private bool _positionContinuityInvalidated;
 
     /// <summary>
     /// 初始化寻路移动控制器 
@@ -93,6 +95,13 @@ public class PathingMovementController
         _moveToStartTime = time;
     }
 
+    public void InvalidatePositionContinuity(string reason)
+    {
+        _positionContinuityInvalidated = true;
+        Navigation.Reset();
+        Logger.LogDebug("[寻路系统] 定位连续性已重置：{Reason}", reason);
+    }
+
     /// <summary>
     /// 面向目标路径点 / Faces towards the target waypoint.
     /// </summary>
@@ -130,7 +139,32 @@ public class PathingMovementController
         var partyConfig = _actions.PartyConfigGetter();
         await _actions.SwitchAvatarAction(partyConfig.MainAvatarIndex);
 
-        Point2f position = await InitialCoarseApproach(waypoint);
+        var continuityInvalidated = ConsumePositionContinuityInvalidated();
+        var validationPreviousWaypoint = continuityInvalidated ? null : previousWaypoint;
+        if (continuityInvalidated)
+        {
+            Logger.LogInformation("[寻路系统] 上一次外部动作可能改变了位置或坐标域，本路径点将重新建立定位基准。");
+        }
+
+        var isNavigationBreak = PathingPositionValidator.IsNavigationBreak(validationPreviousWaypoint, waypoint);
+        var navigationBreakRecovered = !isNavigationBreak;
+        var navigationBreakStartTime = DateTime.UtcNow;
+        if (isNavigationBreak)
+        {
+            var breakDistance = validationPreviousWaypoint == null
+                ? 0
+                : Navigation.GetDistance(validationPreviousWaypoint, new Point2f((float)waypoint.X, (float)waypoint.Y));
+            Logger.LogInformation(
+                "[寻路系统] 检测到非连续路线点（距离：{Distance:F1}），重置小地图匹配状态并等待过场后重新定位。",
+                breakDistance);
+            Navigation.Reset();
+        }
+
+        Point2f position = await InitialCoarseApproach(waypoint, validationPreviousWaypoint, isNavigationBreak || continuityInvalidated);
+        if (isNavigationBreak && PathingPositionValidator.IsKnownPosition(position))
+        {
+            navigationBreakRecovered = true;
+        }
         _moveToStartTime = DateTime.UtcNow;
 
         var moveContext = new PathingMovementContext
@@ -201,19 +235,60 @@ public class PathingMovementController
                 new BTAction(async () => {
                     try
                     {
-                        var (newPosition, addonTime) = await _navigator.GetPositionAndTime(moveContext.Screen, waypoint);
+                        var ignoreContinuityValidation = continuityInvalidated || (isNavigationBreak && !navigationBreakRecovered);
+                        var (newPosition, addonTime) = await _navigator.GetPositionAndTime(moveContext.Screen, waypoint, validationPreviousWaypoint, ignoreContinuityValidation);
                         additionalTimeInMs = addonTime;
                         if (additionalTimeInMs > 0)
                         {
                             MaintainForwardKey();
                             additionalTimeInMs += 1000;
                         }
-                        position = await HandleInertialPositioning(waypoint, newPosition, moveContext.Screen, DateTime.UtcNow);
+
+                        if (isNavigationBreak && !navigationBreakRecovered)
+                        {
+                            if (!PathingPositionValidator.IsKnownPosition(newPosition))
+                            {
+                                if ((DateTime.UtcNow - navigationBreakStartTime).TotalSeconds > NAVIGATION_BREAK_MINIMAP_GRACE_SECONDS)
+                                {
+                                    throw new RetryNoCountException("非连续路线点过场后小地图仍未恢复，重试一次此路线！");
+                                }
+
+                                if (moveContext.Num == 1 || moveContext.Num % 10 == 0)
+                                {
+                                    Logger.LogDebug("[寻路系统] 非连续路线点过场中，小地图暂不可用，继续等待重新定位。");
+                                }
+
+                                position = newPosition;
+                                distance = double.PositiveInfinity;
+                                return BTStatus.Running;
+                            }
+
+                            navigationBreakRecovered = true;
+                            Navigation.SetPrevPosition(newPosition.X, newPosition.Y);
+                            _inertialTracker.Reset(newPosition);
+                            Logger.LogInformation("[寻路系统] 非连续路线点小地图已恢复，当前位置：({X:F1}, {Y:F1})。", newPosition.X, newPosition.Y);
+                        }
+
+                        if (continuityInvalidated && PathingPositionValidator.IsKnownPosition(newPosition))
+                        {
+                            continuityInvalidated = false;
+                            Navigation.SetPrevPosition(newPosition.X, newPosition.Y);
+                            _inertialTracker.Reset(newPosition);
+                            Logger.LogInformation("[寻路系统] 已使用当前识别位置重建定位基准：({X:F1}, {Y:F1})。", newPosition.X, newPosition.Y);
+                        }
+
+                        position = await HandleInertialPositioning(waypoint, validationPreviousWaypoint, newPosition, moveContext.Screen, DateTime.UtcNow, ignoreContinuityValidation);
+                        if (!PathingPositionValidator.IsKnownPosition(position))
+                        {
+                            distance = double.PositiveInfinity;
+                            return BTStatus.Running;
+                        }
+
                         distance = Navigation.GetDistance(waypoint, position);
                         //Logger.LogDebug("[寻路系统] 正在向目标点移动，当前实时距离：{Distance:F1}", distance);
 
                         // 【自进化寻路】定距抽样刻录真实坐标足迹 (每2.0距离记录一次)
-                        if (position.X != 0 && position.Y != 0)
+                        if (PathingPositionValidator.IsKnownPosition(position))
                         {
                             var point2fPos = new Point2f(position.X, position.Y);
                             if (actualTrajectory.Count == 0 || Navigation.GetDistance(new Waypoint { X = actualTrajectory[^1].X, Y = actualTrajectory[^1].Y }, position) > 2.0)
@@ -252,7 +327,7 @@ public class PathingMovementController
                         new BTAction(async () => {
                             try 
                             {
-                                bool needsEscape = await CheckAndHandleStuck(waypoint, previousWaypoint, position, additionalTimeInMs);
+                                bool needsEscape = await CheckAndHandleStuck(waypoint, validationPreviousWaypoint, position, additionalTimeInMs);
                                 if (needsEscape) {
                                     // 触发脱困动作
                                     return BTStatus.Success;
@@ -348,6 +423,13 @@ public class PathingMovementController
         return false;
     }
 
+    private bool ConsumePositionContinuityInvalidated()
+    {
+        var invalidated = _positionContinuityInvalidated;
+        _positionContinuityInvalidated = false;
+        return invalidated;
+    }
+
     private void MaintainForwardKey()
     {
         if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
@@ -356,22 +438,42 @@ public class PathingMovementController
         }
     }
 
-    private async Task<Point2f> InitialCoarseApproach(WaypointForTrack waypoint)
+    private async Task<Point2f> InitialCoarseApproach(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint, bool isNavigationBreak)
     {
         using var screen = _actions.CaptureAction();
-        var result = await _navigator.GetPositionAndTime(screen, waypoint);
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, result.Item1);
+        var result = await _navigator.GetPositionAndTime(screen, waypoint, previousWaypoint, isNavigationBreak);
+        var initialPosition = result.Item1;
+
+        if (!PathingPositionValidator.IsKnownPosition(initialPosition) && previousWaypoint != null && !isNavigationBreak)
+        {
+            initialPosition = new Point2f((float)previousWaypoint.X, (float)previousWaypoint.Y);
+            Logger.LogDebug(
+                "[寻路系统] 初始小地图定位失败，使用上一点位作为初始基准坐标：({X:F1}, {Y:F1})",
+                initialPosition.X,
+                initialPosition.Y);
+        }
+
+        if (!PathingPositionValidator.IsKnownPosition(initialPosition))
+        {
+            if (isNavigationBreak)
+            {
+                Logger.LogDebug("[寻路系统] 非连续路线点初始定位失败，跳过初始转向，等待小地图恢复后再继续。");
+            }
+
+            return initialPosition;
+        }
+
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, initialPosition);
         Logger.LogDebug("[寻路系统] 启动初步接近，开始转向目标坐标：({X}, {Y})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _actions.WaitUntilRotatedToAction(targetOrientation, 5);
-        return result.Item1;
+        return initialPosition;
     }
 
-    private async Task<Point2f> HandleInertialPositioning(WaypointForTrack waypoint, Point2f position, ImageRegion screen, DateTime now)
+    private async Task<Point2f> HandleInertialPositioning(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint, Point2f position, ImageRegion screen, DateTime now, bool ignoreContinuityValidation = false)
     {
-        var rawDistance = Navigation.GetDistance(waypoint, position);
-        var isPositionLost = (position.X == 0 && position.Y == 0) || rawDistance > 500;
+        var validation = PathingPositionValidator.Validate(position, waypoint, previousWaypoint, _inertialTracker.LastValidPosition, ignoreContinuityValidation);
 
-        if (!isPositionLost)
+        if (validation.IsValid)
         {
             _inertialTracker.MarkValid(position, now);
             return position;
@@ -379,28 +481,54 @@ public class PathingMovementController
 
         if (_pathExecutorSuspend.CheckAndResetSuspendPoint())
         {
-            throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+            throw new RetryNoCountException("可能暂停导致定位异常，重试一次此路线！");
         }
 
-        if (_inertialTracker.DistanceTooFarRetryCount > 50)
+        if (_inertialTracker.DistanceTooFarRetryCount > MAX_INERTIAL_RETRY_COUNT)
         {
-            Logger.LogError("[寻路系统] 视觉定位连续丢失超过 50 次，航迹推算已达极限（偏离距离：{Distance:F1}），终止当前路径。请检查游戏画面或网络状态。", rawDistance);
-            throw new HandledException("目标距离过远或定位彻底丢失，放弃此路径！");
+            Logger.LogError(
+                "[寻路系统] 视觉定位连续异常超过 {Count} 次，航迹推算已达极限（原因：{Reason}，目标距离：{TargetDistance:F1}，跳变距离：{JumpDistance:F1}，路线偏离：{SegmentDeviation:F1}），终止当前路径。请检查游戏画面或网络状态。",
+                MAX_INERTIAL_RETRY_COUNT,
+                validation.Reason,
+                validation.TargetDistance,
+                validation.JumpDistance,
+                validation.SegmentDeviation);
+            throw new HandledException("视觉定位持续异常，放弃此路径！");
         }
 
         if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 10 == 0)
         {
             await _actions.ResolveAnomaliesAction(screen);
-            Logger.LogInformation("[寻路系统] 正在尝试通过异常处理重置推算基准，上次有效坐标：({X:F1}, {Y:F1})", _inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
-            Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
+            if (PathingPositionValidator.IsKnownPosition(_inertialTracker.LastValidPosition))
+            {
+                Logger.LogInformation("[寻路系统] 正在尝试通过异常处理重置推算基准，上次有效坐标：({X:F1}, {Y:F1})", _inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
+                Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
+            }
+            else
+            {
+                Logger.LogInformation("[寻路系统] 正在尝试通过异常处理恢复定位，当前还没有可用的有效坐标基准");
+            }
             await Delay(500, _ct);
         }
-        
+
+        if (!PathingPositionValidator.IsKnownPosition(_inertialTracker.LastValidPosition))
+        {
+            return position;
+        }
+
         position = _inertialTracker.TrackLost(now);
         
         if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 5 == 0)
         {
-            Logger.LogWarning("[寻路系统] 游戏视觉定位丢失（重试累计：{Count}次），已切换至惯性航迹推算模式，当前预测位置：({X:F1}, {Y:F1})", _inertialTracker.DistanceTooFarRetryCount, position.X, position.Y);
+            Logger.LogWarning(
+                "[寻路系统] 游戏视觉定位异常（原因：{Reason}，重试累计：{Count}次，目标距离：{TargetDistance:F1}，跳变距离：{JumpDistance:F1}，路线偏离：{SegmentDeviation:F1}），已切换至惯性航迹推算模式，当前预测位置：({X:F1}, {Y:F1})",
+                validation.Reason,
+                _inertialTracker.DistanceTooFarRetryCount,
+                validation.TargetDistance,
+                validation.JumpDistance,
+                validation.SegmentDeviation,
+                position.X,
+                position.Y);
         }
         
         return position;
@@ -618,24 +746,33 @@ public class PathingMovementController
                 // 视觉坐标采集与脱围容错判定
                 new BTAction(async () => {
                     position = await _navigator.GetPosition(screen, waypoint);
-                    var rawDistance = Navigation.GetDistance(waypoint, position);
-                    var isPositionLost = (position.X == 0 && position.Y == 0) || rawDistance > 500;
+                    var validation = PathingPositionValidator.Validate(position, waypoint, null, lastValidPosition);
 
-                    if (isPositionLost)
+                    if (!validation.IsValid)
                     {
                         lostRetryCount++;
                         if (lastValidPosition.HasValue && lostRetryCount <= maxLostRetryCount)
                         {
                             position = lastValidPosition.Value;
                             if (lostRetryCount == 1 || lostRetryCount % 3 == 0)
-                                Logger.LogWarning("[精细寻路] 瞬时视觉失常，启用位置缓存作为保险坐标：({X:F1}, {Y:F1})", position.X, position.Y);
+                                Logger.LogWarning(
+                                    "[精细寻路] 瞬时视觉失常，启用位置缓存作为保险坐标：({X:F1}, {Y:F1})。原因：{Reason}，目标距离：{TargetDistance:F1}，跳变距离：{JumpDistance:F1}",
+                                    position.X,
+                                    position.Y,
+                                    validation.Reason,
+                                    validation.TargetDistance,
+                                    validation.JumpDistance);
                             return BTStatus.Success; // 使用了兜底坐标，容许通过
                         }
                         
                         if (lostRetryCount % 3 == 0)
                             await _actions.ResolveAnomaliesAction(screen);
 
-                        Logger.LogWarning("[精细寻路] 视觉坐标信号断开时间过长，安全停止本次路径微调...");
+                        Logger.LogWarning(
+                            "[精细寻路] 视觉坐标信号异常时间过长，安全停止本次路径微调。原因：{Reason}，目标距离：{TargetDistance:F1}，跳变距离：{JumpDistance:F1}",
+                            validation.Reason,
+                            validation.TargetDistance,
+                            validation.JumpDistance);
                         isRouteCompleted = true;
                         return BTStatus.Failure;
                     }

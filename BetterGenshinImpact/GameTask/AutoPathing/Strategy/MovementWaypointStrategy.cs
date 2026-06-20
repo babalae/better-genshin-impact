@@ -27,6 +27,8 @@ public class MovementWaypointStrategy : IWaypointStrategy
     {
         if (executor == null) throw new ArgumentNullException(nameof(executor));
         if (waypoint == null) throw new ArgumentNullException(nameof(waypoint));
+        
+        PauseAutoPickIfApproachingInteractTeleport(executor, waypoint);
 
         // 1. 前置动作（如：解包飞行、日志输出、抓取叶子等）。
         // 路线重试追进度时应跳过这些非移动操作，避免四叶印/日志等动作在恢复阶段重复触发。
@@ -126,7 +128,10 @@ public class MovementWaypointStrategy : IWaypointStrategy
             var handler = ActionFactory.GetAfterHandler(waypoint.Action ?? string.Empty);
             if (handler != null)
             {
-                await handler.RunAsync(executor.ct, waypoint, executor.PartyConfig);
+                InvalidatePositionContinuityBeforeHandlerIfNeeded(executor, waypoint);
+                object handlerConfig = IsInteractTeleport(waypoint) ? executor : executor.PartyConfig;
+                await handler.RunAsync(executor.ct, waypoint, handlerConfig);
+                ResumeAutoPickIfNeeded(executor, waypoint);
                 
                 // 特定后置统计：战斗次数
                 if (string.Equals(waypoint.Action, ActionEnum.Fight.Code, StringComparison.OrdinalIgnoreCase))
@@ -146,10 +151,50 @@ public class MovementWaypointStrategy : IWaypointStrategy
         if (handler != null)
         {
             // 通过 config 传递 executor 上下文，交给 handler 自己决策细节
+            InvalidatePositionContinuityBeforeHandlerIfNeeded(executor, waypoint);
             await handler.RunAsync(executor.ct, waypoint, executor);
+            ResumeAutoPickIfNeeded(executor, waypoint);
             return true;
         }
 
         return false;
+    }
+
+    private static void InvalidatePositionContinuityBeforeHandlerIfNeeded(PathExecutor executor, WaypointForTrack waypoint)
+    {
+        if (IsInteractTeleport(waypoint))
+        {
+            executor.MovementController.InvalidatePositionContinuity($"执行交互传送 {waypoint.Action}");
+        }
+    }
+
+    private static void PauseAutoPickIfApproachingInteractTeleport(PathExecutor executor, WaypointForTrack waypoint)
+    {
+        if (IsInteractTeleport(waypoint) || IsNextWaypointInteractTeleport(executor))
+        {
+            executor.PauseAutoPickForInteractTeleport();
+        }
+    }
+
+    private static void ResumeAutoPickIfNeeded(PathExecutor executor, WaypointForTrack waypoint)
+    {
+        if (IsInteractTeleport(waypoint))
+        {
+            executor.ResumeAutoPickForInteractTeleport();
+        }
+    }
+
+    private static bool IsNextWaypointInteractTeleport(PathExecutor executor)
+    {
+        var waypoints = executor.CurWaypoints.Item2;
+        var nextIndex = executor.CurWaypoint.Item1 + 1;
+        return nextIndex >= 0
+            && nextIndex < waypoints.Count
+            && IsInteractTeleport(waypoints[nextIndex]);
+    }
+
+    private static bool IsInteractTeleport(WaypointForTrack waypoint)
+    {
+        return string.Equals(waypoint.Action, ActionEnum.InteractTeleport.Code, StringComparison.OrdinalIgnoreCase);
     }
 }

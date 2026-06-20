@@ -6383,6 +6383,7 @@ public partial class MapViewerViewModel : ObservableObject
             "set_time" => "格式：HH:MM 或 HH:MM:true，如 06:00:true。",
             "use_gadget" => "可填 not_wait/no_wait/once 表示不等 CD；留空默认等待。",
             "pick_up_collect" => "可填角色名或 角色-动作，如 琴 或 琴-短E；留空自动识别。",
+            "interact_teleport" => "按拾取/交互键触发场景内传送；通常不需要参数，可填 wait=秒数 追加等待。",
             _ => "动作参数。"
         };
     }

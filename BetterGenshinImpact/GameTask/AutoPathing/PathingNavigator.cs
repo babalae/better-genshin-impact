@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         private readonly Func<ImageRegion?, Task> _resolveAnomaliesAction;
         
         private readonly object _preStateLock = new();
-        private Point2f _prePosition;
+        private Point2f _prePosition = PathingPositionValidator.UnknownPosition;
         
         private int _isPositionAndTimeSuspended = 0;
         private int _positionFailCount = 0;
@@ -161,8 +161,6 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
             return (await GetPositionAndTime(imageRegion, waypoint).ConfigureAwait(false)).point;
         }
 
-        private const double PathTooFarDistanceThreshold = 500.0;
-
         /// <summary>
         /// Determines exact location incorporating potential anomaly detection and map-reopening routines.
         /// 集成异常检测和地图重定位程序的精确游戏坐标解析组合体。
@@ -177,7 +175,11 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         /// 附带耗时元数据的坐标返回值。
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when parameter <paramref name="imageRegion"/> or <paramref name="waypoint"/> is null. 当传递的参数为 null 时抛出错误。</exception>
-        public async Task<(Point2f point, int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
+        public async Task<(Point2f point, int additionalTimeInMs)> GetPositionAndTime(
+            ImageRegion imageRegion,
+            WaypointForTrack waypoint,
+            WaypointForTrack? previousWaypoint = null,
+            bool ignoreContinuityValidation = false)
         {
             ArgumentNullException.ThrowIfNull(imageRegion);
             ArgumentNullException.ThrowIfNull(waypoint);
@@ -185,7 +187,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
             var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
             int time = 0;
 
-            if (position.X == 0f && position.Y == 0f)
+            if (!PathingPositionValidator.IsKnownPosition(position))
             {
                 if (!Bv.IsInMainUi(imageRegion))
                 {
@@ -203,62 +205,75 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                 _positionFailCount = 0; // 成功定位则重置容错计数
             }
 
-            var distance = Navigation.GetDistance(waypoint, position);
+            var validation = PathingPositionValidator.Validate(position, waypoint, previousWaypoint, null, ignoreContinuityValidation);
             
             bool hasSuspendFlag = CheckAndClearPositionAndTimeSuspended();
 
-            if (position.X == 0f && position.Y == 0f && hasSuspendFlag)
+            if (!PathingPositionValidator.IsKnownPosition(position) && hasSuspendFlag)
             {
-                throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+                throw new RetryNoCountException("可能暂停导致定位异常，重试一次此路线！");
             }
 
             bool unrecognized = waypoint.Misidentification?.Type?.Contains("unrecognized") ?? false;
             bool pathTooFar = waypoint.Misidentification?.Type?.Contains("pathTooFar") ?? false;
+            bool configuredAnomaly = (!validation.IsValid && validation.Reason == "position_unrecognized" && unrecognized) ||
+                                     (!validation.IsValid && validation.Reason != "position_unrecognized" && pathTooFar);
 
-            if ((position.X == 0f && position.Y == 0f && unrecognized) || (distance > PathTooFarDistanceThreshold && pathTooFar))
+            if (configuredAnomaly && waypoint.Misidentification?.HandlingMode == "mapRecognition")
             {
-                if (waypoint.Misidentification?.HandlingMode == "previousDetectedPoint")
+                Logger?.LogDebug(
+                    "路线点定位异常，尝试大地图识别。原因：{Reason}，目标距离：{TargetDistance:F1}，路线偏离：{SegmentDeviation:F1}",
+                    validation.Reason,
+                    validation.TargetDistance,
+                    validation.SegmentDeviation);
+                DateTime start = DateTime.UtcNow;
+                var tpTask = new TpTask(_ct);
+                await tpTask.OpenBigMapUi().ConfigureAwait(false);
+                try
                 {
-                    lock (_preStateLock) 
+                    var mapBase = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod);
+                    if (mapBase != null)
                     {
-                        if (_prePosition != default)
-                        {
-                            position = _prePosition;
-                            Logger?.LogDebug("未识别到具体路径，取上次点位");
-                        }
+                        position = mapBase.ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
                     }
                 }
-                else if (waypoint.Misidentification?.HandlingMode == "mapRecognition")
+                catch (Exception ex)
                 {
-                    DateTime start = DateTime.UtcNow;
-                    var tpTask = new TpTask(_ct);
-                    await tpTask.OpenBigMapUi().ConfigureAwait(false);
-                    try
-                    {
-                        var mapBase = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod);
-                        if (mapBase != null)
-                        {
-                            position = mapBase.ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger?.LogWarning(ex, $"地图中心点识别失败！异常: {ex.Message}");
-                        throw new RetryNoCountException("地图识别异常，重试路线！");
-                    }
+                    Logger?.LogWarning(ex, $"地图中心点识别失败！异常: {ex.Message}");
+                    throw new RetryNoCountException("地图识别异常，重试路线！");
+                }
 
-                    Simulation.SendInput?.Keyboard?.KeyPress(User32.VK.VK_ESCAPE);
-                    await WaitForCloseMap(10, 200).ConfigureAwait(false);
-                    DateTime end = DateTime.UtcNow;
-                    time = (int)(end - start).TotalMilliseconds;
-                    Logger?.LogDebug($"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
+                Simulation.SendInput?.Keyboard?.KeyPress(User32.VK.VK_ESCAPE);
+                await WaitForCloseMap(10, 200).ConfigureAwait(false);
+                DateTime end = DateTime.UtcNow;
+                time = (int)(end - start).TotalMilliseconds;
+                Logger?.LogDebug($"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
+            }
+            else if (configuredAnomaly && waypoint.Misidentification?.HandlingMode == "previousDetectedPoint")
+            {
+                lock (_preStateLock)
+                {
+                    if (PathingPositionValidator.IsKnownPosition(_prePosition))
+                    {
+                        position = _prePosition;
+                        Logger?.LogDebug("未识别到具体路径，取上次点位");
+                    }
+                    else if (previousWaypoint != null)
+                    {
+                        position = new Point2f((float)previousWaypoint.X, (float)previousWaypoint.Y);
+                        _prePosition = position;
+                        Logger?.LogDebug("未识别到具体路径，取上一路线点作为初始点位");
+                    }
                 }
             }
             else
             {
-                lock (_preStateLock) 
+                lock (_preStateLock)
                 {
-                    _prePosition = position;
+                    if (PathingPositionValidator.IsKnownPosition(position))
+                    {
+                        _prePosition = position;
+                    }
                 }
             }
 
