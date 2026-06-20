@@ -64,6 +64,7 @@ public class PathExecutor
     internal CancellationToken ct;
     internal PathExecutorSuspend pathExecutorSuspend;
     internal readonly PathingHealthController _healthController;
+    private bool _autoPickPausedForInteractTeleport;
 
     /// <summary>
     /// Initializes the path executor.
@@ -236,10 +237,35 @@ public class PathExecutor
             // 任务结束时清理暂停/恢复的临时状态，避免影响下一次路径执行。
             pathExecutorSuspend.Reset();
             IsPositionAndTimeSuspended = false;
+            ResumeAutoPickForInteractTeleport();
             
             // 触发遥测落盘策略，强制当前积累的路线无论多少都全量写入 JSON 文件
             _ = RouteTelemetryManager.FlushAsync();
         }
+    }
+
+    public void PauseAutoPickForInteractTeleport()
+    {
+        if (_autoPickPausedForInteractTeleport)
+        {
+            return;
+        }
+
+        RunnerContext.Instance.StopAutoPick();
+        _autoPickPausedForInteractTeleport = true;
+        Logger.LogInformation("[寻路系统] 即将执行交互传送，已临时暂停自动拾取，避免提前触发交互。");
+    }
+
+    public void ResumeAutoPickForInteractTeleport()
+    {
+        if (!_autoPickPausedForInteractTeleport)
+        {
+            return;
+        }
+
+        RunnerContext.Instance.ResumeAutoPick();
+        _autoPickPausedForInteractTeleport = false;
+        Logger.LogInformation("[寻路系统] 交互传送处理结束，已恢复自动拾取。");
     }
 
     private async Task<PathingSegmentResult> ExecuteWaypointSegmentAsync(
@@ -393,6 +419,7 @@ public class PathExecutor
 
         if (positions == null) return result;
 
+        var enableWaypointMisidentificationConfig = TaskContext.Instance().Config.PathingConditionConfig.EnableWaypointMisidentificationConfig;
         foreach (var p in positions)
         {
             if (p == null) continue;
@@ -400,7 +427,9 @@ public class PathExecutor
 
             var wft = new WaypointForTrack(p, task.Info.MapName, task.Info.MapMatchMethod)
             {
-                Misidentification = pointExtParams?.Misidentification ?? new Waypoint.Misidentification(),
+                Misidentification = enableWaypointMisidentificationConfig
+                    ? pointExtParams?.Misidentification ?? new Waypoint.Misidentification()
+                    : new Waypoint.Misidentification { Type = [] },
                 MonsterTag = pointExtParams?.MonsterTag ?? string.Empty,
                 EnableMonsterLootSplit = pointExtParams?.EnableMonsterLootSplit == true
             };

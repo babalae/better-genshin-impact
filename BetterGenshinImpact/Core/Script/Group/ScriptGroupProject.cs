@@ -244,8 +244,8 @@ public partial class ScriptGroupProject : ObservableObject
             foreach (var chunk in tasks)
             {
                 var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
-                pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
-                if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
+                pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig ?? new PathingPartyConfig();
+                if (pathingTask.PartyConfig.AutoPickEnabled)
                 {
                     TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
                 }

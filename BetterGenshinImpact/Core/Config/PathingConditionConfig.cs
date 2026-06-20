@@ -42,6 +42,10 @@ public partial class PathingConditionConfig : ObservableObject
     [ObservableProperty]
     private bool _enableRouteTelemetry = false;
 
+    // 临时兼容开关：是否读取路线点中的异常识别参数
+    [ObservableProperty]
+    private bool _enableWaypointMisidentificationConfig = true;
+
     public static PathingConditionConfig Default => new()
     {
         AvatarConditions =

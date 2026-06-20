@@ -57,7 +57,7 @@ public class NavigationInstance
         ArgumentNullException.ThrowIfNull(imageRegion);
         
         if (imageRegion.SrcMat == null || imageRegion.SrcMat.IsDisposed)
-            return default;
+            return PathingPositionValidator.UnknownPosition;
 
         using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
         var captureTime = DateTime.UtcNow;
@@ -65,7 +65,12 @@ public class NavigationInstance
         var mapBase = MapManager.GetMap(mapName, mapMatchMethod);
         var p = mapBase.GetMiniMapPosition(colorMat, _prevX, _prevY);
 
-        if (p != default && captureTime > _captureTime)
+        if (p == default)
+        {
+            p = PathingPositionValidator.UnknownPosition;
+        }
+
+        if (PathingPositionValidator.IsKnownPosition(p) && captureTime > _captureTime)
         {
             _prevX = p.X;
             _prevY = p.Y;
@@ -91,7 +96,7 @@ public class NavigationInstance
         ArgumentNullException.ThrowIfNull(imageRegion);
         
         if (imageRegion.SrcMat == null || imageRegion.SrcMat.IsDisposed)
-            return default;
+            return PathingPositionValidator.UnknownPosition;
 
         using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
         var captureTime = DateTime.UtcNow;
@@ -117,7 +122,12 @@ public class NavigationInstance
             p = sceneMap.GetMiniMapPosition(colorMat, _prevX, _prevY);
         }
 
-        if (p != default && captureTime > _captureTime)
+        if (p == default)
+        {
+            p = PathingPositionValidator.UnknownPosition;
+        }
+
+        if (PathingPositionValidator.IsKnownPosition(p) && captureTime > _captureTime)
         {
             _prevX = p.X;
             _prevY = p.Y;

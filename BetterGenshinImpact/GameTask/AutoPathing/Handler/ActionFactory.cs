@@ -34,6 +34,7 @@ public static class ActionFactory
         ["set_time"] = () => new SetTimeHandler(),
         ["use_gadget"] = () => new UseGadgetHandler(),
         ["pick_up_collect"] = () => new PickUpCollectHandler(),
+        ["interact_teleport"] = () => new InteractTeleportHandler(),
         ["stop_flying"] = () => new StopFlyingHandler()
     };
 

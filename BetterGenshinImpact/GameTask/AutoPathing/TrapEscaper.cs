@@ -129,7 +129,7 @@ public class TrapEscaper
                     // 判断是否有有效位移
                     var dx = position.X - initialPosition.X;
                     var dy = position.Y - initialPosition.Y;
-                    if (dx * dx + dy * dy < 9 && (position.X != 0 || position.Y != 0)) 
+                    if (dx * dx + dy * dy < 9 && PathingPositionValidator.IsKnownPosition(position)) 
                     {
                         return await AttemptFallback(previousWaypoint, waypoint.MoveMode, "未产生有效位移");
                     }

@@ -604,7 +604,7 @@ namespace BetterGenshinImpact.ViewModel
         private void OverlayMetricsServiceOnMetricsUpdated(object? sender, OverlayMetricsSnapshot snapshot)
         {
             // OverlayMetricsService 可能在计时器线程发布事件，绑定集合必须切回 UI 线程更新。
-            UIDispatcherHelper.Invoke(() =>
+            UIDispatcherHelper.BeginInvoke(() =>
             {
                 OverlayMetricDisplayItems = snapshot.Items;
                 OverlayMetricsText = snapshot.CombinedText;
