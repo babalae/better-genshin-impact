@@ -213,7 +213,12 @@ internal class GameTaskManager
                 assetScale = 1;
             }
 
-            mat = ResizeHelper.Resize(mat, assetScale);
+            var resizedMat = ResizeHelper.Resize(mat, assetScale);
+            if (!ReferenceEquals(resizedMat, mat))
+            {
+                mat.Dispose();
+                mat = resizedMat;
+            }
         }
 
         return mat;

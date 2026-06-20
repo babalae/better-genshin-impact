@@ -100,12 +100,14 @@ public class CaptureGeometryTests
         Assert.Equal(new Rect(0, 0, 1920, 1080), systemInfo.ScaleMax1080PCaptureRect);
     }
 
-    [Fact]
-    public void IsGameResolution16X9_ReturnsFalseWhenDerivedContentSizeIsNot16x9()
+    [Theory]
+    [InlineData(0, 0, false)]
+    [InlineData(0, 1080, false)]
+    [InlineData(1000, 1000, false)]
+    [InlineData(1920, 1080, true)]
+    public void IsGameResolution16X9_ValidatesPositive16x9Size(int width, int height, bool expected)
     {
-        var systemInfo = new FakeSystemInfo(new RECT(0, 0, 1000, 1000), 1);
-
-        Assert.False(AssertUtils.IsGameResolution16X9(systemInfo.GameScreenSize));
+        Assert.Equal(expected, AssertUtils.IsGameResolution16X9(new RECT(0, 0, width, height)));
     }
 
     [Fact]

@@ -36,6 +36,8 @@ public class AssertUtils
 
     public static bool IsGameResolution16X9(RECT gameScreenSize)
     {
-        return gameScreenSize.Width * 9 == gameScreenSize.Height * 16;
+        return gameScreenSize.Width > 0
+               && gameScreenSize.Height > 0
+               && gameScreenSize.Width * 9 == gameScreenSize.Height * 16;
     }
 }

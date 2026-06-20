@@ -68,25 +68,25 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
     /// </param>
     public static void GameRegionClick(Func<Size, double, (double, double)> posFunc)
     {
-        var contentRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var scaleTo1080P = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var (cx, cy) = posFunc(new Size(contentRect.Width, contentRect.Height), scaleTo1080P);
-        DesktopRegion.DesktopRegionClick(contentRect.X + cx, contentRect.Y + cy);
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (cx, cy) = posFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
+        DesktopRegion.DesktopRegionClick(captureAreaRect.X + cx, captureAreaRect.Y + cy);
     }
 
     public static void GameRegionMove(Func<Size, double, (double, double)> posFunc)
     {
-        var contentRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var scaleTo1080P = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var (cx, cy) = posFunc(new Size(contentRect.Width, contentRect.Height), scaleTo1080P);
-        DesktopRegion.DesktopRegionMove(contentRect.X + cx, contentRect.Y + cy);
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (cx, cy) = posFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
+        DesktopRegion.DesktopRegionMove(captureAreaRect.X + cx, captureAreaRect.Y + cy);
     }
 
     public static void GameRegionMoveBy(Func<Size, double, (double, double)> deltaFunc)
     {
-        var contentRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var scaleTo1080P = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var (dx, dy) = deltaFunc(new Size(contentRect.Width, contentRect.Height), scaleTo1080P);
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (dx, dy) = deltaFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
         DesktopRegion.DesktopRegionMoveBy(dx, dy);
     }
 

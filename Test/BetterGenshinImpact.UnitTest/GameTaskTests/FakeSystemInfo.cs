@@ -25,9 +25,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
 
         public double ScaleTo1080PRatio { get; private set; }
 
-        public RECT CaptureAreaRect { get; private set; }
+        public RECT CaptureAreaRect { get; set; }
 
-        public Rect ScaleMax1080PCaptureRect { get; private set; } = new Rect(0, 0, 1920, 1080);
+        public Rect ScaleMax1080PCaptureRect { get; set; } = new Rect(0, 0, 1920, 1080);
 
         public CaptureGeometry CaptureGeometry { get; private set; } = null!;
 
