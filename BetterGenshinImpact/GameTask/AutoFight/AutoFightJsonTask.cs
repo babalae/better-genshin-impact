@@ -310,7 +310,6 @@ public class AutoFightJsonTask : ISoloTask
                         // 求值条件表达式
                         var conditionMet = evaluator.Evaluate(
                             action.Condition.Expression,
-                            action.Condition.SubConditions,
                             action.Index,
                             action.Character);
 

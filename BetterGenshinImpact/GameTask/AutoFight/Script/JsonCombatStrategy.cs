@@ -55,14 +55,4 @@ public class JsonAction
 public class JsonCondition
 {
     public string Expression { get; set; } = string.Empty;
-    public List<JsonSubCondition> SubConditions { get; set; } = [];
-}
-
-/// <summary>
-/// 具名条件子项
-/// </summary>
-public class JsonSubCondition
-{
-    public string Name { get; set; } = string.Empty;
-    public string Expression { get; set; } = string.Empty;
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text.RegularExpressions;
+using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -13,12 +13,13 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
 /// <summary>
 /// 条件表达式求值器
-/// 支持语法：||, &&, !, (), 函数调用
-/// 支持函数：last-exec, q-ready, low-hp, battle-time, in-party
+/// 支持语法：||, &&, !, (), +, -, *, /, >, <, =, 函数调用
+/// 支持函数：last-exec, q-ready, low-hp, battle-time, in-party, t, since, count
 /// </summary>
 public class ConditionEvaluator
 {
     private readonly Dictionary<int, DateTime> _lastExecTimes = new();
+    private readonly List<(int Index, double Time)> _execHistory = new();
     private readonly DateTime _battleStartTime;
     private readonly CombatScenes _combatScenes;
     private readonly Func<ImageRegion> _captureFunc;
@@ -53,10 +54,12 @@ public class ConditionEvaluator
 
     public void UpdateLastExecTime(int index)
     {
-        _lastExecTimes[index] = DateTime.Now;
+        var now = DateTime.Now;
+        _lastExecTimes[index] = now;
+        _execHistory.Add((index, (now - _battleStartTime).TotalSeconds));
     }
 
-    public bool Evaluate(string expression, List<JsonSubCondition> subConditions, int currentIndex, string? characterName = null)
+    public bool Evaluate(string expression, int currentIndex, string? characterName = null)
     {
         _currentCharacterName = characterName;
         if (string.IsNullOrWhiteSpace(expression))
@@ -64,11 +67,10 @@ public class ConditionEvaluator
 
         try
         {
-            var resolved = ResolveSubConditions(expression, subConditions);
-            var tokens = Tokenize(resolved);
+            var tokens = Tokenize(expression);
             var pos = 0;
             var ast = ParseOrExpr(tokens, ref pos);
-            return EvalBool(ast, currentIndex);
+            return ToBool(Eval(ast, currentIndex));
         }
         catch (Exception e)
         {
@@ -77,27 +79,9 @@ public class ConditionEvaluator
         }
     }
 
-    private static string ResolveSubConditions(string expression, List<JsonSubCondition> subConditions)
-    {
-        if (subConditions == null || subConditions.Count == 0)
-            return expression;
-
-        var resolved = expression;
-        foreach (var sc in subConditions)
-        {
-            if (!string.IsNullOrEmpty(sc.Name))
-            {
-                // 使用单词边界确保完整匹配，避免子串替换
-                resolved = Regex.Replace(resolved, $@"\b{Regex.Escape(sc.Name)}\b", $"({sc.Expression})");
-            }
-        }
-
-        return resolved;
-    }
-
     // ========== 词法分析 ==========
 
-    private enum TokenType { Identifier, Number, Bool, And, Or, Not, LParen, RParen, Comma, End }
+    private enum TokenType { Identifier, Number, Bool, And, Or, Not, Plus, Minus, Mul, Div, Greater, Less, Equal, LParen, RParen, Comma, End }
 
     private readonly struct Token(TokenType type, string value)
     {
@@ -125,6 +109,13 @@ public class ConditionEvaluator
             if (c == ')') { tokens.Add(new Token(TokenType.RParen, ")")); i++; continue; }
             if (c == ',') { tokens.Add(new Token(TokenType.Comma, ",")); i++; continue; }
             if (c == '!') { tokens.Add(new Token(TokenType.Not, "!")); i++; continue; }
+            if (c == '+') { tokens.Add(new Token(TokenType.Plus, "+")); i++; continue; }
+            if (c == '-') { tokens.Add(new Token(TokenType.Minus, "-")); i++; continue; }
+            if (c == '*') { tokens.Add(new Token(TokenType.Mul, "*")); i++; continue; }
+            if (c == '/') { tokens.Add(new Token(TokenType.Div, "/")); i++; continue; }
+            if (c == '>') { tokens.Add(new Token(TokenType.Greater, ">")); i++; continue; }
+            if (c == '<') { tokens.Add(new Token(TokenType.Less, "<")); i++; continue; }
+            if (c == '=') { tokens.Add(new Token(TokenType.Equal, "=")); i++; continue; }
 
             if (char.IsDigit(c) || (c == '.' && i + 1 < expr.Length && char.IsDigit(expr[i + 1])))
             {
@@ -179,6 +170,8 @@ public class ConditionEvaluator
         public AstNode Right { get; } = right;
     }
 
+    // 优先级：|| < && < 比较 < +- < */ < 一元 < 基本
+
     private static AstNode ParseOrExpr(List<Token> tokens, ref int pos)
     {
         var left = ParseAndExpr(tokens, ref pos);
@@ -193,8 +186,44 @@ public class ConditionEvaluator
 
     private static AstNode ParseAndExpr(List<Token> tokens, ref int pos)
     {
-        var left = ParseUnaryExpr(tokens, ref pos);
+        var left = ParseCompareExpr(tokens, ref pos);
         while (tokens[pos].Type == TokenType.And)
+        {
+            var op = tokens[pos].Value; pos++;
+            var right = ParseCompareExpr(tokens, ref pos);
+            left = new BinaryOpNode(op, left, right);
+        }
+        return left;
+    }
+
+    private static AstNode ParseCompareExpr(List<Token> tokens, ref int pos)
+    {
+        var left = ParseAddExpr(tokens, ref pos);
+        while (tokens[pos].Type is TokenType.Greater or TokenType.Less or TokenType.Equal)
+        {
+            var op = tokens[pos].Value; pos++;
+            var right = ParseAddExpr(tokens, ref pos);
+            left = new BinaryOpNode(op, left, right);
+        }
+        return left;
+    }
+
+    private static AstNode ParseAddExpr(List<Token> tokens, ref int pos)
+    {
+        var left = ParseMulExpr(tokens, ref pos);
+        while (tokens[pos].Type is TokenType.Plus or TokenType.Minus)
+        {
+            var op = tokens[pos].Value; pos++;
+            var right = ParseMulExpr(tokens, ref pos);
+            left = new BinaryOpNode(op, left, right);
+        }
+        return left;
+    }
+
+    private static AstNode ParseMulExpr(List<Token> tokens, ref int pos)
+    {
+        var left = ParseUnaryExpr(tokens, ref pos);
+        while (tokens[pos].Type is TokenType.Mul or TokenType.Div)
         {
             var op = tokens[pos].Value; pos++;
             var right = ParseUnaryExpr(tokens, ref pos);
@@ -209,6 +238,11 @@ public class ConditionEvaluator
         {
             var op = tokens[pos].Value; pos++;
             return new UnaryOpNode(op, ParseUnaryExpr(tokens, ref pos));
+        }
+        if (tokens[pos].Type == TokenType.Minus)
+        {
+            pos++;
+            return new UnaryOpNode("-u", ParseUnaryExpr(tokens, ref pos));
         }
         return ParsePrimary(tokens, ref pos);
     }
@@ -262,27 +296,53 @@ public class ConditionEvaluator
         throw new InvalidOperationException($"意外的 token：{tokens[pos].Value}");
     }
 
-    // ========== AST 求值 ==========
+    // ========== AST 求值（统一返回 object: double 或 bool） ==========
 
-    private bool EvalBool(AstNode node, int currentIndex)
+    private object Eval(AstNode node, int currentIndex)
     {
         return node switch
         {
             BoolNode b => b.Value,
-            NumberNode n => n.Value != 0,
-            UnaryOpNode u => !EvalBool(u.Operand, currentIndex),
-            BinaryOpNode b => b.Op switch
-            {
-                "&&" => EvalBool(b.Left, currentIndex) && EvalBool(b.Right, currentIndex),
-                "||" => EvalBool(b.Left, currentIndex) || EvalBool(b.Right, currentIndex),
-                _ => throw new InvalidOperationException($"未知运算符：{b.Op}")
-            },
+            NumberNode n => n.Value,
+            UnaryOpNode u => EvalUnary(u, currentIndex),
+            BinaryOpNode b => EvalBinary(b, currentIndex),
             FuncCallNode f => EvalFunc(f.Name, f.Args, currentIndex),
-            _ => throw new InvalidOperationException($"未知节点：{node.GetType()}")
+            _ => false
         };
     }
 
-    private bool EvalFunc(string name, List<AstNode> args, int currentIndex)
+    private object EvalBinary(BinaryOpNode node, int currentIndex)
+    {
+        var left = Eval(node.Left, currentIndex);
+        var right = Eval(node.Right, currentIndex);
+
+        return node.Op switch
+        {
+            "&&" => ToBool(left) && ToBool(right),
+            "||" => ToBool(left) || ToBool(right),
+            ">" => ToNumber(left) > ToNumber(right),
+            "<" => ToNumber(left) < ToNumber(right),
+            "=" => Math.Abs(ToNumber(left) - ToNumber(right)) < 0.0001, // 浮点数相等比较
+            "+" => ToNumber(left) + ToNumber(right),
+            "-" => ToNumber(left) - ToNumber(right),
+            "*" => ToNumber(left) * ToNumber(right),
+            "/" => ToNumber(right) != 0 ? ToNumber(left) / ToNumber(right) : 0,
+            _ => false
+        };
+    }
+
+    private object EvalUnary(UnaryOpNode node, int currentIndex)
+    {
+        var operand = Eval(node.Operand, currentIndex);
+        return node.Op switch
+        {
+            "!" => !ToBool(operand),
+            "-u" => -ToNumber(operand),
+            _ => false
+        };
+    }
+
+    private object EvalFunc(string name, List<AstNode> args, int currentIndex)
     {
         return name switch
         {
@@ -291,9 +351,46 @@ public class ConditionEvaluator
             "low-hp" => EvalLowHp(),
             "battle-time" => EvalBattleTime(args),
             "in-party" => EvalInParty(args),
+            "t" => EvalT(),
+            "since" => EvalSince(args, currentIndex),
+            "count" => EvalCount(args, currentIndex),
             _ => throw new InvalidOperationException($"未知条件函数：{name}")
         };
     }
+
+    // ========== 类型转换 ==========
+
+    private static bool ToBool(object val)
+    {
+        return val switch
+        {
+            bool b => b,
+            double d => d > 0,
+            _ => false
+        };
+    }
+
+    private static double ToNumber(object val)
+    {
+        return val switch
+        {
+            double d => d,
+            bool b => b ? 1 : 0,
+            _ => 0
+        };
+    }
+
+    private static double EvalNumber(AstNode node)
+    {
+        return node switch
+        {
+            NumberNode n => n.Value,
+            BoolNode b => b.Value ? 1 : 0,
+            _ => 0
+        };
+    }
+
+    // ========== 布尔函数（返回 bool） ==========
 
     private bool EvalLastExec(List<AstNode> args, int currentIndex)
     {
@@ -304,7 +401,7 @@ public class ConditionEvaluator
         var targetIndex = args.Count >= 3 ? (int)EvalNumber(args[2]) : currentIndex;
 
         if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
-            return greater; // 从未执行：greater → true（满足"超过"），否则 false
+            return greater;
 
         var elapsed = (DateTime.Now - lastTime).TotalMilliseconds;
         return greater ? elapsed > timeMs : elapsed < timeMs;
@@ -326,11 +423,9 @@ public class ConditionEvaluator
 
         try
         {
-            // 首次调用时检测并缓存全队 Q 状态
             if (_qReadyCache == null)
             {
                 var capture = GetCapture();
-                // AvatarQSkillAsync 内部会修改 SrcMat，克隆一份避免影响缓存截图
                 using var clonedMat = capture.SrcMat.Clone();
                 using var clone = new ImageRegion(clonedMat, 0, 0);
                 _qReadyCache = new HashSet<int>(AutoFightSkill.AvatarQSkillAsync(clone).Result);
@@ -381,7 +476,7 @@ public class ConditionEvaluator
     }
 
     /// <summary>
-    /// 判断战斗持续时长
+    /// 判断战斗持续时长（保留旧函数，单位为毫秒）
     /// </summary>
     private bool EvalBattleTime(List<AstNode> args)
     {
@@ -405,13 +500,41 @@ public class ConditionEvaluator
         return _combatScenes.SelectAvatar(targetName) != null;
     }
 
-    private static double EvalNumber(AstNode node)
+    // ========== 数值函数（返回 double） ==========
+
+    /// <summary>
+    /// 距离开战至今的时间，单位秒
+    /// </summary>
+    private double EvalT()
     {
-        return node switch
-        {
-            NumberNode n => n.Value,
-            BoolNode b => b.Value ? 1 : 0,
-            _ => 0
-        };
+        return (DateTime.Now - _battleStartTime).TotalSeconds;
+    }
+
+    /// <summary>
+    /// 距离动作上次执行的时间，单位秒
+    /// 不传参时指代当前动作；从未执行返回 -1
+    /// </summary>
+    private double EvalSince(List<AstNode> args, int currentIndex)
+    {
+        var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
+
+        if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
+            return -1;
+
+        return (DateTime.Now - lastTime).TotalSeconds;
+    }
+
+    /// <summary>
+    /// 动作在指定时间范围内的执行次数
+    /// index 不传时指代自己；start 默认为 0（战斗开始）；end 默认为当前时间 t
+    /// </summary>
+    private double EvalCount(List<AstNode> args, int currentIndex)
+    {
+        var currentT = (DateTime.Now - _battleStartTime).TotalSeconds;
+        var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
+        var start = args.Count >= 2 ? ToNumber(Eval(args[1], currentIndex)) : 0;
+        var end = args.Count >= 3 ? ToNumber(Eval(args[2], currentIndex)) : currentT;
+
+        return _execHistory.Count(e => e.Index == targetIndex && e.Time >= start && e.Time <= end);
     }
 }
