@@ -27,12 +27,6 @@ public class QuickEnhanceArtifactMacro
         // 强化 1760x1020
         GameCaptureRegion.GameRegion1080PPosClick(1760, 1020);
         Thread.Sleep(100 + config.EnhanceWaitDelay);
-        // 详情菜单 150x150
-        GameCaptureRegion.GameRegion1080PPosClick(150, 150);
-        Thread.Sleep(100);
-        // 强化菜单 150x220
-        GameCaptureRegion.GameRegion1080PPosClick(150, 220);
-        Thread.Sleep(100);
         // 移动回快捷放入 #30
         GameCaptureRegion.GameRegion1080PPosMove(1760, 770);
     }
