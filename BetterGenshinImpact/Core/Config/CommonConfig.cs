@@ -86,4 +86,22 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _redeemCodeFeedsUpdateVersion = "20251013";
+
+    /// <summary>
+    /// 国服兑换码更新是否允许通知
+    /// </summary>
+    [ObservableProperty]
+    private bool _redeemCodeCnFeedsNotificationEnabled = true;
+
+    /// <summary>
+    /// 国际服兑换码更新是否允许通知
+    /// </summary>
+    [ObservableProperty]
+    private bool _redeemCodeGlobalFeedsNotificationEnabled;
+
+    /// <summary>
+    /// 当前看过的国际服兑换码推送版本
+    /// </summary>
+    [ObservableProperty]
+    private string _redeemCodeGlobalFeedsUpdateVersion = string.Empty;
 }
