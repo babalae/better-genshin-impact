@@ -178,13 +178,18 @@ public partial class FeedWindowViewModel : ViewModel
         }
     }
 
-    public static (List<FeedItem> CnFeeds, List<FeedItem> GlobalFeeds) SplitByServer(IEnumerable<FeedItem> items)
+    public static (List<FeedItem> CnFeeds, List<FeedItem> GlobalFeeds) SplitByServer(IEnumerable<FeedItem?> items)
     {
         var cnFeeds = new List<FeedItem>();
         var globalFeeds = new List<FeedItem>();
 
         foreach (var feed in items)
         {
+            if (feed is null)
+            {
+                continue;
+            }
+
             feed.HasTag = !string.IsNullOrWhiteSpace(feed.Tag);
 
             if (GetServerType(feed) == RedeemCodeServerType.Global)
@@ -209,11 +214,12 @@ public partial class FeedWindowViewModel : ViewModel
 
     public static string GetFeedVersion(IEnumerable<FeedItem> items)
     {
-        return string.Join("|", items
-            .OrderByDescending(item => item.Time)
-            .ThenByDescending(item => item.Valid)
-            .ThenByDescending(item => item.Title)
-            .Select(item => $"{item.Time},{item.Valid},{item.Title},{string.Join(",", item.Codes ?? [])}"));
+        return items
+            .Select(item => item.Time?.Trim())
+            .OfType<string>()
+            .Where(time => !string.IsNullOrEmpty(time))
+            .OrderByDescending(time => time, StringComparer.Ordinal)
+            .FirstOrDefault() ?? string.Empty;
     }
 }
 
