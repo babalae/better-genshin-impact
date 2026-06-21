@@ -80,6 +80,12 @@ public class BgiOnnxModel
         Register("PpOcrDetV5", @"Assets\Model\PaddleOCR\Det\V5\PP-OCRv5_mobile_det_infer\slim.onnx");
 
     /// <summary>
+    /// paddleOCR V6 检测模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrDetV6 =
+        Register("PpOcrDetV6", @"Assets\Model\PaddleOCR\Det\V6\PP-OCRv6_small_det_infer\slim.onnx");
+
+    /// <summary>
     /// paddleOCR V4 识别模型
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrRecV4 =
@@ -96,6 +102,12 @@ public class BgiOnnxModel
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrRecV5 =
         Register("PpOcrRecV5", @"Assets\Model\PaddleOCR\Rec\V5\PP-OCRv5_mobile_rec_infer\slim.onnx");
+
+    /// <summary>
+    /// paddleOCR V6 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrRecV6 =
+        Register("PpOcrRecV6", @"Assets\Model\PaddleOCR\Rec\V6\PP-OCRv6_small_rec_infer\slim.onnx");
 
     /// <summary>
     /// paddleOCR V5 拉丁文 识别模型

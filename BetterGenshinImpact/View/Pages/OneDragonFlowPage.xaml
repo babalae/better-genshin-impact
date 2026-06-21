@@ -1083,6 +1083,33 @@
                         </StackPanel>
                     </ui:CardControl>
 
+                    <ui:CardControl Margin="0,0,0,4">
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="启用奖励识别"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="每轮领取后识别奖励名称与数量，任务结束打印汇总"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                        <ui:ToggleSwitch
+                            Margin="0,0,36,0"
+                            IsChecked="{Binding Config.AutoDomainConfig.RewardRecognitionEnabled, Mode=TwoWay}" />
+                    </ui:CardControl>
+
                     <!--  自动首领讨伐  -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
                         <TextBlock FontSize="14"
@@ -1297,6 +1324,32 @@
                                                  Grid.Column="1"
                                                  Margin="0,0,36,0"
                                                  IsChecked="{Binding Config.AutoBossConfig.ReturnToStatueAfterEachRound, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="启用奖励识别"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="每轮领取后识别奖励名称与数量，任务结束打印汇总"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding Config.AutoBossConfig.RewardRecognitionEnabled, Mode=TwoWay}" />
                             </Grid>
 
                             <Grid Margin="16">

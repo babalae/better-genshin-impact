@@ -582,6 +582,32 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.CommonConfig.ScreenshotUidCoverEnabled, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="保存奖励识别截图"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="保存奖励识别的裁剪图、掩码图和检测框图到 log/RewardRecognition"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsEnabled="{Binding Config.CommonConfig.ScreenshotEnabled}"
+                                     IsChecked="{Binding Config.CommonConfig.RewardRecognitionScreenshotEnabled, Mode=TwoWay}" />
+                </Grid>
 
             </StackPanel>
         </ui:CardExpander>

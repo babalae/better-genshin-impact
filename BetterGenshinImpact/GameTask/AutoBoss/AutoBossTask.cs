@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
@@ -37,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 /// <summary>
 /// 自动首领讨伐独立任务，负责按配置前往 Boss、执行战斗策略、领取征讨之花奖励并处理重定位。
 /// </summary>
-public class AutoBossTask : ISoloTask
+public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 {
     public string Name => "自动首领讨伐";
 
@@ -45,6 +46,7 @@ public class AutoBossTask : ISoloTask
     private readonly AutoBossParam _taskParam;
     private readonly CombatScriptBag _combatScriptBag;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
+    private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
 
@@ -78,9 +80,12 @@ public class AutoBossTask : ISoloTask
     /// 启动自动首领讨伐任务，包含参数校验、分辨率校验、死亡重试和最终输入状态释放。
     /// </summary>
     /// <param name="ct">任务取消令牌。</param>
-    public async Task Start(CancellationToken ct)
+    Task ISoloTask.Start(CancellationToken ct) => Start(ct);
+
+    public async Task<Dictionary<string, int>> Start(CancellationToken ct)
     {
         _ct = ct;
+        _rewardSummary.Clear();
         Validate();
         LogScreenResolution();
 
@@ -114,6 +119,8 @@ public class AutoBossTask : ISoloTask
             Simulation.SendInput.Mouse.LeftButtonUp();
             Notify.Event("AutoBoss").Success($"{Name}结束");
         }
+
+        return new Dictionary<string, int>(_rewardSummary);
     }
 
     /// <summary>
@@ -1283,9 +1290,66 @@ public class AutoBossTask : ISoloTask
             return false;
         }
 
+        await TryRecognizeRewardResult(page);
         await CloseRewardResult();
         Notify.Event("AutoBoss").Success($"{Name}奖励领取");
         return true;
+    }
+
+    private async Task TryRecognizeRewardResult(BvPage page)
+    {
+        if (!_taskParam.RewardRecognitionEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await WaitForRewardResultReady(page))
+            {
+                _logger.LogWarning("{Name}：奖励结果页未检测到“点击空白区域继续”，已跳过本轮奖励识别", Name);
+                return;
+            }
+
+            // 使用多页识别（自动检测是否需要翻页）
+            _logger.LogInformation("{Name}：开始奖励识别", Name);
+            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage();
+
+            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
+
+            if (rewards.Count > 0)
+            {
+                _logger.LogInformation("{Name}：本轮奖励识别结果 {Rewards}", Name,
+                    string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
+            }
+            else
+            {
+                _logger.LogWarning("{Name}：本轮奖励识别结果为空", Name);
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "{Name}：奖励识别失败，已跳过本轮奖励汇总", Name);
+        }
+    }
+
+    private async Task<bool> WaitForRewardResultReady(BvPage page)
+    {
+        var closeRect = ScaleRect(850, 960, 220, 35);
+
+        for (var i = 0; i < 20; i++)
+        {
+            var closeRegion = page.Ocr(closeRect)
+                .FirstOrDefault(r => r.Text.Contains("点击空白区域继续", StringComparison.Ordinal));
+            if (closeRegion != null)
+            {
+                return true;
+            }
+
+            await Delay(300, _ct);
+        }
+
+        return false;
     }
 
     /// <summary>

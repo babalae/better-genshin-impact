@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -26,6 +27,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -54,8 +56,23 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [ObservableProperty] private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
     
     [ObservableProperty] private Brush _redeemCodeButtonForeground = Brushes.White;
-    
+
     private string? _redeemCodeUpdateNewVersion;
+
+    private CancellationTokenSource? _redeemCodeDismissCts;
+
+    [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
+
+    partial void OnIsRedeemCodeInfoBarOpenChanged(bool value)
+    {
+        if (!value)
+        {
+            // 取消自动消失计时器
+            _redeemCodeDismissCts?.Cancel();
+            _redeemCodeDismissCts?.Dispose();
+            _redeemCodeDismissCts = null;
+        }
+    }
 
     private bool _firstActivated = true;
 
@@ -235,8 +252,34 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             _redeemCodeUpdateNewVersion = null;
         }
 
+        // 关闭通知卡片
+        IsRedeemCodeInfoBarOpen = false;
+
         var feedWindow = new FeedWindow(new FeedWindowViewModel());
         feedWindow.Show();
+    }
+
+    [RelayCommand]
+    private void OnDismissRedeemCode()
+    {
+        // 仅关闭通知卡片并标记已读，不打开窗口
+        IsRedeemCodeInfoBarOpen = false;
+    }
+
+    private async Task AutoDismissRedeemCodeCardAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(20), ct);
+            if (IsRedeemCodeInfoBarOpen)
+            {
+                IsRedeemCodeInfoBarOpen = false;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 计时器被取消（用户手动关闭卡片），无需处理
+        }
     }
 
     [RelayCommand]
@@ -246,6 +289,20 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 应用上次保存的主题
         ApplyTheme(Config.CommonConfig.CurrentThemeType);
 
+        // 版本是否运行过
+        if (Config.CommonConfig.RunForVersion != Global.Version)
+        {
+            ModifyFolderSecurity();
+
+            // alpha 版本用户每次升级后默认切换到 V6 OCR 模型
+            if (Global.Version.Contains("alpha", StringComparison.OrdinalIgnoreCase)
+                && Config.OtherConfig.OcrConfig.PaddleOcrModelConfig != PaddleOcrModelConfig.V6)
+            {
+                Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = PaddleOcrModelConfig.V6;
+            }
+
+            Config.CommonConfig.RunForVersion = Global.Version;
+        }
 
         // 预热OCR
         await OcrPreheating();
@@ -276,13 +333,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Config.CommonConfig.IsFirstRun = false;
         }
 
-        // 版本是否运行过
-        if (Config.CommonConfig.RunForVersion != Global.Version)
-        {
-            ModifyFolderSecurity();
-            Config.CommonConfig.RunForVersion = Global.Version;
-        }
-
         OnceRun();
 
         // 检查更新
@@ -308,7 +358,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 清理临时目录
         TempManager.CleanUp();
     }
-
 
     private void ModifyFolderSecurity()
     {
@@ -483,6 +532,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     {
                         RedeemCodeButtonForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E9BFA"));
                         _redeemCodeUpdateNewVersion = txt;
+                        // 显示通知卡片
+                        IsRedeemCodeInfoBarOpen = true;
+                        // 取消旧计时器，启动新的自动消失计时器
+                        _redeemCodeDismissCts?.Cancel();
+                        _redeemCodeDismissCts?.Dispose();
+                        _redeemCodeDismissCts = new CancellationTokenSource();
+                        _ = AutoDismissRedeemCodeCardAsync(_redeemCodeDismissCts.Token);
                     }
                 }
             }
