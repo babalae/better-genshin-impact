@@ -395,15 +395,15 @@ public class ConditionEvaluator
     {
         if (args.Count < 1) return false;
 
-        var timeMs = EvalNumber(args[0], currentIndex);
+        var timeSec = EvalNumber(args[0], currentIndex);
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
         var targetIndex = args.Count >= 3 ? (int)EvalNumber(args[2], currentIndex) : currentIndex;
 
         if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
             return greater;
 
-        var elapsed = (DateTime.Now - lastTime).TotalMilliseconds;
-        return greater ? elapsed > timeMs : elapsed < timeMs;
+        var elapsed = (DateTime.Now - lastTime).TotalSeconds;
+        return greater ? elapsed > timeSec : elapsed < timeSec;
     }
 
     /// <summary>
@@ -495,10 +495,10 @@ public class ConditionEvaluator
         // 使用 currentIndex=0 求值，因为 battle-time 参数不涉及动作索引
         if (args.Count < 1) return false;
 
-        var timeMs = EvalNumber(args[0], 0);
+        var timeSec = EvalNumber(args[0], 0);
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
-        var elapsed = (DateTime.Now - _battleStartTime).TotalMilliseconds;
-        return greater ? elapsed > timeMs : elapsed < timeMs;
+        var elapsed = (DateTime.Now - _battleStartTime).TotalSeconds;
+        return greater ? elapsed > timeSec : elapsed < timeSec;
     }
 
     /// <summary>
