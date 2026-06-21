@@ -1,0 +1,991 @@
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.GearTaskListPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:component="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Component"
+             xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.Component"
+             d:DataContext="{d:DesignInstance Type=pages:GearTaskListPageViewModel}"
+             d:DesignHeight="850"
+             d:DesignWidth="1200"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <Style x:Key="TaskDefinitionListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+
+        <Style x:Key="TaskDefinitionListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border Background="Transparent"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TaskDefinitionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,10" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="BorderThickness" Value="1.5" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ExecutionRecordCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="7" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="BorderThickness" Value="1.5" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SectionCardStyle" TargetType="ui:Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+        </Style>
+
+        <Style x:Key="InfoCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,10" />
+        </Style>
+
+        <Style x:Key="CompactInfoCardStyle" TargetType="Border" BasedOn="{StaticResource InfoCardStyle}">
+            <Setter Property="Padding" Value="7,6" />
+        </Style>
+
+        <Style x:Key="ToneBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="MinHeight" Value="22" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusTone}" Value="Success">
+                    <Setter Property="Background" Value="#183D2D" />
+                    <Setter Property="BorderBrush" Value="#2D7E57" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusTone}" Value="Warning">
+                    <Setter Property="Background" Value="#4A3218" />
+                    <Setter Property="BorderBrush" Value="#B06A2A" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusTone}" Value="Danger">
+                    <Setter Property="Background" Value="#4B2328" />
+                    <Setter Property="BorderBrush" Value="#A44C57" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusTone}" Value="Info">
+                    <Setter Property="Background" Value="#183A4C" />
+                    <Setter Property="BorderBrush" Value="#2C7CA8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ConsistentTabControlStyle" TargetType="TabControl" BasedOn="{StaticResource {x:Type TabControl}}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid Background="{TemplateBinding Background}" ClipToBounds="True" SnapsToDevicePixels="True">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    Margin="0,0,0,8"
+                                    Padding="5"
+                                    Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                <TabPanel IsItemsHost="True" Background="Transparent" />
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <Border Margin="1"
+                                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                        CornerRadius="9">
+                                    <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      Content="{TemplateBinding SelectedContent}"
+                                                      ContentStringFormat="{TemplateBinding SelectedContentStringFormat}"
+                                                      ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </Border>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ConsistentTabItemStyle" TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Grid Background="Transparent" SnapsToDevicePixels="True">
+                            <Border x:Name="mainBorder"
+                                    Margin="0,0,6,0"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="8">
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Content="{TemplateBinding Header}"
+                                                  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                                                  ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Border>
+                            <Border x:Name="selectionIndicator"
+                                    Width="42"
+                                    Height="3"
+                                    Margin="0,0,5,5"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="1.5"
+                                    Opacity="0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <Setter TargetName="mainBorder" Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                                <Setter TargetName="mainBorder" Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+                                <Setter TargetName="mainBorder" Property="BorderThickness" Value="1" />
+                                <Setter TargetName="selectionIndicator" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="mainBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 任务定义列表项模板 -->
+        <DataTemplate x:Key="TaskDefinitionItemTemplate" DataType="{x:Type component:GearTaskDefinitionViewModel}">
+            <Border Style="{StaticResource TaskDefinitionCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border x:Name="SelectionIndicator"
+                            Grid.Column="0"
+                            Margin="0,2,8,2"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="2"
+                            Opacity="0" />
+
+                    <Border Grid.Column="1"
+                            Width="26"
+                            Height="26"
+                            Margin="0,0,10,0"
+                            VerticalAlignment="Top"
+                            Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                            CornerRadius="6">
+                        <ui:SymbolIcon HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Symbol="Folder24" />
+                    </Border>
+
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:TextBlock Grid.Column="0"
+                                          FontSize="13"
+                                          FontWeight="SemiBold"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                          Text="{Binding Name}"
+                                          TextTrimming="CharacterEllipsis" />
+
+                            <Border Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Padding="10,2"
+                                    Height="24"
+                                    Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <ui:TextBlock FontSize="10"
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                              Text="{Binding ModifiedTime, StringFormat='{}{0:MM-dd HH:mm}'}" />
+                            </Border>
+                        </Grid>
+
+                        <ui:TextBlock Grid.Row="1"
+                                      Margin="0,4,0,0"
+                                      FontSize="12"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding Description}"
+                                      TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter TargetName="SelectionIndicator" Property="Opacity" Value="0.35" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter TargetName="SelectionIndicator" Property="Opacity" Value="1" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ExecutionRecordItemTemplate" DataType="{x:Type component:GearTaskExecutionRecordItemViewModel}">
+            <Border Style="{StaticResource ExecutionRecordCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBlock Grid.Column="0"
+                                      FontSize="11"
+                                      FontWeight="SemiBold"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                      Text="{Binding StartTimeText}" />
+                        <Border Grid.Column="1" Style="{StaticResource ToneBadgeStyle}">
+                            <ui:TextBlock FontSize="10"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                          Text="{Binding StatusText}" />
+                        </Border>
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBlock Grid.Column="0"
+                                      FontSize="10"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding ProgressText}"
+                                      TextTrimming="CharacterEllipsis" />
+                        <ui:TextBlock Grid.Column="1"
+                                      FontSize="10"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding DurationText}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ExecutionNodeItemTemplate" DataType="{x:Type component:GearTaskExecutionNodeItemViewModel}">
+            <Border Style="{StaticResource ExecutionRecordCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBlock Grid.Column="0"
+                                      FontSize="11"
+                                      FontWeight="SemiBold"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                      Text="{Binding TaskName}"
+                                      TextTrimming="CharacterEllipsis" />
+                        <Border Grid.Column="1"
+                                Margin="6,0,0,0"
+                                HorizontalAlignment="Left"
+                                Style="{StaticResource ToneBadgeStyle}">
+                            <ui:TextBlock FontSize="10"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                          Text="{Binding StatusText}" />
+                        </Border>
+                        <ui:TextBlock Grid.Column="2"
+                                      HorizontalAlignment="Right"
+                                      FontSize="10"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding DurationText}" />
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="72" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBlock Grid.Column="0"
+                                      FontSize="10"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding TaskType}"
+                                      TextTrimming="CharacterEllipsis" />
+                        <ui:TextBlock Grid.Column="1"
+                                      HorizontalAlignment="Right"
+                                      FontSize="10"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding TimeRangeText}"
+                                      TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- 任务节点右键菜单 -->
+        <ContextMenu x:Key="TaskNodeContextMenu">
+            <MenuItem Header="添加 JS 脚本" Command="{Binding AddTaskNodeCommand}" CommandParameter="Javascript">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加地图追踪任务" Command="{Binding AddTaskNodeCommand}" CommandParameter="Pathing">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加键鼠脚本" Command="{Binding AddTaskNodeCommand}" CommandParameter="KeyMouse">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加 Shell" Command="{Binding AddTaskNodeCommand}" CommandParameter="Shell">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加 C# 方法" Command="{Binding AddTaskNodeCommand}" CommandParameter="CSharp">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="添加任务组" Command="{Binding AddTaskGroupCommand}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Folder24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="删除"
+                      Command="{Binding DeleteTaskNodeCommand}"
+                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Delete24" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="8" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：任务定义列表 -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <ui:TextBlock Grid.Row="0"
+                          Margin="0,0,0,8"
+                          FontSize="16"
+                          FontWeight="SemiBold"
+                          Text="任务定义列表" />
+
+            <!-- 左侧工具栏 -->
+            <StackPanel Grid.Row="1"
+                        Margin="0,0,0,8"
+                        Orientation="Horizontal">
+                <ui:Button Command="{Binding AddTaskDefinitionCommand}"
+                           Content="新建"
+                           Icon="{ui:SymbolIcon Add24}"
+                           Margin="0,0,6,0" />
+                <ui:Button Command="{Binding ExecuteSelectedTaskDefinitionCommand}"
+                           Content="执行任务组"
+                           Icon="{ui:SymbolIcon Play24}" />
+            </StackPanel>
+
+            <!-- 任务定义列表 -->
+            <ui:Border Grid.Row="2" Style="{StaticResource SectionCardStyle}">
+                <ListBox ItemsSource="{Binding TaskDefinitions}"
+                         SelectedItem="{Binding SelectedTaskDefinition}"
+                         ItemTemplate="{StaticResource TaskDefinitionItemTemplate}"
+                         Style="{StaticResource TaskDefinitionListBoxStyle}"
+                         ItemContainerStyle="{StaticResource TaskDefinitionListBoxItemStyle}"
+                         dd:DragDrop.IsDragSource="True"
+                         dd:DragDrop.IsDropTarget="True"
+                         dd:DragDrop.DropHandler="{Binding}"
+                         dd:DragDrop.UseDefaultDragAdorner="True">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="新增任务定义"
+                                      Command="{Binding AddTaskDefinitionCommand}"
+                                      Icon="{ui:SymbolIcon Add24}" />
+                            <MenuItem Header="执行选中任务组"
+                                      Command="{Binding ExecuteTaskDefinitionCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Icon="{ui:SymbolIcon Play24}" />
+                            <Separator />
+                            <MenuItem Header="编辑选中项"
+                                      Command="{Binding EditSelectedTaskDefinitionCommand}"
+                                      Icon="{ui:SymbolIcon Edit24}" />
+                            <MenuItem Header="删除选中项"
+                                      Command="{Binding DeleteSelectedTaskDefinitionCommand}"
+                                      Icon="{ui:SymbolIcon Delete24}" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="SelectionChanged">
+                            <b:InvokeCommandAction Command="{Binding SelectTaskDefinitionCommand}"
+                                                   CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                </ListBox>
+            </ui:Border>
+        </Grid>
+
+        <!-- 分隔线 -->
+        <GridSplitter Grid.Column="1"
+                      HorizontalAlignment="Stretch"
+                      Background="Transparent" />
+
+        <!-- 右侧：任务详情与执行记录 -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <ui:TextBlock Grid.Row="0"
+                          Margin="0,0,0,8"
+                          FontSize="16"
+                          FontWeight="SemiBold"
+                          Text="{Binding SelectedTaskDefinition.Name, StringFormat='任务详情 - {0}', FallbackValue='任务详情'}" />
+
+            <Grid Grid.Row="1">
+                <TabControl SelectedIndex="{Binding SelectedDetailTabIndex}"
+                            Style="{StaticResource ConsistentTabControlStyle}">
+                    <TabItem Header="任务定义" Style="{StaticResource ConsistentTabItemStyle}">
+                        <Grid Margin="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,12">
+                                <Border Style="{StaticResource InfoCardStyle}" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="最近一次执行" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding LatestExecutionStatusText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InfoCardStyle}" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="可续跑断点" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding LatestResumeNodeText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InfoCardStyle}" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="最近 30 次成功率" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding ExecutionSuccessRateText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InfoCardStyle}">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="骞冲潎鑰楁椂" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding ExecutionAverageDurationText}" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+
+                            <StackPanel Grid.Row="1"
+                                        Margin="0,0,0,12"
+                                        Orientation="Horizontal">
+                                <ui:DropDownButton Content="添加任务"
+                                                   Icon="{ui:SymbolIcon Add24}"
+                                                   Margin="0,0,10,0">
+                                    <ui:DropDownButton.Flyout>
+                                        <ContextMenu>
+                                            <MenuItem Header="JS 脚本" Command="{Binding AddTaskNodeCommand}" CommandParameter="Javascript" />
+                                            <MenuItem Header="地图追踪任务" Command="{Binding AddTaskNodeCommand}" CommandParameter="Pathing" />
+                                            <MenuItem Header="键鼠脚本" Command="{Binding AddTaskNodeCommand}" CommandParameter="KeyMouse" />
+                                            <MenuItem Header="Shell" Command="{Binding AddTaskNodeCommand}" CommandParameter="Shell" />
+                                            <MenuItem Header="C# 方法" Command="{Binding AddTaskNodeCommand}" CommandParameter="CSharp" />
+                                        </ContextMenu>
+                                </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton>
+                                <ui:Button Command="{Binding AddTaskGroupCommand}"
+                                           Content="添加组"
+                                           Icon="{ui:SymbolIcon Folder24}"
+                                           Margin="0,0,10,0" />
+                                <ui:Button Command="{Binding OpenSelectedTaskDefinitionSettingsCommand}"
+                                           Content="设置"
+                                           Icon="{ui:SymbolIcon Settings24}" />
+                            </StackPanel>
+
+                            <!-- 任务树 -->
+                            <ui:Border Grid.Row="2" Style="{StaticResource SectionCardStyle}">
+                                <Grid Margin="6">
+                                    <Grid Visibility="Hidden">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="120" />
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="140" />
+                                            <ColumnDefinition Width="100" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid x:Name="TreeColumnName" Grid.Column="0" />
+                                        <Grid x:Name="TreeColumnType" Grid.Column="1" />
+                                        <Grid x:Name="TreeColumnEnabled" Grid.Column="2" />
+                                        <Grid x:Name="TreeColumnLatest" Grid.Column="3" />
+                                        <Grid x:Name="TreeColumnActions" Grid.Column="4" />
+                                    </Grid>
+
+                                    <ui:TreeListView BorderThickness="0"
+                                                     ItemsSource="{Binding CurrentTaskTreeRoot.Children}"
+                                                     SelectedItem="{Binding SelectedTaskNode, Mode=TwoWay}"
+                                                     dd:DragDrop.IsDragSource="True"
+                                                     dd:DragDrop.IsDropTarget="True"
+                                                     dd:DragDrop.DropHandler="{x:Static local:GearTaskDragDropHandler.Instance}"
+                                                     dd:DragDrop.UseDefaultDragAdorner="True"
+                                                     dd:DragDrop.UseDefaultEffectDataTemplate="True"
+                                                     ContextMenu="{StaticResource TaskNodeContextMenu}"
+                                                     Visibility="{Binding SelectedTaskDefinition, Converter={StaticResource NullToVisibilityConverter}}">
+                                        <ui:TreeListView.ItemContainerStyle>
+                                            <Style TargetType="ui:TreeListViewItem" BasedOn="{StaticResource DefaultTreeListViewItemStyle}">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                            </Style>
+                                        </ui:TreeListView.ItemContainerStyle>
+                                        <ui:TreeListView.Columns>
+                                            <GridViewColumnCollection>
+                                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnName}" Header="任务名称">
+                                                    <ui:GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ui:TreeRowExpander Content="{Binding Name}" />
+                                                        </DataTemplate>
+                                                    </ui:GridViewColumn.CellTemplate>
+                                                </ui:GridViewColumn>
+                                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnType}" Header="类型">
+                                                    <ui:GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ui:TextBlock Text="{Binding TaskType}"
+                                                                          VerticalAlignment="Center"
+                                                                          Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                                        </DataTemplate>
+                                                    </ui:GridViewColumn.CellTemplate>
+                                                </ui:GridViewColumn>
+                                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnEnabled}" Header="启用">
+                                                    <ui:GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsEnabled}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center" />
+                                                        </DataTemplate>
+                                                    </ui:GridViewColumn.CellTemplate>
+                                                </ui:GridViewColumn>
+                                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnLatest}" Header="最近结果">
+                                                    <ui:GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ui:TextBlock Text="{Binding LatestExecutionResult}"
+                                                                          VerticalAlignment="Center"
+                                                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                          TextTrimming="CharacterEllipsis" />
+                                                        </DataTemplate>
+                                                    </ui:GridViewColumn.CellTemplate>
+                                                </ui:GridViewColumn>
+                                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnActions}" Header="鎿嶄綔">
+                                                    <ui:GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <ui:Button Command="{Binding DataContext.DeleteTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                           CommandParameter="{Binding}"
+                                                                           Icon="{ui:SymbolIcon Delete24}"
+                                                                           Appearance="Transparent"
+                                                                           Padding="4"
+                                                                           ToolTip="删除" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ui:GridViewColumn.CellTemplate>
+                                                </ui:GridViewColumn>
+                                            </GridViewColumnCollection>
+                                        </ui:TreeListView.Columns>
+                                        <ui:TreeListView.ItemTemplate>
+                                            <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+                                        </ui:TreeListView.ItemTemplate>
+                                    </ui:TreeListView>
+
+                                    <!-- 未选择任务定义时的提示 -->
+                                    <StackPanel HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding SelectedTaskDefinition, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                                        <ui:SymbolIcon Symbol="Settings24"
+                                                       FontSize="48"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        <TextBlock Text="请选择一个任务定义进行配置"
+                                                   FontSize="16"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,16,0,0" />
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Border>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="{Binding ExecutionRecordTabTitle}" Style="{StaticResource ConsistentTabItemStyle}">
+                        <Grid Margin="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0"
+                                        Margin="0,0,0,8"
+                                        Orientation="Horizontal">
+                                <ui:Button Command="{Binding ResumeSelectedExecutionRecordCommand}"
+                                           Content="继续执行"
+                                           Margin="0,0,8,0"
+                                           IsEnabled="{Binding CanResumeSelectedExecutionRecord}" />
+                                <ui:Button Command="{Binding ExecuteSelectedTaskDefinitionCommand}"
+                                           Content="从头执行"
+                                           Margin="0,0,8,0" />
+                                <ui:Button Command="{Binding StopTaskExecutionCommand}"
+                                           Content="停止" />
+                            </StackPanel>
+
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="212" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+                                    <ListBox ItemsSource="{Binding RecentExecutionRecords}"
+                                             SelectedItem="{Binding SelectedExecutionRecord}"
+                                             ItemTemplate="{StaticResource ExecutionRecordItemTemplate}"
+                                             Style="{StaticResource TaskDefinitionListBoxStyle}"
+                                             ItemContainerStyle="{StaticResource TaskDefinitionListBoxItemStyle}" />
+                                </ui:Border>
+
+                                <Grid Grid.Column="2">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <Border Grid.Row="0"
+                                            Margin="0,0,0,8"
+                                            Padding="8,7"
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Visibility="{Binding SelectedExecutionRecord, Converter={StaticResource NullToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <ui:TextBlock FontSize="10"
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              Text="状态" />
+                                                <Border Margin="0,4,0,0"
+                                                        HorizontalAlignment="Left"
+                                                        Style="{StaticResource ToneBadgeStyle}">
+                                                    <ui:TextBlock FontSize="10"
+                                                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                  Text="{Binding SelectedExecutionRecord.StatusText}" />
+                                                </Border>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                <ui:TextBlock FontSize="10"
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              Text="进度" />
+                                                <ui:TextBlock Margin="0,4,0,0"
+                                                              FontSize="12"
+                                                              FontWeight="SemiBold"
+                                                              Text="{Binding SelectedExecutionRecord.ProgressText}" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2" Margin="12,0,0,0">
+                                                <ui:TextBlock FontSize="10"
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              Text="断点" />
+                                                <ui:TextBlock Margin="0,4,0,0"
+                                                              FontSize="12"
+                                                              FontWeight="SemiBold"
+                                                              Text="{Binding SelectedExecutionRecord.ResumeNodeText}"
+                                                              TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="3" Margin="12,0,0,0">
+                                                <ui:TextBlock FontSize="10"
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              Text="耗时" />
+                                                <ui:TextBlock Margin="0,4,0,0"
+                                                              FontSize="12"
+                                                              FontWeight="SemiBold"
+                                                              Text="{Binding SelectedExecutionRecord.DurationText}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <ui:Border Grid.Row="1"
+                                               Style="{StaticResource SectionCardStyle}"
+                                               Visibility="{Binding SelectedExecutionRecord, Converter={StaticResource NullToVisibilityConverter}}">
+                                        <Grid Margin="10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+
+                                            <Grid Grid.Row="0" Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <ui:TextBlock Grid.Column="0"
+                                                              FontSize="14"
+                                                              FontWeight="SemiBold"
+                                                              Text="小任务执行情况" />
+                                                <ui:TextBlock Grid.Column="1"
+                                                              Margin="8,0,0,0"
+                                                              VerticalAlignment="Center"
+                                                              FontSize="10"
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              Text="{Binding SelectedExecutionNodes.Count, StringFormat='共 {0} 项'}" />
+                                            </Grid>
+
+                                            <ListBox Grid.Row="1"
+                                                     ItemsSource="{Binding SelectedExecutionNodes}"
+                                                     ItemTemplate="{StaticResource ExecutionNodeItemTemplate}"
+                                                     Style="{StaticResource TaskDefinitionListBoxStyle}"
+                                                     ItemContainerStyle="{StaticResource TaskDefinitionListBoxItemStyle}" />
+                                        </Grid>
+                                    </ui:Border>
+
+                                    <StackPanel Grid.RowSpan="2"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding SelectedExecutionRecord, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                                        <ui:SymbolIcon Symbol="Clock24"
+                                                       FontSize="48"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        <TextBlock Text="当前任务组还没有可查看的执行记录"
+                                                   FontSize="16"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,16,0,0" />
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="运行监控" Style="{StaticResource ConsistentTabItemStyle}">
+                        <Grid Margin="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Style="{StaticResource InfoCardStyle}" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="执行状态" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding Executor.StatusMessage}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="1" Style="{StaticResource InfoCardStyle}" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="当前任务" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding Executor.CurrentTaskName}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Style="{StaticResource InfoCardStyle}">
+                                    <StackPanel>
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="进度" />
+                                        <ui:TextBlock Margin="0,6,0,0"
+                                                      FontSize="16"
+                                                      FontWeight="SemiBold"
+                                                      Text="{Binding Executor.Progress, StringFormat='{}{0:F0}%'}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <ui:Border Grid.Row="1" Style="{StaticResource SectionCardStyle}">
+                                <Grid Margin="18">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <ui:TextBlock Grid.Row="0"
+                                                  FontSize="16"
+                                                  FontWeight="SemiBold"
+                                                  Text="当前执行状态" />
+
+                                    <ProgressBar Grid.Row="1"
+                                                 Margin="0,12,0,0"
+                                                 Height="10"
+                                                 Maximum="100"
+                                                 Minimum="0"
+                                                 Value="{Binding Executor.Progress}" />
+
+                                    <StackPanel Grid.Row="2"
+                                                Margin="0,20,0,0"
+                                                VerticalAlignment="Top">
+                                        <ui:TextBlock FontSize="13"
+                                                      Text="{Binding Executor.StatusMessage}" />
+                                        <ui:TextBlock Margin="0,8,0,0"
+                                                      FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="{Binding Executor.CurrentTaskName, StringFormat='当前节点：{0}'}" />
+                                        <ui:TextBlock Margin="0,8,0,0"
+                                                      FontSize="12"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Text="{Binding Executor.IsExecuting, StringFormat='执行中：{0}'}" />
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Border>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

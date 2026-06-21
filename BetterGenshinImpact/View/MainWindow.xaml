@@ -12,8 +12,8 @@
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                  Title="更好的原神"
-                 Width="900"
-                 Height="600"
+                 Width="1050"
+                 Height="700"
                  d:Background="#D2D2D2"
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -86,6 +86,7 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+
                 <!--<ui:NavigationViewItemSeparator />-->
 
                 <ui:NavigationViewItem Content="一条龙"
@@ -101,7 +102,20 @@
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
                     <ui:NavigationViewItem.MenuItems>
-
+                        <ui:NavigationViewItem Content="任务列表"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:GearTaskListPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="TaskListLtr24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="任务触发"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:GearTriggerPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Play24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                         <!--<ui:NavigationViewItemSeparator />-->
                         <!--  ConvertRange20  -->
                         <ui:NavigationViewItem Content="调度器"
@@ -127,12 +141,27 @@
                                 <ui:SymbolIcon Symbol="Map24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="采集与锄地"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:GatheringAndFarmingPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Map24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                         <!--  Script16  -->
                         <ui:NavigationViewItem Content="录制回放"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:KeyMouseRecordPage}">
                             <ui:NavigationViewItem.Icon>
                                 <ui:SymbolIcon Symbol="Record24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        
+                        <ui:NavigationViewItem Content="调度器2"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:SchedulerPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Script16" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                     </ui:NavigationViewItem.MenuItems>

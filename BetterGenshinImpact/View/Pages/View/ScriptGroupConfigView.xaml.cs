@@ -1,5 +1,4 @@
-﻿using System.Windows.Controls;
-using BetterGenshinImpact.Core.Script.Group;
+using System.Windows.Controls;
 using BetterGenshinImpact.ViewModel.Pages.View;
 
 namespace BetterGenshinImpact.View.Pages.View
@@ -13,9 +12,8 @@ namespace BetterGenshinImpact.View.Pages.View
 
         public ScriptGroupConfigView(ScriptGroupConfigViewModel viewModel)
         {
-            DataContext  = ViewModel = viewModel;
+            DataContext = ViewModel = viewModel;
             InitializeComponent();
-            
         }
     }
 }
