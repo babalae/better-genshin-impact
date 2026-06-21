@@ -525,14 +525,14 @@ public class ConditionEvaluator
 
     /// <summary>
     /// 距离动作上次执行的时间，单位秒
-    /// 不传参时指代当前动作；从未执行返回 -1
+    /// 不传参时指代当前动作；从未执行返回正无穷
     /// </summary>
     private double EvalSince(List<AstNode> args, int currentIndex)
     {
         var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
 
         if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
-            return -1;
+            return double.PositiveInfinity;
 
         return (DateTime.Now - lastTime).TotalSeconds;
     }
