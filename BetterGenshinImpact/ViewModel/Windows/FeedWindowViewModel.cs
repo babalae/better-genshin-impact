@@ -8,10 +8,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Service.Interface;
 using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
 
@@ -19,15 +21,23 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 
 public partial class FeedWindowViewModel : ViewModel
 {
-    [ObservableProperty] private ObservableCollection<FeedItem> _feedItems = new();
+    public const string CodesJsonUrl = "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/codes.json";
+    private const string GlobalServerTitlePrefix = "[国际服]";
+
+    [ObservableProperty] private ObservableCollection<FeedItem> _cnFeedItems = new();
+    [ObservableProperty] private ObservableCollection<FeedItem> _globalFeedItems = new();
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isDisplayBtnGetLiveCodes;
+    [ObservableProperty] private bool _isCnServerSelected = true;
+    [ObservableProperty] private bool _isGlobalServerSelected;
 
     private readonly HttpClient _httpClient = HttpClientFactory.GetCommonSendClient();
-    private const string CodesJsonUrl = "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/codes.json";
+    public CommonConfig CommonConfig { get; }
 
     public FeedWindowViewModel()
     {
+        var configService = App.GetService<IConfigService>();
+        CommonConfig = configService?.Get().CommonConfig ?? new CommonConfig();
         IsDisplayBtnGetLiveCodes = GamePreviewLiveDateCalculator.IsWithinPreviewRange(DateTime.Now);
     }
 
@@ -59,17 +69,17 @@ public partial class FeedWindowViewModel : ViewModel
                 Codes = codeList.Select(c => c.Code).ToList()
             };
 
-            // 插入到列表顶部，方便查看
-            if (FeedItems.Count > 0 && FeedItems[0].Title == item.Title)
+            // 插入到国服列表顶部，方便查看
+            if (CnFeedItems.Count > 0 && CnFeedItems[0].Title == item.Title)
             {
                 // 如果已经存在相同标题的项，则更新内容和时间
-                FeedItems[0].Content = item.Content;
-                FeedItems[0].Time = item.Time;
-                FeedItems[0].Codes = item.Codes;
+                CnFeedItems[0].Content = item.Content;
+                CnFeedItems[0].Time = item.Time;
+                CnFeedItems[0].Codes = item.Codes;
             }
             else
             {
-                FeedItems.Insert(0, item);
+                CnFeedItems.Insert(0, item);
             }
 
 
@@ -89,6 +99,20 @@ public partial class FeedWindowViewModel : ViewModel
     private async Task Refresh()
     {
         await LoadRemoteDataAsync();
+    }
+
+    [RelayCommand]
+    private void SelectCnServer()
+    {
+        IsCnServerSelected = true;
+        IsGlobalServerSelected = false;
+    }
+
+    [RelayCommand]
+    private void SelectGlobalServer()
+    {
+        IsCnServerSelected = false;
+        IsGlobalServerSelected = true;
     }
 
     [RelayCommand]
@@ -130,13 +154,18 @@ public partial class FeedWindowViewModel : ViewModel
             var json = await response.Content.ReadAsStringAsync();
 
             var items = JsonConvert.DeserializeObject<List<FeedItem>>(json) ?? [];
+            var (cnFeeds, globalFeeds) = SplitByServer(items);
 
-            FeedItems.Clear();
-            foreach (var feed in items)
+            CnFeedItems.Clear();
+            foreach (var feed in cnFeeds)
             {
-                // 若存在标签文本，设置 HasTag
-                feed.HasTag = !string.IsNullOrWhiteSpace(feed.Tag);
-                FeedItems.Add(feed);
+                CnFeedItems.Add(feed);
+            }
+
+            GlobalFeedItems.Clear();
+            foreach (var feed in globalFeeds)
+            {
+                GlobalFeedItems.Add(feed);
             }
         }
         catch (Exception ex)
@@ -148,6 +177,56 @@ public partial class FeedWindowViewModel : ViewModel
             IsLoading = false;
         }
     }
+
+    public static (List<FeedItem> CnFeeds, List<FeedItem> GlobalFeeds) SplitByServer(IEnumerable<FeedItem?> items)
+    {
+        var cnFeeds = new List<FeedItem>();
+        var globalFeeds = new List<FeedItem>();
+
+        foreach (var feed in items)
+        {
+            if (feed is null)
+            {
+                continue;
+            }
+
+            feed.HasTag = !string.IsNullOrWhiteSpace(feed.Tag);
+
+            if (GetServerType(feed) == RedeemCodeServerType.Global)
+            {
+                globalFeeds.Add(feed);
+            }
+            else
+            {
+                cnFeeds.Add(feed);
+            }
+        }
+
+        return (cnFeeds, globalFeeds);
+    }
+
+    public static RedeemCodeServerType GetServerType(FeedItem feed)
+    {
+        return feed.Title?.StartsWith(GlobalServerTitlePrefix, StringComparison.OrdinalIgnoreCase) == true
+            ? RedeemCodeServerType.Global
+            : RedeemCodeServerType.Cn;
+    }
+
+    public static string GetFeedVersion(IEnumerable<FeedItem> items)
+    {
+        return items
+            .Select(item => item.Time?.Trim())
+            .OfType<string>()
+            .Where(time => !string.IsNullOrEmpty(time))
+            .OrderByDescending(time => time, StringComparer.Ordinal)
+            .FirstOrDefault() ?? string.Empty;
+    }
+}
+
+public enum RedeemCodeServerType
+{
+    Cn,
+    Global
 }
 
 public partial class FeedItem : ObservableObject

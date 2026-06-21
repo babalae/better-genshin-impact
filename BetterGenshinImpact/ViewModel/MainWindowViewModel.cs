@@ -33,6 +33,7 @@ using System.Windows;
 using System.Windows.Media;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.ViewModel.Windows;
+using Newtonsoft.Json;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -57,9 +58,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     
     [ObservableProperty] private Brush _redeemCodeButtonForeground = Brushes.White;
 
-    private string? _redeemCodeUpdateNewVersion;
+    private string? _redeemCodeCnUpdateNewVersion;
+
+    private string? _redeemCodeGlobalUpdateNewVersion;
 
     private CancellationTokenSource? _redeemCodeDismissCts;
+
+    private bool HasPendingRedeemCodeUpdate => _redeemCodeCnUpdateNewVersion != null || _redeemCodeGlobalUpdateNewVersion != null;
 
     [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
 
@@ -225,7 +230,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
 
         // 根据当前主题更新兑换码按钮的默认前景色（若无更新高亮）
-        if (_redeemCodeUpdateNewVersion == null)
+        if (!HasPendingRedeemCodeUpdate)
         {
             UpdateRedeemCodeButtonDefaultForeground();
         }
@@ -244,12 +249,22 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private void OnOpenFeed()
     {
-        if (_redeemCodeUpdateNewVersion != null)
+        if (HasPendingRedeemCodeUpdate)
         {
-            Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
+            if (_redeemCodeCnUpdateNewVersion != null)
+            {
+                Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeCnUpdateNewVersion;
+                _redeemCodeCnUpdateNewVersion = null;
+            }
+
+            if (_redeemCodeGlobalUpdateNewVersion != null)
+            {
+                Config.CommonConfig.RedeemCodeGlobalFeedsUpdateVersion = _redeemCodeGlobalUpdateNewVersion;
+                _redeemCodeGlobalUpdateNewVersion = null;
+            }
+
             // 重置为主题默认前景色，避免浅色主题下显示为白色
             UpdateRedeemCodeButtonDefaultForeground();
-            _redeemCodeUpdateNewVersion = null;
         }
 
         // 关闭通知卡片
@@ -517,30 +532,42 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     {
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/update_time.txt");
+            var request = new HttpRequestMessage(HttpMethod.Get, FeedWindowViewModel.CodesJsonUrl);
             var response = await HttpClientFactory.GetCommonSendClient().SendAsync(request);
             response.EnsureSuccessStatusCode();
-            var txt = await response.Content.ReadAsStringAsync();
+            var json = await response.Content.ReadAsStringAsync();
+            var items = JsonConvert.DeserializeObject<List<FeedItem>>(json) ?? [];
+            var (cnFeeds, globalFeeds) = FeedWindowViewModel.SplitByServer(items);
 
-
-            if (!string.IsNullOrEmpty(txt))
+            var hasUpdate = false;
+            var cnVersion = FeedWindowViewModel.GetFeedVersion(cnFeeds);
+            if (Config.CommonConfig.RedeemCodeCnFeedsNotificationEnabled
+                && !string.IsNullOrEmpty(cnVersion)
+                && cnVersion != Config.CommonConfig.RedeemCodeFeedsUpdateVersion)
             {
-                if (long.TryParse(txt, out long v2) 
-                    && long.TryParse(Config.CommonConfig.RedeemCodeFeedsUpdateVersion, out long v1))
-                {
-                    if (v2 > v1)
-                    {
-                        RedeemCodeButtonForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E9BFA"));
-                        _redeemCodeUpdateNewVersion = txt;
-                        // 显示通知卡片
-                        IsRedeemCodeInfoBarOpen = true;
-                        // 取消旧计时器，启动新的自动消失计时器
-                        _redeemCodeDismissCts?.Cancel();
-                        _redeemCodeDismissCts?.Dispose();
-                        _redeemCodeDismissCts = new CancellationTokenSource();
-                        _ = AutoDismissRedeemCodeCardAsync(_redeemCodeDismissCts.Token);
-                    }
-                }
+                _redeemCodeCnUpdateNewVersion = cnVersion;
+                hasUpdate = true;
+            }
+
+            var globalVersion = FeedWindowViewModel.GetFeedVersion(globalFeeds);
+            if (Config.CommonConfig.RedeemCodeGlobalFeedsNotificationEnabled
+                && !string.IsNullOrEmpty(globalVersion)
+                && globalVersion != Config.CommonConfig.RedeemCodeGlobalFeedsUpdateVersion)
+            {
+                _redeemCodeGlobalUpdateNewVersion = globalVersion;
+                hasUpdate = true;
+            }
+
+            if (hasUpdate)
+            {
+                RedeemCodeButtonForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E9BFA"));
+                // 显示通知卡片
+                IsRedeemCodeInfoBarOpen = true;
+                // 取消旧计时器，启动新的自动消失计时器
+                _redeemCodeDismissCts?.Cancel();
+                _redeemCodeDismissCts?.Dispose();
+                _redeemCodeDismissCts = new CancellationTokenSource();
+                _ = AutoDismissRedeemCodeCardAsync(_redeemCodeDismissCts.Token);
             }
             
         }
