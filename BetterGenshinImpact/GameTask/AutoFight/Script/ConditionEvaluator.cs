@@ -26,6 +26,7 @@ public class ConditionEvaluator
     private ImageRegion? _cachedCapture;
     private string? _currentCharacterName;
     private HashSet<int>? _qReadyCache;
+    private bool? _lowHpCache;
 
     public ConditionEvaluator(CombatScenes combatScenes, Func<ImageRegion> captureFunc)
     {
@@ -42,6 +43,7 @@ public class ConditionEvaluator
     {
         _cachedCapture = capture;
         _qReadyCache = null;
+        _lowHpCache = null;
     }
 
     /// <summary>
@@ -128,7 +130,7 @@ public class ConditionEvaluator
             if (char.IsLetter(c) || c == '-')
             {
                 var start = i;
-                while (i < expr.Length && (char.IsLetterOrDigit(expr[i]) || expr[i] == '-')) i++;
+                while (i < expr.Length && (char.IsLetterOrDigit(expr[i]) || (expr[i] == '-' && i + 1 < expr.Length && char.IsLetter(expr[i + 1])))) i++;
                 var word = expr[start..i];
                 tokens.Add(word is "true" or "false"
                     ? new Token(TokenType.Bool, word)
@@ -314,12 +316,14 @@ public class ConditionEvaluator
     private object EvalBinary(BinaryOpNode node, int currentIndex)
     {
         var left = Eval(node.Left, currentIndex);
-        var right = Eval(node.Right, currentIndex);
 
+        // 短路求值
+        if (node.Op == "&&") return ToBool(left) && ToBool(Eval(node.Right, currentIndex));
+        if (node.Op == "||") return ToBool(left) || ToBool(Eval(node.Right, currentIndex));
+
+        var right = Eval(node.Right, currentIndex);
         return node.Op switch
         {
-            "&&" => ToBool(left) && ToBool(right),
-            "||" => ToBool(left) || ToBool(right),
             ">" => ToNumber(left) > ToNumber(right),
             "<" => ToNumber(left) < ToNumber(right),
             "=" => Math.Abs(ToNumber(left) - ToNumber(right)) < 0.0001, // 浮点数相等比较
@@ -380,14 +384,9 @@ public class ConditionEvaluator
         };
     }
 
-    private static double EvalNumber(AstNode node)
+    private double EvalNumber(AstNode node, int currentIndex)
     {
-        return node switch
-        {
-            NumberNode n => n.Value,
-            BoolNode b => b.Value ? 1 : 0,
-            _ => 0
-        };
+        return ToNumber(Eval(node, currentIndex));
     }
 
     // ========== 布尔函数（返回 bool） ==========
@@ -396,9 +395,9 @@ public class ConditionEvaluator
     {
         if (args.Count < 1) return false;
 
-        var timeMs = EvalNumber(args[0]);
+        var timeMs = EvalNumber(args[0], currentIndex);
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
-        var targetIndex = args.Count >= 3 ? (int)EvalNumber(args[2]) : currentIndex;
+        var targetIndex = args.Count >= 3 ? (int)EvalNumber(args[2], currentIndex) : currentIndex;
 
         if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
             return greater;
@@ -426,9 +425,17 @@ public class ConditionEvaluator
             if (_qReadyCache == null)
             {
                 var capture = GetCapture();
-                using var clonedMat = capture.SrcMat.Clone();
-                using var clone = new ImageRegion(clonedMat, 0, 0);
-                _qReadyCache = new HashSet<int>(AutoFightSkill.AvatarQSkillAsync(clone).Result);
+                var ownCapture = _cachedCapture == null;
+                try
+                {
+                    using var clonedMat = capture.SrcMat.Clone();
+                    using var clone = new ImageRegion(clonedMat, 0, 0);
+                    _qReadyCache = new HashSet<int>(AutoFightSkill.AvatarQSkillAsync(clone).Result);
+                }
+                finally
+                {
+                    if (ownCapture) capture.Dispose();
+                }
             }
 
             foreach (var avatar in _combatScenes.GetAvatars())
@@ -451,17 +458,21 @@ public class ConditionEvaluator
     }
 
     /// <summary>
-    /// 判断当前角色是否低血量（使用缓存的截图）
+    /// 判断当前角色是否低血量（使用缓存的截图，每轮循环只检测一次）
     /// </summary>
     private bool EvalLowHp()
     {
+        if (_lowHpCache.HasValue)
+            return _lowHpCache.Value;
+
         try
         {
             var ra = GetCapture();
             var ownRa = _cachedCapture == null;
             try
             {
-                return Bv.CurrentAvatarIsLowHp(ra);
+                _lowHpCache = Bv.CurrentAvatarIsLowHp(ra);
+                return _lowHpCache.Value;
             }
             finally
             {
@@ -471,6 +482,7 @@ public class ConditionEvaluator
         catch (Exception e)
         {
             Logger.LogWarning("[低血检测] 异常：{Msg}", e.Message);
+            _lowHpCache = false;
             return false;
         }
     }
@@ -480,9 +492,10 @@ public class ConditionEvaluator
     /// </summary>
     private bool EvalBattleTime(List<AstNode> args)
     {
+        // 使用 currentIndex=0 求值，因为 battle-time 参数不涉及动作索引
         if (args.Count < 1) return false;
 
-        var timeMs = EvalNumber(args[0]);
+        var timeMs = EvalNumber(args[0], 0);
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
         var elapsed = (DateTime.Now - _battleStartTime).TotalMilliseconds;
         return greater ? elapsed > timeMs : elapsed < timeMs;
