@@ -355,6 +355,18 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    public void OnGoToRewardRecognitionFolder()
+    {
+        var path = Global.Absolute(@"log\RewardRecognition\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
     public void OnGoToLogFolder()
     {
         var path = Global.Absolute(@"log");

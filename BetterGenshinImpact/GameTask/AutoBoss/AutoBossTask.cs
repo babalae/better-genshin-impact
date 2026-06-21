@@ -1121,29 +1121,29 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
 
         var navigationStopwatch = Stopwatch.StartNew();
-        var navigationTimeout = TimeSpan.FromSeconds(15);
+        var navigationTimeout = TimeSpan.FromSeconds(20);
         var adjustCameraTask = AdjustRewardCameraTask(page, navigationCts);
         var moveToRewardTask = MoveToRewardTask(page, navigationCts);
+        var monitorRewardPromptTask = MonitorRewardPromptTask(page, navigationCts);
 
         try
         {
-            while (!navigationCts.IsCancellationRequested)
+            while (true)
             {
-                navigationCts.Token.ThrowIfCancellationRequested();
+                _ct.ThrowIfCancellationRequested();
                 if (navigationStopwatch.Elapsed >= navigationTimeout)
                 {
-                    throw new TimeoutException("超时未找到征讨之花交互选项");
+                    throw new TimeoutException("超时未找到征讨之花领奖界面");
                 }
 
-                if (HasRewardPrompt(page))
+                var completedTask = await Task.WhenAny(Task.Delay(500, _ct),adjustCameraTask,moveToRewardTask,monitorRewardPromptTask);
+
+                if (completedTask == monitorRewardPromptTask)
                 {
-                    _logger.LogInformation("{Name}：已到达征讨之花", Name);
-                    navigationCts.Cancel();
+                    await monitorRewardPromptTask;
+                    _logger.LogInformation("{Name}：已进入征讨之花领奖界面", Name);
                     return;
                 }
-
-                var completedTask = await Task.WhenAny(Task.Delay(500, navigationCts.Token), adjustCameraTask, moveToRewardTask);
-                navigationCts.Token.ThrowIfCancellationRequested();
 
                 if (completedTask == adjustCameraTask || completedTask == moveToRewardTask)
                 {
@@ -1158,11 +1158,11 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             navigationCts.Cancel();
             try
             {
-                await Task.WhenAll(adjustCameraTask, moveToRewardTask);
+                await Task.WhenAll(adjustCameraTask, moveToRewardTask, monitorRewardPromptTask);
             }
             catch
             {
-                // The main loop observes task failures; shutdown also cancels both background tasks.
+                // The main loop observes task failures; shutdown also cancels background tasks.
             }
 
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
@@ -1171,10 +1171,45 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
     }
 
-    private bool HasRewardPrompt(BvPage page)
+    private bool HasRewardInteractionPrompt(BvPage page)
     {
         var rewardRect = ScaleRect(1210, 300, 200, 400);
-        return page.Ocr(rewardRect).Any(region => region.Text.Contains("接触征讨之花"));
+        return page.Ocr(rewardRect).Any(region => region.Text.Contains("接触征讨之花", StringComparison.Ordinal));
+    }
+
+    private bool HasRewardPanelPrompt(BvPage page)
+    {
+        var rewardPanelRect = ScaleRect(850, 740, 250, 35);
+        return page.Ocr(rewardPanelRect).Any(region =>
+            region.Text.Contains("使用原粹树脂", StringComparison.Ordinal)
+            || region.Text.Contains("补充原粹树脂", StringComparison.Ordinal));
+    }
+
+    private async Task MonitorRewardPromptTask(BvPage page, CancellationTokenSource navigationCts)
+    {
+        var ct = navigationCts.Token;
+        var lastInteractAt = DateTime.MinValue;
+
+        while (!ct.IsCancellationRequested)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (HasRewardPanelPrompt(page))
+            {
+                return;
+            }
+
+            if (HasRewardInteractionPrompt(page))
+            {
+                if (DateTime.UtcNow - lastInteractAt >= TimeSpan.FromMilliseconds(300))
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+                    lastInteractAt = DateTime.UtcNow;
+                }
+            }
+
+            await Delay(300, ct);
+        }
     }
 
     private async Task AdjustRewardCameraTask(BvPage page, CancellationTokenSource navigationCts)
@@ -1281,8 +1316,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private async Task<bool> TakeReward()
     {
         var page = new BvPage(_ct);
-        var rewardRect = ScaleRect(1210, 515, 200, 50);
-        await InteractWithRewardFlower(page, rewardRect);
 
         if (!await TryUseOriginalResinOnRewardPrompt(page))
         {
@@ -1350,20 +1383,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// 等待“接触征讨之花”出现后，持续按F直到从屏幕上消失。
-    /// </summary>
-    /// <param name="page">当前视觉定位页面。</param>
-    /// <param name="rewardRect">“接触征讨之花”的 OCR 识别区域。</param>
-    private async Task InteractWithRewardFlower(BvPage page, Rect rewardRect)
-    {
-        await page.Locator("接触征讨之花", rewardRect).WaitFor(5000);
-        await page.Locator("接触征讨之花", rewardRect)
-            .WithRetryAction(_ => Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract))
-            .WaitForDisappear(5000);
-        await Delay(800, _ct);
     }
 
     /// <summary>
