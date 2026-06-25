@@ -84,6 +84,7 @@ public sealed class MapTileViewerControl : FrameworkElement
     private readonly Pen _recordRoutePreviewPen = new(new SolidColorBrush(Color.FromArgb(210, 120, 210, 226)), 2.4);
     private readonly Pen _targetPen = new(new SolidColorBrush(Color.FromRgb(255, 99, 99)), 2);
     private readonly Pen _teleportOutlinePen = new(new SolidColorBrush(Color.FromRgb(230, 245, 255)), 1.4);
+    private readonly Pen _orientationArrowPen = new(new SolidColorBrush(Color.FromRgb(255, 238, 150)), 2.4);
     private readonly Pen _selectedRecorderOuterPen = new(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 2);
     private readonly Pen _selectedRecorderInnerPen = new(new SolidColorBrush(Color.FromRgb(35, 200, 210)), 3);
     private readonly Pen _selectedRecorderEdgeOuterPen = new(new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)), 6);
@@ -93,6 +94,12 @@ public sealed class MapTileViewerControl : FrameworkElement
     private readonly Brush _teleportBrush = new SolidColorBrush(Color.FromRgb(77, 174, 255));
     private readonly Brush _goddessBrush = new SolidColorBrush(Color.FromRgb(84, 238, 225));
     private readonly Brush _domainBrush = new SolidColorBrush(Color.FromRgb(179, 136, 255));
+    private readonly Brush _domainBlessBrush = new SolidColorBrush(Color.FromRgb(112, 216, 142));
+    private readonly Brush _domainForgeryBrush = new SolidColorBrush(Color.FromRgb(255, 174, 76));
+    private readonly Brush _domainMasteryBrush = new SolidColorBrush(Color.FromRgb(119, 156, 255));
+    private readonly Brush _domainTrounceBrush = new SolidColorBrush(Color.FromRgb(255, 100, 110));
+    private readonly Brush _domainOneTimeBrush = new SolidColorBrush(Color.FromRgb(190, 150, 255));
+    private readonly Brush _specialTeleportBrush = new SolidColorBrush(Color.FromRgb(255, 216, 103));
     private readonly Brush _labelBrush = new SolidColorBrush(Color.FromArgb(210, 32, 32, 32));
     private readonly Brush _selectedRecorderHaloBrush = new SolidColorBrush(Color.FromArgb(86, 35, 200, 210));
     private readonly Brush _selectedRecorderFillBrush = new SolidColorBrush(Color.FromRgb(35, 200, 210));
@@ -272,6 +279,10 @@ public sealed class MapTileViewerControl : FrameworkElement
             {
                 CenterOn(_selectedRecorderPoint.Value, useFollowZoom: true);
             }
+            else
+            {
+                EnsurePointsVisible(_selectedRecorderPoints);
+            }
 
             InvalidateVisual();
             return;
@@ -289,6 +300,10 @@ public sealed class MapTileViewerControl : FrameworkElement
             if (IsCompactFollowView)
             {
                 CenterOn(GetPointCenter(_selectedRecorderPoints), useFollowZoom: true);
+            }
+            else
+            {
+                EnsurePointsVisible(_selectedRecorderPoints);
             }
 
             InvalidateVisual();
@@ -1091,14 +1106,9 @@ public sealed class MapTileViewerControl : FrameworkElement
             return;
         }
 
-        for (var i = 0; i < _currentPathPoints.Count - 1; i++)
+        foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(_currentPathPoints))
         {
-            if (IsTeleportWaypoint(_currentPathPoints[i + 1].Type))
-            {
-                continue;
-            }
-
-            dc.DrawLine(_pathPen, MapToScreen(_currentPathPoints[i].Point), MapToScreen(_currentPathPoints[i + 1].Point));
+            dc.DrawLine(_pathPen, MapToScreen(_currentPathPoints[startIndex].Point), MapToScreen(_currentPathPoints[endIndex].Point));
         }
     }
 
@@ -1112,6 +1122,11 @@ public sealed class MapTileViewerControl : FrameworkElement
         var viewport = new WpfRect(-24, -24, ActualWidth + 48, ActualHeight + 48);
         foreach (var teleport in _teleportPoints)
         {
+            if (!ShouldShowTeleportAtZoom(teleport.Type))
+            {
+                continue;
+            }
+
             var point = MapToScreen(teleport.DisplayPoint);
             if (!viewport.Contains(point))
             {
@@ -1121,7 +1136,7 @@ public sealed class MapTileViewerControl : FrameworkElement
             DrawTeleportPoint(dc, teleport, point);
         }
 
-        if (_hoverTeleportPoint is { } hover)
+        if (_hoverTeleportPoint is { } hover && ShouldShowTeleportAtZoom(hover.Type))
         {
             var point = MapToScreen(hover.DisplayPoint);
             if (viewport.Contains(point))
@@ -1142,30 +1157,81 @@ public sealed class MapTileViewerControl : FrameworkElement
         var brush = GetTeleportBrush(teleport.Type);
         if (IsGoddess(teleport.Type))
         {
-            var geometry = new StreamGeometry();
-            using (var context = geometry.Open())
-            {
-                context.BeginFigure(new WpfPoint(point.X, point.Y - 8), true, true);
-                context.LineTo(new WpfPoint(point.X + 8, point.Y), true, false);
-                context.LineTo(new WpfPoint(point.X, point.Y + 8), true, false);
-                context.LineTo(new WpfPoint(point.X - 8, point.Y), true, false);
-            }
-
-            geometry.Freeze();
-            dc.DrawGeometry(brush, _teleportOutlinePen, geometry);
+            DrawPolygon(dc, point, 9, 8, -Math.PI / 2, brush, _teleportOutlinePen);
             dc.DrawEllipse(Brushes.White, null, point, 2, 2);
+            return;
+        }
+
+        if (IsSpecialTeleport(teleport.Type))
+        {
+            DrawPolygon(dc, point, 7, 6, Math.PI / 6, brush, _teleportOutlinePen);
+            dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3, point.Y), new WpfPoint(point.X + 3, point.Y));
             return;
         }
 
         if (IsDomain(teleport.Type))
         {
-            dc.DrawEllipse(brush, _teleportOutlinePen, point, 6.5, 6.5);
-            dc.DrawEllipse(null, new Pen(Brushes.White, 1), point, 3.5, 3.5);
+            if (IsTrounceDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7.5, 8, Math.PI / 8, brush, _teleportOutlinePen);
+                dc.DrawEllipse(Brushes.White, null, point, 2, 2);
+            }
+            else if (IsOneTimeDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7.5, 3, -Math.PI / 2, brush, _teleportOutlinePen);
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 2.5, point.Y + 2), new WpfPoint(point.X + 2.5, point.Y + 2));
+            }
+            else if (IsForgeryDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7, 6, Math.PI / 6, brush, _teleportOutlinePen);
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3.2, point.Y), new WpfPoint(point.X + 3.2, point.Y));
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X, point.Y - 3.2), new WpfPoint(point.X, point.Y + 3.2));
+            }
+            else if (IsMasteryDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7, 4, Math.PI / 4, brush, _teleportOutlinePen);
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3, point.Y - 1.5), new WpfPoint(point.X + 3, point.Y - 1.5));
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3, point.Y + 1.5), new WpfPoint(point.X + 3, point.Y + 1.5));
+            }
+            else
+            {
+                dc.DrawEllipse(brush, _teleportOutlinePen, point, 6.5, 6.5);
+                dc.DrawEllipse(null, new Pen(Brushes.White, 1), point, 3.5, 3.5);
+            }
+
             return;
         }
 
-        dc.DrawEllipse(brush, _teleportOutlinePen, point, 5.5, 5.5);
+        DrawPolygon(dc, point, 6, 4, Math.PI / 4, brush, _teleportOutlinePen);
         dc.DrawEllipse(Brushes.White, null, point, 2.2, 2.2);
+    }
+
+    private static void DrawPolygon(DrawingContext dc, WpfPoint center, double radius, int sides, double rotation, Brush brush, Pen pen)
+    {
+        if (sides < 3)
+        {
+            return;
+        }
+
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
+        {
+            var first = new WpfPoint(
+                center.X + Math.Cos(rotation) * radius,
+                center.Y + Math.Sin(rotation) * radius);
+            context.BeginFigure(first, true, true);
+
+            for (var i = 1; i < sides; i++)
+            {
+                var angle = rotation + Math.PI * 2 * i / sides;
+                context.LineTo(new WpfPoint(
+                    center.X + Math.Cos(angle) * radius,
+                    center.Y + Math.Sin(angle) * radius), true, false);
+            }
+        }
+
+        geometry.Freeze();
+        dc.DrawGeometry(brush, pen, geometry);
     }
 
     private void DrawRecordedPath(DrawingContext dc)
@@ -1179,21 +1245,24 @@ public sealed class MapTileViewerControl : FrameworkElement
 
         if (_recordedPoints.Count >= 2)
         {
-            for (var i = 0; i < _recordedPoints.Count - 1; i++)
+            foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(_recordedPoints))
             {
-                if (IsTeleportWaypoint(_recordedPoints[i + 1].Type))
-                {
-                    continue;
-                }
-
-                dc.DrawLine(_recordPathPen, MapToScreen(_recordedPoints[i].Point), MapToScreen(_recordedPoints[i + 1].Point));
+                dc.DrawLine(_recordPathPen, MapToScreen(_recordedPoints[startIndex].Point), MapToScreen(_recordedPoints[endIndex].Point));
             }
         }
 
         for (var i = 0; i < _recordedPoints.Count; i++)
         {
             var point = MapToScreen(_recordedPoints[i].Point);
-            dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 178, 72)), new Pen(Brushes.White, 1), point, 6, 6);
+            if (IsOrientationWaypoint(_recordedPoints[i].Type))
+            {
+                DrawOrientationArrow(dc, _recordedPoints, i);
+            }
+            else
+            {
+                dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 178, 72)), new Pen(Brushes.White, 1), point, 6, 6);
+            }
+
             var indexText = CreateText((i + 1).ToString());
             dc.DrawText(indexText, new WpfPoint(point.X + 8, point.Y - 14));
         }
@@ -1210,22 +1279,85 @@ public sealed class MapTileViewerControl : FrameworkElement
         {
             if (route.Count >= 2)
             {
-                for (var i = 0; i < route.Count - 1; i++)
+                foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(route))
                 {
-                    if (IsTeleportWaypoint(route[i + 1].Type))
-                    {
-                        continue;
-                    }
-
-                    dc.DrawLine(_recordRoutePreviewPen, MapToScreen(route[i].Point), MapToScreen(route[i + 1].Point));
+                    dc.DrawLine(_recordRoutePreviewPen, MapToScreen(route[startIndex].Point), MapToScreen(route[endIndex].Point));
                 }
             }
 
-            foreach (var point in route)
+            for (var i = 0; i < route.Count; i++)
             {
-                dc.DrawEllipse(_recordRoutePreviewBrush, null, MapToScreen(point.Point), 4.5, 4.5);
+                var point = route[i];
+                if (IsOrientationWaypoint(point.Type))
+                {
+                    DrawOrientationArrow(dc, route, i, preview: true);
+                }
+                else
+                {
+                    dc.DrawEllipse(_recordRoutePreviewBrush, null, MapToScreen(point.Point), 4.5, 4.5);
+                }
             }
         }
+    }
+
+    private void DrawOrientationArrow(DrawingContext dc, IReadOnlyList<RecordedMapPoint> points, int index, bool preview = false)
+    {
+        if (index < 0 || index >= points.Count)
+        {
+            return;
+        }
+
+        var previous = FindPreviousNonOrientationPoint(points, index);
+        var end = MapToScreen(points[index].Point);
+        var headLength = preview ? 5.0 : 7.0;
+        var pen = preview ? _recordRoutePreviewPen : _orientationArrowPen;
+        var brush = preview ? _recordRoutePreviewBrush : _orientationArrowPen.Brush;
+
+        WpfPoint start;
+        double angle;
+        if (previous == null)
+        {
+            var length = preview ? 14.0 : 18.0;
+            angle = -Math.PI / 2;
+            start = new WpfPoint(end.X - Math.Cos(angle) * length, end.Y - Math.Sin(angle) * length);
+        }
+        else
+        {
+            start = MapToScreen(previous.Value);
+            angle = Math.Atan2(end.Y - start.Y, end.X - start.X);
+            var distance = Math.Sqrt(Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+            if (distance < 0.001)
+            {
+                var length = preview ? 14.0 : 18.0;
+                angle = -Math.PI / 2;
+                start = new WpfPoint(end.X - Math.Cos(angle) * length, end.Y - Math.Sin(angle) * length);
+            }
+        }
+
+        var left = new WpfPoint(
+            end.X - Math.Cos(angle - Math.PI / 6) * headLength,
+            end.Y - Math.Sin(angle - Math.PI / 6) * headLength);
+        var right = new WpfPoint(
+            end.X - Math.Cos(angle + Math.PI / 6) * headLength,
+            end.Y - Math.Sin(angle + Math.PI / 6) * headLength);
+
+        dc.DrawEllipse(brush, null, end, preview ? 2.8 : 3.5, preview ? 2.8 : 3.5);
+        dc.DrawLine(pen, start, end);
+        dc.DrawLine(pen, end, left);
+        dc.DrawLine(pen, end, right);
+    }
+
+    private static Point2f? FindPreviousNonOrientationPoint(IReadOnlyList<RecordedMapPoint> points, int index)
+    {
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (!IsOrientationWaypoint(points[i].Type))
+            {
+                return points[i].Point;
+            }
+        }
+
+        return null;
     }
 
     private void DrawSelectedRecorderPoint(DrawingContext dc)
@@ -1739,6 +1871,28 @@ public sealed class MapTileViewerControl : FrameworkElement
         PublishZoom();
     }
 
+    private void EnsurePointsVisible(IReadOnlyList<Point2f> points)
+    {
+        if (points.Count == 0 || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        const double margin = 56;
+        var visibleRect = new WpfRect(
+            margin,
+            margin,
+            Math.Max(1, ActualWidth - margin * 2),
+            Math.Max(1, ActualHeight - margin * 2));
+
+        if (points.All(point => visibleRect.Contains(MapToScreen(point))))
+        {
+            return;
+        }
+
+        CenterOn(GetPointCenter(points));
+    }
+
     private void FocusCompactView()
     {
         if (!IsCompactFollowView || ActualWidth <= 0 || ActualHeight <= 0)
@@ -1883,6 +2037,11 @@ public sealed class MapTileViewerControl : FrameworkElement
         var bestDistance = double.MaxValue;
         foreach (var candidate in _teleportPoints)
         {
+            if (!ShouldShowTeleportAtZoom(candidate.Type))
+            {
+                continue;
+            }
+
             var point = MapToScreen(candidate.DisplayPoint);
             var dx = point.X - screenPoint.X;
             var dy = point.Y - screenPoint.Y;
@@ -1967,15 +2126,10 @@ public sealed class MapTileViewerControl : FrameworkElement
         const double hitRadius = 10;
         RecordedMapEdge? best = null;
         var bestDistance = double.MaxValue;
-        for (var i = 0; i < _recordedPoints.Count - 1; i++)
+        foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(_recordedPoints))
         {
-            if (IsTeleportWaypoint(_recordedPoints[i + 1].Type))
-            {
-                continue;
-            }
-
-            var start = MapToScreen(_recordedPoints[i].Point);
-            var end = MapToScreen(_recordedPoints[i + 1].Point);
+            var start = MapToScreen(_recordedPoints[startIndex].Point);
+            var end = MapToScreen(_recordedPoints[endIndex].Point);
             var projection = ProjectPointToSegment(screenPoint, start, end);
             var dx = projection.X - screenPoint.X;
             var dy = projection.Y - screenPoint.Y;
@@ -1986,7 +2140,7 @@ public sealed class MapTileViewerControl : FrameworkElement
             }
 
             bestDistance = distance;
-            best = new RecordedMapEdge(i, i + 1, _recordedPoints[i].Point, _recordedPoints[i + 1].Point, ScreenToMap(projection));
+            best = new RecordedMapEdge(startIndex, endIndex, _recordedPoints[startIndex].Point, _recordedPoints[endIndex].Point, ScreenToMap(projection));
         }
 
         if (best == null)
@@ -2106,6 +2260,7 @@ public sealed class MapTileViewerControl : FrameworkElement
 
         return teleport.Type.Contains("Teleport", StringComparison.OrdinalIgnoreCase) ||
                teleport.Type.Contains("Domain", StringComparison.OrdinalIgnoreCase) ||
+               IsSpecialTeleport(teleport.Type) ||
                IsGoddess(teleport.Type);
     }
 
@@ -2114,9 +2269,65 @@ public sealed class MapTileViewerControl : FrameworkElement
         return string.Equals(type, "Goddess", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsSpecialTeleport(string? type)
+    {
+        return string.Equals(type, "NatlanObsidianTotemPole", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(type, "NodKraiMeetingPoint", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsDomain(string? type)
     {
         return !string.IsNullOrWhiteSpace(type) && type.Contains("Domain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBlessDomain(string? type)
+    {
+        return string.Equals(type, "BlessDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsForgeryDomain(string? type)
+    {
+        return string.Equals(type, "ForgeryDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMasteryDomain(string? type)
+    {
+        return string.Equals(type, "MasteryDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsTrounceDomain(string? type)
+    {
+        return string.Equals(type, "TrounceDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsOneTimeDomain(string? type)
+    {
+        return string.Equals(type, "OneTimeDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool ShouldShowTeleportAtZoom(string? type)
+    {
+        if (IsGoddess(type))
+        {
+            return true;
+        }
+
+        if (IsTrounceDomain(type))
+        {
+            return _zoom >= 0.22;
+        }
+
+        if (IsDomain(type))
+        {
+            return _zoom >= 0.32;
+        }
+
+        if (IsSpecialTeleport(type))
+        {
+            return _zoom >= 0.42;
+        }
+
+        return _zoom >= 0.55;
     }
 
     private Brush GetTeleportBrush(string? type)
@@ -2124,6 +2335,36 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (IsGoddess(type))
         {
             return _goddessBrush;
+        }
+
+        if (IsSpecialTeleport(type))
+        {
+            return _specialTeleportBrush;
+        }
+
+        if (IsBlessDomain(type))
+        {
+            return _domainBlessBrush;
+        }
+
+        if (IsForgeryDomain(type))
+        {
+            return _domainForgeryBrush;
+        }
+
+        if (IsMasteryDomain(type))
+        {
+            return _domainMasteryBrush;
+        }
+
+        if (IsTrounceDomain(type))
+        {
+            return _domainTrounceBrush;
+        }
+
+        if (IsOneTimeDomain(type))
+        {
+            return _domainOneTimeBrush;
         }
 
         return IsDomain(type) ? _domainBrush : _teleportBrush;
@@ -2134,6 +2375,38 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (IsGoddess(type))
         {
             return "七天神像";
+        }
+
+        if (IsBlessDomain(type))
+        {
+            return "祝圣秘境";
+        }
+
+        if (IsForgeryDomain(type))
+        {
+            return "炼武秘境";
+        }
+
+        if (IsMasteryDomain(type))
+        {
+            return "精通秘境";
+        }
+
+        if (IsTrounceDomain(type))
+        {
+            return "征讨领域";
+        }
+
+        if (IsOneTimeDomain(type))
+        {
+            return "一次性秘境";
+        }
+
+        if (IsSpecialTeleport(type))
+        {
+            return string.Equals(type, "NatlanObsidianTotemPole", StringComparison.OrdinalIgnoreCase)
+                ? "曜石图腾柱"
+                : "聚所";
         }
 
         if (IsDomain(type))
@@ -2190,6 +2463,30 @@ public sealed class MapTileViewerControl : FrameworkElement
     private static bool IsTeleportWaypoint(string? type)
     {
         return string.Equals(type, WaypointType.Teleport.Code, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsOrientationWaypoint(string? type)
+    {
+        return string.Equals(type, WaypointType.Orientation.Code, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<(int StartIndex, int EndIndex)> EnumerateDrawableConnections(IReadOnlyList<RecordedMapPoint> points)
+    {
+        int? startIndex = null;
+        for (var i = 0; i < points.Count; i++)
+        {
+            if (IsOrientationWaypoint(points[i].Type))
+            {
+                continue;
+            }
+
+            if (startIndex.HasValue && !IsTeleportWaypoint(points[i].Type))
+            {
+                yield return (startIndex.Value, i);
+            }
+
+            startIndex = i;
+        }
     }
 
     private static bool TryNormalizeMapName(string? mapName, out string normalizedMapName)

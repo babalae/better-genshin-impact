@@ -3932,7 +3932,6 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         RemoveRecordedRoutes(selected);
-        selectedItems.Clear();
         RecordStatusText = $"录制器：已删除 {selected.Count} 条路线";
     }
 
