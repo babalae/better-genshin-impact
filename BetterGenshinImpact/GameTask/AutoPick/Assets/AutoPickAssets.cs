@@ -1,5 +1,6 @@
 ﻿using System;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
@@ -20,6 +21,7 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
 
 
     public User32.VK PickVk = User32.VK.VK_F;
+    public bool UseControllerY;
     public RecognitionObject PickRo;
     public RecognitionObject ChatPickRo;
 
@@ -73,9 +75,20 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             try
             {
                 PickRo = LoadCustomPickKey(keyName);
-                PickVk = User32Helper.ToVk(keyName);
-                TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract = (Core.Config.KeyId)(int)PickVk;
                 ChatPickRo = LoadCustomChatPickKey(keyName);
+                if (IsControllerYPromptKey(keyName))
+                {
+                    UseControllerY = true;
+                    PickVk = User32.VK.VK_F;
+                    TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract = Core.Config.KeyId.F;
+                    VirtualXbox360Controller.EnsureConnected(_logger);
+                }
+                else
+                {
+                    UseControllerY = false;
+                    PickVk = User32Helper.ToVk(keyName);
+                    TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract = (Core.Config.KeyId)(int)PickVk;
+                }
             }
             catch (Exception e)
             {
@@ -87,9 +100,32 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
 
             if (keyName != "F")
             {
-                _logger.LogInformation("自定义拾取按键：{Key}", keyName);
+                if (IsControllerYPromptKey(keyName))
+                {
+                    _logger.LogInformation("自定义拾取提示：手柄Y（YY模板，交互发送虚拟手柄Y键）");
+                }
+                else
+                {
+                    _logger.LogInformation("自定义拾取按键：{Key}", keyName);
+                }
             }
         }
+    }
+
+    public static bool IsControllerYPromptKey(string key)
+    {
+        return string.Equals(key, "YY", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void PressPickKey()
+    {
+        if (UseControllerY)
+        {
+            VirtualXbox360Controller.PressY(_logger);
+            return;
+        }
+
+        Simulation.SendInput.Keyboard.KeyPress(PickVk);
     }
 
     public RecognitionObject LoadCustomPickKey(string key)

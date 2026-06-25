@@ -35,7 +35,7 @@ public class WalkToFTask
             {
                 if (needPress)
                 {
-                    Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                    AutoPickAssets.Instance.PressPickKey();
                 }
 
                 Logger.LogInformation("检测到交互键");

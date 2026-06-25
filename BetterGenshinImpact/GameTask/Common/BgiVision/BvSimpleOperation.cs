@@ -172,7 +172,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            AutoPickAssets.Instance.PressPickKey();
             return true;
         }
 
@@ -183,6 +183,12 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
+            if (AutoPickAssets.Instance.UseControllerY)
+            {
+                AutoPickAssets.Instance.PressPickKey();
+                return true;
+            }
+
             keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             return true;
         }

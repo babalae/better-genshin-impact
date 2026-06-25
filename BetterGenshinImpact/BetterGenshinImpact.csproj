@@ -78,6 +78,7 @@
 		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
+		<PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
 		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Semver" Version="3.0.0" />

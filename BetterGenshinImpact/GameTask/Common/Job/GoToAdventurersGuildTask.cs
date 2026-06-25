@@ -180,7 +180,7 @@ public class GoToAdventurersGuildTask
             using var ra = CaptureToRectArea();
             if (!Bv.IsInTalkUi(ra))
             {
-                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                AutoPickAssets.Instance.PressPickKey();
                 await Delay(500, ct);
 
                 if (i == retryTalkTimes - 1)

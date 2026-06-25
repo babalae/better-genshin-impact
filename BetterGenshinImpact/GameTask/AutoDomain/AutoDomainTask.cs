@@ -332,7 +332,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
                 var menu = await NewRetry.WaitForElementAppear(
                     GetConfirmRa("单人挑战"),
-                    () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
+                    () => AutoPickAssets.Instance.PressPickKey(),
                     _ct,
                     20,
                     500
@@ -373,7 +373,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         var menuFound = await NewRetry.WaitForElementAppear(
             GetConfirmRa("单人挑战"),
-            () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
+            () => AutoPickAssets.Instance.PressPickKey(),
             _ct,
             10,
             1000
@@ -617,7 +617,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     else
                     {
                         Logger.LogInformation("检测到交互键");
-                        Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                        AutoPickAssets.Instance.PressPickKey();
                         break;
                     }
 

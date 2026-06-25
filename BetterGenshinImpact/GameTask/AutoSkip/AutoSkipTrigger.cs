@@ -536,10 +536,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 return true;
             }
 
-            var fKey = AutoPickAssets.Instance.PickVk;
             if (_config.IsClickFirstChatOption())
             {
-                _postMessageSimulator?.KeyPressBackground(fKey);
+                PressPickKeyForDialogue();
             }
             else if (_config.IsClickRandomChatOption())
             {
@@ -553,13 +552,13 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
 
                 Thread.Sleep(50);
-                _postMessageSimulator?.KeyPressBackground(fKey);
+                PressPickKeyForDialogue();
             }
             else
             {
                 _postMessageSimulator?.KeyPressBackground(User32.VK.VK_W);
                 Thread.Sleep(100);
-                _postMessageSimulator?.KeyPressBackground(fKey);
+                PressPickKeyForDialogue();
             }
             
             AutoSkipLog("交互键点击(后台)");
@@ -568,6 +567,17 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
 
         return false;
+    }
+
+    private void PressPickKeyForDialogue()
+    {
+        if (AutoPickAssets.Instance.UseControllerY)
+        {
+            AutoPickAssets.Instance.PressPickKey();
+            return;
+        }
+
+        _postMessageSimulator?.KeyPressBackground(AutoPickAssets.Instance.PickVk);
     }
 
     /// <summary>
@@ -799,7 +809,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
             if (pickRa.IsExist())
             {
-                _postMessageSimulator?.KeyPressBackground(AutoPickAssets.Instance.PickVk);
+                PressPickKeyForDialogue();
                 AutoSkipLog("无气泡图标，但存在交互键，直接按下交互键");
             }
         }
