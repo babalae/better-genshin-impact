@@ -680,12 +680,61 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
+        // 秘境战斗不用自动战斗的结束检测，但可以复用其寻敌/靠近辅助。
+        var fightSeekAssistTask = StartFightSeekAssistTask(cts);
         // 自动吃药
         // var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
         combatTask.Start();
         domainEndTask.Start();
         // autoEatRecoveryHpTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask);
+        return Task.WhenAll(combatTask, domainEndTask, fightSeekAssistTask);
+    }
+
+    private Task StartFightSeekAssistTask(CancellationTokenSource cts)
+    {
+        var options = AutoDomainFightSeekOptions.FromAutoFightConfig(TaskContext.Instance().Config.AutoFightConfig);
+        if (!options.Enabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        Logger.LogInformation("自动秘境：启用战斗寻敌辅助，间隔 {Interval:0.##} 秒，旋转因子 {RotaryFactor}",
+            options.Interval.TotalSeconds,
+            options.RotaryFactor);
+
+        AutoFightSeek.RotationCount = 0;
+        return Task.Run(async () =>
+        {
+            try
+            {
+                if (options.InitialDelay > TimeSpan.Zero)
+                {
+                    await Delay((int)options.InitialDelay.TotalMilliseconds, cts.Token);
+                }
+
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        // isEndCheck=true keeps this as seek-only assist and avoids party-screen finish checks.
+                        await AutoFightSeek.SeekAndFightAsync(Logger, 0, 0, cts.Token, true, options.RotaryFactor);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogDebug(ex, "自动秘境战斗寻敌辅助异常");
+                    }
+
+                    await Delay((int)options.Interval.TotalMilliseconds, cts.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        });
     }
 
     private void EndFightWait()
