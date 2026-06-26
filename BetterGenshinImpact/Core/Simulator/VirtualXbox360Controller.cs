@@ -9,6 +9,9 @@ namespace BetterGenshinImpact.Core.Simulator;
 
 public static class VirtualXbox360Controller
 {
+    public const int DefaultPickYHoldMilliseconds = 140;
+    private const int MinimumYHoldMilliseconds = 30;
+
     private static readonly object SyncRoot = new();
     private static ViGEmClient? _client;
     private static IXbox360Controller? _controller;
@@ -43,7 +46,12 @@ public static class VirtualXbox360Controller
         }
     }
 
-    public static bool PressY(ILogger logger, int holdMilliseconds = 80)
+    public static int NormalizeYHoldMilliseconds(int? holdMilliseconds)
+    {
+        return Math.Max(holdMilliseconds ?? DefaultPickYHoldMilliseconds, MinimumYHoldMilliseconds);
+    }
+
+    public static bool PressY(ILogger logger, int? holdMilliseconds = null)
     {
         lock (SyncRoot)
         {
@@ -54,9 +62,11 @@ public static class VirtualXbox360Controller
 
             try
             {
+                var normalizedHoldMilliseconds = NormalizeYHoldMilliseconds(holdMilliseconds);
                 _controller.SetButtonState(Xbox360Button.Y, true);
-                Thread.Sleep(Math.Max(holdMilliseconds, 30));
+                Thread.Sleep(normalizedHoldMilliseconds);
                 _controller.SetButtonState(Xbox360Button.Y, false);
+                logger.LogInformation("自动拾取：已发送虚拟Xbox 360手柄Y键，按住{Milliseconds}ms", normalizedHoldMilliseconds);
                 return true;
             }
             catch (Exception e)

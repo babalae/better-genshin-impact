@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
@@ -157,6 +158,9 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private int _prevClickFrameIndex = -1;
 
+    private const int ControllerYDialogueBackoffMilliseconds = 1200;
+    private DateTime _controllerYBackoffUntil = DateTime.MinValue;
+
     //private int _fastModePickCount = 0;
 
     public void OnCapture(CaptureContent content)
@@ -167,6 +171,12 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         var speedTimer = new SpeedTimer();
+        var forceInteraction = _externalConfig is { ForceInteraction: true };
+
+        if (!forceInteraction && IsControllerYBackoffActive())
+        {
+            return;
+        }
 
         using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
 
@@ -185,7 +195,7 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         speedTimer.Record($"识别到拾取键");
 
-        if (_externalConfig is { ForceInteraction: true })
+        if (forceInteraction)
         {
             LogPick(content, "直接拾取");
             AutoPickAssets.Instance.PressPickKey();
@@ -194,6 +204,11 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
         var config = TaskContext.Instance().Config.AutoPickConfig;
+
+        if (ShouldBackOffControllerYForTalkUi(content))
+        {
+            return;
+        }
 
         // 存在 L 键位是千星奇遇，无需拾取
         using var lKeyRa = content.CaptureRectArea.Find(_autoPickAssets.LRo);
@@ -204,31 +219,38 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 识别到拾取键，开始识别物品图标
         var isExcludeIcon = false;
-        _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
-            foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
-            (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-        using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
-        speedTimer.Record("识别聊天图标");
-        if (!chatIconRa.IsEmpty())
+        if (HasControllerDialoguePromptIcon(foundRectArea, content.CaptureRectArea, config, scale))
         {
-            // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
             isExcludeIcon = true;
+            speedTimer.Record("识别手柄聊天图标");
         }
         else
         {
-            _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
-            using var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
-            speedTimer.Record("识别设置图标");
-            if (!settingsIconRa.IsEmpty())
+            _autoPickAssets.ChatIconRo.RegionOfInterest = CreatePromptIconSearchRect(foundRectArea, content.CaptureRectArea, config, scale);
+            using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+            speedTimer.Record("识别聊天图标");
+            if (!chatIconRa.IsEmpty())
             {
-                // 物品图标是设置图标，一般是解谜、活动、电梯等
+                // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
                 isExcludeIcon = true;
+            }
+            else
+            {
+                _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
+                using var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+                speedTimer.Record("识别设置图标");
+                if (!settingsIconRa.IsEmpty())
+                {
+                    // 物品图标是设置图标，一般是解谜、活动、电梯等
+                    isExcludeIcon = true;
+                }
             }
         }
 
         if (!config.WhiteListEnabled && isExcludeIcon)
         {
             // 默认不拾取且没有白名单直接放弃OCR
+            BackOffControllerY("NPC/设置交互图标");
             return;
         }
 
@@ -237,6 +259,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             // 没有黑白名单直接拾取
             AutoPickAssets.Instance.PressPickKey();
             LogPick(content, "黑名单未启用，直接拾取");
+            return;
         }
 
         //if (config.FastModeEnabled && !isExcludeIcon)
@@ -314,60 +337,182 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.Record("文字识别");
-        if (!string.IsNullOrEmpty(text))
+        if (IsAllowedByPickLists(text, isExcludeIcon, config, out var pickText))
         {
-            // 处理OCR识别结果，清理无效字符并确保引号配对
-            text = ProcessOcrText(text);
-
-            if (DoNotPick(text))
-            {
-                return;
-            }
-
-            // 单个字符不拾取
-            if (text.Length <= 1)
-            {
-                return;
-            }
-
-            if (config.WhiteListEnabled && _whiteList.Contains(text))
-            {
-                LogPick(content, text);
-                AutoPickAssets.Instance.PressPickKey();
-                return;
-            }
-
             speedTimer.Record("白名单判断");
-
-            if (isExcludeIcon)
-            {
-                //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
-                return;
-            }
-
-            if (config.BlackListEnabled)
-            {
-                if (_blackList.Contains(text))
-                {
-                    return;
-                }
-
-                if (_fuzzyBlackList.Count > 0)
-                {
-                    if (_fuzzyBlackList.Any(item => text.Contains(item)))
-                    {
-                        return;
-                    }
-                }
-            }
-
             speedTimer.Record("黑名单判断");
-
-            LogPick(content, text);
+            LogPick(content, pickText);
             AutoPickAssets.Instance.PressPickKey();
         }
 
         speedTimer.DebugPrint();
+    }
+
+    private bool IsControllerYBackoffActive()
+    {
+        return _autoPickAssets.UseControllerY && DateTime.Now < _controllerYBackoffUntil;
+    }
+
+    private bool ShouldBackOffControllerYForTalkUi(CaptureContent content)
+    {
+        if (!_autoPickAssets.UseControllerY)
+        {
+            return false;
+        }
+
+        if (content.CurrentGameUiCategory != GameUiCategory.Talk && !Bv.IsInTalkUi(content.CaptureRectArea))
+        {
+            return false;
+        }
+
+        BackOffControllerY("对话界面");
+        return true;
+    }
+
+    private void BackOffControllerY(string reason)
+    {
+        if (!_autoPickAssets.UseControllerY)
+        {
+            return;
+        }
+
+        _controllerYBackoffUntil = DateTime.Now.AddMilliseconds(ControllerYDialogueBackoffMilliseconds);
+        _logger.LogDebug("自动拾取：手柄Y检测到{Reason}，退避{Milliseconds}ms", reason, ControllerYDialogueBackoffMilliseconds);
+    }
+
+    private static Rect CreatePromptIconSearchRect(Region foundRectArea, ImageRegion captureRectArea, AutoPickConfig config, double scale)
+    {
+        var legacyLeft = foundRectArea.X + (int)(config.ItemIconLeftOffset * scale);
+        var keyRightLeft = foundRectArea.Right + Math.Max((int)(8 * scale), 1);
+        var left = Math.Min(legacyLeft, keyRightLeft);
+        var right = foundRectArea.X + (int)(config.ItemTextLeftOffset * scale);
+        var top = foundRectArea.Y - Math.Max((int)(4 * scale), 1);
+        var bottom = foundRectArea.Bottom + Math.Max((int)(4 * scale), 1);
+
+        return ClampToCaptureRect(new Rect(left, top, Math.Max(right - left, foundRectArea.Width), bottom - top), captureRectArea);
+    }
+
+    private bool HasControllerDialoguePromptIcon(Region foundRectArea, ImageRegion captureRectArea, AutoPickConfig config, double scale)
+    {
+        if (!_autoPickAssets.UseControllerY)
+        {
+            return false;
+        }
+
+        var rect = CreateControllerPromptIconSearchRect(foundRectArea, captureRectArea, config, scale);
+        using var iconMat = new Mat(captureRectArea.SrcMat, rect);
+        if (iconMat.Empty())
+        {
+            return false;
+        }
+
+        using var hsvMat = new Mat();
+        Cv2.CvtColor(iconMat, hsvMat, ColorConversionCodes.BGR2HSV);
+        using var whiteMask = new Mat();
+        Cv2.InRange(hsvMat, new Scalar(0, 0, 205), new Scalar(180, 80, 255), whiteMask);
+        using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect,
+            new Size(Math.Max((int)(2 * scale), 1), Math.Max((int)(2 * scale), 1)));
+        Cv2.MorphologyEx(whiteMask, whiteMask, MorphTypes.Open, kernel);
+
+        Cv2.FindContours(whiteMask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        var minWidth = Math.Max((int)(24 * scale), 18);
+        var minHeight = Math.Max((int)(18 * scale), 14);
+        var maxWidth = Math.Max((int)(42 * scale), 28);
+        var maxHeight = Math.Max((int)(34 * scale), 22);
+        var minArea = Math.Max(300d * scale * scale, 150d);
+        var minLeft = Math.Max((int)(24 * scale), 16);
+        var maxLeft = Math.Max((int)(80 * scale), 50);
+        const double minFillRatio = 0.55;
+
+        foreach (var contour in contours)
+        {
+            var boundingRect = Cv2.BoundingRect(contour);
+            if (boundingRect.Width < minWidth || boundingRect.Height < minHeight ||
+                boundingRect.Width > maxWidth || boundingRect.Height > maxHeight ||
+                boundingRect.X < minLeft || boundingRect.X > maxLeft)
+            {
+                continue;
+            }
+
+            var area = Cv2.ContourArea(contour);
+            var fillRatio = area / (boundingRect.Width * boundingRect.Height);
+            if (area >= minArea && fillRatio >= minFillRatio)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Rect CreateControllerPromptIconSearchRect(Region foundRectArea, ImageRegion captureRectArea, AutoPickConfig config, double scale)
+    {
+        var left = foundRectArea.Right - Math.Max((int)(2 * scale), 1);
+        var right = foundRectArea.X + (int)(config.ItemTextLeftOffset * scale) - Math.Max((int)(6 * scale), 1);
+        var top = foundRectArea.Y - Math.Max((int)(8 * scale), 1);
+        var bottom = foundRectArea.Bottom + Math.Max((int)(10 * scale), 1);
+
+        return ClampToCaptureRect(new Rect(left, top, Math.Max(right - left, foundRectArea.Width), bottom - top), captureRectArea);
+    }
+
+    private static Rect ClampToCaptureRect(Rect rect, ImageRegion captureRectArea)
+    {
+        var x = Math.Clamp(rect.X, 0, Math.Max(captureRectArea.Width - 1, 0));
+        var y = Math.Clamp(rect.Y, 0, Math.Max(captureRectArea.Height - 1, 0));
+        var right = Math.Clamp(rect.X + rect.Width, x + 1, captureRectArea.Width);
+        var bottom = Math.Clamp(rect.Y + rect.Height, y + 1, captureRectArea.Height);
+
+        return new Rect(x, y, right - x, bottom - y);
+    }
+
+    private bool IsAllowedByPickLists(string rawText, bool isExcludeIcon, AutoPickConfig config, out string text)
+    {
+        text = string.Empty;
+        if (string.IsNullOrEmpty(rawText))
+        {
+            return false;
+        }
+
+        // 处理OCR识别结果，清理无效字符并确保引号配对
+        text = ProcessOcrText(rawText);
+        var normalizedText = text;
+        if (DoNotPick(normalizedText))
+        {
+            return false;
+        }
+
+        // 单个字符不拾取
+        if (normalizedText.Length <= 1)
+        {
+            return false;
+        }
+
+        if (config.WhiteListEnabled && _whiteList.Contains(normalizedText))
+        {
+            return true;
+        }
+
+        if (isExcludeIcon)
+        {
+            // 物品图标是聊天气泡或设置图标，一般是NPC对话、解谜、活动、电梯等。
+            BackOffControllerY("NPC/设置交互图标");
+            return false;
+        }
+
+        if (config.BlackListEnabled)
+        {
+            if (_blackList.Contains(normalizedText))
+            {
+                return false;
+            }
+
+            if (_fuzzyBlackList.Count > 0 && _fuzzyBlackList.Any(item => normalizedText.Contains(item)))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private bool DoNotPick(string text)
