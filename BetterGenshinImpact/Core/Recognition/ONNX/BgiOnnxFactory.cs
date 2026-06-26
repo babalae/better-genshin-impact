@@ -113,8 +113,8 @@ public class BgiOnnxFactory
                 List<ProviderType> list = [];
                 SessionOptions? testSession = null;
                 var hasGpu = false;
-                if (!hasGpu && CudaDeviceId >= 0)
-                    // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
+                if (CudaDeviceId >= 0)
+                    // TensorRT 依赖 CUDA，优先作为高性能 provider。
                     try
                     {
                         testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
@@ -130,8 +130,25 @@ public class BgiOnnxFactory
                         testSession?.Dispose();
                     }
 
+                if (CudaDeviceId >= 0)
+                    // CUDA 作为 TensorRT 的 fallback provider；TensorRT 不支持的节点仍可留在 GPU 上。
+                    try
+                    {
+                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
+                        list.Add(ProviderType.Cuda);
+                        hasGpu = true;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
+                    }
+                    finally
+                    {
+                        testSession?.Dispose();
+                    }
+
                 if (!hasGpu && DmlDeviceId >= 0)
-                    // dml效果不如tensorrt，但是比纯cuda稳定性强
+                    // CUDA/TensorRT 不可用时再回退到 DML。
                     try
                     {
                         testSession = new SessionOptions();
@@ -142,23 +159,6 @@ public class BgiOnnxFactory
                     catch (Exception e)
                     {
                         _logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu && CudaDeviceId >= 0)
-                    // cuda优先级比较低，因为跑起来并不太理想。
-                    try
-                    {
-                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
-                        list.Add(ProviderType.Cuda);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -393,8 +393,8 @@ public class BgiOnnxFactory
         ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
-        foreach (var type in
-                 forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider)
+        var providerTypes = forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider;
+        foreach (var type in providerTypes)
             try
             {
                 switch (type)
@@ -449,6 +449,8 @@ public class BgiOnnxFactory
 
         if (!OptimizedModel) return sessionOptions;
         if (!genCache) return sessionOptions;
+        // TensorRT creates compiled nodes; ORT cannot serialize those through OptimizedModelFilePath.
+        if (providerTypes.Contains(ProviderType.TensorRt)) return sessionOptions;
         var optPath = Path.Combine(model.CachePath, "optimized");
         if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
         sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));

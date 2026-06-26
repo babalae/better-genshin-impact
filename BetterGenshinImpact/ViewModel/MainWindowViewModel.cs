@@ -1,8 +1,10 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
@@ -472,6 +474,20 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     // await OcrFactory.ChangeCulture(gameCultureInfoName);
                     var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png")));
                     Debug.WriteLine("PaddleOcr预热结果:" + s);
+                    if (TaskContext.Instance().Config.AutoPickConfig.OcrEngine == nameof(PickOcrEngineEnum.Yap))
+                    {
+                        try
+                        {
+                            using var yapWarmupMat = new Mat(new OpenCvSharp.Size(384, 32), MatType.CV_8UC1, Scalar.Black);
+                            var yapText = TextInferenceFactory.Pick.Value.Inference(yapWarmupMat);
+                            Debug.WriteLine("Yap拾取OCR预热结果:" + yapText);
+                            _logger.LogDebug("Yap拾取OCR预热完成");
+                        }
+                        catch (Exception yapException)
+                        {
+                            _logger.LogError(yapException, "Yap拾取OCR预热异常");
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
