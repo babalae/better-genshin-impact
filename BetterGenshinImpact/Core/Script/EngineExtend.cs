@@ -79,6 +79,7 @@ public class EngineExtend
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
+        engine.AddHostType("AutoBossParam", typeof(AutoBossParam));
         engine.AddHostObject("strategyFile", new StrategyFile());
         //鼠标回调
         engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
