@@ -48,7 +48,7 @@ public static class RecognitionObjectJsonLoader
         catch (Exception ex)
         {
             Logger.LogError(ex,
-                "加载 RecognitionObject 配置文件失败。FilePath={FilePath}, ObjectName={ObjectName}, CaptureWidth={CaptureWidth}, CaptureHeight={CaptureHeight}",
+                "Recognition 加载失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}, file={FilePath}",
                 filePath,
                 objectName,
                 context.CaptureWidth,
@@ -75,7 +75,7 @@ public static class RecognitionObjectJsonLoader
         catch (Exception ex)
         {
             Logger.LogError(ex,
-                "构建 RecognitionObject 失败。ObjectName={ObjectName}, CaptureWidth={CaptureWidth}, CaptureHeight={CaptureHeight}",
+                "Recognition 构建失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}",
                 objectName,
                 context.CaptureWidth,
                 context.CaptureHeight);
