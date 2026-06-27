@@ -49,11 +49,11 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class ScriptControlViewModel : ViewModel
 {
-    private sealed class JsScriptSelectionItem(string folderName, TextBox? displayNameTextBox = null)
+    private sealed class JsScriptNameEditItem(ScriptProject project, TextBox displayNameTextBox)
     {
-        public string FolderName { get; } = folderName;
+        public ScriptProject Project { get; } = project;
 
-        public TextBox? DisplayNameTextBox { get; } = displayNameTextBox;
+        public TextBox DisplayNameTextBox { get; } = displayNameTextBox;
     }
 
     private readonly ISnackbarService _snackbarService;
@@ -742,7 +742,7 @@ public partial class ScriptControlViewModel : ViewModel
         var result = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", stackPanel, new Size(500, 600));
         if (!string.IsNullOrEmpty(result))
         {
-            AddSelectedJsScripts((StackPanel)stackPanel.Content);
+            AddSelectedJsScriptsWithDisplayNames((StackPanel)stackPanel.Content);
         }
     }
 
@@ -805,38 +805,14 @@ public partial class ScriptControlViewModel : ViewModel
 
             if (selectType == typeof(CheckBox))
             {
-                var displayNameTextBox = new TextBox
-                {
-                    PlaceholderText = "显示名称（留空使用脚本名）",
-                    ToolTip = "显示名称（留空使用脚本名）",
-                    Margin = new Thickness(12, 0, 0, 0),
-                    MinWidth = 170,
-                    IsEnabled = false
-                };
-                var selectionItem = new JsScriptSelectionItem(script.FolderName, displayNameTextBox);
                 var checkBox = new CheckBox
                 {
                     Content = displayText,
-                    Tag = selectionItem,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                checkBox.Checked += delegate { displayNameTextBox.IsEnabled = true; };
-                checkBox.Unchecked += delegate { displayNameTextBox.IsEnabled = false; };
-
-                var row = new System.Windows.Controls.Grid
-                {
+                    Tag = script.FolderName,
                     Margin = new Thickness(0, 2, 0, 2),
                     Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
                 };
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
-
-                row.Children.Add(checkBox);
-                System.Windows.Controls.Grid.SetColumn(checkBox, 0);
-                row.Children.Add(displayNameTextBox);
-                System.Windows.Controls.Grid.SetColumn(displayNameTextBox, 1);
-
-                parentPanel.Children.Add(row);
+                parentPanel.Children.Add(checkBox);
             }
             else if (selectType == typeof(RadioButton))
             {
@@ -857,25 +833,96 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private void AddSelectedJsScripts(StackPanel stackPanel)
+    private void AddSelectedJsScriptsWithDisplayNames(StackPanel stackPanel)
     {
-        foreach (var child in stackPanel.Children)
+        if (SelectedScriptGroup == null)
         {
-            if (TryGetSelectedJsScript(child, out var folderName, out var displayName))
-            {
-                SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName), displayName));
-            }
+            return;
+        }
+
+        var selectedProjects = CollectSelectedJsScriptProjects(stackPanel);
+        if (selectedProjects.Count == 0)
+        {
+            Toast.Warning("未选择JS脚本");
+            return;
+        }
+
+        var nameItems = new List<JsScriptNameEditItem>();
+        var nameEditorPanel = CreateJsScriptNameEditorPanel(selectedProjects, nameItems);
+        var height = Math.Min(620, 140 + selectedProjects.Count * 74);
+        var result = PromptDialog.Prompt("请设置JS脚本在脚本组中的显示名称", "设置JS脚本显示名称", nameEditorPanel, new Size(560, height));
+        if (string.IsNullOrEmpty(result))
+        {
+            return;
+        }
+
+        foreach (var item in nameItems)
+        {
+            SelectedScriptGroup.AddProject(new ScriptGroupProject(item.Project, item.DisplayNameTextBox.Text));
         }
     }
 
-    private static bool TryGetSelectedJsScript(object child, out string folderName, out string? displayName)
+    private static List<ScriptProject> CollectSelectedJsScriptProjects(StackPanel stackPanel)
+    {
+        var selectedProjects = new List<ScriptProject>();
+        foreach (var child in stackPanel.Children)
+        {
+            if (TryGetSelectedJsScript(child, out var folderName))
+            {
+                selectedProjects.Add(new ScriptProject(folderName));
+            }
+        }
+
+        return selectedProjects;
+    }
+
+    private static ScrollViewer CreateJsScriptNameEditorPanel(List<ScriptProject> selectedProjects, List<JsScriptNameEditItem> nameItems)
+    {
+        var stackPanel = new StackPanel();
+
+        for (var i = 0; i < selectedProjects.Count; i++)
+        {
+            var script = selectedProjects[i];
+            var label = new TextBlock
+            {
+                Text = script.FolderName + " - " + script.Manifest.Name,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 6, 0, 2)
+            };
+            var displayNameTextBox = new TextBox
+            {
+                Text = script.Manifest.Name,
+                ToolTip = "显示名称（留空使用脚本名）",
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            if (i == 0)
+            {
+                displayNameTextBox.Loaded += delegate
+                {
+                    displayNameTextBox.Focus();
+                    displayNameTextBox.SelectAll();
+                };
+            }
+
+            nameItems.Add(new JsScriptNameEditItem(script, displayNameTextBox));
+            stackPanel.Children.Add(label);
+            stackPanel.Children.Add(displayNameTextBox);
+        }
+
+        return new ScrollViewer
+        {
+            Content = stackPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+    }
+
+    private static bool TryGetSelectedJsScript(object child, out string folderName)
     {
         folderName = string.Empty;
-        displayName = null;
 
         if (child is CheckBox { IsChecked: true } directCheckBox)
         {
-            return TryReadSelectedJsScript(directCheckBox, out folderName, out displayName);
+            return TryReadSelectedJsScript(directCheckBox, out folderName);
         }
 
         if (child is Panel panel)
@@ -884,7 +931,7 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 if (panelChild is CheckBox { IsChecked: true } checkBox)
                 {
-                    return TryReadSelectedJsScript(checkBox, out folderName, out displayName);
+                    return TryReadSelectedJsScript(checkBox, out folderName);
                 }
             }
         }
@@ -892,17 +939,9 @@ public partial class ScriptControlViewModel : ViewModel
         return false;
     }
 
-    private static bool TryReadSelectedJsScript(CheckBox checkBox, out string folderName, out string? displayName)
+    private static bool TryReadSelectedJsScript(CheckBox checkBox, out string folderName)
     {
         folderName = string.Empty;
-        displayName = null;
-
-        if (checkBox.Tag is JsScriptSelectionItem selectionItem)
-        {
-            folderName = selectionItem.FolderName;
-            displayName = selectionItem.DisplayNameTextBox?.Text;
-            return true;
-        }
 
         if (checkBox.Tag is string legacyFolderName)
         {
@@ -1758,6 +1797,32 @@ public partial class ScriptControlViewModel : ViewModel
         else
         {
             Toast.Warning("只有JS脚本才有自定义配置");
+        }
+    }
+
+    [RelayCommand]
+    public void OnRenameJsScript(ScriptGroupProject? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        if (item.Type != "Javascript")
+        {
+            Toast.Warning("只有JS脚本才支持重命名显示名称");
+            return;
+        }
+
+        var newName = PromptDialog.Prompt("请输入JS脚本在脚本组中的显示名称", "重命名JS脚本", item.Name);
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            return;
+        }
+
+        if (item.RenameDisplayName(newName) && SelectedScriptGroup != null)
+        {
+            WriteScriptGroup(SelectedScriptGroup);
         }
     }
 

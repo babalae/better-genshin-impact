@@ -147,6 +147,19 @@ public partial class ScriptGroupProject : ObservableObject
         return string.IsNullOrEmpty(trimmedName) ? defaultName : trimmedName;
     }
 
+    public bool RenameDisplayName(string? newName)
+    {
+        var trimmedName = newName?.Trim();
+        if (string.IsNullOrEmpty(trimmedName) || trimmedName == Name)
+        {
+            return false;
+        }
+
+        Name = trimmedName;
+        OnPropertyChanged(nameof(Name));
+        return true;
+    }
+
     /// <summary>
     ///
     /// </summary>
