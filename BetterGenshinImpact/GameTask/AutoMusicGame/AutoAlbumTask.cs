@@ -56,7 +56,8 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
         else
         {
             // OCR 后再次判断，区分是否是全部歌曲页面
-            var ocrRes = ra1.DeriveCrop(iconRa.Right, iconRa.Top, ra1.Width * 0.16, iconRa.Height).FindMulti(RecognitionObject.OcrThis);
+            using var ocrArea = ra1.DeriveCrop(iconRa.Right, iconRa.Top, ra1.Width * 0.16, iconRa.Height);
+            var ocrRes = ocrArea.FindMulti(RecognitionObject.OcrThis);
             if (ocrRes.Any(region => region.Text.Contains("全部")))
             {
                 throw new Exception("当前在全部歌曲页面，此页面无法运行本任务。请返回到主界面选择专辑列表中以国家为主题的专辑页！");
@@ -95,7 +96,8 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             {
                 if (TaskContext.Instance().Config.AutoMusicGameConfig.MustCanorusLevel)
                 {
-                    using var canoraRa = CaptureToRectArea().Find(canorusAsset);
+                    using var canoraArea = CaptureToRectArea();
+                    using var canoraRa = canoraArea.Find(canorusAsset);
                     if (canoraRa.IsExist())
                     {
                         Logger.LogInformation("乐曲{Num} - {Difficulty}级别：已完成【大音天籁】，切换下一首", i + 1, difficultyName);
@@ -123,7 +125,10 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
 
 
                 // 点击确认按钮
-                Bv.ClickWhiteConfirmButton(CaptureToRectArea());
+                using (var confirmArea = CaptureToRectArea())
+                {
+                    Bv.ClickWhiteConfirmButton(confirmArea);
+                }
                 await Delay(800, ct);
 
                 // 选择难度
@@ -131,18 +136,20 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 await Delay(200, ct);
 
                 // 开始演奏
-                Bv.ClickWhiteConfirmButton(CaptureToRectArea());
+                using (var startArea = CaptureToRectArea())
+                {
+                    Bv.ClickWhiteConfirmButton(startArea);
+                }
                 await Delay(500, ct);
 
-                var cts = new CancellationTokenSource();
-                ct.Register(cts.Cancel);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
                 // 演奏结束检查任务
                 var checkTask = Task.Run(async () =>
                 {
                     while (!cts.Token.IsCancellationRequested)
                     {
-                        await Delay(5000, ct); // 每5秒检查一次
+                        await Delay(5000, cts.Token); // 每5秒检查一次
                         using var listArea = CaptureToRectArea();
                         using var listRa = listArea.Find(RecognitionAssets.Get("AutoMusicGame", "BtnList", listArea));
                         if (listRa.IsExist())
@@ -157,9 +164,20 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 // 演奏任务
                 var musicTask = _autoMusicGameTask.StartWithOutInit(cts.Token);
 
-                // 等待任意一个任务完成
+                // 任意一侧先结束，就说明这一首歌已经可以开始收尾了。
                 await Task.WhenAny(checkTask, musicTask);
+                // 通知另一侧尚未结束的任务尽快退出。
                 await cts.CancelAsync();
+
+                try
+                {
+                    // 等待两个任务都真正结束，避免后台轮询或按键任务拖到下一首。
+                    await Task.WhenAll(checkTask, musicTask);
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested && !ct.IsCancellationRequested)
+                {
+                    // 忽略主动停止另一侧任务时产生的取消异常
+                }
 
                 Logger.LogInformation("第{Num}首{Difficulty}难度乐曲演奏完成", i + 1, difficultyName);
                 await Delay(2000, ct);
