@@ -49,6 +49,13 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class ScriptControlViewModel : ViewModel
 {
+    private sealed class JsScriptSelectionItem(string folderName, TextBox? displayNameTextBox = null)
+    {
+        public string FolderName { get; } = folderName;
+
+        public TextBox? DisplayNameTextBox { get; } = displayNameTextBox;
+    }
+
     private readonly ISnackbarService _snackbarService;
 
     private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
@@ -798,14 +805,38 @@ public partial class ScriptControlViewModel : ViewModel
 
             if (selectType == typeof(CheckBox))
             {
+                var displayNameTextBox = new TextBox
+                {
+                    PlaceholderText = "显示名称（留空使用脚本名）",
+                    ToolTip = "显示名称（留空使用脚本名）",
+                    Margin = new Thickness(12, 0, 0, 0),
+                    MinWidth = 170,
+                    IsEnabled = false
+                };
+                var selectionItem = new JsScriptSelectionItem(script.FolderName, displayNameTextBox);
                 var checkBox = new CheckBox
                 {
                     Content = displayText,
-                    Tag = script.FolderName,
+                    Tag = selectionItem,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                checkBox.Checked += delegate { displayNameTextBox.IsEnabled = true; };
+                checkBox.Unchecked += delegate { displayNameTextBox.IsEnabled = false; };
+
+                var row = new System.Windows.Controls.Grid
+                {
                     Margin = new Thickness(0, 2, 0, 2),
                     Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
                 };
-                parentPanel.Children.Add(checkBox);
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+
+                row.Children.Add(checkBox);
+                System.Windows.Controls.Grid.SetColumn(checkBox, 0);
+                row.Children.Add(displayNameTextBox);
+                System.Windows.Controls.Grid.SetColumn(displayNameTextBox, 1);
+
+                parentPanel.Children.Add(row);
             }
             else if (selectType == typeof(RadioButton))
             {
@@ -830,11 +861,56 @@ public partial class ScriptControlViewModel : ViewModel
     {
         foreach (var child in stackPanel.Children)
         {
-            if (child is CheckBox { IsChecked: true } checkBox && checkBox.Tag is string folderName)
+            if (TryGetSelectedJsScript(child, out var folderName, out var displayName))
             {
-                SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+                SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName), displayName));
             }
         }
+    }
+
+    private static bool TryGetSelectedJsScript(object child, out string folderName, out string? displayName)
+    {
+        folderName = string.Empty;
+        displayName = null;
+
+        if (child is CheckBox { IsChecked: true } directCheckBox)
+        {
+            return TryReadSelectedJsScript(directCheckBox, out folderName, out displayName);
+        }
+
+        if (child is Panel panel)
+        {
+            foreach (var panelChild in panel.Children)
+            {
+                if (panelChild is CheckBox { IsChecked: true } checkBox)
+                {
+                    return TryReadSelectedJsScript(checkBox, out folderName, out displayName);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadSelectedJsScript(CheckBox checkBox, out string folderName, out string? displayName)
+    {
+        folderName = string.Empty;
+        displayName = null;
+
+        if (checkBox.Tag is JsScriptSelectionItem selectionItem)
+        {
+            folderName = selectionItem.FolderName;
+            displayName = selectionItem.DisplayNameTextBox?.Text;
+            return true;
+        }
+
+        if (checkBox.Tag is string legacyFolderName)
+        {
+            folderName = legacyFolderName;
+            return true;
+        }
+
+        return false;
     }
 
     [RelayCommand]

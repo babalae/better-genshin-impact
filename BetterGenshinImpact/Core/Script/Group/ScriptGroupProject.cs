@@ -127,13 +127,24 @@ public partial class ScriptGroupProject : ObservableObject
     }
 
     public ScriptGroupProject(ScriptProject project)
+        : this(project, null)
     {
-        Name = project.Manifest.Name;
+    }
+
+    public ScriptGroupProject(ScriptProject project, string? customName)
+    {
+        Name = ResolveJsScriptProjectName(project.Manifest.Name, customName);
         FolderName = project.FolderName;
         Status = "Enabled";
         Schedule = "Daily";
         Project = project;
         Type = "Javascript";
+    }
+
+    public static string ResolveJsScriptProjectName(string defaultName, string? customName)
+    {
+        var trimmedName = customName?.Trim();
+        return string.IsNullOrEmpty(trimmedName) ? defaultName : trimmedName;
     }
 
     /// <summary>
