@@ -1,17 +1,11 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Model;
 using OpenCvSharp;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
-public class MapAssets : BaseAssets<MapAssets>
+public class MapAssets : Singleton<MapAssets>
 {
     public Rect MimiMapRect { get; }
     
@@ -20,6 +14,7 @@ public class MapAssets : BaseAssets<MapAssets>
 
     public MapAssets()
     {
-        MimiMapRect = new Rect((int)Math.Round(62 * AssetScale), (int)Math.Round(19 * AssetScale), (int)Math.Round(212 * AssetScale), (int)Math.Round(212 * AssetScale));
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        MimiMapRect = new Rect((int)Math.Round(62 * assetScale), (int)Math.Round(19 * assetScale), (int)Math.Round(212 * assetScale), (int)Math.Round(212 * assetScale));
     }
 }

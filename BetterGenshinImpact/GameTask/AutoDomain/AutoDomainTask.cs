@@ -42,7 +42,6 @@ using BetterGenshinImpact.GameTask.Common.Reward;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -398,7 +397,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         var serverTime = ServerTimeHelper.GetServerTimeNow();
         if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
-            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
+            using var ra0 = CaptureToRectArea();
+            using var artifactArea = ra0.Find(RecognitionAssets.Get("AutoFight", "ArtifactArea", ra0)); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
             {
                 if (int.TryParse(_taskParam.SundaySelectedValue, out int sundaySelectedValue))
@@ -460,11 +460,11 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         // 点击单人挑战确认并等待队伍界面--使用图像模版匹配的方法，也可以使用文字OCR的方法识别“单人挑战”直到消失
         await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PartyBtnChooseView,
+            ElementRecognition.Get("PartyBtnChooseView"),
             () =>
             {
                 using var ra = CaptureToRectArea();
-                var ra2 = ra.Find(fightAssets.ConfirmRa);
+                var ra2 = ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra));
                 if (!ra2.IsEmpty())
                 {
                     ra2.Click();
@@ -487,7 +487,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         // 等待队伍选择界面出现
         var teamUiFound = await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PartyBtnChooseView,
+            ElementRecognition.Get("PartyBtnChooseView"),
             () => { Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); },
             _ct,
             10,
@@ -507,7 +507,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             GetConfirmRa("开始挑战"),
             screen =>
             {
-                screen.Find(fightAssets.ConfirmRa, ra =>
+                screen.Find(RecognitionAssets.Get("AutoFight", "Confirm", screen), ra =>
                 {
                     ra.Click();
                     ra.Dispose();
@@ -535,7 +535,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             using var ra = CaptureToRectArea();
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var ocrListLeft = ra.Find(AutoFightAssets.Instance.AbnormalIconRa);
+            var ocrListLeft = ra.Find(RecognitionAssets.Get("AutoFight", "AbnormalIcon", ra));
             return (ocrList.Any(t => t.Text.Contains(leyLineDisorderLocalizedString) ||
                                      t.Text.Contains(clickanywheretocloseLocalizedString))) || ocrListLeft.IsExist();
         }, _ct, 40, 500);
@@ -562,7 +562,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
             // 检查左下角区域是否还存在目标文字，消失则继续，存在则结束
             using var leftBottom = CaptureToRectArea();
-            var leftBottomOcr = leftBottom.Find(AutoFightAssets.Instance.AbnormalIconRa);
+            var leftBottomOcr = leftBottom.Find(RecognitionAssets.Get("AutoFight", "AbnormalIcon", leftBottom));
             return leftBottomOcr.IsExist();
         }, _ct, 20, 500);
         if (!leftBottomFound)
@@ -1218,13 +1218,13 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             using var ra = CaptureToRectArea();
             // 优先点击继续
-            using var confirmRectArea = ra.Find(AutoFightAssets.Instance.ConfirmRa);
+            using var confirmRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra));
             if (!confirmRectArea.IsEmpty())
             {
                 if (isLastTurn)
                 {
                     // 最后一回合 退出
-                    var exitRectArea = ra.Find(AutoFightAssets.Instance.ExitRa);
+                    var exitRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra));
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.Click();
@@ -1378,7 +1378,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             }
 
             //切换20/40原粹树脂的按钮是亮的
-            var clickable = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnRo);
+            var clickable = ra0.Find(RecognitionAssets.Get("AutoDomain", "ResinSwitchBtn", ra0.Width, ra0.Height));
             if (clickable.IsExist())
             {
                 Logger.LogDebug("自动秘境：切换原粹树脂使用数量");
@@ -1386,7 +1386,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             }
 
             //切换20/40原粹树脂的按钮是暗的
-            var disabled = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnNoActiveRo);
+            var disabled = ra0.Find(RecognitionAssets.Get("AutoDomain", "ResinSwitchBtnNoActive", ra0.Width, ra0.Height));
             if (disabled.IsExist())
             {
                 Logger.LogWarning("自动秘境：切换原粹树脂的使用数量失败，可能是体力不足，当前目标：{Num}", expectedNum);

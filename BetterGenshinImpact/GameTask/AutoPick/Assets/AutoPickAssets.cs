@@ -1,72 +1,31 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Model;
 using OpenCvSharp;
-using System.Drawing;
 using Vanara.PInvoke;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPick.Assets;
 
-public class AutoPickAssets : BaseAssets<AutoPickAssets>
+public class AutoPickAssets : Singleton<AutoPickAssets>
 {
     private readonly ILogger<AutoPickAssets> _logger = App.GetLogger<AutoPickAssets>();
-
-    public RecognitionObject FRo;
-    public RecognitionObject ChatIconRo;
-    public RecognitionObject SettingsIconRo;
-    public RecognitionObject LRo;
-
+    private readonly ISystemInfo systemInfo;
 
     public User32.VK PickVk = User32.VK.VK_F;
     public RecognitionObject PickRo;
     public RecognitionObject ChatPickRo;
 
+    private Rect CaptureRect => systemInfo.ScaleMax1080PCaptureRect;
+    private double AssetScale => systemInfo.AssetScale;
+
     private AutoPickAssets()
     {
-        FRo = new RecognitionObject
-        {
-            Name = "F",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "F.png"),
-            RegionOfInterest = new Rect((int)(1090 * AssetScale),
-                (int)(330 * AssetScale),
-                (int)(60 * AssetScale),
-                (int)(420 * AssetScale)),
-            DrawOnWindow = false
-        }.InitTemplate();
-
-        ChatIconRo = new RecognitionObject
-        {
-            Name = "ChatIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
-            DrawOnWindow = false,
-            DrawOnWindowPen = new Pen(Color.Chocolate, 2)
-        }.InitTemplate();
-        SettingsIconRo = new RecognitionObject
-        {
-            Name = "SettingsIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "icon_settings.png"),
-            DrawOnWindow = false,
-            DrawOnWindowPen = new Pen(Color.Chocolate, 2)
-        }.InitTemplate();
-        
-        LRo = new RecognitionObject
-        {
-            Name = "L",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "L.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width-(int)(110 * AssetScale),
-                (int)(550 * AssetScale),
-                (int)(70 * AssetScale),
-                (int)(100 * AssetScale)),
-        }.InitTemplate();
-
-
-        PickRo = FRo;
+        systemInfo = TaskContext.Instance().SystemInfo;
+        PickRo = RecognitionAssets.Get("AutoPick", "F", CaptureRect.Width, CaptureRect.Height);
+        ChatPickRo = LoadCustomChatPickKey("F");
         var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
         if (!string.IsNullOrEmpty(keyName))
         {
@@ -121,4 +80,5 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             DrawOnWindow = false
         }.InitTemplate();
     }
+
 }

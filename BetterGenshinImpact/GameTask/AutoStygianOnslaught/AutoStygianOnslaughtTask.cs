@@ -183,34 +183,34 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     [StateDetector(StygianState.ContinueOrExit, Order = 10)]
     private bool DetectContinueOrExit(ImageRegion ra)
     {
-        return ra.Find(AutoFightAssets.Instance.ConfirmRa).IsExist() &&
-               ra.Find(AutoFightAssets.Instance.ExitRa).IsExist();
+        return ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra)).IsExist() &&
+               ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra)).IsExist();
     }
 
     [StateDetector(StygianState.TeleportMap, Order = 20)]
     private bool DetectTeleportMap(ImageRegion ra)
     {
-        return ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo).IsExist();
+        return ra.Find(RecognitionAssets.Get("QuickTeleport", "TeleportButton", ra)).IsExist();
     }
 
     [StateDetector(StygianState.DomainLobby, Order = 30)]
     private bool DetectDomainLobby(ImageRegion ra)
     {
-        return ra.Find(ElementAssets.Instance.LeylineDisorderIconRo).IsExist() &&
-               ra.Find(ElementAssets.Instance.InventoryRo).IsExist();
+        return ra.Find(ElementRecognition.Get("LeylineDisorderIcon", ra)).IsExist() &&
+               ra.Find(ElementRecognition.Get("Inventory", ra)).IsExist();
     }
 
     [StateDetector(StygianState.BattleArena, Order = 40)]
     private bool DetectBattleArena(ImageRegion ra)
     {
-        return ra.Find(ElementAssets.Instance.LeylineDisorderIconRo).IsExist() &&
-               !ra.Find(ElementAssets.Instance.InventoryRo).IsExist();
+        return ra.Find(ElementRecognition.Get("LeylineDisorderIcon", ra)).IsExist() &&
+               !ra.Find(ElementRecognition.Get("Inventory", ra)).IsExist();
     }
 
     [StateDetector(StygianState.MainWorld, Order = 50)]
     private bool DetectMainWorld(ImageRegion ra)
     {
-        return ra.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
+        return ra.Find(ElementRecognition.Get("PaimonMenu", ra)).IsExist();
     }
 
     // ========== 第二优先级：模板匹配 + 局部 OCR ==========
@@ -218,7 +218,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     [StateDetector(StygianState.BattleResultWin, Order = 60)]
     private bool DetectBattleResultWin(ImageRegion ra)
     {
-        return ra.Find(ElementAssets.Instance.BtnWhiteCancel).IsExist() &&
+        return ra.Find(ElementRecognition.Get("BtnWhiteCancel", ra)).IsExist() &&
                ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.35, ra.Height * 0.7, ra.Width * 0.3, ra.Height * 0.2))
                  .Any(o => o.Text.Contains("返回"));
     }
@@ -226,7 +226,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     [StateDetector(StygianState.BattleResultLose, Order = 70)]
     private bool DetectBattleResultLose(ImageRegion ra)
     {
-        return ra.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist() &&
+        return ra.Find(ElementRecognition.Get("BtnWhiteConfirm", ra)).IsExist() &&
                ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.2, ra.Height * 0.3, ra.Width * 0.6, ra.Height * 0.3))
                  .Any(o => o.Text.Contains("挑战失败") || o.Text.Contains("重新挑战"));
     }
@@ -375,7 +375,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task<StateHandlerResult> HandleTeleportMapState(BvPage page)
     {
         Logger.LogInformation($"{Name}：点击传送");
-        var teleportButton = page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo).FindAll().FirstOrDefault();
+        var teleportButton = page.Locator(RecognitionAssets.Get("QuickTeleport", "TeleportButton")).FindAll().FirstOrDefault();
         if (teleportButton == null)
         {
             Logger.LogWarning($"{Name}：未找到传送按钮");
@@ -406,7 +406,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
         // 点击确认进入
         using var ra = CaptureToRectArea();
-        var btn = ra.Find(ElementAssets.Instance.BtnWhiteConfirm);
+        var btn = ra.Find(ElementRecognition.Get("BtnWhiteConfirm", ra));
         if (btn.IsEmpty())
         {
             Logger.LogWarning($"{Name}：未找到进入确认按钮");
@@ -502,7 +502,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
         if (isLastTurn)
         {
-            var exitBtn = ra.Find(AutoFightAssets.Instance.ExitRa);
+            var exitBtn = ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra));
             if (!exitBtn.IsEmpty())
             {
                 exitBtn.Click();
@@ -510,7 +510,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         }
         else
         {
-            var confirmBtn = ra.Find(AutoFightAssets.Instance.ConfirmRa);
+            var confirmBtn = ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra));
             if (!confirmBtn.IsEmpty())
             {
                 confirmBtn.Click();
@@ -645,7 +645,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             if (isLastTurn)
             {
                 using var ra2 = CaptureToRectArea();
-                var exitBtn = ra2.Find(AutoFightAssets.Instance.ExitRa);
+                var exitBtn = ra2.Find(RecognitionAssets.Get("AutoFight", "Exit", ra2));
                 if (!exitBtn.IsEmpty())
                 {
                     exitBtn.Click();
@@ -655,7 +655,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             else
             {
                 using var ra2 = CaptureToRectArea();
-                var confirmBtn = ra2.Find(AutoFightAssets.Instance.ConfirmRa);
+                var confirmBtn = ra2.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra2));
                 if (!confirmBtn.IsEmpty())
                 {
                     confirmBtn.Click();
@@ -960,7 +960,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 {
                     Name = "BtnWhiteCancel",
                     RecognitionType = RecognitionTypes.TemplateMatch,
-                    TemplateImageMat = ElementAssets.Instance.BtnWhiteCancel.TemplateImageMat,
+                    TemplateImageMat = ElementRecognition.Get("BtnWhiteCancel").TemplateImageMat,
                     RegionOfInterest = new Rect(captureRect.Width / 3, captureRect.Height - (int)(captureRect.Height * 0.22), captureRect.Width / 3, (int)(captureRect.Height * 0.22)),
                     Use3Channels = true
                 }.InitTemplate();
@@ -1093,13 +1093,13 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task OpenExitMenuAndClickLoop(BvPage page)
     {
         var found = await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.BtnExitDoor.Value,
+            ElementRecognition.Get("BtnExitDoor"),
             () => Simulation.SendInput.SimulateAction(GIActions.OpenPaimonMenu),
             _ct);
 
         if (found)
         {
-            await page.Locator(ElementAssets.Instance.BtnExitDoor.Value).Click();
+            await page.Locator(ElementRecognition.Get("BtnExitDoor")).Click();
             Logger.LogInformation($"{Name}：点击退出秘境");
         }
         else
@@ -1110,7 +1110,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
     private async Task WaitExitCompleteLoop(BvPage page)
     {
-        var found = await Bv.WaitUntilFound(ElementAssets.Instance.PaimonMenuRo, _ct, 200, 300);
+        var found = await Bv.WaitUntilFound(ElementRecognition.Get("PaimonMenu"), _ct, 200, 300);
         if (found)
         {
             Logger.LogInformation($"{Name}：退出秘境完成");

@@ -570,7 +570,7 @@ public class AutoFightTask : ISoloTask
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
-                        ElementAssets.Instance.PartyBtnChooseView,
+                        ElementRecognition.Get("PartyBtnChooseView"),
                         () => { },
                         ct,
                         15,
@@ -591,7 +591,7 @@ public class AutoFightTask : ISoloTask
                 while(timeWaitStart < 6000)
                 {
                     using var ra = CaptureToRectArea();
-                    var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+                    var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView", ra));
                     if (partyViewBtn.IsExist())
                     {
                         // OCR 当前队伍名称（无法单字，中间禁止空格）

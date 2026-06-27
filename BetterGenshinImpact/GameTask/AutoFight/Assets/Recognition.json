@@ -1,0 +1,56 @@
+{
+  "objects": {
+    "OneP": {
+      "type": "TemplateMatch",
+      "template": "1p.png",
+      "roi": "rect(0, 0, cw / 4, ch / 7)",
+      "draw": false
+    },
+    "P": {
+      "type": "TemplateMatch",
+      "template": "p.png",
+      "roi": "rect(cw - cw / 12.5, ch / 5, cw / 12.5, ch / 2 - cw / 7)",
+      "draw": false
+    },
+    "WandererIcon": {
+      "type": "TemplateMatch",
+      "template": "wanderer_icon.png",
+      "draw": false
+    },
+    "WandererIconNoActive": {
+      "type": "TemplateMatch",
+      "template": "wanderer_icon_no_active.png",
+      "draw": false
+    },
+    "Confirm": {
+      "type": "TemplateMatch",
+      "template": "confirm.png",
+      "roi": "rect(cw / 2, ch / 2, cw / 2, ch / 2)",
+      "draw": false
+    },
+    "ArtifactArea": {
+      "type": "TemplateMatch",
+      "template": "artifact_flower_logo.png",
+      "roi": "rect(cw / 2, 0, cw / 2, ch)",
+      "draw": false
+    },
+    "ClickAnyCloseTip": {
+      "type": "TemplateMatch",
+      "template": "click_any_close_tip.png",
+      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "draw": false
+    },
+    "Exit": {
+      "type": "TemplateMatch",
+      "template": "exit.png",
+      "roi": "rect(0, ch / 2, cw / 2, ch / 2)",
+      "draw": false
+    },
+    "AbnormalIcon": {
+      "type": "TemplateMatch",
+      "template": "abnormal_icon.png",
+      "roi": "rect(0, ch * 0.08, cw * 0.04, ch * 0.07)",
+      "draw": false
+    }
+  }
+}

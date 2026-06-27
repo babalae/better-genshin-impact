@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
@@ -53,6 +54,11 @@ public partial class AutoWoodTask : ISoloTask
         this._taskParam = taskParam;
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
+    }
+
+    private static RecognitionObject GetRecognitionObject(string objectName, Region region)
+    {
+        return RecognitionAssets.Get("AutoWood", objectName, region);
     }
 
     public async Task Start(CancellationToken ct)
@@ -429,7 +435,7 @@ public partial class AutoWoodTask : ISoloTask
         if (_first)
         {
             using var contentRegion = CaptureToRectArea();
-            using var ra = contentRegion.Find(_assets.TheBoonOfTheElderTreeRo);
+            using var ra = contentRegion.Find(GetRecognitionObject("TheBoonOfTheElderTree", contentRegion));
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
@@ -454,7 +460,7 @@ public partial class AutoWoodTask : ISoloTask
             {
                 Sleep(1, _ct);
                 using var contentRegion = CaptureToRectArea();
-                using var ra = contentRegion.Find(_assets.TheBoonOfTheElderTreeRo);
+                using var ra = contentRegion.Find(GetRecognitionObject("TheBoonOfTheElderTree", contentRegion));
                 if (ra.IsEmpty())
                 {
 #if !TEST_WITHOUT_Z_ITEM
@@ -492,7 +498,7 @@ public partial class AutoWoodTask : ISoloTask
             {
                 Sleep(1, _ct);
                 using var contentRegion = CaptureToRectArea();
-                using var ra = contentRegion.Find(_assets.MenuBagRo);
+                using var ra = contentRegion.Find(GetRecognitionObject("MenuBag", contentRegion));
                 if (ra.IsEmpty())
                 {
                     Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
@@ -515,7 +521,7 @@ public partial class AutoWoodTask : ISoloTask
 
         // 点击退出到主界面确认
         using var contentRegion = CaptureToRectArea();
-        contentRegion.Find(_assets.ConfirmRo, ra =>
+        contentRegion.Find(GetRecognitionObject("Confirm", contentRegion), ra =>
         {
             ra.Click();
             Debug.WriteLine("[AutoWood] Click confirm button");
@@ -537,7 +543,7 @@ public partial class AutoWoodTask : ISoloTask
             Sleep(1, _ct);
 
             using var contentRegion = CaptureToRectArea();
-            using var ra = contentRegion.Find(_assets.EnterGameRo);
+            using var ra = contentRegion.Find(GetRecognitionObject("EnterGame", contentRegion));
             if (!ra.IsEmpty())
             {
                 clickCnt++;

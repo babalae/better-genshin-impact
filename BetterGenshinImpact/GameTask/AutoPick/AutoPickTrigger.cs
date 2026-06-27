@@ -196,7 +196,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         var config = TaskContext.Instance().Config.AutoPickConfig;
 
         // 存在 L 键位是千星奇遇，无需拾取
-        using var lKeyRa = content.CaptureRectArea.Find(_autoPickAssets.LRo);
+        using var lKeyRa = content.CaptureRectArea.Find(RecognitionAssets.Get("AutoPick", "L", content.CaptureRectArea));
         if (lKeyRa.IsExist())
         {
             return;
@@ -204,10 +204,12 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 识别到拾取键，开始识别物品图标
         var isExcludeIcon = false;
-        _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
+        var iconRoi = new Rect(
             foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
             (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-        using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+        var chatIconRo = RecognitionAssets.Get("AutoSkip", "ChatIcon", content.CaptureRectArea);
+        chatIconRo.RegionOfInterest = iconRoi;
+        using var chatIconRa = content.CaptureRectArea.Find(chatIconRo);
         speedTimer.Record("识别聊天图标");
         if (!chatIconRa.IsEmpty())
         {
@@ -216,8 +218,9 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         else
         {
-            _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
-            using var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+            var settingsIconRo = RecognitionAssets.Get("AutoPick", "SettingsIcon", content.CaptureRectArea);
+            settingsIconRo.RegionOfInterest = iconRoi;
+            using var settingsIconRa = content.CaptureRectArea.Find(settingsIconRo);
             speedTimer.Record("识别设置图标");
             if (!settingsIconRa.IsEmpty())
             {

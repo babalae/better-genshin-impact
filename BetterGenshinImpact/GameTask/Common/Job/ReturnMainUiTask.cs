@@ -27,7 +27,7 @@ public class ReturnMainUiTask
 
             var region = CaptureToRectArea();
 
-            var exitDoor = region.Find(ElementAssets.Instance.BtnExitDoor.Value);
+            var exitDoor = region.Find(ElementRecognition.Get("BtnExitDoor", region));
             if (exitDoor.IsExist())
             {
                 exitDoor.Click();

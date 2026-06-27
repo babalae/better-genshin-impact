@@ -104,7 +104,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     public void Tick(object? sender, EventArgs e)
     {
         var ra = TaskControl.CaptureToRectArea();
-        var iconRa = ra.Find(ElementAssets.Instance.FriendChat);
+        var iconRa = ra.Find(ElementRecognition.Get("FriendChat", ra));
         var exist = iconRa.IsExist();
         if (exist != _isInMainUi)
         {

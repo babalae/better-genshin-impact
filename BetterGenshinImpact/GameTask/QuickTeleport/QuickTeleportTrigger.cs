@@ -47,6 +47,11 @@ internal class QuickTeleportTrigger : ITaskTrigger
         IsExclusive = false;
     }
 
+    private static RecognitionObject GetRecognitionObject(string objectName, Region region)
+    {
+        return RecognitionAssets.Get("QuickTeleport", objectName, region);
+    }
+
     public void OnCapture(CaptureContent content)
     {
         if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 300)
@@ -77,14 +82,14 @@ internal class QuickTeleportTrigger : ITaskTrigger
             if (!hasTeleportButton)
             {
                 // 存在地图关闭按钮，说明未选中传送点，直接返回
-                var mapCloseRa = content.CaptureRectArea.Find(_assets.MapCloseButtonRo);
+                var mapCloseRa = content.CaptureRectArea.Find(GetRecognitionObject("MapCloseButton", content.CaptureRectArea));
                 if (!mapCloseRa.IsEmpty())
                 {
                     return;
                 }
 
                 // 存在地图选择按钮，说明未选中传送点，直接返回
-                var mapChooseRa = content.CaptureRectArea.Find(_assets.MapChooseRo);
+                var mapChooseRa = content.CaptureRectArea.Find(GetRecognitionObject("MapChoose", content.CaptureRectArea));
                 if (!mapChooseRa.IsEmpty())
                 {
                     return;
@@ -104,7 +109,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
     private bool CheckTeleportButton(ImageRegion imageRegion)
     {
         var hasTeleportButton = false;
-        imageRegion.Find(_assets.TeleportButtonRo, ra =>
+        imageRegion.Find(GetRecognitionObject("TeleportButton", imageRegion), ra =>
         {
             ra.Click();
             hasTeleportButton = true;

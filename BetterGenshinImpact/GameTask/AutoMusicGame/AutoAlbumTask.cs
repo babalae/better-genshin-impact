@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoMusicGame.Assets;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Service.Notification;
@@ -49,7 +48,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
     public async Task StartOneAlbum(CancellationToken ct)
     {
         using var ra1 = CaptureToRectArea();
-        using var iconRa = ra1.Find(AutoMusicAssets.Instance.UiLeftTopAlbumIcon);
+        using var iconRa = ra1.Find(RecognitionAssets.Get("AutoMusicGame", "UiLeftTopAlbumIcon", ra1));
         if (!iconRa.IsExist())
         {
             throw new Exception("当前未处于主题专辑界面，请在专辑界面运行本任务。注意全部歌曲列表页面无法运行本任务！");
@@ -75,10 +74,10 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
         // 遍历4个难度等级
         var defaultDifficultyLevels = new[]
         {
-            ("普通", 480, 600, AutoMusicAssets.Instance.MusicCanorusLevel1),
-            ("困难", 800, 600, AutoMusicAssets.Instance.MusicCanorusLevel2),
-            ("大师", 1150, 600, AutoMusicAssets.Instance.MusicCanorusLevel3),
-            ("传说", 1400, 600, AutoMusicAssets.Instance.MusicCanorusLevel4)
+            ("普通", 480, 600, RecognitionAssets.Get("AutoMusicGame", "MusicCanorusLevel1", ra1)),
+            ("困难", 800, 600, RecognitionAssets.Get("AutoMusicGame", "MusicCanorusLevel2", ra1)),
+            ("大师", 1150, 600, RecognitionAssets.Get("AutoMusicGame", "MusicCanorusLevel3", ra1)),
+            ("传说", 1400, 600, RecognitionAssets.Get("AutoMusicGame", "MusicCanorusLevel4", ra1))
         };
 
         var difficultyLevels = defaultDifficultyLevels;
@@ -109,7 +108,8 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 }
                 else
                 {
-                    using var doneRa = CaptureToRectArea().Find(AutoMusicAssets.Instance.AlbumMusicComplate);
+                    using var doneArea = CaptureToRectArea();
+                    using var doneRa = doneArea.Find(RecognitionAssets.Get("AutoMusicGame", "AlbumMusicComplate", doneArea));
                     if (doneRa.IsExist())
                     {
                         Logger.LogInformation("当前乐曲{Num}所有奖励已领取，切换下一首", i + 1);
@@ -143,7 +143,8 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                     while (!cts.Token.IsCancellationRequested)
                     {
                         await Delay(5000, ct); // 每5秒检查一次
-                        using var listRa = CaptureToRectArea().Find(AutoMusicAssets.Instance.BtnList);
+                        using var listArea = CaptureToRectArea();
+                        using var listRa = listArea.Find(RecognitionAssets.Get("AutoMusicGame", "BtnList", listArea));
                         if (listRa.IsExist())
                         {
                             Logger.LogDebug("检测到返回列表按钮，演奏结束");
@@ -163,7 +164,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 Logger.LogInformation("第{Num}首{Difficulty}难度乐曲演奏完成", i + 1, difficultyName);
                 await Delay(2000, ct);
 
-                await Bv.WaitUntilFound(AutoMusicAssets.Instance.UiLeftTopAlbumIcon, ct);
+                await Bv.WaitUntilFound(RecognitionAssets.Get("AutoMusicGame", "UiLeftTopAlbumIcon", TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width, TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Height), ct);
                 Logger.LogDebug("切换到下一首乐曲");
                 GameCaptureRegion.GameRegion1080PPosClick(310, 220);
                 await Delay(800, ct);

@@ -43,13 +43,13 @@ public class ClaimMailRewardsTask
         await Delay(1300, ct);
 
         var ra = CaptureToRectArea();
-        var mailIcon = ra.Find(ElementAssets.Instance.EscMailReward);
+        var mailIcon = ra.Find(ElementRecognition.Get("EscMailReward", ra));
         if (mailIcon.IsExist())
         {
             mailIcon.Click();
             await Delay(1000, ct);
             ra = CaptureToRectArea();
-            var claimAll = ra.Find(ElementAssets.Instance.CollectRo);
+            var claimAll = ra.Find(ElementRecognition.Get("Collect", ra));
             if (claimAll.IsExist())
             {
                 claimAll.Click();

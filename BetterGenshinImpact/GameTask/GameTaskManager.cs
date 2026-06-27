@@ -1,20 +1,15 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
-using BetterGenshinImpact.GameTask.AutoBoss.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
-using BetterGenshinImpact.GameTask.AutoEat.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
-using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Placeholder;
-using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
@@ -22,7 +17,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
@@ -135,20 +129,13 @@ internal class GameTaskManager
 
     public static void ReloadAssets()
     {
+        // RecognitionAssets.ClearAll();
         AutoPickAssets.DestroyInstance();
-        AutoSkipAssets.DestroyInstance();
-        AutoFishingAssets.DestroyInstance();
         QuickTeleportAssets.DestroyInstance();
         AutoWoodAssets.DestroyInstance();
         AutoGeniusInvokationAssets.DestroyInstance();
         AutoFightAssets.DestroyInstance();
-        ElementAssets.DestroyInstance();
-        QuickSereniteaPotAssets.DestroyInstance();
-        GameLoadingAssets.DestroyInstance();
         MapLazyAssets.DestroyInstance();
-        AutoEatAssets.DestroyInstance();
-        AutoDomainAssets.DestroyInstance();
-        AutoBossAssets.DestroyInstance();
     }
 
     /// <summary>

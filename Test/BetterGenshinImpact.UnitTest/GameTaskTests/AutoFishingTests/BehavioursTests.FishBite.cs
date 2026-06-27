@@ -24,9 +24,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
-            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
-            Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
+            Blackboard blackboard = new Blackboard();
 
             //
             FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent());
@@ -47,9 +45,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
-            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
-            Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
+            Blackboard blackboard = new Blackboard();
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
@@ -104,9 +100,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
-            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
-            Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
+            Blackboard blackboard = new Blackboard();
 
             //
             FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer);
