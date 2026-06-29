@@ -38,14 +38,14 @@ public class CraftMaterialResult
     public string MaterialName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 目标合成次数。
+    /// 目标合成个数。
     /// </summary>
-    public int TargetCount { get; set; }
+    public int TargetQuantity { get; set; }
 
     /// <summary>
-    /// 实际设置到界面的合成次数。
+    /// 实际设置到界面的合成个数。
     /// </summary>
-    public int ActualCount { get; set; }
+    public int ActualQuantity { get; set; }
 
     /// <summary>
     /// 本次使用的材料筛选类型。
@@ -53,22 +53,30 @@ public class CraftMaterialResult
     public string MaterialType { get; set; } = string.Empty;
 
     /// <summary>
+    /// 本次合成产物汇总。
+    /// </summary>
+    public List<RewardItem> Rewards { get; set; } = [];
+
+    /// <summary>
     /// 创建成功结果。
     /// </summary>
     /// <param name="materialName">目标材料名。</param>
-    /// <param name="targetCount">目标合成次数。</param>
-    /// <param name="actualCount">实际设置次数。</param>
+    /// <param name="targetQuantity">目标合成个数。</param>
+    /// <param name="actualQuantity">实际设置个数。</param>
     /// <param name="materialType">材料筛选类型。</param>
+    /// <param name="rewards">本次合成产物汇总。</param>
     /// <returns>成功结果。</returns>
-    public static CraftMaterialResult CreateSuccess(string materialName, int targetCount, int actualCount, string materialType)
+    public static CraftMaterialResult CreateSuccess(string materialName, int targetQuantity, int actualQuantity, string materialType,
+        List<RewardItem> rewards)
     {
         return new CraftMaterialResult
         {
             Success = true,
             MaterialName = materialName,
-            TargetCount = targetCount,
-            ActualCount = actualCount,
-            MaterialType = materialType
+            TargetQuantity = targetQuantity,
+            ActualQuantity = actualQuantity,
+            MaterialType = materialType,
+            Rewards = rewards
         };
     }
 
@@ -92,7 +100,7 @@ public class CraftMaterialTask
     private readonly InputSimulator _input = Simulation.SendInput;
     private readonly RewardIconMatcher _iconMatcher = new();
     private readonly string _materialName;
-    private readonly int _targetCount;
+    private readonly int _targetQuantity;
     private readonly string? _materialType;
     private BvPage? _page;
     private CancellationToken _ct;
@@ -107,12 +115,12 @@ public class CraftMaterialTask
     /// 创建当前合成界面自动合成任务。
     /// </summary>
     /// <param name="materialName">目标材料名。</param>
-    /// <param name="targetCount">目标合成次数。</param>
+    /// <param name="targetQuantity">目标合成个数。</param>
     /// <param name="materialType">材料筛选类型；为空时从物品 CSV 读取。</param>
-    public CraftMaterialTask(string materialName, int targetCount, string? materialType = null)
+    public CraftMaterialTask(string materialName, int targetQuantity, string? materialType = null)
     {
         _materialName = materialName?.Trim() ?? string.Empty;
-        _targetCount = targetCount;
+        _targetQuantity = targetQuantity;
         _materialType = string.IsNullOrWhiteSpace(materialType) ? null : materialType.Trim();
     }
 
@@ -122,7 +130,7 @@ public class CraftMaterialTask
     /// <param name="ct">取消令牌。</param>
     /// <returns>合成执行结果。</returns>
     /// <exception cref="ArgumentException">材料名为空时抛出。</exception>
-    /// <exception cref="ArgumentOutOfRangeException">合成次数小于等于 0 时抛出。</exception>
+    /// <exception cref="ArgumentOutOfRangeException">合成个数小于等于 0 时抛出。</exception>
     /// <exception cref="InvalidOperationException">合成界面、材料筛选、材料搜索或数量设置失败时抛出。</exception>
     public async Task<CraftMaterialResult> Start(CancellationToken ct)
     {
@@ -133,23 +141,26 @@ public class CraftMaterialTask
         var materialType = ResolveMaterialType();
         EnsureInCraftingUi();
 
-        _logger.LogInformation("开始合成材料：{MaterialName}，目标次数：{Count}，筛选类型：{MaterialType}", _materialName, _targetCount, materialType);
+        _logger.LogInformation("开始合成材料：{MaterialName}，目标个数：{Quantity}，筛选类型：{MaterialType}", _materialName, _targetQuantity, materialType);
 
         await SelectMaterialType(materialType);
         await FindAndSelectMaterial();
-        var adjustedCount = await SetCraftCount(_targetCount);
+        var adjustedQuantity = await SetCraftQuantity(_targetQuantity);
 
-        await SubmitCraftAndClaimResult();
+        var rewards = await SubmitCraftAndClaimResult(adjustedQuantity);
 
-        _logger.LogInformation("材料 {MaterialName} 合成完成，次数：{Count}", _materialName, adjustedCount);
-        return CraftMaterialResult.CreateSuccess(_materialName, _targetCount, adjustedCount, materialType);
+        _logger.LogInformation("材料 {MaterialName} 合成完成，实际设置个数：{Quantity}，产物：{Rewards}",
+            _materialName,
+            adjustedQuantity,
+            FormatRewards(rewards));
+        return CraftMaterialResult.CreateSuccess(_materialName, _targetQuantity, adjustedQuantity, materialType, rewards);
     }
 
     /// <summary>
     /// 校验任务构造参数。
     /// </summary>
     /// <exception cref="ArgumentException">材料名为空时抛出。</exception>
-    /// <exception cref="ArgumentOutOfRangeException">合成次数小于等于 0 时抛出。</exception>
+    /// <exception cref="ArgumentOutOfRangeException">合成个数小于等于 0 时抛出。</exception>
     private void ValidateArguments()
     {
         if (string.IsNullOrWhiteSpace(_materialName))
@@ -157,9 +168,9 @@ public class CraftMaterialTask
             throw new ArgumentException("材料名不能为空。", nameof(_materialName));
         }
 
-        if (_targetCount <= 0)
+        if (_targetQuantity <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(_targetCount), _targetCount, "合成次数必须大于 0。");
+            throw new ArgumentOutOfRangeException(nameof(_targetQuantity), _targetQuantity, "合成个数必须大于 0。");
         }
     }
 
@@ -284,18 +295,14 @@ public class CraftMaterialTask
     {
         try
         {
-        
             var confirmation = await Page.GetByText(materialType, Rect1080(165, 1000, 279, 34)).TryWaitFor(300);
             if (confirmation.Count > 0)
             {
                 return true;
             }
-
             await Page.GetByText("筛选", Rect1080(90, 1000, 60, 33)).Click(3000);
             await Page.GetByText(materialType, Rect1080(35, 124, 243, 615)).Click(5000);
-    
-
-            throw new TimeoutException($"识别文字[{materialType}]在 10 次筛选后仍未确认！");
+            return true;
         }
         catch (TimeoutException e)
         {
@@ -381,28 +388,28 @@ public class CraftMaterialTask
     }
 
     /// <summary>
-    /// 设置合成次数并校验最终数量。
+    /// 设置本次合成个数并校验最终数量。
     /// </summary>
-    /// <param name="targetCount">目标合成次数。</param>
-    /// <returns>最终校验到的合成次数。</returns>
-    /// <exception cref="InvalidOperationException">最大可合成次数、当前合成次数读取失败，材料不足或最终数量不匹配时抛出。</exception>
-    private async Task<int> SetCraftCount(int targetCount)
+    /// <param name="targetQuantity">目标合成个数。</param>
+    /// <returns>最终校验到的合成个数。</returns>
+    /// <exception cref="InvalidOperationException">最大可合成个数、当前合成个数读取失败，材料不足或最终数量不匹配时抛出。</exception>
+    private async Task<int> SetCraftQuantity(int targetQuantity)
     {
         var addButton = (X: 1614, Y: 672);
         var reduceButton = (X: 1074, Y: 672);
 
-        var maxCount = ReadMaxCraftCount();
-        if (maxCount <= 0)
+        var maxQuantity = ReadMaxCraftQuantity();
+        if (maxQuantity <= 0)
         {
-            throw new InvalidOperationException("未能识别最大可合成次数。");
+            throw new InvalidOperationException("未能识别最大可合成个数。");
         }
 
-        if (targetCount > maxCount)
+        if (targetQuantity > maxQuantity)
         {
-            throw new InvalidOperationException($"材料不足以合成指定数量，目标 {targetCount}，当前最多可合成 {maxCount}。");
+            throw new InvalidOperationException($"材料不足以合成指定个数，目标 {targetQuantity}，当前最多可合成 {maxQuantity}。");
         }
 
-        if (maxCount == 1)
+        if (maxQuantity == 1)
         {
             return 1;
         }
@@ -410,77 +417,77 @@ public class CraftMaterialTask
         await DragSliderToRatio(0);
         await Delay(250, _ct);
 
-        var ratio = Math.Clamp((targetCount - 1d) / (maxCount - 1d), 0d, 1d);
+        var ratio = Math.Clamp((targetQuantity - 1d) / (maxQuantity - 1d), 0d, 1d);
         await DragSliderToRatio(ratio);
         await Delay(350, _ct);
 
-        var actualCount = ReadCurrentCraftCount();
-        if (actualCount <= 0)
+        var actualQuantity = ReadCurrentCraftQuantity();
+        if (actualQuantity <= 0)
         {
-            throw new InvalidOperationException("未能读取当前合成次数。");
+            throw new InvalidOperationException("未能读取当前合成个数。");
         }
 
-        if (Math.Abs(actualCount - targetCount) > 30)
+        if (Math.Abs(actualQuantity - targetQuantity) > 30)
         {
             await DragSliderToRatio(ratio);
             await Delay(350, _ct);
-            actualCount = ReadCurrentCraftCount();
-            if (actualCount <= 0 || Math.Abs(actualCount - targetCount) > 30)
+            actualQuantity = ReadCurrentCraftQuantity();
+            if (actualQuantity <= 0 || Math.Abs(actualQuantity - targetQuantity) > 30)
             {
-                throw new InvalidOperationException($"滑块调整合成次数后校验失败，目标 {targetCount}，当前 {actualCount}。");
+                throw new InvalidOperationException($"滑块调整合成个数后校验失败，目标 {targetQuantity}，当前 {actualQuantity}。");
             }
         }
 
-        while (actualCount < targetCount)
+        while (actualQuantity < targetQuantity)
         {
             GameCaptureRegion.GameRegion1080PPosClick(addButton.X, addButton.Y);
             await Delay(60, _ct);
-            actualCount++;
+            actualQuantity++;
         }
 
-        while (actualCount > targetCount)
+        while (actualQuantity > targetQuantity)
         {
             GameCaptureRegion.GameRegion1080PPosClick(reduceButton.X, reduceButton.Y);
             await Delay(60, _ct);
-            actualCount--;
+            actualQuantity--;
         }
 
         await Delay(200, _ct);
-        var verifiedCount = ReadCurrentCraftCount();
-        if (verifiedCount <= 0)
+        var verifiedQuantity = ReadCurrentCraftQuantity();
+        if (verifiedQuantity <= 0)
         {
-            throw new InvalidOperationException("最终合成次数读取失败。");
+            throw new InvalidOperationException("最终合成个数读取失败。");
         }
 
-        if (verifiedCount != targetCount)
+        if (verifiedQuantity != targetQuantity)
         {
-            throw new InvalidOperationException($"最终合成次数与目标不一致，目标 {targetCount}，当前 {verifiedCount}。");
+            throw new InvalidOperationException($"最终合成个数与目标不一致，目标 {targetQuantity}，当前 {verifiedQuantity}。");
         }
 
-        return verifiedCount;
+        return verifiedQuantity;
     }
 
     /// <summary>
-    /// 读取右侧当前合成次数。
+    /// 读取右侧当前合成个数。
     /// </summary>
-    /// <returns>识别到的当前合成次数；失败时返回 0。</returns>
-    private int ReadCurrentCraftCount()
+    /// <returns>识别到的当前合成个数；失败时返回 0。</returns>
+    private int ReadCurrentCraftQuantity()
     {
         var text = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(1220, 600, 300, 85)));
         return ReadFirstPositiveInt(text);
     }
 
     /// <summary>
-    /// 读取当前材料最大可合成次数。
+    /// 读取当前材料最大可合成个数。
     /// </summary>
-    /// <returns>最大可合成次数；识别失败时返回 0。</returns>
-    private int ReadMaxCraftCount()
+    /// <returns>最大可合成个数；识别失败时返回 0。</returns>
+    private int ReadMaxCraftQuantity()
     {
         var maxText = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(1500, 625, 135, 90)));
-        var maxCount = ReadFirstPositiveInt(maxText);
-        if (maxCount > 0)
+        var maxQuantity = ReadFirstPositiveInt(maxText);
+        if (maxQuantity > 0)
         {
-            return maxCount;
+            return maxQuantity;
         }
 
         var materialText = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(815, 742, 1055, 215)));
@@ -543,20 +550,79 @@ public class CraftMaterialTask
     /// <summary>
     /// 提交合成并按顺序确认合成消耗与产物获得弹窗。
     /// </summary>
-    /// <returns>异步任务。</returns>
+    /// <param name="actualQuantity">实际合成个数。</param>
+    /// <returns>本次合成产物汇总。</returns>
     /// <exception cref="InvalidOperationException">合成提交或任一确认按钮未能识别点击时抛出。</exception>
-    private async Task SubmitCraftAndClaimResult()
+    private async Task<List<RewardItem>> SubmitCraftAndClaimResult(int actualQuantity)
     {
         try
-        {   //分别是右下角合成按钮，弹窗确认合成按钮，弹窗产物确认按钮
+        {
+            var rewards = CreateDefaultCraftRewards(actualQuantity);
+
+            // 分别是右下角合成按钮、弹窗确认合成按钮、弹窗产物确认按钮。
             await Page.GetByText("合成", Rect1080(1588, 967, 332, 113)).Click(5000);
             await Page.GetByText("确认", Rect1080(980, 725, 370, 70)).Click(5000);
-            await Page.GetByText("确认", Rect1080(790, 875, 340, 65)).Click(5000);
+
+            var resultConfirmButtons = await Page.GetByText("确认", Rect1080(790, 875, 340, 65)).WaitFor(5000);
+            rewards = RecognizeCraftRewards(actualQuantity);
+
+            resultConfirmButtons.First().Click();
+            return rewards;
         }
         catch (TimeoutException e)
         {
             throw new InvalidOperationException("合成提交与确认流程失败。", e);
         }
+    }
+
+    /// <summary>
+    /// 识别产物弹窗中的实际合成产物，失败时回退为默认产物。
+    /// </summary>
+    /// <param name="actualQuantity">实际合成个数。</param>
+    /// <returns>识别到的产物汇总。</returns>
+    private List<RewardItem> RecognizeCraftRewards(int actualQuantity)
+    {
+        try
+        {
+            var rewardSummary = RewardResultRecognizer.Instance.RecognizeMultiPage(1);
+            var rewards = rewardSummary
+                .Where(pair => pair.Value > 0)
+                .Select((pair, index) => new RewardItem(pair.Key, -1, pair.Value, index))
+                .ToList();
+
+            if (rewards.Count > 0)
+            {
+                return rewards;
+            }
+
+            _logger.LogWarning("合成产物识别结果为空，已回退为默认产物。");
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "合成产物识别失败，已回退为默认产物。");
+        }
+
+        return CreateDefaultCraftRewards(actualQuantity);
+    }
+
+    /// <summary>
+    /// 创建产物识别失败时的默认合成产物。
+    /// </summary>
+    /// <param name="actualQuantity">实际合成个数。</param>
+    /// <returns>默认合成产物汇总。</returns>
+    private List<RewardItem> CreateDefaultCraftRewards(int actualQuantity)
+    {
+        return [new RewardItem(_materialName, -1, actualQuantity, 0)];
+    }
+
+    /// <summary>
+    /// 格式化产物汇总日志文本。
+    /// </summary>
+    /// <param name="rewards">产物汇总。</param>
+    /// <returns>用于日志输出的产物文本。</returns>
+    private static string FormatRewards(IEnumerable<RewardItem> rewards)
+    {
+        return string.Join(", ", rewards.Select(reward => reward.ToString()));
     }
 
     /// <summary>
