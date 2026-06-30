@@ -47,6 +47,12 @@ public class JsonAction
     /// 动作执行后确保E技能进入冷却（释放成功），至多重试3次
     /// </summary>
     public bool EnsureCast { get; set; } = false;
+
+    /// <summary>
+    /// 额外优先级条目：同一动作在不同条件下有不同的优先级位置
+    /// 主循环会将这些条目与原动作一起展开，按 priority 排序后依次检查
+    /// </summary>
+    public List<JsonMorePriority> MorePriorities { get; set; } = [];
 }
 
 /// <summary>
@@ -55,4 +61,13 @@ public class JsonAction
 public class JsonCondition
 {
     public string Expression { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// 额外优先级条目
+/// </summary>
+public class JsonMorePriority
+{
+    public string Expression { get; set; } = string.Empty;
+    public int Priority { get; set; }
 }

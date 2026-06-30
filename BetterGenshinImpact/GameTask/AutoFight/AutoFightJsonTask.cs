@@ -53,6 +53,17 @@ public class AutoFightJsonTask : ISoloTask
     private string _lastLoggedActionName = "";
     private DateTime _lastLogTime = DateTime.MinValue;
 
+    /// <summary>
+    /// 展开后的优先级动作条目
+    /// 每个 JsonAction 展开为 1+N 个条目（1个主条件 + N个 morePriorities）
+    /// </summary>
+    private class PrioritizedAction
+    {
+        public JsonAction Action { get; set; }
+        public string Expression { get; set; }
+        public int Priority { get; set; }
+    }
+
     // 战斗点位
     public static WaypointForTrack? FightWaypoint { get; set; } = null;
 
@@ -235,11 +246,39 @@ public class AutoFightJsonTask : ISoloTask
         Logger.LogInformation("JSON 策略：当前队伍角色：{Names}", string.Join(", ", _teamCharacterNames));
 
         // 过滤可用动作：Character 为空（通用）或在当前队伍中
-        var validActions = _strategy.Actions
+        var filteredActions = _strategy.Actions
             .Where(a => string.IsNullOrEmpty(a.Character) || _teamCharacterNames.Contains(a.Character))
-            .OrderBy(a => a.Index)
             .ToList();
-        Logger.LogInformation("JSON 策略：共 {Total} 个动作，可用 {Valid} 个",
+
+        // 展开为优先级条目：每个动作产生 1个主条目 + N个 morePriorities 条目
+        var validActions = new List<PrioritizedAction>();
+        foreach (var action in filteredActions)
+        {
+            validActions.Add(new PrioritizedAction
+            {
+                Action = action,
+                Expression = action.Condition.Expression,
+                Priority = action.Index
+            });
+
+            foreach (var morePriority in action.MorePriorities)
+            {
+                validActions.Add(new PrioritizedAction
+                {
+                    Action = action,
+                    Expression = morePriority.Expression,
+                    Priority = morePriority.Priority
+                });
+            }
+        }
+
+        // 按优先级排序，相同优先级时原动作排在 morePriorities 之前（通过索引辅助排序）
+        validActions = validActions
+            .OrderBy(p => p.Priority)
+            .ThenBy(p => p.Expression == p.Action.Condition.Expression ? 0 : 1)
+            .ToList();
+
+        Logger.LogInformation("JSON 策略：共 {Total} 个动作，展开为 {Expanded} 个优先级条目",
             _strategy.Actions.Count, validActions.Count);
 
         if (validActions.Count == 0)
@@ -303,73 +342,75 @@ public class AutoFightJsonTask : ISoloTask
 
                     var anyExecuted = false;
 
-                    foreach (var action in validActions)
-                    {
-                        if (cts2.Token.IsCancellationRequested) break;
-
-                        // 求值条件表达式
-                        var conditionMet = evaluator.Evaluate(
-                            action.Condition.Expression,
-                            action.Index,
-                            action.Character);
-
-                        if (!conditionMet)
+                    foreach (var prioritizedAction in validActions)
                         {
-                            continue;
-                        }
+                            if (cts2.Token.IsCancellationRequested) break;
 
-                        // 指定角色的动作：执行前确保切换到该角色
-                        if (!string.IsNullOrEmpty(action.Character))
-                        {
-                            var avatar = combatScenes.SelectAvatar(action.Character);
-                            if (avatar == null) continue;
+                            var action = prioritizedAction.Action;
 
-                            avatar.Switch();
-                            CombatScriptParser.CurrentAvatarName = action.Character;
-                        }
+                            // 求值条件表达式（使用展开后的表达式和优先级）
+                            var conditionMet = evaluator.Evaluate(
+                                prioritizedAction.Expression,
+                                prioritizedAction.Priority,
+                                action.Character);
 
-                        // 执行动作
-                        await ExecuteAction(combatScenes, action);
-
-                        // 确保E技能释放成功
-                        if (action.EnsureCast)
-                        {
-                            var characterName = string.IsNullOrEmpty(action.Character)
-                                ? CombatScriptParser.CurrentAvatarName
-                                : action.Character;
-                            var avatar = combatScenes.SelectAvatar(characterName);
-                            if (avatar != null)
+                            if (!conditionMet)
                             {
-                                var imageAfterAction = CaptureToRectArea();
-                                var retry = 5;
-                                while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
-                                {
-                                    Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
-                                    // 防止在纳塔飞天或爬墙
-                                    Simulation.ReleaseAllKey();
-                                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                    Simulation.SendInput.SimulateAction(GIActions.Drop);
-                                    await Delay(200, _ct);
-                                    // 重新执行整个动作
-                                    await ExecuteAction(combatScenes, action);
-                                    imageAfterAction = CaptureToRectArea();
-                                    await Task.Delay(30, _ct);
-                                    retry--;
-                                }
-                                imageAfterAction.Dispose();
+                                continue;
                             }
+
+                            // 指定角色的动作：执行前确保切换到该角色
+                            if (!string.IsNullOrEmpty(action.Character))
+                            {
+                                var avatar = combatScenes.SelectAvatar(action.Character);
+                                if (avatar == null) continue;
+
+                                avatar.Switch();
+                                CombatScriptParser.CurrentAvatarName = action.Character;
+                            }
+
+                            // 执行动作
+                            await ExecuteAction(combatScenes, action);
+
+                            // 确保E技能释放成功
+                            if (action.EnsureCast)
+                            {
+                                var characterName = string.IsNullOrEmpty(action.Character)
+                                    ? CombatScriptParser.CurrentAvatarName
+                                    : action.Character;
+                                var avatar = combatScenes.SelectAvatar(characterName);
+                                if (avatar != null)
+                                {
+                                    var imageAfterAction = CaptureToRectArea();
+                                    var retry = 5;
+                                    while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                    {
+                                        Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
+                                        // 防止在纳塔飞天或爬墙
+                                        Simulation.ReleaseAllKey();
+                                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                        Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                        await Delay(200, _ct);
+                                        // 重新执行整个动作
+                                        await ExecuteAction(combatScenes, action);
+                                        imageAfterAction = CaptureToRectArea();
+                                        await Task.Delay(30, _ct);
+                                        retry--;
+                                    }
+                                    imageAfterAction.Dispose();
+                                }
+                            }
+
+                            evaluator.UpdateLastExecTime(prioritizedAction.Priority);
+                            lastExecutedAction = action;
+                            anyExecuted = true;
+                            lastFightName = action.Character ?? "";
+
+                            if (_fightEndFlag) break;
+
+                            // 执行完第一个满足条件的动作后重新判断
+                            break;
                         }
-
-                        evaluator.UpdateLastExecTime(action.Index);
-                        lastExecutedAction = action;
-                        anyExecuted = true;
-                        lastFightName = action.Character ?? "";
-
-                        if (_fightEndFlag) break;
-
-                        // 执行完第一个满足条件的动作后重新判断
-                        break;
-                    }
 
                     if (fightEndFlag || _fightEndFlag) break;
 
