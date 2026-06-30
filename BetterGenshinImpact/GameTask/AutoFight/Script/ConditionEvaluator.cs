@@ -352,6 +352,8 @@ public class ConditionEvaluator
         {
             "last-exec" => EvalLastExec(args, currentIndex),
             "q-ready" => EvalQReady(args),
+            "e-ready" => EvalEReady(args),
+            "e-cd" => EvalECd(args),
             "low-hp" => EvalLowHp(),
             "battle-time" => EvalBattleTime(args),
             "in-party" => EvalInParty(args),
@@ -455,6 +457,41 @@ public class ConditionEvaluator
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 判断指定角色 E 技能是否就绪。
+    /// e-ready() 检查本动作所属角色；e-ready(角色名) 检查指定角色。
+    /// 数据来源为 <see cref="ESkillCdTracker"/>（跨战斗持久化的 OCR 冷却记录）。
+    /// </summary>
+    private bool EvalEReady(List<AstNode> args)
+    {
+        string? targetName;
+        if (args.Count >= 1 && args[0] is FuncCallNode f && f.Args.Count == 0)
+            targetName = f.Name;
+        else
+            targetName = _currentCharacterName;
+
+        if (targetName == null) return false;
+        return ESkillCdTracker.IsReady(targetName);
+    }
+
+    /// <summary>
+    /// 获取指定角色 E 技能的剩余冷却秒数。
+    /// e-cd() 返回本动作所属角色的剩余 CD；e-cd(角色名) 返回指定角色的。
+    /// 数据来源为 <see cref="ESkillCdTracker"/>（跨战斗持久化的 OCR 冷却记录）。
+    /// 返回 0 表示就绪或无需冷却。
+    /// </summary>
+    private double EvalECd(List<AstNode> args)
+    {
+        string? targetName;
+        if (args.Count >= 1 && args[0] is FuncCallNode f && f.Args.Count == 0)
+            targetName = f.Name;
+        else
+            targetName = _currentCharacterName;
+
+        if (targetName == null) return 0;
+        return ESkillCdTracker.GetRemainingCd(targetName);
     }
 
     /// <summary>
