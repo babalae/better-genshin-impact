@@ -94,11 +94,9 @@ public class CraftMaterialTask
     private static readonly Regex PositiveIntRegex = new(@"\d+", RegexOptions.Compiled);
     private static readonly Regex FractionRegex = new(@"(\d+)\s*/\s*(\d+)", RegexOptions.Compiled);
     private static readonly Lazy<Dictionary<string, string>> MaterialTypes = new(LoadMaterialTypes);
-    private static readonly GridParams CraftingGridParams = new(new Rect(48, 193, 696, 762), 5, 3, 40, 28, 0.024);
 
     private readonly ILogger<CraftMaterialTask> _logger = App.GetLogger<CraftMaterialTask>();
     private readonly InputSimulator _input = Simulation.SendInput;
-    private readonly RewardIconMatcher _iconMatcher = new();
     private readonly string _materialName;
     private readonly int _targetQuantity;
     private readonly string? _materialType;
@@ -332,7 +330,8 @@ public class CraftMaterialTask
     {
         var pageIndex = 0;
         var shouldStop = false;
-        GridScreen gridScreen = new(CraftingGridParams, _logger, _ct);
+        using ItemRecognizer itemRecognizer = new();
+        GridScreen gridScreen = new(GridParams.Templates[GridScreenName.Crafting], _logger, _ct);
         gridScreen.OnAfterTurnToNewPage += data =>
         {
             pageIndex++;
@@ -351,7 +350,7 @@ public class CraftMaterialTask
 
                 using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                var candidate = _iconMatcher.Match(icon);
+                var candidate = itemRecognizer.Match(icon);
                 if (candidate.Score < 0.75 || candidate.Name != _materialName)
                 {
                     continue;

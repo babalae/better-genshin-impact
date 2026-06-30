@@ -38,7 +38,8 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             { GridScreenName.Quest, weapons },
             { GridScreenName.PreciousItems, weapons },
             { GridScreenName.Furnishings, weapons },
-            { GridScreenName.ArtifactSalvage, new GridParams(new Rect(48, 106, 1267, 768), 9, 3, 40, 28, 0.018)}
+            { GridScreenName.ArtifactSalvage, new GridParams(new Rect(48, 106, 1267, 768), 9, 3, 40, 28, 0.018) },
+            { GridScreenName.Crafting, new GridParams(new Rect(45, 170, 705, 790), 5, 3, 40, 32, 0.024)}
         }.ToFrozenDictionary();
     }
 }
