@@ -12,6 +12,13 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// </summary>
 public static class JsonCombatStrategyParser
 {
+    /// <summary>
+    /// 从文件解析 JSON 战斗策略
+    /// </summary>
+    /// <param name="path">策略文件路径</param>
+    /// <returns>解析后的战斗策略</returns>
+    /// <exception cref="FileNotFoundException">文件不存在</exception>
+    /// <exception cref="InvalidOperationException">解析失败或格式错误</exception>
     public static JsonCombatStrategy ParseFile(string path)
     {
         if (!File.Exists(path))
@@ -24,6 +31,12 @@ public static class JsonCombatStrategyParser
         return Parse(json);
     }
 
+    /// <summary>
+    /// 从 JSON 字符串解析战斗策略
+    /// </summary>
+    /// <param name="json">JSON 字符串</param>
+    /// <returns>解析后的战斗策略</returns>
+    /// <exception cref="InvalidOperationException">解析失败或格式错误</exception>
     public static JsonCombatStrategy Parse(string json)
     {
         JsonCombatStrategy? strategy;
@@ -64,6 +77,7 @@ public static class JsonCombatStrategyParser
         return strategy;
     }
 
+    /// <summary>校验动作索引唯一性</summary>
     private static void ValidateActions(List<JsonAction> actions)
     {
         var seen = new HashSet<int>();

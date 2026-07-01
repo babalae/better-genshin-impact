@@ -54,6 +54,10 @@ public class ConditionEvaluator
         return _cachedCapture ?? _captureFunc();
     }
 
+    /// <summary>
+    /// 更新动作的最后执行时间
+    /// </summary>
+    /// <param name="index">动作索引</param>
     public void UpdateLastExecTime(int index)
     {
         var now = DateTime.Now;
@@ -61,6 +65,13 @@ public class ConditionEvaluator
         _execHistory.Add((index, (now - _battleStartTime).TotalSeconds));
     }
 
+    /// <summary>
+    /// 求值条件表达式
+    /// </summary>
+    /// <param name="expression">表达式字符串</param>
+    /// <param name="currentIndex">当前动作索引</param>
+    /// <param name="characterName">当前角色名称</param>
+    /// <returns>表达式结果</returns>
     public bool Evaluate(string expression, int currentIndex, string? characterName = null)
     {
         _currentCharacterName = characterName;
@@ -300,6 +311,7 @@ public class ConditionEvaluator
 
     // ========== AST 求值（统一返回 object: double 或 bool） ==========
 
+    /// <summary>求值 AST 节点</summary>
     private object Eval(AstNode node, int currentIndex)
     {
         return node switch
@@ -313,6 +325,7 @@ public class ConditionEvaluator
         };
     }
 
+    /// <summary>求值二元运算节点</summary>
     private object EvalBinary(BinaryOpNode node, int currentIndex)
     {
         var left = Eval(node.Left, currentIndex);
@@ -335,6 +348,7 @@ public class ConditionEvaluator
         };
     }
 
+    /// <summary>求值一元运算节点</summary>
     private object EvalUnary(UnaryOpNode node, int currentIndex)
     {
         var operand = Eval(node.Operand, currentIndex);
@@ -346,6 +360,7 @@ public class ConditionEvaluator
         };
     }
 
+    /// <summary>求值函数调用节点</summary>
     private object EvalFunc(string name, List<AstNode> args, int currentIndex)
     {
         return name switch
@@ -366,6 +381,7 @@ public class ConditionEvaluator
 
     // ========== 类型转换 ==========
 
+    /// <summary>将对象转换为 bool</summary>
     private static bool ToBool(object val)
     {
         return val switch
@@ -376,6 +392,7 @@ public class ConditionEvaluator
         };
     }
 
+    /// <summary>将对象转换为 double</summary>
     private static double ToNumber(object val)
     {
         return val switch
@@ -386,6 +403,7 @@ public class ConditionEvaluator
         };
     }
 
+    /// <summary>求值并转换为 double</summary>
     private double EvalNumber(AstNode node, int currentIndex)
     {
         return ToNumber(Eval(node, currentIndex));
@@ -393,6 +411,7 @@ public class ConditionEvaluator
 
     // ========== 布尔函数（返回 bool） ==========
 
+    /// <summary>判断动作上次执行距离现在是否超过/少于指定时间</summary>
     private bool EvalLastExec(List<AstNode> args, int currentIndex)
     {
         if (args.Count < 1) return false;

@@ -19,8 +19,9 @@ public static class CombatTaskFactoryProvider
     }
 
     /// <summary>
-    /// 注册工厂
+    /// 注册战斗任务工厂
     /// </summary>
+    /// <param name="factory">战斗任务工厂实例</param>
     public static void RegisterFactory(ICombatTaskFactory factory)
     {
         _factories.Add(factory);
@@ -29,6 +30,9 @@ public static class CombatTaskFactoryProvider
     /// <summary>
     /// 根据策略文件路径获取对应的工厂
     /// </summary>
+    /// <param name="strategyPath">策略文件路径</param>
+    /// <returns>匹配的战斗任务工厂</returns>
+    /// <exception cref="InvalidOperationException">不支持的文件类型</exception>
     public static ICombatTaskFactory GetFactory(string strategyPath)
     {
         strategyPath ??= string.Empty;

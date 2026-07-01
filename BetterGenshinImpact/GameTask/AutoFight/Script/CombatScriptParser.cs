@@ -19,8 +19,8 @@ public class CombatScriptParser
             // 防护性代码：防止 .json 策略文件被错误传入旧的 .txt 解析器
             if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             {
-                Logger.LogError("当前路径不支持使用JSON策略模式，请使用 JSON 工厂入口或正确的任务模式");
-                throw new Exception("当前路径不支持使用JSON策略模式，请使用 JSON 工厂入口或正确的任务模式");
+                Logger.LogError("当前任务暂不支持使用json策略，请使用txt策略");
+                throw new Exception("当前任务暂不支持使用json策略，请使用txt策略");
             }
 
             return new CombatScriptBag(Parse(path));

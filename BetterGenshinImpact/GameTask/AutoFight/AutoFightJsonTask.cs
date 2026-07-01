@@ -35,6 +35,11 @@ public class AutoFightJsonTask : ISoloTask
     private readonly JsonCombatStrategy _strategy;
     private CancellationToken _ct;
 
+    /// <summary>
+    /// YOLO目标检测器（BgiWorld模型），用于战斗结束检测
+    /// 当前未使用（战斗结束检测已委托到 AutoFightEndDetection），保留声明以与 TXT 策略保持一致
+    /// 初始化条件：_taskParam.FightFinishDetectEnabled == true
+    /// </summary>
     private readonly BgiYoloPredictor? _predictor;
     private DateTime _lastFightFlagTime = DateTime.Now;
 
@@ -210,6 +215,11 @@ public class AutoFightJsonTask : ISoloTask
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
 
+    /// <summary>
+    /// 获取战斗场景，带重试机制
+    /// 最多重试 5 次，每次间隔 1 秒
+    /// </summary>
+    /// <returns>初始化完成的战斗场景</returns>
     public CombatScenes GetCombatScenesWithRetry()
     {
         const int maxRetries = 5;
@@ -231,6 +241,10 @@ public class AutoFightJsonTask : ISoloTask
         throw new Exception("识别队伍角色失败（已重试 5 次）");
     }
 
+    /// <summary>
+    /// 启动自动战斗（JSON策略模式）
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
@@ -479,9 +493,7 @@ public class AutoFightJsonTask : ISoloTask
 
     private bool _fightEndFlag;
 
-    /// <summary>
-    /// 执行单个 JSON 动作节点
-    /// </summary>
+    /// <summary>执行单个 JSON 动作节点</summary>
     private async Task ExecuteAction(CombatScenes combatScenes, JsonAction action)
     {
         try
@@ -527,9 +539,7 @@ public class AutoFightJsonTask : ISoloTask
         }
     }
 
-    /// <summary>
-    /// 战斗结束检测（与 AutoFightTask.CheckFightFinish 逻辑一致）
-    /// </summary>
+    /// <summary>战斗结束检测</summary>
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
         if (_finishDetectConfig.RotateFindEnemyEnabled)
@@ -560,11 +570,10 @@ public class AutoFightJsonTask : ISoloTask
         await Delay(detectDelayTime, _ct);
 
         using var ra = CaptureToRectArea();
-        var scaleX = (int)(790 * _assetScale * _dpi);
-        var scaleY = (int)(50 * _assetScale * _dpi);
-        var b3 = ra.SrcMat.At<Vec3b>(scaleY, scaleX);
-        var whiteTileX = (int)(768 * _assetScale * _dpi);
-        var whiteTile = ra.SrcMat.At<Vec3b>(scaleY, whiteTileX);
+        // 注意：像素坐标 (50, 790) 和 (50, 768) 是硬编码的，未做分辨率缩放
+        // 与 TXT 版本逻辑保持一致，不进行缩放
+        var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
+        var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
         Simulation.SendInput.SimulateAction(GIActions.Drop);
 
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
@@ -579,12 +588,17 @@ public class AutoFightJsonTask : ISoloTask
 
         if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
-            Task.Run(() =>
+            // 注意：此处使用 await 确保异常能被正确捕获
+            // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
+            Task.Run(async () =>
             {
                 try
                 {
                     var bloodLower = new Scalar(255, 90, 90);
-                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                    await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                }
+                catch (OperationCanceledException)
+                {
                 }
                 catch (Exception ex)
                 {
@@ -611,9 +625,7 @@ public class AutoFightJsonTask : ISoloTask
                (b >= 240 && b <= 255);
     }
 
-    /// <summary>
-    /// 日志防刷：同一动作名在1秒内至多输出一次日志
-    /// </summary>
+    /// <summary>日志防刷：同一动作名在1秒内至多输出一次日志</summary>
     private void LogActionOnce(string actionName)
     {
         if (actionName == _lastLoggedActionName && (DateTime.Now - _lastLogTime).TotalSeconds < 1)
@@ -625,9 +637,7 @@ public class AutoFightJsonTask : ISoloTask
         Logger.LogInformation("自动战斗：{Name}", actionName);
     }
 
-    /// <summary>
-    /// 执行战斗前动作
-    /// </summary>
+    /// <summary>执行战斗前动作</summary>
     private async Task RunPreActions(CombatScenes combatScenes, ConditionEvaluator evaluator)
     {
         if (_strategy.Info.PreActions == null || _strategy.Info.PreActions.Count == 0)
@@ -669,9 +679,7 @@ public class AutoFightJsonTask : ISoloTask
         }
     }
 
-    /// <summary>
-    /// 战后拾取（完全参照 AutoFightTask 中 Start 方法末尾的拾取逻辑）
-    /// </summary>
+    /// <summary>战后拾取</summary>
     private async Task PostFightPickup(CombatScenes combatScenes, bool timeOutFlag, string lastFightName)
     {
         if (_taskParam.KazuhaPickupEnabled)
@@ -903,6 +911,9 @@ public class AutoFightJsonTask : ISoloTask
         }
     }
 
+    /// <summary>
+    /// 检查并记录屏幕分辨率
+    /// </summary>
     private void LogScreenResolution()
     {
         AssertUtils.CheckGameResolution("自动战斗");
