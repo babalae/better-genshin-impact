@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
@@ -24,7 +25,7 @@ public class RewardResultRecognizer
     private static readonly Lazy<RewardResultRecognizer> _instance = new(() => new RewardResultRecognizer());
     public static RewardResultRecognizer Instance => _instance.Value;
 
-    private readonly RewardIconMatcher _iconMatcher;
+    private readonly ItemRecognizer _itemRecognizer;
     private readonly ILogger<RewardResultRecognizer> _logger = App.GetLogger<RewardResultRecognizer>();
     private static readonly Scalar RewardMaskLower = new(0, 0, 190);
     private static readonly Scalar RewardMaskUpper = new(179, 20, 249);
@@ -46,7 +47,7 @@ public class RewardResultRecognizer
 
     private RewardResultRecognizer()
     {
-        _iconMatcher = new RewardIconMatcher();
+        _itemRecognizer = new ItemRecognizer();
     }
 
     /// <summary>
@@ -363,17 +364,17 @@ public class RewardResultRecognizer
     /// <param name="cardMat">奖励卡片图像。</param>
     /// <param name="cardIdx">卡片序号。</param>
     /// <returns>图标候选结果。</returns>
-    private RewardIconCandidate RecognizeIcon(Mat cardMat, int cardIdx)
+    private ItemIconCandidate RecognizeIcon(Mat cardMat, int cardIdx)
     {
         try
         {
             using Mat icon = cardMat.GetGridIcon(); // 归一化为 125×125
-            return _iconMatcher.Match(icon);
+            return _itemRecognizer.Match(icon);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "奖励识别：卡片 {CardIndex} 图标识别异常，已忽略", cardIdx);
-            return RewardIconCandidate.Empty;
+            return ItemIconCandidate.Empty;
         }
     }
 

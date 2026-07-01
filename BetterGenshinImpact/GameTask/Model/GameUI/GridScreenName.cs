@@ -28,6 +28,8 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         [Description("圣遗物分解")]
         ArtifactSalvage,
         [Description("圣遗物套装筛选")]
-        ArtifactSetFilter
+        ArtifactSetFilter,
+        [Description("合成")]
+        Crafting
     }
 }
