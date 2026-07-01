@@ -432,6 +432,7 @@ public class ConditionEvaluator
     /// 每次主循环只检测一次，结果缓存供本循环内所有 q-ready 复用。
     /// 使用缓存截图进行全队 4 角色 Q 状态检测，避免重复截图。
     /// q-ready() 检查本动作所属角色；q-ready(角色名) 检查指定角色。
+    /// 检测采用两路独立检测后合并：侧边栏检测后台角色 + 中央检测场上角色，OR 合并。
     /// </summary>
     private bool EvalQReady(List<AstNode> args)
     {
@@ -451,7 +452,22 @@ public class ConditionEvaluator
                 {
                     using var clonedMat = capture.SrcMat.Clone();
                     using var clone = new ImageRegion(clonedMat, 0, 0);
-                    _qReadyCache = new HashSet<int>(AutoFightSkill.AvatarQSkillAsync(clone).Result);
+
+                    // ① 侧边栏检测：检测所有 4 个角色侧边栏 Q 图标（主要捕获后台角色）
+                    var sidePanelReady = AutoFightSkill.AvatarQSkillAsync(clone).Result;
+
+                    // ② 场上角色中央检测：仅检测当前场上角色的中央 Q 图标
+                    var centerReady = new List<int>();
+                    var currentOnFieldIndex = _combatScenes.LastActiveAvatarIndex;
+                    if (currentOnFieldIndex > 0)
+                    {
+                        // 仅对场上角色单独检测中央 Q 区域
+                        centerReady = AutoFightSkill.AvatarQSkillAsync(clone,
+                            new List<int> { currentOnFieldIndex }, currentOnFieldIndex).Result;
+                    }
+
+                    // ③ 合并：OR 逻辑，只要有一路检测到就视为就绪
+                    _qReadyCache = new HashSet<int>(sidePanelReady.Union(centerReady));
                 }
                 finally
                 {
