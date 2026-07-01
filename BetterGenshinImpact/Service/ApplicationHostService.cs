@@ -1,15 +1,17 @@
-﻿using BetterGenshinImpact.View;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
+using System.Windows.Threading;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -19,6 +21,7 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedService
 {
+    private readonly ILogger<ApplicationHostService> _logger = App.GetLogger<ApplicationHostService>();
     private INavigationWindow? _navigationWindow;
 
     /// <summary>
@@ -27,7 +30,8 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await HandleActivationAsync();
+        RuntimeHelper.SingleInstanceActivated += OnSingleInstanceActivated;
+        await HandleActivationAsync(CommandLineOptions.Instance, false);
     }
 
     /// <summary>
@@ -36,77 +40,181 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        RuntimeHelper.SingleInstanceActivated -= OnSingleInstanceActivated;
         await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Creates main window during activation.
+    /// Handles first launch with the original page-loaded flow, and subsequent single-instance activations explicitly.
     /// </summary>
-    private async Task HandleActivationAsync()
+    private async Task HandleActivationAsync(CommandLineOptions cmdOptions, bool isSingleInstanceActivation)
     {
-        if (!Application.Current.Windows.OfType<MainWindow>().Any())
+        EnsureNavigationWindow();
+
+        if (isSingleInstanceActivation)
         {
-            _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
-            _navigationWindow!.ShowWindow();
+            QueueActivationAction(async () => await RunSingleInstanceActivationAsync(cmdOptions));
+        }
+        else
+        {
+            QueueActivationAction(async () => await RunFirstLaunchActivationAsync(cmdOptions));
+        }
 
-            var cmdOptions = CommandLineOptions.Instance;
+        await Task.CompletedTask;
+    }
 
-            if (cmdOptions.HasTaskArgs)
+    private async Task RunFirstLaunchActivationAsync(CommandLineOptions cmdOptions)
+    {
+        if (cmdOptions.HasTaskArgs)
+        {
+            _ = _navigationWindow!.Navigate(typeof(HomePage));
+
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            if (scriptConfig.AutoUpdateBeforeCommandLineRun)
             {
-                //无论如何，先跳到主页，否则在通过参数的任务在执行完之前，不会加载快捷键
-                _ = _navigationWindow.Navigate(typeof(HomePage));
-
-                // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
-                // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
-                var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-                if (scriptConfig.AutoUpdateBeforeCommandLineRun)
-                {
-                    ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
-                        Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
-                }
-
-                switch (cmdOptions.Action)
-                {
-                    case CommandLineAction.StartOneDragon:
-                        // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
-                        _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
-                        // 后续代码在 OneDragonFlowViewModel / OnLoaded 中。
-                        break;
-
-                    case CommandLineAction.StartGroups:
-                        // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
-                        _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                        if (cmdOptions.GroupNames.Length > 0)
-                        {
-                            var scheduler = App.GetService<ScriptControlViewModel>();
-                            scheduler?.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
-                        }
-                        break;
-
-                    case CommandLineAction.TaskProgress:
-                        // 通过命令行参数启动「任务进度」 => 跳转到调度器配置页。
-                        _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                        if (cmdOptions.GroupNames.Length > 0)
-                        {
-                            var scheduler = App.GetService<ScriptControlViewModel>();
-                            scheduler?.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
-                        }
-                        break;
-
-                    case CommandLineAction.Start:
-                        // 通过命令行参数打开「启动页开关」 => 跳转到主页。
-                        _ = _navigationWindow.Navigate(typeof(HomePage));
-                        // 后续代码在 HomePageViewModel / OnLoaded 中。
-                        break;
-                }
+                ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
+                    Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
             }
-            else
+
+            switch (cmdOptions.Action)
             {
-                // 通过双击程序启动 => 跳转到主页。
-                _ = _navigationWindow.Navigate(typeof(HomePage));
+                case CommandLineAction.StartOneDragon:
+                    _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+                    break;
+
+                case CommandLineAction.StartGroups:
+                    _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                    if (cmdOptions.GroupNames.Length > 0)
+                    {
+                        var scheduler = App.GetService<ScriptControlViewModel>();
+                        if (scheduler != null)
+                        {
+                            await scheduler.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                        }
+                    }
+                    break;
+
+                case CommandLineAction.TaskProgress:
+                    _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                    if (cmdOptions.GroupNames.Length > 0)
+                    {
+                        var scheduler = App.GetService<ScriptControlViewModel>();
+                        if (scheduler != null)
+                        {
+                            await scheduler.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                        }
+                    }
+                    break;
+
+                case CommandLineAction.Start:
+                    _ = _navigationWindow.Navigate(typeof(HomePage));
+                    break;
             }
         }
-        //
-        await Task.CompletedTask;
+        else
+        {
+            _ = _navigationWindow!.Navigate(typeof(HomePage));
+        }
+    }
+
+    private async Task RunSingleInstanceActivationAsync(CommandLineOptions cmdOptions)
+    {
+        if (!cmdOptions.HasTaskArgs)
+        {
+            return;
+        }
+
+        _ = _navigationWindow!.Navigate(typeof(HomePage));
+
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+        if (scriptConfig.AutoUpdateBeforeCommandLineRun)
+        {
+            ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
+                Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+        }
+
+        switch (cmdOptions.Action)
+        {
+            case CommandLineAction.StartOneDragon:
+                _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+                OneDragonFlowViewModel? oneDragon = App.GetService<OneDragonFlowViewModel>();
+                if (oneDragon != null)
+                {
+                    await oneDragon.StartFromCommandLineOptionsAsync(cmdOptions);
+                }
+                break;
+
+            case CommandLineAction.StartGroups:
+                _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                if (cmdOptions.GroupNames.Length > 0)
+                {
+                    var scheduler = App.GetService<ScriptControlViewModel>();
+                    if (scheduler != null)
+                    {
+                        await scheduler.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                    }
+                }
+                break;
+
+            case CommandLineAction.TaskProgress:
+                _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                if (cmdOptions.GroupNames.Length > 0)
+                {
+                    var scheduler = App.GetService<ScriptControlViewModel>();
+                    if (scheduler != null)
+                    {
+                        await scheduler.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                    }
+                }
+                break;
+
+            case CommandLineAction.Start:
+                _ = _navigationWindow.Navigate(typeof(HomePage));
+                HomePageViewModel? home = App.GetService<HomePageViewModel>();
+                if (home != null)
+                {
+                    await home.OnStartTriggerAsync();
+                }
+                break;
+        }
+    }
+    private void EnsureNavigationWindow()
+    {
+        _navigationWindow ??= (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
+
+        if (!Application.Current.Windows.OfType<MainWindow>().Any())
+        {
+            _navigationWindow.ShowWindow();
+        }
+    }
+
+    private void OnSingleInstanceActivated(object? sender, SingleInstanceActivatedEventArgs e)
+    {
+        _ = Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            try
+            {
+                await HandleActivationAsync(CommandLineOptions.ParseActivationArgs(e.Args), true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Handle single instance activation failed");
+            }
+        });
+    }
+
+    private void QueueActivationAction(Func<Task> action)
+    {
+        _ = Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            try
+            {
+                await action();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Run command line activation action failed");
+            }
+        }, DispatcherPriority.ApplicationIdle);
     }
 }
