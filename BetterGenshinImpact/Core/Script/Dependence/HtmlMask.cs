@@ -196,6 +196,30 @@ public class HtmlMask : IDisposable
     }
 
     /// <summary>
+    /// 响应 HTML 页面通过 window.htmlMask.request(...) 发起的请求。
+    /// </summary>
+    /// <param name="windowId">HTML 遮罩窗口 ID。</param>
+    /// <param name="requestId">从 Receive/Poll/PollAll 返回消息的 requestId 字段取得，不能由脚本自行生成。</param>
+    /// <param name="jsonData">响应数据，必须是合法 JSON 字符串。</param>
+    public void Respond(string windowId, string requestId, string jsonData)
+    {
+        if (string.IsNullOrWhiteSpace(requestId))
+            throw new ArgumentException("requestId cannot be empty", nameof(requestId));
+
+        if (!HtmlMaskWindow.Exists(windowId) || !_toHtmlQueues.TryGetValue(windowId, out var queue))
+            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
+
+        queue.Enqueue(new Message
+        {
+            Url = "/__response__",
+            Data = ParseData(jsonData),
+            RequestId = requestId
+        });
+
+        HtmlMaskWindow.NotifyFlush(windowId);
+    }
+    
+    /// <summary>
     /// 发送请求到HTML并等待响应
     /// </summary>
     /// <param name="windowId">目标窗口ID</param>
