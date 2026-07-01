@@ -163,14 +163,14 @@ public class Avatar
                     
                     // FaceTo 朝向战斗点，超时 2 秒
                     cts.CancelAfter(2000);
-                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                    pathExecutor.MovementController.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
                     
                     // 重置超时，MoveTo 超时 15 秒
                     cts.CancelAfter(15000);
                     // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
                     AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
                     Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                    pathExecutor.MovementController.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
                     Logger.LogInformation("游泳检测：移动结束");
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
