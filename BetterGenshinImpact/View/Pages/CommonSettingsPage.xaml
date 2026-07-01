@@ -133,7 +133,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="重启后生效"
+                                  Text="在游戏窗口上方显示日志、状态、识别结果等信息。需要重启生效。"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -151,43 +151,6 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="显示日志窗口"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        在遮罩内显示日志窗口，<Hyperlink Command="{Binding GoToLogFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击打开日志文件夹
-                        </Hyperlink>
-                    </ui:TextBlock>
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="Unchecked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                            <b:EventTrigger EventName="Checked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                    </ui:ToggleSwitch>
-                </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -229,100 +192,6 @@
                                Command="{Binding ResetMaskOverlayLayoutCommand}"
                                Content="重置位置" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="显示实时任务启用状态"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在遮罩内显示实时任务启用状态"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.MaskWindowConfig.ShowStatus, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="Unchecked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                            <b:EventTrigger EventName="Checked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                    </ui:ToggleSwitch>
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="显示遮罩指标栏"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="显示游戏帧率、处理耗时和硬件占用，指标项可单独选择"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.MaskWindowConfig.ShowOverlayMetrics, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="Unchecked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                            <b:EventTrigger EventName="Checked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                    </ui:ToggleSwitch>
-                </Grid>
-                <!-- 固定三行三列，顺序来自 OverlayMetricItemDefaults.AllItems，与遮罩实际展示顺序一致。 -->
-                <ItemsControl Margin="48,0,52,12"
-                              ItemsSource="{Binding OverlayMetricItems}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="3" Rows="3" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <CheckBox Width="132"
-                                      Height="28"
-                                      HorizontalAlignment="Left"
-                                      HorizontalContentAlignment="Left"
-                                      VerticalContentAlignment="Center"
-                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                      ToolTip="{Binding ToolTipText}">
-                                <ui:TextBlock Margin="4,0,0,0"
-                                              FontTypography="Body"
-                                              Text="{Binding DisplayName}"
-                                              TextTrimming="CharacterEllipsis"
-                                              TextWrapping="NoWrap" />
-                            </CheckBox>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -352,30 +221,283 @@
                         IsChecked="{Binding Config.MaskWindowConfig.ShowMaskBorder, Mode=TwoWay}" />
                 </Grid>-->
                 <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="显示图像识别结果"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="实时显示各种图像识别的结果"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.MaskWindowConfig.DisplayRecognitionResultsOnMask, Mode=TwoWay}" />
+                    <StackPanel Grid.Column="0">
+                        <ui:TextBlock FontTypography="BodyStrong"
+                                      Text="遮罩显示与样式"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Margin="0,4,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="调整遮罩文字、颜色和背景。"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               Margin="12,0,36,0"
+                               VerticalAlignment="Center"
+                               Command="{Binding ResetOverlayStyleCommand}"
+                               Content="重置" />
                 </Grid>
+
+                <ItemsControl Margin="16,0,52,8"
+                              ItemsSource="{Binding OverlayStyleSettingGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:CardExpander Margin="0,0,0,12"
+                                             ContentPadding="0"
+                                             IsExpanded="False">
+                                <ui:CardExpander.Header>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="BodyStrong"
+                                                      Text="{Binding Name}"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Margin="0,4,0,0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{Binding Description}"
+                                                      TextWrapping="Wrap" />
+                                        <ui:ToggleSwitch Grid.Row="0"
+                                                         Grid.RowSpan="2"
+                                                         Grid.Column="1"
+                                                         Margin="12,0,24,0"
+                                                         HorizontalAlignment="Right"
+                                                         VerticalAlignment="Center"
+                                                         IsChecked="{Binding SwitchValue, Mode=TwoWay}"
+                                                         Visibility="{Binding HasSwitch, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+                                </ui:CardExpander.Header>
+                                <StackPanel>
+                                    <Grid Margin="16"
+                                          Visibility="{Binding IsMetricsGroup, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      FontTypography="Body"
+                                                      Text="显示的指标"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Margin="0,4,0,8"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="勾选需要显示在指标栏里的项目。顺序和遮罩中的显示顺序一致。"
+                                                      TextWrapping="Wrap" />
+                                        <ItemsControl Grid.Row="2"
+                                                      Margin="32,0,0,0"
+                                                      ItemsSource="{Binding DataContext.OverlayMetricItems, RelativeSource={RelativeSource AncestorType=Page}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="3" Rows="3" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Width="132"
+                                                              Height="28"
+                                                              HorizontalAlignment="Left"
+                                                              HorizontalContentAlignment="Left"
+                                                              VerticalContentAlignment="Center"
+                                                              IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                              ToolTip="{Binding ToolTipText}">
+                                                        <ui:TextBlock Margin="4,0,0,0"
+                                                                      FontTypography="Body"
+                                                                      Text="{Binding DisplayName}"
+                                                                      TextTrimming="CharacterEllipsis"
+                                                                      TextWrapping="NoWrap" />
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="16">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="218" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:TextBlock Grid.Row="0"
+                                                                  Grid.Column="0"
+                                                                  FontTypography="Body"
+                                                                  Text="{Binding DisplayName}"
+                                                                  TextWrapping="Wrap" />
+                                                    <ui:TextBlock Grid.Row="1"
+                                                                  Grid.Column="0"
+                                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                                  Text="{Binding Description}"
+                                                                  TextWrapping="Wrap" />
+                                                    <ui:TextBox Grid.Row="0"
+                                                                Grid.RowSpan="2"
+                                                                Grid.Column="1"
+                                                                Width="130"
+                                                                Margin="0,0,36,0"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Center"
+                                                                Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                Visibility="{Binding IsText, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                    <ComboBox Grid.Row="0"
+                                                              Grid.RowSpan="2"
+                                                              Grid.Column="1"
+                                                              Width="130"
+                                                              Margin="0,0,36,0"
+                                                              HorizontalAlignment="Right"
+                                                              VerticalAlignment="Center"
+                                                              ItemsSource="{Binding ColorOptions}"
+                                                              SelectedValue="{Binding ColorValue, Mode=TwoWay}"
+                                                              SelectedValuePath="Value"
+                                                              Visibility="{Binding IsColor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Border Width="14"
+                                                                            Height="14"
+                                                                            Margin="0,0,8,0"
+                                                                            VerticalAlignment="Center"
+                                                                            Background="{Binding SwatchBrush}"
+                                                                            BorderBrush="Gray"
+                                                                            BorderThickness="1" />
+                                                                    <TextBlock VerticalAlignment="Center"
+                                                                               Text="{Binding DisplayName}"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                    <ui:TextBox Grid.Row="0"
+                                                                Grid.RowSpan="2"
+                                                                Grid.Column="1"
+                                                                Width="130"
+                                                                Margin="0,0,36,0"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Center"
+                                                                Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                Visibility="{Binding IsNumber, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                    <StackPanel Grid.Row="0"
+                                                                Grid.RowSpan="2"
+                                                                Grid.Column="1"
+                                                                Margin="0,0,36,0"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Center"
+                                                                Orientation="Horizontal"
+                                                                Visibility="{Binding IsSlider, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <Slider Width="130"
+                                                                VerticalAlignment="Center"
+                                                                IsSnapToTickEnabled="True"
+                                                                Maximum="{Binding SliderMaximum}"
+                                                                Minimum="{Binding SliderMinimum}"
+                                                                TickFrequency="{Binding SliderTickFrequency}"
+                                                                Value="{Binding SliderValue, Mode=TwoWay}" />
+                                                        <TextBlock Margin="12,0,0,0"
+                                                                   HorizontalAlignment="Left"
+                                                                   VerticalAlignment="Center"
+                                                                   FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                                                   FontSize="14"
+                                                                   MinWidth="40"
+                                                                   Text="{Binding SliderValue, StringFormat=F2}" />
+                                                    </StackPanel>
+                                                    <ui:ToggleSwitch Grid.Row="0"
+                                                                     Grid.RowSpan="2"
+                                                                     Grid.Column="1"
+                                                                     Margin="0,0,36,0"
+                                                                     HorizontalAlignment="Right"
+                                                                     VerticalAlignment="Center"
+                                                                     IsChecked="{Binding BoolValue, Mode=TwoWay}"
+                                                                     Visibility="{Binding IsBool, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Grid Margin="16"
+                                          Visibility="{Binding IsLogGroup, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="218" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="Body"
+                                                      Text="日志文件"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="需要排查问题时，可以打开日志目录查看完整记录。"
+                                                      TextWrapping="Wrap" />
+                                        <ui:Button Grid.Row="0"
+                                                   Grid.RowSpan="2"
+                                                   Grid.Column="1"
+                                                   Margin="0,0,36,0"
+                                                   HorizontalAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   Command="{Binding DataContext.GoToLogFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                   Content="打开日志目录" />
+                                    </Grid>
+                                    <Grid Margin="16"
+                                          Visibility="{Binding IsCustomHtmlGroup, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="Body"
+                                                      Text="编辑 HTML 遮罩"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="打开 HTML 编辑器。需要查看文件时使用打开目录。"
+                                                      TextWrapping="Wrap" />
+                                        <ui:Button Grid.Row="0"
+                                                   Grid.RowSpan="2"
+                                                   Grid.Column="1"
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"
+                                                   Command="{Binding DataContext.OpenCustomHtmlMaskEditorCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                   Content="打开编辑器" />
+                                        <ui:Button Grid.Row="0"
+                                                   Grid.RowSpan="2"
+                                                   Grid.Column="2"
+                                                   Margin="0,0,36,0"
+                                                   VerticalAlignment="Center"
+                                                   Command="{Binding DataContext.OpenCustomHtmlMaskFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                   Content="打开目录" />
+                                    </Grid>
+                                </StackPanel>
+                            </ui:CardExpander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -410,80 +532,7 @@
                         </b:Interaction.Triggers>
                     </ui:ToggleSwitch>
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="显示小地图方位"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在小地图周围显示东南西北的文字"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.MaskWindowConfig.DirectionsEnabled, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="Unchecked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                            <b:EventTrigger EventName="Checked">
-                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                    </ui:ToggleSwitch>
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="遮罩文本透明度"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="调整遮罩窗口中文本的透明度（0.0-1.0）"
-                                  TextWrapping="Wrap" />
-                    <Slider Grid.Row="0"
-                            Grid.Column="1"
-                            Width="200"
-                            Margin="0,0,12,0"
-                            VerticalAlignment="Center"
-                            Minimum="0"
-                            Maximum="1"
-                            TickFrequency="0.1"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding Config.MaskWindowConfig.TextOpacity, Mode=TwoWay}" />
-                    <TextBlock Grid.Row="0"
-                               Grid.Column="2"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
-                               Margin="0,0,36,0"
-                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
-                               FontSize="14"
-                               MinWidth="40"
-                               Text="{Binding Config.MaskWindowConfig.TextOpacity, StringFormat=F2}" />
-                </Grid>
+
             </StackPanel>
         </ui:CardExpander>
 
@@ -1846,32 +1895,6 @@
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看地图" />
-        </ui:CardControl>-->
-
-        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
-            <ui:CardControl.Header>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="aaaaaaa" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="xxxxxxxxxxxxxxxxxxxxxxxx" />
-                </Grid>
-            </ui:CardControl.Header>
-            <ui:ToggleSwitch
-                Margin="0,0,36,0"
-                IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}"/>
         </ui:CardControl>-->
 
         <!--  About Option  -->

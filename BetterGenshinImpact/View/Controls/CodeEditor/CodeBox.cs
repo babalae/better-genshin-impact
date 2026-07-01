@@ -9,8 +9,8 @@ public class CodeBox : TextEditor
 {
     public string Code
     {
-        get => Text;
-        set => Text = value;
+        get => (string)GetValue(CodeProperty);
+        set => SetValue(CodeProperty, value);
     }
 
     public static readonly DependencyProperty CodeProperty =
@@ -20,7 +20,11 @@ public class CodeBox : TextEditor
     {
         if (d is TextEditor editor)
         {
-            editor.Text = (e.NewValue as string)!;
+            var text = e.NewValue as string ?? string.Empty;
+            if (editor.Text != text)
+            {
+                editor.Text = text;
+            }
         }
     }
 
@@ -49,5 +53,12 @@ public class CodeBox : TextEditor
         TextArea.SelectionBorder = new(Brushes.Transparent, 0d);
         TextArea.SelectionCornerRadius = 2d;
         TextArea.SelectionForeground = null!;
+        TextChanged += (_, _) =>
+        {
+            if ((string)GetValue(CodeProperty) != Text)
+            {
+                SetCurrentValue(CodeProperty, Text);
+            }
+        };
     }
 }
