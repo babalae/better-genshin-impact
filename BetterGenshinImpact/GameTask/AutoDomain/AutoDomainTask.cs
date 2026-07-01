@@ -330,17 +330,6 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     throw new Exception("请检查是否在秘境门前");
                 }
 
-                var menu = await NewRetry.WaitForElementAppear(
-                    GetConfirmRa("单人挑战"),
-                    () => AutoPickAssets.Instance.PressPickKey(),
-                    _ct,
-                    20,
-                    500
-                );
-                if (!menu)
-                {
-                    throw new Exception("请检查是否已进入秘境页面");
-                }
             }
             else
             {
@@ -371,12 +360,19 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     {
         var fightAssets = AutoFightAssets.Instance;
 
-        var menuFound = await NewRetry.WaitForElementAppear(
-            GetConfirmRa("单人挑战"),
+        await NewRetry.WaitForElementDisappear(
+            AutoPickAssets.Instance.PickRo,
             () => AutoPickAssets.Instance.PressPickKey(),
             _ct,
-            10,
-            1000
+            20,
+            500
+        );
+        var menuFound = await NewRetry.WaitForElementAppear(
+            GetConfirmRa("单人挑战"),
+            null,//只等待,不执行操作
+            _ct,
+            20,
+            500
         );
         if (!menuFound)
         {
