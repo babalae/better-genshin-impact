@@ -87,10 +87,6 @@ public class CraftMaterialResult
 /// </summary>
 public class CraftMaterialTask
 {
-    private const int MaxSearchPages = 5;
-    private const int SliderStartX = 1173;
-    private const int SliderY = 672;
-
     private static readonly Regex PositiveIntRegex = new(@"\d+", RegexOptions.Compiled);
     private static readonly Regex FractionRegex = new(@"(\d+)\s*/\s*(\d+)", RegexOptions.Compiled);
     private static readonly Lazy<Dictionary<string, string>> MaterialTypes = new(LoadMaterialTypes);
@@ -313,12 +309,12 @@ public class CraftMaterialTask
     /// 查找并选中目标材料，失败时抛出异常。
     /// </summary>
     /// <returns>异步任务。</returns>
-    /// <exception cref="InvalidOperationException">前 5 页未找到目标材料时抛出。</exception>
+    /// <exception cref="InvalidOperationException">未找到目标材料时抛出。</exception>
     private async Task FindAndSelectMaterial()
     {
         if (!await TryFindAndSelectMaterial())
         {
-            throw new InvalidOperationException($"前 {MaxSearchPages} 页未找到材料：{_materialName}");
+            throw new InvalidOperationException($"未找到材料：{_materialName}");
         }
     }
 
@@ -328,26 +324,15 @@ public class CraftMaterialTask
     /// <returns>找到并选中目标材料时返回 true。</returns>
     private async Task<bool> TryFindAndSelectMaterial()
     {
-        var pageIndex = 0;
-        var shouldStop = false;
         using ItemRecognizer itemRecognizer = new();
         GridScreen gridScreen = new(GridParams.Templates[GridScreenName.Crafting], _logger, _ct);
-        gridScreen.OnAfterTurnToNewPage += data =>
-        {
-            pageIndex++;
-            GridScreen.DrawItemsAfterTurnToNewPage(data);
-        };
+        gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
         gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
 
         try
         {
             await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
-                if (pageIndex > MaxSearchPages || shouldStop)
-                {
-                    break;
-                }
-
                 using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 using Mat icon = itemRegion.SrcMat.GetGridIcon();
                 var candidate = itemRecognizer.Match(icon);
@@ -365,7 +350,6 @@ public class CraftMaterialTask
                     continue;
                 }
 
-                shouldStop = true;
                 return true;
             }
         }
@@ -383,7 +367,7 @@ public class CraftMaterialTask
     /// <returns>详情区包含目标材料名时返回 true。</returns>
     private bool ConfirmSelectedMaterial()
     {
-        return ContainsText(Rect1080(1040, 90, 760, 175), _materialName);
+        return ContainsText(Rect1080(1139, 112, 401, 39), _materialName);
     }
 
     /// <summary>
@@ -472,7 +456,7 @@ public class CraftMaterialTask
     /// <returns>识别到的当前合成个数；失败时返回 0。</returns>
     private int ReadCurrentCraftQuantity()
     {
-        var text = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(1220, 600, 300, 85)));
+        var text = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(1248, 615, 221, 34)));
         return ReadFirstPositiveInt(text);
     }
 
@@ -482,14 +466,14 @@ public class CraftMaterialTask
     /// <returns>最大可合成个数；识别失败时返回 0。</returns>
     private int ReadMaxCraftQuantity()
     {
-        var maxText = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(1500, 625, 135, 90)));
+        var maxText = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(1522, 653, 72, 32)));
         var maxQuantity = ReadFirstPositiveInt(maxText);
         if (maxQuantity > 0)
         {
             return maxQuantity;
         }
 
-        var materialText = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(815, 742, 1055, 215)));
+        var materialText = StringUtils.ConvertFullWidthNumToHalfWidth(ReadOcrText(Rect1080(933, 912, 561, 33)));
         var counts = FractionRegex.Matches(materialText)
             .Select(match =>
             {
@@ -526,8 +510,12 @@ public class CraftMaterialTask
     /// <returns>异步任务。</returns>
     private async Task DragSliderToRatio(double ratio)
     {
-        var x = SliderStartX + (1521 - SliderStartX) * Math.Clamp(ratio, 0d, 1d);
-        GameCaptureRegion.GameRegion1080PPosMove(SliderStartX, SliderY);
+        const int sliderStartX = 1173;
+        const int sliderEndX = 1521;
+        const int sliderY = 672;
+
+        var x = sliderStartX + (sliderEndX - sliderStartX) * Math.Clamp(ratio, 0d, 1d);
+        GameCaptureRegion.GameRegion1080PPosMove(sliderStartX, sliderY);
         await Delay(80, _ct);
         _input.Mouse.LeftButtonDown();
         try
@@ -535,8 +523,8 @@ public class CraftMaterialTask
             const int steps = 12;
             for (int step = 0; step <= steps; step++)
             {
-                var currentX = SliderStartX + (x - SliderStartX) * step / steps;
-                GameCaptureRegion.GameRegion1080PPosMove(currentX, SliderY);
+                var currentX = sliderStartX + (x - sliderStartX) * step / steps;
+                GameCaptureRegion.GameRegion1080PPosMove(currentX, sliderY);
                 await Delay(25, _ct);
             }
         }
