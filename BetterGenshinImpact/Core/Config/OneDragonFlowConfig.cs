@@ -62,6 +62,10 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private List<string> _secretTreasureObjects = new();
 
+    // 检查每日奖励后是否关闭冒险之证界面
+    [ObservableProperty]
+    private bool _closeAdventurerHandbookAfterDailyRewardCheck = true;
+
     // 地脉花一条龙模式（跳过部分准备流程）
     [ObservableProperty]
     private bool _leyLineOneDragonMode = false;

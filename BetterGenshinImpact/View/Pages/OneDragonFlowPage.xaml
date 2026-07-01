@@ -2089,6 +2089,37 @@
                         </StackPanel>
                     </ui:CardControl>
                     
+                    <!--  检查每日奖励结果  -->
+                    <TextBlock Margin="4,0,0,4"
+                               FontSize="14"
+                               Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                               Text="检查每日奖励结果" />
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf2f6;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="是否关闭冒险之证界面"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="开启后检查完成会返回主界面"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                        <ui:ToggleSwitch Margin="0,0,28,0"
+                                         IsChecked="{Binding SelectedConfig.CloseAdventurerHandbookAfterDailyRewardCheck, Mode=TwoWay}" />
+                    </ui:CardControl>
+
                     <!--  完成后操作  -->
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"

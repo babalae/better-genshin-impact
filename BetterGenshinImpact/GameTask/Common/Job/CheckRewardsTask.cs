@@ -47,7 +47,7 @@ public class CheckRewardsTask
             RecognitionObject.Ocr(x, y, width, height);
     }
 
-    public async Task Start(CancellationToken ct)
+    public async Task Start(CancellationToken ct, bool closeAdventurerHandbook = true)
     {
         try
         {
@@ -79,7 +79,10 @@ public class CheckRewardsTask
                 Notify.Event(NotificationEvent.DailyReward).Error("检查到每日奖励未领取，请手动查看！");
             }
             await Delay(200, ct);
-            await new ReturnMainUiTask().Start(ct);
+            if (closeAdventurerHandbook)
+            {
+                await new ReturnMainUiTask().Start(ct);
+            }
         }
         catch (Exception e)
         {

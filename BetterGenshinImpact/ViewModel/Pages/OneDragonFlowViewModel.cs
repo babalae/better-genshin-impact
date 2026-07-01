@@ -647,7 +647,9 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 检查和最终结束的任务
         await new TaskRunner().RunThreadAsync(async () =>
         {
-            await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+            await new CheckRewardsTask().Start(
+                CancellationContext.Instance.Cts.Token,
+                SelectedConfig?.CloseAdventurerHandbookAfterDailyRewardCheck ?? true);
             await Task.Delay(500);
             if (CancellationContext.Instance.IsManualStop is false)
             {
