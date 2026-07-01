@@ -44,7 +44,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private readonly ILogger<AutoBossTask> _logger = App.GetLogger<AutoBossTask>();
     private readonly AutoBossParam _taskParam;
-    private readonly CombatScriptBag _combatScriptBag;
+    private readonly CombatScriptBag? _combatScriptBag;
+    private readonly string? _jsonCombatStrategyPath;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
@@ -73,7 +74,15 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             _taskParam.SetCombatStrategyPath(_taskParam.StrategyName);
         }
 
-        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
+            _logger.LogInformation("自动首领讨伐：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        }
     }
 
     /// <summary>
@@ -883,22 +892,63 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         _logger.LogInformation("{Name}：执行战斗策略", Name);
 
-        // 保留原 AutoBoss 行为：战斗开始前先切到策略首个角色。
-        var combatScenes = GetCombatScenesWithRetry();
-        FindCombatScriptAndSwitchAvatar(combatScenes);
+        if (_jsonCombatStrategyPath != null)
+        {
+            await StartJsonFight();
+        }
+        else
+        {
+            var combatScenes = GetCombatScenesWithRetry();
+            FindCombatScriptAndSwitchAvatar(combatScenes);
 
-        var taskParam = BuildAutoFightParamForBoss();
+            var taskParam = BuildAutoFightParamForBoss();
+            try
+            {
+                await new AutoFightTask(taskParam).Start(_ct);
+            }
+            catch (NormalEndException e)
+            {
+                _logger.LogInformation("战斗操作中断：{Msg}", e.Message);
+            }
+            finally
+            {
+                combatScenes.AfterTask();
+            }
+        }
+    }
+
+    /// <summary>
+    /// JSON策略战斗入口：委托给AutoFightJsonTask，由其自身处理战斗结束检测，
+    /// 抑制战后拾取逻辑。
+    /// </summary>
+    private async Task StartJsonFight()
+    {
+        CancellationTokenSource cts = new();
+        _ct.Register(cts.Cancel);
+
+        var jsonParam = new AutoFightParam
+        {
+            CombatStrategyPath = _jsonCombatStrategyPath!,
+            FightFinishDetectEnabled = true,
+            ExpBasedPickupEnabled = false,
+            KazuhaPickupEnabled = false,
+            PickDropsAfterFightEnabled = false,
+            Timeout = 600,
+        };
+
+        var jsonTask = new AutoFightJsonTask(jsonParam);
+
         try
         {
-            await new AutoFightTask(taskParam).Start(_ct);
+            await jsonTask.Start(cts.Token);
         }
         catch (NormalEndException e)
         {
             _logger.LogInformation("战斗操作中断：{Msg}", e.Message);
         }
-        finally
+        catch (Exception e)
         {
-            combatScenes.AfterTask();
+            _logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
         }
     }
 
