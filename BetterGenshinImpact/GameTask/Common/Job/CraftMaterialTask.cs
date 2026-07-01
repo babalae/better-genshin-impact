@@ -208,7 +208,7 @@ public class CraftMaterialTask
         var headers = parser.ReadFields()!;
 
         int nameIndex = FindHeaderIndex(headers, "item_name");
-        int typeIndex = FindHeaderIndex(headers, "material_type", "materialType", "item_type", "itemType", "material_category", "category");
+        int typeIndex = FindHeaderIndex(headers, "material_type");
 
         while (!parser.EndOfData)
         {
