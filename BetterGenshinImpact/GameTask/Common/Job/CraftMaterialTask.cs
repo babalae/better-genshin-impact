@@ -481,7 +481,6 @@ public class CraftMaterialTask
                 var required = StringUtils.TryParseInt(match.Groups[2].Value, 0);
                 return required > 0 ? owned / required : 0;
             })
-            .Where(value => value > 0)
             .ToList();
 
         return counts.Count > 0 ? counts.Min() : 0;
