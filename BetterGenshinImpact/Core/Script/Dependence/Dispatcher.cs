@@ -369,7 +369,9 @@ public class Dispatcher
         }  
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
-        await new AutoFightTask(param).Start(cancellationToken);  
+        var factory = GameTask.AutoFight.Factory.CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
+        var fightTask = factory.CreateTask(param);
+        await fightTask.Start(cancellationToken);  
     }
     
     /// <summary>  

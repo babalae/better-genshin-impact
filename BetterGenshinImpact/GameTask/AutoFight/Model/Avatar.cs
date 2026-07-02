@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -549,9 +550,32 @@ public class Avatar
             var cd = AfterUseSkill(region);
             if (cd > 0)
             {
+                ESkillCdTracker.RecordUse(Name, cd);
                 // Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
                 //     Math.Round(cd, 2));
                 return;
+            }
+
+            // OCR 读取 CD 失败时，检查是否需要特殊兜底处理
+            if (ESkillCdTracker.CdFallbackMap.TryGetValue(Name, out var fallbackType))
+            {
+                var cfgCd = CombatAvatar.SkillCd > 0 ? CombatAvatar.SkillCd : CombatAvatar.SkillHoldCd;
+                if (cfgCd > 0)
+                {
+                    if (fallbackType == ESkillCdTracker.FallbackType.SetFull)
+                    {
+                        ESkillCdTracker.RecordUse(Name, cfgCd);
+                    }
+                    else if (fallbackType == ESkillCdTracker.FallbackType.MinRemaining)
+                    {
+                        var remaining = ESkillCdTracker.GetRemainingCd(Name);
+                        if (remaining > 0)
+                        {
+                            var actual = Math.Min(remaining, cfgCd);
+                            ESkillCdTracker.RecordUse(Name, actual);
+                        }
+                    }
+                }
             }
         }
     }
