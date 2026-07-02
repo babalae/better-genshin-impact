@@ -548,34 +548,16 @@ public class Avatar
             using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
             var cd = AfterUseSkill(region);
-            if (cd > 0)
+            var recordedCd = ESkillCdTracker.Record(Name, cd);
+            if (recordedCd <= 0)
             {
-                ESkillCdTracker.RecordUse(Name, cd);
-                // Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
-                //     Math.Round(cd, 2));
-                return;
+                recordedCd = ESkillCdTracker.ApplyFallback(Name);
             }
 
-            // OCR 读取 CD 失败时，检查是否需要特殊兜底处理
-            if (ESkillCdTracker.CdFallbackMap.TryGetValue(Name, out var fallbackType))
+            if (recordedCd > 0)
             {
-                var cfgCd = CombatAvatar.SkillCd > 0 ? CombatAvatar.SkillCd : CombatAvatar.SkillHoldCd;
-                if (cfgCd > 0)
-                {
-                    if (fallbackType == ESkillCdTracker.FallbackType.SetFull)
-                    {
-                        ESkillCdTracker.RecordUse(Name, cfgCd);
-                    }
-                    else if (fallbackType == ESkillCdTracker.FallbackType.MinRemaining)
-                    {
-                        var remaining = ESkillCdTracker.GetRemainingCd(Name);
-                        if (remaining > 0)
-                        {
-                            var actual = Math.Min(remaining, cfgCd);
-                            ESkillCdTracker.RecordUse(Name, actual);
-                        }
-                    }
-                }
+                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                    Math.Round(recordedCd, 2));
             }
         }
     }
