@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace BetterGenshinImpact.View.Drawable;
@@ -31,7 +31,7 @@ public class DrawContent
         }
 
         RectList[key] = [newRect];
-        MaskWindow.Instance().Refresh();
+        RefreshMask();
     }
 
     public virtual void PutOrRemoveRectList(string key, List<RectDrawable>? list)
@@ -68,7 +68,7 @@ public class DrawContent
 
         if (changed)
         {
-            MaskWindow.Instance().Refresh();
+            RefreshMask();
         }
     }
 
@@ -77,7 +77,7 @@ public class DrawContent
         if (RectList.TryGetValue(key, out _))
         {
             RectList.TryRemove(key, out _);
-            MaskWindow.Instance().Refresh();
+            RefreshMask();
         }
     }
 
@@ -92,7 +92,7 @@ public class DrawContent
         }
 
         LineList[key] = [newLine];
-        MaskWindow.Instance().Refresh();
+        RefreshMask();
     }
 
 
@@ -101,7 +101,7 @@ public class DrawContent
         if (LineList.TryGetValue(key, out _))
         {
             LineList.TryRemove(key, out _);
-            MaskWindow.Instance().Refresh();
+            RefreshMask();
         }
     }
 
@@ -135,7 +135,7 @@ public class DrawContent
 
         if (changed)
         {
-            MaskWindow.Instance().Refresh();
+            RefreshMask();
         }
     }
 
@@ -151,6 +151,16 @@ public class DrawContent
         RectList.Clear();
         TextList.Clear();
         LineList.Clear();
-        MaskWindow.Instance().Refresh();
+        RefreshMask();
+    }
+
+    private static void RefreshMask()
+    {
+        if (BetterGenshinImpact.GameTask.Session.GameSessionContext.Current != null)
+        {
+            return;
+        }
+
+        MaskWindow.InstanceNullable()?.Refresh();
     }
 }

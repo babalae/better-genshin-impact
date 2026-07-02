@@ -17,7 +17,10 @@ public class TaskControl
 {
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
-    public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
+    private static readonly SemaphoreSlim LegacyTaskSemaphore = new(1, 1);
+
+    public static SemaphoreSlim TaskSemaphore =>
+        BetterGenshinImpact.GameTask.Session.GameSessionContext.Current?.TaskSemaphore ?? LegacyTaskSemaphore;
 
 
     public static void CheckAndSleep(int millisecondsTimeout)

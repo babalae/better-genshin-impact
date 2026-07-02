@@ -25,7 +25,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private readonly InputSimulator input = Simulation.SendInput;
+        private readonly IInputSimulator input = Simulation.SendInput;
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }

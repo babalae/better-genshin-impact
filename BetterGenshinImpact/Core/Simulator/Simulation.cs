@@ -1,6 +1,7 @@
-﻿using Fischless.WindowsInput;
+using Fischless.WindowsInput;
 using System;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Session;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
@@ -8,7 +9,10 @@ namespace BetterGenshinImpact.Core.Simulator;
 
 public class Simulation
 {
-    public static InputSimulator SendInput { get; } = new();
+    private static readonly InputSimulator NativeInput = new();
+
+    public static IInputSimulator SendInput =>
+        (IInputSimulator?)GameSessionContext.Current?.Input ?? NativeInput;
 
     public static MouseEventSimulator MouseEvent { get; } = new();
 
@@ -19,6 +23,12 @@ public class Simulation
 
     public static void ReleaseAllKey()
     {
+        if (GameSessionContext.Current?.Input is { } sessionInput)
+        {
+            sessionInput.ReleaseAllAsync().GetAwaiter().GetResult();
+            return;
+        }
+
         foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
         {
             // 检查键是否被按下
@@ -35,6 +45,11 @@ public class Simulation
 
     public static bool IsKeyDown(User32.VK key)
     {
+        if (GameSessionContext.Current?.Input is { } sessionInput)
+        {
+            return sessionInput.InputDeviceState.IsKeyDown(key);
+        }
+
         // 获取按键状态
         var state = User32.GetAsyncKeyState((int)key);
 

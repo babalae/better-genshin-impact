@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -16,6 +17,9 @@ namespace BetterGenshinImpact.GameTask;
 /// </summary>
 public class RunnerContext : Singleton<RunnerContext>
 {
+    public new static RunnerContext Instance =>
+        GameSessionContext.Current?.RunnerContext ?? Singleton<RunnerContext>.Instance;
+
     /// <summary>
     /// 是否是连续执行配置组的场景
     /// </summary>

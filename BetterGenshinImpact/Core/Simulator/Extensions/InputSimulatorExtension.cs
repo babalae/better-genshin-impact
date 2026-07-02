@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,7 +9,7 @@ using Fischless.WindowsInput;
 namespace BetterGenshinImpact.Core.Simulator.Extensions;
 
 /// <summary>
-/// 用于扩展<seealso cref="Fischless.WindowsInput.InputSimulator"/>的功能
+/// 用于扩展<seealso cref="Fischless.WindowsInput.IInputSimulator"/>的功能
 /// </summary>
 public static class InputSimulatorExtension
 {
@@ -19,7 +19,7 @@ public static class InputSimulatorExtension
     /// </summary>
     /// <param name="action">动作</param>
     /// <param name="type">按键类型</param>
-    public static void SimulateAction(this InputSimulator self, GIActions action, KeyType type = KeyType.KeyPress)
+    public static void SimulateAction(this IInputSimulator self, GIActions action, KeyType type = KeyType.KeyPress)
     {
         var key = action.ToActionKey();
         switch (type)
@@ -41,14 +41,14 @@ public static class InputSimulatorExtension
         }
     }
 
-    private static void HoldKeyPress(InputSimulator self, KeyId key)
+    private static void HoldKeyPress(IInputSimulator self, KeyId key)
     {
         KeyDown(self, key);
         Thread.Sleep(1000);
         KeyUp(self, key);
     }
 
-    private static void KeyPress(InputSimulator self, KeyId key)
+    private static void KeyPress(IInputSimulator self, KeyId key)
     {
         switch (key)
         {
@@ -85,7 +85,7 @@ public static class InputSimulatorExtension
         }
     }
 
-    private static void KeyDown(InputSimulator self, KeyId key)
+    private static void KeyDown(IInputSimulator self, KeyId key)
     {
         switch (key)
         {
@@ -122,7 +122,7 @@ public static class InputSimulatorExtension
         }
     }
 
-    private static void KeyUp(InputSimulator self, KeyId key)
+    private static void KeyUp(IInputSimulator self, KeyId key)
     {
         switch (key)
         {

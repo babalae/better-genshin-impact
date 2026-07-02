@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -10,6 +10,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
@@ -38,6 +39,9 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Collections.ObjectModel;
+using BetterGenshinImpact.GameTask.Session;
+using BetterGenshinImpact.Core.Profile;
 using Windows.System;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -65,6 +69,11 @@ public partial class HomePageViewModel : ViewModel
 
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
+    private readonly ProfileService _profileService;
+    private readonly GameSessionManager _gameSessionManager;
+    private readonly IScriptService _scriptService;
+
+    public ObservableCollection<CloudGameInstanceViewModel> CloudGameInstances { get; } = [];
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
@@ -76,12 +85,21 @@ public partial class HomePageViewModel : ViewModel
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
 
-    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public HomePageViewModel(
+        IConfigService configService,
+        TaskTriggerDispatcher taskTriggerDispatcher,
+        ProfileService profileService,
+        GameSessionManager gameSessionManager,
+        IScriptService scriptService)
     {
         _taskDispatcher = taskTriggerDispatcher;
+        _profileService = profileService;
+        _gameSessionManager = gameSessionManager;
+        _scriptService = scriptService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
+        LoadCloudGameProfiles();
 
 
         // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
@@ -144,8 +162,34 @@ public partial class HomePageViewModel : ViewModel
     private void OnClosed()
     {
         OnStopTrigger();
+        _ = _gameSessionManager.StopAllAsync();
         // 等待任务结束
         _maskWindow?.Close();
+    }
+
+    [RelayCommand]
+    private void AddCloudGameInstance()
+    {
+        var profile = _profileService.CreateCloudProfile();
+        CloudGameInstances.Add(CreateCloudGameViewModel(profile));
+    }
+
+    private void LoadCloudGameProfiles()
+    {
+        foreach (var profile in _profileService.ReadProfiles().Where(x => x.Type == ProfileType.CloudGame))
+        {
+            CloudGameInstances.Add(CreateCloudGameViewModel(profile));
+        }
+    }
+
+    private CloudGameInstanceViewModel CreateCloudGameViewModel(BetterGiProfile profile)
+    {
+        return new CloudGameInstanceViewModel(
+            profile,
+            _profileService,
+            _gameSessionManager,
+            _scriptService,
+            Config);
     }
 
     [RelayCommand]

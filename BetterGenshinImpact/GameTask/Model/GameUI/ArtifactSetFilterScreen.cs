@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         private readonly GridParams @params;
         private readonly CancellationToken ct;
         private readonly ILogger logger;
-        private readonly InputSimulator input = Simulation.SendInput;
+        private readonly IInputSimulator input = Simulation.SendInput;
         internal Action? OnBeforeScroll { get; set; }
 
         /// <summary>

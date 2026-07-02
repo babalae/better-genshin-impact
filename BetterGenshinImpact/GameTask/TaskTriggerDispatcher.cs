@@ -19,6 +19,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Model;
 using BetterGenshinImpact.Service.Model.OverlayMetric;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.Session;
 using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.GameTask
@@ -28,14 +29,17 @@ namespace BetterGenshinImpact.GameTask
         private readonly ILogger<TaskTriggerDispatcher> _logger = App.GetLogger<TaskTriggerDispatcher>();
         private readonly OverlayMetricsService? _metricsService = App.GetService<OverlayMetricsService>();
 
-        private static TaskTriggerDispatcher? _instance;
+        private static TaskTriggerDispatcher? _legacyInstance;
+        private readonly GameSession? _session;
 
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
 
         public IGameCapture? GameCapture { get; private set; }
 
-        private static readonly object _locker = new();
+        public bool IsRunning => _timer.Enabled && GameCapture?.IsCapturing == true;
+
+        private readonly object _locker = new();
         private int _frameIndex = 0;
 
         private RECT _gameRect = RECT.Empty;
@@ -43,7 +47,7 @@ namespace BetterGenshinImpact.GameTask
 
         private DateTime _prevManualGc = DateTime.MinValue;
 
-        private static readonly object _triggerListLocker = new();
+        private readonly object _triggerListLocker = new();
 
         private User32.HWINEVENTHOOK _winEventHookMoveSize;
         private User32.HWINEVENTHOOK _winEventHookLocation;
@@ -62,35 +66,48 @@ namespace BetterGenshinImpact.GameTask
         private DateTime PrevGameUiChangeTime = DateTime.Now; // 上一次UI变化时间
         
 
-        public TaskTriggerDispatcher()
+        public TaskTriggerDispatcher() : this(null)
         {
-            _instance = this;
+        }
+
+        internal TaskTriggerDispatcher(GameSession? session)
+        {
+            _session = session;
+            if (session == null)
+            {
+                _legacyInstance = this;
+            }
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
         }
 
         public static TaskTriggerDispatcher Instance()
         {
-            if (_instance == null)
+            if (GameSessionContext.Current?.Dispatcher is { } sessionDispatcher)
+            {
+                return sessionDispatcher;
+            }
+
+            if (_legacyInstance == null)
             {
                 throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
             }
 
-            return _instance;
+            return _legacyInstance;
         }
 
         public static IGameCapture GlobalGameCapture
         {
             get
             {
-                _instance = Instance();
+                var instance = Instance();
 
-                if (_instance.GameCapture == null)
+                if (instance.GameCapture == null)
                 {
                     throw new Exception("截图器未初始化!");
                 }
 
-                return _instance.GameCapture;
+                return instance.GameCapture;
             }
         }
 
@@ -168,6 +185,31 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        internal void StartCloud(IGameCapture gameCapture, int interval = 50)
+        {
+            if (_session == null)
+            {
+                throw new InvalidOperationException("当前调度器不是云会话调度器");
+            }
+
+            using var scope = GameSessionContext.Enter(_session);
+            ChatUiHotkeyGuard.Reset();
+            GameCapture = gameCapture;
+            _triggers = GameTaskManager.LoadInitialTriggers();
+            GameLoadingTrigger.GlobalEnabled = false;
+            if (!GameCapture.IsCapturing)
+            {
+                GameCapture.Start(_session.Target.WindowHandle);
+            }
+
+            _frameIndex = 0;
+            _timer.Interval = interval;
+            if (!_timer.Enabled)
+            {
+                _timer.Start();
+            }
+        }
+
         public void Stop()
         {
             _timer.Stop();
@@ -175,8 +217,11 @@ namespace BetterGenshinImpact.GameTask
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
-            PictureInPictureService.Hide(resetManual: true);
-            HtmlMaskWindow.CloseAll();
+            if (_session == null)
+            {
+                PictureInPictureService.Hide(resetManual: true);
+                HtmlMaskWindow.CloseAll();
+            }
             if (_winEventHookMoveSize != default)
             {
                 User32.UnhookWinEvent(_winEventHookMoveSize);
@@ -215,6 +260,7 @@ namespace BetterGenshinImpact.GameTask
 
         public void Tick(object? sender, EventArgs e)
         {
+            using var sessionScope = _session == null ? null : GameSessionContext.Enter(_session);
             var hasLock = false;
             var tickMetrics = new DispatcherTickMetrics();
             try
@@ -229,11 +275,11 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查截图器是否初始化
-                var maskWindow = MaskWindow.Instance();
+                var maskWindow = _session == null ? MaskWindow.Instance() : null;
                 if (GameCapture == null || !GameCapture.IsCapturing)
                 {
                     ChatUiHotkeyGuard.Reset();
-                    if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    if (IsTargetAlive())
                     {
                         _logger.LogError("截图器未初始化!");
                     }
@@ -242,15 +288,21 @@ namespace BetterGenshinImpact.GameTask
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                     }
 
-                    PictureInPictureService.Hide(resetManual: true);
+                    if (_session == null)
+                    {
+                        PictureInPictureService.Hide(resetManual: true);
+                    }
                     UiTaskStopTickEvent?.Invoke(sender, e);
-                    maskWindow.Invoke(maskWindow.HideSelf);
-                    HtmlMaskWindow.HideAll();
+                    maskWindow?.Invoke(maskWindow.HideSelf);
+                    if (_session == null)
+                    {
+                        HtmlMaskWindow.HideAll();
+                    }
                     return;
                 }
                 
                 // 如果是最小化状态，直接不进行截图
-                if (SystemControl.IsGenshinImpactMinimized())
+                if (_session == null && SystemControl.IsGenshinImpactMinimized())
                 {
                     ChatUiHotkeyGuard.Reset();
                     PictureInPictureService.Hide();
@@ -260,7 +312,7 @@ namespace BetterGenshinImpact.GameTask
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
                 var autoSkipConfig = TaskContext.Instance().Config.AutoSkipConfig;
-                var shouldShowPictureInPicture = autoSkipConfig.Enabled
+                var shouldShowPictureInPicture = _session == null && autoSkipConfig.Enabled
                                                  && autoSkipConfig.PictureInPictureEnabled
                                                  && !PictureInPictureService.IsManuallyClosed
                                                  && TaskControl.TaskSemaphore.CurrentCount == 1; // 没有任务持有锁（也就是没有任务正在运行）
@@ -269,7 +321,7 @@ namespace BetterGenshinImpact.GameTask
                 {
                     ChatUiHotkeyGuard.Reset();
                     // 检查游戏是否已结束
-                    if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    if (!IsTargetAlive())
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                         UiTaskStopTickEvent?.Invoke(sender, e);
@@ -285,8 +337,11 @@ namespace BetterGenshinImpact.GameTask
                     if (pName != "Idle" && pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
                     {
                         // Debug.WriteLine(pName + "：hide mask window");
-                        maskWindow.Invoke(() => { maskWindow.HideSelf(); });
-                        HtmlMaskWindow.HideAll();
+                        maskWindow?.Invoke(() => { maskWindow.HideSelf(); });
+                        if (_session == null)
+                        {
+                            HtmlMaskWindow.HideAll();
+                        }
                     }
 
                     _prevGameActive = active;
@@ -321,10 +376,13 @@ namespace BetterGenshinImpact.GameTask
                 }
                 else
                 {
-                    PictureInPictureService.Hide(resetManual: true);
+                    if (_session == null)
+                    {
+                        PictureInPictureService.Hide(resetManual: true);
+                    }
                     // if (!_prevGameActive)
                     // {
-                    maskWindow.BeginInvoke(() =>
+                    maskWindow?.BeginInvoke(() =>
                     {
                         if (maskWindow.IsExist())
                         {
@@ -335,12 +393,15 @@ namespace BetterGenshinImpact.GameTask
                             }
                         }
                     });
-                    HtmlMaskWindow.ShowAll();
+                    if (_session == null)
+                    {
+                        HtmlMaskWindow.ShowAll();
+                    }
                     // }
 
                     _prevGameActive = active;
                     // // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
-                    if (SyncMaskWindowPosition())
+                    if (_session == null && SyncMaskWindowPosition())
                     {
                         return;
                     }
@@ -371,13 +432,16 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-                if (shouldShowPictureInPicture && !active)
+                if (_session == null && shouldShowPictureInPicture && !active)
                 {
                     PictureInPictureService.Update(bitmap);
                 }
                 else
                 {
-                    PictureInPictureService.Hide();
+                    if (_session == null)
+                    {
+                        PictureInPictureService.Hide();
+                    }
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
@@ -497,6 +561,12 @@ namespace BetterGenshinImpact.GameTask
         private bool SizeIsZero(RECT rect)
         {
             return rect.Width == 0 || rect.Height == 0;
+        }
+
+        private bool IsTargetAlive()
+        {
+            return _session?.Target.IsAlive
+                   ?? !TaskContext.Instance().SystemInfo.GameProcess.HasExited;
         }
 
         private void WinEventCallback(User32.HWINEVENTHOOK hWinEventHook, uint @event, HWND hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)

@@ -40,7 +40,7 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 public class AutoArtifactSalvageTask : ISoloTask
 {
     private readonly ILogger logger;
-    private readonly InputSimulator input = Simulation.SendInput;
+    private readonly IInputSimulator input = Simulation.SendInput;
 
     private CancellationToken ct;
 
@@ -88,7 +88,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
-    public static async Task OpenInventory(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
+    public static async Task OpenInventory(GridScreenName gridScreenName, IInputSimulator input, ILogger logger, CancellationToken ct)
     {
         RecognitionObject? recognitionObjectChecked;
         RecognitionObject? recognitionObjectUnchecked;

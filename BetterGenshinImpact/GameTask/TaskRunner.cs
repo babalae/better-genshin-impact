@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 
 using BetterGenshinImpact.View;
@@ -15,6 +15,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -157,23 +158,29 @@ public class TaskRunner
         // 清空实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();
         
-        // 隐藏地图遮罩
-        UIDispatcherHelper.Invoke(() =>
+        if (GameSessionContext.Current == null)
         {
-            if (MaskWindow.InstanceNullable() != null)
+            // 隐藏地图遮罩
+            UIDispatcherHelper.Invoke(() =>
             {
-                if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
+                if (MaskWindow.InstanceNullable() != null)
                 {
-                    vm.IsInBigMapUi = false;
+                    if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
+                    {
+                        vm.IsInBigMapUi = false;
+                    }
                 }
-            }
-        });
+            });
+        }
         VisionContext.Instance().DrawContent.ClearAll(); 
         
-        // 激活原神窗口
-        var maskWindow = MaskWindow.Instance();
-        SystemControl.ActivateWindow();
-        maskWindow.Invoke(maskWindow.Show);
+        if (GameSessionContext.Current == null)
+        {
+            // 激活原神窗口
+            var maskWindow = MaskWindow.Instance();
+            SystemControl.ActivateWindow();
+            maskWindow.Invoke(maskWindow.Show);
+        }
     }
 
     public void End()
@@ -190,7 +197,10 @@ public class TaskRunner
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
 
         VisionContext.Instance().DrawContent.ClearAll();
-        HtmlMaskWindow.CloseAll();
+        if (GameSessionContext.Current == null)
+        {
+            HtmlMaskWindow.CloseAll();
+        }
     }
 
 }

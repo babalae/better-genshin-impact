@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -20,6 +20,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.TaskProgress;
+using BetterGenshinImpact.GameTask.Session;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -115,7 +116,10 @@ public partial class ScriptService : IScriptService
     
     
     //优先执行的配置组，统计每个project执行次数
-    private readonly Dictionary<string, int> _projectExecutionCount = new();
+    private readonly Dictionary<string, int> _legacyProjectExecutionCount = new();
+
+    private Dictionary<string, int> ProjectExecutionCount =>
+        GameSessionContext.Current?.ScriptProjectExecutionCount ?? _legacyProjectExecutionCount;
     
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
@@ -170,7 +174,7 @@ public partial class ScriptService : IScriptService
         //非优先执行配置下，清空执行计数
         if (!RunnerContext.Instance.IsPreExecution)
         {
-            _projectExecutionCount.Clear();
+            ProjectExecutionCount.Clear();
         }
 
 
@@ -223,7 +227,7 @@ public partial class ScriptService : IScriptService
                                     var projectKey = $"{p.Name}|{p.FolderName}|{p.GroupInfo?.Name}";
 
                                     // 检查执行次数
-                                    if (!_projectExecutionCount.TryGetValue(projectKey, out var count))
+                                    if (!ProjectExecutionCount.TryGetValue(projectKey, out var count))
                                     {
                                         count = 0;
                                     }
@@ -233,7 +237,7 @@ public partial class ScriptService : IScriptService
                                         continue;
 
                                     //增加执行计数
-                                    //_projectExecutionCount[projectKey] = count + 1;
+                                    //ProjectExecutionCount[projectKey] = count + 1;
                                     preExecutionProjects.Add(p);
                                 }
                             }
@@ -322,12 +326,12 @@ public partial class ScriptService : IScriptService
                             // 生成项目唯一标识
                             var projectKey = $"{exeProject.Name}|{exeProject.FolderName}|{exeProject.GroupInfo?.Name}";
                             // 检查执行次数
-                            if (!_projectExecutionCount.TryGetValue(projectKey, out var preExecutionCount))
+                            if (!ProjectExecutionCount.TryGetValue(projectKey, out var preExecutionCount))
                             {
                                 preExecutionCount = 0;
                             }
 
-                            _projectExecutionCount[projectKey] = preExecutionCount + 1;
+                            ProjectExecutionCount[projectKey] = preExecutionCount + 1;
                         }
 
 
@@ -604,70 +608,98 @@ public partial class ScriptService : IScriptService
 
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
-        // 没启动时候，启动截图器
-        var homePageViewModel = App.GetService<HomePageViewModel>();
-        if (!homePageViewModel!.TaskDispatcherEnabled)
+        if (GameSessionContext.Current is { } cloudSession)
         {
-            await homePageViewModel.OnStartTriggerAsync();
-
+            if (cloudSession.Dispatcher?.IsRunning != true)
+            {
+                cloudSession.StartDispatcher(TaskContext.Instance().Config.TriggerInterval);
+            }
             if (waitForMainUi)
             {
-                await Task.Run(async () =>
+                await Task.Delay(200);
+                while (true)
                 {
-                    await Task.Delay(200);
-                    var first = true;
-                    var sw = Stopwatch.StartNew();
-                    var loseFocusCount = 0;
-                    while (true)
+                    if (CancellationContext.Instance.IsCancellationRequested)
                     {
-                        if (CancellationContext.Instance.IsCancellationRequested)
-                        {
-                            TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");
-                            return;
-                        }
-
-                        if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
-                        {
-                            await Task.Delay(500);
-                            continue;
-                        }
-
-                        using var content = TaskControl.CaptureToRectArea();
-                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
-                        {
-                            return;
-                        }
-
-                        if (first)
-                        {
-                            first = false;
-                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
-                        }
-
-                        await Task.Delay(500);
-                        if (sw.Elapsed.TotalSeconds >= 30)
-                        {
-                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
-                            if (!SystemControl.IsGenshinImpactActiveByProcess())
-                            {
-                                loseFocusCount++;
-                                if (loseFocusCount>50 && loseFocusCount<100)
-                                {
-                                    SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
-                                }
-                                SystemControl.ActivateWindow();
-                            }
-
-                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
-                            if (sw.Elapsed.TotalSeconds < 200)
-                            {
-                                GlobalMethod.MoveMouseTo(300, 300);
-                            }
-
-                        }
+                        TaskControl.Logger.LogInformation("检测到停止指令，退出云原神启动等待");
+                        return;
                     }
-                });
+
+                    using var content = TaskControl.CaptureToRectArea();
+                    if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
+                    {
+                        break;
+                    }
+                    await Task.Delay(500);
+                }
+            }
+        }
+        else
+        {
+            // 没启动时候，启动截图器
+            var homePageViewModel = App.GetService<HomePageViewModel>();
+            if (!homePageViewModel!.TaskDispatcherEnabled)
+            {
+                await homePageViewModel.OnStartTriggerAsync();
+
+                if (waitForMainUi)
+                {
+                    await Task.Run(async () =>
+                    {
+                        await Task.Delay(200);
+                        var first = true;
+                        var sw = Stopwatch.StartNew();
+                        var loseFocusCount = 0;
+                        while (true)
+                        {
+                            if (CancellationContext.Instance.IsCancellationRequested)
+                            {
+                                TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");
+                                return;
+                            }
+
+                            if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                            {
+                                await Task.Delay(500);
+                                continue;
+                            }
+
+                            using var content = TaskControl.CaptureToRectArea();
+                            if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
+                            {
+                                return;
+                            }
+
+                            if (first)
+                            {
+                                first = false;
+                                TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                                TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
+                            }
+
+                            await Task.Delay(500);
+                            if (sw.Elapsed.TotalSeconds >= 30)
+                            {
+                                //防止自启动游戏后因为一些原因失焦，导致一直卡住
+                                if (!SystemControl.IsGenshinImpactActiveByProcess())
+                                {
+                                    loseFocusCount++;
+                                    if (loseFocusCount>50 && loseFocusCount<100)
+                                    {
+                                        SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+                                    }
+                                    SystemControl.ActivateWindow();
+                                }
+
+                                //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                                if (sw.Elapsed.TotalSeconds < 200)
+                                {
+                                    GlobalMethod.MoveMouseTo(300, 300);
+                                }
+                            }
+                        }
+                    });
+                }
             }
         }
 

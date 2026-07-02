@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         private readonly GridParams @params;
         private readonly CancellationToken ct;
         private readonly ILogger logger;
-        private readonly InputSimulator input = Simulation.SendInput;
+        private readonly IInputSimulator input = Simulation.SendInput;
         internal Action? OnBeforeScroll { get; set; }
         internal Action<Tuple<ImageRegion, IEnumerable<Tuple<Rect, bool>>>>? OnAfterTurnToNewPage { get; set; }
 
@@ -66,7 +66,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             private readonly GridScreen owner;
             private readonly Rect roi;
             private readonly CancellationToken ct;
-            private readonly InputSimulator input = Simulation.SendInput;
+            private readonly IInputSimulator input = Simulation.SendInput;
             private readonly int columns;
             private readonly GridScroller gridScroller;
 
@@ -92,7 +92,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <param name="logger"></param>
             /// <param name="input"></param>
             /// <param name="ct"></param>
-            internal GridEnumerator(GridScreen owner, Rect roi, int columns, InputSimulator input, GridScroller gridScroller, CancellationToken ct)
+            internal GridEnumerator(GridScreen owner, Rect roi, int columns, IInputSimulator input, GridScroller gridScroller, CancellationToken ct)
             {
                 this.owner = owner;
                 this.roi = roi;

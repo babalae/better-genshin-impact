@@ -338,6 +338,129 @@
             </StackPanel>
         </ui:CardExpander>
 
+        <!--  云原神 WebView2 多实例  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Cloud24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="Body"
+                                      Text="网页版云原神" />
+                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="每个实例使用独立登录数据，可分别显示、只读或隐藏运行。"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               Margin="12,0,24,0"
+                               Command="{Binding AddCloudGameInstanceCommand}"
+                               Content="新增实例"
+                               Icon="{ui:SymbolIcon Add24}" />
+                </Grid>
+            </ui:CardExpander.Header>
+
+            <StackPanel>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <ui:TextBlock Margin="16"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="首次启动后请在独立窗口中完成登录并进入游戏；状态变为“云游戏连接已就绪”后才可启动任务。"
+                              TextWrapping="Wrap" />
+
+                <ItemsControl Margin="16,0,16,16"
+                              ItemsSource="{Binding CloudGameInstances}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,12"
+                                    Padding="14"
+                                    Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox MinWidth="180"
+                                                 HorizontalAlignment="Left"
+                                                 FontWeight="SemiBold"
+                                                 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                        <ui:TextBlock Grid.Column="1"
+                                                      Margin="12,0,0,0"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                      Text="{Binding Status}"
+                                                      TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <WrapPanel Margin="0,12,0,0">
+                                        <ui:Button Margin="0,0,8,8"
+                                                   Command="{Binding OpenBrowserCommand}"
+                                                   Content="打开/交互" />
+                                        <ui:Button Margin="0,0,8,8"
+                                                   Command="{Binding ShowReadOnlyCommand}"
+                                                   Content="只读显示" />
+                                        <ui:Button Margin="0,0,8,8"
+                                                   Command="{Binding HideBrowserCommand}"
+                                                   Content="隐藏" />
+                                        <ui:Button Margin="0,0,8,8"
+                                                   Command="{Binding CloseBrowserCommand}"
+                                                   Content="关闭实例" />
+                                    </WrapPanel>
+
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox MinWidth="220"
+                                                  Margin="0,0,8,0"
+                                                  ItemsSource="{Binding TaskOptions}"
+                                                  SelectedItem="{Binding SelectedTask, Mode=TwoWay}" />
+                                        <ui:Button Grid.Column="1"
+                                                   Margin="0,0,8,0"
+                                                   Command="{Binding StartTaskCommand}"
+                                                   Content="启动任务"
+                                                   Icon="{ui:SymbolIcon Play24}" />
+                                        <ui:Button Grid.Column="2"
+                                                   Command="{Binding StopTaskCommand}"
+                                                   Content="停止任务"
+                                                   Icon="{ui:SymbolIcon Stop24}" />
+                                    </Grid>
+
+                                    <Border MaxHeight="96"
+                                            Margin="0,10,0,0"
+                                            Padding="8"
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            CornerRadius="4">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding LogEntries}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <ui:TextBlock FontFamily="Consolas"
+                                                                      FontSize="11"
+                                                                      Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                                      Text="{Binding}"
+                                                                      TextWrapping="Wrap" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ui:CardExpander>
+
         <!--  原神，启动！  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"

@@ -36,7 +36,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTask : ISoloTask
     {
         private readonly ILogger _logger = App.GetLogger<AutoFishingTask>();
-        private readonly InputSimulator input = Simulation.SendInput;
+        private readonly IInputSimulator input = Simulation.SendInput;
         public string Name => "钓鱼独立任务";
 
         private CancellationToken _ct;

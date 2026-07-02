@@ -34,7 +34,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
     private readonly AutoEatParam _taskParam;
     private readonly AutoEatConfig _config;
     private readonly ILogger _logger = App.GetLogger<AutoEatTask>();
-    private readonly InputSimulator _input = Simulation.SendInput;
+    private readonly IInputSimulator _input = Simulation.SendInput;
     private CancellationToken _ct;
 
     public AutoEatTask(AutoEatParam taskParam)

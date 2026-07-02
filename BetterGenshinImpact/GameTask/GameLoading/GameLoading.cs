@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Session;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -20,7 +21,23 @@ namespace BetterGenshinImpact.GameTask.GameLoading;
 
 public class GameLoadingTrigger : ITaskTrigger
 {
-    public static bool GlobalEnabled = true;
+    private static bool _legacyGlobalEnabled = true;
+
+    public static bool GlobalEnabled
+    {
+        get => GameSessionContext.Current?.GameLoadingEnabled ?? _legacyGlobalEnabled;
+        set
+        {
+            if (GameSessionContext.Current is { } session)
+            {
+                session.GameLoadingEnabled = value;
+            }
+            else
+            {
+                _legacyGlobalEnabled = value;
+            }
+        }
+    }
     
     public string Name => "自动开门";
 

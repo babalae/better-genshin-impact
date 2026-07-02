@@ -20,12 +20,29 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact.GameTask;
 
 internal class GameTaskManager
 {
-    public static ConcurrentDictionary<string, ITaskTrigger>? TriggerDictionary { get; set; }
+    private static ConcurrentDictionary<string, ITaskTrigger>? _legacyTriggerDictionary;
+
+    public static ConcurrentDictionary<string, ITaskTrigger>? TriggerDictionary
+    {
+        get => GameSessionContext.Current?.TriggerDictionary ?? _legacyTriggerDictionary;
+        set
+        {
+            if (GameSessionContext.Current is { } session)
+            {
+                session.TriggerDictionary = value;
+            }
+            else
+            {
+                _legacyTriggerDictionary = value;
+            }
+        }
+    }
 
     /// <summary>
     /// 一定要在任务上下文初始化完毕后使用

@@ -1,4 +1,4 @@
-﻿namespace BetterGenshinImpact.View.Drawable
+namespace BetterGenshinImpact.View.Drawable
 {
     /// <summary>
     /// Vision 上下文
@@ -8,12 +8,17 @@
         private static VisionContext? _uniqueInstance;
         private static readonly object Locker = new();
 
-        private VisionContext()
+        public VisionContext()
         {
         }
 
         public static VisionContext Instance()
         {
+            if (BetterGenshinImpact.GameTask.Session.GameSessionContext.Current is { } session)
+            {
+                return session.VisionContext;
+            }
+
             if (_uniqueInstance == null)
             {
                 lock (Locker)

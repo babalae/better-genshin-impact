@@ -114,6 +114,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="Assets\CloudGame\**">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\**\Recognition.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

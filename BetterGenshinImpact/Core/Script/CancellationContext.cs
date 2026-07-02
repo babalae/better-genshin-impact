@@ -1,11 +1,15 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.Model;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact.Core.Script;
 
 public class CancellationContext : Singleton<CancellationContext>
 {
+    public new static CancellationContext Instance =>
+        GameSessionContext.Current?.CancellationContext ?? Singleton<CancellationContext>.Instance;
+
     private readonly object _sync = new();
     public CancellationTokenSource Cts { get; private set; } = new();
     public bool IsManualStop { get; private set; }

@@ -37,6 +37,7 @@ using Wpf.Ui.Violeta.Controls;
 // Wine 平台适配
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service.Tavern;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact;
 
@@ -153,6 +154,8 @@ public partial class App : Application
                 // My Services
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<TaskTriggerDispatcher>();
+                services.AddSingleton<ProfileService>();
+                services.AddSingleton<GameSessionManager>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
@@ -257,6 +260,11 @@ public partial class App : Application
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
 
         TempManager.CleanUp();
+
+        if (GetService<GameSessionManager>() is { } gameSessionManager)
+        {
+            await gameSessionManager.StopAllAsync();
+        }
 
         await _host.StopAsync();
         _host.Dispose();

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -69,6 +70,11 @@ public class SystemControl
 
     public static bool IsGenshinImpactActiveByProcess()
     {
+        if (GameSessionContext.Current?.Target.CanRunInBackground == true)
+        {
+            return true;
+        }
+
         var name = GetActiveProcessName();
         if (string.IsNullOrEmpty(name))
         {
@@ -86,12 +92,22 @@ public class SystemControl
 
     public static bool IsGenshinImpactActive()
     {
+        if (GameSessionContext.Current?.Target.CanRunInBackground == true)
+        {
+            return true;
+        }
+
         var hWnd = User32.GetForegroundWindow();
         return hWnd == TaskContext.Instance().GameHandle;
     }
 
     public static bool IsGenshinImpactMinimized()
     {
+        if (GameSessionContext.Current?.Target.CanRunInBackground == true)
+        {
+            return false;
+        }
+
         return User32.IsIconic(TaskContext.Instance().GameHandle);
     }
 
@@ -186,6 +202,12 @@ public class SystemControl
     /// <returns></returns>
     public static RECT GetGameScreenRect(nint hWnd)
     {
+        if (GameSessionContext.Current is { } session && session.Target.WindowHandle == hWnd)
+        {
+            var size = session.Target.CaptureSize;
+            return new RECT(0, 0, size.Width, size.Height);
+        }
+
         User32.GetClientRect(hWnd, out var clientRect);
         return clientRect;
     }
@@ -197,6 +219,12 @@ public class SystemControl
     /// <returns></returns>
     public static RECT GetCaptureRect(nint hWnd)
     {
+        if (GameSessionContext.Current is { } session && session.Target.WindowHandle == hWnd)
+        {
+            var size = session.Target.CaptureSize;
+            return new RECT(0, 0, size.Width, size.Height);
+        }
+
         var windowRect = GetWindowRect(hWnd);
         var gameScreenRect = GetGameScreenRect(hWnd);
         var left = windowRect.Left;
@@ -217,6 +245,11 @@ public class SystemControl
         if (!TaskContext.Instance().IsInitialized)
         {
             throw new Exception("请先启动BetterGI");
+        }
+
+        if (GameSessionContext.Current?.Target.CanRunInBackground == true)
+        {
+            return;
         }
 
         ActivateWindow(TaskContext.Instance().GameHandle);
@@ -242,6 +275,11 @@ public class SystemControl
     }
     public static void FocusWindow(nint hWnd)
     {
+        if (GameSessionContext.Current?.Target.CanRunInBackground == true)
+        {
+            return;
+        }
+
         if (User32.IsWindow(hWnd))
         {
             _ = User32.SendMessage(hWnd, User32.WindowMessage.WM_SYSCOMMAND, User32.SysCommand.SC_RESTORE, 0);

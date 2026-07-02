@@ -1,10 +1,11 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
 using Fischless.WindowsInput;
 using System.Drawing;
 using Fischless.GameCapture;
 using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
 
@@ -53,6 +54,11 @@ public class DesktopRegion : Region
             (y + (h * 1d / 2)) * 65535 / Height);
     }
 
+    public void MoveBy(double dx, double dy)
+    {
+        mouse.MoveMouseBy((int)dx, (int)dy);
+    }
+
     /// <summary>
     /// 静态方法,每次都会重新计算屏幕大小
     /// </summary>
@@ -60,18 +66,38 @@ public class DesktopRegion : Region
     /// <param name="cy"></param>
     public static void DesktopRegionClick(double cx, double cy)
     {
+        if (TaskContext.Instance().IsInitialized)
+        {
+            var desktop = TaskContext.Instance().SystemInfo.DesktopRectArea;
+            desktop.DesktopRegionClick((int)Math.Round(cx), (int)Math.Round(cy), 0, 0);
+            return;
+        }
+
         Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonDown().Sleep(50).LeftButtonUp().Sleep(50);
     }
 
     public static void DesktopRegionMove(double cx, double cy)
     {
+        if (TaskContext.Instance().IsInitialized)
+        {
+            var desktop = TaskContext.Instance().SystemInfo.DesktopRectArea;
+            desktop.DesktopRegionMove((int)Math.Round(cx), (int)Math.Round(cy), 0, 0);
+            return;
+        }
+
         Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height);
     }
     
     public static void DesktopRegionMoveBy(double dx, double dy)
     {
+        if (TaskContext.Instance().IsInitialized)
+        {
+            TaskContext.Instance().SystemInfo.DesktopRectArea.MoveBy(dx, dy);
+            return;
+        }
+
         Simulation.SendInput.Mouse.MoveMouseBy((int)dx, (int)dy);
     }
 

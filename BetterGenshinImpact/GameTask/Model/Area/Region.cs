@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model.Area.Converter;
+using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using OpenCvSharp;
@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Session;
+using BetterGenshinImpact.Core.Simulator;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -90,6 +92,13 @@ public class Region : IDisposable
     /// </summary>
     public void BackgroundClick()
     {
+        if (GameSessionContext.Current != null)
+        {
+            Move();
+            Simulation.SendInput.Mouse.LeftButtonClick();
+            return;
+        }
+
         User32.GetCursorPos(out var p);
         this.Move();  // 必须移动实际鼠标
         TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();

@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public class GetGridIconsTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
-    private readonly InputSimulator input = Simulation.SendInput;
+    private readonly IInputSimulator input = Simulation.SendInput;
 
     private CancellationToken ct;
 

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.GameTask.Session;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -23,7 +24,7 @@ namespace BetterGenshinImpact.GameTask
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑声明为可以为 null。
 
-        private TaskContext()
+        internal TaskContext()
         {
         }
 
@@ -31,7 +32,24 @@ namespace BetterGenshinImpact.GameTask
 
         public static TaskContext Instance()
         {
+            if (GameSessionContext.Current is { } session)
+            {
+                return session.TaskContext;
+            }
+
             return LazyInitializer.EnsureInitialized(ref _uniqueInstance, ref InstanceLocker, () => new TaskContext());
+        }
+
+        internal static TaskContext CreateSessionContext(IntPtr hWnd, ISystemInfo systemInfo)
+        {
+            return new TaskContext
+            {
+                GameHandle = hWnd,
+                PostMessageSimulator = Simulation.PostMessage(hWnd),
+                SystemInfo = systemInfo,
+                DpiScale = 1f,
+                IsInitialized = true
+            };
         }
 
         public void Init(IntPtr hWnd)
