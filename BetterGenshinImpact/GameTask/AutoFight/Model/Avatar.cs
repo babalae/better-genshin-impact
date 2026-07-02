@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -547,11 +548,16 @@ public class Avatar
             using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
             var cd = AfterUseSkill(region);
-            if (cd > 0)
+            var recordedCd = ESkillCdTracker.Record(Name, cd);
+            if (recordedCd <= 0)
             {
-                // Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
-                //     Math.Round(cd, 2));
-                return;
+                recordedCd = ESkillCdTracker.ApplyFallback(Name);
+            }
+
+            if (recordedCd > 0)
+            {
+                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                    Math.Round(recordedCd, 2));
             }
         }
     }

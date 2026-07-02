@@ -56,7 +56,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private readonly AutoDomainConfig _config;
 
-    private readonly CombatScriptBag _combatScriptBag;
+    private readonly CombatScriptBag? _combatScriptBag;
+    private readonly string? _jsonCombatStrategyPath;
     private readonly Dictionary<string, int> _rewardSummary = new();
 
     private CancellationToken _ct;
@@ -83,7 +84,15 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
-        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
+            Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        }
 
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
@@ -178,25 +187,40 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             Logger.LogDebug("0. 关闭秘境提示");
             await CloseDomainTip();
 
-            //0.5. 初始化队伍，只执行一次
-            if (i == 0)
+            if (_jsonCombatStrategyPath != null)
             {
-                combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+                ESkillCdTracker.Clear();
+                // JSON策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
+                // 1. 走到钥匙处启动
+                Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+                await WalkToPressF();
+
+                // 2. 执行战斗（JSON战斗引擎）
+                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略(JSON)");
+                await StartJsonFight();
             }
+            else
+            {
+                //0.5. 初始化队伍，只执行一次
+                if (i == 0)
+                {
+                    combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+                }
 
-            RetryTeamInit(combatScenes); // 队伍没初始化成功则重试
+                RetryTeamInit(combatScenes);
 
-            // 0. 切换到第一个角色
-            var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
+                // 0. 切换到第一个角色
+                var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
-            // 1. 走到钥匙处启动
-            Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
-            await WalkToPressF();
+                // 1. 走到钥匙处启动
+                Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+                await WalkToPressF();
 
-            // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
-            Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
-            await StartFight(combatScenes, combatCommands);
-            combatScenes.AfterTask();
+                // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
+                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
+                await StartFight(combatScenes, combatCommands);
+                combatScenes.AfterTask();
+            }
             EndFightWait();
 
             // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
@@ -682,6 +706,45 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         domainEndTask.Start();
         // autoEatRecoveryHpTask.Start();
         return Task.WhenAll(combatTask, domainEndTask);
+    }
+
+    /// <summary>
+    /// JSON策略战斗入口：委托给AutoFightJsonTask，抑制其自带的结束检测和拾取逻辑，
+    /// 秘境的DomainEndDetectionTask通过CancellationToken控制战斗结束。
+    /// </summary>
+    private async Task StartJsonFight()
+    {
+        CancellationTokenSource cts = new();
+        _ct.Register(cts.Cancel);
+
+        var jsonParam = new AutoFightParam
+        {
+            CombatStrategyPath = _jsonCombatStrategyPath!,
+            FightFinishDetectEnabled = false,
+            ExpBasedPickupEnabled = false,
+            KazuhaPickupEnabled = false,
+            PickDropsAfterFightEnabled = false,
+            Timeout = 600,
+        };
+
+        var jsonTask = new AutoFightJsonTask(jsonParam);
+
+        var domainEndTask = DomainEndDetectionTask(cts);
+
+        var combatTask = Task.Run(async () =>
+        {
+            try
+            {
+                await jsonTask.Start(cts.Token);
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
+            }
+        }, cts.Token);
+
+        domainEndTask.Start();
+        await Task.WhenAll(combatTask, domainEndTask);
     }
 
     private void EndFightWait()
