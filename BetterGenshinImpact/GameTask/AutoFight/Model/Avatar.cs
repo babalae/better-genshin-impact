@@ -555,6 +555,28 @@ public class Avatar
                 //     Math.Round(cd, 2));
                 return;
             }
+
+            // OCR 读取 CD 失败时，检查是否需要特殊兜底处理
+            if (ESkillCdTracker.CdFallbackMap.TryGetValue(Name, out var fallbackType))
+            {
+                var cfgCd = CombatAvatar.SkillCd > 0 ? CombatAvatar.SkillCd : CombatAvatar.SkillHoldCd;
+                if (cfgCd > 0)
+                {
+                    if (fallbackType == ESkillCdTracker.FallbackType.SetFull)
+                    {
+                        ESkillCdTracker.RecordUse(Name, cfgCd);
+                    }
+                    else if (fallbackType == ESkillCdTracker.FallbackType.MinRemaining)
+                    {
+                        var remaining = ESkillCdTracker.GetRemainingCd(Name);
+                        if (remaining > 0)
+                        {
+                            var actual = Math.Min(remaining, cfgCd);
+                            ESkillCdTracker.RecordUse(Name, actual);
+                        }
+                    }
+                }
+            }
         }
     }
 

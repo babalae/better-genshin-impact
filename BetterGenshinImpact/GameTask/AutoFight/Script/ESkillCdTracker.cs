@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
@@ -11,6 +12,24 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// </summary>
 public static class ESkillCdTracker
 {
+    /// <summary>特殊处理类别</summary>
+    public enum FallbackType
+    {
+        /// <summary>无特殊处理，使用现有逻辑</summary>
+        None = 0,
+        /// <summary>OCR读不到CD时，直接设置为完整CD</summary>
+        SetFull = 1,
+        /// <summary>OCR读不到CD且已有剩余CD大于0时，取 min(剩余CD, 完整CD)</summary>
+        MinRemaining = 2
+    }
+
+    /// <summary>角色名 → FallbackType 映射（硬编码名单）</summary>
+    public static readonly Dictionary<string, FallbackType> CdFallbackMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["莉奈娅"] = FallbackType.SetFull,
+        ["玛薇卡"] = FallbackType.MinRemaining,
+    };
+
     /// <summary>角色名 → E 技能就绪的时间戳（UTC）</summary>
     private static readonly ConcurrentDictionary<string, DateTime> EReadyAt = new(StringComparer.OrdinalIgnoreCase);
 
