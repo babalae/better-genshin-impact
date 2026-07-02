@@ -44,8 +44,9 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private DateTimeOffset _cachedTokenExpiresAt = DateTimeOffset.MinValue;
     private static readonly TimeSpan RefreshBeforeExpiry = TimeSpan.FromMinutes(1);
 
-    internal static readonly IReadOnlySet<long> MaskMapItemTypeExcludedAreaIds = new HashSet<long> { 7, 25, 42, 16, 4, 8, 10, 26, 32, 43 };
-    
+    // 来自 https://cloud.yuanshen.site/api/area/get/list 列出地区
+    internal static readonly IReadOnlySet<long> MaskMapItemTypeExcludedAreaIds = new HashSet<long> { 7, 25, 42, 16, 4, 8, 10, 26, 32, 43, 48, 53, 55, 56 };
+
     public KongyingTavernApiService()
         : this(CreateDefaultMemoryFileCache())
     {
@@ -59,6 +60,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
             "KongyingTavern",
             () => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
     }
+
     private static MemoryFileCache CreateDefaultMemoryFileCache()
     {
         var memoryCache = new MemoryCache(new MemoryCacheOptions());
@@ -152,6 +154,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
                 resList.Add(item);
             }
         }
+
         return resList;
     }
 
