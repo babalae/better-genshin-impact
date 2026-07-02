@@ -1301,7 +1301,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private static string BuildAutoFightStrategyPath(AutoFightConfig config)
     {
-        var path = AutoFightParam.ResolveStrategyPath(config.StrategyName);
+        var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
         if (!File.Exists(path) && !Directory.Exists(path))
         {
             throw new Exception("战斗策略文件不存在");

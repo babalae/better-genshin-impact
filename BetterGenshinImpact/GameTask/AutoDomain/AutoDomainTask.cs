@@ -721,7 +721,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             CombatStrategyPath = _jsonCombatStrategyPath!,
             FightFinishDetectEnabled = false,
-            ExpKazuhaPickup = false,
+            ExpBasedPickupEnabled = false,
             KazuhaPickupEnabled = false,
             PickDropsAfterFightEnabled = false,
             Timeout = 600,
