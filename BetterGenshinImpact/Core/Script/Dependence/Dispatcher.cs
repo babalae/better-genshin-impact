@@ -385,10 +385,13 @@ public class Dispatcher
     /// </summary>
     /// <param name="script">策略字符串，用逗号/换行分隔动作指令，可选角色名前缀</param>
     /// <param name="avatarName">指定操作的角色名（可选，不指定则操作当前角色）</param>
-    public async Task RunCombatScript(string script, string? avatarName = null)
+    /// <param name="customCt">自定义取消令牌</param>
+    public async Task RunCombatScript(string script, string? avatarName = null, CancellationToken? customCt = null)
     {
         if (string.IsNullOrWhiteSpace(script))
             throw new ArgumentException("策略字符串不能为空", nameof(script));
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
 
         // 1. 标准化分隔符
         var normalized = script.Replace("，", ",");
@@ -405,24 +408,28 @@ public class Dispatcher
         using var capture = CaptureToRectArea();
         var combatScenes = new CombatScenes();
         combatScenes.InitializeTeam(capture);
+        if (!combatScenes.CheckTeamInitialized()) return;
 
-        // 4. 若指定了角色名，切到该角色（不在第一位则切换）
+        // 4. 若指定了角色名，切到该角色
         if (!string.IsNullOrEmpty(avatarName))
         {
             var standardName = DefaultAutoFightConfig.AvatarAliasToStandardName(avatarName);
             var avatar = combatScenes.GetAvatars().FirstOrDefault(a =>
                 a.Name.Equals(standardName, StringComparison.OrdinalIgnoreCase));
-            if (avatar != null && avatar.Index > 1)
+            if (avatar != null)
             {
                 avatar.Switch();
             }
         }
 
-        // 5. 依次执行指令
+        // 5. 依次执行指令（传入 lastCommand 以优化同角色切换）
+        CombatCommand? lastCommand = null;
         foreach (var cmd in combatScript.CombatCommands)
         {
-            cmd.Execute(combatScenes);
-            await Task.Delay(300);
+            cancellationToken.ThrowIfCancellationRequested();
+            cmd.Execute(combatScenes, lastCommand);
+            lastCommand = cmd;
+            await Task.Delay(300, cancellationToken);
         }
     }
     
