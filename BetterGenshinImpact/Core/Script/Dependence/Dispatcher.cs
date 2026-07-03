@@ -429,7 +429,7 @@ public class Dispatcher
             cancellationToken.ThrowIfCancellationRequested();
             cmd.Execute(combatScenes, lastCommand);
             lastCommand = cmd;
-            await TaskControl.Delay(300, cancellationToken);
+            await Delay(300, cancellationToken);
         }
     }
     
