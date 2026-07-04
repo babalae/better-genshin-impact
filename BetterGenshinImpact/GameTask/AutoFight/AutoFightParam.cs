@@ -117,6 +117,34 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         }
     }
 
+    /// <summary>
+    /// 解析策略文件路径，自动检测 .json 或 .txt 扩展名。
+    /// 优先检测 .json，未命中则回退 .txt。
+    /// </summary>
+    /// <param name="strategyName">策略名称（不含扩展名）</param>
+    /// <returns>(完整路径, 类型标识: "json" / "txt")</returns>
+    public static (string path, string type) ResolveStrategyPath(string strategyName)
+    {
+        if ("根据队伍自动选择".Equals(strategyName))
+        {
+            var dir = Global.Absolute(@"User\AutoFight\");
+            return (dir, "txt");
+        }
+
+        var baseDir = Global.Absolute(@"User\AutoFight\");
+
+        // 优先检测 .json
+        var jsonPath = System.IO.Path.Combine(baseDir, strategyName + ".json");
+        if (System.IO.File.Exists(jsonPath))
+        {
+            return (jsonPath, "json");
+        }
+
+        // 回退 .txt
+        var txtPath = System.IO.Path.Combine(baseDir, strategyName + ".txt");
+        return (txtPath, "txt");
+    }
+
     public void SetDefault()
     {
         var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;

@@ -23,6 +23,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.Core.Recognition;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -148,22 +149,45 @@ public class CombatScenes : IDisposable
             for (var i = 0; i < avatarSideIconRectList.Count; i++)
             {
                 using var ra = imageRegion.DeriveCrop(avatarSideIconRectList[i]);
-                var pair = ClassifyAvatarCnName(ra.CacheImage, i + 1);
-                names[i] = pair.Item1;
-                if (!string.IsNullOrEmpty(pair.Item2))
+                try
                 {
-                    var costumeName = pair.Item2;
-                    if (_autoFightAssets.AvatarCostumeMap.TryGetValue(costumeName, out string? name))
+                    var pair = ClassifyAvatarCnName(ra.CacheImage, i + 1);
+                    names[i] = pair.Item1;
+                    if (!string.IsNullOrEmpty(pair.Item2))
                     {
-                        costumeName = name;
-                    }
+                        var costumeName = pair.Item2;
+                        if (_autoFightAssets.AvatarCostumeMap.TryGetValue(costumeName, out string? name))
+                        {
+                            costumeName = name;
+                        }
 
-                    displayNames[i] = $"{pair.Item1}({costumeName})";
+                        displayNames[i] = $"{pair.Item1}({costumeName})";
+                    }
+                    else
+                    {
+                        displayNames[i] = pair.Item1;
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    displayNames[i] = pair.Item1;
+                    _logger.LogWarning(e.Message);
+                    // 失败则使用 OCR 兜底
+                    var s = _systemInfo.AssetScale;
+                    var indexRect = avatarIndexRectList[i];
+                    using var ra2 = imageRegion.DeriveCrop(new Rect(indexRect.X - (int)(240 * s), indexRect.Y - indexRect.Height, (int)(240 * s), indexRect.Height * 3));
+                    var rName = ra2.Find(RecognitionObject.OcrThis);
+                    var name = StringUtils.ExtractChinese(rName.Text);
+                    if (IsGenshinAvatarName(name))
+                    {
+                        names[i] = name;
+                        displayNames[i] = name;
+                    }
+                    else
+                    {
+                        throw new Exception($"OCR识别第{i+1}位角色，结果：{rName.Text}，但是这个角色数据未维护");
+                    }
                 }
+
             }
 
             _logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
@@ -620,7 +644,6 @@ public class CombatScenes : IDisposable
         Avatars = BuildAvatars(names, nameRects);
     }
 
-    [Obsolete]
     private bool IsGenshinAvatarName(string name)
     {
         if (DefaultAutoFightConfig.CombatAvatarNames.Contains(name))

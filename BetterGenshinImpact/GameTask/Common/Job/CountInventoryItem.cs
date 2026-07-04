@@ -1,19 +1,16 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.Helpers;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
-using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -29,25 +26,22 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         private CancellationToken ct;
         private readonly GridScreenName gridScreenName;
         private readonly string? itemName;
-        private readonly IEnumerable<string>? itemNames;
+        private readonly IReadOnlyCollection<string>? itemNames;
+        private readonly ItemIconRecognitionMode iconRecognitionMode;
 
-        public CountInventoryItem(GridScreenName gridScreenName, string? itemName = null, IEnumerable<string>? itemNames = null)
+        public CountInventoryItem(CountInventoryItemParam param)
         {
-            this.gridScreenName = gridScreenName;
-            if (itemName != null && itemNames != null)
+            if (param == null)
             {
-                throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时使用");
+                throw new ArgumentNullException(nameof(param));
             }
-            if (itemName == null && itemNames == null)
-            {
-                throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时为空");
-            }
-            if (itemNames != null && !itemNames.Any())
-            {
-                throw new ArgumentException($"参数{nameof(itemNames)}不能为空序列");
-            }
-            this.itemName = itemName;
-            this.itemNames = itemNames;
+
+            param.Validate();
+
+            this.gridScreenName = param.GridScreenName;
+            this.itemName = param.ItemName;
+            this.itemNames = param.GetItemNamesOrNull()?.ToList();
+            this.iconRecognitionMode = param.IconRecognitionMode;
         }
 
         public async Task<object> Start(CancellationToken ct)
@@ -65,21 +59,26 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, input, logger, this.ct);
 
-            using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
+            using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.Create(this.iconRecognitionMode);
 
             object result;
             if (this.itemName != null)
             {
-                result = await FindOne(session, prototypes);
+                result = await FindOne(iconRecognizer);
             }
             else
             {
-                result = await FindMulti(session, prototypes);
+                result = await FindMulti(iconRecognizer);
             }
 
             await new ReturnMainUiTask().Start(ct);
 
             return result;
+        }
+
+        private GridParams CreateGridParams()
+        {
+            return GridParams.Templates[this.gridScreenName];
         }
 
         private async Task PreScrollToBottomForWeaponOre()
@@ -95,16 +94,16 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             {
                 GlobalMethod.LeftButtonUp();
             }
-            var gridScroller = new GridScroller(GridParams.Templates[gridScreenName], logger, input, ct);
+            var gridScroller = new GridScroller(CreateGridParams(), logger, input, ct);
             while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
             {
                 await TaskControl.Delay(300, ct);
             }
         }
 
-        private async Task<int> FindOne(InferenceSession session, Dictionary<string, float[]> prototypes)
+        private async Task<int> FindOne(IItemIconRecognizer iconRecognizer)
         {
-            GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
+            GridScreen gridScreen = new GridScreen(CreateGridParams(), logger, ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
             gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             int? count = null;
@@ -120,26 +119,15 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
-                    using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                    if (result.Item1 == null)
+                    string? predName = RecognizeItemName(itemRegion, iconRecognizer);
+                    if (predName == null)
                     {
                         continue;
                     }
-                    string predName = result.Item1;
+
                     if (predName == this.itemName!)
                     {
-                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
-                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
-                        if (int.TryParse(numStr, out int num))
-                        {
-                            count = num;
-                        }
-                        else
-                        {
-                            logger.LogWarning("无法识别数量：{text}", numStr);
-                            count = -2;
-                        }
+                        count = ReadItemCount(itemRegion);
                         break;
                     }
                 }
@@ -156,12 +144,12 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             return count.Value;
         }
 
-        private async Task<Dictionary<string, int>> FindMulti(InferenceSession session, Dictionary<string, float[]> prototypes)
+        private async Task<Dictionary<string, int>> FindMulti(IItemIconRecognizer iconRecognizer)
         {
             Dictionary<string, int> itemsCountDic = new Dictionary<string, int>();
             List<string> notFoundItemNames = this.itemNames!.ToList();
 
-            GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
+            GridScreen gridScreen = new GridScreen(CreateGridParams(), logger, ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
             gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             try
@@ -175,27 +163,15 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
-                    using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                    if (result.Item1 == null)
+                    string? predName = RecognizeItemName(itemRegion, iconRecognizer);
+                    if (predName == null)
                     {
                         continue;
                     }
-                    string predName = result.Item1;
+
                     if (this.itemNames!.Contains(predName) && !itemsCountDic!.ContainsKey(predName))
                     {
-                        int count;
-                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
-                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
-                        if (int.TryParse(numStr, out int num))
-                        {
-                            count = num;
-                        }
-                        else
-                        {
-                            logger.LogWarning("无法识别数量：{text}", numStr);
-                            count = -2;
-                        }
+                        int count = ReadItemCount(itemRegion);
 
                         if (!itemsCountDic!.TryAdd(predName, count))
                         {
@@ -221,6 +197,25 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                 logger.LogInformation("没有找到{name}", String.Join(", ", notFoundItemNames));
             }
             return itemsCountDic;
+        }
+
+        private static string? RecognizeItemName(ImageRegion itemRegion, IItemIconRecognizer iconRecognizer)
+        {
+            using Mat icon = itemRegion.SrcMat.GetGridIcon();
+            return iconRecognizer.Recognize(icon);
+        }
+
+        private int ReadItemCount(ImageRegion itemRegion)
+        {
+            string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+            string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
+            if (int.TryParse(numStr, out int num))
+            {
+                return num;
+            }
+
+            logger.LogWarning("无法识别数量：{text}", numStr);
+            return -2;
         }
 
         async Task ISoloTask.Start(CancellationToken ct)

@@ -10,6 +10,7 @@ using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Script.Utils;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -17,6 +18,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -76,6 +78,9 @@ public class EngineExtend
         
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoBossParam", typeof(AutoBossParam));
+        engine.AddHostType("CountInventoryItemParam", typeof(CountInventoryItemParam));
+        engine.AddHostType("GridScreenName", typeof(GridScreenName));
+        engine.AddHostType("ItemIconRecognitionMode", typeof(ItemIconRecognitionMode));
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));

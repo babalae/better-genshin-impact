@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -327,13 +328,15 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <returns></returns>
             public static IEnumerable<GridCell> PostProcess(Mat mat, IEnumerable<Rect> rects, int threshold)
             {
-                if (!rects.Any())
+                List<Rect> rectList = rects.ToList();
+                if (!rectList.Any())
                 {
                     return [];
                 }
                 // 根据聚簇结果补漏……
-                List<GridCell> cells = GridCell.ClusterToCells(rects, threshold).ToList();
+                List<GridCell> cells = GridCell.ClusterToCells(rectList, threshold).ToList();
                 GridCell.FillMissingGridCells(ref cells);
+                FillExtraBottomRow(mat, ref cells);
 
                 // 在末尾处有可能补多了，把底部颜色不符的丢掉……  // PS：群友有直接用底部颜色进行识别的，效果不错
                 var result = cells.ToList();
@@ -356,6 +359,95 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 }
 
                 return result;
+            }
+
+            /// <summary>
+            /// 当已有网格行下方仍有足够空间时，按当前行距和列距额外推断一行幻影格子。
+            /// 推断出的格子会在后续流程中继续通过 <see cref="IsCorrectBottomColor(Mat, int)"/> 做底部颜色校验。
+            /// </summary>
+            /// <param name="mat">当前网格 ROI 图像。</param>
+            /// <param name="cells">当前已识别和已补齐的网格格子。</param>
+            private static void FillExtraBottomRow(Mat mat, ref List<GridCell> cells)
+            {
+                if (cells.Count <= 0)
+                {
+                    return;
+                }
+
+                var rows = cells
+                    .GroupBy(c => c.RowNum)
+                    .Select(g => new
+                    {
+                        RowNum = g.Key,
+                        Y = g.Average(c => c.Rect.Y),
+                        Height = g.Average(c => c.Rect.Height)
+                    })
+                    .OrderBy(row => row.RowNum)
+                    .ToList();
+                if (rows.Count < 2)
+                {
+                    return;
+                }
+
+                var rowSpacings = rows
+                    .Zip(rows.Skip(1), (previous, next) => next.Y - previous.Y - previous.Height)
+                    .Where(spacing => spacing >= 0)
+                    .ToList();
+                if (rowSpacings.Count == 0)
+                {
+                    return;
+                }
+
+                double avgWidth = cells.Average(c => c.Rect.Width);
+                double avgHeight = cells.Average(c => c.Rect.Height);
+                double avgRowSpacing = rowSpacings.Average();
+                var lastRow = rows[^1];
+                double nextY = lastRow.Y + lastRow.Height + avgRowSpacing;
+                if (nextY + avgHeight > mat.Rows)
+                {
+                    return;
+                }
+
+                double avgColSpacing;
+                {
+                    var colSpacings = new List<double>();
+                    foreach (var row in cells.GroupBy(c => c.RowNum))
+                    {
+                        foreach (var pair in row.OrderBy(c => c.ColNum).Zip(row.OrderBy(c => c.ColNum).Skip(1)))
+                        {
+                            if (pair.Second.ColNum != pair.First.ColNum + 1)
+                            {
+                                continue;
+                            }
+
+                            double spacing = pair.Second.Rect.X - pair.First.Rect.X - pair.First.Rect.Width;
+                            if (spacing >= 0)
+                            {
+                                colSpacings.Add(spacing);
+                            }
+                        }
+                    }
+
+                    avgColSpacing = colSpacings.Count == 0 ? 0 : colSpacings.Average();
+                }
+
+                double avgLeft = cells.Average(c => c.Rect.X - (avgWidth + avgColSpacing) * c.ColNum);
+                int rowNum = cells.Max(c => c.RowNum) + 1;
+                int maxColNum = cells.Max(c => c.ColNum);
+                for (int colNum = 0; colNum <= maxColNum; colNum++)
+                {
+                    int x = (int)Math.Round(avgLeft + (avgWidth + avgColSpacing) * colNum, MidpointRounding.AwayFromZero);
+                    int y = (int)Math.Round(nextY, MidpointRounding.AwayFromZero);
+                    int width = (int)Math.Round(avgWidth, MidpointRounding.AwayFromZero);
+                    int height = (int)Math.Round(avgHeight, MidpointRounding.AwayFromZero);
+                    GridCell cell = new GridCell(new Rect(x, y, width, height))
+                    {
+                        ColNum = colNum,
+                        RowNum = rowNum,
+                        IsPhantom = true
+                    };
+                    cells.Add(cell);
+                }
             }
 
             public async ValueTask<bool> MoveNextAsync()
@@ -455,13 +547,27 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
                 Scalar bgrColor = new Scalar(0xdc, 0xe5, 0xe9);
 
-                // 计算区域的平均颜色
-                Scalar meanColor = Cv2.Mean(image);
+                //在合成台沿用时，名字太长会影响颜色比较，这里将名字区域从矩形中扣掉，只用剩下的口字型边框来比较颜色。
+                using Mat mask = new Mat(image.Size(), MatType.CV_8UC1, new Scalar(255));
+                Rect ignoredRect = new Rect(6, 0, 113, 21).ClampTo(image);
+                if (ignoredRect.Width > 0 && ignoredRect.Height > 0)
+                {
+                    using Mat ignoredMask = mask.SubMat(ignoredRect);
+                    ignoredMask.SetTo(0);
+                }
+
+                if (Cv2.CountNonZero(mask) == 0)
+                {
+                    return false;
+                }
+
+                // 忽略文字主区域后，使用剩余底部背景计算平均颜色。
+                Scalar meanColor = Cv2.Mean(image, mask);
 
                 // 计算平均颜色与目标颜色的差异
                 double diff = Math.Abs(meanColor.Val0 - bgrColor.Val0) +
-                             Math.Abs(meanColor.Val1 - bgrColor.Val1) +
-                             Math.Abs(meanColor.Val2 - bgrColor.Val2);
+                              Math.Abs(meanColor.Val1 - bgrColor.Val1) +
+                              Math.Abs(meanColor.Val2 - bgrColor.Val2);
 
                 return diff <= tolerance * 3;
             }

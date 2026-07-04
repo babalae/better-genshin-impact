@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;

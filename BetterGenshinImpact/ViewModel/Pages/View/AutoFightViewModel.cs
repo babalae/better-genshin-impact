@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -6,6 +6,7 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -43,18 +44,37 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
         var files = Directory.GetFiles(folder, "*.*",
             SearchOption.AllDirectories);
 
-        var strategyList = new string[files.Length];
-        for (var i = 0; i < files.Length; i++)
+        var count = 0;
+        foreach (var file in files)
         {
-            if (files[i].EndsWith(".txt"))
+            if (file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                count++;
+        }
+
+        var strategyList = new string[count];
+        var idx = 0;
+        foreach (var file in files)
+        {
+            string? ext = null;
+            if (file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
             {
-                var strategyName = files[i].Replace(folder, "").Replace(".txt", "");
-                if (strategyName.StartsWith('\\'))
+                ext = ".txt";
+            }
+            else if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                ext = ".json";
+            }
+
+            if (ext != null)
+            {
+                var relativePath = Path.GetRelativePath(folder, file);
+                var strategyName = Path.GetFileNameWithoutExtension(relativePath);
+                if (strategyName.StartsWith('\\') || strategyName.StartsWith('/'))
                 {
                     strategyName = strategyName[1..];
                 }
 
-                strategyList[i] = strategyName;
+                strategyList[idx++] = strategyName;
             }
         }
 

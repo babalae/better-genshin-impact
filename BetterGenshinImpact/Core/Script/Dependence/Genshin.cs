@@ -362,6 +362,18 @@ public class Genshin
     }
 
     /// <summary>
+    /// 在当前已打开的合成界面中合成指定材料。
+    /// </summary>
+    /// <param name="materialName">目标成品材料名。</param>
+    /// <param name="quantity">目标合成个数，必须大于 0。</param>
+    /// <param name="materialType">材料筛选类型；为空时从物品模型 CSV 中读取。</param>
+    /// <returns>合成执行结果。</returns>
+    public async Task<CraftMaterialResult> CraftMaterial(string materialName, int quantity, string? materialType = null)
+    {
+        return await new CraftMaterialTask(materialName, quantity, materialType).Start(CancellationContext.Instance.Cts.Token);
+    }
+
+    /// <summary>
     /// 返回主界面
     /// </summary>
     /// <returns></returns>

@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.GetGridIcons;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Microsoft.VisualBasic.FileIO;
@@ -9,28 +10,65 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace BetterGenshinImpact.GameTask.Common.Reward;
+namespace BetterGenshinImpact.GameTask.Common.Job;
 
 /// <summary>
-/// 奖励图标 ONNX 匹配候选。
+/// 物品图标 ONNX 匹配候选。
 /// </summary>
 /// <param name="Name">候选名称。</param>
 /// <param name="Score">匹配分数。</param>
 /// <param name="QualityLevel">候选稀有度；未知或不支持时为 -1。</param>
-internal sealed record RewardIconCandidate(string Name, double Score, int QualityLevel)
+internal sealed record ItemIconCandidate(string Name, double Score, int QualityLevel)
 {
     /// <summary>
     /// 无有效匹配时的空候选。
     /// </summary>
-    public static readonly RewardIconCandidate Empty = new(string.Empty, double.MinValue, -1);
+    public static readonly ItemIconCandidate Empty = new(string.Empty, double.MinValue, -1);
 }
 
-/// <summary>
-/// 奖励图标 embedding 匹配器。
-/// </summary>
-internal sealed class RewardIconMatcher
+internal interface IItemIconRecognizer : IDisposable
+{
+    string? Recognize(Mat icon);
+}
+
+internal static class ItemIconRecognizerFactory
+{
+    public static IItemIconRecognizer Create(ItemIconRecognitionMode mode)
+    {
+        return mode switch
+        {
+            ItemIconRecognitionMode.GridIcon => new GridIconRecognizer(),
+            ItemIconRecognitionMode.Item => new ItemRecognizer(),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "不支持的物品图标识别模式")
+        };
+    }
+}
+
+internal sealed class GridIconRecognizer : IItemIconRecognizer
+{
+    private readonly InferenceSession _session;
+    private readonly Dictionary<string, float[]> _prototypes;
+
+    public GridIconRecognizer()
+    {
+        _session = GridIconsAccuracyTestTask.LoadModel(out _prototypes);
+    }
+
+    public string? Recognize(Mat icon)
+    {
+        return GridIconsAccuracyTestTask.Infer(icon, _session, _prototypes).Item1;
+    }
+
+    public void Dispose()
+    {
+        _session.Dispose();
+    }
+}
+
+internal sealed class ItemRecognizer : IItemIconRecognizer
 {
     private const int InputSize = 125;
+    private const double MatchThreshold = 0.75;
 
     private readonly InferenceSession _session;
     private readonly List<IconPrototype> _prototypes;
@@ -45,21 +83,21 @@ internal sealed class RewardIconMatcher
     private sealed record IconPrototype(string Name, int QualityLevel, bool IsRelic, float[] Embedding);
 
     /// <summary>
-    /// 初始化奖励图标模型和原型表。
+    /// 初始化物品图标模型和原型表。
     /// </summary>
-    internal RewardIconMatcher()
+    internal ItemRecognizer()
     {
         _session = new InferenceSession(Global.Absolute(@"Assets\Model\ItemV2\item.onnx"));
         _prototypes = LoadIconPrototypes();
     }
 
     /// <summary>
-    /// 返回奖励图标模型的最高分匹配结果。
+    /// 返回物品图标模型的最高分匹配结果。
     /// </summary>
     /// <param name="mat">125×125 的 BGR 图标图像。</param>
     /// <returns>最高分图标候选。</returns>
     /// <exception cref="ArgumentOutOfRangeException">图标尺寸不是 125×125。</exception>
-    internal RewardIconCandidate Match(Mat mat)
+    internal ItemIconCandidate Match(Mat mat)
     {
         if (mat.Size().Width != InputSize || mat.Size().Height != InputSize)
         {
@@ -83,7 +121,7 @@ internal sealed class RewardIconMatcher
         using var results = _session.Run(inputs);
         var embedding = results.First(r => r.Name == "embedding");
         float[] feature = embedding.AsEnumerable<float>().ToArray();
-        NormalizeVectorInPlace(feature, "奖励图标模型特征向量");
+        NormalizeVectorInPlace(feature, "物品图标模型特征向量");
 
         return _prototypes
             // 每个原型与模型特征做点积；两侧都已 L2 归一化，点积即余弦相似度。
@@ -103,17 +141,28 @@ internal sealed class RewardIconMatcher
                     Score = score
                 };
             })
-            // 圣遗物需要保留同名不同星级；其它奖励不支持稀有度检测。
+            // 圣遗物需要保留同名不同星级；其它物品不支持稀有度检测。
             .GroupBy(c => new
             {
                 c.Name,
                 QualityLevel = c.IsRelic ? c.QualityLevel : -1
             })
-            // 每个显示名只保留最高分原型作为该奖励得分。
+            // 每个显示名只保留最高分原型作为该物品得分。
             .Select(g => g.OrderByDescending(c => c.Score).First())
             .OrderByDescending(c => c.Score)
-            .Select(c => new RewardIconCandidate(c.Name, c.Score, c.IsRelic ? c.QualityLevel : -1))
-            .FirstOrDefault() ?? RewardIconCandidate.Empty;
+            .Select(c => new ItemIconCandidate(c.Name, c.Score, c.IsRelic ? c.QualityLevel : -1))
+            .FirstOrDefault() ?? ItemIconCandidate.Empty;
+    }
+
+    public string? Recognize(Mat icon)
+    {
+        var candidate = Match(icon);
+        return candidate.Score >= MatchThreshold ? candidate.Name : null;
+    }
+
+    public void Dispose()
+    {
+        _session.Dispose();
     }
 
     /// <summary>
@@ -168,7 +217,7 @@ internal sealed class RewardIconMatcher
         int totalFloats = bytes.Length / sizeof(float);
         float[] flatData = new float[totalFloats];
         Buffer.BlockCopy(bytes, 0, flatData, 0, bytes.Length);
-        NormalizeVectorInPlace(flatData, $"奖励图标原型向量 {name}");
+        NormalizeVectorInPlace(flatData, $"物品图标原型向量 {name}");
         return new IconPrototype(name, qualityLevel, isRelic, flatData);
     }
 

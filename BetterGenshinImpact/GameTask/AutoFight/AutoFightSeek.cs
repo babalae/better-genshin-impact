@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Threading;
@@ -711,7 +711,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         
             if (useMedicine.Count > 0)
             {
-                Logger.LogInformation("元素爆发 {text} 的角色序号：{useMedicine}", "就绪", useMedicine);
                 return Task.FromResult(useMedicine);
             }
         
