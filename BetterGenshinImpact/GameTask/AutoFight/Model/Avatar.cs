@@ -132,6 +132,12 @@ public class Avatar
     {
         if (Bv.IsInRevivePrompt(region))
         {
+            if (Bv.IsInDomainIncludingRevivePrompt(region))
+            {
+                Logger.LogWarning("检测到秘境内复苏界面，跳过七天神像传送并交由自动秘境重试");
+                throw new RetryException("检测到秘境内复苏界面，存在角色被击败，退出秘境后重试");
+            }
+
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键

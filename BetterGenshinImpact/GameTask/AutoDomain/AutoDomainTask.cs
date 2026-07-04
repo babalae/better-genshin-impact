@@ -136,7 +136,12 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 if (!string.IsNullOrEmpty(_taskParam.DomainName))
                 {
                     var msg = e.Message;
-                    if (msg.Contains("复活"))
+                    if (IsDomainReviveRetry(e))
+                    {
+                        await ExitDomainForRetry();
+                        msg = "存在角色死亡，退出秘境后重试...";
+                    }
+                    else if (msg.Contains("复活") || msg.Contains("复苏"))
                     {
                         msg = "存在角色死亡，复活后重试秘境...";
                     }
@@ -663,6 +668,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             }
             catch (Exception e)
             {
+                cts.Cancel();
                 Logger.LogWarning(e.Message);
                 throw;
             }
@@ -1352,6 +1358,29 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         await Delay(800, _ct);
         Bv.ClickBlackConfirmButton(CaptureToRectArea());
+    }
+
+    private static bool IsDomainReviveRetry(RetryException e)
+    {
+        return e.Message.Contains("秘境内复苏界面");
+    }
+
+    private async Task ExitDomainForRetry()
+    {
+        try
+        {
+            Logger.LogWarning("自动秘境：角色在秘境内被击败，先退出秘境再重试");
+            await ExitDomain();
+            await Delay(2000, _ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "自动秘境：秘境内复苏后退出秘境失败，将继续按重试流程处理");
+        }
     }
 
     public static (bool, int) PressUseResin(ImageRegion ra, string resinName, string logPrefix = "自动秘境")

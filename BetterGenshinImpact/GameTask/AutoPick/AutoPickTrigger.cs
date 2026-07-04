@@ -217,6 +217,16 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
+        if (_autoPickAssets.UseControllerY &&
+            HasControllerIconBlacklistTemplate(content.CaptureRectArea,
+                CreateControllerPromptIconSearchRect(foundRectArea, content.CaptureRectArea, config, scale),
+                _autoPickAssets.ControllerIconBlacklistRos))
+        {
+            speedTimer.Record("识别手柄图标黑名单");
+            BackOffControllerY("图标黑名单");
+            return;
+        }
+
         // 识别到拾取键，开始识别物品图标
         var isExcludeIcon = false;
         if (HasControllerDialoguePromptIcon(foundRectArea, content.CaptureRectArea, config, scale))
@@ -294,49 +304,16 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        string text;
-        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
-        {
-            var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
-            text = TextInferenceFactory.Pick.Value.Inference(textMat);
-        }
-        else
-        {
-            using var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
-            // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
-            // 如果找到有效区域
-            if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
-            {
-                // 截取只包含文字的区域
-                using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
-                    boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
-                text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
-
-                // if (RuntimeHelper.IsDebug)
-                // {
-                //     // 如果不等于正确文字，则保存图片
-                //     if (text != "烹饪")
-                //     {
-                //         var path = Global.Absolute("log/pick");
-                //         Directory.CreateDirectory(path);
-                //         var str = $"{DateTime.Now:yyyyMMddHHmmssfff}";
-                //         // textMat.SaveImage(Path.Combine(path, $"pick_ocr_ori_{str}.png"));
-                //         // 画上 boundingRect
-                //         Cv2.Rectangle(textMat, boundingRect, new Scalar(0, 0, 255), 1);
-                //         textMat.SaveImage(Path.Combine(path, $"pick_ocr_rect_{str}.png"));
-                //         bin.SaveImage(Path.Combine(path, $"bin_{str}.png"));
-                //     }
-                // }
-            }
-            else
-            {
-                Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
-                text = OcrFactory.Paddle.Ocr(textMat);
-            }
-        }
-
+        var text = RecognizePickText(content.CaptureRectArea, textRect, config);
         speedTimer.Record("文字识别");
+        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap) && ShouldFallbackToPaddleOcr(text))
+        {
+            var yapText = text;
+            text = RecognizePickTextByPaddle(content.CaptureRectArea, textRect);
+            _logger.LogDebug("自动拾取：Yap识别结果不可用({YapText})，Paddle兜底结果：{PaddleText}", yapText, text);
+            speedTimer.Record("Paddle兜底识别");
+        }
+
         if (IsAllowedByPickLists(text, isExcludeIcon, config, out var pickText))
         {
             speedTimer.Record("白名单判断");
@@ -346,6 +323,40 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
+    }
+
+    private static string RecognizePickText(ImageRegion captureRectArea, Rect textRect, AutoPickConfig config)
+    {
+        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
+        {
+            using var textMat = new Mat(captureRectArea.CacheGreyMat, textRect);
+            return TextInferenceFactory.Pick.Value.Inference(textMat);
+        }
+
+        return RecognizePickTextByPaddle(captureRectArea, textRect);
+    }
+
+    private static string RecognizePickTextByPaddle(ImageRegion captureRectArea, Rect textRect)
+    {
+        using var textMat = new Mat(captureRectArea.SrcMat, textRect);
+        var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
+        // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
+        // 如果找到有效区域
+        if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
+        {
+            // 截取只包含文字的区域
+            using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
+                boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
+            return OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
+        }
+
+        Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
+        return OcrFactory.Paddle.Ocr(textMat);
+    }
+
+    internal static bool ShouldFallbackToPaddleOcr(string? rawText)
+    {
+        return ProcessOcrText(rawText ?? string.Empty).Length <= 1;
     }
 
     private bool IsControllerYBackoffActive()
@@ -439,6 +450,41 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (area >= minArea && fillRatio >= minFillRatio)
             {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static bool HasControllerIconBlacklistTemplate(ImageRegion captureRectArea, Rect searchRect, IReadOnlyList<RecognitionObject> templates)
+    {
+        if (templates.Count == 0 || searchRect.Width <= 0 || searchRect.Height <= 0)
+        {
+            return false;
+        }
+
+        foreach (var template in templates)
+        {
+            var templateMat = template.TemplateImageGreyMat ?? template.TemplateImageMat;
+            if (templateMat is null || templateMat.Empty() ||
+                templateMat.Width > searchRect.Width || templateMat.Height > searchRect.Height)
+            {
+                continue;
+            }
+
+            var previousRegionOfInterest = template.RegionOfInterest;
+            template.RegionOfInterest = searchRect;
+            try
+            {
+                using var match = captureRectArea.Find(template);
+                if (match.IsExist())
+                {
+                    return true;
+                }
+            }
+            finally
+            {
+                template.RegionOfInterest = previousRegionOfInterest;
             }
         }
 
