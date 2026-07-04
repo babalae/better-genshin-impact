@@ -14,7 +14,6 @@ using System.Linq;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using  OpenCvSharp;
 using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.AutoFight
@@ -223,6 +222,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight
     public class AutoFightSeek
     {
         public static int RotationCount = 0;
+
+        private static readonly int[] VerticalSeekBands = { 0, 1, -1, 2, -2, 3, -3, 1, 0, -2, 2, -1 };
         
         private static readonly Dictionary<int, int> RotaryFactorMapping = new Dictionary<int, int> //旋转因子映射表
         {
@@ -339,28 +340,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     }
                 }
 
-                if (RotationCount == 3 && retryCount == 0)
+                if (ShouldResetCameraBeforeSeek(RotationCount, retryCount))
                 {
                     Simulation.SendInput.Mouse.MiddleButtonClick();
                     await Task.Delay(500, ct);
                 }
-                
-                if (retryCount <= 2)
-                {
-                   var offsets = new (int x, int y)[] {
-                        (image.Width / 6, image.Height / 7), 
-                        (image.Width / 6, 0),                 
-                        (image.Width / 6, -image.Height / 5),
-                        (image.Width / 6, -image.Height),  
-                    };
 
-                    var offsetIndex = RotationCount < 2 ? 0 : (RotationCount == 2) ? 1 : (RotationCount >= 3) ? 2 : 3;
-                    Simulation.SendInput.Mouse.MoveMouseBy(offsets[offsetIndex].x, offsets[offsetIndex].y);
-                }
-                else
-                {
-                    Simulation.SendInput.Mouse.MoveMouseBy(image.Width / 6, 0);
-                }
+                var offset = GetSeekCameraOffset(image.Width, image.Height, RotationCount, retryCount);
+                Simulation.SendInput.Mouse.MoveMouseBy(offset.x, offset.y);
 
                 await Task.Delay(50+(int)(adjustedX/adjustedDivisor),ct);
 
@@ -428,6 +415,27 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             
             logger.LogInformation("寻找敌人：{Text}", "无");
             return null;
+        }
+
+        internal static (int x, int y) GetSeekCameraOffset(int imageWidth, int imageHeight, int rotationCount, int retryCount)
+        {
+            var horizontalStep = Math.Max(80, imageWidth / 6);
+            var phase = Math.Max(0, rotationCount) * 3 + Math.Max(0, retryCount);
+            var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
+            var verticalStep = imageHeight * verticalBand / 10;
+
+            // Widen the horizontal sweep once per vertical cycle so abnormal view angles do not get stuck in a narrow arc.
+            if (retryCount > 0 && retryCount % VerticalSeekBands.Length == 0)
+            {
+                horizontalStep *= 2;
+            }
+
+            return (horizontalStep, verticalStep);
+        }
+
+        internal static bool ShouldResetCameraBeforeSeek(int rotationCount, int retryCount)
+        {
+            return retryCount == 0 && rotationCount > 0 && rotationCount % 3 == 0;
         }
         
         private static bool IsYellow(int r, int g, int b)

@@ -13,6 +13,10 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 internal class AutoFightHandler : IActionHandler
 {
+    private const int DisabledFightTimeout = 0;
+    private const string Elite400PathingFolder = "精英400@汐";
+    private const string Elite400TaskName = "400精英";
+
     private readonly ILogger<AutoFightHandler> _logger = App.GetLogger<AutoFightHandler>();
     public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
@@ -38,6 +42,12 @@ internal class AutoFightHandler : IActionHandler
         else
         {
             taskParams = new AutoFightParam(GetFightStrategy(), TaskContext.Instance().Config.AutoFightConfig);
+        }
+
+        if (ShouldDisableTimeTimeoutForPathing(waypointForTrack))
+        {
+            ApplyElite400NoTimeoutSafety(taskParams);
+            _logger.LogInformation("当前为 400 精英路线，禁用时间型战斗超时并启用找敌失败保护");
         }
 
         //根据怪物标签，调整拾取配置
@@ -72,6 +82,30 @@ internal class AutoFightHandler : IActionHandler
         var factory2 = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
         var fightSoloTask = factory2.CreateTask(taskParams);
         await fightSoloTask.Start(ct);
+    }
+
+    internal static bool ShouldDisableTimeTimeoutForPathing(WaypointForTrack? waypointForTrack)
+    {
+        return IsElite400PathingSource(waypointForTrack?.PathingTaskFileName, waypointForTrack?.PathingTaskFullPath);
+    }
+
+    internal static bool IsElite400PathingSource(string? fileName, string? fullPath)
+    {
+        return ContainsElite400Marker(fileName) || ContainsElite400Marker(fullPath);
+    }
+
+    internal static void ApplyElite400NoTimeoutSafety(AutoFightParam taskParams)
+    {
+        taskParams.Timeout = DisabledFightTimeout;
+        taskParams.FightFinishDetectEnabled = true;
+        taskParams.FinishDetectConfig.RotateFindEnemyEnabled = true;
+    }
+
+    private static bool ContainsElite400Marker(string? value)
+    {
+        return !string.IsNullOrEmpty(value) &&
+               (value.Contains(Elite400PathingFolder, StringComparison.OrdinalIgnoreCase) ||
+                value.Contains(Elite400TaskName, StringComparison.OrdinalIgnoreCase));
     }
 
     private AutoFightParam GetFightAutoFightParam(AutoFightConfig? config)

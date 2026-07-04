@@ -308,14 +308,16 @@ public class AutoFightJsonTask : ISoloTask
         combatScenes.BeforeTask(cts2.Token);
         // 设置初始当前角色名（用于无 Character 字段的通用 action 回退）
         CombatScriptParser.CurrentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? CombatScriptParser.CurrentAvatarName;
-        TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout);
+        var fightTimeoutEnabled = AutoFightParam.IsTimeTimeoutEnabled(_taskParam.Timeout);
+        TimeSpan fightTimeout = fightTimeoutEnabled ? TimeSpan.FromSeconds(_taskParam.Timeout) : TimeSpan.Zero;
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+        var periodicFinishCheckInterval = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime > 0 ? _finishDetectConfig.CheckTime : 5);
 
         AutoFightSeek.RotationCount = 0;
         AutoFightTask.FightStatusFlag = true;
 
         var fightEndFlag = false;
-        var timeOutFlag = false;
+        var skipPostFightPickupFlag = false;
         string lastFightName = "";
 
         // 初始化条件求值器
@@ -332,6 +334,7 @@ public class AutoFightJsonTask : ISoloTask
 
         // 战斗前动作
         await RunPreActions(combatScenes, evaluator);
+        Stopwatch periodicFinishCheckStopwatch = Stopwatch.StartNew();
 
         // 战斗操作
         var fightTask = Task.Run(async () =>
@@ -342,11 +345,11 @@ public class AutoFightJsonTask : ISoloTask
 
                 while (!cts2.Token.IsCancellationRequested)
                 {
-                    if (timeoutStopwatch.Elapsed > fightTimeout)
+                    if (AutoFightParam.ShouldStopForCombatTimeout(fightTimeoutEnabled, timeoutStopwatch.Elapsed, fightTimeout, AutoFightSeek.RotationCount))
                     {
-                        Logger.LogInformation("战斗超时结束");
+                        Logger.LogInformation(AutoFightParam.IsSeekRotationLimitReached(AutoFightSeek.RotationCount) ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                         fightEndFlag = true;
-                        timeOutFlag = true;
+                        skipPostFightPickupFlag = AutoFightParam.ShouldSkipPostFightPickupAfterForcedStop(fightTimeoutEnabled, timeoutStopwatch.Elapsed, fightTimeout, AutoFightSeek.RotationCount);
                         break;
                     }
 
@@ -428,6 +431,18 @@ public class AutoFightJsonTask : ISoloTask
 
                     if (fightEndFlag || _fightEndFlag) break;
 
+                    if (!_fightEndFlag && AutoFightParam.ShouldRunPeriodicFinishCheck(
+                            fightTimeoutEnabled,
+                            _taskParam.FightFinishDetectEnabled,
+                            periodicFinishCheckStopwatch.Elapsed,
+                            periodicFinishCheckInterval))
+                    {
+                        periodicFinishCheckStopwatch.Restart();
+                        fightEndFlag = await CheckFightFinish(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
+                    }
+
+                    if (fightEndFlag || _fightEndFlag) break;
+
                     if (!anyExecuted)
                     {
                         await Delay(200, _ct);
@@ -451,6 +466,12 @@ public class AutoFightJsonTask : ISoloTask
 
         try
         {
+            if (skipPostFightPickupFlag)
+            {
+                Logger.LogInformation("战斗被强制结束，跳过战后拾取");
+                return;
+            }
+
             // 基于经验值检测结果的拾取判断
             if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled && expDetector != null)
             {
@@ -488,7 +509,7 @@ public class AutoFightJsonTask : ISoloTask
         }
 
         // 战后拾取（完全参照 AutoFightTask）
-        await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
+        await PostFightPickup(combatScenes, skipPostFightPickupFlag, lastFightName);
     }
 
     private bool _fightEndFlag;
@@ -680,8 +701,14 @@ public class AutoFightJsonTask : ISoloTask
     }
 
     /// <summary>战后拾取</summary>
-    private async Task PostFightPickup(CombatScenes combatScenes, bool timeOutFlag, string lastFightName)
+    private async Task PostFightPickup(CombatScenes combatScenes, bool skipPostFightPickupFlag, string lastFightName)
     {
+        if (skipPostFightPickupFlag)
+        {
+            Logger.LogInformation("战斗被强制结束，跳过战后拾取");
+            return;
+        }
+
         if (_taskParam.KazuhaPickupEnabled)
         {
             var picker = combatScenes.SelectAvatar("枫原万叶") ?? combatScenes.SelectAvatar("琴");
@@ -764,7 +791,7 @@ public class AutoFightJsonTask : ISoloTask
             }
 
             var switchPartyFlag = false;
-            if (picker == null && !timeOutFlag && !string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
+            if (picker == null && !skipPostFightPickupFlag && !string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
             {
                 try
                 {

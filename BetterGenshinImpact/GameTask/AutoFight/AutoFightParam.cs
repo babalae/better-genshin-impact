@@ -1,3 +1,4 @@
+using System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
 
@@ -68,6 +69,29 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public int PickDropsAfterFightSeconds { get; set; } = 15;
     public int BattleThresholdForLoot { get; set; } = -1;
     public int Timeout { get; set; } = 120;
+    public const int MaxSeekRotationCount = 6;
+
+    public static bool IsTimeTimeoutEnabled(int timeoutSeconds) => timeoutSeconds > 0;
+
+    public static bool IsSeekRotationLimitReached(int rotationCount) => rotationCount >= MaxSeekRotationCount;
+
+    public static bool ShouldStopForCombatTimeout(bool fightTimeoutEnabled, TimeSpan elapsed, TimeSpan fightTimeout, int rotationCount)
+    {
+        return (fightTimeoutEnabled && elapsed > fightTimeout) || IsSeekRotationLimitReached(rotationCount);
+    }
+
+    public static bool ShouldSkipPostFightPickupAfterForcedStop(bool fightTimeoutEnabled, TimeSpan elapsed, TimeSpan fightTimeout, int rotationCount)
+    {
+        return (fightTimeoutEnabled && elapsed > fightTimeout) || IsSeekRotationLimitReached(rotationCount);
+    }
+
+    public static bool ShouldRunPeriodicFinishCheck(bool fightTimeoutEnabled, bool fightFinishDetectEnabled, TimeSpan elapsedSinceLastCheck, TimeSpan checkInterval)
+    {
+        return !fightTimeoutEnabled &&
+               fightFinishDetectEnabled &&
+               checkInterval > TimeSpan.Zero &&
+               elapsedSinceLastCheck >= checkInterval;
+    }
 
     public bool KazuhaPickupEnabled = true;
     public string ActionSchedulerByCd = "";

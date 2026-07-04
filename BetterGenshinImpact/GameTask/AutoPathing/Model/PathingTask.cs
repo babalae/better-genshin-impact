@@ -117,6 +117,14 @@ public class PathingTask
         return task;
     }
 
+    public static PathingTask BuildFromJson(string json, string sourcePath)
+    {
+        var task = BuildFromJson(json);
+        task.FileName = Path.GetFileName(sourcePath);
+        task.FullPath = sourcePath;
+        return task;
+    }
+
     public void SaveToFile(string filePath)
     {
         var json = JsonSerializer.Serialize(this, PathRecorder.JsonOptions);

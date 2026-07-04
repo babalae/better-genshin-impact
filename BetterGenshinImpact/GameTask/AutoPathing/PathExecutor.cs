@@ -536,6 +536,8 @@ public class PathExecutor
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
             wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
             wft.EnableMonsterLootSplit = waypoint.PointExtParams.EnableMonsterLootSplit;
+            wft.PathingTaskFileName = task.FileName;
+            wft.PathingTaskFullPath = task.FullPath;
             return wft;
         }).ToList();
 

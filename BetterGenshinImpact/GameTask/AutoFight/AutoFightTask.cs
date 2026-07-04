@@ -267,7 +267,8 @@ public class AutoFightTask : ISoloTask
         ct.Register(cts2.Cancel);
 
         combatScenes.BeforeTask(cts2.Token);
-        TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 战斗超时时间
+        var fightTimeoutEnabled = AutoFightParam.IsTimeTimeoutEnabled(_taskParam.Timeout);
+        TimeSpan fightTimeout = fightTimeoutEnabled ? TimeSpan.FromSeconds(_taskParam.Timeout) : TimeSpan.Zero; // 战斗超时时间
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
 
         Stopwatch checkFightFinishStopwatch = Stopwatch.StartNew();
@@ -279,7 +280,7 @@ public class AutoFightTask : ISoloTask
         //     return;
         // }
         var fightEndFlag = false;
-        var timeOutFlag = false;
+        var skipPostFightPickupFlag = false;
         string lastFightName = "";
 
         //统计切换人打架次数
@@ -415,11 +416,11 @@ public class AutoFightTask : ISoloTask
 
                         #endregion
 
-                        if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
+                        if (AutoFightParam.ShouldStopForCombatTimeout(fightTimeoutEnabled, timeoutStopwatch.Elapsed, fightTimeout, AutoFightSeek.RotationCount))
                         {
-                            Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
+                            Logger.LogInformation(AutoFightParam.IsSeekRotationLimitReached(AutoFightSeek.RotationCount) ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                             fightEndFlag = true;
-                            timeOutFlag = true;
+                            skipPostFightPickupFlag = AutoFightParam.ShouldSkipPostFightPickupAfterForcedStop(fightTimeoutEnabled, timeoutStopwatch.Elapsed, fightTimeout, AutoFightSeek.RotationCount);
                             break;
                         }
 
@@ -503,6 +504,12 @@ public class AutoFightTask : ISoloTask
 
         try
         {
+            if (skipPostFightPickupFlag)
+            {
+                Logger.LogInformation("战斗被强制结束，跳过战后拾取");
+                return;
+            }
+
             // 基于经验值检测结果的拾取判断
             if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled && expDetector != null)
             {
@@ -641,7 +648,7 @@ public class AutoFightTask : ISoloTask
             }
 
             var switchPartyFlag = false;
-            if (picker == null && !timeOutFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
+            if (picker == null && !skipPostFightPickupFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
             {
                 try
                 {
