@@ -1,0 +1,10 @@
+// 冰系长短轴高容错队：钟离 / 迪奥娜 / 神里绫华 / 枫原万叶
+// 短轴：钟离盾、迪奥娜补盾奶、万叶长 E、绫华爆发；长轴：补盾后绫华短站场，万叶长 E 后适度补 Q。
+
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+迪奥娜 e(hold), wait(0.3), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2)
+神里绫华 dash, wait(0.25), e, wait(0.45), charge(0.7), wait(0.25), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+神里绫华 dash, wait(0.25), charge(0.7), attack(0.8), charge(0.7), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)

@@ -1,0 +1,11 @@
+// 岩系长短轴高容错队：钟离 / 珊瑚宫心海 / 娜维娅 / 枫原万叶
+// 短轴：心海铺底、万叶长 E、娜维娅开大打一枪；长轴：补盾后娜维娅第二枪、万叶长 E 后适度补 Q 和心海短站场。
+
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+珊瑚宫心海 e, wait(0.3), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2)
+娜维娅 attack(0.1), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2), keydown(E), wait(0.75), keyup(E), attack(1.2), check, wait(0.2)
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+娜维娅 keydown(E), wait(0.75), keyup(E), attack(1.2), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+珊瑚宫心海 attack(1.4), charge(0.4), check, wait(0.2)

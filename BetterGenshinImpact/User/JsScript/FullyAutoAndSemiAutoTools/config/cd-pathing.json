@@ -1,0 +1,134 @@
+[
+    {
+        "name": "地方特产",
+        "type": "hours",
+        "level": 1,
+        "value": 46
+    },
+    {
+        "name": "星银矿石",
+        "type": "cron",
+        "level": 2,
+        "value": "0 0 0 1/2 * ?"
+    },
+    {
+        "name": "白铁块",
+        "type": "cron",
+        "level": 2,
+        "value": "0 0 0 1/2 * ?"
+    },
+    {
+        "name": "矿物",
+        "type": "cron",
+        "level": 1,
+        "value": "0 0 0 1/3 * ?"
+    },
+    {
+        "name": "晶蝶",
+        "type": "hours",
+        "level": 2,
+        "value": 12
+    },
+    {
+        "name": "「冷鲜肉」",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "发光髓",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "鳅鳅宝玉",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "青蛙",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "鳗肉",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "螃蟹",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "禽肉",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "蜥蜴尾巴",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "兽肉",
+        "type": "hours",
+        "level": 2,
+        "value": "12"
+    },
+    {
+        "name": "沉玉仙茗",
+        "type": "hours",
+        "level": 2,
+        "value": "24"
+    },
+    {
+        "name": "冰雾花花朵",
+        "type": "hours",
+        "level": 2,
+        "value": "46"
+    },
+    {
+        "name": "奇异的「牙齿」",
+        "type": "hours",
+        "level": 2,
+        "value": "46"
+    },
+    {
+        "name": "烈焰花花蕊",
+        "type": "hours",
+        "level": 2,
+        "value": "46"
+    },
+    {
+        "name": "电气水晶",
+        "type": "cron",
+        "level": 2,
+        "value": "0 0 0 1/2 * ?"
+    },
+    {
+        "name": "食材与炼金",
+        "type": "cron",
+        "level": 1,
+        "value": "0 0 0 1/1 * ?"
+    },
+    {
+        "name": "敌人与魔物",
+        "type": "cron",
+        "level": 1,
+        "value": "0 0 4 1/1 * ?"
+    },
+    {
+        "name": "锄地专区",
+        "type": "cron",
+        "level": 1,
+        "value": "0 0 4 1/1 * ?"
+    }
+]

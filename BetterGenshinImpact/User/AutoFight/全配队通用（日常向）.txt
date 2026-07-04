@@ -1,0 +1,167 @@
+// 作者:CLIIICL
+// 描述:个人一直使用的通用战斗配队文件,仍在慢慢优化中【订阅即用，没有问题就可以不用自行修改】
+//【修修补补不包含全部角色，但包含绝大部分常见角色，且大部分战斗流程仔细测试过，但不一定对所有人都是最优解】
+//【如果缺少角色或流程不对可参考其他相似流程角色自行添加修改，然后修改战斗配置的文件名防止更新覆盖】
+//版本：v1.3
+
+// 本配队为日常向，通用向。
+//【适合日常副本，脚本锄地，剧诗关卡，N5以下幽境，12层及以下深渊。】
+
+//配队推荐：【盾 奶】+【站场输出】+【后台输出】 其中只有盾奶必需，高难度下请自行合理配队
+
+//战斗逻辑：
+//首先【盾辅】开盾，确保生存或者不被打断。
+//其次【奶妈】回血，恢复队伍在之前或者上一轮不满的血量
+//然后【先手】开启技能，通常为不需要上拐或者持续时间较长的挂先手元素技能
+//接着【副C】开启技能，这里可能会因为没吃到拐导致副C输出降低，但为了稳定考虑
+//再让【辅助】上拐，主要用来拐接下来的主C或者站场角色来输出
+//然后【速切】会打出或多或少的爆发伤害，主要为非站场C的输出
+//最后【站场】正式开启输出
+//收尾【占位】这里为占位角色，使用率低的角色用来占位，只让BGI识别到完整配队，队伍里没有实际作用，可自行添加
+//最后的最后【停止判断】这里的角色作用是一轮结束后切回队伍第一个角色，防止处于角色大招动画时触发战斗结束判断(大多数角色为了防止没有大招时发呆，使用了短按大招键，如果没有大招就及时切走，也会导致屏幕上方不时弹出当前无法切换角色的提示，属正常现象)，可按照常用配队自行添加
+
+//Tips：以上列表中的角色只有【盾 奶】为刚需
+//Tips：本配队为了【通用性】，牺牲了不少配队的合理性和角色轴的配合，因此在角色练度命座不高的情况下，不太适用于高难如【N5N6幽境危战  部分12层深境螺旋  月谕剧诗部分Boss】等。
+//Tips：为了【稳定性】考虑，如防止掉盾掉血，依赖持续性大招输出的角色缩短了输出轴。如无法循环请堆一定的充能效率，例如嘉明
+//Tips：有许多站场角色只做了速切处理的策略或注释掉了，主要是我没有这类战场角色不熟悉如基尼奇，没有后续站场输出的流程，后续慢慢再补。本策略会持续优化。
+
+
+//盾辅 水 火 冰 雷 风 岩 草    开盾确保生存或者不被打断。
+
+尼可 w(0.05),wait(0.1),keypress(e),attack(0.2),wait(0.5),keypress(q),wait(0.1),attack(0.2),wait(0.1),keypress(q)
+托马 w(0.05),wait(0.3),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+辛焱 wait(0.3),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+茜特菈莉 wait(0.3),keypress(e),wait(0.3),keypress(q),wait(0.3),keypress(q)
+迪奥娜 e(hold),wait(0.3),keypress(q),wait(0.3),keypress(q)
+莱依拉 w(0.05),wait(0.3),keypress(e),attack(0.4),wait(0.1),keypress(q),attack(0.1)
+伊涅芙 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(q),wait(0.3),keypress(q)
+蓝砚 w(0.05),wait(0.3),keypress(e),wait(0.4),attack(0.4),wait(0.2),keypress(q),wait(0.4),keypress(q)
+钟离 s(0.15), e(hold), wait(0.5), w(0.15),keypress(q)
+绮良良 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(q),wait(0.4),keypress(q)
+白术 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(q),wait(0.3),keypress(q), wait(0.1),keypress(e)
+
+//奶妈 水 火 冰 雷 风 岩 草    恢复队伍在之前或者上一轮不满的血量
+
+珊瑚宫心海 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(e)
+希格雯 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(e)
+芭芭拉 w(0.05),wait(0.3),keypress(e),wait(0.1),attack(0.5),click(middle),attack(0.5),wait(0.1),keypress(q),attack(0.1)
+塔利雅 w(0.05),attack(0.3),keypress(e),wait(0.5),keypress(q)
+班尼特 w(0.05),e,wait(0.5),keypress(q),wait(0.1),keypress(e),wait(0.4),keypress(q)
+夏洛蒂 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+米卡 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+久岐忍 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+多莉 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+闲云 w(0.05),e, wait(0.5), e, wait(0.5), e, attack,wait(0.5),keypress(q),wait(0.5),keypress(q),wait(0.5),keypress(q),wait(0.5),keypress(q),wait(0.5),keypress(q),wait(0.5),keypress(q)
+琴 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+瑶瑶 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+
+//先手 水 火 冰 雷 风 岩 草    通常为不需要上拐或者持续时间较长的挂先手元素技能
+
+哥伦比娅 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+爱诺 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+妮露 e,e,e,wait(0.3),keypress(q)
+坎蒂丝 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+仆人 e
+杜林 w(0.05),e,wait(0.3),e,wait(0.7),keypress(q)
+瓦雷莎 wait(0.4),keydown(e),wait(0.5),keyup(e),attack(0.3),wait(0.5),attack(0.3)
+菲谢尔 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+阿贝多 keydown(d),wait(0.2),keyup(d),wait(0.2),keydown(e),wait(0.3),keyup(e),wait(0.5),keypress(q)
+娜维娅 w(0.05),wait(0.5),keypress(q)
+菈乌玛 e(hold),wait(0.2),keypress(q),wait(0.3),keypress(q)
+纳西妲 e(hold),wait(0.5),keypress(q),wait(0.5),keypress(q)
+
+//副C 水 火 冰 雷 风 岩 草    这里的位置可能会因为没吃到拐导致副C输出降低
+
+芙宁娜 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(e),attack(0.8),wait(0.3),keypress(q),wait(0.3),keypress(q)
+神里绫人 w(0.05),wait(0.4),keypress(q),wait(0.4),keypress(q)
+行秋 e,wait(0.2),attack(0.3),wait(0.6),keypress(q),attack(0.7),keypress(e),attack(0.3)
+夜兰 e,wait(0.5),e,wait(0.4),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+玛薇卡 e
+安柏 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+罗莎莉亚 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+甘雨 w(0.05),wait(0.5),keypress(q),wait(0.1),keypress(e),dash
+爱可菲 attack(0.2),keypress(e),wait(0.3),keypress(q),wait(0.3),keypress(q),wait(0.4),keypress(q)
+八重神子 s(0.1),e,wait(0.45),e,wait(0.55),w(0.3),e
+丽莎 wait(0.5),keypress(q)
+北斗 wait(0.5),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+早柚 e,e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+莉奈娅 wait(0.3),keypress(e),wait(0.3),keypress(q),wait(0.3),keypress(q)
+艾梅莉埃 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+科莱 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+
+//辅助 水 火 冰 雷 风 岩 草    主要用来拐接下来的主C或者站场角色来输出
+
+莫娜 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+欧洛伦 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+九条裟罗 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+夏沃蕾 w(0.05),attack(0.1),click(middle),wait(0.1),keydown(e),wait(0.15), moveby(0,900),wait(0.15),keyup(e), keypress(q), wait(0.5), keypress(q), wait(0.5), keydown(e),wait(0.15), moveby(0,900),wait(0.15),keyup(e)
+申鹤 w(0.05),e(hold),wait(0.5),keypress(q),wait(0.5),keypress(q)
+枫原万叶 e(hold),attack(0.3),wait(1),keypress(q),wait(1)
+温迪 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+砂糖 w(0.05),e,wait(0.3),keypress(q),wait(0.05),click(left),wait(0.3),keypress(q),wait(0.05),click(left),wait(0.3),keypress(q),wait(0.05),click(left)
+雅珂达 w(0.05),wait(0.3),keypress(e),wait(0.5),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+琳妮特 w(0.05),e, attack(0.5),wait(0.5),keypress(q),wait(0.5),keypress(q)
+珐露珊 w(0.05),e,wait(0.35),charge,wait(0.5),keypress(q)
+希诺宁 s(0.3),e,w(0.3),attack(0.35),wait(0.1),attack(0.35),wait(0.5), keypress(q), wait(0.5), keypress(q)
+叶洛亚 w(0.05),wait(0.3),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+卡齐娜 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+五郎 w(0.05),wait(0.3),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+云堇 w(0.05),wait(0.3),keypress(e),wait(0.5),keypress(q),wait(0.5),keypress(q)
+
+//速切 水 火 冰 雷 风 岩 草    会打出或多或少的爆发伤害，主要为非站场C的输出
+
+迪希雅 e,attack(0.3),e
+可莉 e,wait(0.6),e
+香菱 e,wait(0.3),keypress(q),wait(0.3),keypress(q),wait(0.3),keypress(q)
+凯亚 e,wait(0.3),keypress(q),wait(0.3),keypress(q)
+伊安珊 e, wait(0.5), s(0.4),click(middle), attack(0.3),keypress(q), wait(0.5), keypress(q)
+布伦妮 wait(0.3),keypress(e),wait(0.5),keypress(q), wait(0.7), keypress(e)
+千织 wait(0.3),keypress(e),wait(0.2),keypress(e),wait(0.2),keypress(e),wait(0.5),keypress(q),wait(0.2),keypress(q)
+
+//站场 水 火 冰 雷 风 岩 草    正式开启输出
+
+玛拉妮 w(0.05),e, w(0.4), d(0.4), s(0.6), a(0.4), w(0.1), attack, w(0.4), d(0.4), s(0.6), a(0.4), w(0.1), attack(0.3), w(0.4), d(0.4), s(0.6), a(0.4), w(0.1), attack(0.3), w(0.4), d(0.4), s(0.6), a(0.4), w(0.1), attack(0.3),wait(0.5),keypress(q),wait(0.5),keypress(q)
+那维莱特 wait(0.3),e,charge(3),q,wait(0.2),charge(3),wait(0.3),charge(3)
+嘉明 wait(0.2),keypress(q),wait(0.6),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left),wait(0.4),keypress(e),wait(0.8),click(left)
+烟绯 w(0.05),wait(0.3),keypress(q),ready,wait(0.2),charge,wait(0.6),keypress(e),wait(0.5),charge,wait(0.6),attack(1.4),charge,wait(0.6),attack(1.4),charge,wait(0.6),attack(1.4),wait(0.3),keypress(e),wait(0.3),charge
+仆人 charge(0.52),attack(2),dash,attack(2),dash,attack(2),e
+玛薇卡 wait(0.2),keypress(q),wait(0.2),ready,charge(5)
+宵宫 w(0.05),e,attack(5.5)
+胡桃 w(0.05),wait(0.3),keypress(e),wait(0.3),keypress(e),wait(0.5),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.52),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.52),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.52),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.5),keypress(q),wait(0.5),keypress(q)
+迪卢克 w(0.05),wait(0.3),keypress(q),ready,wait(0.6),keypress(e),wait(0.4),attack(1.4),wait(0.3),keypress(e),wait(0.4),attack(1.4),wait(0.3),keypress(e),wait(0.6),attack(3)
+丝柯克 w(0.05),e,wait(0.3),click(left),wait(0.1),click(left),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(q),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),keypress(e),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),wait(0.2),keypress(q),wait(0.2),click(left),wait(0.03),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),keypress(e),wait(0.2),wait(0.1),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),mousedown(right),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.03),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.03),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1),click(left),wait(0.1)
+神里绫华 wait(0.1),dash,wait(0.3),e,wait(0.6),charge,wait(0.6),charge,wait(0.4),dash,wait(0.6),charge,wait(0.6),charge,wait(0.4),keypress(q),wait(0.4),keypress(q)
+莱欧斯利 w(0.05),e,attack(1.25),wait(0.2),keypress(e),wait(0.2),attack(1.25),charge,attack(1.25),wait(0.2),keypress(e),wait(0.2),attack(1.25),charge,attack(1.25),wait(0.2),keypress(e),wait(0.2),attack(1.25),charge,wait(0.5),keypress(q),wait(0.2),keypress(q)
+雷电将军 w(0.05),e,wait(0.5),keypress(q),wait(0.5),keypress(q),ready,charge,charge,charge
+克洛琳德 w(0.05),e,charge(0.8),e,charge(0.8),e,charge(0.8),e,charge(0.8),e,charge(0.8),e,charge(0.8),e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+瓦雷莎 w(0.05),e, attack(1.25), wait(0.45), s(0.4), click(middle), e, attack(1.25), wait(0.3), keypress(q), wait(0.45)
+刻晴 w(0.05),e,wait(0.5),e,attack(3),wait(0.5),keypress(q),wait(0.5),keypress(q)
+菲林斯 w(0.05),e,wait(0.35),e,q,attack(4),e,q,attack(5)
+伊法 wait(0.3),keypress(q),ready,wait(0.2),e,wait(0.5),charge(3),wait(0.1),charge(3),wait(0.1),charge(3),wait(0.1),keypress(e),wait(0.1),keypress(e)
+鹿野苑平藏 wait(0.3),keypress(q),ready,wait(0.2),attack(1.5),charge,wait(0.4),attack(1.5),charge,wait(0.4),attack(1.5),charge,wait(0.4),keydown(e),wait(0.5),keyup(e)
+梦见月瑞希 w(0.05),e,wait(0.2),w(0.2),a(0.2),s(0.3),d(0.3),w(0.2),a(0.2),s(0.2),d(0.2),w(0.2),a(0.2),s(0.2),d(0.2),w(0.2),a(0.2),s(0.2),d(0.2),w(0.2),a(0.2),s(0.2),d(0.2),w(0.2),a(0.2),s(0.2),d(0.2),w(0.2),a(0.2),s(0.2),d(0.2),w(0.2),a(0.2),s(0.2),d(0.2),wait(0.1),keypress(q),wait(0.1)
+恰斯卡 w(0.05),e,wait(0.5),s(1.2),w(0.4),moveby(0,2400),charge(2.3),wait(0.5),charge(2.3),wait(0.5),charge(2.3),wait(0.5),e,wait(0.7),keypress(q)
+流浪者 wait(0.2),keypress(e),wait(0.2),keypress(e),wait(0.2),keypress(e),wait(0.5),keypress(space),attack(1.5),charge,attack(1.5),charge,keypress(q),attack(2),wait(0.2),keypress(e),wait(0.2),
+法尔伽 wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left),wait(0.2),click(left),wait(0.2),keypress(e),wait(0.2),click(left)
+娜维娅 attack(0.05),dash,click(middle),click(middle),wait(0.5),keydown(e),wait(0.5),keyup(e),click
+一斗 e,q,attack,attack,charge(3),attack(3),e,charge(3),attack(3),e
+凝光 w(0.05),wait(0.4),keypress(e),wait(0.5),keypress(q),wait(0.6),attack(1.2),wait(0.6),keypress(e),wait(0.1),attack(1.2),charge,wait(0.6),keypress(e),wait(0.1),attack(1.2),charge,wait(0.6),attack(1.2),charge
+兹白 wait(0.2),keypress(e),wait(0.3),keypress(e),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q),attack(1),wait(0.1),keypress(e),wait(0.1),keypress(q)
+艾尔海森 w(0.05),e,charge,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash
+提纳里 w(0.05),q,e,wait(0.5),charge(0.52),wait(0.15),charge(0.52),wait(0.15),charge(0.52),wait(0.15)
+奈芙尔 wait(0.3),keypress(e),wait(0.4),charge(4),wait(0.3),keypress(e),wait(0.3),charge(4),wait(0.2),keypress(q)
+基尼奇 wait(0.3),keypress(q),ready,wait(0.2),keypress(e),wait(0.4),attack(2),keypress(e),wait(0.6),attack(2),keypress(e),wait(0.6),attack(2),keypress(e),wait(0.6),attack(2),keypress(e),wait(0.6),attack(1)
+
+
+//占位 水 火 冰 雷 风 岩 草    只让BGI识别到完整配队，队伍里没有实际作用，可自行添加
+菲米尼 e,wait(0.5),keypress(q),wait(0.5),keypress(q)
+
+//停止判断    切回队伍第一个角色 防止处于角色大招动画时触发战斗结束判断
+钟离 w(0.05)
+茜特菈莉 w(0.05),wait(0.1),keypress(e),wait(0.2)
+伊涅芙 w(0.05),wait(0.1),keypress(e),wait(0.2)
+尼可 w(0.05),wait(0.1),keypress(e),wait(0.2)
+
+//更新：v1.1【添加并测试了迪卢克 凝光 烟绯 伊法 嘉明 鹿野苑平藏的站场策略，添加了雅珂达 基尼奇 莉奈娅(暂时注释掉)的战斗策略】
+//更新：v1.2【添加了莉奈娅 九条裟罗的战斗策略】
+//更新：v1.3【添加了布伦妮 尼可的战斗策略】

@@ -1,0 +1,139 @@
+{
+  "index": 2,
+  "name": "下午16点10-角色养成一条龙",
+  "config": {
+    "pathingConfig": {
+      "enabled": true,
+      "autoPickEnabled": true,
+      "partyName": "",
+      "isVisitStatueBeforeSwitchParty": false,
+      "mainAvatarIndex": "1",
+      "guardianAvatarIndex": "1",
+      "guardianElementalSkillSecondInterval": "",
+      "guardianElementalSkillLongPress": true,
+      "onlyInTeleportRecover": false,
+      "jsScriptUseEnabled": true,
+      "soloTaskUseFightEnabled": true,
+      "skipDuring": "",
+      "useGadgetIntervalMs": 0,
+      "autoSkipEnabled": true,
+      "autoRunEnabled": true,
+      "autoEatEnabled": false,
+      "autoEatConfig": {
+        "enabled": false,
+        "showNotification": true,
+        "checkInterval": 150,
+        "eatInterval": 1000,
+        "testFoodName": null,
+        "defaultAtkBoostingDishName": "炸萝卜丸子",
+        "defaultAdventurersDishName": null,
+        "defaultDefBoostingDishName": null
+      },
+      "hideOnRepeat": false,
+      "taskCycleConfig": {
+        "enable": false,
+        "boundaryTime": 0,
+        "isBoundaryTimeBasedOnServerTime": false,
+        "cycle": 1,
+        "index": 1
+      },
+      "taskCompletionSkipRuleConfig": {
+        "enable": false,
+        "skipPolicy": "GroupPhysicalPathSkipPolicy",
+        "boundaryTime": 0,
+        "isBoundaryTimeBasedOnServerTime": false,
+        "lastRunGapSeconds": -1,
+        "referencePoint": "EndTime"
+      },
+      "preExecutionPriorityConfig": {
+        "enabled": false,
+        "groupNames": "",
+        "maxRetryCount": 1
+      },
+      "autoFightEnabled": true,
+      "autoFightConfig": {
+        "strategyName": "根据队伍自动选择",
+        "teamNames": "",
+        "fightFinishDetectEnabled": true,
+        "actionSchedulerByCd": "",
+        "onlyPickEliteDropsMode": "Closed",
+        "finishDetectConfig": {
+          "battleEndProgressBarColor": "",
+          "battleEndProgressBarColorTolerance": "",
+          "fastCheckEnabled": true,
+          "rotateFindEnemyEnabled": true,
+          "fastCheckParams": "",
+          "checkEndDelay": "0.4;钟离,1.4;",
+          "beforeDetectDelay": "0.4",
+          "rotaryFactor": 12,
+          "isFirstCheck": true,
+          "checkBeforeBurst": true
+        },
+        "pickDropsAfterFightEnabled": true,
+        "pickDropsAfterFightSeconds": 15,
+        "battleThresholdForLoot": null,
+        "kazuhaPickupEnabled": true,
+        "qinDoublePickUp": false,
+        "guardianAvatar": "",
+        "guardianCombatSkip": false,
+        "skipModel": false,
+        "guardianAvatarHold": true,
+        "burstEnabled": true,
+        "kazuhaPartyName": "钟心那万",
+        "swimmingEnabled": true,
+        "expBasedPickupEnabled": false,
+        "timeout": 200
+      }
+    },
+    "shellConfig": {
+      "disable": false,
+      "timeout": 60,
+      "noWindow": true,
+      "output": true
+    },
+    "enableShellConfig": false
+  },
+  "projects": [
+    {
+      "name": "角色养成一条龙",
+      "folderName": "角色养成一条龙",
+      "jsScriptSettingsObject": {
+        "energyMax": false,
+        "unfairContractTerms": true,
+        "talentBookName0": "浪迹",
+        "talentBookRequireCounts0": "9-63-114",
+        "weaponName0": "狮牙斗士",
+        "weaponMaterialRequireCounts0": "3-9-9-4",
+        "bossName0": "守望者·堕天",
+        "bossRequireCounts0": "46",
+        "teamName": "钟班香万",
+        "talentBookRequireCounts1": "9-63-114",
+        "talentBookName1": "公平",
+        "bossName1": "水形幻人",
+        "bossRequireCounts1": "46"
+      },
+      "index": 1,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "Daily",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "自动使用兑换码",
+      "folderName": "AutoCode",
+      "jsScriptSettingsObject": {
+        "username": "默认账户",
+        "use_bgi_code_source": true
+      },
+      "index": 2,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "Daily",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": "https://cnb.cool/bettergi/genshin-redeem-code/*"
+    }
+  ]
+}

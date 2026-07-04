@@ -1,0 +1,106 @@
+[
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "挪德卡莱",
+        "order": 980
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "纳塔",
+        "order": 979
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "枫丹",
+        "order": 978
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "须弥",
+        "order": 977
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "稻妻",
+        "order": 976
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "璃月",
+        "order": 975
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "地方特产",
+        "parent_name": "地方特产",
+        "name": "蒙德",
+        "order": 974
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "矿物",
+        "parent_name": "矿物",
+        "name": "虹滴晶",
+        "order": 940
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "矿物",
+        "parent_name": "矿物",
+        "name": "萃凝晶",
+        "order": 939
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "矿物",
+        "parent_name": "矿物",
+        "name": "紫晶块",
+        "order": 938
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "矿物",
+        "parent_name": "矿物",
+        "name": "水晶块",
+        "order": 937
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "矿物",
+        "parent_name": "矿物",
+        "name": "星银矿石",
+        "order": 936
+    },
+    {
+        "uid": "",
+        "is_common": true,
+        "root_name": "矿物",
+        "parent_name": "矿物",
+        "name": "白铁块",
+        "order": 935
+    }
+]

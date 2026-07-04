@@ -1,0 +1,12 @@
+// 雷草长短轴大地图队：钟离 / 纳西妲 / 久岐忍 / 枫原万叶
+// 短轴：纳西妲扫标记、久岐忍环、万叶长 E；长轴：补盾后续久岐忍和万叶，万叶长 E 后适度补 Q，不重复完整开场。
+
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+纳西妲 keydown(e), wait(0.25), moveby(2100, 0), wait(0.05), moveby(2100, 0), wait(0.05), moveby(2100, -1100), wait(0.05), moveby(1300, -1800), wait(0.05), moveby(1300, -1800), keyup(e), wait(0.12), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+久岐忍 e, wait(0.25), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2)
+纳西妲 attack(1.2), charge(0.4), check, wait(0.2)
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+久岐忍 e, wait(0.25), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+纳西妲 attack(2.0), charge(0.4), check, wait(0.2)

@@ -1,0 +1,231 @@
+{
+  "index": 5,
+  "name": "手动-配置自动化队伍",
+  "config": {
+    "pathingConfig": {
+      "enabled": true,
+      "autoPickEnabled": true,
+      "partyName": "钟心那万",
+      "isVisitStatueBeforeSwitchParty": false,
+      "mainAvatarIndex": "",
+      "guardianAvatarIndex": "",
+      "guardianElementalSkillSecondInterval": "",
+      "guardianElementalSkillLongPress": false,
+      "onlyInTeleportRecover": false,
+      "jsScriptUseEnabled": true,
+      "soloTaskUseFightEnabled": true,
+      "skipDuring": "",
+      "useGadgetIntervalMs": 0,
+      "autoSkipEnabled": true,
+      "autoRunEnabled": true,
+      "autoEatEnabled": false,
+      "autoEatConfig": {
+        "enabled": false,
+        "showNotification": true,
+        "checkInterval": 150,
+        "eatInterval": 1000,
+        "testFoodName": null,
+        "defaultAtkBoostingDishName": "炸萝卜丸子",
+        "defaultAdventurersDishName": null,
+        "defaultDefBoostingDishName": null
+      },
+      "hideOnRepeat": false,
+      "taskCycleConfig": {
+        "enable": false,
+        "boundaryTime": 0,
+        "isBoundaryTimeBasedOnServerTime": false,
+        "cycle": 1,
+        "index": 1
+      },
+      "taskCompletionSkipRuleConfig": {
+        "enable": true,
+        "skipPolicy": "GroupPhysicalPathSkipPolicy",
+        "boundaryTime": 4,
+        "isBoundaryTimeBasedOnServerTime": true,
+        "lastRunGapSeconds": -1,
+        "referencePoint": "EndTime"
+      },
+      "preExecutionPriorityConfig": {
+        "enabled": false,
+        "groupNames": "",
+        "maxRetryCount": 1
+      },
+      "autoFightEnabled": true,
+      "autoFightConfig": {
+        "strategyName": "根据队伍自动选择",
+        "teamNames": "",
+        "fightFinishDetectEnabled": true,
+        "actionSchedulerByCd": "",
+        "onlyPickEliteDropsMode": "Closed",
+        "finishDetectConfig": {
+          "battleEndProgressBarColor": "",
+          "battleEndProgressBarColorTolerance": "",
+          "fastCheckEnabled": true,
+          "rotateFindEnemyEnabled": true,
+          "fastCheckParams": "",
+          "checkEndDelay": "0.4;钟离,1.4;",
+          "beforeDetectDelay": "0.4",
+          "rotaryFactor": 12,
+          "isFirstCheck": true,
+          "checkBeforeBurst": true
+        },
+        "pickDropsAfterFightEnabled": false,
+        "pickDropsAfterFightSeconds": 15,
+        "battleThresholdForLoot": null,
+        "kazuhaPickupEnabled": true,
+        "qinDoublePickUp": false,
+        "guardianAvatar": "",
+        "guardianCombatSkip": false,
+        "skipModel": false,
+        "guardianAvatarHold": false,
+        "burstEnabled": false,
+        "kazuhaPartyName": "钟心那万",
+        "swimmingEnabled": true,
+        "expBasedPickupEnabled": false,
+        "timeout": 200
+      }
+    },
+    "shellConfig": {
+      "disable": false,
+      "timeout": 60,
+      "noWindow": true,
+      "output": true
+    },
+    "enableShellConfig": false
+  },
+  "projects": [
+    {
+      "name": "配置钟纳娜万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟纳娜万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "纳西妲",
+        "position3": "娜维娅",
+        "position4": "枫原万叶"
+      },
+      "index": 1,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "配置钟班香万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟班香万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "班尼特",
+        "position3": "香菱",
+        "position4": "枫原万叶"
+      },
+      "index": 2,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "配置钟心那万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟心那万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "珊瑚宫心海",
+        "position3": "那维莱特",
+        "position4": "枫原万叶"
+      },
+      "index": 3,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "配置钟芙琴万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟芙琴万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "芙宁娜",
+        "position3": "琴",
+        "position4": "枫原万叶"
+      },
+      "index": 4,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "配置钟纳久万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟纳久万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "纳西妲",
+        "position3": "久岐忍",
+        "position4": "枫原万叶"
+      },
+      "index": 5,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "配置钟迪绫万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟迪绫万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "迪奥娜",
+        "position3": "神里绫华",
+        "position4": "枫原万叶"
+      },
+      "index": 6,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    },
+    {
+      "name": "配置钟心娜万",
+      "folderName": "AutoSwitchRoles",
+      "jsScriptSettingsObject": {
+        "switchPartyName": "钟心娜万",
+        "option": "推荐-非快速配对模式 @Tool_tingsu",
+        "position1": "钟离",
+        "position2": "珊瑚宫心海",
+        "position3": "娜维娅",
+        "position4": "枫原万叶"
+      },
+      "index": 7,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "None",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    }
+  ]
+}

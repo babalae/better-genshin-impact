@@ -1,0 +1,18 @@
+//作者：unlucky
+//介绍：用钟离的盾来循环战斗草神战斗会后退会导致后几轮可能会找不到怪
+
+钟离  e(hold),check, wait(0.15),keypress(q),wait(0.3),ready
+
+纳西妲 e(hold),wait(0.2),,keypress(q),ready
+
+行秋 attack(1.8),e,wait(0.3),keypress(F1),wait(0.7),keypress(ESCAPE),ready, attack(0.8),wait(0.5),keypress(e),wait(0.3),keypress(F1),wait(0.7),keypress(ESCAPE), ready, attack(0.8),wait(0.5),keypress(q),attack(0.3),ready
+
+久岐忍 e,ready, wait(0.75), keypress(q),wait(0.2),attack(7.0),ready
+
+钟离  e(hold),check, wait(0.15),keypress(q),wait(0.3),ready
+
+纳西妲 e(hold),wait(0.2),keypress(q),ready
+
+行秋 attack(1.8),e,wait(0.3),keypress(F1),wait(0.7),keypress(ESCAPE),ready, attack(0.8),wait(0.5),keypress(e),wait(0.3),keypress(F1),wait(0.7),keypress(ESCAPE),ready, attack(0.8),wait(0.5),keypress(q),attack(0.3),ready
+
+久岐忍 e,ready, wait(0.75), keypress(q),wait(0.2),attack(7.0),ready

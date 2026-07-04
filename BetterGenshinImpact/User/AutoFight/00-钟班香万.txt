@@ -1,0 +1,13 @@
+// 火系长短轴高容错队：钟离 / 班尼特 / 香菱 / 枫原万叶
+// 短轴：上盾后铺班尼特、香菱和万叶；长轴：中途回钟离补盾，只刷必要技能，万叶长 E 后适度补 Q 并站场补伤害。
+
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+班尼特 attack(0.1), check, wait(0.2), e, wait(0.45), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+香菱 e, wait(0.25), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2)
+香菱 attack(1.2), check, wait(0.2)
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+班尼特 e, wait(0.35), check, wait(0.2)
+香菱 attack(2.0), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+香菱 attack(1.5), check, wait(0.2)

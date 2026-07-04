@@ -1,0 +1,21 @@
+{
+  "manifest_version": 1,
+  "name": "全自动或半自动工具箱",
+  "version": "0.0.2",
+  "bgi_version": "0.61.0",
+  "key": "PGCSBY37NJA",
+  "description": "",
+  "saved_files": [],
+  "authors": [
+    {
+      "name": "云端客",
+      "links": "https://github.com/Kirito520Asuna"
+    }
+  ],
+  "http_allowed_urls": [
+      "https://*",
+      "http://*"
+  ],
+  "settings_ui": "settings.json",
+  "main": "main.js"
+}

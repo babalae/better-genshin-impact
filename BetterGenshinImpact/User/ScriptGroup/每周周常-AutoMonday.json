@@ -1,0 +1,131 @@
+{
+  "index": 4,
+  "name": "每周周常-AutoMonday",
+  "config": {
+    "pathingConfig": {
+      "enabled": true,
+      "autoPickEnabled": true,
+      "partyName": "钟心那万",
+      "isVisitStatueBeforeSwitchParty": false,
+      "mainAvatarIndex": "",
+      "guardianAvatarIndex": "",
+      "guardianElementalSkillSecondInterval": "",
+      "guardianElementalSkillLongPress": false,
+      "onlyInTeleportRecover": false,
+      "jsScriptUseEnabled": true,
+      "soloTaskUseFightEnabled": true,
+      "skipDuring": "",
+      "useGadgetIntervalMs": 0,
+      "autoSkipEnabled": true,
+      "autoRunEnabled": true,
+      "autoEatEnabled": false,
+      "autoEatConfig": {
+        "enabled": false,
+        "showNotification": true,
+        "checkInterval": 150,
+        "eatInterval": 1000,
+        "testFoodName": null,
+        "defaultAtkBoostingDishName": "炸萝卜丸子",
+        "defaultAdventurersDishName": null,
+        "defaultDefBoostingDishName": null
+      },
+      "hideOnRepeat": false,
+      "taskCycleConfig": {
+        "enable": false,
+        "boundaryTime": 0,
+        "isBoundaryTimeBasedOnServerTime": false,
+        "cycle": 1,
+        "index": 1
+      },
+      "taskCompletionSkipRuleConfig": {
+        "enable": true,
+        "skipPolicy": "GroupPhysicalPathSkipPolicy",
+        "boundaryTime": -1,
+        "isBoundaryTimeBasedOnServerTime": true,
+        "lastRunGapSeconds": 518400,
+        "referencePoint": "EndTime"
+      },
+      "preExecutionPriorityConfig": {
+        "enabled": false,
+        "groupNames": "",
+        "maxRetryCount": 1
+      },
+      "autoFightEnabled": true,
+      "autoFightConfig": {
+        "strategyName": "根据队伍自动选择",
+        "teamNames": "",
+        "fightFinishDetectEnabled": true,
+        "actionSchedulerByCd": "",
+        "onlyPickEliteDropsMode": "Closed",
+        "finishDetectConfig": {
+          "battleEndProgressBarColor": "",
+          "battleEndProgressBarColorTolerance": "",
+          "fastCheckEnabled": true,
+          "rotateFindEnemyEnabled": true,
+          "fastCheckParams": "",
+          "checkEndDelay": "0.4;钟离,1.4;",
+          "beforeDetectDelay": "0.4",
+          "rotaryFactor": 12,
+          "isFirstCheck": true,
+          "checkBeforeBurst": true
+        },
+        "pickDropsAfterFightEnabled": false,
+        "pickDropsAfterFightSeconds": 15,
+        "battleThresholdForLoot": null,
+        "kazuhaPickupEnabled": true,
+        "qinDoublePickUp": false,
+        "guardianAvatar": "",
+        "guardianCombatSkip": false,
+        "skipModel": false,
+        "guardianAvatarHold": false,
+        "burstEnabled": false,
+        "kazuhaPartyName": "钟心那万",
+        "swimmingEnabled": true,
+        "expBasedPickupEnabled": false,
+        "timeout": 200
+      }
+    },
+    "shellConfig": {
+      "disable": false,
+      "timeout": 60,
+      "noWindow": true,
+      "output": true
+    },
+    "enableShellConfig": false
+  },
+  "projects": [
+    {
+      "name": "全自动周一",
+      "folderName": "AutoMonday",
+      "jsScriptSettingsObject": {
+        "ifCheck": true,
+        "username": "默认账户",
+        "ifZBY": true,
+        "ifAkf": false,
+        "Material": "薄荷",
+        "chargingMethod": "法器角色充能",
+        "TEAMname": "钟纳久万",
+        "ifYB": true,
+        "ifCooking": false,
+        "food": "提瓦特煎蛋",
+        "cookCount": "20",
+        "ifduanZao": false,
+        "mineral": "锻造紫晶块",
+        "BossPartyName": "钟心那万",
+        "ifShouling": false,
+        "ifMijing": false,
+        "ifbuyNet": false,
+        "ifbuyTzq": false,
+        "ifPink": false,
+        "ifBlue": false
+      },
+      "index": 1,
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "Monday",
+      "runNum": 1,
+      "allowJsNotification": true,
+      "allowJsHTTPHash": ""
+    }
+  ]
+}

@@ -1,0 +1,590 @@
+[
+  {
+    "name": "config_uid",
+    "type": "checkbox",
+    "label": "当前配置uid:{无}\n(仅仅显示配置uid无其他作用)",
+    "default": false
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "key",
+    "type": "input-text",
+    "label": "密钥",
+    "default": "PGCSBY37NJA"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "config_run",
+    "type": "select",
+    "label": "配置模式",
+    "options": [
+      "刷新",
+      "加载",
+      "执行"
+    ],
+    "default": "执行"
+  },
+  {
+    "name": "refresh_record",
+    "type": "checkbox",
+    "label": "配置模式-刷新-清空运行记录",
+    "default": false
+  },
+  {
+    "name": "refresh_record_mode",
+    "type": "select",
+    "label": "清空运行记录模式",
+    "options": [
+      "全部",
+      "UID"
+    ],
+    "default": "UID"
+  },
+  {
+    "name": "loading_level",
+    "type": "input-text",
+    "label": "加载路径层级(不可小于1)<配置模式 刷新||加载 生效>",
+    "default": "3"
+  },
+  {
+    "name": "the_layer",
+    "type": "checkbox",
+    "label": "只加载指定层级<配置模式 加载 生效>",
+    "default": false
+  },
+  {
+    "name": "high_level_filtering",
+    "type": "input-text",
+    "label": "高阶过滤{语法看文档}<配置模式 加载 生效>",
+    "default": ""
+  },
+  {
+    "name": "order_rules",
+    "type": "input-text",
+    "label": "执行顺序规则(可留空)\n{语法:父文件夹名称->文件夹名称=顺序请填整数,.....}",
+    "default": ""
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "config_white_list",
+    "type": "input-text",
+    "label": "刷新白名单 以,分割",
+    "default": "锄地专区"
+  },
+  {
+    "name": "config_black_list",
+    "type": "input-text",
+    "label": "刷新黑名单 以,分割",
+    "default": "其他,地方特产,矿物,食材与炼金,晶蝶,传奇,低效,不跑,不刷,不稳定,钓鱼,木材,成就"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "open_cd",
+    "type": "checkbox",
+    "label": "启用CD算法",
+    "default": false
+  },
+  {
+    "name": "http_api",
+    "type": "input-text",
+    "label": "[默认CD算法api]\ncron解析Http地址\n[请部署bettergi-scripts-tools可支持]",
+    "default": "http://127.0.0.1:18081/bgi/cron/next-timestamp/all"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "real_time_missions",
+    "type": "multi-checkbox",
+    "label": "实时任务",
+    "options": [
+      "自动对话",
+      "自动战斗(已弃用)",
+      "自动拾取"
+    ],
+    "default": [
+      "自动对话",
+      "自动拾取"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "choose_best",
+    "type": "checkbox",
+    "label": "择优模式(默认关闭 优先跑之前没跑过的)",
+    "default": true
+  },
+  {
+    "name": "mode",
+    "type": "select",
+    "label": "模式",
+    "options": [
+      "全自动",
+      "半自动"
+    ],
+    "default": "全自动"
+  },
+  {
+    "name": "auto_semi_key_mode",
+    "type": "select",
+    "label": "[半自动]快捷键模式",
+    "options": [
+      "继续运行",
+      "跳过"
+    ],
+    "default": "继续运行"
+  },
+  {
+    "name": "auto_key",
+    "type": "input-text",
+    "label": "<继续运行|跳过>本次路线快捷键 (独立BGI的快捷键请勿冲突)",
+    "default": "F8"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "open_limit_max",
+    "type": "checkbox",
+    "label": "开启执行组最大路径设置",
+    "default": false
+  },
+  {
+    "name": "limit_max_group",
+    "type": "input-text",
+    "label": "配置执行组最大路径数\n{语法:父文件夹名称->文件夹名称=最大路径数,.....}\n如:敌人与魔物->蕈兽=50",
+    "default": ""
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "team_fight",
+    "type": "input-text",
+    "label": "战斗队伍配置(同时也是行走队伍配置)\n已禁用战斗检测,战斗队伍配置失效\n只留行走队伍配置",
+    "default": "钟心那万"
+  },
+  {
+    "name": "team_hoe_ground",
+    "type": "input-text",
+    "label": "锄地队伍配置\n{语法:父文件夹名称->文件夹名称=队伍名称,.....}\n如:敌人与魔物->蕈兽=队伍名称",
+    "default": "锄地专区->精英400@汐=钟心那万,锄地专区->小怪2000@mno=钟班香万,锄地专区->挪德卡莱锄地小怪=钟心那万,敌人与魔物->蕈兽=钟纳久万,敌人与魔物->发条机关=钟心娜万,敌人与魔物->遗迹机兵=钟心娜万,敌人与魔物->浊水幻灵=钟班香万,敌人与魔物->深渊法师=钟班香万,敌人与魔物->飘浮灵=钟班香万"
+  },
+  {
+    "name": "team_seven_elements",
+    "type": "input-text",
+    "label": "队伍配置 按 `矿物,火,水,风,雷,草,冰,岩` 该顺序填写(建议草神请填至`草`位)",
+    "default": "钟心娜万,钟班香万,钟心那万,钟芙琴万,钟纳久万,钟心纳久,钟迪绫万,钟心娜万"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "is_debug",
+    "type": "checkbox",
+    "label": "开发者模式",
+    "default": false
+  },
+  {
+    "name": "debug",
+    "type": "input-text",
+    "label": "调试快捷键(开发者)"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_0_0",
+    "type": "multi-checkbox",
+    "label": "选择要执行的1级路径\n[pathing]",
+    "options": [
+      "锄地专区",
+      "敌人与魔物"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_1_0",
+    "type": "multi-checkbox",
+    "label": "选择要执行的2级路径\n[锄地专区]",
+    "options": [
+      "精英400@汐",
+      "挪德卡莱锄地小怪",
+      "小怪2000@mno"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_1_1",
+    "type": "multi-checkbox",
+    "label": "选择要执行的2级路径\n[敌人与魔物]",
+    "options": [
+      "部族龙形武士",
+      "大灵显化身",
+      "大驮兽",
+      "盗宝团",
+      "冬国仕女",
+      "镀金旅团",
+      "发条机关",
+      "飞萤",
+      "黑蛇众",
+      "荒野狂猎",
+      "龙蜥",
+      "炉壳山鼬",
+      "秘源机兵",
+      "魔像禁卫",
+      "纳塔龙众",
+      "纳塔龙众和部族龙形武士",
+      "骗骗花",
+      "飘浮灵",
+      "奇怪的丘丘人",
+      "丘丘人射手",
+      "丘丘萨满",
+      "丘丘王",
+      "丘丘游侠",
+      "熔岩游像",
+      "深黯钓客",
+      "深邃拟覆叶",
+      "深渊法师",
+      "圣骸兽",
+      "史莱姆",
+      "兽境之狼",
+      "霜夜灵嗣",
+      "隙境原体",
+      "辖域守护者",
+      "小驮兽(面具驮)",
+      "小型深海龙蜥",
+      "玄文兽",
+      "巡陆艇",
+      "蕈兽",
+      "野伏众",
+      "遗迹机兵",
+      "遗迹龙兽",
+      "遗迹守卫",
+      "萤术士",
+      "愚人众风役人",
+      "愚人众特辖队",
+      "愚人众先遣队",
+      "元能构装体",
+      "原海异种",
+      "蕴光异兽",
+      "债务处理人",
+      "浊水幻灵"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_0",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[大驮兽]",
+    "options": [
+      "沙漠路线（暂不可用）",
+      "雨林路线"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_1",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[荒野狂猎]",
+    "options": [
+      "荒野狂猎@鸿羽er",
+      "荒野狂猎@jay"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_2",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《锄地专区》->[精英400@汐]",
+    "options": [
+      "0-传奇",
+      "1-精英",
+      "2-收尾",
+      "3-低效"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_3",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[骗骗花]",
+    "options": [
+      "骗骗花@san"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_4",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[飘浮灵]",
+    "options": [
+      "飘浮灵@baixi",
+      "飘浮灵@san"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_5",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[丘丘人射手]",
+    "options": [
+      "丘丘人射手@曦",
+      "丘丘人射手@Annijang"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_6",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[圣骸兽]",
+    "options": [
+      "圣骸兽@呱呱z",
+      "圣骸兽@下流山汉"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_7",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《锄地专区》->[小怪2000@mno]",
+    "options": [
+      "0_0_飞萤",
+      "0_6_纳塔",
+      "1_1_蒙德",
+      "1_2_璃月",
+      "1_3_稻妻",
+      "1_4_须弥",
+      "1_5_枫丹",
+      "9_0_低效路线(不跑）",
+      "9_3_稻妻未修正部分（不跑）"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_8",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[小驮兽(面具驮)]",
+    "options": [
+      "常规路线"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_9",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[蕈兽]",
+    "options": [
+      "蕈兽@翎镞",
+      "蕈兽@C-01-11011"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_10",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[野伏众]",
+    "options": [
+      "野伏众@XS"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_11",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[愚人众风役人]",
+    "options": [
+      "愚人众风役人@迷茫之途&XS",
+      "愚人众风役人@下流山汉"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_12",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[原海异种]",
+    "options": [
+      "原海异种-地面全收集@鸿羽er",
+      "原海异种@雕茂"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_2_13",
+    "type": "multi-checkbox",
+    "label": "选择要执行的3级路径\n《敌人与魔物》->[浊水幻灵]",
+    "options": [
+      "浊水幻灵@呱呱z",
+      "浊水幻灵@无狐"
+    ]
+  },
+  {
+    "type": "separator"
+  },
+  {
+    "name": "treeLevel_3_0",
+    "type": "multi-checkbox",
+    "label": "选择要执行的4级路径\n《敌人与魔物》->[浊水幻灵@呱呱z]",
+    "options": [
+      "等级100+",
+      "高效率",
+      "全收集"
+    ]
+  }
+]

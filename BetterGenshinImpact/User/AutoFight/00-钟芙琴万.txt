@@ -1,0 +1,11 @@
+// 风系长短轴高容错队：钟离 / 芙宁娜 / 琴 / 枫原万叶
+// 短轴：芙宁娜后台、琴治疗、万叶长 E；长轴：补盾后只补治疗和万叶，万叶长 E 后适度补 Q，不强制四人全切。
+
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+芙宁娜 e, attack(0.6), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+琴 attack(0.1), e, wait(0.25), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2)
+钟离 s(0.2), e(hold,wait), wait(0.2), w(0.2), check, wait(0.2)
+琴 e, wait(0.3), attack(0.5), check, wait(0.2)
+枫原万叶 e(hold,fast), attack(0.35), wait(0.5), check, wait(0.2), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.2)
+芙宁娜 attack(1.0), check, wait(0.2)
