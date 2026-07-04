@@ -14,7 +14,7 @@ using System.Text;
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
 /// <summary>
-/// 队伍配置角色头像模型识别候选。
+/// 角色头像模型识别候选。
 /// </summary>
 /// <param name="CharacterName">角色标准名称。</param>
 /// <param name="ElementType">角色元素类型，来自 avatar.csv 的 element_type。</param>
@@ -28,7 +28,7 @@ internal sealed record AvatarGridIconCandidate(string CharacterName, string Elem
 }
 
 /// <summary>
-/// 队伍配置角色头像识别器。
+/// 角色头像识别器。
 /// </summary>
 /// <remarks>
 /// 使用 <c>Assets\Model\AvatarGridIcon\avatar.onnx</c> 提取头像特征，
@@ -55,7 +55,7 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     }
 
     /// <summary>
-    /// 识别一个队伍配置角色头像格子，返回相似度最高的角色候选。
+    /// 识别一个角色格子，返回相似度最高的角色候选。
     /// </summary>
     /// <param name="mat">角色头像格子裁剪图，BGR 格式；方法内部会 resize 到 115x115。</param>
     /// <returns>按角色名聚合后的最高分识别候选。</returns>
@@ -99,7 +99,7 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     }
 
     /// <summary>
-    /// 获取指定角色的元素类型，用于队伍配置界面的元素筛选。
+    /// 获取指定角色的元素类型
     /// </summary>
     /// <param name="characterName">角色标准名称。</param>
     /// <returns>角色元素类型。</returns>
@@ -109,7 +109,7 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     }
 
     /// <summary>
-    /// 获取指定角色的武器名称，用于队伍配置界面的武器筛选。
+    /// 获取指定角色的武器名称
     /// </summary>
     /// <param name="characterName">角色标准名称。</param>
     /// <returns>角色武器名称。</returns>
