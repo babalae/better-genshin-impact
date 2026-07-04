@@ -30,6 +30,11 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         [Description("圣遗物套装筛选")]
         ArtifactSetFilter,
         [Description("合成")]
-        Crafting
+        Crafting,
+        /// <summary>
+        /// 队伍配置快速编队界面的左侧角色头像网格。
+        /// </summary>
+        [Description("队伍配置角色")]
+        PartySetupCharacters
     }
 }
