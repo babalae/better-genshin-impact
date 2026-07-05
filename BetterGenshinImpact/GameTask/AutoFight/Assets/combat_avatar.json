@@ -50,7 +50,8 @@
   {
     "alias": [
       "奇偶(男)",
-      "MannequinBoy"
+      "MannequinBoy",
+      "奇偶·男性"
     ],
     "id": "10000117",
     "name": "奇偶(男)",
@@ -60,7 +61,8 @@
   {
     "alias": [
       "奇偶(女)",
-      "MannequinGirl"
+      "MannequinGirl",
+      "奇偶·女性"
     ],
     "id": "10000118",
     "name": "奇偶(女)",
