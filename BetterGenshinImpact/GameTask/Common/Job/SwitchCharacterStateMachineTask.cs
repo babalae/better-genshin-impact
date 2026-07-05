@@ -1289,7 +1289,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
         List<SelectionPlanItem> plan = [];
         int maxTargetSlot = rolesToSelect.Max(role => role.Slot);
-        for (int slot = 1; slot <= maxTargetSlot; slot++)
+        int maxAffectedSlot = Math.Max(maxTargetSlot, slotsToClear.Max());
+        for (int slot = 1; slot <= maxAffectedSlot; slot++)
         {
             if (targetBySlot.TryGetValue(slot, out var targetRole))
             {
@@ -1303,8 +1304,10 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 continue;
             }
 
-            bool hasLaterTarget = targetBySlot.Keys.Any(targetSlot => targetSlot > slot);
-            if (!hasLaterTarget)
+            bool shouldRefill = slotsToClear.Contains(slot)
+                                || targetBySlot.Keys.Any(targetSlot => targetSlot > slot)
+                                || slotsToClear.Any(slotToClear => slotToClear > slot);
+            if (!shouldRefill)
             {
                 continue;
             }

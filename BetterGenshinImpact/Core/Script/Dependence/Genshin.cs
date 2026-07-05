@@ -314,9 +314,8 @@ public class Genshin
         {
             return await new SwitchCharacterStateMachineTask().Start(slot1, slot2, slot3, slot4, CancellationContext.Instance.Cts.Token);
         }
-        catch (Exception ex)
+        catch (PartySetupFailedException)
         {
-            _logger.LogError("{Message}", ex.Message);
             return false;
         }
     }
