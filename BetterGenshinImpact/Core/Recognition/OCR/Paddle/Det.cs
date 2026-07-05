@@ -13,8 +13,17 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
 {
     private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
 
-    /// <summary>Gets or sets the maximum size for resizing the input image.</summary>
-    public int? MaxSize { get; set; } = 960;
+    /// <summary>Gets or sets the detection side length limit used by the Python det preprocess.</summary>
+    public int LimitSideLen { get; set; } = 960;
+
+    /// <summary>Gets or sets the maximum size limit after resizing.</summary>
+    public int MaxSideLimit { get; set; } = 4000;
+
+    /// <summary>Gets or sets the side length limit type. Supports max/min/resize_long.</summary>
+    public string LimitType { get; set; } = "max";
+
+    /// <summary>Gets or sets the shortest side threshold used for tiny-image upscaling.</summary>
+    public int SmallImageLimitSideLen { get; set; } = 64;
 
     /// <summary>Gets or sets the size for dilation during preprocessing.</summary>
     public int? DilatedSize { get; set; } = 2;
@@ -71,20 +80,24 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
         }
 
         var contours = dilated.FindContoursAsArray(RetrievalModes.List, ContourApproximationModes.ApproxSimple);
-        // var size = src.Size();
-        var scaleRate = 1.0 * src.Width / resizedSize.Width;
+        // PaddleOCR Python keeps ratio_h/ratio_w separately. Because we align det resize to that behavior,
+        // map contour points back with independent X/Y scales before building rotated rects.
+        var scaleX = 1.0 * src.Width / resizedSize.Width;
+        var scaleY = 1.0 * src.Height / resizedSize.Height;
 
         var rects = contours
             .Where(x => BoxScoreThreshold == null || GetScore(x, pred) > BoxScoreThreshold)
+            .Select(contour =>
+                contour.Select(point => new Point2f((float)(point.X * scaleX), (float)(point.Y * scaleY))).ToArray())
             .Select(Cv2.MinAreaRect)
             .Where(x => x.Size.Width > MinSize && x.Size.Height > MinSize)
             .Select(rect =>
             {
                 var minEdge = Math.Min(rect.Size.Width, rect.Size.Height);
                 Size2f newSize = new(
-                    (rect.Size.Width + UnclipRatio * minEdge) * scaleRate,
-                    (rect.Size.Height + UnclipRatio * minEdge) * scaleRate);
-                RotatedRect largerRect = new(rect.Center * scaleRate, newSize, rect.Angle);
+                    rect.Size.Width + UnclipRatio * minEdge,
+                    rect.Size.Height + UnclipRatio * minEdge);
+                RotatedRect largerRect = new(rect.Center, newSize, rect.Angle);
                 return largerRect;
             })
             .OrderBy(v => v.Center.Y)
@@ -107,11 +120,14 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
             3 => src,
             var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
         };
-        // DetResizeForTest resize_long
-        using (var resized = MatResize(padded, MaxSize))
+        // Align with PaddleOCR Python DetResizeForTest:
+        // 1. tiny image padding when h + w < 64
+        // 2. keep current max/960 behavior for normal images
+        // 3. switch to limit_type=min for very small crops so det can see the text
+        using (var resized = MatResizeForDetection(padded))
         {
             resizedSize = new Size(resized.Width, resized.Height);
-            padded = MatPadding32(resized);
+            padded = resized.Clone();
         }
 
         using (var _ = padded)
@@ -150,19 +166,80 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
     }
 
     /// <summary>
-    /// 按比例缩放图像，保持长边不超过 maxSize。
+    /// 按 PaddleOCR Python 的 DetResizeForTest 思路缩放图像：
+    /// 小图先补边，再按 max/min/resize_long 规则缩放，并对齐到 32 的倍数。
     /// </summary>
     /// <param name="src"></param>
-    /// <param name="maxSize"></param>
     /// <returns></returns>
-    private static Mat MatResize(Mat src, int? maxSize)
+    private Mat MatResizeForDetection(Mat src)
     {
-        if (maxSize == null) return src.Clone();
+        using var preprocessed = PrepareTinyImage(src);
 
-        var size = src.Size();
-        var longEdge = Math.Max(size.Width, size.Height);
-        var scaleRate = 1.0 * maxSize.Value / longEdge;
-        return scaleRate < 1.0 ? src.Resize(default, scaleRate, scaleRate) : src.Clone();
+        var size = preprocessed.Size();
+        var height = size.Height;
+        var width = size.Width;
+
+        var limitSideLen = LimitSideLen;
+        var limitType = LimitType;
+
+        if (Math.Min(height, width) < SmallImageLimitSideLen)
+        {
+            limitSideLen = SmallImageLimitSideLen;
+            limitType = "min";
+        }
+
+        var ratio = CalculateResizeRatio(width, height, limitSideLen, limitType);
+        var resizeHeight = (int)(height * ratio);
+        var resizeWidth = (int)(width * ratio);
+
+        if (Math.Max(resizeHeight, resizeWidth) > MaxSideLimit)
+        {
+            var maxSideRatio = 1.0 * MaxSideLimit / Math.Max(resizeHeight, resizeWidth);
+            resizeHeight = (int)(resizeHeight * maxSideRatio);
+            resizeWidth = (int)(resizeWidth * maxSideRatio);
+        }
+
+        resizeHeight = Math.Max((int)Math.Round(resizeHeight / 32.0) * 32, 32);
+        resizeWidth = Math.Max((int)Math.Round(resizeWidth / 32.0) * 32, 32);
+
+        if (resizeWidth <= 0 || resizeHeight <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Invalid det resize target size: {resizeWidth}x{resizeHeight}, src={width}x{height}");
+        }
+
+        using var resized = preprocessed.Resize(new Size(resizeWidth, resizeHeight));
+        return MatPadding32(resized);
+    }
+
+    private static Mat PrepareTinyImage(Mat src)
+    {
+        if (src.Width + src.Height >= 64)
+        {
+            return src.Clone();
+        }
+
+        var newHeight = Math.Max(32, src.Height);
+        var newWidth = Math.Max(32, src.Width);
+        var padded = new Mat(newHeight, newWidth, src.Type(), Scalar.Black);
+        src.CopyTo(padded[new Rect(0, 0, src.Width, src.Height)]);
+        return padded;
+    }
+
+    private static double CalculateResizeRatio(int width, int height, int limitSideLen, string limitType)
+    {
+        return limitType switch
+        {
+            "max" => Math.Max(height, width) > limitSideLen
+                ? 1.0 * limitSideLen / Math.Max(height, width)
+                : 1.0,
+            "min" => Math.Min(height, width) < limitSideLen
+                ? 1.0 * limitSideLen / Math.Min(height, width)
+                : 1.0,
+            "resize_long" => 1.0 * limitSideLen / Math.Max(height, width),
+            _ => throw new ArgumentOutOfRangeException(nameof(limitType), limitType,
+                "limitType only supports max/min/resize_long")
+        };
     }
 
     private static float GetScore(Point[] contour, Mat pred)

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Factory;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
@@ -42,29 +43,30 @@ public class AutoFightHandler : IActionHandler
         TaskControl.Logger.LogInformation("执行动作: 【自动战斗】");
 
         AutoFightParam taskParams;
-        if (config is PathingPartyConfig { AutoFightEnabled: true } partyConfig)
+        if (config is PathingPartyConfig { Enabled: true, AutoFightEnabled: true } partyConfig)
         {
             taskParams = CreateFightParam(partyConfig.AutoFightConfig);
         }
         else
         {
-            var fallbackConfig = TaskContext.Instance().Config.AutoFightConfig;
-            taskParams = new AutoFightParam(GetStrategyPath(fallbackConfig), fallbackConfig);
+            taskParams = CreateFightParam(TaskContext.Instance().Config.AutoFightConfig);
         }
 
         ProcessMonsterLootConfiguration(waypointForTrack, taskParams);
 
-        if (waypointForTrack != null && waypointForTrack.EnableMonsterLootSplit && 
+        var factory = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
+
+        if (waypointForTrack != null && waypointForTrack.EnableMonsterLootSplit &&
            !(waypointForTrack.MonsterTag == "elite" || waypointForTrack.MonsterTag == "legendary") &&
             taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
         {
             await RunnerContext.Instance.StopAutoPickRunTask(
-                async () => await new AutoFightTask(taskParams).Start(ct),
+                async () => await factory.CreateTask(taskParams).Start(ct),
                 5);
             return;
         }
 
-        var fightSoloTask = new AutoFightTask(taskParams);
+        var fightSoloTask = factory.CreateTask(taskParams);
         await fightSoloTask.Start(ct);
     }
 
@@ -120,10 +122,10 @@ public class AutoFightHandler : IActionHandler
         ArgumentNullException.ThrowIfNull(config);
 
         var strategyName = config.StrategyName;
-        var path = "根据队伍自动选择".Equals(strategyName, StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrEmpty(strategyName)
+        var path = string.IsNullOrEmpty(strategyName)
+                   || "根据队伍自动选择".Equals(strategyName, StringComparison.OrdinalIgnoreCase)
             ? Global.Absolute(@"User\AutoFight\")
-            : Global.Absolute($@"User\AutoFight\{strategyName}.txt");
+            : AutoFightParam.ResolveStrategyPath(strategyName).path;
 
         if (!File.Exists(path) && !Directory.Exists(path))
         {

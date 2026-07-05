@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Group;
@@ -524,7 +525,15 @@ public partial class ScriptService : IScriptService
 
             _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
-            await project.Run();
+            var hasSettingsBeforeRun = project.JsScriptSettingsObject != null;
+            try
+            {
+                await project.Run();
+            }
+            finally
+            {
+                SaveScriptGroupAfterJsRun(project, hasSettingsBeforeRun);
+            }
         }
         else if (project.Type == "KeyMouse")
         {
@@ -543,6 +552,32 @@ public partial class ScriptService : IScriptService
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             await project.Run();
+        }
+    }
+
+    private void SaveScriptGroupAfterJsRun(ScriptGroupProject project, bool hasSettingsBeforeRun)
+    {
+        if (!hasSettingsBeforeRun)
+        {
+            project.JsScriptSettingsObject = null;
+            return;
+        }
+
+        var scriptGroup = project.GroupInfo!;
+        try
+        {
+            var scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
+            if (!Directory.Exists(scriptGroupPath))
+            {
+                Directory.CreateDirectory(scriptGroupPath);
+            }
+
+            var file = Path.Combine(scriptGroupPath, $"{scriptGroup.Name}.json");
+            File.WriteAllText(file, scriptGroup.ToJson());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "保存JS脚本配置组失败: {GroupName}", scriptGroup.Name);
         }
     }
 
