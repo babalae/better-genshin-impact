@@ -304,11 +304,11 @@ public class Genshin
     /// <param name="slot4">4 号位角色名。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
     /// <remarks>
-    /// 每个槽位都必须传入字符串，空字符串表示跳过对应槽位。
+    /// 未传入的槽位默认跳过；空字符串表示跳过对应槽位。
     /// 调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", "", "钟离");</c>
     /// 该方法表示重组队伍槽位角色，不是按数字键切换当前出战角色。
     /// </remarks>
-    public async Task<bool> SwitchCharacter(string slot1, string slot2, string slot3, string slot4)
+    public async Task<bool> SwitchCharacter(string slot1 = "", string slot2 = "", string slot3 = "", string slot4 = "")
     {
         try
         {
