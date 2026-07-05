@@ -1062,12 +1062,58 @@
                                                Symbol="Location24" />
                             </Button>
                             <Rectangle Height="1" Fill="#26313B" />
-                            <Button Command="{Binding ClearPathingCommand}"
-                                    Style="{StaticResource MapToolButtonStyle}"
-                                    ToolTip="清除目标与路径">
+                            <Button Command="{Binding ToggleFollowingCurrentCommand}"
+                                    ToolTip="{Binding FollowHotkeyText, StringFormat=切换跟随当前坐标（{0}）}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MapToolButtonStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFollowingCurrent}" Value="True">
+                                                <Setter Property="Background" Value="#B0147884" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
                                 <ui:SymbolIcon FontSize="18"
-                                               Foreground="#D7E4EA"
-                                               Symbol="Dismiss24" />
+                                               Symbol="ArrowTrending24">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Foreground" Value="#D7E4EA" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsFollowingCurrent}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                            </Button>
+                            <Rectangle Height="1" Fill="#26313B" />
+                            <Button Command="{Binding ToggleTeleportPointsCommand}"
+                                    ToolTip="显示/隐藏传送点">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MapToolButtonStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowTeleportPoints}" Value="True">
+                                                <Setter Property="Background" Value="#B0147884" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource MapEditorAccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <ui:SymbolIcon FontSize="18"
+                                               Symbol="Map24">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Foreground" Value="#D7E4EA" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ShowTeleportPoints}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource MapEditorAccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
                             </Button>
                             <Rectangle Height="1"
                                        Fill="#26313B"
@@ -1145,33 +1191,9 @@
                                           ItemTemplate="{StaticResource MapEditorOptionTemplate}"
                                           ItemContainerStyle="{StaticResource MapEditorComboBoxItemStyle}"
                                           ItemsSource="{Binding MapLayerOptions}"
-                                          SelectedValue="{Binding MapName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SelectedValuePath="Code"
-                                          Style="{StaticResource MapEditorComboBoxStyle}" />
-                            </Grid>
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center"
-                                           Style="{StaticResource CaptionTextStyle}"
-                                           Text="跟随" />
-                                <ui:ToggleSwitch Grid.Column="1"
-                                                 VerticalAlignment="Center"
-                                                 IsChecked="{Binding IsFollowingCurrent, Mode=TwoWay}"
-                                                 ToolTip="{Binding FollowHotkeyText, StringFormat=跟随当前坐标（{0}）}" />
-                                <TextBlock Grid.Column="3"
-                                           VerticalAlignment="Center"
-                                           Style="{StaticResource CaptionTextStyle}"
-                                           Text="传送点" />
-                                <ui:ToggleSwitch Grid.Column="4"
-                                                 VerticalAlignment="Center"
-                                                 IsChecked="{Binding ShowTeleportPoints, Mode=TwoWay}"
-                                                 ToolTip="显示传送点" />
+                                           SelectedValue="{Binding MapName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                           SelectedValuePath="Code"
+                                           Style="{StaticResource MapEditorComboBoxStyle}" />
                             </Grid>
                         </StackPanel>
                     </Border>
