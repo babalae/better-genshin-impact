@@ -378,7 +378,7 @@ public partial class HtmlMaskWindow : Window
             // 本地文件：必须在脚本目录内
             if (uri.Scheme == "file")
             {
-                var localPath = Uri.UnescapeDataString(uri.AbsolutePath);
+                var localPath = uri.LocalPath;
                 var fullDir = Path.GetFullPath(_workDir);
                 var fullFile = Path.GetFullPath(localPath);
                 if (fullFile.StartsWith(fullDir, StringComparison.OrdinalIgnoreCase)) return;

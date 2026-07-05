@@ -80,14 +80,23 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     protected override ILogger Logger => TaskControl.Logger;
 
     private readonly AutoStygianOnslaughtParam _taskParam;
-    private readonly CombatScriptBag _combatScriptBag;
+    private readonly CombatScriptBag? _combatScriptBag;
+    private readonly string? _jsonCombatStrategyPath;
     private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
     private LowerHeadThenWalkToTask? _lowerHeadThenWalkToTask;
     public AutoStygianOnslaughtTask(AutoStygianOnslaughtParam taskParam)
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
-        _combatScriptBag = CombatScriptParser.ReadAndParse(taskParam.CombatScriptBagPath);
+        if (taskParam.CombatScriptBagPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = taskParam.CombatScriptBagPath;
+            Logger.LogInformation("自动幽境危战：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(taskParam.CombatScriptBagPath);
+        }
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
         // 注册所有状态处理器
@@ -97,7 +106,15 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
-        _combatScriptBag = CombatScriptParser.ReadAndParse(path);
+        if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = path;
+            Logger.LogInformation("自动幽境危战：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(path);
+        }
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
         // 注册所有状态处理器
@@ -596,12 +613,20 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         CurrentState = StygianState.BossSelect;
         await EnsureNextStateTransition(60000);
 
-        // 初始化战斗
-        var combatScenes = await InitializeCombatScenesLoop();
-        var combatCommands = await PrepareForBattleLoop(combatScenes);
+        if (_jsonCombatStrategyPath != null)
+        {
+            Logger.LogInformation($"{Name}：执行战斗策略(JSON)");
+            await StartJsonFight();
+        }
+        else
+        {
+            // 初始化战斗
+            var combatScenes = await InitializeCombatScenesLoop();
+            var combatCommands = await PrepareForBattleLoop(combatScenes);
 
-        Logger.LogInformation($"{Name}：执行战斗策略");
-        await StartFight(combatScenes, combatCommands);
+            Logger.LogInformation($"{Name}：执行战斗策略");
+            await StartFight(combatScenes, combatCommands);
+        }
     }
 
     /// <summary>
@@ -946,6 +971,45 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         combatTask.Start();
         domainEndTask.Start();
         return Task.WhenAll(combatTask, domainEndTask);
+    }
+
+    /// <summary>
+    /// JSON策略战斗入口：委托给AutoFightJsonTask，抑制其自带的结束检测和拾取逻辑，
+    /// 幽境危战的DomainEndDetectionTask通过CancellationToken控制战斗结束。
+    /// </summary>
+    private async Task StartJsonFight()
+    {
+        CancellationTokenSource cts = new();
+        _ct.Register(cts.Cancel);
+
+        var jsonParam = new AutoFightParam
+        {
+            CombatStrategyPath = _jsonCombatStrategyPath!,
+            FightFinishDetectEnabled = false,
+            ExpBasedPickupEnabled = false,
+            KazuhaPickupEnabled = false,
+            PickDropsAfterFightEnabled = false,
+            Timeout = 600,
+        };
+
+        var jsonTask = new AutoFightJsonTask(jsonParam);
+
+        var domainEndTask = DomainEndDetectionTask(cts);
+
+        var combatTask = Task.Run(async () =>
+        {
+            try
+            {
+                await jsonTask.Start(cts.Token);
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
+            }
+        }, cts.Token);
+
+        domainEndTask.Start();
+        await Task.WhenAll(combatTask, domainEndTask);
     }
 
     private Task DomainEndDetectionTask(CancellationTokenSource cts)

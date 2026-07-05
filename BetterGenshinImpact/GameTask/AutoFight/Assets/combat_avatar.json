@@ -1765,8 +1765,7 @@
       "西特拉利",
       "黑曜石奶奶",
       "黑曜石",
-      "奶奶",
-      "老伴"
+      "奶奶"
     ],
     "burstCD": 15,
     "id": "10000107",
@@ -2109,6 +2108,43 @@
     "id": "10000132",
     "name": "布伦妮",
     "nameEn": "Prune",
+    "skillCD": 15,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "桑多涅",
+      "Sandrone",
+      "Marionette"
+    ],
+    "burstCD": 15,
+    "id": "10000133",
+    "name": "桑多涅",
+    "nameEn": "Marionette",
+    "skillCD": 4,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "阿罗夏",
+      "Alyosha"
+    ],
+    "burstCD": 18,
+    "id": "10000148",
+    "name": "阿罗夏",
+    "nameEn": "Alyosha",
+    "skillCD": 15,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "奥黛塔",
+      "Odette"
+    ],
+    "burstCD": 15,
+    "id": "10000150",
+    "name": "奥黛塔",
+    "nameEn": "Odette",
     "skillCD": 15,
     "weapon": "10"
   }
