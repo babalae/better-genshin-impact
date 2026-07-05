@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
@@ -37,14 +38,16 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 /// <summary>
 /// 自动首领讨伐独立任务，负责按配置前往 Boss、执行战斗策略、领取征讨之花奖励并处理重定位。
 /// </summary>
-public class AutoBossTask : ISoloTask
+public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 {
     public string Name => "自动首领讨伐";
 
     private readonly ILogger<AutoBossTask> _logger = App.GetLogger<AutoBossTask>();
     private readonly AutoBossParam _taskParam;
-    private readonly CombatScriptBag _combatScriptBag;
+    private readonly CombatScriptBag? _combatScriptBag;
+    private readonly string? _jsonCombatStrategyPath;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
+    private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
 
@@ -71,16 +74,27 @@ public class AutoBossTask : ISoloTask
             _taskParam.SetCombatStrategyPath(_taskParam.StrategyName);
         }
 
-        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
+            _logger.LogInformation("自动首领讨伐：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        }
     }
 
     /// <summary>
     /// 启动自动首领讨伐任务，包含参数校验、分辨率校验、死亡重试和最终输入状态释放。
     /// </summary>
     /// <param name="ct">任务取消令牌。</param>
-    public async Task Start(CancellationToken ct)
+    Task ISoloTask.Start(CancellationToken ct) => Start(ct);
+
+    public async Task<Dictionary<string, int>> Start(CancellationToken ct)
     {
         _ct = ct;
+        _rewardSummary.Clear();
         Validate();
         LogScreenResolution();
 
@@ -114,6 +128,8 @@ public class AutoBossTask : ISoloTask
             Simulation.SendInput.Mouse.LeftButtonUp();
             Notify.Event("AutoBoss").Success($"{Name}结束");
         }
+
+        return new Dictionary<string, int>(_rewardSummary);
     }
 
     /// <summary>
@@ -876,22 +892,63 @@ public class AutoBossTask : ISoloTask
     {
         _logger.LogInformation("{Name}：执行战斗策略", Name);
 
-        // 保留原 AutoBoss 行为：战斗开始前先切到策略首个角色。
-        var combatScenes = GetCombatScenesWithRetry();
-        FindCombatScriptAndSwitchAvatar(combatScenes);
+        if (_jsonCombatStrategyPath != null)
+        {
+            await StartJsonFight();
+        }
+        else
+        {
+            var combatScenes = GetCombatScenesWithRetry();
+            FindCombatScriptAndSwitchAvatar(combatScenes);
 
-        var taskParam = BuildAutoFightParamForBoss();
+            var taskParam = BuildAutoFightParamForBoss();
+            try
+            {
+                await new AutoFightTask(taskParam).Start(_ct);
+            }
+            catch (NormalEndException e)
+            {
+                _logger.LogInformation("战斗操作中断：{Msg}", e.Message);
+            }
+            finally
+            {
+                combatScenes.AfterTask();
+            }
+        }
+    }
+
+    /// <summary>
+    /// JSON策略战斗入口：委托给AutoFightJsonTask，由其自身处理战斗结束检测，
+    /// 抑制战后拾取逻辑。
+    /// </summary>
+    private async Task StartJsonFight()
+    {
+        CancellationTokenSource cts = new();
+        _ct.Register(cts.Cancel);
+
+        var jsonParam = new AutoFightParam
+        {
+            CombatStrategyPath = _jsonCombatStrategyPath!,
+            FightFinishDetectEnabled = true,
+            ExpBasedPickupEnabled = false,
+            KazuhaPickupEnabled = false,
+            PickDropsAfterFightEnabled = false,
+            Timeout = 600,
+        };
+
+        var jsonTask = new AutoFightJsonTask(jsonParam);
+
         try
         {
-            await new AutoFightTask(taskParam).Start(_ct);
+            await jsonTask.Start(cts.Token);
         }
         catch (NormalEndException e)
         {
             _logger.LogInformation("战斗操作中断：{Msg}", e.Message);
         }
-        finally
+        catch (Exception e)
         {
-            combatScenes.AfterTask();
+            _logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
         }
     }
 
@@ -1114,29 +1171,29 @@ public class AutoBossTask : ISoloTask
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
 
         var navigationStopwatch = Stopwatch.StartNew();
-        var navigationTimeout = TimeSpan.FromSeconds(15);
+        var navigationTimeout = TimeSpan.FromSeconds(20);
         var adjustCameraTask = AdjustRewardCameraTask(page, navigationCts);
         var moveToRewardTask = MoveToRewardTask(page, navigationCts);
+        var monitorRewardPromptTask = MonitorRewardPromptTask(page, navigationCts);
 
         try
         {
-            while (!navigationCts.IsCancellationRequested)
+            while (true)
             {
-                navigationCts.Token.ThrowIfCancellationRequested();
+                _ct.ThrowIfCancellationRequested();
                 if (navigationStopwatch.Elapsed >= navigationTimeout)
                 {
-                    throw new TimeoutException("超时未找到征讨之花交互选项");
+                    throw new TimeoutException("超时未找到征讨之花领奖界面");
                 }
 
-                if (HasRewardPrompt(page))
+                var completedTask = await Task.WhenAny(Task.Delay(500, _ct),adjustCameraTask,moveToRewardTask,monitorRewardPromptTask);
+
+                if (completedTask == monitorRewardPromptTask)
                 {
-                    _logger.LogInformation("{Name}：已到达征讨之花", Name);
-                    navigationCts.Cancel();
+                    await monitorRewardPromptTask;
+                    _logger.LogInformation("{Name}：已进入征讨之花领奖界面", Name);
                     return;
                 }
-
-                var completedTask = await Task.WhenAny(Task.Delay(500, navigationCts.Token), adjustCameraTask, moveToRewardTask);
-                navigationCts.Token.ThrowIfCancellationRequested();
 
                 if (completedTask == adjustCameraTask || completedTask == moveToRewardTask)
                 {
@@ -1151,11 +1208,11 @@ public class AutoBossTask : ISoloTask
             navigationCts.Cancel();
             try
             {
-                await Task.WhenAll(adjustCameraTask, moveToRewardTask);
+                await Task.WhenAll(adjustCameraTask, moveToRewardTask, monitorRewardPromptTask);
             }
             catch
             {
-                // The main loop observes task failures; shutdown also cancels both background tasks.
+                // The main loop observes task failures; shutdown also cancels background tasks.
             }
 
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
@@ -1164,10 +1221,45 @@ public class AutoBossTask : ISoloTask
         }
     }
 
-    private bool HasRewardPrompt(BvPage page)
+    private bool HasRewardInteractionPrompt(BvPage page)
     {
         var rewardRect = ScaleRect(1210, 300, 200, 400);
-        return page.Ocr(rewardRect).Any(region => region.Text.Contains("接触征讨之花"));
+        return page.Ocr(rewardRect).Any(region => region.Text.Contains("接触征讨之花", StringComparison.Ordinal));
+    }
+
+    private bool HasRewardPanelPrompt(BvPage page)
+    {
+        var rewardPanelRect = ScaleRect(850, 740, 250, 35);
+        return page.Ocr(rewardPanelRect).Any(region =>
+            region.Text.Contains("使用原粹树脂", StringComparison.Ordinal)
+            || region.Text.Contains("补充原粹树脂", StringComparison.Ordinal));
+    }
+
+    private async Task MonitorRewardPromptTask(BvPage page, CancellationTokenSource navigationCts)
+    {
+        var ct = navigationCts.Token;
+        var lastInteractAt = DateTime.MinValue;
+
+        while (!ct.IsCancellationRequested)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (HasRewardPanelPrompt(page))
+            {
+                return;
+            }
+
+            if (HasRewardInteractionPrompt(page))
+            {
+                if (DateTime.UtcNow - lastInteractAt >= TimeSpan.FromMilliseconds(300))
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+                    lastInteractAt = DateTime.UtcNow;
+                }
+            }
+
+            await Delay(300, ct);
+        }
     }
 
     private async Task AdjustRewardCameraTask(BvPage page, CancellationTokenSource navigationCts)
@@ -1274,8 +1366,6 @@ public class AutoBossTask : ISoloTask
     private async Task<bool> TakeReward()
     {
         var page = new BvPage(_ct);
-        var rewardRect = ScaleRect(1210, 515, 200, 50);
-        await InteractWithRewardFlower(page, rewardRect);
 
         if (!await TryUseOriginalResinOnRewardPrompt(page))
         {
@@ -1283,23 +1373,66 @@ public class AutoBossTask : ISoloTask
             return false;
         }
 
+        await TryRecognizeRewardResult(page);
         await CloseRewardResult();
         Notify.Event("AutoBoss").Success($"{Name}奖励领取");
         return true;
     }
 
-    /// <summary>
-    /// 等待“接触征讨之花”出现后，持续按F直到从屏幕上消失。
-    /// </summary>
-    /// <param name="page">当前视觉定位页面。</param>
-    /// <param name="rewardRect">“接触征讨之花”的 OCR 识别区域。</param>
-    private async Task InteractWithRewardFlower(BvPage page, Rect rewardRect)
+    private async Task TryRecognizeRewardResult(BvPage page)
     {
-        await page.Locator("接触征讨之花", rewardRect).WaitFor(5000);
-        await page.Locator("接触征讨之花", rewardRect)
-            .WithRetryAction(_ => Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract))
-            .WaitForDisappear(5000);
-        await Delay(800, _ct);
+        if (!_taskParam.RewardRecognitionEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await WaitForRewardResultReady(page))
+            {
+                _logger.LogWarning("{Name}：奖励结果页未检测到“点击空白区域继续”，已跳过本轮奖励识别", Name);
+                return;
+            }
+
+            // 使用多页识别（自动检测是否需要翻页）
+            _logger.LogInformation("{Name}：开始奖励识别", Name);
+            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage();
+
+            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
+
+            if (rewards.Count > 0)
+            {
+                _logger.LogInformation("{Name}：本轮奖励识别结果 {Rewards}", Name,
+                    string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
+            }
+            else
+            {
+                _logger.LogWarning("{Name}：本轮奖励识别结果为空", Name);
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "{Name}：奖励识别失败，已跳过本轮奖励汇总", Name);
+        }
+    }
+
+    private async Task<bool> WaitForRewardResultReady(BvPage page)
+    {
+        var closeRect = ScaleRect(850, 960, 220, 35);
+
+        for (var i = 0; i < 20; i++)
+        {
+            var closeRegion = page.Ocr(closeRect)
+                .FirstOrDefault(r => r.Text.Contains("点击空白区域继续", StringComparison.Ordinal));
+            if (closeRegion != null)
+            {
+                return true;
+            }
+
+            await Delay(300, _ct);
+        }
+
+        return false;
     }
 
     /// <summary>

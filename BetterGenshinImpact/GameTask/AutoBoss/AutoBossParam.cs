@@ -83,6 +83,11 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     public bool ReturnToStatueAfterEachRound { get; set; }
 
     /// <summary>
+    /// 是否启用奖励名称识别。默认关闭。
+    /// </summary>
+    public bool RewardRecognitionEnabled { get; set; }
+
+    /// <summary>
     /// 使用当前全局 AutoBoss 配置创建参数，主要用于 JS 无参构造和一条龙默认启动。
     /// </summary>
     public AutoBossParam() : base(null, null)
@@ -123,6 +128,7 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
         UseFragileResin = config.UseFragileResin;
         ReviveRetryCount = config.ReviveRetryCount;
         ReturnToStatueAfterEachRound = config.ReturnToStatueAfterEachRound;
+        RewardRecognitionEnabled = config.RewardRecognitionEnabled;
     }
 
     /// <summary>

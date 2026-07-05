@@ -44,4 +44,14 @@ public readonly record struct OcrVersionConfig(
             [0.485f, 0.456f, 0.406f],
             [0.229f, 0.224f, 0.225f]
         ), new OcrShape(3, 320, 48));
+
+    public static OcrVersionConfig PpOcrV6 = new(
+        "PP-OCRv6",
+        OcrImgMode.BGR,
+        false,
+        new OcrNormalizeImage(
+            1.0f / 255.0f,
+            [0.485f, 0.456f, 0.406f],
+            [0.229f, 0.224f, 0.225f]
+        ), new OcrShape(3, 320, 48));
 }
