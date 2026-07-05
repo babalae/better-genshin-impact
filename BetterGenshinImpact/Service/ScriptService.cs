@@ -612,62 +612,62 @@ public partial class ScriptService : IScriptService
 
             if (waitForMainUi)
             {
-                await Task.Run(async () =>
-                {
-                    await Task.Delay(200);
-                    var first = true;
-                    var sw = Stopwatch.StartNew();
-                    var loseFocusCount = 0;
-                    while (true)
-                    {
-                        if (CancellationContext.Instance.IsCancellationRequested)
-                        {
-                            TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");
-                            return;
-                        }
-
-                        if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
-                        {
-                            await Task.Delay(500);
-                            continue;
-                        }
-
-                        using var content = TaskControl.CaptureToRectArea();
-                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
-                        {
-                            return;
-                        }
-
-                        if (first)
-                        {
-                            first = false;
-                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
-                        }
-
-                        await Task.Delay(500);
-                        if (sw.Elapsed.TotalSeconds >= 30)
-                        {
-                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
-                            if (!SystemControl.IsGenshinImpactActiveByProcess())
-                            {
-                                loseFocusCount++;
-                                if (loseFocusCount>50 && loseFocusCount<100)
-                                {
-                                    SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
-                                }
-                                SystemControl.ActivateWindow();
-                            }
-
-                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
-                            if (sw.Elapsed.TotalSeconds < 200)
-                            {
-                                GlobalMethod.MoveMouseTo(300, 300);
-                            }
-
-                        }
-                    }
-                });
+                // await Task.Run(async () =>
+                // {
+                //     await Task.Delay(200);
+                //     var first = true;
+                //     var sw = Stopwatch.StartNew();
+                //     var loseFocusCount = 0;
+                //     while (true)
+                //     {
+                //         if (CancellationContext.Instance.IsCancellationRequested)
+                //         {
+                //             TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");
+                //             return;
+                //         }
+                //
+                //         if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                //         {
+                //             await Task.Delay(500);
+                //             continue;
+                //         }
+                //
+                //         using var content = TaskControl.CaptureToRectArea();
+                //         if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
+                //         {
+                //             return;
+                //         }
+                //
+                //         if (first)
+                //         {
+                //             first = false;
+                //             TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                //             TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
+                //         }
+                //
+                //         await Task.Delay(500);
+                //         if (sw.Elapsed.TotalSeconds >= 30)
+                //         {
+                //             //防止自启动游戏后因为一些原因失焦，导致一直卡住
+                //             if (!SystemControl.IsGenshinImpactActiveByProcess())
+                //             {
+                //                 loseFocusCount++;
+                //                 if (loseFocusCount>50 && loseFocusCount<100)
+                //                 {
+                //                     SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+                //                 }
+                //                 SystemControl.ActivateWindow();
+                //             }
+                //
+                //             //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                //             if (sw.Elapsed.TotalSeconds < 200)
+                //             {
+                //                 GlobalMethod.MoveMouseTo(300, 300);
+                //             }
+                //
+                //         }
+                //     }
+                // });
             }
         }
 
