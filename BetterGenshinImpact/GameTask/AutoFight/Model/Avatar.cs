@@ -244,11 +244,15 @@ public class Avatar
     /// <exception cref="RetryException"></exception>
     public static void TpForRecover(CancellationToken ct, Exception ex)
     {
-        // tp 到七天神像复活
-        var tpTask = new TpTask(ct);
-        tpTask.TpToStatueOfTheSeven().Wait(ct);
-        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+        RecoverAtStatueOfTheSeven(ct).Wait(ct);
         throw ex;
+    }
+
+    public static async Task RecoverAtStatueOfTheSeven(CancellationToken ct)
+    {
+        var tpTask = new TpTask(ct);
+        await tpTask.TpToStatueOfTheSeven();
+        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
     /// <summary>

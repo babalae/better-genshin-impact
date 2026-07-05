@@ -161,6 +161,17 @@ public partial class AutoPickTrigger : ITaskTrigger
     private const int ControllerYDialogueBackoffMilliseconds = 1200;
     private DateTime _controllerYBackoffUntil = DateTime.MinValue;
 
+    internal enum PickListDecision
+    {
+        Allow,
+        EmptyText,
+        DoNotPick,
+        TooShort,
+        ExcludeIcon,
+        BlackList,
+        FuzzyBlackList
+    }
+
     //private int _fastModePickCount = 0;
 
     public void OnCapture(CaptureContent content)
@@ -513,10 +524,28 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     private bool IsAllowedByPickLists(string rawText, bool isExcludeIcon, AutoPickConfig config, out string text)
     {
+        var decision = EvaluatePickLists(rawText, isExcludeIcon, config, _blackList, _fuzzyBlackList, _whiteList, out text);
+        if (ShouldBackOffControllerYForPickListDecision(decision))
+        {
+            BackOffControllerY(GetControllerYBackoffReason(decision));
+        }
+
+        return decision == PickListDecision.Allow;
+    }
+
+    internal static PickListDecision EvaluatePickLists(
+        string rawText,
+        bool isExcludeIcon,
+        AutoPickConfig config,
+        IReadOnlySet<string> blackList,
+        IReadOnlyCollection<string> fuzzyBlackList,
+        IReadOnlySet<string> whiteList,
+        out string text)
+    {
         text = string.Empty;
         if (string.IsNullOrEmpty(rawText))
         {
-            return false;
+            return PickListDecision.EmptyText;
         }
 
         // 处理OCR识别结果，清理无效字符并确保引号配对
@@ -524,44 +553,63 @@ public partial class AutoPickTrigger : ITaskTrigger
         var normalizedText = text;
         if (DoNotPick(normalizedText))
         {
-            return false;
+            return PickListDecision.DoNotPick;
         }
 
         // 单个字符不拾取
         if (normalizedText.Length <= 1)
         {
-            return false;
+            return PickListDecision.TooShort;
         }
 
-        if (config.WhiteListEnabled && _whiteList.Contains(normalizedText))
+        if (config.WhiteListEnabled && whiteList.Contains(normalizedText))
         {
-            return true;
+            return PickListDecision.Allow;
         }
 
         if (isExcludeIcon)
         {
             // 物品图标是聊天气泡或设置图标，一般是NPC对话、解谜、活动、电梯等。
-            BackOffControllerY("NPC/设置交互图标");
-            return false;
+            return PickListDecision.ExcludeIcon;
         }
 
         if (config.BlackListEnabled)
         {
-            if (_blackList.Contains(normalizedText))
+            if (blackList.Contains(normalizedText))
             {
-                return false;
+                return PickListDecision.BlackList;
             }
 
-            if (_fuzzyBlackList.Count > 0 && _fuzzyBlackList.Any(item => normalizedText.Contains(item)))
+            if (fuzzyBlackList.Count > 0 && fuzzyBlackList.Any(item => normalizedText.Contains(item)))
             {
-                return false;
+                return PickListDecision.FuzzyBlackList;
             }
         }
 
-        return true;
+        return PickListDecision.Allow;
     }
 
-    private bool DoNotPick(string text)
+    internal static bool ShouldBackOffControllerYForPickListDecision(PickListDecision decision)
+    {
+        return decision is PickListDecision.DoNotPick
+            or PickListDecision.ExcludeIcon
+            or PickListDecision.BlackList
+            or PickListDecision.FuzzyBlackList;
+    }
+
+    private static string GetControllerYBackoffReason(PickListDecision decision)
+    {
+        return decision switch
+        {
+            PickListDecision.DoNotPick => "内置黑名单",
+            PickListDecision.ExcludeIcon => "NPC/设置交互图标",
+            PickListDecision.BlackList => "黑名单",
+            PickListDecision.FuzzyBlackList => "模糊黑名单",
+            _ => "不可拾取项"
+        };
+    }
+
+    private static bool DoNotPick(string text)
     {
         // 唯一一个动态拾取项，特殊处理，不拾取
         if (text.Contains("长时间"))

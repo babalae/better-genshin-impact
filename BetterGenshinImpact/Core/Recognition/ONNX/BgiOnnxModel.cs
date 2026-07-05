@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
@@ -42,7 +44,7 @@ public class BgiOnnxModel
     /// <summary>
     /// 用于捡东西等的大世界模型
     /// </summary>
-    public static readonly BgiOnnxModel BgiWorld = Register("BgiTree", @"Assets\Model\World\bgi_world.onnx");
+    public static readonly BgiOnnxModel BgiWorld = Register("BgiWorld", @"Assets\Model\World\bgi_world.onnx");
 
     /// <summary>
     /// 矿物识别模型
@@ -158,6 +160,11 @@ public class BgiOnnxModel
 
     private static BgiOnnxModel Register(string name, string modelRelativePath, string cacheRelativePath)
     {
+        if (RegisteredModels.Any(model => model.Name == name))
+        {
+            throw new InvalidOperationException($"ONNX model name is already registered: {name}");
+        }
+
         var model = new BgiOnnxModel(name, modelRelativePath, cacheRelativePath);
         var cachePath = model.CachePath;
         if (!Directory.Exists(cachePath))

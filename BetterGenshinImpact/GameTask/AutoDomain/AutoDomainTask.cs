@@ -147,8 +147,10 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     var msg = e.Message;
                     if (IsDomainReviveRetry(e))
                     {
-                        await ExitDomainForRetry();
-                        msg = "存在角色死亡，退出秘境后重试...";
+                        var recovered = await TryRecoverAfterDomainReviveRetry(_ct, TryExitDomainForRetry, Avatar.RecoverAtStatueOfTheSeven);
+                        msg = recovered
+                            ? "存在角色死亡，退出秘境并前往七天神像复苏后重试..."
+                            : "存在角色死亡，退出秘境失败，跳过七天神像复苏并重试...";
                     }
                     else if (msg.Contains("复活") || msg.Contains("复苏"))
                     {
@@ -1414,27 +1416,58 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         }
     }
 
-    private async Task ExitDomain()
+    private async Task<bool> ExitDomain()
     {
         Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         await Delay(500, _ct);
         Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         await Delay(800, _ct);
-        Bv.ClickBlackConfirmButton(CaptureToRectArea());
+        using var ra = CaptureToRectArea();
+        return Bv.ClickBlackConfirmButton(ra);
     }
 
-    private static bool IsDomainReviveRetry(RetryException e)
+    internal static bool IsDomainReviveRetry(RetryException e)
     {
         return e.Message.Contains("秘境内复苏界面");
     }
 
-    private async Task ExitDomainForRetry()
+    internal static bool HasExitedDomainReviveState(bool isInDomainIncludingRevivePrompt)
+    {
+        return !isInDomainIncludingRevivePrompt;
+    }
+
+    internal static async Task<bool> TryRecoverAfterDomainReviveRetry(
+        CancellationToken ct,
+        Func<Task<bool>> tryExitDomainForRetryAsync,
+        Func<CancellationToken, Task> recoverAtStatueAsync)
+    {
+        ArgumentNullException.ThrowIfNull(tryExitDomainForRetryAsync);
+        ArgumentNullException.ThrowIfNull(recoverAtStatueAsync);
+
+        if (!await tryExitDomainForRetryAsync())
+        {
+            return false;
+        }
+
+        await recoverAtStatueAsync(ct);
+        return true;
+    }
+
+    private async Task<bool> TryExitDomainForRetry()
     {
         try
         {
             Logger.LogWarning("自动秘境：角色在秘境内被击败，先退出秘境再重试");
             await ExitDomain();
             await Delay(2000, _ct);
+            using var ra = CaptureToRectArea();
+            var exited = HasExitedDomainReviveState(Bv.IsInDomainIncludingRevivePrompt(ra));
+            if (!exited)
+            {
+                Logger.LogWarning("自动秘境：未能确认退出秘境，跳过七天神像复苏并继续按重试流程处理");
+            }
+
+            return exited;
         }
         catch (OperationCanceledException)
         {
@@ -1443,6 +1476,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "自动秘境：秘境内复苏后退出秘境失败，将继续按重试流程处理");
+            return false;
         }
     }
 
