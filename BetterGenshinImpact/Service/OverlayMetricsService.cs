@@ -241,7 +241,11 @@ public sealed class OverlayMetricsService : IDisposable
                     }
                     else if (IsGpu(hardware.HardwareType))
                     {
-                        gpuUsage = TryGetLoad(hardware, "GPU Core") ?? TryGetFirstSensorValue(hardware, SensorType.Load) ?? gpuUsage;
+                        var curGpuUsage = TryGetLoad(hardware, "GPU Core") ?? TryGetFirstSensorValue(hardware, SensorType.Load);
+                        if (curGpuUsage.HasValue)
+                        {
+                            gpuUsage = gpuUsage.HasValue ? Math.Max(gpuUsage.Value, curGpuUsage.Value) : curGpuUsage.Value;
+                        }
                     }
                     else if (hardware.HardwareType == HardwareType.Memory)
                     {
