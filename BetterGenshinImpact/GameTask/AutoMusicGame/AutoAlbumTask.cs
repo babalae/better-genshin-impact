@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -174,9 +174,12 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                     // 等待两个任务都真正结束，避免后台轮询或按键任务拖到下一首。
                     await Task.WhenAll(checkTask, musicTask);
                 }
-                catch (OperationCanceledException) when (cts.IsCancellationRequested && !ct.IsCancellationRequested)
+                catch (Exception ex) when (
+                    (ex is OperationCanceledException || ex is NormalEndException)
+                    && cts.IsCancellationRequested
+                    && !ct.IsCancellationRequested)
                 {
-                    // 忽略主动停止另一侧任务时产生的取消异常
+                    // 忽略主动停止另一侧任务时产生的取消或正常结束异常
                 }
 
                 Logger.LogInformation("第{Num}首{Difficulty}难度乐曲演奏完成", i + 1, difficultyName);

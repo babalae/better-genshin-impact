@@ -92,10 +92,14 @@ public static class RecognitionAssets
             throw new FileNotFoundException($"未找到{taskName}中的{assetName}文件");
         }
 
-        var mat = Mat.FromStream(File.OpenRead(filePath), flags);
+        using var stream = File.OpenRead(filePath);
+        var mat = Mat.FromStream(stream, flags);
         if (captureWidth < 1920)
         {
-            mat = ResizeHelper.Resize(mat, captureWidth / 1920d);
+            using (mat)
+            {
+                return ResizeHelper.Resize(mat, captureWidth / 1920d);
+            }
         }
 
         return mat;

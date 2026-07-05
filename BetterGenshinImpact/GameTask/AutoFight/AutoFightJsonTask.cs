@@ -701,7 +701,7 @@ public class AutoFightJsonTask : ISoloTask
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
-                        ElementAssets.Instance.PartyBtnChooseView,
+                        ElementRecognition.Get("PartyBtnChooseView"),
                         () => { },
                         _ct,
                         15,
@@ -723,7 +723,7 @@ public class AutoFightJsonTask : ISoloTask
                 while (timeWaitStart < 6000)
                 {
                     using var ra = CaptureToRectArea();
-                    var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+                    var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView"));
                     if (partyViewBtn.IsExist())
                     {
                         var rawPartyName = ra.Find(new RecognitionObject

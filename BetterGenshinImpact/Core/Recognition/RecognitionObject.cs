@@ -113,14 +113,7 @@ public class RecognitionObject
     /// 二值化阈值，默认 128
     /// </summary>
     public int BinaryThreshold { get; set; } = 128;
-
-
-    public static RecognitionObject BuildRecognitionObject(string relativePath)
-    {
-        // 从路径中加载图片和文件
-        return null;
-    }
-
+    
     public RecognitionObject InitTemplate()
     {
         if (TemplateImageMat != null && TemplateImageGreyMat == null)

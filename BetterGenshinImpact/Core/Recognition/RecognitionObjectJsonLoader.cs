@@ -49,10 +49,10 @@ public static class RecognitionObjectJsonLoader
         {
             Logger.LogError(ex,
                 "Recognition 加载失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}, file={FilePath}",
-                filePath,
                 objectName,
                 context.CaptureWidth,
-                context.CaptureHeight);
+                context.CaptureHeight,
+                filePath);
             throw;
         }
     }

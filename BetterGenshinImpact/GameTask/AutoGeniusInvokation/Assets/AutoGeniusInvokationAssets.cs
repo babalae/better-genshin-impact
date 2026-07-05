@@ -1,4 +1,4 @@
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Model;
 using OpenCvSharp;
@@ -24,11 +24,11 @@ public class AutoGeniusInvokationAssets : Singleton<AutoGeniusInvokationAssets>
     {
         systemInfo = TaskContext.Instance().SystemInfo;
 
-        CharacterDefeatedMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\瑙掕壊琚墦璐?png", ImreadModes.Grayscale);
+        CharacterDefeatedMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色被打败.png", ImreadModes.Grayscale);
 
-        CharacterStatusFreezeMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\瑙掕壊鐘舵€乢鍐荤粨.png", ImreadModes.Grayscale);
-        CharacterStatusDizzinessMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\瑙掕壊鐘舵€乢姘存场.png", ImreadModes.Grayscale);
-        CharacterEnergyOnMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\婊¤兘閲?png", ImreadModes.Grayscale);
+        CharacterStatusFreezeMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色状态_冻结.png", ImreadModes.Grayscale);
+        CharacterStatusDizzinessMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色状态_水泡.png", ImreadModes.Grayscale);
+        CharacterEnergyOnMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\满能量.png", ImreadModes.Grayscale);
 
         // 投掷期间的骰子
         RollPhaseDiceMats = new Dictionary<string, Mat>()

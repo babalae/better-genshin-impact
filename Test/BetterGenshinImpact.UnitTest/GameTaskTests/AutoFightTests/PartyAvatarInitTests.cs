@@ -30,12 +30,6 @@ public class PartyAvatarInitTests
         {
         }
     }
-    internal class ElementAssets : GameTask.Common.Element.Assets.ElementAssets
-    {
-        internal ElementAssets(ISystemInfo systemInfo) : base(systemInfo)
-        {
-        }
-    }
 
     /// <summary>
     /// 测试普通的多人游戏下的角色头像识别
@@ -68,7 +62,7 @@ public class PartyAvatarInitTests
         FakeLogger logger = new FakeLogger();
 
         //
-        var combatScenes = new CombatScenes(Predictor, new AutoFightAssets(systemInfo), logger, new ElementAssets(systemInfo), systemInfo).InitializeTeam(imageRegion, autoFightConfig);
+        var combatScenes = new CombatScenes(Predictor, new AutoFightAssets(systemInfo), logger, systemInfo).InitializeTeam(imageRegion, autoFightConfig);
 
         //
         Assert.True(combatScenes.CheckTeamInitialized());
