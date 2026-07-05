@@ -1781,6 +1781,18 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleFollowingCurrent()
+    {
+        IsFollowingCurrent = !IsFollowingCurrent;
+    }
+
+    [RelayCommand]
+    private void ToggleTeleportPoints()
+    {
+        ShowTeleportPoints = !ShowTeleportPoints;
+    }
+
+    [RelayCommand]
     private void SwitchToNextMapLayer()
     {
         if (MapLayerOptions.Count == 0)
