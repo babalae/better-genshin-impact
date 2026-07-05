@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.StateMachine;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
@@ -66,7 +67,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
     private SwitchCharacterState _workflowState;
-    private bool _result;
     private AvatarGridIconRecognizer? _recognizer;
     private List<TargetRole> _targetRoles = [];
     private List<TeamSlotSnapshot> _initialSlots = [];
@@ -194,22 +194,23 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <summary>
     /// 按槽位切换当前队伍角色。
     /// </summary>
-    /// <param name="slot1">1 号槽位角色名；为空、空白或 null 时跳过。</param>
-    /// <param name="slot2">2 号槽位角色名；为空、空白或 null 时跳过。</param>
-    /// <param name="slot3">3 号槽位角色名；为空、空白或 null 时跳过。</param>
-    /// <param name="slot4">4 号槽位角色名；为空、空白或 null 时跳过。</param>
+    /// <param name="slot1">1 号槽位角色名。</param>
+    /// <param name="slot2">2 号槽位角色名。</param>
+    /// <param name="slot3">3 号槽位角色名。</param>
+    /// <param name="slot4">4 号槽位角色名。</param>
     /// <param name="ct">取消令牌。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
-    public async Task<bool> Start(string? slot1, string? slot2, string? slot3, string? slot4, CancellationToken ct)
+    /// <remarks>slot1-slot4 均需传入字符串；空字符串或空白字符串表示跳过对应槽位。</remarks>
+    public async Task<bool> Start(string slot1, string slot2, string slot3, string slot4, CancellationToken ct)
     {
         Initialize(ct, SwitchCharacterState.Unknown);
         var page = new BvPage(ct);
+        string[] slots = [slot1, slot2, slot3, slot4];
 
-        var roles = ParseRoles([slot1, slot2, slot3, slot4]);
+        var roles = ParseRoles(slots);
         if (roles.Count == 0 || HasConflictingRoleTargets(roles))
         {
-            _logger.LogError("切换角色：未指定角色或同一实际角色被指定到多个槽位");
-            return false;
+            throw new PartySetupFailedException("切换角色：未指定角色或同一实际角色被指定到多个槽位");
         }
 
         ResetWorkflow(roles);
@@ -219,18 +220,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         try
         {
             await RunStateMachineUntil(page, SwitchCharacterState.Completed);
-            return _result;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "切换角色：状态机流程失败");
-            // 调试状态机问题时保留当前界面，避免失败后自动返回主界面。
-            // await TryReturnMainUi(ct);
-            return false;
+            return true;
         }
         finally
         {
@@ -245,7 +235,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private void ResetWorkflow(IReadOnlyList<TargetRole> roles)
     {
         _workflowState = SwitchCharacterState.BuildSwitchPlan;
-        _result = false;
         _targetRoles = roles.ToList();
         _initialSlots = [];
         _slotsToClear = [];
@@ -315,18 +304,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return StateHandlerResult.Success;
         }
 
-        if (exception == null)
-        {
-            _logger.LogError("{Message}", message);
-        }
-        else
-        {
-            _logger.LogError(exception, "{Message}", message);
-        }
-
-        _result = false;
-        _workflowState = SwitchCharacterState.ReturnMainUi;
-        return StateHandlerResult.Success;
+        throw new PartySetupFailedException(exception == null ? message : $"{message}，{exception.Message}");
     }
 
     #region 状态检测器
@@ -773,16 +751,12 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         var plan = BuildSelectionPlan(_targetRoles, _initialSlots);
         if (!plan.Success)
         {
-            _logger.LogError("切换角色：{Reason}", plan.FailureReason);
-            _result = false;
-            _workflowState = SwitchCharacterState.ReturnMainUi;
-            return StateHandlerResult.Success;
+            throw new PartySetupFailedException($"切换角色：{plan.FailureReason}");
         }
 
         if (plan.SelectionPlan.Count == 0)
         {
             _logger.LogInformation("切换角色：目标角色已在指定槽位");
-            _result = true;
             _clearCombatScenesAfterReturn = false;
             _workflowState = SwitchCharacterState.ReturnMainUi;
             return StateHandlerResult.Success;
@@ -971,9 +945,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         if (_currentRole == null)
         {
-            _result = false;
-            _workflowState = SwitchCharacterState.ReturnMainUi;
-            return StateHandlerResult.Success;
+            throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
         _currentAvatarFound = await FindAndClickAvatar(_currentRole, Recognizer, _ct);
@@ -999,9 +971,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
         if (_currentRole == null)
         {
-            _result = false;
-            _workflowState = SwitchCharacterState.ReturnMainUi;
-            return Task.FromResult(StateHandlerResult.Success);
+            throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
         if (_currentAvatarFound)
@@ -1018,10 +988,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return Task.FromResult(StateHandlerResult.Success);
         }
 
-        _logger.LogError("切换角色：未找到目标角色 {Name}", _currentRole.Name);
-        _result = false;
-        _workflowState = SwitchCharacterState.ReturnMainUi;
-        return Task.FromResult(StateHandlerResult.Success);
+        throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
     }
 
     /// <summary>
@@ -1034,9 +1001,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         if (_currentRole == null)
         {
-            _result = false;
-            _workflowState = SwitchCharacterState.ReturnMainUi;
-            return StateHandlerResult.Success;
+            throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
         if (await WaitForRoleInSlot(_currentRole, Recognizer, _ct))
@@ -1061,10 +1026,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return StateHandlerResult.Success;
         }
 
-        _logger.LogError("切换角色：未能将目标角色 {Name} 放入槽位 {Slot}", _currentRole.Name, _currentRole.Slot);
-        _result = false;
-        _workflowState = SwitchCharacterState.ReturnMainUi;
-        return StateHandlerResult.Success;
+        throw new PartySetupFailedException($"切换角色：未能将目标角色 {_currentRole.Name} 放入槽位 {_currentRole.Slot}");
     }
 
     /// <summary>
@@ -1077,9 +1039,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         if (_currentRole == null)
         {
-            _result = false;
-            _workflowState = SwitchCharacterState.ReturnMainUi;
-            return StateHandlerResult.Success;
+            throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
         await ClearMisplacedRole(_currentRole, Recognizer, _ct);
@@ -1103,7 +1063,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return Task.FromResult(StateHandlerResult.Retry);
         }
 
-        _result = true;
         _clearCombatScenesAfterReturn = true;
         return Task.FromResult(StateHandlerResult.Success);
     }
@@ -1117,7 +1076,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private async Task<StateHandlerResult> HandleReturnMainUi(BvPage page)
     {
         await _returnMainUiTask.Start(_ct);
-        if (_result && _clearCombatScenesAfterReturn)
+        if (_clearCombatScenesAfterReturn)
         {
             RunnerContext.Instance.ClearCombatScenes();
         }
@@ -1129,16 +1088,16 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     #endregion
 
     /// <summary>
-    /// 解析四个槽位参数，跳过空槽位并转换角色名。
+    /// 解析四个槽位参数，跳过空字符串槽位并转换角色名。
     /// </summary>
     /// <param name="slots">1-4 号槽位角色名。</param>
     /// <returns>目标槽位角色列表。</returns>
-    private static List<TargetRole> ParseRoles(IReadOnlyList<string?> slots)
+    private static List<TargetRole> ParseRoles(IReadOnlyList<string> slots)
     {
         List<TargetRole> roles = [];
         for (int i = 0; i < slots.Count; i++)
         {
-            var name = slots[i]?.Trim();
+            var name = slots[i].Trim();
             if (string.IsNullOrEmpty(name))
             {
                 continue;
@@ -1608,22 +1567,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             {
                 region.Dispose();
             }
-        }
-    }
-
-    /// <summary>
-    /// 尝试返回主界面，失败时仅记录日志。
-    /// </summary>
-    /// <param name="ct">取消令牌。</param>
-    private async Task TryReturnMainUi(CancellationToken ct)
-    {
-        try
-        {
-            await _returnMainUiTask.Start(ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogDebug(ex, "切换角色：返回主界面失败");
         }
     }
 

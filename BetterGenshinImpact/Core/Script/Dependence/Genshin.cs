@@ -16,12 +16,14 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
 {
     private RECT captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    private readonly ILogger<Genshin> _logger = App.GetLogger<Genshin>();
 
     /// <summary>
     /// 游戏宽度
@@ -302,19 +304,20 @@ public class Genshin
     /// <param name="slot4">4 号位角色名。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
     /// <remarks>
-    /// 参数为 null 或空字符串表示跳过对应槽位。
-    /// 调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", null, "钟离");</c>
+    /// 每个槽位都必须传入字符串，空字符串表示跳过对应槽位。
+    /// 调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", "", "钟离");</c>
     /// 该方法表示重组队伍槽位角色，不是按数字键切换当前出战角色。
     /// </remarks>
-    public async Task<bool> SwitchCharacter(string? slot1 = null, string? slot2 = null, string? slot3 = null, string? slot4 = null)
+    public async Task<bool> SwitchCharacter(string slot1, string slot2, string slot3, string slot4)
     {
         try
         {
             return await new SwitchCharacterStateMachineTask().Start(slot1, slot2, slot3, slot4, CancellationContext.Instance.Cts.Token);
         }
-        catch (PartySetupFailedException)
+        catch (Exception ex)
         {
-            return false;//释放失败状态给调用方，否则失败后会退出任务。
+            _logger.LogError("{Message}", ex.Message);
+            return false;
         }
     }
 
