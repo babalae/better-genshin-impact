@@ -42,7 +42,6 @@ public enum SwitchCharacterState
     ClearFilter, //清除当前筛选条件
     VerifyRoleInSlot, //确认角色已进入目标槽位
     ClearMisplacedRole, //清理进入非目标槽位的角色
-    PrepareRefillRole, //准备原队角色补位
     SaveConfiguration, //保存当前队伍配置
     ReturnMainUi, //返回主界面
     Completed //任务已完成
@@ -72,15 +71,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private List<TargetRole> _targetRoles = [];
     private List<TeamSlotSnapshot> _initialSlots = [];
     private HashSet<int> _slotsToClear = [];
-    private Queue<TargetRole> _rolesToSelect = new();
-    private Queue<string> _refillCandidates = new();
-    private List<int> _sourceClearedSlots = [];
-    private Queue<int> _fillSlots = new();
+    private Queue<SelectionPlanItem> _selectionPlan = new();
     private TargetRole? _currentRole;
     private bool _currentRoleIsRefill;
     private int _currentRoleAttempt;
     private bool _currentAvatarFound;
-    private bool _fillSlotsInitialized;
     private bool _clearCombatScenesAfterReturn;
     private string? _pendingFilterElementType;
     private string? _pendingFilterWeaponType;
@@ -116,6 +111,14 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
     private sealed record TeamSlotSnapshot(int Slot, string? Name, bool IsSelected, Rect? CardRect);
 
+    private sealed record SelectionPlanItem(TargetRole Role, bool IsRefill);
+
+    private sealed record SwitchPlanBuildResult(
+        bool Success,
+        HashSet<int> SlotsToClear,
+        List<SelectionPlanItem> SelectionPlan,
+        string? FailureReason);
+
     private AvatarGridIconRecognizer Recognizer =>
         _recognizer ?? throw new InvalidOperationException("切换角色：头像识别器未初始化");
 
@@ -138,23 +141,22 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             (SwitchCharacterState.QuickTeamList, [
                 SwitchCharacterState.BuildSwitchPlan,
                 SwitchCharacterState.FindAndClickAvatar,
-                SwitchCharacterState.PrepareRefillRole,
                 SwitchCharacterState.SaveConfiguration,
                 SwitchCharacterState.ReturnMainUi
             ]),
             (SwitchCharacterState.BuildSwitchPlan, [SwitchCharacterState.ClearSelectedRoles, SwitchCharacterState.ReturnMainUi]),
             (SwitchCharacterState.ClearSelectedRoles, [SwitchCharacterState.PrepareNextRole]),
-            (SwitchCharacterState.PrepareNextRole, [SwitchCharacterState.OpenFilterPanel, SwitchCharacterState.PrepareRefillRole]),
+            (SwitchCharacterState.PrepareNextRole, [SwitchCharacterState.OpenFilterPanel, SwitchCharacterState.SaveConfiguration]),
             (SwitchCharacterState.OpenFilterPanel, [
                 SwitchCharacterState.ReturnMainUi,
                 SwitchCharacterState.FilterPanel,
-                SwitchCharacterState.PrepareRefillRole
+                SwitchCharacterState.PrepareNextRole
             ]),
             (SwitchCharacterState.FilterPanel, [
                 SwitchCharacterState.ReturnMainUi,
                 SwitchCharacterState.SelectElementFilter,
                 SwitchCharacterState.SelectWeaponFilter,
-                SwitchCharacterState.PrepareRefillRole
+                SwitchCharacterState.PrepareNextRole
             ]),
             (SwitchCharacterState.SelectElementFilter, [
                 SwitchCharacterState.ReturnMainUi,
@@ -171,21 +173,19 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             (SwitchCharacterState.FindAndClickAvatar, [SwitchCharacterState.ClearFilter]),
             (SwitchCharacterState.ClearFilter, [
                 SwitchCharacterState.VerifyRoleInSlot,
-                SwitchCharacterState.PrepareRefillRole,
+                SwitchCharacterState.PrepareNextRole,
                 SwitchCharacterState.ReturnMainUi
             ]),
             (SwitchCharacterState.VerifyRoleInSlot, [
                 SwitchCharacterState.PrepareNextRole,
                 SwitchCharacterState.ClearMisplacedRole,
-                SwitchCharacterState.PrepareRefillRole,
                 SwitchCharacterState.ReturnMainUi
             ]),
             (SwitchCharacterState.ClearMisplacedRole, [
                 SwitchCharacterState.OpenFilterPanel,
-                SwitchCharacterState.PrepareRefillRole,
+                SwitchCharacterState.PrepareNextRole,
                 SwitchCharacterState.ReturnMainUi
             ]),
-            (SwitchCharacterState.PrepareRefillRole, [SwitchCharacterState.OpenFilterPanel, SwitchCharacterState.SaveConfiguration]),
             (SwitchCharacterState.SaveConfiguration, [SwitchCharacterState.ReturnMainUi]),
             (SwitchCharacterState.ReturnMainUi, [SwitchCharacterState.Completed])
         );
@@ -249,15 +249,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         _targetRoles = roles.ToList();
         _initialSlots = [];
         _slotsToClear = [];
-        _rolesToSelect = new Queue<TargetRole>();
-        _refillCandidates = new Queue<string>();
-        _sourceClearedSlots = [];
-        _fillSlots = new Queue<int>();
+        _selectionPlan = new Queue<SelectionPlanItem>();
         _currentRole = null;
         _currentRoleIsRefill = false;
         _currentRoleAttempt = 0;
         _currentAvatarFound = false;
-        _fillSlotsInitialized = false;
         _clearCombatScenesAfterReturn = false;
         _pendingFilterElementType = null;
         _pendingFilterWeaponType = null;
@@ -315,7 +311,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             }
 
             _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareRefillRole;
+            _workflowState = SwitchCharacterState.PrepareNextRole;
             return StateHandlerResult.Success;
         }
 
@@ -423,18 +419,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private bool DetectClearMisplacedRole(ImageRegion capture)
     {
         return IsWorkflowQuickTeamState(capture, SwitchCharacterState.ClearMisplacedRole)
-               && !IsFilterApplied(capture);
-    }
-
-    /// <summary>
-    /// 检测补位准备状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待准备补位时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.PrepareRefillRole, Order = 19)]
-    private bool DetectPrepareRefillRole(ImageRegion capture)
-    {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.PrepareRefillRole)
                && !IsFilterApplied(capture);
     }
 
@@ -771,7 +755,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         {
             SwitchCharacterState.BuildSwitchPlan
                 or SwitchCharacterState.FindAndClickAvatar
-                or SwitchCharacterState.PrepareRefillRole
                 or SwitchCharacterState.SaveConfiguration
                 or SwitchCharacterState.ReturnMainUi => Task.FromResult(StateHandlerResult.Success),
             _ => Task.FromResult(StateHandlerResult.Fail)
@@ -787,8 +770,16 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private async Task<StateHandlerResult> HandleBuildSwitchPlan(BvPage page)
     {
         _initialSlots = await RecognizeTeamSlots(Recognizer, _ct);
-        var rolesToSelect = GetRolesToSelect(_targetRoles, _initialSlots);
-        if (rolesToSelect.Count == 0)
+        var plan = BuildSelectionPlan(_targetRoles, _initialSlots);
+        if (!plan.Success)
+        {
+            _logger.LogError("切换角色：{Reason}", plan.FailureReason);
+            _result = false;
+            _workflowState = SwitchCharacterState.ReturnMainUi;
+            return StateHandlerResult.Success;
+        }
+
+        if (plan.SelectionPlan.Count == 0)
         {
             _logger.LogInformation("切换角色：目标角色已在指定槽位");
             _result = true;
@@ -797,20 +788,12 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return StateHandlerResult.Success;
         }
 
-        _slotsToClear = GetSlotsToClear(rolesToSelect, _initialSlots);
-        _refillCandidates = GetRefillCandidates(_initialSlots, _slotsToClear, _targetRoles);
-        _sourceClearedSlots = _slotsToClear
-            .Except(rolesToSelect.Select(role => role.Slot))
-            .OrderBy(slot => slot)
-            .ToList();
-        _rolesToSelect = new Queue<TargetRole>(rolesToSelect);
-        _fillSlots = new Queue<int>();
-        _fillSlotsInitialized = false;
+        _slotsToClear = plan.SlotsToClear;
+        _selectionPlan = new Queue<SelectionPlanItem>(plan.SelectionPlan);
 
-        _logger.LogInformation("切换角色：需要取消槽位 {SlotsToClear}，目标角色数 {TargetCount}，补位候选数 {RefillCount}",
+        _logger.LogInformation("切换角色：需要取消槽位 {SlotsToClear}，选择计划 {Plan}",
             string.Join(",", _slotsToClear.OrderBy(slot => slot)),
-            _rolesToSelect.Count,
-            _refillCandidates.Count);
+            string.Join(",", plan.SelectionPlan.Select(item => $"{item.Role.Slot}.{item.Role.Name}{(item.IsRefill ? "(补位)" : string.Empty)}")));
 
         _workflowState = SwitchCharacterState.ClearSelectedRoles;
         return StateHandlerResult.Success;
@@ -833,18 +816,19 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 准备下一个目标角色。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>存在目标角色时进入筛选流程；目标角色耗尽时进入补位流程。</returns>
+    /// <returns>存在计划项时进入筛选流程；计划耗尽时进入保存流程。</returns>
     [StateHandler(SwitchCharacterState.PrepareNextRole, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private Task<StateHandlerResult> HandlePrepareNextRole(BvPage page)
     {
-        if (_rolesToSelect.Count == 0)
+        if (_selectionPlan.Count == 0)
         {
             _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareRefillRole;
+            _workflowState = SwitchCharacterState.SaveConfiguration;
             return Task.FromResult(StateHandlerResult.Success);
         }
 
-        SetCurrentRole(_rolesToSelect.Dequeue(), isRefill: false);
+        var item = _selectionPlan.Dequeue();
+        SetCurrentRole(item.Role, item.IsRefill);
         _workflowState = SwitchCharacterState.OpenFilterPanel;
         return Task.FromResult(StateHandlerResult.Success);
     }
@@ -883,7 +867,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 }
 
                 _currentRole = null;
-                _workflowState = SwitchCharacterState.PrepareRefillRole;
+                _workflowState = SwitchCharacterState.PrepareNextRole;
                 return Task.FromResult(StateHandlerResult.Success);
             }
 
@@ -1030,7 +1014,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         {
             _logger.LogWarning("切换角色：未找到补位角色 {Name}，保留空位", _currentRole.Name);
             _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareRefillRole;
+            _workflowState = SwitchCharacterState.PrepareNextRole;
             return Task.FromResult(StateHandlerResult.Success);
         }
 
@@ -1059,9 +1043,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         {
             _logger.LogInformation("切换角色：{Name} 已进入 {Slot} 号位", _currentRole.Name, _currentRole.Slot);
             _currentRole = null;
-            _workflowState = _currentRoleIsRefill
-                ? SwitchCharacterState.PrepareRefillRole
-                : SwitchCharacterState.PrepareNextRole;
+            _workflowState = SwitchCharacterState.PrepareNextRole;
             return StateHandlerResult.Success;
         }
 
@@ -1069,7 +1051,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         {
             _logger.LogWarning("切换角色：补位角色 {Name} 未进入槽位 {Slot}，保留空位", _currentRole.Name, _currentRole.Slot);
             _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareRefillRole;
+            _workflowState = SwitchCharacterState.PrepareNextRole;
             return StateHandlerResult.Success;
         }
 
@@ -1105,41 +1087,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         SetCurrentRoleFilter(_currentRole);
         _workflowState = SwitchCharacterState.OpenFilterPanel;
         return StateHandlerResult.Success;
-    }
-
-    /// <summary>
-    /// 准备本次被清出的原队角色补位。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>有补位任务时进入筛选流程；无补位任务时进入保存状态。</returns>
-    [StateHandler(SwitchCharacterState.PrepareRefillRole, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private Task<StateHandlerResult> HandlePrepareRefillRole(BvPage page)
-    {
-        if (!_fillSlotsInitialized)
-        {
-            _fillSlots = new Queue<int>(_sourceClearedSlots.OrderBy(slot => slot));
-            _fillSlotsInitialized = true;
-        }
-
-        while (_fillSlots.Count > 0)
-        {
-            if (_refillCandidates.Count == 0)
-            {
-                _logger.LogInformation("切换角色：补位候选已耗尽，剩余空槽保留为空");
-                _workflowState = SwitchCharacterState.SaveConfiguration;
-                return Task.FromResult(StateHandlerResult.Success);
-            }
-
-            var slot = _fillSlots.Dequeue();
-            var candidate = _refillCandidates.Dequeue();
-            _logger.LogInformation("切换角色：使用原队角色 {Name} 补位到槽位 {Slot}", candidate, slot);
-            SetCurrentRole(CreateTargetRole(slot, candidate), isRefill: true);
-            _workflowState = SwitchCharacterState.OpenFilterPanel;
-            return Task.FromResult(StateHandlerResult.Success);
-        }
-
-        _workflowState = SwitchCharacterState.SaveConfiguration;
-        return Task.FromResult(StateHandlerResult.Success);
     }
 
     /// <summary>
@@ -1353,6 +1300,68 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
 
         return candidates;
+    }
+
+    /// <summary>
+    /// 构建按槽位从小到大执行的角色选择计划。
+    /// </summary>
+    /// <param name="roles">目标槽位角色列表。</param>
+    /// <param name="initialSlots">当前已选角色快照。</param>
+    /// <returns>清空槽位和选择计划；前置空槽无法补齐时返回失败。</returns>
+    private static SwitchPlanBuildResult BuildSelectionPlan(
+        IReadOnlyCollection<TargetRole> roles,
+        IReadOnlyCollection<TeamSlotSnapshot> initialSlots)
+    {
+        var rolesToSelect = GetRolesToSelect(roles, initialSlots);
+        if (rolesToSelect.Count == 0)
+        {
+            return new SwitchPlanBuildResult(true, [], [], null);
+        }
+
+        HashSet<int> slotsToClear = GetSlotsToClear(rolesToSelect, initialSlots);
+        Queue<string> refillCandidates = GetRefillCandidates(initialSlots, slotsToClear, roles);
+        var targetBySlot = rolesToSelect.ToDictionary(role => role.Slot);
+        var slotOccupants = Enumerable.Range(1, 4)
+            .ToDictionary(
+                slot => slot,
+                slot => slotsToClear.Contains(slot)
+                    ? null
+                    : initialSlots.FirstOrDefault(snapshot => snapshot.Slot == slot)?.Name);
+
+        List<SelectionPlanItem> plan = [];
+        int maxTargetSlot = rolesToSelect.Max(role => role.Slot);
+        for (int slot = 1; slot <= maxTargetSlot; slot++)
+        {
+            if (targetBySlot.TryGetValue(slot, out var targetRole))
+            {
+                plan.Add(new SelectionPlanItem(targetRole, IsRefill: false));
+                slotOccupants[slot] = targetRole.Name;
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(slotOccupants[slot]))
+            {
+                continue;
+            }
+
+            bool hasLaterTarget = targetBySlot.Keys.Any(targetSlot => targetSlot > slot);
+            if (!hasLaterTarget)
+            {
+                continue;
+            }
+
+            if (!refillCandidates.TryDequeue(out var refillName))
+            {
+                string failureReason = $"目标槽位 {maxTargetSlot} 前存在无法补齐的空槽 {slot}，请同时指定前置槽位";
+                return new SwitchPlanBuildResult(false, slotsToClear, plan, failureReason);
+            }
+
+            var refillRole = CreateTargetRole(slot, refillName);
+            plan.Add(new SelectionPlanItem(refillRole, IsRefill: true));
+            slotOccupants[slot] = refillRole.Name;
+        }
+
+        return new SwitchPlanBuildResult(true, slotsToClear, plan, null);
     }
 
     /// <summary>
