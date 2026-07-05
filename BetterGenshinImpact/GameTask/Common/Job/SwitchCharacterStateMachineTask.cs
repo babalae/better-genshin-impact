@@ -201,30 +201,45 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <param name="ct">取消令牌。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
     /// <remarks>slot1-slot4 均需传入字符串；空字符串或空白字符串表示跳过对应槽位。</remarks>
-    public async Task<bool> Start(string slot1, string slot2, string slot3, string slot4, CancellationToken ct)
+    public async Task<bool> Start(string? slot1, string? slot2, string? slot3, string? slot4, CancellationToken ct)
     {
-        Initialize(ct, SwitchCharacterState.Unknown);
-        var page = new BvPage(ct);
-        string[] slots = [slot1, slot2, slot3, slot4];
-
-        var roles = ParseRoles(slots);
-        if (roles.Count == 0 || HasConflictingRoleTargets(roles))
-        {
-            throw new PartySetupFailedException("切换角色：未指定角色或同一实际角色被指定到多个槽位");
-        }
-
-        ResetWorkflow(roles);
-        using var recognizer = new AvatarGridIconRecognizer();
-        _recognizer = recognizer;
-
         try
         {
-            await RunStateMachineUntil(page, SwitchCharacterState.Completed);
-            return true;
+            Initialize(ct, SwitchCharacterState.Unknown);
+            var page = new BvPage(ct);
+            string?[] slots = [slot1, slot2, slot3, slot4];
+
+            var roles = ParseRoles(slots);
+            if (roles.Count == 0 || HasConflictingRoleTargets(roles))
+            {
+                throw new PartySetupFailedException("切换角色：未指定角色或同一实际角色被指定到多个槽位");
+            }
+
+            ResetWorkflow(roles);
+            using var recognizer = new AvatarGridIconRecognizer();
+            _recognizer = recognizer;
+
+            try
+            {
+                await RunStateMachineUntil(page, SwitchCharacterState.Completed);
+                return true;
+            }
+            finally
+            {
+                _recognizer = null;
+            }
         }
-        finally
+        catch (PartySetupFailedException)
         {
-            _recognizer = null;
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw WrapSwitchCharacterException(exception);
         }
     }
 
@@ -1092,12 +1107,12 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// </summary>
     /// <param name="slots">1-4 号槽位角色名。</param>
     /// <returns>目标槽位角色列表。</returns>
-    private static List<TargetRole> ParseRoles(IReadOnlyList<string> slots)
+    private static List<TargetRole> ParseRoles(IReadOnlyList<string?> slots)
     {
         List<TargetRole> roles = [];
         for (int i = 0; i < slots.Count; i++)
         {
-            var name = slots[i].Trim();
+            var name = NormalizeSlotName(slots[i]);
             if (string.IsNullOrEmpty(name))
             {
                 continue;
@@ -1107,6 +1122,16 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
 
         return roles;
+    }
+
+    internal static string NormalizeSlotName(string? value)
+    {
+        return value?.Trim() ?? string.Empty;
+    }
+
+    internal static PartySetupFailedException WrapSwitchCharacterException(Exception exception)
+    {
+        return new PartySetupFailedException($"切换角色：{exception.Message}", exception);
     }
 
     /// <summary>
