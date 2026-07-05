@@ -119,6 +119,14 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         List<SelectionPlanItem> SelectionPlan,
         string? FailureReason);
 
+    internal sealed record SwitchPlanDebugItem(int Slot, string Name, bool IsRefill);
+
+    internal sealed record SwitchPlanDebugResult(
+        bool Success,
+        int[] SlotsToClear,
+        SwitchPlanDebugItem[] SelectionPlan,
+        string? FailureReason);
+
     private AvatarGridIconRecognizer Recognizer =>
         _recognizer ?? throw new InvalidOperationException("切换角色：头像识别器未初始化");
 
@@ -203,6 +211,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <remarks>slot1-slot4 均需传入字符串；空字符串或空白字符串表示跳过对应槽位。</remarks>
     public async Task<bool> Start(string? slot1, string? slot2, string? slot3, string? slot4, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
         try
         {
             Initialize(ct, SwitchCharacterState.Unknown);
@@ -1134,6 +1144,40 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         return new PartySetupFailedException($"切换角色：{exception.Message}", exception);
     }
 
+    internal static SwitchPlanDebugResult BuildSelectionPlanForTesting(
+        IReadOnlyList<string?> targetSlots,
+        IReadOnlyList<string?> currentSlots)
+    {
+        var roles = ParseRoles(PadSlots(targetSlots));
+        var initialSlots = PadSlots(currentSlots)
+            .Select((name, index) =>
+            {
+                string normalizedName = NormalizeSlotName(name);
+                return new TeamSlotSnapshot(
+                    index + 1,
+                    string.IsNullOrEmpty(normalizedName) ? null : normalizedName,
+                    !string.IsNullOrEmpty(normalizedName),
+                    null);
+            })
+            .ToList();
+
+        var result = BuildSelectionPlan(roles, initialSlots);
+        return new SwitchPlanDebugResult(
+            result.Success,
+            result.SlotsToClear.OrderBy(slot => slot).ToArray(),
+            result.SelectionPlan
+                .Select(item => new SwitchPlanDebugItem(item.Role.Slot, item.Role.Name, item.IsRefill))
+                .ToArray(),
+            result.FailureReason);
+    }
+
+    private static string?[] PadSlots(IReadOnlyList<string?> slots)
+    {
+        return Enumerable.Range(0, 4)
+            .Select(index => index < slots.Count ? slots[index] : null)
+            .ToArray();
+    }
+
     /// <summary>
     /// 根据输入名称创建目标角色定义。
     /// </summary>
@@ -1256,15 +1300,15 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
-    /// 获取本次取消选择前被移出的原队角色，作为后续补位候选。
+    /// 获取从首个受影响槽位开始、需要在目标角色之间保留的原队角色。
     /// </summary>
-    /// <param name="initialSlots">取消选择前的已选角色快照。</param>
-    /// <param name="slotsToClear">本次需要取消选择的槽位。</param>
+    /// <param name="initialSlots">变更前的已选角色快照。</param>
+    /// <param name="firstAffectedSlot">首个受影响槽位。</param>
     /// <param name="roles">目标槽位角色列表。</param>
     /// <returns>补位候选队列。</returns>
-    private static Queue<string> GetRefillCandidates(
+    private static Queue<string> GetPreservedRoleCandidates(
         IReadOnlyCollection<TeamSlotSnapshot> initialSlots,
-        IReadOnlySet<int> slotsToClear,
+        int firstAffectedSlot,
         IReadOnlyCollection<TargetRole> roles)
     {
         var excludedNames = roles.SelectMany(role => role.ConflictNames).ToHashSet(StringComparer.Ordinal);
@@ -1272,7 +1316,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
         foreach (var slot in initialSlots.OrderBy(slot => slot.Slot))
         {
-            if (!slotsToClear.Contains(slot.Slot)
+            if (slot.Slot < firstAffectedSlot
                 || string.IsNullOrEmpty(slot.Name)
                 || excludedNames.Contains(slot.Name))
             {
@@ -1302,42 +1346,33 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return new SwitchPlanBuildResult(true, [], [], null);
         }
 
-        HashSet<int> slotsToClear = GetSlotsToClear(rolesToSelect, initialSlots);
-        Queue<string> refillCandidates = GetRefillCandidates(initialSlots, slotsToClear, roles);
-        var targetBySlot = rolesToSelect.ToDictionary(role => role.Slot);
-        var slotOccupants = Enumerable.Range(1, 4)
-            .ToDictionary(
-                slot => slot,
-                slot => slotsToClear.Contains(slot)
-                    ? null
-                    : initialSlots.FirstOrDefault(snapshot => snapshot.Slot == slot)?.Name);
+        HashSet<int> affectedSlots = GetSlotsToClear(rolesToSelect, initialSlots);
+        int firstAffectedSlot = affectedSlots.Min();
+        int fixedPrefixCount = initialSlots.Count(slot => slot.IsSelected && slot.Slot < firstAffectedSlot);
+        if (fixedPrefixCount < firstAffectedSlot - 1)
+        {
+            int emptySlot = fixedPrefixCount + 1;
+            string failureReason = $"目标槽位 {roles.Max(role => role.Slot)} 前存在无法补齐的空槽 {emptySlot}，请同时指定前置槽位";
+            return new SwitchPlanBuildResult(false, affectedSlots, [], failureReason);
+        }
+
+        HashSet<int> slotsToClear = Enumerable.Range(firstAffectedSlot, 5 - firstAffectedSlot).ToHashSet();
+        Queue<string> preservedCandidates = GetPreservedRoleCandidates(initialSlots, firstAffectedSlot, roles);
+        var targetBySlot = roles.ToDictionary(role => role.Slot);
 
         List<SelectionPlanItem> plan = [];
         int maxTargetSlot = rolesToSelect.Max(role => role.Slot);
-        int maxAffectedSlot = Math.Max(maxTargetSlot, slotsToClear.Max());
-        for (int slot = 1; slot <= maxAffectedSlot; slot++)
+        int currentSelectedCount = initialSlots.Count(slot => slot.IsSelected);
+        int desiredLength = Math.Min(4, Math.Max(currentSelectedCount, maxTargetSlot));
+        for (int slot = firstAffectedSlot; slot <= desiredLength; slot++)
         {
             if (targetBySlot.TryGetValue(slot, out var targetRole))
             {
                 plan.Add(new SelectionPlanItem(targetRole, IsRefill: false));
-                slotOccupants[slot] = targetRole.Name;
                 continue;
             }
 
-            if (!string.IsNullOrEmpty(slotOccupants[slot]))
-            {
-                continue;
-            }
-
-            bool shouldRefill = slotsToClear.Contains(slot)
-                                || targetBySlot.Keys.Any(targetSlot => targetSlot > slot)
-                                || slotsToClear.Any(slotToClear => slotToClear > slot);
-            if (!shouldRefill)
-            {
-                continue;
-            }
-
-            if (!refillCandidates.TryDequeue(out var refillName))
+            if (!preservedCandidates.TryDequeue(out var refillName))
             {
                 string failureReason = $"目标槽位 {maxTargetSlot} 前存在无法补齐的空槽 {slot}，请同时指定前置槽位";
                 return new SwitchPlanBuildResult(false, slotsToClear, plan, failureReason);
@@ -1345,7 +1380,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
             var refillRole = CreateTargetRole(slot, refillName);
             plan.Add(new SelectionPlanItem(refillRole, IsRefill: true));
-            slotOccupants[slot] = refillRole.Name;
         }
 
         return new SwitchPlanBuildResult(true, slotsToClear, plan, null);
