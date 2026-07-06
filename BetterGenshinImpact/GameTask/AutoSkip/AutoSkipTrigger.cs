@@ -944,7 +944,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return true;
         }
 
-        if (Bv.IsInMainUi(region))
+        if (Bv.IsInMainUi(region) || Bv.IsInBigMapUi(region))
         {
             return false;
         }
@@ -1033,7 +1033,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return; 
         }
         
-        if (Bv.IsInMainUi(content.CaptureRectArea))  
+        if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInBigMapUi(content.CaptureRectArea))  
         {  
             return;  
         }  
@@ -1065,15 +1065,16 @@ public partial class AutoSkipTrigger : ITaskTrigger
     {
         // 屏幕底部中间，实心三角的位置
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
-        using var croppedRegion = captureRegion.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
+        //不同场景的三角高度不同,几乎不能再小了
+        using var croppedRegion = captureRegion.DeriveCrop(945 * scale, 980 * scale, 30 * scale, 80 * scale);
 
         using var hsv = new Mat();
         Cv2.CvtColor(croppedRegion.SrcMat, hsv, ColorConversionCodes.BGR2HSV);
 
         using var yellowMask = new Mat();
         using var buleMask = new Mat();
-        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), yellowMask);
-        Cv2.InRange(hsv, new Scalar(87, 131, 142), new Scalar(124, 255, 255), buleMask);  //活动玩法介绍会有出现蓝色三角，但不一定在对话流程中出现，先加上
+        Cv2.InRange(hsv, new Scalar(0, 240, 229), new Scalar(25, 255, 255), yellowMask);
+        Cv2.InRange(hsv, new Scalar(90, 156, 145), new Scalar(99, 208, 253), buleMask);
 
         Cv2.FindContours(yellowMask, out var yellowContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
         Cv2.FindContours(buleMask, out var buleMaskContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
