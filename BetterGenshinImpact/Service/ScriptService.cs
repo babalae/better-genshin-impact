@@ -355,7 +355,7 @@ public partial class ScriptService : IScriptService
                             {
                                 throw;
                             }
-                            catch (TaskCanceledException e)
+                            catch (OperationCanceledException e)
                             {
                                 _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
                                 throw;

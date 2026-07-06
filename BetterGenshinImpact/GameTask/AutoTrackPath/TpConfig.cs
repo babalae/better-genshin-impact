@@ -3,7 +3,6 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
-using Range = OpenCvSharp.Range;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
@@ -11,6 +10,9 @@ public partial class TpConfig : ObservableValidator
 {
     [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关
+
+    [ObservableProperty]
+    private bool _mapDragUseRelativeMove = false; // 大地图拖动使用相对鼠标移动
 
     [ObservableProperty]
     [NotifyDataErrorInfo] 
@@ -52,11 +54,6 @@ public partial class TpConfig : ObservableValidator
     [NotifyDataErrorInfo] 
     [Range(1.0, 6.0)]
     private double _maxZoomLevel = 5.0; // 最大缩放等级
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo] 
-    [Range(1.0, 6.0)]
-    private double _minZoomLevel = 2.0; // 最小缩放等级
 
     [ObservableProperty]
     private double _reviveStatueOfTheSevenPointX = 2296.4; // 七天神像点位X坐标
@@ -109,13 +106,6 @@ public partial class TpConfig : ObservableValidator
     [property: JsonIgnore]
     private int _zoomEndY = 612; // y-coordinate for zoom end
 
-    /// <summary>
-    /// 缩放比例按钮的 x 坐标
-    /// </summary>
-    [ObservableProperty]
-    [property: JsonIgnore]
-    private int _zoomButtonX = 47; // x-coordinate for zoom button
-
     [ObservableProperty]
     [NotifyDataErrorInfo] 
     [Range(50, 500)]
@@ -126,19 +116,6 @@ public partial class TpConfig : ObservableValidator
     [Range(10, 500)]
     private int _maxIterations = 30; // 移动最大次数
 
-    [ObservableProperty]
-    [NotifyDataErrorInfo] 
-    [Range(100, 2000)]
-    private int _maxMouseMove = 300; // 单次移动最大距离
-
-    partial void OnMaxMouseMoveChanged(int value)
-    {
-        if (value is < 100 or > 2000)
-        {
-            MaxMouseMove = 300;
-        }
-    }
-    
     [ObservableProperty]
     private double _mapScaleFactor = 2.361;  // 游戏坐标和 mapZoomLevel=1 时的像素比例因子。
     
