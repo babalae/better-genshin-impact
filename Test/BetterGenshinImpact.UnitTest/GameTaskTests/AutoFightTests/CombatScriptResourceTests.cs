@@ -82,6 +82,16 @@ public class CombatScriptResourceTests
     }
 
     [Fact]
+    public void SeekCameraOffset_ShouldApplyVisibleVerticalOffsetEarly()
+    {
+        var firstOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 0);
+        var secondOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 1);
+
+        Assert.Equal(0, firstOffset.y);
+        Assert.True(Math.Abs(secondOffset.y) >= 180, "seek scan should change pitch before it completes a horizontal-only sweep");
+    }
+
+    [Fact]
     public void SeekCameraOffset_ShouldStartDifferentVerticalBandsAfterFailedRotations()
     {
         var startingBands = Enumerable.Range(0, AutoFightParam.MaxSeekRotationCount)

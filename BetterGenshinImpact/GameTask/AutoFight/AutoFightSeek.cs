@@ -223,7 +223,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
     {
         public static int RotationCount = 0;
 
-        private static readonly int[] VerticalSeekBands = { 0, 1, -1, 2, -2, 3, -3, 1, 0, -2, 2, -1 };
+        private static readonly int[] VerticalSeekBands = { 0, 2, -2, 3, -3, 4, -4, 1, -1, 3, -3, 0 };
         
         private static readonly Dictionary<int, int> RotaryFactorMapping = new Dictionary<int, int> //旋转因子映射表
         {
@@ -347,7 +347,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 }
 
                 var offset = GetSeekCameraOffset(image.Width, image.Height, RotationCount, retryCount);
-                Simulation.SendInput.Mouse.MoveMouseBy(offset.x, offset.y);
+                logger.LogDebug("寻敌调整视角: x={X}, y={Y}, rotation={RotationCount}, retry={RetryCount}",
+                    offset.x, offset.y, RotationCount, retryCount);
+                await MoveSeekCameraAsync(offset, ct);
 
                 await Task.Delay(50+(int)(adjustedX/adjustedDivisor),ct);
 
@@ -420,9 +422,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         internal static (int x, int y) GetSeekCameraOffset(int imageWidth, int imageHeight, int rotationCount, int retryCount)
         {
             var horizontalStep = Math.Max(80, imageWidth / 6);
-            var phase = Math.Max(0, rotationCount) * 3 + Math.Max(0, retryCount);
+            var phase = Math.Max(0, rotationCount) * 5 + Math.Max(0, retryCount);
             var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
-            var verticalStep = imageHeight * verticalBand / 10;
+            var verticalStep = Math.Clamp(imageHeight * verticalBand / 10, -420, 420);
 
             // Widen the horizontal sweep once per vertical cycle so abnormal view angles do not get stuck in a narrow arc.
             if (retryCount > 0 && retryCount % VerticalSeekBands.Length == 0)
@@ -431,6 +433,17 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             }
 
             return (horizontalStep, verticalStep);
+        }
+
+        private static async Task MoveSeekCameraAsync((int x, int y) offset, CancellationToken ct)
+        {
+            if (offset.y != 0)
+            {
+                Simulation.SendInput.Mouse.MoveMouseBy(0, offset.y);
+                await Task.Delay(35, ct);
+            }
+
+            Simulation.SendInput.Mouse.MoveMouseBy(offset.x, 0);
         }
 
         internal static bool ShouldResetCameraBeforeSeek(int rotationCount, int retryCount)
