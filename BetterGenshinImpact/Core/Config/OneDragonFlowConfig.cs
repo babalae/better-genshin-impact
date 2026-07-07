@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -219,6 +220,10 @@ public partial class OneDragonFlowConfig : ObservableObject
     // 完成后操作
     [ObservableProperty]
     private string _completionAction = string.Empty;
+
+    // 自动首领讨伐配置（每条一条龙配置独立保存）
+    [ObservableProperty]
+    private AutoBossConfig _autoBossConfig = new();
     
     // 通过当天（4点起始）是哪一天来返回配置
     public (string partyName, string domainName, string sundaySelectedValue) GetDomainConfig()

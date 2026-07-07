@@ -312,6 +312,13 @@ public partial class OneDragonFlowViewModel : ViewModel
             var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
             if (config != null)
             {
+                if (config.AutoBossConfig == null)
+                {
+                    config.AutoBossConfig = JsonConvert.DeserializeObject<GameTask.AutoBoss.AutoBossConfig>(
+                        JsonConvert.SerializeObject(TaskContext.Instance().Config.AutoBossConfig))
+                        ?? new GameTask.AutoBoss.AutoBossConfig();
+                }
+
                 configs.Add(config);
                 if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
                 {

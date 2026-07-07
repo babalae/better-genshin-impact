@@ -116,26 +116,27 @@ public partial class OneDragonTaskItem : ObservableObject
             case "自动首领讨伐":
                 Action = async () =>
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoBossConfig.StrategyName))
+                    var autoBossConfig = config.AutoBossConfig ??= new AutoBossConfig();
+                    if (string.IsNullOrEmpty(autoBossConfig.StrategyName))
                     {
-                        TaskContext.Instance().Config.AutoBossConfig.StrategyName = "根据队伍自动选择";
+                        autoBossConfig.StrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoBossConfig.StrategyName, out var path))
+                    if (taskSettingsPageViewModel!.GetFightStrategy(autoBossConfig.StrategyName, out var path))
                     {
                         TaskControl.Logger.LogError("自动首领讨伐战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
-                    if (string.IsNullOrWhiteSpace(TaskContext.Instance().Config.AutoBossConfig.BossName))
+                    if (string.IsNullOrWhiteSpace(autoBossConfig.BossName))
                     {
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要讨伐的首领，跳过", "未选择");
                         return;
                     }
 
                     AutoBossParam param = new AutoBossParam(path);
-                    param.SetAutoBossConfig(TaskContext.Instance().Config.AutoBossConfig);
+                    param.SetAutoBossConfig(autoBossConfig);
                     await new AutoBossTask(param).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
