@@ -90,19 +90,33 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     /// <summary>
     /// 使用当前全局 AutoBoss 配置创建参数，主要用于 JS 无参构造和一条龙默认启动。
     /// </summary>
-    public AutoBossParam() : base(null, null)
+    public AutoBossParam() : this(true)
     {
-        SetDefault();
     }
 
     /// <summary>
     /// 使用当前全局 AutoBoss 配置创建参数，并用传入路径覆盖实际战斗策略路径。
     /// </summary>
     /// <param name="combatStrategyPath">自动战斗策略文件或策略目录路径。</param>
-    public AutoBossParam(string combatStrategyPath) : base(null, null)
+    public AutoBossParam(string combatStrategyPath) : this(true)
     {
-        SetDefault();
         CombatStrategyPath = combatStrategyPath;
+    }
+
+    private AutoBossParam(bool loadDefaultConfig) : base(null, null)
+    {
+        if (loadDefaultConfig)
+        {
+            SetDefault();
+        }
+    }
+
+    internal static AutoBossParam CreateWithoutDefaultConfig(string combatStrategyPath)
+    {
+        return new AutoBossParam(false)
+        {
+            CombatStrategyPath = combatStrategyPath
+        };
     }
 
     /// <summary>
