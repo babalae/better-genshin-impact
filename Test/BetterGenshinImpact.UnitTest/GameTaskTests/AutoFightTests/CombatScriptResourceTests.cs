@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.Service;
@@ -64,6 +65,37 @@ public class CombatScriptResourceTests
             fightFinishDetectEnabled,
             TimeSpan.FromSeconds(elapsedSeconds),
             TimeSpan.FromSeconds(intervalSeconds)));
+    }
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, true)]
+    public void AutoBoss_ShouldRunInitialSeekOnlyWhenRotateAndFirstCheckAreEnabled(bool rotateFindEnemyEnabled, bool isFirstCheck, bool expected)
+    {
+        Assert.Equal(expected, AutoFightParam.ShouldRunInitialSeek(rotateFindEnemyEnabled, isFirstCheck));
+    }
+
+    [Fact]
+    public void ApplyBossFightSeek_ShouldForceSeekSwitchesAndPreserveRotaryFactor()
+    {
+        var taskParams = (AutoFightParam)RuntimeHelpers.GetUninitializedObject(typeof(AutoFightParam));
+        taskParams.FinishDetectConfig = new AutoFightParam.FightFinishDetectConfig
+        {
+            RotateFindEnemyEnabled = false
+        };
+        taskParams.FightFinishDetectEnabled = false;
+        taskParams.IsFirstCheck = false;
+        taskParams.RotaryFactor = 12;
+
+        var result = AutoBossTask.ApplyBossFightSeek(taskParams);
+
+        Assert.Same(taskParams, result);
+        Assert.True(result.FightFinishDetectEnabled);
+        Assert.True(result.FinishDetectConfig.RotateFindEnemyEnabled);
+        Assert.True(result.IsFirstCheck);
+        Assert.Equal(12, result.RotaryFactor);
     }
 
     [Fact]

@@ -353,6 +353,15 @@ public class AutoFightJsonTask : ISoloTask
                         break;
                     }
 
+                    if (AutoFightParam.ShouldRunInitialSeek(_finishDetectConfig.RotateFindEnemyEnabled, _taskParam.IsFirstCheck))
+                    {
+                        fightEndFlag = await SeekBeforeAction(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
+                        if (fightEndFlag)
+                        {
+                            break;
+                        }
+                    }
+
                     // 每次循环开始：截图一次，供所有条件求值复用
                     using var capture = CaptureToRectArea();
                     evaluator.SetCachedCapture(capture);
@@ -513,6 +522,24 @@ public class AutoFightJsonTask : ISoloTask
     }
 
     private bool _fightEndFlag;
+
+    private async Task<bool> SeekBeforeAction(int delayTime, int detectDelayTime)
+    {
+        bool? result = null;
+        try
+        {
+            result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct, true, _taskParam.RotaryFactor);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+            result = false;
+        }
+
+        AutoFightSeek.RotationCount = result == null ? AutoFightSeek.RotationCount + 1 : 0;
+
+        return result == true;
+    }
 
     /// <summary>执行单个 JSON 动作节点</summary>
     private async Task ExecuteAction(CombatScenes combatScenes, JsonAction action)

@@ -93,6 +93,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
                elapsedSinceLastCheck >= checkInterval;
     }
 
+    internal static bool ShouldRunInitialSeek(bool rotateFindEnemyEnabled, bool isFirstCheck)
+    {
+        return rotateFindEnemyEnabled && isFirstCheck;
+    }
+
     public bool KazuhaPickupEnabled = true;
     public string ActionSchedulerByCd = "";
     public string KazuhaPartyName;
