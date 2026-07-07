@@ -242,6 +242,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             
             int retryCount = isEndCheck? 1 : 0;
 
+            if (ShouldRecenterCameraBeforeSeek())
+            {
+                await ResetSeekCameraPitchAsync(logger, ct);
+            }
+
             while (retryCount < 25+(int)(adjustedX / 5))
             {
                 var image = CaptureToRectArea();
@@ -340,12 +345,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     }
                 }
 
-                if (ShouldResetCameraBeforeSeek(RotationCount, retryCount))
-                {
-                    Simulation.SendInput.Mouse.MiddleButtonClick();
-                    await Task.Delay(500, ct);
-                }
-
                 var offset = GetSeekCameraOffset(image.Width, image.Height, RotationCount, retryCount);
                 logger.LogDebug("寻敌调整视角: x={X}, y={Y}, rotation={RotationCount}, retry={RetryCount}",
                     offset.x, offset.y, RotationCount, retryCount);
@@ -422,9 +421,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         internal static (int x, int y) GetSeekCameraOffset(int imageWidth, int imageHeight, int rotationCount, int retryCount)
         {
             var horizontalStep = Math.Max(80, imageWidth / 6);
-            var phase = Math.Max(0, rotationCount) * 5 + Math.Max(0, retryCount);
-            var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
-            var verticalStep = Math.Clamp(imageHeight * verticalBand * 4 / 10, -1600, 1600);
+            var currentVerticalTarget = GetSeekCameraVerticalTargetOffset(imageHeight, rotationCount, retryCount);
+            var previousVerticalTarget = retryCount <= 0
+                ? 0
+                : GetSeekCameraVerticalTargetOffset(imageHeight, rotationCount, retryCount - 1);
+            var verticalStep = currentVerticalTarget - previousVerticalTarget;
 
             // Widen the horizontal sweep once per vertical cycle so abnormal view angles do not get stuck in a narrow arc.
             if (retryCount > 0 && retryCount % VerticalSeekBands.Length == 0)
@@ -433,6 +434,13 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             }
 
             return (horizontalStep, verticalStep);
+        }
+
+        internal static int GetSeekCameraVerticalTargetOffset(int imageHeight, int rotationCount, int retryCount)
+        {
+            var phase = Math.Max(0, rotationCount) * 5 + Math.Max(0, retryCount);
+            var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
+            return Math.Clamp(imageHeight * verticalBand * 4 / 10, -3200, 3200);
         }
 
         private static async Task MoveSeekCameraAsync((int x, int y) offset, CancellationToken ct)
@@ -444,6 +452,18 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             }
 
             Simulation.SendInput.Mouse.MoveMouseBy(offset.x, 0);
+        }
+
+        private static async Task ResetSeekCameraPitchAsync(ILogger logger, CancellationToken ct)
+        {
+            logger.LogDebug("寻敌重置视角俯仰");
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Task.Delay(500, ct);
+        }
+
+        internal static bool ShouldRecenterCameraBeforeSeek()
+        {
+            return true;
         }
 
         internal static bool ShouldResetCameraBeforeSeek(int rotationCount, int retryCount)

@@ -92,13 +92,42 @@ public class CombatScriptResourceTests
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldUseLargerVerticalClampForFarBands()
+    public void SeekCameraOffset_TargetOffsetShouldCoverCenterAndBothPitchDirections()
     {
-        var bandFourOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 5);
+        var targets = Enumerable.Range(0, 3)
+            .Select(retryCount => AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount))
+            .ToList();
 
-        Assert.True(Math.Abs(bandFourOffset.y) > 420, "band four seek should exceed the old vertical clamp");
-        Assert.True(Math.Abs(bandFourOffset.y) >= 1400, "band four seek should clearly approach the new vertical clamp");
-        Assert.True(Math.Abs(bandFourOffset.y) <= 1600, "band four seek should stay within the new vertical clamp");
+        Assert.Contains(0, targets);
+        Assert.Contains(targets, y => y > 0);
+        Assert.Contains(targets, y => y < 0);
+        Assert.Equal(720, targets[1]);
+        Assert.Equal(-720, targets[2]);
+    }
+
+    [Fact]
+    public void SeekCameraOffset_ShouldMoveDeltaBetweenAdjacentVerticalTargets()
+    {
+        var retryOneTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 1);
+        var retryTwoTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 2);
+        var retryTwoOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 2);
+
+        Assert.Equal(720, retryOneTarget);
+        Assert.Equal(-720, retryTwoTarget);
+        Assert.Equal(-1440, retryTwoOffset.y);
+        Assert.Equal(retryTwoTarget - retryOneTarget, retryTwoOffset.y);
+    }
+
+    [Fact]
+    public void SeekCameraOffset_TargetOffsetShouldUseLargerVerticalClampForFarBands()
+    {
+        var upperTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 5);
+        var lowerTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 6);
+
+        Assert.Equal(3200, upperTarget);
+        Assert.Equal(-3200, lowerTarget);
+        Assert.True(Math.Abs(upperTarget) <= 3200, "upper seek target should stay within the current vertical clamp");
+        Assert.True(Math.Abs(lowerTarget) <= 3200, "lower seek target should stay within the current vertical clamp");
     }
 
     [Fact]
@@ -122,6 +151,12 @@ public class CombatScriptResourceTests
     public void ShouldResetCameraBeforeSeek_ShouldRecoverAbnormalViewEveryThirdFailedRotation(int rotationCount, int retryCount, bool expected)
     {
         Assert.Equal(expected, AutoFightSeek.ShouldResetCameraBeforeSeek(rotationCount, retryCount));
+    }
+
+    [Fact]
+    public void Recenter_ShouldRunBeforeSeekScan()
+    {
+        Assert.True(AutoFightSeek.ShouldRecenterCameraBeforeSeek());
     }
 
     [Theory]
