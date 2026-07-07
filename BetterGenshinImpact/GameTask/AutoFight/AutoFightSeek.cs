@@ -424,7 +424,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             var horizontalStep = Math.Max(80, imageWidth / 6);
             var phase = Math.Max(0, rotationCount) * 5 + Math.Max(0, retryCount);
             var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
-            var verticalStep = Math.Clamp(imageHeight * verticalBand / 10, -420, 420);
+            var verticalStep = Math.Clamp(imageHeight * verticalBand * 4 / 10, -1600, 1600);
 
             // Widen the horizontal sweep once per vertical cycle so abnormal view angles do not get stuck in a narrow arc.
             if (retryCount > 0 && retryCount % VerticalSeekBands.Length == 0)

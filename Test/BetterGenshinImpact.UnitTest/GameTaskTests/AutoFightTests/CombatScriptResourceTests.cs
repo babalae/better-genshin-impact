@@ -76,8 +76,8 @@ public class CombatScriptResourceTests
         Assert.All(offsets, offset => Assert.True(offset.x > 0));
         Assert.Contains(offsets, offset => offset.y > 0);
         Assert.Contains(offsets, offset => offset.y < 0);
-        Assert.Contains(offsets, offset => offset.y >= 270);
-        Assert.Contains(offsets, offset => offset.y <= -270);
+        Assert.Contains(offsets, offset => offset.y >= 700);
+        Assert.Contains(offsets, offset => offset.y <= -700);
         Assert.True(offsets.Select(offset => offset.y).Distinct().Count() >= 5, "seek scan should not collapse to horizontal-only rotation");
     }
 
@@ -88,7 +88,17 @@ public class CombatScriptResourceTests
         var secondOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 1);
 
         Assert.Equal(0, firstOffset.y);
-        Assert.True(Math.Abs(secondOffset.y) >= 180, "seek scan should change pitch before it completes a horizontal-only sweep");
+        Assert.True(Math.Abs(secondOffset.y) >= 700, "seek scan should change pitch before it completes a horizontal-only sweep");
+    }
+
+    [Fact]
+    public void SeekCameraOffset_ShouldUseLargerVerticalClampForFarBands()
+    {
+        var bandFourOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 5);
+
+        Assert.True(Math.Abs(bandFourOffset.y) > 420, "band four seek should exceed the old vertical clamp");
+        Assert.True(Math.Abs(bandFourOffset.y) >= 1400, "band four seek should clearly approach the new vertical clamp");
+        Assert.True(Math.Abs(bandFourOffset.y) <= 1600, "band four seek should stay within the new vertical clamp");
     }
 
     [Fact]
