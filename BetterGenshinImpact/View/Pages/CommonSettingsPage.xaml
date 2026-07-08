@@ -887,19 +887,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="鼠标移动的时间间隔（毫秒）"
+                                  Text="传送操作速度间隔（毫秒）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【2-100】数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
+                                  Text="【2-100】数字越小传送操作越快，会影响拖图、滚轮缩放和传送过程中的短等待；如果出现卡顿或识别不稳定，请提高这个数值"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.StepIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                Text="{Binding Config.TpConfig.TeleportOperationDelayMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

@@ -52,6 +52,7 @@
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
+		<PackageReference Include="HungarianAlgorithm" Version="2.3.5" />
 		<PackageReference Include="LibGit2Sharp" Version="0.31.0" />
 		<PackageReference Include="LazyCache" Version="2.4.0" />
 		<PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />

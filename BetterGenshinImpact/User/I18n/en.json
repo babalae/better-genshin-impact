@@ -417,6 +417,8 @@
   "【200-600】小于这个距离会放大地图以提高移动的精度": "【200-600】Below this distance, the map will zoom in to improve movement precision",
   "鼠标移动的时间间隔（毫秒）": "Mouse move interval (ms)",
   "【2-100】数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值": "【2-100】Smaller means faster mouse movement. If map movement stutters, increase this value",
+  "传送操作速度间隔（毫秒）": "Teleport operation speed interval (ms)",
+  "【2-100】数字越小传送操作越快，会影响拖图、滚轮缩放和传送过程中的短等待；如果出现卡顿或识别不稳定，请提高这个数值": "【2-100】Smaller means faster teleport operations. Affects map dragging, mouse-wheel zooming, and short waits during teleporting. Increase this value if movement stutters or recognition becomes unstable",
   "七天神像国家": "Statue of The Seven nation",
   "选择七天神像所在国家": "Select the Statue of The Seven nation",
   "七天神像区域": "Statue of The Seven area",

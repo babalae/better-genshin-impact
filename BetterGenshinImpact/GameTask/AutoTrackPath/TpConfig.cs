@@ -8,6 +8,10 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
 public partial class TpConfig : ObservableValidator
 {
+    public const int MinTeleportOperationDelayMilliseconds = 2;
+    public const int MaxTeleportOperationDelayMilliseconds = 100;
+    public const int DefaultTeleportOperationDelayMilliseconds = 20;
+
     [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关
 
@@ -41,13 +45,33 @@ public partial class TpConfig : ObservableValidator
     
     [ObservableProperty]
     [NotifyDataErrorInfo] 
-    [Range(2, 100, ErrorMessage = "恰当的鼠标移动时间间隔:2-100")]
-    private int _stepIntervalMilliseconds = 20; // 鼠标移动时间间隔，单位：ms
-    partial void OnStepIntervalMillisecondsChanged(int value)
+    [Range(MinTeleportOperationDelayMilliseconds, MaxTeleportOperationDelayMilliseconds, ErrorMessage = "恰当的传送操作间隔:2-100")]
+    private int _teleportOperationDelayMilliseconds = DefaultTeleportOperationDelayMilliseconds; // 传送操作速度基准间隔，单位：ms
+    partial void OnTeleportOperationDelayMillisecondsChanged(int value)
     {
-        if (value is < 2 or > 100)
+        if (value is < MinTeleportOperationDelayMilliseconds or > MaxTeleportOperationDelayMilliseconds)
         {
-            StepIntervalMilliseconds = 20;
+            TeleportOperationDelayMilliseconds = DefaultTeleportOperationDelayMilliseconds;
+        }
+    }
+
+    /// <summary>
+    /// 旧配置迁移字段：原先只控制鼠标拖图步进间隔，现在迁移到统一的传送操作间隔。
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int StepIntervalMilliseconds
+    {
+        get => 0;
+        set
+        {
+            if (value == 0)
+            {
+                return;
+            }
+
+            TeleportOperationDelayMilliseconds = value is < MinTeleportOperationDelayMilliseconds or > MaxTeleportOperationDelayMilliseconds
+                ? DefaultTeleportOperationDelayMilliseconds
+                : value;
         }
     }
     [ObservableProperty]
