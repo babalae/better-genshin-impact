@@ -926,7 +926,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
 
-        var jsonParam = ApplyBossFightSeek(new AutoFightParam
+        var jsonParam = new AutoFightParam
         {
             CombatStrategyPath = _jsonCombatStrategyPath!,
             FightFinishDetectEnabled = true,
@@ -934,7 +934,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             KazuhaPickupEnabled = false,
             PickDropsAfterFightEnabled = false,
             Timeout = 600,
-        });
+        };
 
         var jsonTask = new AutoFightJsonTask(jsonParam);
 
@@ -969,14 +969,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite"
         };
 
-        return ApplyBossFightSeek(taskParam);
-    }
-
-    internal static AutoFightParam ApplyBossFightSeek(AutoFightParam taskParam)
-    {
-        taskParam.FightFinishDetectEnabled = true;
-        taskParam.FinishDetectConfig.RotateFindEnemyEnabled = true;
-        taskParam.IsFirstCheck = true;
         return taskParam;
     }
 

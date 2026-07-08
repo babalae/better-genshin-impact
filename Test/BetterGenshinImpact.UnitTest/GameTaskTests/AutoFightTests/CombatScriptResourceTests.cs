@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.Service;
@@ -79,37 +78,6 @@ public class CombatScriptResourceTests
             AutoFightParam.NormalizeFinishCheckInterval(TimeSpan.FromSeconds(intervalSeconds), rotateFindEnemyEnabled));
     }
 
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, true)]
-    public void AutoBoss_ShouldRunInitialSeekOnlyWhenRotateAndFirstCheckAreEnabled(bool rotateFindEnemyEnabled, bool isFirstCheck, bool expected)
-    {
-        Assert.Equal(expected, AutoFightParam.ShouldRunInitialSeek(rotateFindEnemyEnabled, isFirstCheck));
-    }
-
-    [Fact]
-    public void ApplyBossFightSeek_ShouldForceSeekSwitchesAndPreserveRotaryFactor()
-    {
-        var taskParams = (AutoFightParam)RuntimeHelpers.GetUninitializedObject(typeof(AutoFightParam));
-        taskParams.FinishDetectConfig = new AutoFightParam.FightFinishDetectConfig
-        {
-            RotateFindEnemyEnabled = false
-        };
-        taskParams.FightFinishDetectEnabled = false;
-        taskParams.IsFirstCheck = false;
-        taskParams.RotaryFactor = 12;
-
-        var result = AutoBossTask.ApplyBossFightSeek(taskParams);
-
-        Assert.Same(taskParams, result);
-        Assert.True(result.FightFinishDetectEnabled);
-        Assert.True(result.FinishDetectConfig.RotateFindEnemyEnabled);
-        Assert.True(result.IsFirstCheck);
-        Assert.Equal(12, result.RotaryFactor);
-    }
-
     [Fact]
     public void SeekCameraOffset_ShouldCoverUpperAndLowerViewBands()
     {
@@ -120,53 +88,53 @@ public class CombatScriptResourceTests
         Assert.All(offsets, offset => Assert.True(offset.x > 0));
         Assert.Contains(offsets, offset => offset.y > 0);
         Assert.Contains(offsets, offset => offset.y < 0);
-        Assert.Contains(offsets, offset => offset.y >= 700);
-        Assert.Contains(offsets, offset => offset.y <= -700);
-        Assert.True(offsets.Select(offset => offset.y).Distinct().Count() >= 5, "seek scan should not collapse to horizontal-only rotation");
+        Assert.Contains(offsets, offset => offset.y >= 300);
+        Assert.Contains(offsets, offset => offset.y <= -300);
+        Assert.True(offsets.Select(offset => offset.y).Distinct().Count() >= 3, "seek scan should not collapse to horizontal-only rotation");
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldApplyVisibleVerticalOffsetEarly()
+    public void SeekCameraOffset_ShouldApplyGradualVerticalOffsetEarly()
     {
         var firstOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 0);
         var secondOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 1);
 
         Assert.Equal(0, firstOffset.y);
-        Assert.True(Math.Abs(secondOffset.y) >= 700, "seek scan should change pitch before it completes a horizontal-only sweep");
+        Assert.InRange(Math.Abs(secondOffset.y), 300, 400);
     }
 
     [Fact]
     public void SeekCameraOffset_TargetOffsetShouldCoverCenterAndBothPitchDirections()
     {
-        var targets = Enumerable.Range(0, 3)
+        var targets = Enumerable.Range(0, 13)
             .Select(retryCount => AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount))
             .ToList();
 
         Assert.Contains(0, targets);
-        Assert.Contains(targets, y => y > 0);
-        Assert.Contains(targets, y => y < 0);
-        Assert.Equal(720, targets[1]);
-        Assert.Equal(-720, targets[2]);
+        Assert.Contains(1080, targets);
+        Assert.Contains(-1080, targets);
+        Assert.Equal(targets.Max(), -targets.Min());
+        Assert.Equal(0, targets[^1]);
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldMoveDeltaBetweenAdjacentVerticalTargets()
+    public void SeekCameraOffset_ShouldMoveGraduallyBetweenAdjacentVerticalTargets()
     {
         var retryOneTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 1);
         var retryTwoTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 2);
         var retryTwoOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 2);
 
-        Assert.Equal(720, retryOneTarget);
+        Assert.Equal(-360, retryOneTarget);
         Assert.Equal(-720, retryTwoTarget);
-        Assert.Equal(-1440, retryTwoOffset.y);
+        Assert.Equal(-360, retryTwoOffset.y);
         Assert.Equal(retryTwoTarget - retryOneTarget, retryTwoOffset.y);
     }
 
     [Fact]
     public void SeekCameraOffset_TargetOffsetShouldUseLargerVerticalClampForFarBands()
     {
-        var upperTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 5);
-        var lowerTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 6);
+        var upperTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 9);
+        var lowerTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 3);
 
         Assert.Equal(3200, upperTarget);
         Assert.Equal(-3200, lowerTarget);

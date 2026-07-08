@@ -286,7 +286,6 @@ public class AutoFightTask : ISoloTask
         string lastFightName = "";
         var finishCheckRequested = false;
         var periodicFinishCheckRequested = false;
-        var initialSeekCompleted = false;
 
         //统计切换人打架次数
         var countFight = 0;
@@ -300,34 +299,6 @@ public class AutoFightTask : ISoloTask
         
         var delayTime = _finishDetectConfig.DelayTime;
         var detectDelayTime = _finishDetectConfig.DetectDelayTime;
-
-        async Task<bool> RunInitialSeekOnceAsync()
-        {
-            if (initialSeekCompleted)
-            {
-                return false;
-            }
-
-            initialSeekCompleted = true;
-            if (!AutoFightParam.ShouldRunInitialSeek(_finishDetectConfig.RotateFindEnemyEnabled, _taskParam.IsFirstCheck))
-            {
-                return false;
-            }
-
-            bool? result = null;
-            try
-            {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                result = false;
-            }
-
-            AutoFightSeek.RotationCount = result == null ? AutoFightSeek.RotationCount + 1 : 0;
-            return result == true;
-        }
 
         async Task<bool> RunPendingFinishCheckAsync()
         {
@@ -405,9 +376,21 @@ public class AutoFightTask : ISoloTask
                         
                         #region 初始寻敌处理
                         
-                        if (i == 0)
+                        if (_finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
                         {
-                            fightEndFlag = await RunInitialSeekOnceAsync();
+                            bool? result = null;
+                            try
+                            {
+                                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+                                result = false;
+                            }
+
+                            AutoFightSeek.RotationCount = result == null ? AutoFightSeek.RotationCount + 1 : 0;
+                            fightEndFlag = result == true;
                             if (fightEndFlag)
                             {
                                 break;

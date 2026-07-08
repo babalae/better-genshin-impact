@@ -324,7 +324,6 @@ public class AutoFightJsonTask : ISoloTask
         var fightEndFlag = false;
         var skipPostFightPickupFlag = false;
         string lastFightName = "";
-        var initialSeekCompleted = false;
 
         // 初始化条件求值器
         var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea());
@@ -373,19 +372,6 @@ public class AutoFightJsonTask : ISoloTask
                         fightEndFlag = true;
                         skipPostFightPickupFlag = AutoFightParam.ShouldSkipPostFightPickupAfterForcedStop(fightTimeoutEnabled, timeoutStopwatch.Elapsed, fightTimeout, AutoFightSeek.RotationCount);
                         break;
-                    }
-
-                    if (!initialSeekCompleted)
-                    {
-                        initialSeekCompleted = true;
-                        if (AutoFightParam.ShouldRunInitialSeek(_finishDetectConfig.RotateFindEnemyEnabled, _taskParam.IsFirstCheck))
-                        {
-                            fightEndFlag = await SeekBeforeAction(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
-                            if (fightEndFlag)
-                            {
-                                break;
-                            }
-                        }
                     }
 
                     fightEndFlag = await RunPendingFinishCheckAsync();
@@ -569,24 +555,6 @@ public class AutoFightJsonTask : ISoloTask
     private bool _fightEndFlag;
     private bool _finishCheckRequested;
     private bool _periodicFinishCheckRequested;
-
-    private async Task<bool> SeekBeforeAction(int delayTime, int detectDelayTime)
-    {
-        bool? result = null;
-        try
-        {
-            result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct, true, _taskParam.RotaryFactor);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-            result = false;
-        }
-
-        AutoFightSeek.RotationCount = result == null ? AutoFightSeek.RotationCount + 1 : 0;
-
-        return result == true;
-    }
 
     private bool ShouldRequestFinishCheckBeforeAction(JsonAction action)
     {

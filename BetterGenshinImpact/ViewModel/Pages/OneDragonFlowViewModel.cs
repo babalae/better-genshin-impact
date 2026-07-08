@@ -38,6 +38,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     public static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
 
     private readonly ScriptService _scriptService;
+    private bool _isLoadingTaskListFromConfig;
 
     [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
     [
@@ -288,7 +289,10 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
             if (e.Action == NotifyCollectionChangedAction.Move)
             {
-                SaveConfig();
+                if (!_isLoadingTaskListFromConfig)
+                {
+                    SaveConfig();
+                }
             }
         };
     }
@@ -343,28 +347,34 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig = selected;
-        LoadDisplayTaskListFromConfig(); // 加载 DisplayTaskList 从配置文件
         SetSomeSelectedConfig(SelectedConfig);
     }
 
-    // 新增方法：从配置文件加载 DisplayTaskList
-
     public void LoadDisplayTaskListFromConfig()
     {
-        if (SelectedConfig == null || SelectedConfig.TaskEnabledList == null)
+        if (SelectedConfig == null)
         {
             return;
         }
 
-        TaskList.Clear();
-        foreach (var kvp in SelectedConfig.TaskEnabledList)
+        SelectedConfig.TaskEnabledList ??= new Dictionary<string, bool>();
+        _isLoadingTaskListFromConfig = true;
+        try
         {
-            var taskItem = new OneDragonTaskItem(kvp.Key)
+            TaskList.Clear();
+            foreach (var kvp in SelectedConfig.TaskEnabledList)
             {
-                IsEnabled = kvp.Value
-            };
-            TaskList.Add(taskItem);
-            // _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
+                var taskItem = new OneDragonTaskItem(kvp.Key)
+                {
+                    IsEnabled = kvp.Value
+                };
+                TaskList.Add(taskItem);
+                // _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
+            }
+        }
+        finally
+        {
+            _isLoadingTaskListFromConfig = false;
         }
     }
 
@@ -403,11 +413,12 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     public void SaveConfig()
     {
-        if (SelectedConfig == null)
+        if (SelectedConfig == null || _isLoadingTaskListFromConfig)
         {
             return;
         }
 
+        SelectedConfig.TaskEnabledList ??= new Dictionary<string, bool>();
         SelectedConfig.TaskEnabledList.Clear();
         foreach (var task in TaskList)
         {
@@ -443,24 +454,26 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
     {
-        if (SelectedConfig != null)
+        if (selected != null)
         {
-            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
-            foreach (var task in TaskList)
-            {
-                if (SelectedConfig.TaskEnabledList.TryGetValue(task.Name, out var value))
-                {
-                    task.IsEnabled = value;
-                }
-            }
-
+            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = selected.Name;
             LoadDisplayTaskListFromConfig();
         }
     }
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (_isLoadingTaskListFromConfig)
+        {
+            return;
+        }
+
         await Task.Delay(100); //等会加载完再保存
+        if (_isLoadingTaskListFromConfig)
+        {
+            return;
+        }
+
         SaveConfig();
     }
 

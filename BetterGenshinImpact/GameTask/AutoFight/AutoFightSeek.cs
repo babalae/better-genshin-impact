@@ -185,7 +185,12 @@ namespace BetterGenshinImpact.GameTask.AutoFight
     {
         public static int RotationCount = 0;
 
-        private static readonly int[] VerticalSeekBands = { 0, 2, -2, 3, -3, 4, -4, 1, -1, 3, -3, 0 };
+        private const int VerticalSeekScaleNumerator = 4;
+        private const int VerticalSeekScaleDenominator = 10;
+        private const int VerticalSeekMaxTargetOffset = 3200;
+        private const int MaxVerticalMouseStep = 240;
+
+        private static readonly int[] VerticalSeekBands = { 0, -1, -2, -3, -2, -1, 0, 1, 2, 3, 2, 1, 0 };
         
         private static readonly Dictionary<int, int> RotaryFactorMapping = new Dictionary<int, int> //旋转因子映射表
         {
@@ -203,6 +208,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             // Logger.LogInformation("开始寻找敌人 {Text} ...",adjustedX);
             
             int retryCount = isEndCheck? 1 : 0;
+            var currentVerticalTarget = 0;
 
             if (ShouldRecenterCameraBeforeSeek())
             {
@@ -280,6 +286,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                         if (height < 3 || height > 25)
                         {
+                            await ReturnSeekCameraPitchToCenterAsync(logger, currentVerticalTarget, ct);
                             return  null;
                         }
                     }
@@ -308,6 +315,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 }
 
                 var offset = GetSeekCameraOffset(image.Width, image.Height, RotationCount, retryCount);
+                currentVerticalTarget = GetSeekCameraVerticalTargetOffset(image.Height, RotationCount, retryCount);
                 logger.LogDebug("寻敌调整视角: x={X}, y={Y}, rotation={RotationCount}, retry={RetryCount}",
                     offset.x, offset.y, RotationCount, retryCount);
                 await MoveSeekCameraAsync(offset, ct);
@@ -362,6 +370,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                         if (height2 < 3 || height2 > 25)
                         {
+                            await ReturnSeekCameraPitchToCenterAsync(logger, currentVerticalTarget, ct);
                             return null;
                         }
                     }
@@ -376,6 +385,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 retryCount++;
             }
             
+            await ReturnSeekCameraPitchToCenterAsync(logger, currentVerticalTarget, ct);
             logger.LogInformation("寻找敌人：{Text}", "无");
             return null;
         }
@@ -402,18 +412,40 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         {
             var phase = Math.Max(0, rotationCount) * 5 + Math.Max(0, retryCount);
             var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
-            return Math.Clamp(imageHeight * verticalBand * 4 / 10, -3200, 3200);
+            return Math.Clamp(
+                imageHeight * verticalBand * VerticalSeekScaleNumerator / VerticalSeekScaleDenominator,
+                -VerticalSeekMaxTargetOffset,
+                VerticalSeekMaxTargetOffset);
         }
 
         private static async Task MoveSeekCameraAsync((int x, int y) offset, CancellationToken ct)
         {
-            if (offset.y != 0)
-            {
-                Simulation.SendInput.Mouse.MoveMouseBy(0, offset.y);
-                await Task.Delay(35, ct);
-            }
+            await MoveSeekCameraVerticallyAsync(offset.y, ct);
 
             Simulation.SendInput.Mouse.MoveMouseBy(offset.x, 0);
+        }
+
+        private static async Task MoveSeekCameraVerticallyAsync(int offsetY, CancellationToken ct)
+        {
+            var remaining = offsetY;
+            while (remaining != 0)
+            {
+                var step = Math.Clamp(remaining, -MaxVerticalMouseStep, MaxVerticalMouseStep);
+                Simulation.SendInput.Mouse.MoveMouseBy(0, step);
+                remaining -= step;
+                await Task.Delay(45, ct);
+            }
+        }
+
+        private static async Task ReturnSeekCameraPitchToCenterAsync(ILogger logger, int currentVerticalTarget, CancellationToken ct)
+        {
+            if (currentVerticalTarget == 0)
+            {
+                return;
+            }
+
+            logger.LogDebug("寻敌结束回正视角俯仰: y={Y}", -currentVerticalTarget);
+            await MoveSeekCameraVerticallyAsync(-currentVerticalTarget, ct);
         }
 
         private static async Task ResetSeekCameraPitchAsync(ILogger logger, CancellationToken ct)
