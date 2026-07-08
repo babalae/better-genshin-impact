@@ -311,14 +311,20 @@ public class AutoFightJsonTask : ISoloTask
         var fightTimeoutEnabled = AutoFightParam.IsTimeTimeoutEnabled(_taskParam.Timeout);
         TimeSpan fightTimeout = fightTimeoutEnabled ? TimeSpan.FromSeconds(_taskParam.Timeout) : TimeSpan.Zero;
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
-        var periodicFinishCheckInterval = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime > 0 ? _finishDetectConfig.CheckTime : 5);
+        var periodicFinishCheckInterval = AutoFightParam.NormalizeFinishCheckInterval(
+            TimeSpan.FromSeconds(_finishDetectConfig.CheckTime),
+            _finishDetectConfig.RotateFindEnemyEnabled);
 
         AutoFightSeek.RotationCount = 0;
         AutoFightTask.FightStatusFlag = true;
+        _fightEndFlag = false;
+        _finishCheckRequested = false;
+        _periodicFinishCheckRequested = false;
 
         var fightEndFlag = false;
         var skipPostFightPickupFlag = false;
         string lastFightName = "";
+        var initialSeekCompleted = false;
 
         // 初始化条件求值器
         var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea());
@@ -335,6 +341,22 @@ public class AutoFightJsonTask : ISoloTask
         // 战斗前动作
         await RunPreActions(combatScenes, evaluator);
         Stopwatch periodicFinishCheckStopwatch = Stopwatch.StartNew();
+
+        async Task<bool> RunPendingFinishCheckAsync()
+        {
+            var shouldRunPeriodicCheck = _periodicFinishCheckRequested && periodicFinishCheckStopwatch.Elapsed >= periodicFinishCheckInterval;
+            if (!_finishCheckRequested && !shouldRunPeriodicCheck)
+            {
+                return false;
+            }
+
+            _finishCheckRequested = false;
+            _periodicFinishCheckRequested = false;
+            periodicFinishCheckStopwatch.Restart();
+            var detected = await CheckFightFinish(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
+            _fightEndFlag = detected;
+            return detected;
+        }
 
         // 战斗操作
         var fightTask = Task.Run(async () =>
@@ -353,13 +375,23 @@ public class AutoFightJsonTask : ISoloTask
                         break;
                     }
 
-                    if (AutoFightParam.ShouldRunInitialSeek(_finishDetectConfig.RotateFindEnemyEnabled, _taskParam.IsFirstCheck))
+                    if (!initialSeekCompleted)
                     {
-                        fightEndFlag = await SeekBeforeAction(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
-                        if (fightEndFlag)
+                        initialSeekCompleted = true;
+                        if (AutoFightParam.ShouldRunInitialSeek(_finishDetectConfig.RotateFindEnemyEnabled, _taskParam.IsFirstCheck))
                         {
-                            break;
+                            fightEndFlag = await SeekBeforeAction(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
+                            if (fightEndFlag)
+                            {
+                                break;
+                            }
                         }
+                    }
+
+                    fightEndFlag = await RunPendingFinishCheckAsync();
+                    if (fightEndFlag)
+                    {
+                        break;
                     }
 
                     // 每次循环开始：截图一次，供所有条件求值复用
@@ -395,10 +427,22 @@ public class AutoFightJsonTask : ISoloTask
                                 CombatScriptParser.CurrentAvatarName = action.Character;
                             }
 
+                            if (ShouldRequestFinishCheckBeforeAction(action))
+                            {
+                                _finishCheckRequested = true;
+                            }
+                            fightEndFlag = await RunPendingFinishCheckAsync();
+                            if (fightEndFlag)
+                            {
+                                break;
+                            }
                             // 执行动作
-                            await ExecuteAction(combatScenes, action);
+                            await ExecuteAction(combatScenes, action, RunPendingFinishCheckAsync);
+                            if (_fightEndFlag)
+                            {
+                                break;
+                            }
 
-                            // 确保E技能释放成功
                             if (action.EnsureCast)
                             {
                                 var characterName = string.IsNullOrEmpty(action.Character)
@@ -418,7 +462,7 @@ public class AutoFightJsonTask : ISoloTask
                                         Simulation.SendInput.SimulateAction(GIActions.Drop);
                                         await Delay(200, _ct);
                                         // 重新执行整个动作
-                                        await ExecuteAction(combatScenes, action);
+                                        await ExecuteAction(combatScenes, action, RunPendingFinishCheckAsync);
                                         imageAfterAction = CaptureToRectArea();
                                         await Task.Delay(30, _ct);
                                         retry--;
@@ -446,9 +490,10 @@ public class AutoFightJsonTask : ISoloTask
                             periodicFinishCheckStopwatch.Elapsed,
                             periodicFinishCheckInterval))
                     {
-                        periodicFinishCheckStopwatch.Restart();
-                        fightEndFlag = await CheckFightFinish(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
+                        _periodicFinishCheckRequested = true;
                     }
+
+                    fightEndFlag = await RunPendingFinishCheckAsync();
 
                     if (fightEndFlag || _fightEndFlag) break;
 
@@ -522,6 +567,8 @@ public class AutoFightJsonTask : ISoloTask
     }
 
     private bool _fightEndFlag;
+    private bool _finishCheckRequested;
+    private bool _periodicFinishCheckRequested;
 
     private async Task<bool> SeekBeforeAction(int delayTime, int detectDelayTime)
     {
@@ -541,8 +588,34 @@ public class AutoFightJsonTask : ISoloTask
         return result == true;
     }
 
+    private bool ShouldRequestFinishCheckBeforeAction(JsonAction action)
+    {
+        if (!_finishDetectConfig.RotateFindEnemyEnabled || !_taskParam.CheckBeforeBurst)
+        {
+            return false;
+        }
+
+        try
+        {
+            var character = string.IsNullOrEmpty(action.Character)
+                ? CombatScriptParser.CurrentAvatarName
+                : action.Character;
+            return CombatScriptParser.ParseLinePart(action.Action, character).Any(IsBurstFinishCheckCommand);
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning("自动战斗：{Name} 预扫描战斗结束检测失败：{Msg}", action.Name, e.Message);
+            return false;
+        }
+    }
+
+    private static bool IsBurstFinishCheckCommand(CombatCommand command)
+    {
+        return command.Method == Method.Burst || command.Args.Contains("q") || command.Args.Contains("Q");
+    }
+
     /// <summary>执行单个 JSON 动作节点</summary>
-    private async Task ExecuteAction(CombatScenes combatScenes, JsonAction action)
+    private async Task ExecuteAction(CombatScenes combatScenes, JsonAction action, Func<Task<bool>> runPendingFinishCheckAsync)
     {
         try
         {
@@ -563,13 +636,13 @@ public class AutoFightJsonTask : ISoloTask
                 cmd.Execute(combatScenes, lastSubCmd);
                 lastSubCmd = cmd;
 
-                // 仅由 check 指令触发战斗结束检测
+                // 仅请求结束检测，主循环在命令间安全点统一消费。
                 if (cmd.Method == Method.Check && _taskParam.FightFinishDetectEnabled)
                 {
-                    _fightEndFlag = await CheckFightFinish(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
-                    if (_fightEndFlag)
+                    _finishCheckRequested = true;
+                    if (await runPendingFinishCheckAsync())
                     {
-                        Logger.LogInformation("{Name} 检测到战斗结束", action.Name);
+                        break;
                     }
                 }
             }
@@ -633,27 +706,6 @@ public class AutoFightJsonTask : ISoloTask
         }
 
         Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
-        {
-            // 注意：此处使用 await 确保异常能被正确捕获
-            // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var bloodLower = new Scalar(255, 90, 90);
-                    await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
-                }
-            }, _ct);
-        }
 
         _lastFightFlagTime = DateTime.Now;
         return false;

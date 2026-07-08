@@ -85,6 +85,20 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         return (fightTimeoutEnabled && elapsed > fightTimeout) || IsSeekRotationLimitReached(rotationCount);
     }
 
+    public static readonly TimeSpan RotateFindEnemyMinimumFinishCheckInterval = TimeSpan.FromSeconds(10);
+
+    public static TimeSpan NormalizeFinishCheckInterval(TimeSpan checkInterval, bool rotateFindEnemyEnabled)
+    {
+        if (checkInterval <= TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        return rotateFindEnemyEnabled && checkInterval < RotateFindEnemyMinimumFinishCheckInterval
+            ? RotateFindEnemyMinimumFinishCheckInterval
+            : checkInterval;
+    }
+
     public static bool ShouldRunPeriodicFinishCheck(bool fightTimeoutEnabled, bool fightFinishDetectEnabled, TimeSpan elapsedSinceLastCheck, TimeSpan checkInterval)
     {
         return !fightTimeoutEnabled &&

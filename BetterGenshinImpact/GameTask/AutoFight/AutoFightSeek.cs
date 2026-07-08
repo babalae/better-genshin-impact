@@ -26,7 +26,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             await MoveForwardAsync(scalarLower, scalarHigher, logger, ct);
         }
 
-        public static Task<bool?> MoveForwardAsync(Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
+        public static async Task<bool?> MoveForwardAsync(Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
         {
             using var image2 = CaptureToRectArea();
             using Mat mask2 = OpenCvCommonHelper.Threshold(
@@ -41,20 +41,16 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
             int numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2, connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
-            // logger.LogInformation("检测数量：{numLabels2}", numLabels2 - 1);
-
             if (numLabels2 > 1)
             {
-                // 获取第一个连通对象的统计信息（标签1）
-                Mat firstRow = stats2.Row(1); // 获取第1行（标签1）的数据
+                using Mat firstRow = stats2.Row(1);
                 int[] stats;
-                bool success = firstRow.GetArray(out stats); // 使用 out 参数来接收数组数据
+                bool success = firstRow.GetArray(out stats);
 
                 if (success)
                 {
                     int x = stats[0];
                     int y = stats[1];
-                    // int width = stats[2];
                     int height = stats[3];
 
                     Point firstPixel = new Point(x, y);
@@ -62,102 +58,56 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     
                     if (firstPixel.X < 580 || firstPixel.X > 1315 || firstPixel.Y > 800)
                     {
-                        // 非中心区域的处理逻辑
                         if (firstPixel.X < 500 && firstPixel.Y < 800)
                         {
-                            // 左上区域
                             if (height <= 6)
                             {
                                 logger.LogInformation("敌人在左上，向前加向左移动");
-                                Task.Run(() =>
-                                {
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-                                    Task.Delay(1000, ct).Wait();
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-                                }, ct);
+                                await MoveWithKeysAsync(ct, GIActions.MoveForward, GIActions.MoveLeft);
                             }
                         }
                         else if (firstPixel.X > 1315 && firstPixel.Y < 800)
                         {
-                            // 右上区域
                             if (height <= 6)
                             {
                                 logger.LogInformation("敌人在右上，向前加向右移动");
-                                Task.Run(() =>
-                                {
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
-                                    Task.Delay(1000, ct).Wait();
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
-                                }, ct);
+                                await MoveWithKeysAsync(ct, GIActions.MoveForward, GIActions.MoveRight);
                             }
                         }
                         else if (firstPixel.X < 500 && firstPixel.Y > 800)
                         {
-                            // 左下区域
                             if (height <= 6)
                             {
                                 logger.LogInformation("敌人在左下，向后加向左移动");
-                                Task.Run(() =>
-                                {
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-                                    Task.Delay(1000, ct).Wait();
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-                                }, ct);
+                                await MoveWithKeysAsync(ct, GIActions.MoveBackward, GIActions.MoveLeft);
                             }
                         }
                         else if (firstPixel.X > 1315 && firstPixel.Y > 800)
                         {
-                            // 右下区域
                             if (height <= 6)
                             {
                                 logger.LogInformation("敌人在右下，向后加向右移动");
-                                Task.Run(() =>
-                                {
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
-                                    Task.Delay(1000, ct).Wait();
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
-                                }, ct);
+                                await MoveWithKeysAsync(ct, GIActions.MoveBackward, GIActions.MoveRight);
                             }
                         }
                         else if (firstPixel.Y < 800)
                         {
-                            // 上方区域
                             if (height <= 6)
                             {
                                 logger.LogInformation("敌人在上方，向前移动");
-                                Task.Run(() =>
-                                {
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                                    Task.Delay(1000, ct).Wait();
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                                }, ct);
+                                await MoveWithKeysAsync(ct, GIActions.MoveForward);
                             }
                         }
                         else if (firstPixel.Y > 800)
                         {
-                            // 下方区域
                             if (height <= 6)
                             {
                                 logger.LogInformation("敌人在下方，向后移动");
-                                Task.Run(() =>
-                                {
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                                    Task.Delay(1000, ct).Wait();
-                                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-                                }, ct);
+                                await MoveWithKeysAsync(ct, GIActions.MoveBackward);
                             }
                         }
                         else
                         {
-                            // 非上述区域且非中心区域，判断左右
                             if (firstPixel.X < 920 && height > 6)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.MoveBackward);
@@ -170,7 +120,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                             }
                         }
                     }
-                    else // 中心区域
+                    else
                     {
                         if (height > 6)
                         {
@@ -180,22 +130,12 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         else if (firstPixel.X < 1315 && firstPixel.X > 500 && firstPixel.Y < 800 && height > 2)
                         {
                             logger.LogInformation("敌人在上方，向前移动");
-                            Task.Run(() =>
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                                Task.Delay(1000, ct).Wait();
-                                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                            }, ct);
+                            await MoveWithKeysAsync(ct, GIActions.MoveForward);
                         }
                         else if (firstPixel.X < 1315 && firstPixel.X > 500 && firstPixel.Y > 800 && height > 2)
                         {
                             logger.LogInformation("敌人在下方，向后移动");
-                            Task.Run(() =>
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                                Task.Delay(1000, ct).Wait();
-                                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-                            }, ct);
+                            await MoveWithKeysAsync(ct, GIActions.MoveBackward);
                         }
                         else if (height < 3)
                         {
@@ -215,7 +155,29 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 }
             }
             
-            return Task.FromResult<bool?>(null);
+            return null;
+        }
+
+        private static async Task MoveWithKeysAsync(CancellationToken ct, params GIActions[] actions)
+        {
+            var pressedActions = new List<GIActions>();
+            try
+            {
+                foreach (var action in actions)
+                {
+                    Simulation.SendInput.SimulateAction(action, KeyType.KeyDown);
+                    pressedActions.Add(action);
+                }
+
+                await Task.Delay(1000, ct);
+            }
+            finally
+            {
+                foreach (var action in pressedActions)
+                {
+                    Simulation.SendInput.SimulateAction(action, KeyType.KeyUp);
+                }
+            }
         }
     }
 
@@ -297,7 +259,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         if (height > 2 && height < 7)
                         {
                             // logger.LogInformation("画面内有找到敌人，尝试移动...");
-                            Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);
+                            await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct);
                             return false;
                         }
 
@@ -388,7 +350,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         if (height2 > 2 && height2 < 7)
                         {
                             // logger.LogInformation("画面内有找到敌人，尝试移动...");
-                            Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);
+                            await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct);
                             return false;
                         }
 

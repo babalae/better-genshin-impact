@@ -68,6 +68,18 @@ public class CombatScriptResourceTests
     }
 
     [Theory]
+    [InlineData(false, 5, 5)]
+    [InlineData(true, 5, 10)]
+    [InlineData(true, 0, 0)]
+    [InlineData(true, 12, 12)]
+    public void NormalizeFinishCheckInterval_ShouldClampOnlyShortRotateIntervals(bool rotateFindEnemyEnabled, int intervalSeconds, int expectedSeconds)
+    {
+        Assert.Equal(
+            TimeSpan.FromSeconds(expectedSeconds),
+            AutoFightParam.NormalizeFinishCheckInterval(TimeSpan.FromSeconds(intervalSeconds), rotateFindEnemyEnabled));
+    }
+
+    [Theory]
     [InlineData(false, false, false)]
     [InlineData(false, true, false)]
     [InlineData(true, false, false)]

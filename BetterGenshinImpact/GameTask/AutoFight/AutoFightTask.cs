@@ -272,7 +272,9 @@ public class AutoFightTask : ISoloTask
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
 
         Stopwatch checkFightFinishStopwatch = Stopwatch.StartNew();
-        TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗超时时间的超时时间
+        TimeSpan checkFightFinishTime = AutoFightParam.NormalizeFinishCheckInterval(
+            TimeSpan.FromSeconds(_finishDetectConfig.CheckTime),
+            _finishDetectConfig.RotateFindEnemyEnabled); //检查战斗超时时间的超时时间
 
 
         //战斗前检查，可做成配置
@@ -282,6 +284,9 @@ public class AutoFightTask : ISoloTask
         var fightEndFlag = false;
         var skipPostFightPickupFlag = false;
         string lastFightName = "";
+        var finishCheckRequested = false;
+        var periodicFinishCheckRequested = false;
+        var initialSeekCompleted = false;
 
         //统计切换人打架次数
         var countFight = 0;
@@ -295,6 +300,48 @@ public class AutoFightTask : ISoloTask
         
         var delayTime = _finishDetectConfig.DelayTime;
         var detectDelayTime = _finishDetectConfig.DetectDelayTime;
+
+        async Task<bool> RunInitialSeekOnceAsync()
+        {
+            if (initialSeekCompleted)
+            {
+                return false;
+            }
+
+            initialSeekCompleted = true;
+            if (!AutoFightParam.ShouldRunInitialSeek(_finishDetectConfig.RotateFindEnemyEnabled, _taskParam.IsFirstCheck))
+            {
+                return false;
+            }
+
+            bool? result = null;
+            try
+            {
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+                result = false;
+            }
+
+            AutoFightSeek.RotationCount = result == null ? AutoFightSeek.RotationCount + 1 : 0;
+            return result == true;
+        }
+
+        async Task<bool> RunPendingFinishCheckAsync()
+        {
+            var shouldRunPeriodicCheck = periodicFinishCheckRequested && checkFightFinishStopwatch.Elapsed >= checkFightFinishTime;
+            if (!finishCheckRequested && !shouldRunPeriodicCheck)
+            {
+                return false;
+            }
+
+            finishCheckRequested = false;
+            periodicFinishCheckRequested = false;
+            checkFightFinishStopwatch.Restart();
+            return await CheckFightFinish(delayTime, detectDelayTime);
+        }
         
         //盾奶优先功能角色预处理
         var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
@@ -358,12 +405,22 @@ public class AutoFightTask : ISoloTask
                         
                         #region 初始寻敌处理
                         
-                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
+                        if (i == 0)
                         {
-                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,true,_taskParam.RotaryFactor);
+                            fightEndFlag = await RunInitialSeekOnceAsync();
+                            if (fightEndFlag)
+                            {
+                                break;
+                            }
                         }
                         
                         #endregion
+
+                        fightEndFlag = await RunPendingFinishCheckAsync();
+                        if (fightEndFlag)
+                        {
+                            break;
+                        }
                         
                         if (avatar is null || (avatar.Name == guardianAvatar?.Name && (_taskParam.GuardianCombatSkip || _taskParam.BurstEnabled)))
                         {
@@ -427,7 +484,12 @@ public class AutoFightTask : ISoloTask
                         #region Q前寻敌处理
                         if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.CheckBeforeBurst && (command.Method == Method.Burst || command.Args.Contains("q") || command.Args.Contains("Q")))
                         {
-                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                            finishCheckRequested = true;
+                        }
+                        fightEndFlag = await RunPendingFinishCheckAsync();
+                        if (fightEndFlag)
+                        {
+                            break;
                         }
                         #endregion
 
@@ -441,7 +503,7 @@ public class AutoFightTask : ISoloTask
                         #region check动作触发战斗结束检测
                         if (command.Method == Method.Check && _taskParam.FightFinishDetectEnabled)
                         {
-                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                            finishCheckRequested = true;
                         }
                         #endregion
 
@@ -458,8 +520,6 @@ public class AutoFightTask : ISoloTask
                                      || _finishDetectConfig.CheckNames.Contains(command.Name))
                                 ))
                             {
-                                checkFightFinishStopwatch.Restart();
-
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
                                 {
                                     delayTime = time;
@@ -470,9 +530,18 @@ public class AutoFightTask : ISoloTask
                                     // Logger.LogInformation($"延时检查为{delayTime}毫秒");
                                 }
                                 
-                                fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                                if (_finishDetectConfig.CheckNames.Contains(command.Name))
+                                {
+                                    finishCheckRequested = true;
+                                }
+                                else
+                                {
+                                    periodicFinishCheckRequested = true;
+                                }
                             }
                         }
+
+                        fightEndFlag = await RunPendingFinishCheckAsync();
 
                         if (fightEndFlag)
                         {
@@ -880,15 +949,6 @@ public class AutoFightTask : ISoloTask
         // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
         Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
 
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
-        {
-            Task.Run(() =>
-            {
-                Scalar bloodLower = new Scalar(255, 90, 90);
-                MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-            } ,_ct);
-        }
-        
         _lastFightFlagTime = DateTime.Now;
         return false;
     }
