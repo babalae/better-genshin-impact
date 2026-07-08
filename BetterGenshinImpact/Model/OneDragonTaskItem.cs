@@ -116,26 +116,35 @@ public partial class OneDragonTaskItem : ObservableObject
             case "自动首领讨伐":
                 Action = async () =>
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoBossConfig.StrategyName))
+                    if (string.IsNullOrEmpty(config.AutoBossStrategyName))
                     {
-                        TaskContext.Instance().Config.AutoBossConfig.StrategyName = "根据队伍自动选择";
+                        config.AutoBossStrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoBossConfig.StrategyName, out var path))
+                    if (taskSettingsPageViewModel!.GetFightStrategy(config.AutoBossStrategyName, out var path))
                     {
                         TaskControl.Logger.LogError("自动首领讨伐战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
-                    if (string.IsNullOrWhiteSpace(TaskContext.Instance().Config.AutoBossConfig.BossName))
+                    if (string.IsNullOrWhiteSpace(config.AutoBossName))
                     {
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要讨伐的首领，跳过", "未选择");
                         return;
                     }
 
-                    AutoBossParam param = new AutoBossParam(path);
-                    param.SetAutoBossConfig(TaskContext.Instance().Config.AutoBossConfig);
+                    AutoBossParam param = AutoBossParam.CreateWithoutDefaultConfig(path);
+                    param.BossName = config.AutoBossName;
+                    param.StrategyName = config.AutoBossStrategyName;
+                    param.TeamName = config.AutoBossTeamName;
+                    param.SpecifyRunCount = config.AutoBossSpecifyRunCount;
+                    param.RunCount = config.AutoBossRunCount;
+                    param.UseTransientResin = config.AutoBossUseTransientResin;
+                    param.UseFragileResin = config.AutoBossUseFragileResin;
+                    param.ReviveRetryCount = config.AutoBossReviveRetryCount;
+                    param.ReturnToStatueAfterEachRound = config.AutoBossReturnToStatueAfterEachRound;
+                    param.RewardRecognitionEnabled = config.AutoBossRewardRecognitionEnabled;
                     await new AutoBossTask(param).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
