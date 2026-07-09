@@ -71,6 +71,11 @@ public class TpTask
         this.stringLocalizer = param.StringLocalizer;
     }
 
+    public static bool ShouldForceGroundSwitch(RouteMapContext mapContext, bool bigMapIsUnderground)
+    {
+        return bigMapIsUnderground && mapContext.LayerSelector.IsEmpty;
+    }
+
     /// <summary>
     /// 传送到七天神像
     /// </summary>
@@ -223,13 +228,19 @@ public class TpTask
     /// <param name="tpY"></param>
     /// <param name="mapName">独立地图名称</param>
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
-    private async Task<(double, double)> TpOnce(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
+    private Task<(double, double)> TpOnce(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
+        return TpOnce(tpX, tpY, RouteMapContext.Legacy(mapName, _mapMatchingMethod), force);
+    }
+
+    private async Task<(double, double)> TpOnce(double tpX, double tpY, RouteMapContext mapContext, bool force = false)
+    {
+        var mapName = mapContext.MapName;
         // 1. 确认在地图界面
         await OpenBigMapUi(1);
         // 2. 传送前的计算准备
         // 获取离目标传送点最近的两个传送点，按距离排序
-        var nTpPoints = GetNearestNTpPoints(tpX, tpY, mapName, 2);
+        var nTpPoints = GetNearestNTpPoints(tpX, tpY, mapContext, 2);
         // 获取最近的传送点与区域
         var (x, y, country) = force ? (tpX, tpY, null) : (nTpPoints[0].X, nTpPoints[0].Y, nTpPoints[0].Country);
         var disBetweenTpPoints = Math.Sqrt(Math.Pow(nTpPoints[0].X - nTpPoints[1].X, 2) +
@@ -240,7 +251,7 @@ public class TpTask
         if (mapName == MapTypes.Teyvat.ToString())
         {
             // 计算传送点位置离哪张地图切换后的中心点最近，切换到该地图
-            await SwitchRecentlyCountryMap(x, y, country);
+            await SwitchRecentlyCountryMap(x, y, mapContext, country);
         }
         else
         {
@@ -278,7 +289,7 @@ public class TpTask
             if (_tpConfig.MapZoomEnabled)
             {
                 Logger.LogInformation("目标传送点有相近传送点，到目标传送点附近将缩放到{zoomLevel:0.00}", minZoomLevel);
-                await MoveMapTo(x, y, mapName, minZoomLevel);
+                await MoveMapTo(x, y, mapContext, minZoomLevel);
                 await Delay(300, ct); // 等待地图移动完成
             }
             else
@@ -289,11 +300,11 @@ public class TpTask
         }
 
         // 5. 判断传送点是否在当前界面，若否则移动地图
-        var bigMapInAllMapRect = GetBigMapRect(mapName);
+        var bigMapInAllMapRect = GetBigMapRect(mapContext);
         var retryCount = 0;
         do
         {
-            if (IsPointInBigMapWindow(mapName, bigMapInAllMapRect, x, y)) break;
+            if (IsPointInBigMapWindow(mapContext, bigMapInAllMapRect, x, y)) break;
             if (retryCount++ >= 5) // 防止死循环
             {
                 Logger.LogWarning("多次尝试未移动到目标传送点，传送失败");
@@ -301,15 +312,15 @@ public class TpTask
             }
 
             Logger.LogInformation("传送点不在当前大地图范围内，重新调整地图位置");
-            await MoveMapTo(x, y, mapName);
+            await MoveMapTo(x, y, mapContext);
             await Delay(300, ct);
-            bigMapInAllMapRect = GetBigMapRect(mapName);
+            bigMapInAllMapRect = GetBigMapRect(mapContext);
         } while (true);
 
         // 6. 计算传送点位置并点击
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
         // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
-        var (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, x, y);
+        var (clickX, clickY) = ConvertToGameRegionPosition(mapContext, bigMapInAllMapRect, x, y);
         Logger.LogInformation("点击传送点");
         CaptureToRectArea().ClickTo((int)clickX, (int)clickY);
 
@@ -359,13 +370,18 @@ public class TpTask
     /// <returns></returns>
     private bool IsPointInBigMapWindow(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
+        return IsPointInBigMapWindow(RouteMapContext.Legacy(mapName, _mapMatchingMethod), bigMapInAllMapRect, x, y);
+    }
+
+    private bool IsPointInBigMapWindow(RouteMapContext mapContext, Rect bigMapInAllMapRect, double x, double y)
+    {
         // 坐标不包含直接返回
         if (!bigMapInAllMapRect.Contains(x, y))
         {
             return false;
         }
 
-        var (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, x, y);
+        var (clickX, clickY) = ConvertToGameRegionPosition(mapContext, bigMapInAllMapRect, x, y);
         // 屏蔽左上角360x400区域
         if (clickX < 360 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
         {
@@ -394,8 +410,14 @@ public class TpTask
     /// <returns></returns>
     private (double clickX, double clickY) ConvertToGameRegionPosition(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
-        var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)x, (float)y));
-        var picRect = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
+        return ConvertToGameRegionPosition(RouteMapContext.Legacy(mapName, _mapMatchingMethod), bigMapInAllMapRect, x, y);
+    }
+
+    private (double clickX, double clickY) ConvertToGameRegionPosition(RouteMapContext mapContext, Rect bigMapInAllMapRect, double x, double y)
+    {
+        var map = MapManager.GetMap(mapContext);
+        var (picX, picY) = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)x, (float)y));
+        var picRect = map.ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
         Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
         var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
         var clickY = (picY - picRect.Y) / picRect.Height * _captureRect.Height;
@@ -451,11 +473,16 @@ public class TpTask
 
     public async Task<(double, double)> Tp(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
+        return await Tp(tpX, tpY, RouteMapContext.Legacy(mapName, _mapMatchingMethod), force);
+    }
+
+    public async Task<(double, double)> Tp(double tpX, double tpY, RouteMapContext mapContext, bool force = false)
+    {
         for (var i = 0; i < 3; i++)
         {
             try
             {
-                return await TpOnce(tpX, tpY, mapName, force);
+                return await TpOnce(tpX, tpY, mapContext, force);
             }
             catch (TpPointNotActivate e)
             {
@@ -489,6 +516,12 @@ public class TpTask
     /// <param name="finalZoomLevel">到达目标点的最小缩放等级，只在 MapZoomEnabled 为 True 生效</param>
     public async Task MoveMapTo(double x, double y, string mapName, double finalZoomLevel = 2)
     {
+        await MoveMapTo(x, y, RouteMapContext.Legacy(mapName, _mapMatchingMethod), finalZoomLevel);
+    }
+
+    public async Task MoveMapTo(double x, double y, RouteMapContext mapContext, double finalZoomLevel = 2)
+    {
+        var mapName = mapContext.MapName;
         // 参数初始化
         double minZoomLevel = Math.Min(finalZoomLevel, _tpConfig.MinZoomLevel);
         double maxZoomLevel = _tpConfig.MaxZoomLevel;
@@ -497,7 +530,7 @@ public class TpTask
         Point2f mapCenterPoint;
         try
         {
-            mapCenterPoint = GetPositionFromBigMap(mapName); // 初始中心
+            mapCenterPoint = GetPositionFromBigMap(mapContext); // 初始中心
         }
         catch (MapPositionNotRecognizedException)
         {
@@ -511,18 +544,18 @@ public class TpTask
 
                 try
                 {
-                    mapCenterPoint = GetPositionFromBigMap(mapName);
+                    mapCenterPoint = GetPositionFromBigMap(mapContext);
                     Logger.LogDebug("调整缩放后识别恢复成功");
                 }
                 catch (MapPositionNotRecognizedException)
                 {
                     Logger.LogDebug("缩放后依然失败，尝试强制跃迁...");
-                    await ForceJumpToTargetArea(x, y, mapName);
+                    await ForceJumpToTargetArea(x, y, mapContext);
                     await Delay(300, ct);
 
                     try
                     {
-                        mapCenterPoint = GetPositionFromBigMap(mapName);
+                        mapCenterPoint = GetPositionFromBigMap(mapContext);
                         Logger.LogDebug("强制切换区域后识别恢复成功");
                     }
                     catch (MapPositionNotRecognizedException ex)
@@ -534,12 +567,12 @@ public class TpTask
             else
             {
                 Logger.LogDebug("缩放已在最佳区间附近，直接尝试强制跃迁...");
-                await ForceJumpToTargetArea(x, y, mapName);
+                await ForceJumpToTargetArea(x, y, mapContext);
                 await Delay(300, ct);
 
                 try
                 {
-                    mapCenterPoint = GetPositionFromBigMap(mapName);
+                    mapCenterPoint = GetPositionFromBigMap(mapContext);
                     Logger.LogDebug("强制切换区域后识别恢复成功");
                 }
                 catch (MapPositionNotRecognizedException ex)
@@ -611,7 +644,7 @@ public class TpTask
 
             try
             {
-                var newCenterPoint = GetPositionFromBigMap(mapName); // 随循环更新的地图中心
+                var newCenterPoint = GetPositionFromBigMap(mapContext); // 随循环更新的地图中心
 
                 // 计算识别坐标与预测坐标的偏差
                 double jumpDistance = Math.Sqrt(Math.Pow(newCenterPoint.X - predictedPoint.X, 2) + Math.Pow(newCenterPoint.Y - predictedPoint.Y, 2));
@@ -785,14 +818,24 @@ public class TpTask
 
     public Point2f GetPositionFromBigMap(string mapName)
     {
-        return GetBigMapCenterPoint(mapName);
+        return GetPositionFromBigMap(RouteMapContext.Legacy(mapName, _mapMatchingMethod));
+    }
+
+    public Point2f GetPositionFromBigMap(RouteMapContext mapContext)
+    {
+        return GetBigMapCenterPoint(mapContext);
     }
 
     public Point2f? GetPositionFromBigMapNullable(string mapName)
     {
+        return GetPositionFromBigMapNullable(RouteMapContext.Legacy(mapName, _mapMatchingMethod));
+    }
+
+    public Point2f? GetPositionFromBigMapNullable(RouteMapContext mapContext)
+    {
         try
         {
-            return GetBigMapCenterPoint(mapName);
+            return GetBigMapCenterPoint(mapContext);
         }
         catch
         {
@@ -801,6 +844,11 @@ public class TpTask
     }
 
     public Rect GetBigMapRect(string mapName)
+    {
+        return GetBigMapRect(RouteMapContext.Legacy(mapName, _mapMatchingMethod));
+    }
+
+    public Rect GetBigMapRect(RouteMapContext mapContext)
     {
         var rect = new Rect();
         NewRetry.Do(() =>
@@ -812,7 +860,7 @@ public class TpTask
             {
                 try
                 {
-                    rect = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapRect(ra.CacheGreyMat);
+                    rect = MapManager.GetMap(mapContext).GetBigMapRect(ra.CacheGreyMat);
                 }
                 catch (Exception)
                 {
@@ -840,16 +888,21 @@ public class TpTask
 
         Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
         // 提瓦特大陆由于用的256的图，需要做特殊逻辑
-        if (mapName == MapTypes.Teyvat.ToString())
+        if (mapContext.MapName == MapTypes.Teyvat.ToString())
         {
             const int s = TeyvatMap.BigMap256ScaleTo2048; // 相对2048做8倍缩放
             rect = new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s);
         }
 
-        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect)!.Value;
+        return MapManager.GetMap(mapContext).ConvertImageCoordinatesToGenshinMapCoordinates(rect)!.Value;
     }
 
     public Point2f GetBigMapCenterPoint(string mapName)
+    {
+        return GetBigMapCenterPoint(RouteMapContext.Legacy(mapName, _mapMatchingMethod));
+    }
+
+    public Point2f GetBigMapCenterPoint(RouteMapContext mapContext)
     {
         // 判断是否在地图界面
         using var ra = CaptureToRectArea();
@@ -859,7 +912,7 @@ public class TpTask
             Point2f p;
             try
             {
-                p = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapPosition(ra.CacheGreyMat);
+                p = MapManager.GetMap(mapContext).GetBigMapPosition(ra.CacheGreyMat);
             }
             catch (Exception ex)
             {
@@ -874,12 +927,12 @@ public class TpTask
             Debug.WriteLine("识别大地图在全地图位置：" + p);
             // 提瓦特大陆由于用的256的图，需要做特殊逻辑
             var (x, y) = (p.X, p.Y);
-            if (mapName == MapTypes.Teyvat.ToString())
+            if (mapContext.MapName == MapTypes.Teyvat.ToString())
             {
                 (x, y) = (p.X * TeyvatMap.BigMap256ScaleTo2048, p.Y * TeyvatMap.BigMap256ScaleTo2048);
             }
 
-            return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y))!.Value;
+            return MapManager.GetMap(mapContext).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y))!.Value;
         }
         else
         {
@@ -892,6 +945,12 @@ public class TpTask
     /// </summary>
     private async Task ForceJumpToTargetArea(double x, double y, string mapName)
     {
+        await ForceJumpToTargetArea(x, y, RouteMapContext.Legacy(mapName, _mapMatchingMethod));
+    }
+
+    private async Task ForceJumpToTargetArea(double x, double y, RouteMapContext mapContext)
+    {
+        var mapName = mapContext.MapName;
         if (mapName == MapTypes.Teyvat.ToString())
         {
             string targetCountry = "当前位置";
@@ -926,6 +985,11 @@ public class TpTask
     /// <returns></returns>
     public List<GiTpPosition> GetNearestNTpPoints(double x, double y, string mapName, int n = 1)
     {
+        return GetNearestNTpPoints(x, y, RouteMapContext.Legacy(mapName, _mapMatchingMethod), n);
+    }
+
+    public List<GiTpPosition> GetNearestNTpPoints(double x, double y, RouteMapContext mapContext, int n = 1)
+    {
         // 检查 n 的合法性
         if (n < 1)
         {
@@ -933,7 +997,7 @@ public class TpTask
         }
 
         // 按距离排序并选择前 n 个点
-        return MapLazyAssets.Instance.ScenesDic[mapName].Points
+        return MapLazyAssets.Instance.ScenesDic[mapContext.MapName].Points
             .OrderBy(tp => Math.Pow(tp.X - x, 2) + Math.Pow(tp.Y - y, 2))
             .Take(n)
             .ToList();
@@ -941,9 +1005,14 @@ public class TpTask
 
     public async Task<bool> SwitchRecentlyCountryMap(double x, double y, string? forceCountry = null)
     {
+        return await SwitchRecentlyCountryMap(x, y, RouteMapContext.Legacy(MapTypes.Teyvat.ToString(), _mapMatchingMethod), forceCountry);
+    }
+
+    public async Task<bool> SwitchRecentlyCountryMap(double x, double y, RouteMapContext mapContext, string? forceCountry = null)
+    {
         // 可能是地下地图，切换到地上地图
         using var ra2 = CaptureToRectArea();
-        if (Bv.BigMapIsUnderground(ra2))
+        if (Bv.BigMapIsUnderground(ra2) && ShouldForceGroundSwitch(mapContext, true))
         {
             ra2.Find(_assets.MapUndergroundToGroundButtonRo).Click();
             await Delay(200, ct);
@@ -951,7 +1020,7 @@ public class TpTask
 
         // 识别当前位置
         var minDistance = double.MaxValue;
-        var bigMapCenterPointNullable = GetPositionFromBigMapNullable(MapTypes.Teyvat.ToString());
+        var bigMapCenterPointNullable = GetPositionFromBigMapNullable(mapContext.WithMapName(MapTypes.Teyvat.ToString()));
 
         if (bigMapCenterPointNullable != null)
         {

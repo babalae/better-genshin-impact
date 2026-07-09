@@ -3,6 +3,7 @@ using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -22,6 +23,10 @@ public class WaypointForTrack : Waypoint
     public string MapName { get; set; }
     
     public string MapMatchMethod { get; set; }
+
+    public MapLayerSelector MapLayerSelector { get; set; } = MapLayerSelector.Empty;
+
+    public RouteMapContext MapContext => new(MapName, MapMatchMethod, MapLayerSelector);
     
     //异常识别
     public Misidentification Misidentification { get; set; } = new();
@@ -46,18 +51,28 @@ public class WaypointForTrack : Waypoint
     public string? LogInfo { get; set; }
 
     public WaypointForTrack(Waypoint waypoint, string mapName, string? mapMatchMethod)
+        : this(waypoint, new RouteMapContext(mapName, mapMatchMethod ?? TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod, MapLayerSelector.Empty))
     {
+    }
+
+    public WaypointForTrack(Waypoint waypoint, string mapName, string? mapMatchMethod, MapLayerSelector? mapLayerSelector)
+        : this(waypoint, new RouteMapContext(mapName, mapMatchMethod ?? TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod, mapLayerSelector))
+    {
+    }
+
+    public WaypointForTrack(Waypoint waypoint, RouteMapContext mapContext)
+    {
+        Id = waypoint.Id;
         Type = waypoint.Type;
         MoveMode = waypoint.MoveMode;
         Action = waypoint.Action;
         ActionParams = waypoint.ActionParams;
         GameX = waypoint.X;
         GameY = waypoint.Y;
-        MapName = mapName;
-        // 坐标系转换
-        mapMatchMethod ??= TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        MapMatchMethod = mapMatchMethod;
-        var MatP = MapManager.GetMap(mapName, MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new OpenCvSharp.Point2f((float)waypoint.X, (float)waypoint.Y));
+        MapName = mapContext.MapName;
+        MapMatchMethod = mapContext.MapMatchMethod;
+        MapLayerSelector = mapContext.LayerSelector;
+        var MatP = MapManager.GetMap(mapContext).ConvertGenshinMapCoordinatesToImageCoordinates(new OpenCvSharp.Point2f((float)waypoint.X, (float)waypoint.Y));
         MatX = MatP.X;
         MatY = MatP.Y;
         X = MatX;

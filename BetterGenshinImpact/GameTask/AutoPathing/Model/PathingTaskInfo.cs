@@ -57,8 +57,20 @@ public class PathingTaskInfo
     /// TemplateMatch 支持分层地图
     /// </summary>
     public string MapMatchMethod { get; set; } = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-    
-    
+
+    public string? MapLayerId { get; set; }
+
+    public string? MapLayerGroupId { get; set; }
+
+    public int? MapLayerFloor { get; set; }
+
+    public string? MapLayerMode { get; set; }
+
+    public List<MapLayerSegment>? MapLayerSegments { get; set; }
+
+    [JsonIgnore]
+    public MapLayerSelector LayerSelector => MapLayerSelector.FromFields(MapLayerId, MapLayerGroupId, MapLayerFloor, MapLayerMode);
+
     public List<MaterialInfo> Items { get; set; } = [];
     
 }

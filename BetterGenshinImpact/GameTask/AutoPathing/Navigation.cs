@@ -31,15 +31,30 @@ public class Navigation
     {
         _instance.Reset();
     }
+
+    public static void Reset(MapLayerSelector? selector)
+    {
+        _instance.Reset(selector);
+    }
     
     public static void SetPrevPosition(float x, float y)
     {
         _instance.SetPrevPosition(x,y);
     }
 
+    public static void SetPrevPosition(float x, float y, MapLayerSelector? selector)
+    {
+        _instance.SetPrevPosition(x, y, selector);
+    }
+
     public static Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
         return _instance.GetPosition(imageRegion, mapName, mapMatchMethod);
+    }
+
+    public static Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod, MapLayerSelector? selector)
+    {
+        return _instance.GetPosition(imageRegion, mapName, mapMatchMethod, selector);
     }
 
     /// <summary>
@@ -52,6 +67,16 @@ public class Navigation
     public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
         return _instance.GetPositionStable(imageRegion, mapName, mapMatchMethod);
+    }
+
+    public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod, MapLayerSelector? selector)
+    {
+        return _instance.GetPositionStable(imageRegion, mapName, mapMatchMethod, selector);
+    }
+
+    public static Point2f? GetCachedPosition(MapLayerSelector? selector, int cacheTimeMs = 900)
+    {
+        return _instance.GetCachedPosition(selector, cacheTimeMs);
     }
 
     public static int GetTargetOrientation(Waypoint waypoint, Point2f position)

@@ -135,7 +135,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (!string.IsNullOrEmpty(txt))
             {
                 // 明确指定使用 char[] 重载版本
-                return [..txt.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)];
+                return [..txt.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)];
             }
         }
         catch (Exception e)

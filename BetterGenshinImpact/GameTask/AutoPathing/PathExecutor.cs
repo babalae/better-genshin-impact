@@ -37,6 +37,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
@@ -175,7 +176,7 @@ public class PathExecutor
                     // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
                     if (waypoints[0].Type != WaypointType.Teleport.Code)
                     {
-                        Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
+                        Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y, waypoints[0].MapLayerSelector);
                     }
 
                     foreach (var waypoint in waypoints) // 一条路径
@@ -529,10 +530,22 @@ public class PathExecutor
 
     private List<List<WaypointForTrack>> ConvertWaypointsForTrack(List<Waypoint> positions, PathingTask task)
     {
+        var validationDiagnostics = RouteLayerSelectorResolver.ValidateTask(task);
+        if (validationDiagnostics.Count > 0)
+        {
+            throw new InvalidOperationException($"地图追踪任务图层选择器配置无效：{string.Join("; ", validationDiagnostics)}");
+        }
+
         // 把 X Y 转换为 MatX MatY
         var allList = positions.Select(waypoint =>
         {
-            WaypointForTrack wft = new WaypointForTrack(waypoint, task.Info.MapName, task.Info.MapMatchMethod);
+            var effectiveSelector = RouteLayerSelectorResolver.ResolveEffectiveSelector(task.Info, waypoint, out var diagnostics);
+            foreach (var diagnostic in diagnostics)
+            {
+                Logger.LogWarning("地图追踪任务 {TaskName} 图层选择器诊断：{Diagnostic}", task.Info.Name, diagnostic);
+            }
+
+            WaypointForTrack wft = new WaypointForTrack(waypoint, new RouteMapContext(task.Info.MapName, task.Info.MapMatchMethod, effectiveSelector));
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
             wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
             wft.EnableMonsterLootSplit = waypoint.PointExtParams.EnableMonsterLootSplit;
@@ -712,10 +725,10 @@ public class PathExecutor
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
         TpTask tpTask = new TpTask(ct);
         await TryGetExpeditionRewardsDispatch(tpTask);
-        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
-        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
+        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapContext, forceTp);
+        var (tprX, tprY) = MapManager.GetMap(waypoint.MapContext)
             .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
-        Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
+        Navigation.SetPrevPosition(tprX, tprY, waypoint.MapLayerSelector); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
     }
 
@@ -821,7 +834,7 @@ public class PathExecutor
                         {
                             await ResolveAnomalies(screen);
                             Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
-                            Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
+                            Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y, waypoint.MapLayerSelector);
                             // 淡入淡出特效
                             await Delay(500, ct);
                         }
@@ -1222,7 +1235,7 @@ public class PathExecutor
     private async Task<(Point2f point,int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
     {
         
-        var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
+        var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod, waypoint.MapLayerSelector);
         int time = 0;
         if (position == new Point2f())
         {
@@ -1257,7 +1270,7 @@ public class PathExecutor
                 await tpTask.OpenBigMapUi();
                 try
                 {
-                    position =MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
+                    position = MapManager.GetMap(waypoint.MapContext).ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapContext));
                 }
                 catch (Exception e)
                 {

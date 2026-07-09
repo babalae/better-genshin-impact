@@ -19,7 +19,7 @@ public sealed class AdaptiveUniformGridColumnsConverter : IValueConverter
 
         if (parameter is string parameterText && !string.IsNullOrWhiteSpace(parameterText))
         {
-            var parts = parameterText.Split([',', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var parts = parameterText.Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             if (parts.Length > 0 &&
                 double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedMinimumWidth) &&

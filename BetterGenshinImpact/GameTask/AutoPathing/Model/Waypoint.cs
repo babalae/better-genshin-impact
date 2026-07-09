@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -9,9 +10,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 [Serializable]
 public class Waypoint
 {
-
-
-
+    public int? Id { get; set; }
 
     //异常识别处理
     public class Misidentification
@@ -56,6 +55,17 @@ public class Waypoint
     public string? Action { get; set; }
     
     public string? ActionParams { get; set; }
+
+    public string? MapLayerId { get; set; }
+
+    public string? MapLayerGroupId { get; set; }
+
+    public int? MapLayerFloor { get; set; }
+
+    public string? MapLayerMode { get; set; }
+
+    [JsonIgnore]
+    public MapLayerSelector LayerSelector => MapLayerSelector.FromFields(MapLayerId, MapLayerGroupId, MapLayerFloor, MapLayerMode);
     
     /// <summary>
     /// 怪物、特产

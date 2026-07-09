@@ -13,6 +13,17 @@ public static class MapManager
         return GetMap(MapTypesExtensions.ParseFromName(mapName), matchingMethod);
     }
 
+    public static ISceneMap GetMap(string mapName, string matchingMethod, MapLayerSelector? selector)
+    {
+        // Layer selector state is partitioned inside template-match maps; loaded map assets remain shared.
+        return GetMap(mapName, matchingMethod);
+    }
+
+    public static ISceneMap GetMap(RouteMapContext context)
+    {
+        return GetMap(context.MapName, context.MapMatchMethod, context.LayerSelector);
+    }
+
 
     /// <summary>
     /// 获取指定类型的地图实例
@@ -26,7 +37,7 @@ public static class MapManager
         {
             matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         }
-        string key = $"{mapType}_{matchingMethod}";
+        string key = GetSharedMapCacheKey(mapType, matchingMethod);
 
         if (_maps.TryGetValue(key, out var map))
         {
@@ -45,6 +56,21 @@ public static class MapManager
             _maps[key] = map;
             return map;
         }
+    }
+
+    public static string GetSharedMapCacheKey(MapTypes mapType, string matchingMethod)
+    {
+        if (string.IsNullOrEmpty(matchingMethod))
+        {
+            matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        }
+
+        return $"{mapType}_{matchingMethod}";
+    }
+
+    public static string GetSelectorStateKey(MapLayerSelector? selector)
+    {
+        return (selector ?? MapLayerSelector.Empty).StateKey;
     }
 
     private static ISceneMap CreateMap(MapTypes mapType, string matchingMethod)
