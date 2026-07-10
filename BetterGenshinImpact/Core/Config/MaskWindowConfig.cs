@@ -419,12 +419,9 @@ public partial class MaskWindowConfig : ObservableObject
         if (ShowFps)
         {
             ShowOverlayMetrics = true;
-            foreach (var item in OverlayMetricItemDefaults.AllItems)
-            {
-                OverlayMetricItems[item.ToString()] = item == OverlayMetricItem.GameFps;
-            }
-
+            OverlayMetricItems[OverlayMetricItem.GameFps.ToString()] = true;
             ShowFps = false;
+            OnPropertyChanged(nameof(OverlayMetricItems));
         }
     }
 
