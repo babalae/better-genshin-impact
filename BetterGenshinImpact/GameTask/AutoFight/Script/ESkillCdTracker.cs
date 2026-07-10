@@ -65,14 +65,11 @@ public static class ESkillCdTracker
             _debounceCts = newCts = new CancellationTokenSource();
         }
 
-        // 取消并释放旧 CTS，防止泄漏
-        if (oldCts != null)
-        {
-            oldCts.Cancel();
-            oldCts.Dispose();
-        }
+        // 只取消旧 CTS（唤醒旧 Task），Dispose 由旧 Task 自身的 finally 处理
+        try { oldCts?.Cancel(); } catch (ObjectDisposedException) { }
 
-        var debounceToken = newCts.Token;
+        var capturedCts = newCts;
+        var debounceToken = capturedCts.Token;
 
         Task.Run(() =>
         {
@@ -108,6 +105,10 @@ public static class ESkillCdTracker
                 }
             }
             catch (OperationCanceledException) { }
+            finally
+            {
+                capturedCts.Dispose();
+            }
         }, CancellationToken.None);
     }
 
