@@ -25,6 +25,7 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.QuickClaimReward.Assets;
 using BetterGenshinImpact.GameTask.SkillCd;
 
 namespace BetterGenshinImpact.GameTask;
@@ -149,6 +150,7 @@ internal class GameTaskManager
         AutoEatAssets.DestroyInstance();
         AutoDomainAssets.DestroyInstance();
         AutoBossAssets.DestroyInstance();
+        QuickClaimRewardAssets.DestroyInstance();
     }
 
     /// <summary>
