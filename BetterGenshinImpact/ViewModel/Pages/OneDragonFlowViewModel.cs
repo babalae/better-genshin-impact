@@ -163,54 +163,44 @@ public partial class OneDragonFlowViewModel : ViewModel
                 IsEnabled = true
             };
             
-            if (TaskList.All(task => task.Name != taskItem.Name))
+            var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(name => name.Trim())
+                .ToList();
+            bool containsAnyDefaultGroup =
+                names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
+                
+            if (containsAnyDefaultGroup)
             {
-                var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(name => name.Trim())
-                    .ToList();
-                bool containsAnyDefaultGroup =
-                    names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
-                    
-                if (containsAnyDefaultGroup)
+                int lastDefaultGroupIndex = -1;
+                for (int i = TaskList.Count - 1; i >= 0; i--)
                 {
-                    int lastDefaultGroupIndex = -1;
-                    for (int i = TaskList.Count - 1; i >= 0; i--)
+                    if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == TaskList[i].Name))
                     {
-                        if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == TaskList[i].Name))
-                        {
-                            lastDefaultGroupIndex = i;
-                            break;
-                        }
+                        lastDefaultGroupIndex = i;
+                        break;
                     }
-                    if (lastDefaultGroupIndex >= 0)
-                    {
-                        TaskList.Insert(lastDefaultGroupIndex + 1, taskItem);
-                    }
-                    else
-                    {
-                        TaskList.Insert(0, taskItem);
-                    }
-                    if (pickTaskCount == 1)
-                    {
-                        Toast.Success("一条龙任务添加成功");
-                    }
+                }
+                if (lastDefaultGroupIndex >= 0)
+                {
+                    TaskList.Insert(lastDefaultGroupIndex + 1, taskItem);
                 }
                 else
                 {
-                    TaskList.Add(taskItem);
-                    if (pickTaskCount == 1)
-                    {
-                        Toast.Success("配置组添加成功");
-                    }
+                    TaskList.Insert(0, taskItem);
+                }
+                if (pickTaskCount == 1)
+                {
+                    Toast.Success("一条龙任务添加成功");
                 }
             }
             else
             {
+                TaskList.Add(taskItem);
                 if (pickTaskCount == 1)
                 {
-                    Toast.Warning("任务或配置组已存在");
+                    Toast.Success("配置组添加成功");
                 }
-            } 
+            }
         }
         if (pickTaskCount > 1)
         {
@@ -357,14 +347,28 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         TaskList.Clear();
+
+        // 旧格式兼容：TaskDefinitions 为空时，TaskEnabledList 键为任务名
+        bool isOldFormat = SelectedConfig.TaskDefinitions == null || SelectedConfig.TaskDefinitions.Count == 0;
+
         foreach (var kvp in SelectedConfig.TaskEnabledList)
         {
-            var taskItem = new OneDragonTaskItem(kvp.Key)
+            OneDragonTaskItem taskItem;
+            if (isOldFormat)
             {
-                IsEnabled = kvp.Value
-            };
+                // 旧格式：键=任务名 → 创建新 Id
+                taskItem = new OneDragonTaskItem(kvp.Key) { IsEnabled = kvp.Value };
+            }
+            else
+            {
+                // 新格式：键=Id，从 TaskDefinitions 取任务名
+                if (!SelectedConfig.TaskDefinitions.TryGetValue(kvp.Key, out var name))
+                {
+                    continue;
+                }
+                taskItem = new OneDragonTaskItem(name, kvp.Key) { IsEnabled = kvp.Value };
+            }
             TaskList.Add(taskItem);
-            // _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
         }
     }
 
@@ -408,10 +412,12 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
+        SelectedConfig.TaskDefinitions.Clear();
         SelectedConfig.TaskEnabledList.Clear();
         foreach (var task in TaskList)
         {
-            SelectedConfig.TaskEnabledList[task.Name] = task.IsEnabled;
+            SelectedConfig.TaskDefinitions[task.Id] = task.Name;
+            SelectedConfig.TaskEnabledList[task.Id] = task.IsEnabled;
         }
 
         WriteConfig(SelectedConfig);
@@ -540,6 +546,24 @@ public partial class OneDragonFlowViewModel : ViewModel
         CancellationContext.Instance.Set();
 
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
+
+        // 如果设置了 NextTaskId，从指定任务开始执行
+        if (!string.IsNullOrEmpty(SelectedConfig.NextTaskId))
+        {
+            var taskIndex = taskListCopy.FindIndex(t => t.Id == SelectedConfig.NextTaskId);
+            if (taskIndex >= 0)
+            {
+                _logger.LogInformation("一条龙：任务将从 {Name} 开始执行", taskListCopy[taskIndex].Name);
+                taskListCopy = taskListCopy.Skip(taskIndex).ToList();
+            }
+            else
+            {
+                _logger.LogWarning("一条龙：未找到标记的任务，将从头开始执行");
+            }
+            SelectedConfig.NextTaskId = string.Empty;
+            LoadDisplayTaskListFromConfig();
+        }
+
         foreach (var task in taskListCopy)
         {
             task.InitAction(SelectedConfig);
@@ -685,6 +709,57 @@ public partial class OneDragonFlowViewModel : ViewModel
         DeleteConfigDisplayTaskListFromConfig();
         SaveConfig();
         InputScriptGroupName = null;
+    }
+
+    [RelayCommand]
+    private void NextTaskGroup()
+    {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择一条龙配置单");
+            return;
+        }
+
+        var enabledTasks = TaskList.Where(t => t.IsEnabled).ToList();
+        if (enabledTasks.Count == 0)
+        {
+            Toast.Warning("请先启用一条龙任务");
+            return;
+        }
+
+        var currentTask = enabledTasks.FirstOrDefault(t => t.Name == InputScriptGroupName);
+        if (currentTask == null)
+        {
+            var taskName = TaskList.FirstOrDefault(t => t.Name == InputScriptGroupName)?.Name ?? "未知任务";
+            Toast.Warning($"当前任务 <{taskName}> 已禁用，请先启用后再从此开始执行");
+            return;
+        }
+
+        SelectedConfig.NextTaskId = currentTask.Id;
+        foreach (var task in TaskList)
+        {
+            task.IsNextTask = task.Id == currentTask.Id;
+        }
+        Toast.Success($"设置从 <{currentTask.Name}> 开始执行任务列表");
+        SaveConfig();
+    }
+
+    [RelayCommand]
+    private void ClearNextTaskGroup()
+    {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择一条龙配置单");
+            return;
+        }
+
+        SelectedConfig.NextTaskId = string.Empty;
+        foreach (var task in TaskList)
+        {
+            task.IsNextTask = false;
+        }
+        Toast.Success("清除从此执行标记完成");
+        SaveConfig();
     }
 
     [RelayCommand]

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,9 +21,13 @@ public partial class OneDragonTaskItem : ObservableObject
 {
     [ObservableProperty] private string _name;
 
+    [ObservableProperty] private string _id = Guid.NewGuid().ToString();
+
     [ObservableProperty] private Brush _statusColor = Brushes.Gray;
 
     [ObservableProperty] private bool _isEnabled = true;
+
+    [ObservableProperty] private bool _isNextTask = false;
 
     [ObservableProperty] private OneDragonBaseViewModel? _viewModel;
 
@@ -32,6 +36,11 @@ public partial class OneDragonTaskItem : ObservableObject
     public OneDragonTaskItem(string name)
     {
         Name = name;
+    }
+
+    public OneDragonTaskItem(string name, string id) : this(name)
+    {
+        _id = id;
     }
 
     // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
@@ -47,13 +56,14 @@ public partial class OneDragonTaskItem : ObservableObject
 
     public void InitAction(OneDragonFlowConfig config)
     {
-        if (config.TaskEnabledList.TryGetValue(Name, out _))
+        if (config.TaskEnabledList.ContainsKey(Id))
         {
-            config.TaskEnabledList[Name] = IsEnabled;
+            config.TaskEnabledList[Id] = IsEnabled;
         }
         else
         {
-            config.TaskEnabledList.Add(Name, IsEnabled);
+            config.TaskEnabledList.Add(Id, IsEnabled);
+            config.TaskDefinitions[Id] = Name;
         }
 
         switch (Name)
