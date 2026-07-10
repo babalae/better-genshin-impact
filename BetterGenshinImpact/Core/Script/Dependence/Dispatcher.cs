@@ -22,8 +22,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.Common;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -374,6 +379,60 @@ public class Dispatcher
         await fightTask.Start(cancellationToken);  
     }
     
+    /// <summary>
+    /// 运行简易战斗策略脚本。
+    /// 使用策略语言直接控制当前角色执行动作（如 e、q、attack等），适合快速操作。
+    /// </summary>
+    /// <param name="script">策略字符串，用逗号/换行分隔动作指令，可选角色名前缀</param>
+    /// <param name="avatarName">指定操作的角色名（可选，不指定则操作当前角色）</param>
+    /// <param name="customCt">自定义取消令牌</param>
+    public async Task RunCombatScript(string script, string? avatarName = null, CancellationToken? customCt = null)
+    {
+        if (string.IsNullOrWhiteSpace(script))
+            throw new ArgumentException("策略字符串不能为空", nameof(script));
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+
+        // 1. 标准化分隔符
+        var normalized = script.Replace("，", ",");
+        if (!normalized.Contains('\n') && !normalized.Contains(';') && normalized.Contains(','))
+        {
+            normalized = normalized.Replace(",", "\n");
+        }
+
+        // 2. 解析策略指令（允许不带角色名的简写）
+        var combatScript = CombatScriptParser.ParseContext(normalized, validate: false);
+        if (combatScript.CombatCommands.Count == 0) return;
+
+        // 3. 截图识别队伍
+        using var capture = CaptureToRectArea();
+        var combatScenes = new CombatScenes();
+        combatScenes.InitializeTeam(capture);
+        if (!combatScenes.CheckTeamInitialized()) return;
+
+        // 4. 若指定了角色名，切到该角色
+        if (!string.IsNullOrEmpty(avatarName))
+        {
+            var standardName = DefaultAutoFightConfig.AvatarAliasToStandardName(avatarName);
+            var avatar = combatScenes.GetAvatars().FirstOrDefault(a =>
+                a.Name.Equals(standardName, StringComparison.OrdinalIgnoreCase));
+            if (avatar != null)
+            {
+                avatar.Switch();
+            }
+        }
+
+        // 5. 依次执行指令（传入 lastCommand 以优化同角色切换）
+        CombatCommand? lastCommand = null;
+        foreach (var cmd in combatScript.CombatCommands)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            cmd.Execute(combatScenes, lastCommand);
+            lastCommand = cmd;
+            await Delay(300, cancellationToken);
+        }
+    }
+
     /// <summary>  
     /// 运行自动地脉花任务
     /// </summary>  
