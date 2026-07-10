@@ -375,31 +375,18 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void DeleteConfigDisplayTaskListFromConfig()
     {
-        if (SelectedConfig == null || SelectedTask == null ||
-            SelectedConfig.TaskEnabledList == null) //|| SelectedConfig.TaskEnabledList == null 
+        if (SelectedConfig == null || SelectedTask == null)
         {
             Toast.Warning("请先选择配置组和任务");
             return;
         }
 
-        var deleteId = SelectedTask?.Id;
-        TaskList.Clear();
-        foreach (var kvp in SelectedConfig.TaskEnabledList)
+        var itemToDelete = TaskList.FirstOrDefault(t => t.Id == SelectedTask.Id);
+        if (itemToDelete != null)
         {
-            if (deleteId != null && kvp.Key == deleteId)
-            {
-                continue;
-            }
-            if (!SelectedConfig.TaskDefinitions.TryGetValue(kvp.Key, out var name))
-            {
-                continue;
-            }
-            TaskList.Add(new OneDragonTaskItem(name, kvp.Key)
-            {
-                IsEnabled = kvp.Value
-            });
+            TaskList.Remove(itemToDelete);
+            Toast.Information("已经删除");
         }
-        Toast.Information("已经删除");
     }
 
     [RelayCommand]
