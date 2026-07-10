@@ -22,6 +22,7 @@ public class OneKeyClaimRewardTask : Singleton<OneKeyClaimRewardTask>
     private const int MaxClickCountPerRun = 30;
     private const int ScrollChunkSize = 10;
     private const int MaxBlankContinueChecks = 3;
+    private const int ScrollRenderDelayMilliseconds = 120;
     private static readonly ILogger<OneKeyClaimRewardTask> Logger = App.GetLogger<OneKeyClaimRewardTask>();
 
     private readonly object _taskLock = new();
@@ -159,6 +160,7 @@ public class OneKeyClaimRewardTask : Singleton<OneKeyClaimRewardTask>
                 {
                     LogNoReward("一键领取奖励：未找到领取图标，滚轮下滑");
                     ScrollDown(ct);
+                    await Delay(ScrollRenderDelayMilliseconds, ct);
                 }
                 else
                 {
