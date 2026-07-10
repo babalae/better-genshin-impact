@@ -136,6 +136,7 @@ internal class GameTaskManager
         AutoGeniusInvokationAssets.DestroyInstance();
         AutoFightAssets.DestroyInstance();
         MapLazyAssets.DestroyInstance();
+        MapAssets.DestroyInstance();
     }
 
     /// <summary>

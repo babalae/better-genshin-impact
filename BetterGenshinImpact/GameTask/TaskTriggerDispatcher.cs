@@ -474,7 +474,7 @@ namespace BetterGenshinImpact.GameTask
             }
             else if (_gameRect != currentRect)
             {
-                // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 不支持 需要考虑的问题太多了
+                // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 现在已经可以取消了，但是一些Assets要重新加载
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
