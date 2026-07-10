@@ -406,7 +406,7 @@ public class Dispatcher
 
         // 3. 截图识别队伍
         using var capture = CaptureToRectArea();
-        var combatScenes = new CombatScenes();
+        using var combatScenes = new CombatScenes();
         combatScenes.InitializeTeam(capture);
         if (!combatScenes.CheckTeamInitialized()) return;
 
