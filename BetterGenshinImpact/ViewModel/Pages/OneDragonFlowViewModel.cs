@@ -382,20 +382,24 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
+        var deleteId = SelectedTask?.Id;
         TaskList.Clear();
         foreach (var kvp in SelectedConfig.TaskEnabledList)
         {
-            var taskItem = new OneDragonTaskItem(kvp.Key)
+            if (deleteId != null && kvp.Key == deleteId)
+            {
+                continue;
+            }
+            if (!SelectedConfig.TaskDefinitions.TryGetValue(kvp.Key, out var name))
+            {
+                continue;
+            }
+            TaskList.Add(new OneDragonTaskItem(name, kvp.Key)
             {
                 IsEnabled = kvp.Value
-            };
-            if (taskItem.Name != InputScriptGroupName)
-            {
-                TaskList.Add(taskItem);
-                taskItem = null;
-                Toast.Information("已经删除");
-            }
+            });
         }
+        Toast.Information("已经删除");
     }
 
     [RelayCommand]
@@ -454,7 +458,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
             foreach (var task in TaskList)
             {
-                if (SelectedConfig.TaskEnabledList.TryGetValue(task.Name, out var value))
+                if (SelectedConfig.TaskEnabledList.TryGetValue(task.Id, out var value))
                 {
                     task.IsEnabled = value;
                 }
@@ -580,11 +584,6 @@ public partial class OneDragonFlowViewModel : ViewModel
             ScriptGroups.Remove(task);
         }
 
-        foreach (var scriptGroup in ScriptGroups)
-        {
-            SelectedConfig.TaskEnabledList.Remove(scriptGroup.Name);
-        }
-
         if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
         {
             Toast.Warning("请先选择任务");
@@ -603,8 +602,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SaveConfig();
-        int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
-            t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
+        int enabledTaskCount = TaskList.Count(t =>
+            t.IsEnabled && !ScriptGroupsdefault.Any(d => d.Name == t.Name));
         _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
 
         if (enabledoneTaskCount <= 0)
@@ -638,7 +637,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
                         Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
 
-                        if (SelectedConfig.TaskEnabledList[task.Name])
+                        if (SelectedConfig.TaskEnabledList[task.Id])
                         {
                             _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
                             await Task.Delay(500);
@@ -720,18 +719,15 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
-        var enabledTasks = TaskList.Where(t => t.IsEnabled).ToList();
-        if (enabledTasks.Count == 0)
-        {
-            Toast.Warning("请先启用一条龙任务");
-            return;
-        }
-
-        var currentTask = enabledTasks.FirstOrDefault(t => t.Name == InputScriptGroupName);
+        var currentTask = SelectedTask;
         if (currentTask == null)
         {
-            var taskName = TaskList.FirstOrDefault(t => t.Name == InputScriptGroupName)?.Name ?? "未知任务";
-            Toast.Warning($"当前任务 <{taskName}> 已禁用，请先启用后再从此开始执行");
+            Toast.Warning("请先选择要从此开始执行的任务");
+            return;
+        }
+        if (!currentTask.IsEnabled)
+        {
+            Toast.Warning($"当前任务 <{currentTask.Name}> 已禁用，请先启用后再从此开始执行");
             return;
         }
 
