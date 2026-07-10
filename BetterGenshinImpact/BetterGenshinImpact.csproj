@@ -182,6 +182,9 @@
 		<None Update="GameTask\QuickBuy\Assets\1920x1080\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickClaimReward\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

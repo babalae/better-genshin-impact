@@ -83,6 +83,12 @@ public partial class HotKeyConfig : ObservableObject
     private string _quickBuyHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     [ObservableProperty]
+    private string _oneKeyClaimRewardHotkey = "";
+
+    [ObservableProperty]
+    private string _oneKeyClaimRewardHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    [ObservableProperty]
     private string _quickSereniteaPotHotkey = "";
 
     [ObservableProperty]

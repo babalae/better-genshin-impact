@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.QuickClaimReward;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
@@ -67,4 +68,22 @@ public partial class MacroConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _combatMacroPriority = 1;
+
+    /// <summary>
+    ///     一键领取奖励快捷键模式
+    /// </summary>
+    [ObservableProperty]
+    private string _oneKeyClaimRewardHotkeyMode = OneKeyClaimRewardTask.ClickOnceMode;
+
+    /// <summary>
+    ///     一键领取奖励未找到领取图标时滚轮下滑
+    /// </summary>
+    [ObservableProperty]
+    private bool _oneKeyClaimRewardScrollDownEnabled;
+
+    /// <summary>
+    ///     一键领取奖励滚轮下滑幅度
+    /// </summary>
+    [ObservableProperty]
+    private int _oneKeyClaimRewardScrollDownAmount = 2;
 }
