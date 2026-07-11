@@ -169,7 +169,7 @@ public partial class PathingPartyConfig : ObservableObject
     /// 跳飞间隔（秒），闲云使用其1/2值
     /// </summary>
     [ObservableProperty]
-    private double _mwkJumpFlyIntervalSeconds = 1.4;
+    private double _mwkJumpFlyIntervalSeconds = 1;
 
     public static PathingPartyConfig BuildDefault()
     {

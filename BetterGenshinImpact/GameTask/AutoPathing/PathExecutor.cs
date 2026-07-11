@@ -891,6 +891,10 @@ public partial class PathExecutor
             var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
             if (hurryOnResult)
             {
+                // continue 会跳过底部 await Delay(100, ct)，
+                // 导致 async state machine 的 MoveNext() 永不返回，调用栈逐轮叠加直到溢出。
+                // 在此处显式等待以展开栈。
+                await Delay(100, ct);
                 continue;
             }
 
