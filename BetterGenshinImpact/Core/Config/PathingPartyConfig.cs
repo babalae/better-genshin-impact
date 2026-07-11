@@ -139,7 +139,7 @@ public partial class PathingPartyConfig : ObservableObject
     private int _approachStopDistance = 25;
 
     [JsonIgnore]
-    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁","瓦雷莎"];
+    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁"];
 
     [JsonIgnore]
     public List<string> TravelModeList { get; } = ["精准靠近","连续赶路"];
