@@ -690,6 +690,27 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void CopyTask(OneDragonTaskItem? taskItem)
+    {
+        if (taskItem == null) return;
+
+        var copy = new OneDragonTaskItem(taskItem.Name) { IsEnabled = taskItem.IsEnabled };
+
+        var index = TaskList.IndexOf(taskItem);
+        if (index >= 0)
+        {
+            TaskList.Insert(index + 1, copy);
+        }
+        else
+        {
+            TaskList.Add(copy);
+        }
+
+        SaveConfig();
+        Toast.Success($"已复制任务: {taskItem.Name}");
+    }
+
+    [RelayCommand]
     private void DeleteTaskGroup()
     {
         DeleteConfigDisplayTaskListFromConfig();

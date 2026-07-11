@@ -151,6 +151,13 @@
                             <ui:ListView.ItemTemplate>
                                 <DataTemplate>
                                     <ui:Card Margin="0,2,14,2">
+                                        <ui:Card.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="复制"
+                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.CopyTaskCommand}"
+                                                          CommandParameter="{Binding}" />
+                                            </ContextMenu>
+                                        </ui:Card.ContextMenu>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />

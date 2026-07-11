@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
 using System.Windows.Controls;
@@ -66,19 +66,8 @@ public partial class OneDragonFlowPage
                 return;
             }
             
-            // 过滤已存在的配置组
-            var availableGroups = ViewModel.ScriptGroups
-                .Where(sg => ViewModel.TaskList == null || !ViewModel.TaskList.Any(task => task.Name == sg.Name))
-                .ToList();
-                
-            if (!availableGroups.Any())
-            {
-                Toast.Warning("没有可添加的配置组");
-                return;
-            }
-            
-            // 设置ItemsControl的数据源
-            ScriptGroupItemsControl.ItemsSource = availableGroups;
+            // 设置ItemsControl的数据源（不过滤已存在的，允许重复添加）
+            ScriptGroupItemsControl.ItemsSource = ViewModel.ScriptGroups;
             
             // 获取主窗口
             var mainWindow = Application.Current.MainWindow;
