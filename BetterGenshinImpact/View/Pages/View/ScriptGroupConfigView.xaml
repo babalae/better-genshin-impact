@@ -368,8 +368,10 @@
 
                     </Grid>
 
-                    <ui:CardExpander Margin="0,0,0,12"
-                                     ContentPadding="0">
+                    <Grid Margin="16">
+
+                        <ui:CardExpander Margin="0,0,36,12"
+                                         ContentPadding="0">
                         <ui:CardExpander.Header>
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -421,7 +423,7 @@
                                           SelectedItem="{Binding PathingConfig.HurryOnAvatar}" />
                             </Grid>
 
-                            <!-- 赶路模式 / 最小距离 -->
+                            <!-- 赶路模式 -->
                             <Grid Margin="16,0,16,10">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -429,7 +431,6 @@
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
@@ -446,22 +447,37 @@
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
                                           Width="100"
-                                          Margin="0,0,10,0"
                                           ItemsSource="{Binding PathingConfig.TravelModeList}"
                                           SelectedItem="{Binding PathingConfig.TravelMode}" />
+                            </Grid>
+
+                            <!-- 赶路启用距离 -->
+                            <Grid Margin="16,0,16,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="赶路启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="节点距离大于此值时启用赶路技能，填0则关闭"
+                                              TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
-                                            Grid.Column="2"
+                                            Grid.Column="1"
                                             MinWidth="60"
                                             Height="35"
                                             HorizontalContentAlignment="Center"
-                                            Text="{Binding PathingConfig.Distance}">
-                                    <ui:TextBox.Style>
-                                        <Style TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </Style>
-                                    </ui:TextBox.Style>
-                                </ui:TextBox>
+                                            Text="{Binding PathingConfig.Distance}" />
                             </Grid>
 
                             <!-- 接近停车距离 -->
@@ -577,6 +593,7 @@
 
                         </StackPanel>
                     </ui:CardExpander>
+                    </Grid>
 
                                        <!-- 执行周期配置 -->
                     <Grid Margin="16">
