@@ -619,7 +619,7 @@ public class PathExecutor
 
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
-        var timing = PartyConfig.RecoverTiming ?? (PartyConfig.OnlyInTeleportRecover ? RecoverTiming.OnlyTeleport : RecoverTiming.AnyWaypoint);
+        var timing = PartyConfig.RecoverTiming;
         if (timing == RecoverTiming.Never)
         {
             return;

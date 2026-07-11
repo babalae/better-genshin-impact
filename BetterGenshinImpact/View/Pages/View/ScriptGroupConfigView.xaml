@@ -314,8 +314,8 @@
                                   Grid.RowSpan="2"
                                   Grid.Column="1"
                                   MinWidth="100"
-                                  SelectedValuePath="Value"
-                                  DisplayMemberPath="Key"
+                                  SelectedValuePath="Key"
+                                  DisplayMemberPath="Value"
                                   ItemsSource="{Binding RecoverTimingSource}"
                                   SelectedValue="{Binding PathingConfig.RecoverTiming}" />
 

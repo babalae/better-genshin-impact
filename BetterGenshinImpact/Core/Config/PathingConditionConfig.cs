@@ -33,16 +33,16 @@ public partial class PathingConditionConfig : ObservableObject
     // 低血量回复时机
     private RecoverTiming? _recoverTiming;
 
-    public RecoverTiming? RecoverTiming
+    public RecoverTiming RecoverTiming
     {
         get
         {
             if (_recoverTiming is null)
             {
                 // 首次读取时从旧字段自动迁移
-                _recoverTiming = _onlyInTeleportRecover ? Core.Config.RecoverTiming.OnlyTeleport : Core.Config.RecoverTiming.AnyWaypoint;
+                _recoverTiming = RecoverTimingMigration.Migrate(_onlyInTeleportRecover);
             }
-            return _recoverTiming;
+            return _recoverTiming.Value;
         }
         set => SetProperty(ref _recoverTiming, value);
     }
