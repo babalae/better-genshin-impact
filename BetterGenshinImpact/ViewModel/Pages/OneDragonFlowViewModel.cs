@@ -162,6 +162,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 IsEnabled = true
             };
+            taskItem.Id = GenerateUniqueTaskId();
             
             var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(name => name.Trim())
@@ -689,12 +690,27 @@ public partial class OneDragonFlowViewModel : ViewModel
         });
     }
 
+    /// <summary>
+    /// 生成与 TaskList 中现有 ID 不重复的唯一 ID。
+    /// </summary>
+    private string GenerateUniqueTaskId()
+    {
+        var existingIds = new HashSet<string>(TaskList.Select(t => t.Id));
+        string newId;
+        do
+        {
+            newId = Guid.NewGuid().ToString();
+        } while (existingIds.Contains(newId));
+        return newId;
+    }
+
     [RelayCommand]
     private void CopyTask(OneDragonTaskItem? taskItem)
     {
         if (taskItem == null) return;
 
         var copy = new OneDragonTaskItem(taskItem.Name) { IsEnabled = taskItem.IsEnabled };
+        copy.Id = GenerateUniqueTaskId();
 
         var index = TaskList.IndexOf(taskItem);
         if (index >= 0)
