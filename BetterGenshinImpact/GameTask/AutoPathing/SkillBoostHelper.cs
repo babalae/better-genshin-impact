@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -153,7 +153,6 @@ public partial class PathExecutor
 
                     if (needsApproach)
                     {
-                        Logger.LogInformation("[赶路调试] 玛薇卡 触发接近: dist={d}, mode={m}", Math.Round(distance, 1), waypoint?.MoveMode);
                         state.PendingApproach = false;
                         var colorDiff = GetMavikaColorDifference(screen2);
                         if (colorDiff < 15 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
@@ -309,7 +308,7 @@ public partial class PathExecutor
                         if (pos3.Item0 >= 250 && pos3.Item1 >= 250 && pos3.Item2 >= 250)
                         {
                             state.MavikaSlopeCount++;
-                            Logger.LogInformation("[赶路调试] 玛薇卡 空中检测触发: slopeDiff={sd}, count={c}", Math.Round(slopeDiff, 1), state.MavikaSlopeCount);
+                            // Logger.LogInformation("[赶路调试] 玛薇卡 空中检测触发: slopeDiff={sd}, count={c}", Math.Round(slopeDiff, 1), state.MavikaSlopeCount);
                             if (state.MavikaSlopeCount > 5 && avatar.IsActive(screen2))
                             {
                                 if (nextWaypoint?.MoveMode != MoveModeEnum.Fly.Code)
@@ -508,7 +507,7 @@ public partial class PathExecutor
                         var cd = await ReadEskillCdAsync("希诺宁");
                         if (cd <= 0)
                         {
-                            Logger.LogInformation("[赶路调试] 希诺宁 启动E技能: spaceExist=false, cd={cd}", cd);
+                            // Logger.LogInformation("[赶路调试] 希诺宁 启动E技能: spaceExist=false, cd={cd}", cd);
                             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                             await Delay(200, ct);
                             avatar.LastSkillTime = DateTime.UtcNow;
@@ -590,8 +589,8 @@ public partial class PathExecutor
                                 var sandroneCd = await ReadEskillCdAsync("桑多涅");
                                 if (sandroneCd <= 0)
                                 {
-                                    Logger.LogInformation("[赶路调试] 桑多涅 启动E技能: dist={d}, sandroneCd={cd}",
-                                        Math.Round(distance, 1), sandroneCd);
+                                    // Logger.LogInformation("[赶路调试] 桑多涅 启动E技能: dist={d}, sandroneCd={cd}",
+                                    //     Math.Round(distance, 1), sandroneCd);
                                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                     await Delay(150, ct);
                                     if (DashAtSecondPlaceExist())
@@ -712,8 +711,8 @@ public partial class PathExecutor
                             var cd = await ReadEskillCdAsync(avatar.Name);
                             if (cd <= 0)
                             {
-                                Logger.LogInformation("[赶路调试] {name} 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
-                                    avatar.Name, Math.Round(distance, 1), state.RotationStableCount, cd);
+                                // Logger.LogInformation("[赶路调试] {name} 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
+                                //     avatar.Name, Math.Round(distance, 1), state.RotationStableCount, cd);
                                 Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                                 await Delay(50, ct);
                                 Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
@@ -865,8 +864,8 @@ public partial class PathExecutor
         {
             if (distance < effectiveStopDist)
             {
-                Logger.LogInformation("[赶路调试] ShouldApproach 终点节点: dist={d}, stopDist={s}",
-                    Math.Round(distance, 1), effectiveStopDist);
+                // Logger.LogInformation("[赶路调试] ShouldApproach 终点节点: dist={d}, stopDist={s}",
+                //     Math.Round(distance, 1), effectiveStopDist);
                 return true;
             }
             return false;
@@ -997,7 +996,7 @@ public partial class PathExecutor
         ESkillCdTracker.Record(avatarName, cd);
         if (cd <= 0)
         {
-            ESkillCdTracker.ApplyFallback(avatarName);
+            ESkillCdTracker.ApplyFallback(avatarName, log: false);
         }
         return cd;
     }
@@ -1035,7 +1034,7 @@ public partial class PathExecutor
             }
 
             var result = await ExecuteHurryOnAsync(waypoint, nextWaypoint, distance, nextDistance, true, avatar, screen, num, hurryOnState, default);
-            Logger.LogInformation("[赶路调试] TryHurryOnAsync  exit: result={r}", result);
+            // Logger.LogInformation("[赶路调试] TryHurryOnAsync  exit: result={r}", result);
             return result;
         }
         catch (Exception e)
@@ -1082,14 +1081,22 @@ public partial class PathExecutor
         else
         {
             _hurryOnAvatar = PartyConfig.HurryOnAvatar;
+
+            // 验证手动指定的角色是否在队伍中，不在则不启用赶路
+            if (_combatScenes != null && !string.IsNullOrEmpty(_hurryOnAvatar))
+            {
+                var avatars = _combatScenes.GetAvatars();
+                if (!avatars.Any(a => a.Name == _hurryOnAvatar))
+                {
+                    Logger.LogWarning("手动指定的赶路角色 {Name} 不在当前队伍中，不启用赶路", _hurryOnAvatar);
+                    _hurryOnAvatar = "";
+                }
+            }
         }
 
         if (string.IsNullOrEmpty(PartyConfig.TravelMode))
         {
             PartyConfig.TravelMode = "精准靠近";
         }
-
-        // Logger.LogInformation("[赶路调试] InitHurryOnConfig: avatar={a}, travelMode={tm}, hurryOnAvatar={ha}",
-        //     _hurryOnAvatar, PartyConfig.TravelMode, PartyConfig.HurryOnAvatar);
     }
 }

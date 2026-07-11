@@ -59,7 +59,7 @@ public static class ESkillCdTracker
     /// 根据 <see cref="CdFallbackMap"/> 兜底设置 CD。
     /// 返回实际记录的 CD 值，无兜底或兜底失败时返回 0。
     /// </summary>
-    internal static double ApplyFallback(string characterName)
+    internal static double ApplyFallback(string characterName, bool log = true)
     {
         if (!CdFallbackMap.TryGetValue(characterName, out var fallbackType)) return 0;
 
@@ -71,7 +71,8 @@ public static class ESkillCdTracker
         if (fallbackType == FallbackType.SetFull)
         {
             Record(characterName, cfgCd);
-            Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(cfgCd, 2));
+            if (log)
+                Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(cfgCd, 2));
             return cfgCd;
         }
         else if (fallbackType == FallbackType.MinRemaining)
@@ -79,7 +80,8 @@ public static class ESkillCdTracker
             var remaining = GetRemainingCd(characterName);
             var actual = remaining > 0 ? Math.Min(remaining, cfgCd) : cfgCd;
             EReadyAt[characterName] = DateTime.UtcNow.AddSeconds(actual);
-            Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(actual, 2));
+            if (log)
+                Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(actual, 2));
             return actual;
         }
 
