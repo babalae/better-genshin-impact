@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -619,7 +619,13 @@ public class PathExecutor
 
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
-        if (PartyConfig.OnlyInTeleportRecover && waypoint.Type != WaypointType.Teleport.Code)
+        var timing = PartyConfig.RecoverTiming ?? (PartyConfig.OnlyInTeleportRecover ? RecoverTiming.OnlyTeleport : RecoverTiming.AnyWaypoint);
+        if (timing == RecoverTiming.Never)
+        {
+            return;
+        }
+
+        if (timing == RecoverTiming.OnlyTeleport && waypoint.Type != WaypointType.Teleport.Code)
         {
             return;
         }

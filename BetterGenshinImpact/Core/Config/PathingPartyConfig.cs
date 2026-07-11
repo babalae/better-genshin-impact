@@ -8,6 +8,13 @@ using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Config;
 
+public enum RecoverTiming
+{
+    AnyWaypoint,
+    OnlyTeleport,
+    Never
+}
+
 [Serializable]
 public partial class PathingPartyConfig : ObservableObject
 {
@@ -71,7 +78,24 @@ public partial class PathingPartyConfig : ObservableObject
     // 只在传送传送点时复活
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
-    
+
+    // 低血量回复时机
+    private RecoverTiming? _recoverTiming;
+
+    public RecoverTiming? RecoverTiming
+    {
+        get
+        {
+            if (_recoverTiming is null)
+            {
+                // 首次读取时从旧字段自动迁移
+                _recoverTiming = _onlyInTeleportRecover ? Core.Config.RecoverTiming.OnlyTeleport : Core.Config.RecoverTiming.AnyWaypoint;
+            }
+            return _recoverTiming;
+        }
+        set => SetProperty(ref _recoverTiming, value);
+    }
+
     //允许在jsScript脚本中使用此地图追踪配置
     [ObservableProperty]
     private bool _jsScriptUseEnabled = true;
@@ -135,6 +159,7 @@ public partial class PathingPartyConfig : ObservableObject
         return new PathingPartyConfig
         {
             OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
+            RecoverTiming = pathingConditionConfig.RecoverTiming,
             UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs,
             AutoEatEnabled = pathingConditionConfig.AutoEatEnabled
         };
