@@ -576,7 +576,7 @@ public partial class PathExecutor
 
                         if (!DashAtSecondPlaceExist())
                         {
-                            if ((DateTime.UtcNow - _lastSandroneSkillTime).TotalSeconds >= 2)
+                            if ((DateTime.UtcNow - _lastSandroneSkillTime).TotalSeconds >= 1)
                             {
                                 var sandroneCd = await ReadEskillCdAsync("桑多涅");
                                 if (sandroneCd <= 0)
