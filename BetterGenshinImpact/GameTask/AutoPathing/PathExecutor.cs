@@ -41,7 +41,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class PathExecutor
+public partial class PathExecutor
 {
     private readonly CameraRotateTask _rotateTask;
     private readonly TrapEscaper _trapEscaper;
@@ -746,6 +746,7 @@ public class PathExecutor
         var fastModeColdTime = DateTime.MinValue;
         var prevNotTooFarPosition = position;
         int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
+        var hurryOnState = new HurryOnState();
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
@@ -884,7 +885,26 @@ public class PathExecutor
                     await WaitUntilRotatedTo(targetOrientation, 2);
                 }
             }
+
+            // 赶路逻辑（使用角色技能加速赶路）
+            if (Math.Abs(diff) <= 60)
+            {
+                hurryOnState.RotationStableCount++;
+            }
+            else
+            {
+                hurryOnState.RotationStableCount = 0;
+            }
             
+            if (waypoint.Type == WaypointType.Target.Code)
+            {
+                var avatar = _combatScenes?.SelectAvatar(PartyConfig.MainAvatarIndex);
+                var result = await ExecuteHurryOnAsync(waypoint, null, distance, null, true, avatar, screen, num, hurryOnState, null);
+                if (result)
+                {
+                    continue;
+                }
+            }
 
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)

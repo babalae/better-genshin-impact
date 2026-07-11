@@ -1,0 +1,913 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
+
+namespace BetterGenshinImpact.GameTask.AutoPathing;
+
+/// <summary>
+/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者）
+/// </summary>
+public partial class PathExecutor
+{
+    private class HurryOnState
+    {
+        public int MavikaFlyCount;
+        public bool SprintMouseLogo = true;
+        public int RunCount;
+        public bool IsFlyingMwk;
+        public bool PendingApproach = true;
+        public bool? RunToDash = false;
+        public double DistanceHalf;
+        public int MavikaSlopeCount;
+        public int ClimbLogo;
+        public int RotationStableCount;
+        public bool FlyingState;
+        public int ChascaFlightCheckCount;
+        public int WandererFlightCheckCount;
+    }
+    // 赶路切换角色黑名单，防止切人后触发夜魂传递
+    private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦蕾莎", "茜特菈莉"];
+
+    private string _hurryOnAvatar = "";
+    private DateTime _lastJumpFlyTime = DateTime.MinValue;
+    private DateTime _lastMavikaBoardTime = DateTime.MinValue;
+    private DateTime _lastSkillCheckTime = DateTime.MinValue;
+    private DateTime _lastLandingTime = DateTime.MinValue;
+    private int _sandroneCount;
+    private DateTime _lastSandroneSkillTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 获取切人步行目标序号：排除赶路角色自身 + 黑名单，取序号最靠前的有效角色。
+    /// 若排除后无合法角色，则忽略黑名单再试一次。
+    /// 返回 "1"/"2"/"3"/"4"，不会返回 null。
+    /// </summary>
+    private string GetSwitchToWalkIndex()
+    {
+        for (var i = 1; i <= 4; i++)
+        {
+            var avatar = _combatScenes?.SelectAvatar(i);
+            if (avatar == null) continue;
+            if (avatar.Name == _hurryOnAvatar) continue;
+            if (HurryOnBlacklist.Contains(avatar.Name)) continue;
+            return i.ToString();
+        }
+
+        for (var i = 1; i <= 4; i++)
+        {
+            var avatar = _combatScenes?.SelectAvatar(i);
+            if (avatar == null) continue;
+            if (avatar.Name == _hurryOnAvatar) continue;
+            return i.ToString();
+        }
+
+        var currentIdx = _combatScenes?.SelectAvatar(_hurryOnAvatar)?.Index ?? 1;
+        return ((currentIdx % 4) + 1).ToString();
+    }
+
+    private async Task SwitchToHurryAvatarAsync(ImageRegion screen2, Avatar avatar, double distance, int num, CancellationToken ct)
+    {
+        if (Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
+        {
+            await SwitchAvatar(avatar.Index.ToString());
+        }
+
+        if (num % 5 == 0)
+        {
+            Logger.LogInformation("自动赶路：{t} 赶路...{t2}", avatar.Name, Math.Round(distance));
+        }
+    }
+
+    /// <summary>
+    /// 赶路逻辑：处理角色特化赶路、接近节点检测、防误飞等。
+    /// 在主循环的通用移动逻辑之前调用。
+    /// </summary>
+    /// <returns>true = 跳过本次通用移动逻辑（continue）；false = 继续执行通用移动逻辑</returns>
+    private async Task<bool> ExecuteHurryOnAsync(
+        WaypointForTrack waypoint,
+        Waypoint? nextWaypoint,
+        double distance,
+        double? nextDistance,
+        bool isPoint,
+        Avatar? avatar,
+        ImageRegion screen2,
+        int num,
+        HurryOnState state,
+        List<string>? disabledAvatars)
+    {
+        if (avatar == null) return false;
+
+        if (disabledAvatars is { Count: > 0 } && disabledAvatars.Contains(avatar.Name))
+            return false;
+
+        if (SwimmingConfirm(screen2))
+        {
+            return false;
+        }
+
+        // 赶路逻辑只在 Run/Dash 路段触发，Fly 路段不处理
+        if (waypoint?.MoveMode != MoveModeEnum.Run.Code && waypoint?.MoveMode != MoveModeEnum.Dash.Code)
+            return false;
+
+        switch (avatar.Name)
+        {
+            case "玛薇卡":
+                bool boarded = false;
+
+                if (state.PendingApproach)
+                {
+                    var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (needsApproach)
+                    {
+                        state.PendingApproach = false;
+                        var colorDiff = GetMavikaColorDifference(screen2);
+                        if (colorDiff < 15 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
+                        {
+                            if (PartyConfig.SwitchToWalkEnabled)
+                            {
+                                var nextIdx = GetSwitchToWalkIndex();
+                                Logger.LogInformation("自动赶路：{t} 节点接近...-i {t2} {t3} {t4}", PartyConfig.TravelMode, nextIdx, waypoint?.MoveMode, Math.Round(colorDiff));
+
+                                Task.Run(async () =>
+                                {
+                                    await SwitchAvatar(nextIdx);
+                                }, ct);
+                            }
+                            else
+                            {
+                                Logger.LogInformation("自动赶路：玛薇卡接近节点，下车步行");
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                if (distance > PartyConfig.Distance)
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 3
+                        && GetMavikaColorDifference(screen2) > 15
+                        && await ReadEskillCdAsync("玛薇卡") <= 0)
+                    {
+                        _lastMavikaBoardTime = DateTime.UtcNow;
+                        boarded = true;
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(200, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(300, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(700, ct);
+                    }
+                }
+
+                if (PartyConfig.MwkJumpFlyEnabled && distance > 2 * PartyConfig.Distance && state.RotationStableCount >= 1)
+                {
+                    var interval = PartyConfig.MwkJumpFlyIntervalSeconds > 0 ? PartyConfig.MwkJumpFlyIntervalSeconds : 2;
+
+                    if (!(boarded || GetMavikaColorDifference(screen2) <= 15 && await ReadEskillCdAsync("玛薇卡") < 1))
+                    {
+                        return false;
+                    }
+
+                    if ((DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds < interval)
+                    {
+                        return true;
+                    }
+
+                    Logger.LogInformation("自动赶路：玛薇卡跳飞赶路 距离下个节点距离 {d}", Math.Round(distance));
+                    await Delay(50, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(150, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(100, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(10, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(150, ct);
+                    _lastJumpFlyTime = DateTime.UtcNow;
+
+                    using var jumpCheckRegion = CaptureToRectArea();
+                    if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                        await Delay(300, ct);
+                        for (int i = 0; i < 5; i++)
+                        {
+                            using var retryRegion = CaptureToRectArea();
+                            if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                await Delay(300, ct);
+                            }
+                            else break;
+                        }
+                        return false;
+                    }
+
+                    if (SpaceAtSecondPlaceExist(state))
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    }
+
+                    return true;
+                }
+
+                if ((boarded || GetMavikaColorDifference(screen2) <= 15) && distance > PartyConfig.Distance)
+                {
+                    if (state.RunToDash == false && distance > 40 && waypoint.MoveMode == MoveModeEnum.Run.Code)
+                    {
+                        state.RunToDash = true;
+                        state.DistanceHalf = distance * 2 / 4;
+                        waypoint.MoveMode = MoveModeEnum.Dash.Code;
+                    }
+                    else if (state.RunToDash == true && distance < state.DistanceHalf)
+                    {
+                        waypoint.MoveMode = MoveModeEnum.Run.Code;
+                        Task.Run(async () =>
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                                await Delay(1000, ct);
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                            }, ct);
+                        state.RunToDash = null;
+                    }
+
+                    if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.Drop);
+                        await Delay(500, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    }
+
+                    if (distance > 10)
+                    {
+                        if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                        }
+                        else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
+                        {
+                            state.RunCount++;
+                            if (state.RunCount < 5)
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                            }
+                        }
+                    }
+
+                    var pos = screen2.SrcMat.At<Vec3b>(1012, 1574);
+                    var pos2 = screen2.SrcMat.At<Vec3b>(1006, 1608);
+                    var pos3 = screen2.SrcMat.At<Vec3b>(1028, 1584);
+                    // 飞行/滑行/爬坡状态指示器两个端点的 RGB 欧氏距离
+                    // < 15 → 指示器消失 → 玛薇卡在平地上（非空中/滑行/爬坡状态）
+                    var slopeDiff = Math.Sqrt(
+                        Math.Pow(pos.Item0 - pos2.Item0, 2) +
+                        Math.Pow(pos.Item1 - pos2.Item1, 2) +
+                        Math.Pow(pos.Item2 - pos2.Item2, 2)
+                    );
+                    // 指示器消失（slopeDiff < 15）→ 在平地上，如果此时 E 技能图标为白色则判定在空中
+                    // 按普攻执行下落攻击快速落地
+                    if (slopeDiff < 15)
+                    {
+                        if (pos3.Item0 >= 250 && pos3.Item1 >= 250 && pos3.Item2 >= 250)
+                        {
+                            state.MavikaSlopeCount++;
+                            if (state.MavikaSlopeCount > 5 && avatar.IsActive(screen2))
+                            {
+                                if (nextWaypoint?.MoveMode != MoveModeEnum.Fly.Code)
+                                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                state.MavikaSlopeCount = 0;
+                                Logger.LogInformation("自动赶路：靠近节点切换 {t}...-h {t2}", "", waypoint?.MoveMode);
+                            }
+                        }
+                    }
+
+                    return true;
+                }
+
+                break;
+
+            // case "瓦雷莎":
+            //     if (state.PendingApproach)
+            //     {
+            //         var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+            //
+            //         if (shouldApproach)
+            //         {
+            //             state.PendingApproach = false;
+            //             if (PartyConfig.SwitchToWalkEnabled)
+            //             {
+            //                 var nextIdx = GetSwitchToWalkIndex();
+            //                 Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
+            //                 Task.Run(async () =>
+            //                 {
+            //                     await SwitchAvatar(nextIdx);
+            //                 }, ct);
+            //             }
+            //             else
+            //             {
+            //                 if (await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
+            //                 {
+            //                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            //                     await Delay(300, ct);
+            //                 }
+            //
+            //                 var lower = new Scalar(220, 150, 150);
+            //                 var higher = new Scalar(230, 160, 180);
+            //                 using var mask = OpenCvCommonHelper.Threshold(screen2.DeriveCrop(948, 410, 26, 30).SrcMat, lower, higher);
+            //                 using var labels = new Mat();
+            //                 using var stats = new Mat();
+            //                 using var centroids = new Mat();
+            //
+            //                 var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            //                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+            //
+            //                 if (numLabels > 3 && numLabels < 40)
+            //                 {
+            //                     state.MavikaFlyCount++;
+            //                     if (state.MavikaFlyCount > 2 && avatar.IsActive(screen2))
+            //                     {
+            //                         Task.Run(async () =>
+            //                         {
+            //                             await Delay(1000, ct);
+            //                             using var region3 = CaptureToRectArea();
+            //                             if (avatar.IsActive(region3))
+            //                             {
+            //                                 Simulation.SendInput.SimulateAction(GIActions.Jump);
+            //                                 await Delay(100, ct);
+            //                                 using var region4 = CaptureToRectArea();
+            //                                 var isFlying = Bv.GetMotionStatus(region4) == MotionStatus.Fly;
+            //                                 if (isFlying)
+            //                                 {
+            //                                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            //                                     Logger.LogInformation("自动赶路：{t} 下落攻击...", "瓦蕾莎");
+            //                                 }
+            //                             }
+            //                             state.MavikaFlyCount = 0;
+            //                         }, ct);
+            //                     }
+            //                 }
+            //             }
+            //             return false;
+            //         }
+            //     }
+            //
+            //     if (distance > PartyConfig.Distance)
+            //     {
+            //         await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+            //
+            //         waypoint.MoveMode = MoveModeEnum.Run.Code;
+            //
+            //         await Delay(300, ct);
+            //         if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
+            //         {
+            //             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+            //             await Delay(300, ct);
+            //             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+            //             await Delay(200, ct);
+            //             avatar.LastSkillTime = DateTime.UtcNow;
+            //
+            //             if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
+            //             {
+            //                 if (distance > 20)
+            //                 {
+            //                     if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
+            //                     {
+            //                         Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                     }
+            //                     else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
+            //                     {
+            //                         if (state.RunCount < 2)
+            //                         {
+            //                             Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                         }
+            //                     }
+            //                 }
+            //             }
+            //             else
+            //             {
+            //                 var higher = new Scalar(0, 221, 250);
+            //                 using var region2 = CaptureToRectArea();
+            //                 using var mask = OpenCvCommonHelper.Threshold(region2.DeriveCrop(1686, 949, 10, 10).SrcMat, higher);
+            //                 using var labels = new Mat();
+            //                 using var stats = new Mat();
+            //                 using var centroids = new Mat();
+            //                 var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            //                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+            //
+            //                 if (numLabels > 1)
+            //                 {
+            //                     if (distance > 20)
+            //                     {
+            //                         if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
+            //                         {
+            //                             Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                         }
+            //                         else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
+            //                         {
+            //                             if (state.RunCount < 2)
+            //                             {
+            //                                 Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                             }
+            //                         }
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
+            //
+            //     return true;
+            // break;
+
+            case "希诺宁":
+                if (state.PendingApproach)
+                {
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (shouldApproach)
+                    {
+                        state.PendingApproach = false;
+                        if (PartyConfig.SwitchToWalkEnabled)
+                        {
+                            var nextIdx = GetSwitchToWalkIndex();
+                            Logger.LogInformation("自动赶路：希诺宁接近节点，切人步行 {t}", nextIdx);
+                            Task.Run(async () =>
+                            {
+                                await SwitchAvatar(nextIdx);
+                            }, ct);
+                        }
+                        else if (SpaceAtSecondPlaceExist(state))
+                        {
+                            Logger.LogInformation("自动赶路：希诺宁接近节点，关闭E技能赶路状态");
+                            for (var retries = 0; retries < 10; retries++)
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                await Delay(100, ct);
+                                var cd = await ReadEskillCdAsync("希诺宁");
+                                if (cd > 0)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                if (distance > PartyConfig.Distance
+                    && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 1)
+                        return false;
+                    _lastSkillCheckTime = DateTime.UtcNow;
+
+                    if (!SpaceAtSecondPlaceExist(state))
+                    {
+                        var cd = await ReadEskillCdAsync("希诺宁");
+                        if (cd <= 0)
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(200, ct);
+                            avatar.LastSkillTime = DateTime.UtcNow;
+                        }
+                    }
+
+                    return false;
+                }
+
+                break;
+
+            case "闲云":
+                if (distance > PartyConfig.Distance
+                    && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    var cd = await ReadEskillCdAsync("闲云");
+                    if (cd <= 0 && state.RotationStableCount >= 1)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        var interval = PartyConfig.MwkJumpFlyIntervalSeconds > 0 ? PartyConfig.MwkJumpFlyIntervalSeconds : 1.4;
+                        await Delay((int)(interval / 2.0 * 1000), ct);
+                        avatar.LastSkillTime = DateTime.UtcNow;
+                        return true;
+                    }
+
+                    return false;
+                }
+                break;
+
+            case "桑多涅":
+                if (state.PendingApproach)
+                {
+                    var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (needsApproach)
+                    {
+                        state.PendingApproach = false;
+
+                        if (DashAtSecondPlaceExist())
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                            await Delay(50, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                        }
+
+                        await SafeLanding(ct);
+
+                        _sandroneCount = 0;
+
+                        Logger.LogInformation("自动赶路：桑多涅接近节点");
+                        return false;
+                    }
+                }
+
+                if (distance > PartyConfig.Distance
+                    && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    if (!DashAtSecondPlaceExist())
+                    {
+                        if ((DateTime.UtcNow - _lastSandroneSkillTime).TotalSeconds >= 2)
+                        {
+                            var sandroneCd = await ReadEskillCdAsync("桑多涅");
+                            if (sandroneCd <= 0)
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                await Delay(150, ct);
+                                if (DashAtSecondPlaceExist())
+                                {
+                                    _lastSandroneSkillTime = DateTime.UtcNow;
+                                    _sandroneCount++;
+                                }
+                                else
+                                {
+                                    await SafeLanding(ct);
+                                }
+                            }
+                        }
+                    }
+                    else if (state.PendingApproach && !DashAtSecondPlaceExist())
+                    {
+                        state.PendingApproach = false;
+                        await SafeLanding(ct);
+                        Logger.LogInformation("自动赶路：桑多涅技能耗尽，安全降落");
+                    }
+
+                    if (nextWaypoint?.Action == MoveModeEnum.Fly.Code)
+                    {
+                        return true;
+                    }
+
+                    if (SandroneShouldSkip(_sandroneCount))
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+
+                break;
+
+            case "恰斯卡":
+            case "伊法":
+                if (state.PendingApproach)
+                {
+                    var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (shouldApproachX)
+                    {
+                        state.PendingApproach = false;
+                        if (state.FlyingState)
+                        {
+                            if (SpaceAtSecondPlaceExist(state))
+                            {
+                                Logger.LogInformation($"自动赶路：{avatar.Name}接近节点，关闭飞行状态");
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                                while (true)
+                                {
+                                    await Delay(100, ct);
+                                    var cd = await ReadEskillCdAsync(avatar.Name);
+                                    if (cd > 0)
+                                    {
+                                        break;
+                                    }
+                                }
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                            }
+                            state.FlyingState = false;
+                        }
+                        return false;
+                    }
+                }
+
+                if (state.FlyingState)
+                {
+                    if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                        return true;
+                    _lastSkillCheckTime = DateTime.UtcNow;
+
+                    if (!SpaceAtSecondPlaceExist(state))
+                    {
+                        state.FlyingState = false;
+                        _lastLandingTime = DateTime.UtcNow;
+                        Logger.LogInformation($"自动赶路：{avatar.Name}飞行结束");
+                        await SafeLanding(ct);
+                        return false;
+                    }
+                    if (distance < 45)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                    }
+                    return true;
+                }
+
+                if (distance > PartyConfig.Distance
+                    && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                        return false;
+                    _lastSkillCheckTime = DateTime.UtcNow;
+
+                    if (state.RotationStableCount >= 1)
+                    {
+                        if ((DateTime.UtcNow - _lastLandingTime).TotalSeconds < 3)
+                            return false;
+
+                        var cd = await ReadEskillCdAsync(avatar.Name);
+                        if (cd <= 0)
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                            await Delay(50, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(100, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+
+                            avatar.LastSkillTime = DateTime.UtcNow;
+                            state.FlyingState = true;
+                            Logger.LogInformation($"自动赶路：{avatar.Name}启动飞行");
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
+                break;
+
+            case "流浪者":
+                if (state.PendingApproach)
+                {
+                    var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (shouldApproachX)
+                    {
+                        state.PendingApproach = false;
+                        if (state.FlyingState)
+                        {
+                            if (SpaceAtSecondPlaceExist(state))
+                            {
+                                Logger.LogInformation("自动赶路：流浪者接近节点，关闭飞行状态");
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                await SafeLanding(ct);
+                            }
+                            state.FlyingState = false;
+                        }
+                        return false;
+                    }
+                }
+
+                if (state.FlyingState)
+                {
+                    if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                        return true;
+                    _lastSkillCheckTime = DateTime.UtcNow;
+
+                    if (!SpaceAtSecondPlaceExist(state))
+                    {
+                        state.FlyingState = false;
+                        _lastLandingTime = DateTime.UtcNow;
+                        Logger.LogInformation("自动赶路：流浪者飞行结束");
+                        await SafeLanding(ct);
+                        return false;
+                    }
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    if (distance < 45)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                    }
+                    state.WandererFlightCheckCount++;
+                    if (state.WandererFlightCheckCount % 3 == 0)
+                        Simulation.SendInput.Mouse.MiddleButtonClick();
+                    return true;
+                }
+
+                if (distance > PartyConfig.Distance
+                    && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                        return false;
+                    _lastSkillCheckTime = DateTime.UtcNow;
+
+                    if (state.RotationStableCount >= 1)
+                    {
+                        if ((DateTime.UtcNow - _lastLandingTime).TotalSeconds < 3)
+                            return false;
+
+                        var cd = await ReadEskillCdAsync("流浪者");
+                        if (cd <= 0)
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                            await Delay(50, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                            await Delay(100, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(50, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+
+                            avatar.LastSkillTime = DateTime.UtcNow;
+                            state.FlyingState = true;
+                            Logger.LogInformation("自动赶路：流浪者启动飞行");
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
+                break;
+        }
+
+        if ((waypoint?.MoveMode == MoveModeEnum.Fly.Code && PartyConfig.TravelMode == "连续赶路"
+                || waypoint?.Action == ActionEnum.StopFlying.Code
+                || waypoint?.MoveMode == MoveModeEnum.Dash.Code)
+            && distance > 4)
+        {
+            var isClimb = Bv.GetMotionStatus(screen2) == MotionStatus.Climb;
+            if (isClimb && state.ClimbLogo < 2 && waypoint.MoveMode != MoveModeEnum.Climb.Code)
+            {
+                await Delay(1000, ct);
+                Simulation.SendInput.SimulateAction(GIActions.Drop);
+                await Delay(500, ct);
+                state.ClimbLogo++;
+            }
+        }
+
+        return false;
+    }
+
+    private double GetMavikaColorDifference(ImageRegion screen2)
+    {
+        var pos = screen2.SrcMat.At<Vec3b>(978, 1692);
+        var pos2 = screen2.SrcMat.At<Vec3b>(995, 1702);
+        return Math.Sqrt(
+            Math.Pow(pos.Item0 - pos2.Item0, 2) +
+            Math.Pow(pos.Item1 - pos2.Item1, 2) +
+            Math.Pow(pos.Item2 - pos2.Item2, 2)
+        );
+    }
+
+    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, Waypoint? nextWaypoint, string avatarName)
+    {
+        var effectiveStopDist = Math.Min(PartyConfig.ApproachStopDistance, PartyConfig.Distance);
+
+        // 下一个节点不存在（终点）或节点模式不是 Run/Dash 时，需要精确接近
+        if (nextWaypoint == null || (nextWaypoint.MoveMode != MoveModeEnum.Run.Code && nextWaypoint.MoveMode != MoveModeEnum.Dash.Code))
+            return true;
+
+        // 连续赶路模式下飞行角色转弯表现差，强制使用精确接近阈值
+        if (distance < effectiveStopDist && (PartyConfig.TravelMode == "精准靠近" || (PartyConfig.TravelMode == "连续赶路" && (avatarName == "恰斯卡" || avatarName == "伊法" || avatarName == "流浪者"))))
+            return true;
+
+        if (PartyConfig.TravelMode == "连续赶路" && distance < Math.Max(effectiveStopDist, 15) &&
+            (nextDistance < 25 || nextWaypoint?.Type == WaypointType.Target.Code || waypoint.Type == WaypointType.Target.Code
+             || waypoint?.Action == ActionEnum.CombatScript.Code))
+            return true;
+        return false;
+    }
+
+    private bool SandroneShouldSkip(int count)
+    {
+        return count switch
+        {
+            0 => false,
+            1 => false,
+            _ => count % 2 == 0,
+        };
+    }
+
+    private bool DashAtSecondPlaceExist()
+    {
+        using var region = CaptureToRectArea().DeriveCrop(1595, 1028, 9, 7);
+        using var mask = OpenCvCommonHelper.Threshold(region.SrcMat,
+            new Scalar(242, 223, 39), new Scalar(255, 233, 44));
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        return numLabels > 1;
+    }
+
+    private bool SpaceAtSecondPlaceExist(HurryOnState state)
+    {
+        using var region = CaptureToRectArea();
+        var pixel = region.SrcMat.At<Vec3b>(1028, 1584);
+        return pixel.Item0 >= 250 && pixel.Item1 >= 250 && pixel.Item2 >= 250;
+    }
+
+    private async Task SafeLanding(CancellationToken ct)
+    {
+        await Delay(100, ct);
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        await Delay(100, ct);
+
+        using var screen = CaptureToRectArea();
+        if (Bv.GetMotionStatus(screen) == MotionStatus.Fly)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            await Delay(300, ct);
+            for (int i = 0; i < 5; i++)
+            {
+                using var retryRegion = CaptureToRectArea();
+                if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    await Delay(300, ct);
+                }
+                else break;
+            }
+        }
+    }
+
+    private static bool SwimmingConfirm(Region region)
+    {
+        var fullRegion = region.ToImageRegion();
+        bool ownRegion = fullRegion != region;
+        try
+        {
+            using var regionMat = fullRegion.DeriveCrop(1819, 1028, 9, 7);
+            using var mask = OpenCvCommonHelper.Threshold(regionMat.SrcMat,
+                new Scalar(242, 223, 39), new Scalar(255, 233, 44));
+            using var labels = new Mat();
+            using var stats = new Mat();
+            using var centroids = new Mat();
+
+            var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+            return numLabels > 1;
+        }
+        finally
+        {
+            if (ownRegion) fullRegion.Dispose();
+        }
+    }
+
+    private async Task<double> ReadEskillCdAsync(string avatarName)
+    {
+        using var cdRegion = CaptureToRectArea();
+        var eRa = cdRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+        var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
+        var cd = StringUtils.TryParseDouble(text);
+        ESkillCdTracker.Record(avatarName, cd);
+        if (cd <= 0)
+        {
+            ESkillCdTracker.ApplyFallback(avatarName);
+        }
+        return cd;
+    }
+}
