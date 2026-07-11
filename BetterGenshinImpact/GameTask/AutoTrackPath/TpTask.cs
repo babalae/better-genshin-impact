@@ -2454,7 +2454,13 @@ public class TpTask
                 return;
             }
 
-            if (!layerSwitchClicked && Bv.BigMapIsUnderground(capture))
+            var isUnderground = Bv.BigMapIsUnderground(capture);
+            if (!layerSwitchClicked && !isUnderground)
+            {
+                break;
+            }
+
+            if (!layerSwitchClicked)
             {
                 using var layerSwitchButton = capture.Find(_assets.MapUndergroundSwitchButtonRo);
                 if (layerSwitchButton.IsExist())
