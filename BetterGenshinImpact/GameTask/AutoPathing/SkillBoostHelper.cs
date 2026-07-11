@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -859,12 +859,30 @@ public partial class PathExecutor
     {
         var effectiveStopDist = Math.Min(PartyConfig.ApproachStopDistance, PartyConfig.Distance);
 
-        // 下一个节点不存在（终点）或节点模式不是 Run/Dash 时，需要精确接近
-        if (nextWaypoint == null || (nextWaypoint.MoveMode != MoveModeEnum.Run.Code && nextWaypoint.MoveMode != MoveModeEnum.Dash.Code))
+        // 终点：接近到停止距离内才下车
+        // 不加距离限制会导致远距离提前下车走一大段路，然后重新上车的震荡
+        if (nextWaypoint == null)
         {
-            Logger.LogInformation("[赶路调试] ShouldApproach 终点/非RunDash节点: dist={d}, nextNull={n}, nextMode={m}",
-                Math.Round(distance, 1), nextWaypoint == null, nextWaypoint?.MoveMode);
-            return true;
+            if (distance < effectiveStopDist)
+            {
+                Logger.LogInformation("[赶路调试] ShouldApproach 终点节点: dist={d}, stopDist={s}",
+                    Math.Round(distance, 1), effectiveStopDist);
+                return true;
+            }
+            return false;
+        }
+
+        // 下一个节点不是 Run/Dash 时（如 Fly/Walk/Climb），接近到停止距离内才下车
+        // 不加距离限制会导致远距离提前下车走一段、然后重新上车的反复震荡
+        if (nextWaypoint.MoveMode != MoveModeEnum.Run.Code && nextWaypoint.MoveMode != MoveModeEnum.Dash.Code)
+        {
+            if (distance < effectiveStopDist)
+            {
+                Logger.LogInformation("[赶路调试] ShouldApproach 非RunDash节点接近: dist={d}, stopDist={s}, nextMode={m}",
+                    Math.Round(distance, 1), effectiveStopDist, nextWaypoint.MoveMode);
+                return true;
+            }
+            return false;
         }
 
         // 连续赶路模式下飞行角色转弯表现差，强制使用精确接近阈值
