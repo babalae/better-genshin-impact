@@ -581,13 +581,13 @@ public partial class PathExecutor
                                 var sandroneCd = await ReadEskillCdAsync("桑多涅");
                                 if (sandroneCd <= 0)
                                 {
+                                    _lastSandroneSkillTime = DateTime.UtcNow;
                                     Logger.LogInformation("[赶路调试] 桑多涅 启动E技能: dist={d}, sandroneCd={cd}",
                                         Math.Round(distance, 1), sandroneCd);
                                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                     await Delay(150, ct);
                                     if (DashAtSecondPlaceExist())
                                     {
-                                        _lastSandroneSkillTime = DateTime.UtcNow;
                                         state.FlyingState = true;
                                         _sandroneCount++;
                                     }
