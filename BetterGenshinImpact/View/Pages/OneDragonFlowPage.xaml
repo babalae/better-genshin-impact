@@ -153,9 +153,17 @@
                                     <ui:Card Margin="0,2,14,2">
                                         <ui:Card.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="复制"
-                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.CopyTaskCommand}"
+                                                <MenuItem Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.AddTaskGroupCommand}"
+                                                          Header="新增配置" />
+                                                <MenuItem Header="删除"
+                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.DeleteTaskCommand}"
                                                           CommandParameter="{Binding}" />
+                                                <Separator />
+                                                <MenuItem Header="从此执行"
+                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.SetTaskAsNextCommand}"
+                                                          CommandParameter="{Binding}" />
+                                                <MenuItem Header="清除标记"
+                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.ClearNextTaskGroupCommand}" />
                                             </ContextMenu>
                                         </ui:Card.ContextMenu>
                                         <Grid>

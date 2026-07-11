@@ -727,6 +727,40 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void DeleteTask(OneDragonTaskItem? taskItem)
+    {
+        if (taskItem == null) return;
+
+        TaskList.Remove(taskItem);
+        SaveConfig();
+        Toast.Success($"已删除任务: {taskItem.Name}");
+    }
+
+    [RelayCommand]
+    private void SetTaskAsNext(OneDragonTaskItem? taskItem)
+    {
+        if (taskItem == null) return;
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择一条龙配置单");
+            return;
+        }
+        if (!taskItem.IsEnabled)
+        {
+            Toast.Warning($"当前任务 <{taskItem.Name}> 已禁用，请先启用后再从此开始执行");
+            return;
+        }
+
+        SelectedConfig.NextTaskId = taskItem.Id;
+        foreach (var task in TaskList)
+        {
+            task.IsNextTask = task.Id == taskItem.Id;
+        }
+        Toast.Success($"设置从 <{taskItem.Name}> 开始执行任务列表");
+        SaveConfig();
+    }
+
+    [RelayCommand]
     private void DeleteTaskGroup()
     {
         DeleteConfigDisplayTaskListFromConfig();
