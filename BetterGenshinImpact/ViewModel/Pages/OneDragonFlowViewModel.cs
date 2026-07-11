@@ -367,18 +367,17 @@ public partial class OneDragonFlowViewModel : ViewModel
             OneDragonTaskItem taskItem;
             if (isOldFormat)
             {
-                // 旧格式：键=任务名 → 创建新 Id
                 taskItem = new OneDragonTaskItem(key) { IsEnabled = enabled };
             }
             else
             {
-                // 新格式：键=Id，从 TaskDefinitions 取任务名
                 if (!SelectedConfig.TaskDefinitions.TryGetValue(key, out var name))
                 {
                     continue;
                 }
                 taskItem = new OneDragonTaskItem(name, key) { IsEnabled = enabled };
             }
+            taskItem.IsNextTask = key == SelectedConfig.NextTaskId;
             TaskList.Add(taskItem);
         }
     }
