@@ -77,6 +77,26 @@ public class Genshin
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, mapName, force);
     }
 
+    public string StartTpDiagnosticSession(string sourceVersion, int totalPoints)
+    {
+        return TpDiagnosticRecorder.StartSession(sourceVersion, totalPoints);
+    }
+
+    public void BeginTpDiagnosticPoint(int index, string pointId, string label, string mapName, double x, double y)
+    {
+        TpDiagnosticRecorder.BeginPoint(index, pointId, label, mapName, x, y);
+    }
+
+    public void CompleteTpDiagnosticPoint(bool success, string? error = null)
+    {
+        TpDiagnosticRecorder.CompletePoint(success, error);
+    }
+
+    public void EndTpDiagnosticSession()
+    {
+        TpDiagnosticRecorder.EndSession();
+    }
+
 
     public async Task Tp(double x, double y, bool force)
     {
