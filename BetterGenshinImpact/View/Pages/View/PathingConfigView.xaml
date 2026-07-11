@@ -291,8 +291,8 @@
                     <ComboBox
                         MinWidth="100"
                         Margin="0,0,36,0"
-                        SelectedValuePath="Key"
-                        DisplayMemberPath="Value"
+                        SelectedValuePath="Value"
+                        DisplayMemberPath="Key"
                         ItemsSource="{Binding RecoverTimingSource}"
                         SelectedValue="{Binding Config.PathingConditionConfig.RecoverTiming}" />
                 </ui:CardControl>
