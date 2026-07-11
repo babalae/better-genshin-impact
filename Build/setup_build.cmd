@@ -3,11 +3,11 @@ if exist dist rd /s /q dist
 mkdir dist\BetterGI
 
 @echo [prepare compiler]
-for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "path=%path%;%%i\MSBuild\Current\Bin;%%i\Common7\IDE"
+for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do if not "%%i"=="" set "path=%path%;%%i\MSBuild\Current\Bin;%%i\Common7\IDE"
 
 @echo [prepare version]
 cd /d ..\BetterGenshinImpact
-set "script=Get-Content 'BetterGenshinImpact.csproj' | Select-String -Pattern 'AssemblyVersion\>(.*)\<\/AssemblyVersion' | ForEach-Object { $_.Matches.Groups[1].Value }"
+set "script=Select-String -Path 'BetterGenshinImpact.csproj' -Pattern 'Version\>(.*)\<\/Version' | ForEach-Object { $_.Matches.Groups[1].Value }"
 for /f "usebackq delims=" %%i in (`powershell -NoLogo -NoProfile -Command "%script%"`) do set version=%%i
 echo current version is %version%
 if "%b%"=="" ( set "b=%version%" )

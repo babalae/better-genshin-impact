@@ -368,9 +368,9 @@
 
                     </Grid>
 
-                    <Grid Margin="16">
+                    <Grid Margin="16,8,16,0">
 
-                        <ui:CardExpander Margin="0,0,36,12"
+                        <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0">
                         <ui:CardExpander.Header>
                             <Grid>
@@ -418,7 +418,7 @@
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
-                                          MinWidth="100"
+                                          MinWidth="120"
                                           ItemsSource="{Binding PathingConfig.HurryOnAvatarList}"
                                           SelectedItem="{Binding PathingConfig.HurryOnAvatar}" />
                             </Grid>
@@ -446,7 +446,7 @@
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
-                                          Width="100"
+                                          Width="120"
                                           ItemsSource="{Binding PathingConfig.TravelModeList}"
                                           SelectedItem="{Binding PathingConfig.TravelMode}" />
                             </Grid>
@@ -596,9 +596,9 @@
                     </Grid>
 
                                        <!-- 执行周期配置 -->
-                    <Grid Margin="16">
+                    <Grid Margin="16,0">
 
-                        <ui:CardExpander Margin="0,0,36,12"
+                        <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0"
                                          IsExpanded="False">
 
@@ -768,9 +768,9 @@
                                        
                                        
                                        <!-- 跳过执行配置 -->
-                    <Grid Margin="16">
+                    <Grid Margin="16,0">
 
-                        <ui:CardExpander Margin="0,0,36,12"
+                        <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0"
                                          IsExpanded="False">
 
@@ -939,9 +939,9 @@
 
                     </Grid>        
                                        <!-- 优先执行其他配置组 -->
-                     <Grid Margin="16">
+                     <Grid Margin="16,0,16,8">
 
-                        <ui:CardExpander Margin="0,0,36,12"
+                        <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0"
                                          IsExpanded="False">
 
