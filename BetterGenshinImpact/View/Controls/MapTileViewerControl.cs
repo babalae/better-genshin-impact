@@ -1,0 +1,2630 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using OpenCvSharp;
+using OpenCvSharp.WpfExtensions;
+using CvRect = OpenCvSharp.Rect;
+using WpfPoint = System.Windows.Point;
+using WpfRect = System.Windows.Rect;
+
+namespace BetterGenshinImpact.View.Controls;
+
+public sealed class MapTileViewerControl : FrameworkElement
+{
+    public static readonly DependencyProperty MapNameProperty = DependencyProperty.Register(
+        nameof(MapName),
+        typeof(string),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(nameof(MapTypes.Teyvat), FrameworkPropertyMetadataOptions.AffectsRender, OnMapNameChanged));
+
+    public static readonly DependencyProperty FollowZoomProperty = DependencyProperty.Register(
+        nameof(FollowZoom),
+        typeof(double),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(5.0, FrameworkPropertyMetadataOptions.AffectsRender, OnFollowZoomChanged));
+
+    public static readonly DependencyProperty ShowTeleportPointsProperty = DependencyProperty.Register(
+        nameof(ShowTeleportPoints),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty IsReadOnlyDisplayProperty = DependencyProperty.Register(
+        nameof(IsReadOnlyDisplay),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnDisplayModeChanged));
+
+    public static readonly DependencyProperty IsCompactFollowViewProperty = DependencyProperty.Register(
+        nameof(IsCompactFollowView),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnDisplayModeChanged));
+
+    public static readonly DependencyProperty IsRecorderModeProperty = DependencyProperty.Register(
+        nameof(IsRecorderMode),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnIsRecorderModeChanged));
+
+    public static readonly DependencyProperty IsPathRecorderRecordingProperty = DependencyProperty.Register(
+        nameof(IsPathRecorderRecording),
+        typeof(bool),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnIsPathRecorderRecordingChanged));
+
+    private const int TileSize = 512;
+    private readonly Dictionary<TileKey, BitmapSource> _tileCache = new();
+    private readonly HashSet<TileKey> _pendingTiles = [];
+    private readonly object _tileCacheLock = new();
+    private readonly object _mapImageLock = new();
+    private readonly object _mapBitmapLock = new();
+    private readonly Pen _pathPen = new(new SolidColorBrush(Color.FromRgb(63, 164, 255)), 3);
+    private readonly Pen _recordPathPen = new(new SolidColorBrush(Color.FromRgb(255, 178, 72)), 2);
+    private readonly Pen _recordRoutePreviewPen = new(new SolidColorBrush(Color.FromArgb(210, 120, 210, 226)), 2.4);
+    private readonly Pen _targetPen = new(new SolidColorBrush(Color.FromRgb(255, 99, 99)), 2);
+    private readonly Pen _teleportOutlinePen = new(new SolidColorBrush(Color.FromRgb(230, 245, 255)), 1.4);
+    private readonly Pen _orientationArrowPen = new(new SolidColorBrush(Color.FromRgb(255, 238, 150)), 2.4);
+    private readonly Pen _selectedRecorderOuterPen = new(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 2);
+    private readonly Pen _selectedRecorderInnerPen = new(new SolidColorBrush(Color.FromRgb(35, 200, 210)), 3);
+    private readonly Pen _selectedRecorderEdgeOuterPen = new(new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)), 6);
+    private readonly Pen _selectedRecorderEdgeInnerPen = new(new SolidColorBrush(Color.FromRgb(35, 220, 230)), 3.5);
+    private readonly Brush _currentBrush = new SolidColorBrush(Color.FromRgb(80, 220, 120));
+    private readonly Brush _targetBrush = new SolidColorBrush(Color.FromRgb(255, 99, 99));
+    private readonly Brush _teleportBrush = new SolidColorBrush(Color.FromRgb(77, 174, 255));
+    private readonly Brush _goddessBrush = new SolidColorBrush(Color.FromRgb(84, 238, 225));
+    private readonly Brush _domainBrush = new SolidColorBrush(Color.FromRgb(179, 136, 255));
+    private readonly Brush _domainBlessBrush = new SolidColorBrush(Color.FromRgb(112, 216, 142));
+    private readonly Brush _domainForgeryBrush = new SolidColorBrush(Color.FromRgb(255, 174, 76));
+    private readonly Brush _domainMasteryBrush = new SolidColorBrush(Color.FromRgb(119, 156, 255));
+    private readonly Brush _domainTrounceBrush = new SolidColorBrush(Color.FromRgb(255, 100, 110));
+    private readonly Brush _domainOneTimeBrush = new SolidColorBrush(Color.FromRgb(190, 150, 255));
+    private readonly Brush _specialTeleportBrush = new SolidColorBrush(Color.FromRgb(255, 216, 103));
+    private readonly Brush _labelBrush = new SolidColorBrush(Color.FromArgb(210, 32, 32, 32));
+    private readonly Brush _selectedRecorderHaloBrush = new SolidColorBrush(Color.FromArgb(86, 35, 200, 210));
+    private readonly Brush _selectedRecorderFillBrush = new SolidColorBrush(Color.FromRgb(35, 200, 210));
+    private readonly Brush _recordRoutePreviewBrush = new SolidColorBrush(Color.FromArgb(230, 120, 210, 226));
+    private readonly Typeface _typeface = new("Segoe UI");
+
+    private Mat _mapImage = new();
+    private BitmapSource? _mapBitmap;
+    private string _loadedMapName = string.Empty;
+    private string _loadingMapName = string.Empty;
+    private double _sourceScaleX = 1;
+    private double _sourceScaleY = 1;
+    private double _zoom = 0.35;
+    private WpfPoint _pan;
+    private bool _followCurrentPosition = true;
+    private bool _isMapLoading;
+    private int _mapLoadVersion;
+    private int _tileGenerationVersion;
+    private bool _isDragging;
+    private bool _dragExceeded;
+    private WpfPoint _dragStart;
+    private WpfPoint _dragStartPan;
+    private Point2f? _currentFeaturePoint;
+    private Point2f? _currentPoint;
+    private Point2f? _targetPoint;
+    private Point2f? _selectedRecorderPoint;
+    private RecordedMapEdge? _selectedRecorderEdge;
+    private List<Point2f> _selectedRecorderPoints = [];
+    private PathingTask? _currentPathingTask;
+    private List<Point2f> _pathPoints = [];
+    private List<RecordedMapPoint> _currentPathPoints = [];
+    private List<RecordedMapPoint> _recordedPoints = [];
+    private List<List<RecordedMapPoint>> _recordedRouteGroups = [];
+    private List<MapTeleportPoint> _teleportPoints = [];
+    private MapTeleportPoint? _hoverTeleportPoint;
+    private bool _isRecorderMode;
+    private bool _isPathRecorderRecording;
+    private bool _isDraggingRecorderPoint;
+    private int _draggedRecorderPointIndex = -1;
+
+    public MapTileViewerControl()
+    {
+        Focusable = true;
+        ClipToBounds = true;
+        Cursor = Cursors.Hand;
+
+        MouseLeftButtonDown += OnMouseLeftButtonDown;
+        MouseLeftButtonUp += OnMouseLeftButtonUp;
+        MouseMove += OnMouseMove;
+        MouseWheel += OnMouseWheel;
+        ContextMenuOpening += OnContextMenuOpening;
+        SizeChanged += (_, _) =>
+        {
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+            }
+            else if (_followCurrentPosition && _currentPoint is { } point)
+            {
+                CenterOn(point);
+            }
+        };
+
+        WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (_, msg) =>
+        {
+            RunOnUiThread(() => HandleMessage(msg));
+        });
+    }
+
+    private void HandleMessage(PropertyChangedMessage<object> msg)
+    {
+        if (msg.PropertyName == "SendCurrentPosition" &&
+            TryGetTrackedPosition(msg.NewValue, out var point, out var positionMapName))
+        {
+            if (point.X == 0 && point.Y == 0)
+            {
+                return;
+            }
+
+            if (!IsPositionForCurrentMap(positionMapName))
+            {
+                InvalidateVisual();
+                return;
+            }
+
+            _currentFeaturePoint = point;
+            _currentPoint = ConvertFeatureImageCoordinateToDisplayPoint(point);
+            if (IsCompactFollowView)
+            {
+                CenterOn(_currentPoint.Value, useFollowZoom: true);
+            }
+            else if (_followCurrentPosition || _isPathRecorderRecording)
+            {
+                CenterOn(_currentPoint.Value);
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is Point2f target)
+        {
+            _targetPoint = ConvertGameCoordinateToImagePoint(target);
+            if (IsCompactFollowView && !_isRecorderMode && _currentPoint == null)
+            {
+                CenterOn(_targetPoint.Value, useFollowZoom: true);
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "UpdateCurrentPathing" && msg.NewValue is PathingTask pathingTask)
+        {
+            _currentPathingTask = pathingTask;
+            RefreshCurrentPathingPoints();
+            if (IsCompactFollowView)
+            {
+                if (!_isRecorderMode)
+                {
+                    FocusCompactView();
+                }
+            }
+            else if (_followCurrentPosition && _currentPoint is { } current)
+            {
+                CenterOn(current);
+            }
+            else if (_pathPoints.Count > 0)
+            {
+                FitPath();
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "UpdateRecorderPathing" && msg.NewValue is PathingTask recorderTask)
+        {
+            _recordedPoints = recorderTask.Positions.Select(CreateRecordedMapPoint).ToList();
+            _selectedRecorderEdge = null;
+            if (IsCompactFollowView)
+            {
+                if (_isPathRecorderRecording && _currentPoint is { } current)
+                {
+                    CenterOn(current, useFollowZoom: true);
+                }
+                else
+                {
+                    FocusLatestRecordedPoint(selectLatest: true);
+                }
+            }
+            else if (_isPathRecorderRecording && _recordedPoints.Count > 0)
+            {
+                CenterOn(_currentPoint ?? _recordedPoints[^1].Point);
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "UpdateRecorderRouteList" && msg.NewValue is IEnumerable<PathingTask> recorderTasks)
+        {
+            _recordedRouteGroups = recorderTasks
+                .Select(task => task.Positions.Select(CreateRecordedMapPoint).ToList())
+                .Where(points => points.Count > 0)
+                .ToList();
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SelectRecorderWaypointPosition" && msg.NewValue is Point2f recorderPoint)
+        {
+            _selectedRecorderEdge = null;
+            _selectedRecorderPoint = ConvertGameCoordinateToImagePoint(recorderPoint);
+            _selectedRecorderPoints = [_selectedRecorderPoint.Value];
+            if (IsCompactFollowView)
+            {
+                CenterOn(_selectedRecorderPoint.Value, useFollowZoom: true);
+            }
+            else
+            {
+                EnsurePointsVisible(_selectedRecorderPoints);
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SelectRecorderWaypointPositions" && msg.NewValue is IEnumerable<Point2f> recorderPoints)
+        {
+            _selectedRecorderEdge = null;
+            _selectedRecorderPoints = recorderPoints
+                .Select(ConvertGameCoordinateToImagePoint)
+                .ToList();
+            _selectedRecorderPoint = _selectedRecorderPoints.Count == 1
+                ? _selectedRecorderPoints[0]
+                : null;
+            if (IsCompactFollowView)
+            {
+                CenterOn(GetPointCenter(_selectedRecorderPoints), useFollowZoom: true);
+            }
+            else
+            {
+                EnsurePointsVisible(_selectedRecorderPoints);
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "FitSelectedRecorderWaypointPositions" && msg.NewValue is IEnumerable<Point2f> fitRecorderPoints)
+        {
+            var points = fitRecorderPoints
+                .Select(ConvertGameCoordinateToImagePoint)
+                .ToList();
+            if (points.Count > 0)
+            {
+                if (IsCompactFollowView)
+                {
+                    CenterOn(GetPointCenter(points), useFollowZoom: true);
+                }
+                else
+                {
+                    FitPoints(points);
+                }
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "ClearSelectedRecorderWaypoint")
+        {
+            _selectedRecorderPoint = null;
+            _selectedRecorderPoints = [];
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SelectRecorderRouteEdgeVisual" && msg.NewValue is RecorderRouteEdgeSelection edgeSelection)
+        {
+            SelectRecordedEdgeVisual(edgeSelection);
+            return;
+        }
+
+        if (msg.PropertyName == "ClearSelectedRecorderEdge")
+        {
+            _selectedRecorderEdge = null;
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "ClearCurrentPathing")
+        {
+            _currentPathingTask = null;
+            _pathPoints = [];
+            _currentPathPoints = [];
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "ResetMapView")
+        {
+            SetFollowCurrentPosition(true);
+            if (_currentPoint is { } current)
+            {
+                CenterOn(current);
+            }
+            else
+            {
+                FitMap();
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "LocateCurrentMapView")
+        {
+            var locatePoint = _currentPoint ?? ConvertGameCoordinateToImagePoint(new Point2f(0, 0));
+            CenterOn(locatePoint, useFollowZoom: true);
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SetMapFollowCurrent" && msg.NewValue is bool followCurrent)
+        {
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+                InvalidateVisual();
+                return;
+            }
+
+            SetFollowCurrentPosition(followCurrent, false);
+            if (_followCurrentPosition && _currentPoint is { } current)
+            {
+                CenterOn(current);
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SetMapViewerRecorderMode" && msg.NewValue is bool recorderMode)
+        {
+            _isRecorderMode = recorderMode;
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "MapZoomIn")
+        {
+            if (IsCompactFollowView)
+            {
+                return;
+            }
+
+            ZoomAroundCenter(1.25);
+            return;
+        }
+
+        if (msg.PropertyName == "MapZoomOut")
+        {
+            if (IsCompactFollowView)
+            {
+                return;
+            }
+
+            ZoomAroundCenter(0.8);
+            return;
+        }
+
+        if (msg.PropertyName == "MapToggleZoom")
+        {
+            if (IsCompactFollowView)
+            {
+                return;
+            }
+
+            ToggleZoomAroundCenter();
+        }
+    }
+
+    private bool IsPositionForCurrentMap(string? mapName)
+    {
+        if (string.IsNullOrWhiteSpace(mapName))
+        {
+            return true;
+        }
+
+        return TryNormalizeMapName(mapName, out var normalizedPositionMapName) &&
+               TryNormalizeMapName(MapName, out var normalizedCurrentMapName) &&
+               string.Equals(normalizedPositionMapName, normalizedCurrentMapName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetTrackedPosition(object? value, out Point2f point, out string? mapName)
+    {
+        switch (value)
+        {
+            case TrackedMapPosition tracked:
+                point = tracked.ImagePosition;
+                mapName = tracked.MapName;
+                return true;
+            case Point2f legacyPoint:
+                point = legacyPoint;
+                mapName = null;
+                return true;
+            default:
+                point = default;
+                mapName = null;
+                return false;
+        }
+    }
+
+    private void RunOnUiThread(Action action)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            action();
+            return;
+        }
+
+        _ = Dispatcher.BeginInvoke(action);
+    }
+
+    public string MapName
+    {
+        get => (string)GetValue(MapNameProperty);
+        set => SetValue(MapNameProperty, value);
+    }
+
+    public double FollowZoom
+    {
+        get => (double)GetValue(FollowZoomProperty);
+        set => SetValue(FollowZoomProperty, value);
+    }
+
+    public bool ShowTeleportPoints
+    {
+        get => (bool)GetValue(ShowTeleportPointsProperty);
+        set => SetValue(ShowTeleportPointsProperty, value);
+    }
+
+    public bool IsReadOnlyDisplay
+    {
+        get => (bool)GetValue(IsReadOnlyDisplayProperty);
+        set => SetValue(IsReadOnlyDisplayProperty, value);
+    }
+
+    public bool IsCompactFollowView
+    {
+        get => (bool)GetValue(IsCompactFollowViewProperty);
+        set => SetValue(IsCompactFollowViewProperty, value);
+    }
+
+    public bool IsRecorderMode
+    {
+        get => (bool)GetValue(IsRecorderModeProperty);
+        set => SetValue(IsRecorderModeProperty, value);
+    }
+
+    public bool IsPathRecorderRecording
+    {
+        get => (bool)GetValue(IsPathRecorderRecordingProperty);
+        set => SetValue(IsPathRecorderRecordingProperty, value);
+    }
+
+    protected override void OnRender(DrawingContext drawingContext)
+    {
+        base.OnRender(drawingContext);
+        EnsureMapLoading();
+
+        drawingContext.DrawRectangle(Brushes.Black, null, new WpfRect(0, 0, ActualWidth, ActualHeight));
+        if (!HasMapImage() || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            DrawStatus(drawingContext, _isMapLoading ? "地图加载中..." : "地图资源未加载");
+            return;
+        }
+
+        DrawMapImage(drawingContext);
+        DrawTeleportPoints(drawingContext);
+        DrawPath(drawingContext);
+        DrawRecordedPath(drawingContext);
+        DrawSelectedRecorderEdge(drawingContext);
+        DrawSelectedRecorderPoint(drawingContext);
+        DrawTargetMarker(drawingContext, _targetPoint);
+        DrawCurrentMarker(drawingContext);
+    }
+
+    private static void OnMapNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control._loadedMapName = string.Empty;
+        control._loadingMapName = string.Empty;
+        control._teleportPoints = [];
+        control._hoverTeleportPoint = null;
+        control._pathPoints = [];
+        control._currentPathPoints = [];
+        control.ClearTiles();
+        control.InvalidateVisual();
+    }
+
+    private static void OnFollowZoomChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        if (control.IsCompactFollowView)
+        {
+            control.FocusCompactView();
+        }
+        else if (control._followCurrentPosition && control._currentPoint is { } current)
+        {
+            control.CenterOn(current);
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private static void OnDisplayModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control.Cursor = control.IsReadOnlyDisplay ? Cursors.Arrow : Cursors.Hand;
+        if (control.IsCompactFollowView)
+        {
+            control._followCurrentPosition = true;
+            control.FocusCompactView();
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private static void OnIsRecorderModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control._isRecorderMode = e.NewValue is true;
+        if (control.IsCompactFollowView)
+        {
+            control.FocusCompactView();
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private static void OnIsPathRecorderRecordingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not MapTileViewerControl control)
+        {
+            return;
+        }
+
+        control._isPathRecorderRecording = e.NewValue is true;
+        if (control._isPathRecorderRecording)
+        {
+            if (control.IsCompactFollowView)
+            {
+                control.FocusCompactView();
+            }
+            else if (control._currentPoint is { } current)
+            {
+                control.CenterOn(current);
+            }
+            else if (control._recordedPoints.Count > 0)
+            {
+                control.CenterOn(control._recordedPoints[^1].Point);
+            }
+        }
+
+        control.InvalidateVisual();
+    }
+
+    private void EnsureMapLoading()
+    {
+        var mapName = string.IsNullOrWhiteSpace(MapName) ? nameof(MapTypes.Teyvat) : MapName;
+        if (string.Equals(_loadedMapName, mapName, StringComparison.OrdinalIgnoreCase) && HasMapImage())
+        {
+            return;
+        }
+
+        if (_isMapLoading && string.Equals(_loadingMapName, mapName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var version = Interlocked.Increment(ref _mapLoadVersion);
+        _isMapLoading = true;
+        _loadingMapName = mapName;
+        _loadedMapName = string.Empty;
+        ClearTiles();
+        lock (_mapImageLock)
+        {
+            _mapImage.Dispose();
+            _mapImage = new Mat();
+        }
+        lock (_mapBitmapLock)
+        {
+            _mapBitmap = null;
+        }
+
+        ResetInitialView(mapName);
+
+        var dispatcher = Dispatcher;
+        _ = Task.Run(() =>
+        {
+            var image = LoadMapImage(mapName, out var bitmap, out var sourceScaleX, out var sourceScaleY);
+            return new LoadedMapResult(version, mapName, image, bitmap, sourceScaleX, sourceScaleY);
+        }).ContinueWith(task => dispatcher.BeginInvoke(() =>
+        {
+            if (task.IsFaulted)
+            {
+                Debug.WriteLine(task.Exception);
+                _isMapLoading = false;
+                InvalidateVisual();
+                return;
+            }
+
+            var result = task.Result;
+            if (result.Version != _mapLoadVersion)
+            {
+                result.Image.Dispose();
+                return;
+            }
+
+            lock (_mapImageLock)
+            {
+                _mapImage.Dispose();
+                _mapImage = result.Image;
+            }
+            lock (_mapBitmapLock)
+            {
+                _mapBitmap = result.Bitmap;
+            }
+
+            _sourceScaleX = result.SourceScaleX;
+            _sourceScaleY = result.SourceScaleY;
+            _loadedMapName = result.MapName;
+            _teleportPoints = LoadTeleportPoints(result.MapName);
+            _hoverTeleportPoint = null;
+            _isMapLoading = false;
+            ClearTiles();
+            if (_currentFeaturePoint is { } featurePoint)
+            {
+                _currentPoint = ConvertFeatureImageCoordinateToDisplayPoint(featurePoint);
+            }
+
+            RefreshCurrentPathingPoints();
+
+            if (IsCompactFollowView)
+            {
+                FocusCompactView();
+            }
+            else if (_followCurrentPosition && _currentPoint is { } current)
+            {
+                CenterOn(current);
+            }
+            else
+            {
+                ResetInitialView(result.MapName);
+            }
+
+            InvalidateVisual();
+        }));
+    }
+
+    private static Mat LoadMapImage(string mapName, out BitmapSource? bitmap, out double sourceScaleX, out double sourceScaleY)
+    {
+        bitmap = TryLoadRecorderMapBitmap(mapName);
+        if (bitmap != null)
+        {
+            var recorderGeometry = GetMapGeometry(mapName);
+            sourceScaleX = recorderGeometry.LogicalWidth / bitmap.PixelWidth;
+            sourceScaleY = recorderGeometry.LogicalHeight / bitmap.PixelHeight;
+            return new Mat();
+        }
+
+        sourceScaleX = 1;
+        sourceScaleY = 1;
+        var highQualityRelativePath = mapName switch
+        {
+            nameof(MapTypes.Teyvat) => string.Empty,
+            _ => string.Empty
+        };
+
+        var fallbackRelativePath = mapName switch
+        {
+            nameof(MapTypes.Teyvat) => @"Assets/Map/Teyvat/Teyvat_0_256.png",
+            nameof(MapTypes.TheChasm) => @"Assets/Map/TheChasm/TheChasm_0_1024.png",
+            nameof(MapTypes.Enkanomiya) => @"Assets/Map/Enkanomiya/Enkanomiya_0_1024.png",
+            nameof(MapTypes.SeaOfBygoneEras) => @"Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_0_1024.png",
+            nameof(MapTypes.AncientSacredMountain) => @"Assets/Map/AncientSacredMountain/AncientSacredMountain_0_1024.png",
+            nameof(MapTypes.TempleOfSpace) => @"Assets/Map/TempleOfSpace/TempleOfSpace_0_1024.png",
+            _ => @"Assets/Map/Teyvat/Teyvat_0_256.png"
+        };
+
+        var mapImage = TryLoadImage(highQualityRelativePath);
+        if (mapImage.Empty())
+        {
+            mapImage = TryLoadImage(fallbackRelativePath);
+        }
+
+        if (mapImage.Empty())
+        {
+            return new Mat();
+        }
+
+        var geometry = GetMapGeometry(mapName);
+        sourceScaleX = geometry.LogicalWidth / (double)mapImage.Width;
+        sourceScaleY = geometry.LogicalHeight / (double)mapImage.Height;
+        if (double.IsNaN(sourceScaleX) || double.IsInfinity(sourceScaleX) || sourceScaleX <= 0)
+        {
+            sourceScaleX = 1;
+        }
+
+        if (double.IsNaN(sourceScaleY) || double.IsInfinity(sourceScaleY) || sourceScaleY <= 0)
+        {
+            sourceScaleY = sourceScaleX;
+        }
+
+        return mapImage;
+    }
+
+    private static BitmapSource? TryLoadRecorderMapBitmap(string mapName)
+    {
+        var fileName = mapName switch
+        {
+            nameof(MapTypes.Teyvat) => "1024_map.jpg",
+            nameof(MapTypes.TheChasm) => "thechasm_1024_map.jpg",
+            nameof(MapTypes.Enkanomiya) => "enkanomiya_1024_map.jpg",
+            nameof(MapTypes.SeaOfBygoneEras) => "seaofbygoneeras_1024_map.jpg",
+            nameof(MapTypes.AncientSacredMountain) => "ancientsacredmountain_1024.jpg",
+            nameof(MapTypes.TempleOfSpace) => "templeofspace_1024.jpg",
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return null;
+        }
+
+        var candidates = new[]
+        {
+            Global.Absolute(Path.Combine("Assets", "Map", "Editor", fileName)),
+            Global.Absolute(Path.Combine("Assets", "Map", "Tracker", fileName)),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "bettergi-map", "public", fileName)),
+        };
+
+        foreach (var path in candidates.Where(File.Exists))
+        {
+            var image = TryLoadBitmap(path, mapName == nameof(MapTypes.Teyvat) ? 4096 : 2048);
+            if (image != null)
+            {
+                return image;
+            }
+        }
+
+        return null;
+    }
+
+    private static BitmapSource? TryLoadBitmap(string path, int decodePixelHeight)
+    {
+        try
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            image.UriSource = new Uri(path, UriKind.Absolute);
+            if (decodePixelHeight > 0)
+            {
+                image.DecodePixelHeight = decodePixelHeight;
+            }
+
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return null;
+        }
+    }
+
+    private static Mat TryLoadImage(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return new Mat();
+        }
+
+        var path = Global.Absolute(relativePath);
+        return File.Exists(path) ? new Mat(path, ImreadModes.Color) : new Mat();
+    }
+
+    private void DrawTiles(DrawingContext dc)
+    {
+        var mapWidth = _mapImage.Width * _sourceScaleX;
+        var mapHeight = _mapImage.Height * _sourceScaleY;
+        var viewport = ScreenToMap(new WpfRect(0, 0, ActualWidth, ActualHeight));
+        var startX = Math.Max(0, (int)Math.Floor(viewport.Left / TileSize));
+        var endX = Math.Min((int)Math.Ceiling(mapWidth / (double)TileSize), (int)Math.Ceiling(viewport.Right / TileSize));
+        var startY = Math.Max(0, (int)Math.Floor(viewport.Top / TileSize));
+        var endY = Math.Min((int)Math.Ceiling(mapHeight / (double)TileSize), (int)Math.Ceiling(viewport.Bottom / TileSize));
+
+        for (var y = startY; y < endY; y++)
+        {
+            for (var x = startX; x < endX; x++)
+            {
+                var key = new TileKey(x, y);
+                var image = GetTile(key);
+                if (image == null)
+                {
+                    continue;
+                }
+
+                var mapRect = new WpfRect(x * TileSize, y * TileSize, TileSize, TileSize);
+                var screenRect = MapToScreen(mapRect);
+                dc.DrawImage(image, screenRect);
+            }
+        }
+    }
+
+    private void DrawMapImage(DrawingContext dc)
+    {
+        BitmapSource? directBitmap;
+        lock (_mapBitmapLock)
+        {
+            directBitmap = _mapBitmap;
+        }
+
+        if (directBitmap != null)
+        {
+            var directMapRect = new WpfRect(0, 0, directBitmap.PixelWidth, directBitmap.PixelHeight);
+            dc.DrawImage(directBitmap, MapToScreen(directMapRect));
+            return;
+        }
+
+        BitmapSource? bitmap;
+        lock (_tileCacheLock)
+        {
+            if (!_tileCache.TryGetValue(new TileKey(-1, -1), out bitmap))
+            {
+                bitmap = null;
+            }
+        }
+
+        if (bitmap == null)
+        {
+            var version = _tileGenerationVersion;
+            lock (_tileCacheLock)
+            {
+                if (!_pendingTiles.Add(new TileKey(-1, -1)))
+                {
+                    return;
+                }
+            }
+
+            _ = Task.Run(BuildMapBitmap).ContinueWith(task => RunOnUiThread(() =>
+            {
+                lock (_tileCacheLock)
+                {
+                    _pendingTiles.Remove(new TileKey(-1, -1));
+                }
+
+                if (version != _tileGenerationVersion || task.IsFaulted || task.Result == null)
+                {
+                    if (task.IsFaulted)
+                    {
+                        Debug.WriteLine(task.Exception);
+                    }
+
+                    return;
+                }
+
+                lock (_tileCacheLock)
+                {
+                    _tileCache[new TileKey(-1, -1)] = task.Result;
+                }
+
+                InvalidateVisual();
+            }));
+            return;
+        }
+
+        var mapRect = new WpfRect(0, 0, _mapImage.Width, _mapImage.Height);
+        dc.DrawImage(bitmap, MapToScreen(mapRect));
+    }
+
+    private BitmapSource? BuildMapBitmap()
+    {
+        try
+        {
+            lock (_mapImageLock)
+            {
+                if (_mapImage.Empty())
+                {
+                    return null;
+                }
+
+                var bitmap = _mapImage.ToBitmapSource();
+                bitmap.Freeze();
+                return bitmap;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return null;
+        }
+    }
+
+    private BitmapSource? GetTile(TileKey key)
+    {
+        lock (_tileCacheLock)
+        {
+            if (_tileCache.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
+
+            if (!_pendingTiles.Add(key))
+            {
+                return null;
+            }
+        }
+
+        var version = _tileGenerationVersion;
+        var sourceScale = _sourceScaleX;
+        _ = Task.Run(() => BuildTile(key, sourceScale)).ContinueWith(task => RunOnUiThread(() =>
+        {
+            lock (_tileCacheLock)
+            {
+                _pendingTiles.Remove(key);
+            }
+
+            if (version != _tileGenerationVersion)
+            {
+                return;
+            }
+
+            if (task.IsFaulted)
+            {
+                Debug.WriteLine(task.Exception);
+                return;
+            }
+
+            if (task.Result == null)
+            {
+                return;
+            }
+
+            lock (_tileCacheLock)
+            {
+                if (_tileCache.Count > 256)
+                {
+                    _tileCache.Clear();
+                }
+
+                _tileCache[key] = task.Result;
+            }
+
+            InvalidateVisual();
+        }));
+
+        return null;
+    }
+
+    private BitmapSource? BuildTile(TileKey key, double sourceScale)
+    {
+        if (sourceScale <= 0 || double.IsNaN(sourceScale) || double.IsInfinity(sourceScale))
+        {
+            return null;
+        }
+
+        try
+        {
+            lock (_mapImageLock)
+            {
+                if (_mapImage.Empty())
+                {
+                    return null;
+                }
+
+                var sourceRect = new CvRect(
+                    (int)Math.Floor(key.X * TileSize / sourceScale),
+                    (int)Math.Floor(key.Y * TileSize / sourceScale),
+                    Math.Max(1, (int)Math.Ceiling(TileSize / sourceScale)),
+                    Math.Max(1, (int)Math.Ceiling(TileSize / sourceScale)));
+                sourceRect = sourceRect.Intersect(new CvRect(0, 0, _mapImage.Width, _mapImage.Height));
+                if (sourceRect.Width <= 0 || sourceRect.Height <= 0)
+                {
+                    return null;
+                }
+
+                using var source = new Mat(_mapImage, sourceRect);
+                using var tile = new Mat();
+                Cv2.Resize(source, tile, new OpenCvSharp.Size(TileSize, TileSize), 0, 0, InterpolationFlags.Linear);
+                var bitmap = tile.ToBitmapSource();
+                bitmap.Freeze();
+                return bitmap;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return null;
+        }
+    }
+
+    private void ClearTiles()
+    {
+        Interlocked.Increment(ref _tileGenerationVersion);
+        lock (_tileCacheLock)
+        {
+            _tileCache.Clear();
+            _pendingTiles.Clear();
+        }
+    }
+
+    private void DrawPath(DrawingContext dc)
+    {
+        if (_currentPathPoints.Count < 2)
+        {
+            return;
+        }
+
+        foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(_currentPathPoints))
+        {
+            dc.DrawLine(_pathPen, MapToScreen(_currentPathPoints[startIndex].Point), MapToScreen(_currentPathPoints[endIndex].Point));
+        }
+    }
+
+    private void DrawTeleportPoints(DrawingContext dc)
+    {
+        if (!ShowTeleportPoints || _teleportPoints.Count == 0)
+        {
+            return;
+        }
+
+        var viewport = new WpfRect(-24, -24, ActualWidth + 48, ActualHeight + 48);
+        foreach (var teleport in _teleportPoints)
+        {
+            if (!ShouldShowTeleportAtZoom(teleport.Type))
+            {
+                continue;
+            }
+
+            var point = MapToScreen(teleport.DisplayPoint);
+            if (!viewport.Contains(point))
+            {
+                continue;
+            }
+
+            DrawTeleportPoint(dc, teleport, point);
+        }
+
+        if (_hoverTeleportPoint is { } hover && ShouldShowTeleportAtZoom(hover.Type))
+        {
+            var point = MapToScreen(hover.DisplayPoint);
+            if (viewport.Contains(point))
+            {
+                var label = string.IsNullOrWhiteSpace(hover.Name)
+                    ? FormatTeleportType(hover.Type)
+                    : $"{hover.Name} / {FormatTeleportType(hover.Type)}";
+                var text = CreateText(label);
+                var rect = new WpfRect(point.X + 12, point.Y - 15, Math.Min(text.Width + 14, 260), 28);
+                dc.DrawRoundedRectangle(_labelBrush, null, rect, 6, 6);
+                dc.DrawText(text, new WpfPoint(rect.X + 7, rect.Y + 5));
+            }
+        }
+    }
+
+    private void DrawTeleportPoint(DrawingContext dc, MapTeleportPoint teleport, WpfPoint point)
+    {
+        var brush = GetTeleportBrush(teleport.Type);
+        if (IsGoddess(teleport.Type))
+        {
+            DrawPolygon(dc, point, 9, 8, -Math.PI / 2, brush, _teleportOutlinePen);
+            dc.DrawEllipse(Brushes.White, null, point, 2, 2);
+            return;
+        }
+
+        if (IsSpecialTeleport(teleport.Type))
+        {
+            DrawPolygon(dc, point, 7, 6, Math.PI / 6, brush, _teleportOutlinePen);
+            dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3, point.Y), new WpfPoint(point.X + 3, point.Y));
+            return;
+        }
+
+        if (IsDomain(teleport.Type))
+        {
+            if (IsTrounceDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7.5, 8, Math.PI / 8, brush, _teleportOutlinePen);
+                dc.DrawEllipse(Brushes.White, null, point, 2, 2);
+            }
+            else if (IsOneTimeDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7.5, 3, -Math.PI / 2, brush, _teleportOutlinePen);
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 2.5, point.Y + 2), new WpfPoint(point.X + 2.5, point.Y + 2));
+            }
+            else if (IsForgeryDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7, 6, Math.PI / 6, brush, _teleportOutlinePen);
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3.2, point.Y), new WpfPoint(point.X + 3.2, point.Y));
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X, point.Y - 3.2), new WpfPoint(point.X, point.Y + 3.2));
+            }
+            else if (IsMasteryDomain(teleport.Type))
+            {
+                DrawPolygon(dc, point, 7, 4, Math.PI / 4, brush, _teleportOutlinePen);
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3, point.Y - 1.5), new WpfPoint(point.X + 3, point.Y - 1.5));
+                dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 3, point.Y + 1.5), new WpfPoint(point.X + 3, point.Y + 1.5));
+            }
+            else
+            {
+                dc.DrawEllipse(brush, _teleportOutlinePen, point, 6.5, 6.5);
+                dc.DrawEllipse(null, new Pen(Brushes.White, 1), point, 3.5, 3.5);
+            }
+
+            return;
+        }
+
+        DrawPolygon(dc, point, 6, 4, Math.PI / 4, brush, _teleportOutlinePen);
+        dc.DrawEllipse(Brushes.White, null, point, 2.2, 2.2);
+    }
+
+    private static void DrawPolygon(DrawingContext dc, WpfPoint center, double radius, int sides, double rotation, Brush brush, Pen pen)
+    {
+        if (sides < 3)
+        {
+            return;
+        }
+
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
+        {
+            var first = new WpfPoint(
+                center.X + Math.Cos(rotation) * radius,
+                center.Y + Math.Sin(rotation) * radius);
+            context.BeginFigure(first, true, true);
+
+            for (var i = 1; i < sides; i++)
+            {
+                var angle = rotation + Math.PI * 2 * i / sides;
+                context.LineTo(new WpfPoint(
+                    center.X + Math.Cos(angle) * radius,
+                    center.Y + Math.Sin(angle) * radius), true, false);
+            }
+        }
+
+        geometry.Freeze();
+        dc.DrawGeometry(brush, pen, geometry);
+    }
+
+    private void DrawRecordedPath(DrawingContext dc)
+    {
+        DrawRecordedRoutePreviews(dc);
+
+        if (_recordedPoints.Count == 0)
+        {
+            return;
+        }
+
+        if (_recordedPoints.Count >= 2)
+        {
+            foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(_recordedPoints))
+            {
+                dc.DrawLine(_recordPathPen, MapToScreen(_recordedPoints[startIndex].Point), MapToScreen(_recordedPoints[endIndex].Point));
+            }
+        }
+
+        for (var i = 0; i < _recordedPoints.Count; i++)
+        {
+            var point = MapToScreen(_recordedPoints[i].Point);
+            if (IsOrientationWaypoint(_recordedPoints[i].Type))
+            {
+                DrawOrientationArrow(dc, _recordedPoints, i);
+            }
+            else
+            {
+                dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 178, 72)), new Pen(Brushes.White, 1), point, 6, 6);
+            }
+
+            var indexText = CreateText((i + 1).ToString());
+            dc.DrawText(indexText, new WpfPoint(point.X + 8, point.Y - 14));
+        }
+    }
+
+    private void DrawRecordedRoutePreviews(DrawingContext dc)
+    {
+        if (_recordedRouteGroups.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var route in _recordedRouteGroups)
+        {
+            if (route.Count >= 2)
+            {
+                foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(route))
+                {
+                    dc.DrawLine(_recordRoutePreviewPen, MapToScreen(route[startIndex].Point), MapToScreen(route[endIndex].Point));
+                }
+            }
+
+            for (var i = 0; i < route.Count; i++)
+            {
+                var point = route[i];
+                if (IsOrientationWaypoint(point.Type))
+                {
+                    DrawOrientationArrow(dc, route, i, preview: true);
+                }
+                else
+                {
+                    dc.DrawEllipse(_recordRoutePreviewBrush, null, MapToScreen(point.Point), 4.5, 4.5);
+                }
+            }
+        }
+    }
+
+    private void DrawOrientationArrow(DrawingContext dc, IReadOnlyList<RecordedMapPoint> points, int index, bool preview = false)
+    {
+        if (index < 0 || index >= points.Count)
+        {
+            return;
+        }
+
+        var previous = FindPreviousNonOrientationPoint(points, index);
+        var end = MapToScreen(points[index].Point);
+        var headLength = preview ? 5.0 : 7.0;
+        var pen = preview ? _recordRoutePreviewPen : _orientationArrowPen;
+        var brush = preview ? _recordRoutePreviewBrush : _orientationArrowPen.Brush;
+
+        WpfPoint start;
+        double angle;
+        if (previous == null)
+        {
+            var length = preview ? 14.0 : 18.0;
+            angle = -Math.PI / 2;
+            start = new WpfPoint(end.X - Math.Cos(angle) * length, end.Y - Math.Sin(angle) * length);
+        }
+        else
+        {
+            start = MapToScreen(previous.Value);
+            angle = Math.Atan2(end.Y - start.Y, end.X - start.X);
+            var distance = Math.Sqrt(Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+            if (distance < 0.001)
+            {
+                var length = preview ? 14.0 : 18.0;
+                angle = -Math.PI / 2;
+                start = new WpfPoint(end.X - Math.Cos(angle) * length, end.Y - Math.Sin(angle) * length);
+            }
+        }
+
+        var left = new WpfPoint(
+            end.X - Math.Cos(angle - Math.PI / 6) * headLength,
+            end.Y - Math.Sin(angle - Math.PI / 6) * headLength);
+        var right = new WpfPoint(
+            end.X - Math.Cos(angle + Math.PI / 6) * headLength,
+            end.Y - Math.Sin(angle + Math.PI / 6) * headLength);
+
+        dc.DrawEllipse(brush, null, end, preview ? 2.8 : 3.5, preview ? 2.8 : 3.5);
+        dc.DrawLine(pen, start, end);
+        dc.DrawLine(pen, end, left);
+        dc.DrawLine(pen, end, right);
+    }
+
+    private static Point2f? FindPreviousNonOrientationPoint(IReadOnlyList<RecordedMapPoint> points, int index)
+    {
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (!IsOrientationWaypoint(points[i].Type))
+            {
+                return points[i].Point;
+            }
+        }
+
+        return null;
+    }
+
+    private void DrawSelectedRecorderPoint(DrawingContext dc)
+    {
+        if (_selectedRecorderPoints.Count == 0)
+        {
+            if (_selectedRecorderPoint == null)
+            {
+                return;
+            }
+
+            DrawSelectedRecorderMarker(dc, _selectedRecorderPoint.Value);
+            return;
+        }
+
+        foreach (var selectedPoint in _selectedRecorderPoints)
+        {
+            DrawSelectedRecorderMarker(dc, selectedPoint);
+        }
+    }
+
+    private void DrawSelectedRecorderEdge(DrawingContext dc)
+    {
+        if (_selectedRecorderEdge is not { } edge)
+        {
+            return;
+        }
+
+        var start = MapToScreen(edge.StartPoint);
+        var end = MapToScreen(edge.EndPoint);
+        var insert = MapToScreen(edge.InsertPoint);
+        dc.DrawLine(_selectedRecorderEdgeOuterPen, start, end);
+        dc.DrawLine(_selectedRecorderEdgeInnerPen, start, end);
+        dc.DrawEllipse(_selectedRecorderHaloBrush, null, insert, 14, 14);
+        dc.DrawEllipse(null, _selectedRecorderOuterPen, insert, 9, 9);
+        dc.DrawEllipse(_selectedRecorderFillBrush, null, insert, 3.5, 3.5);
+        DrawSelectedRecorderEdgeHint(dc, insert);
+    }
+
+    private void DrawSelectedRecorderEdgeHint(DrawingContext dc, WpfPoint insert)
+    {
+        var text = CreateText("按 Enter 在此处插入新点");
+        var width = text.Width + 18;
+        const double height = 28;
+        var x = insert.X + 16;
+        var y = insert.Y - 44;
+
+        if (x + width > ActualWidth - 8)
+        {
+            x = insert.X - width - 16;
+        }
+
+        if (y < 8)
+        {
+            y = insert.Y + 18;
+        }
+
+        x = Math.Max(8, Math.Min(x, Math.Max(8, ActualWidth - width - 8)));
+        y = Math.Max(8, Math.Min(y, Math.Max(8, ActualHeight - height - 8)));
+
+        var rect = new WpfRect(x, y, width, height);
+        dc.DrawRoundedRectangle(_labelBrush, null, rect, 6, 6);
+        dc.DrawText(text, new WpfPoint(rect.X + 9, rect.Y + 5));
+    }
+
+    private void DrawSelectedRecorderMarker(DrawingContext dc, Point2f mapPoint)
+    {
+        var point = MapToScreen(mapPoint);
+        dc.DrawEllipse(_selectedRecorderHaloBrush, null, point, 19, 19);
+        dc.DrawEllipse(null, _selectedRecorderOuterPen, point, 15, 15);
+        dc.DrawEllipse(null, _selectedRecorderInnerPen, point, 11, 11);
+        dc.DrawEllipse(_selectedRecorderFillBrush, null, point, 4.5, 4.5);
+    }
+
+    private void DrawTargetMarker(DrawingContext dc, Point2f? mapPoint)
+    {
+        if (mapPoint == null)
+        {
+            return;
+        }
+
+        var point = MapToScreen(mapPoint.Value);
+        var haloBrush = new SolidColorBrush(Color.FromArgb(56, 255, 99, 99));
+        var shadowBrush = new SolidColorBrush(Color.FromArgb(82, 0, 0, 0));
+        var whitePen = new Pen(Brushes.White, 2.2);
+        var targetPen = new Pen(_targetBrush, 2);
+
+        dc.DrawEllipse(shadowBrush, null, new WpfPoint(point.X + 1, point.Y + 2), 15, 15);
+        dc.DrawEllipse(haloBrush, null, point, 16, 16);
+        dc.DrawEllipse(null, whitePen, point, 10, 10);
+        dc.DrawEllipse(_targetBrush, _targetPen, point, 7, 7);
+        dc.DrawLine(targetPen, new WpfPoint(point.X - 18, point.Y), new WpfPoint(point.X - 11, point.Y));
+        dc.DrawLine(targetPen, new WpfPoint(point.X + 11, point.Y), new WpfPoint(point.X + 18, point.Y));
+        dc.DrawLine(targetPen, new WpfPoint(point.X, point.Y - 18), new WpfPoint(point.X, point.Y - 11));
+        dc.DrawLine(targetPen, new WpfPoint(point.X, point.Y + 11), new WpfPoint(point.X, point.Y + 18));
+    }
+
+    private void DrawCurrentMarker(DrawingContext dc)
+    {
+        if (_currentPoint == null)
+        {
+            return;
+        }
+
+        var point = MapToScreen(_currentPoint.Value);
+        dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(90, 80, 220, 120)), null, point, 18, 18);
+        dc.DrawEllipse(_currentBrush, new Pen(Brushes.White, 2), point, 8, 8);
+        dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X - 18, point.Y), new WpfPoint(point.X + 18, point.Y));
+        dc.DrawLine(new Pen(Brushes.White, 1), new WpfPoint(point.X, point.Y - 18), new WpfPoint(point.X, point.Y + 18));
+
+        var label = _currentFeaturePoint is { } featurePoint
+            ? $"当前 {FormatGameCoordinate(featurePoint)}"
+            : "当前";
+        var text = CreateText(label);
+        var labelRect = new WpfRect(point.X + 16, point.Y - 34, text.Width + 14, 26);
+        dc.DrawRoundedRectangle(_labelBrush, null, labelRect, 5, 5);
+        dc.DrawText(text, new WpfPoint(labelRect.X + 7, labelRect.Y + 4));
+    }
+
+    private void DrawStatus(DrawingContext dc, string status)
+    {
+        var text = CreateText(status);
+        dc.DrawRoundedRectangle(_labelBrush, null, new WpfRect(12, ActualHeight - 38, text.Width + 18, 26), 6, 6);
+        dc.DrawText(text, new WpfPoint(21, ActualHeight - 34));
+    }
+
+    private FormattedText CreateText(string text)
+    {
+        return new FormattedText(
+            text,
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            _typeface,
+            12,
+            Brushes.White,
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+    }
+
+    private void OnContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (IsReadOnlyDisplay)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var position = Mouse.GetPosition(this);
+        if (!TrySelectRecordedPointForContextMenu(position) &&
+            !TrySelectRecordedEdgeForContextMenu(position))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private bool TrySelectRecordedPointForContextMenu(WpfPoint screenPoint)
+    {
+        if (!_isRecorderMode || !TryFindNearestRecordedPoint(screenPoint, out var recordedPoint))
+        {
+            return false;
+        }
+
+        Focus();
+        if (!IsSelectedRecorderPoint(recordedPoint.Point))
+        {
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "SelectRecorderWaypointIndex",
+                new object(),
+                recordedPoint.Index));
+        }
+
+        return true;
+    }
+
+    private bool TrySelectRecordedEdgeForContextMenu(WpfPoint screenPoint)
+    {
+        if (!_isRecorderMode || !TryFindNearestRecordedEdge(screenPoint, out var recordedEdge))
+        {
+            return false;
+        }
+
+        Focus();
+        SelectRecordedEdge(recordedEdge);
+        return true;
+    }
+
+    private bool IsSelectedRecorderPoint(Point2f point)
+    {
+        const float tolerance = 0.01f;
+        return _selectedRecorderPoints.Any(selected =>
+            Math.Abs(selected.X - point.X) < tolerance &&
+            Math.Abs(selected.Y - point.Y) < tolerance);
+    }
+
+    private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (IsReadOnlyDisplay)
+        {
+            return;
+        }
+
+        Focus();
+        _isDragging = true;
+        _dragExceeded = false;
+        _dragStart = e.GetPosition(this);
+        _dragStartPan = _pan;
+        _isDraggingRecorderPoint = false;
+        _draggedRecorderPointIndex = -1;
+        if (_isRecorderMode && TryFindNearestRecordedPoint(_dragStart, out var recordedPoint))
+        {
+            _isDraggingRecorderPoint = true;
+            _draggedRecorderPointIndex = recordedPoint.Index;
+            Cursor = Cursors.SizeAll;
+            _selectedRecorderEdge = null;
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "SelectRecorderWaypointIndex",
+                new object(),
+                recordedPoint.Index));
+        }
+        else if (_isRecorderMode && TryFindNearestRecordedEdge(_dragStart, out var recordedEdge))
+        {
+            _isDragging = false;
+            SelectRecordedEdge(recordedEdge);
+            e.Handled = true;
+            return;
+        }
+
+        CaptureMouse();
+    }
+
+    private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (IsReadOnlyDisplay)
+        {
+            return;
+        }
+
+        if (!_isDragging)
+        {
+            return;
+        }
+
+        ReleaseMouseCapture();
+        _isDragging = false;
+        if (_isDraggingRecorderPoint)
+        {
+            if (!_dragExceeded && _draggedRecorderPointIndex >= 0)
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                    this,
+                    "SelectRecorderWaypointIndex",
+                    new object(),
+                    _draggedRecorderPointIndex));
+            }
+
+            _isDraggingRecorderPoint = false;
+            _draggedRecorderPointIndex = -1;
+            Cursor = Cursors.Hand;
+            return;
+        }
+
+        if (_dragExceeded)
+        {
+            return;
+        }
+
+        _selectedRecorderEdge = null;
+        var target = ScreenToMap(e.GetPosition(this));
+        if (TryFindNearestTeleport(e.GetPosition(this), out var teleport))
+        {
+            target = teleport.DisplayPoint;
+            _targetPoint = target;
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "SelectPathingTargetPosition",
+                new object(),
+                new Point2f((float)teleport.GameX, (float)teleport.GameY)));
+        }
+        else
+        {
+            _targetPoint = target;
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SelectPathingTargetPosition", new object(), ConvertImageCoordinateToGamePoint(target)));
+        }
+
+        InvalidateVisual();
+    }
+
+    private void OnMouseMove(object sender, MouseEventArgs e)
+    {
+        if (IsReadOnlyDisplay)
+        {
+            Cursor = Cursors.Arrow;
+            return;
+        }
+
+        if (!_isDragging)
+        {
+            UpdateHoveredTeleport(e.GetPosition(this));
+            UpdateRecorderPointHover(e.GetPosition(this));
+            return;
+        }
+
+        var point = e.GetPosition(this);
+        var dx = point.X - _dragStart.X;
+        var dy = point.Y - _dragStart.Y;
+        if (_isDraggingRecorderPoint && _draggedRecorderPointIndex >= 0)
+        {
+            if (Math.Abs(dx) + Math.Abs(dy) > 2)
+            {
+                _dragExceeded = true;
+                SetFollowCurrentPosition(false);
+            }
+
+            var mapPoint = ScreenToMap(point);
+            var gamePoint = ConvertImageCoordinateToGamePoint(mapPoint);
+            UpdateRecordedPointPreview(_draggedRecorderPointIndex, mapPoint);
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                this,
+                "MoveRecorderWaypointPosition",
+                new object(),
+                new RecorderWaypointMapUpdate(_draggedRecorderPointIndex, gamePoint)));
+            InvalidateVisual();
+            return;
+        }
+
+        if (Math.Abs(dx) + Math.Abs(dy) > 4)
+        {
+            _dragExceeded = true;
+            SetFollowCurrentPosition(false);
+        }
+
+        _pan = new WpfPoint(_dragStartPan.X + dx, _dragStartPan.Y + dy);
+        InvalidateVisual();
+    }
+
+    private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (IsReadOnlyDisplay)
+        {
+            return;
+        }
+
+        if (!HasMapImage())
+        {
+            return;
+        }
+
+        SetFollowCurrentPosition(false);
+        ZoomAt(e.GetPosition(this), e.Delta > 0 ? 1.25 : 0.8);
+    }
+
+    private void ZoomAroundCenter(double factor)
+    {
+        if (!HasMapImage())
+        {
+            return;
+        }
+
+        SetFollowCurrentPosition(false);
+        ZoomAt(new WpfPoint(ActualWidth / 2, ActualHeight / 2), factor);
+    }
+
+    private void ToggleZoomAroundCenter()
+    {
+        if (!HasMapImage())
+        {
+            return;
+        }
+
+        SetFollowCurrentPosition(false);
+        var levels = new[] { 0.35, 1.0, 2.5, 5.0, 8.0 };
+        var nextZoom = levels.FirstOrDefault(level => level > _zoom + 0.05);
+        if (nextZoom <= 0)
+        {
+            nextZoom = levels[0];
+        }
+
+        SetZoomAt(new WpfPoint(ActualWidth / 2, ActualHeight / 2), nextZoom);
+    }
+
+    private void ZoomAt(WpfPoint screenPoint, double factor)
+    {
+        SetZoomAt(screenPoint, Math.Clamp(_zoom * factor, 0.12, 8));
+    }
+
+    private void SetZoomAt(WpfPoint screenPoint, double zoom)
+    {
+        var before = ScreenToMap(screenPoint);
+        _zoom = Math.Clamp(zoom, 0.12, 8);
+        var after = MapToScreen(before);
+        _pan = new WpfPoint(_pan.X + screenPoint.X - after.X, _pan.Y + screenPoint.Y - after.Y);
+        PublishZoom();
+        InvalidateVisual();
+    }
+
+    private void FitMap()
+    {
+        if (!HasMapImage() || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var mapWidth = GetMapDisplayWidth();
+        var mapHeight = GetMapDisplayHeight();
+        _zoom = Math.Min(ActualWidth / mapWidth, ActualHeight / mapHeight);
+        if (double.IsNaN(_zoom) || _zoom <= 0)
+        {
+            _zoom = 1;
+        }
+
+        _pan = new WpfPoint((ActualWidth - mapWidth * _zoom) / 2, (ActualHeight - mapHeight * _zoom) / 2);
+        PublishZoom();
+    }
+
+    private bool HasMapImage()
+    {
+        lock (_mapBitmapLock)
+        {
+            if (_mapBitmap != null)
+            {
+                return true;
+            }
+        }
+
+        lock (_mapImageLock)
+        {
+            return !_mapImage.Empty();
+        }
+    }
+
+    private double GetMapDisplayWidth()
+    {
+        lock (_mapBitmapLock)
+        {
+            if (_mapBitmap != null)
+            {
+                return _mapBitmap.PixelWidth;
+            }
+        }
+
+        lock (_mapImageLock)
+        {
+            return _mapImage.Width;
+        }
+    }
+
+    private double GetMapDisplayHeight()
+    {
+        lock (_mapBitmapLock)
+        {
+            if (_mapBitmap != null)
+            {
+                return _mapBitmap.PixelHeight;
+            }
+        }
+
+        lock (_mapImageLock)
+        {
+            return _mapImage.Height;
+        }
+    }
+
+    private void ResetInitialView(string? mapName = null)
+    {
+        _zoom = 0.35;
+        var origin = ConvertFeatureImageCoordinateToDisplayPoint(GetMapGeometry(mapName ?? MapName).Origin);
+        _pan = new WpfPoint(ActualWidth / 2 - origin.X * _zoom, ActualHeight / 2 - origin.Y * _zoom);
+        PublishZoom();
+    }
+
+    private void FitPath()
+    {
+        if (_pathPoints.Count == 0 || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var minX = _pathPoints.Min(p => p.X);
+        var minY = _pathPoints.Min(p => p.Y);
+        var maxX = _pathPoints.Max(p => p.X);
+        var maxY = _pathPoints.Max(p => p.Y);
+        var width = Math.Max(256, maxX - minX);
+        var height = Math.Max(256, maxY - minY);
+        _zoom = Math.Clamp(Math.Min((ActualWidth - 80) / width, (ActualHeight - 80) / height), 0.12, 8);
+        _pan = new WpfPoint(ActualWidth / 2 - (minX + width / 2) * _zoom, ActualHeight / 2 - (minY + height / 2) * _zoom);
+        SetFollowCurrentPosition(false);
+        PublishZoom();
+    }
+
+    private void FitPoints(IReadOnlyList<Point2f> points)
+    {
+        if (points.Count == 0 || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var minX = points.Min(p => p.X);
+        var minY = points.Min(p => p.Y);
+        var maxX = points.Max(p => p.X);
+        var maxY = points.Max(p => p.Y);
+        var width = Math.Max(220, maxX - minX);
+        var height = Math.Max(220, maxY - minY);
+        var availableWidth = Math.Max(120, ActualWidth - 120);
+        var availableHeight = Math.Max(120, ActualHeight - 120);
+        var centerX = points.Average(p => p.X);
+        var centerY = points.Average(p => p.Y);
+        _zoom = Math.Clamp(Math.Min(availableWidth / width, availableHeight / height), 0.12, 8);
+        _pan = new WpfPoint(ActualWidth / 2 - centerX * _zoom, ActualHeight / 2 - centerY * _zoom);
+        SetFollowCurrentPosition(false);
+        PublishZoom();
+    }
+
+    private void EnsurePointsVisible(IReadOnlyList<Point2f> points)
+    {
+        if (points.Count == 0 || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        const double margin = 56;
+        var visibleRect = new WpfRect(
+            margin,
+            margin,
+            Math.Max(1, ActualWidth - margin * 2),
+            Math.Max(1, ActualHeight - margin * 2));
+
+        if (points.All(point => visibleRect.Contains(MapToScreen(point))))
+        {
+            return;
+        }
+
+        CenterOn(GetPointCenter(points));
+    }
+
+    private void FocusCompactView()
+    {
+        if (!IsCompactFollowView || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        if (_isRecorderMode)
+        {
+            if (_selectedRecorderPoints.Count > 0)
+            {
+                CenterOn(GetPointCenter(_selectedRecorderPoints), useFollowZoom: true);
+                return;
+            }
+
+            if (FocusLatestRecordedPoint(selectLatest: false))
+            {
+                return;
+            }
+        }
+
+        if (_currentPoint is { } current)
+        {
+            CenterOn(current, useFollowZoom: true);
+            return;
+        }
+
+        if (_targetPoint is { } target)
+        {
+            CenterOn(target, useFollowZoom: true);
+            return;
+        }
+
+        if (_pathPoints.Count > 0)
+        {
+            CenterOn(GetPointCenter(_pathPoints), useFollowZoom: true);
+            return;
+        }
+
+        CenterOn(ConvertGameCoordinateToImagePoint(new Point2f(0, 0)), useFollowZoom: true);
+    }
+
+    private bool FocusLatestRecordedPoint(bool selectLatest)
+    {
+        if (!IsCompactFollowView || _recordedPoints.Count == 0)
+        {
+            return false;
+        }
+
+        var latest = _recordedPoints[^1].Point;
+        if (selectLatest)
+        {
+            _selectedRecorderEdge = null;
+            _selectedRecorderPoint = latest;
+            _selectedRecorderPoints = [latest];
+        }
+
+        CenterOn(latest, useFollowZoom: true);
+        return true;
+    }
+
+    private static Point2f GetPointCenter(IReadOnlyList<Point2f> points)
+    {
+        if (points.Count == 0)
+        {
+            return new Point2f(0, 0);
+        }
+
+        return new Point2f(
+            (float)points.Average(point => point.X),
+            (float)points.Average(point => point.Y));
+    }
+
+    private void CenterOn(Point2f point, bool useFollowZoom = false)
+    {
+        if (ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        if (_followCurrentPosition || useFollowZoom)
+        {
+            _zoom = GetSafeFollowZoom();
+        }
+
+        _pan = new WpfPoint(ActualWidth / 2 - point.X * _zoom, ActualHeight / 2 - point.Y * _zoom);
+        PublishZoom();
+    }
+
+    private void PublishZoom()
+    {
+        if (IsCompactFollowView)
+        {
+            return;
+        }
+
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateMapZoom", new object(), _zoom));
+    }
+
+    private double GetSafeFollowZoom()
+    {
+        return FollowZoom is > 0 and <= 20 && !double.IsNaN(FollowZoom) && !double.IsInfinity(FollowZoom)
+            ? FollowZoom
+            : 5.0;
+    }
+
+    private void SetFollowCurrentPosition(bool value, bool notify = true)
+    {
+        if (_followCurrentPosition == value)
+        {
+            return;
+        }
+
+        _followCurrentPosition = value;
+        if (notify)
+        {
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "MapFollowCurrentChanged", new object(), value));
+        }
+    }
+
+    private void UpdateHoveredTeleport(WpfPoint screenPoint)
+    {
+        var previous = _hoverTeleportPoint;
+        _hoverTeleportPoint = TryFindNearestTeleport(screenPoint, out var teleport) ? teleport : null;
+        if (!ReferenceEquals(previous, _hoverTeleportPoint))
+        {
+            InvalidateVisual();
+        }
+    }
+
+    private bool TryFindNearestTeleport(WpfPoint screenPoint, out MapTeleportPoint teleport)
+    {
+        teleport = default!;
+        if (!ShowTeleportPoints || _teleportPoints.Count == 0)
+        {
+            return false;
+        }
+
+        var hitRadius = Math.Max(12, Math.Min(24, 8 * _zoom));
+        var hitRadiusSquared = hitRadius * hitRadius;
+        MapTeleportPoint? best = null;
+        var bestDistance = double.MaxValue;
+        foreach (var candidate in _teleportPoints)
+        {
+            if (!ShouldShowTeleportAtZoom(candidate.Type))
+            {
+                continue;
+            }
+
+            var point = MapToScreen(candidate.DisplayPoint);
+            var dx = point.X - screenPoint.X;
+            var dy = point.Y - screenPoint.Y;
+            var distance = dx * dx + dy * dy;
+            if (distance > hitRadiusSquared || distance >= bestDistance)
+            {
+                continue;
+            }
+
+            best = candidate;
+            bestDistance = distance;
+        }
+
+        if (best == null)
+        {
+            return false;
+        }
+
+        teleport = best;
+        return true;
+    }
+
+    private void UpdateRecorderPointHover(WpfPoint screenPoint)
+    {
+        if (!_isRecorderMode)
+        {
+            Cursor = Cursors.Hand;
+            return;
+        }
+
+        Cursor = TryFindNearestRecordedPoint(screenPoint, out _)
+            ? Cursors.SizeAll
+            : TryFindNearestRecordedEdge(screenPoint, out _)
+                ? Cursors.Cross
+                : Cursors.Hand;
+    }
+
+    private bool TryFindNearestRecordedPoint(WpfPoint screenPoint, out RecordedMapPoint recordedPoint)
+    {
+        recordedPoint = default!;
+        if (_recordedPoints.Count == 0)
+        {
+            return false;
+        }
+
+        const double hitRadius = 15;
+        const double hitRadiusSquared = hitRadius * hitRadius;
+        RecordedMapPoint? best = null;
+        var bestDistance = double.MaxValue;
+        foreach (var candidate in _recordedPoints)
+        {
+            var point = MapToScreen(candidate.Point);
+            var dx = point.X - screenPoint.X;
+            var dy = point.Y - screenPoint.Y;
+            var distance = dx * dx + dy * dy;
+            if (distance > hitRadiusSquared || distance >= bestDistance)
+            {
+                continue;
+            }
+
+            best = candidate;
+            bestDistance = distance;
+        }
+
+        if (best == null)
+        {
+            return false;
+        }
+
+        recordedPoint = best;
+        return true;
+    }
+
+    private bool TryFindNearestRecordedEdge(WpfPoint screenPoint, out RecordedMapEdge recordedEdge)
+    {
+        recordedEdge = default!;
+        if (_recordedPoints.Count < 2)
+        {
+            return false;
+        }
+
+        const double hitRadius = 10;
+        RecordedMapEdge? best = null;
+        var bestDistance = double.MaxValue;
+        foreach (var (startIndex, endIndex) in EnumerateDrawableConnections(_recordedPoints))
+        {
+            var start = MapToScreen(_recordedPoints[startIndex].Point);
+            var end = MapToScreen(_recordedPoints[endIndex].Point);
+            var projection = ProjectPointToSegment(screenPoint, start, end);
+            var dx = projection.X - screenPoint.X;
+            var dy = projection.Y - screenPoint.Y;
+            var distance = Math.Sqrt(dx * dx + dy * dy);
+            if (distance > hitRadius || distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            best = new RecordedMapEdge(startIndex, endIndex, _recordedPoints[startIndex].Point, _recordedPoints[endIndex].Point, ScreenToMap(projection));
+        }
+
+        if (best == null)
+        {
+            return false;
+        }
+
+        recordedEdge = best;
+        return true;
+    }
+
+    private void SelectRecordedEdge(RecordedMapEdge recordedEdge)
+    {
+        _selectedRecorderPoint = null;
+        _selectedRecorderPoints = [];
+        _selectedRecorderEdge = recordedEdge;
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectRecorderRouteEdge",
+            new object(),
+            new RecorderRouteEdgeSelection(recordedEdge.StartIndex + 1, ConvertImageCoordinateToGamePoint(recordedEdge.InsertPoint))));
+        InvalidateVisual();
+    }
+
+    private void SelectRecordedEdgeVisual(RecorderRouteEdgeSelection edgeSelection)
+    {
+        var endIndex = edgeSelection.InsertIndex;
+        var startIndex = endIndex - 1;
+        if (startIndex < 0 || endIndex >= _recordedPoints.Count)
+        {
+            _selectedRecorderEdge = null;
+            InvalidateVisual();
+            return;
+        }
+
+        _selectedRecorderPoint = null;
+        _selectedRecorderPoints = [];
+        _selectedRecorderEdge = new RecordedMapEdge(
+            startIndex,
+            endIndex,
+            _recordedPoints[startIndex].Point,
+            _recordedPoints[endIndex].Point,
+            ConvertGameCoordinateToImagePoint(edgeSelection.Point));
+        InvalidateVisual();
+    }
+
+    private static WpfPoint ProjectPointToSegment(WpfPoint point, WpfPoint start, WpfPoint end)
+    {
+        var dx = end.X - start.X;
+        var dy = end.Y - start.Y;
+        var lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared <= 0.0001)
+        {
+            return start;
+        }
+
+        var t = ((point.X - start.X) * dx + (point.Y - start.Y) * dy) / lengthSquared;
+        t = Math.Clamp(t, 0, 1);
+        return new WpfPoint(start.X + dx * t, start.Y + dy * t);
+    }
+
+    private void UpdateRecordedPointPreview(int index, Point2f mapPoint)
+    {
+        var listIndex = _recordedPoints.FindIndex(i => i.Index == index);
+        if (listIndex < 0)
+        {
+            return;
+        }
+
+        _recordedPoints[listIndex] = _recordedPoints[listIndex] with { Point = mapPoint };
+    }
+
+    private List<MapTeleportPoint> LoadTeleportPoints(string mapName)
+    {
+        try
+        {
+            if (!MapLazyAssets.Instance.ScenesDic.TryGetValue(mapName, out var scene))
+            {
+                return [];
+            }
+
+            var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+            var map = MapManager.GetMap(mapName, matchingMethod);
+            return scene.Points
+                .Where(IsTeleportLike)
+                .Select(tp => CreateTeleportPoint(map, tp))
+                .Where(tp => tp != null)
+                .Cast<MapTeleportPoint>()
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return [];
+        }
+    }
+
+    private MapTeleportPoint? CreateTeleportPoint(ISceneMap map, GiTpPosition tp)
+    {
+        var gamePoint = new Point2f((float)tp.X, (float)tp.Y);
+        var featurePoint = map.ConvertGenshinMapCoordinatesToImageCoordinates(gamePoint);
+        var displayPoint = ConvertFeatureImageCoordinateToDisplayPoint(featurePoint);
+        return new MapTeleportPoint(
+            displayPoint,
+            tp.X,
+            tp.Y,
+            tp.Name ?? string.Empty,
+            tp.Type ?? string.Empty);
+    }
+
+    private static bool IsTeleportLike(GiTpPosition teleport)
+    {
+        if (string.IsNullOrWhiteSpace(teleport.Type))
+        {
+            return false;
+        }
+
+        return teleport.Type.Contains("Teleport", StringComparison.OrdinalIgnoreCase) ||
+               teleport.Type.Contains("Domain", StringComparison.OrdinalIgnoreCase) ||
+               IsSpecialTeleport(teleport.Type) ||
+               IsGoddess(teleport.Type);
+    }
+
+    private static bool IsGoddess(string? type)
+    {
+        return string.Equals(type, "Goddess", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSpecialTeleport(string? type)
+    {
+        return string.Equals(type, "NatlanObsidianTotemPole", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(type, "NodKraiMeetingPoint", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDomain(string? type)
+    {
+        return !string.IsNullOrWhiteSpace(type) && type.Contains("Domain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBlessDomain(string? type)
+    {
+        return string.Equals(type, "BlessDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsForgeryDomain(string? type)
+    {
+        return string.Equals(type, "ForgeryDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMasteryDomain(string? type)
+    {
+        return string.Equals(type, "MasteryDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsTrounceDomain(string? type)
+    {
+        return string.Equals(type, "TrounceDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsOneTimeDomain(string? type)
+    {
+        return string.Equals(type, "OneTimeDomain", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool ShouldShowTeleportAtZoom(string? type)
+    {
+        if (IsGoddess(type))
+        {
+            return true;
+        }
+
+        if (IsTrounceDomain(type))
+        {
+            return _zoom >= 0.22;
+        }
+
+        if (IsDomain(type))
+        {
+            return _zoom >= 0.32;
+        }
+
+        if (IsSpecialTeleport(type))
+        {
+            return _zoom >= 0.42;
+        }
+
+        return _zoom >= 0.55;
+    }
+
+    private Brush GetTeleportBrush(string? type)
+    {
+        if (IsGoddess(type))
+        {
+            return _goddessBrush;
+        }
+
+        if (IsSpecialTeleport(type))
+        {
+            return _specialTeleportBrush;
+        }
+
+        if (IsBlessDomain(type))
+        {
+            return _domainBlessBrush;
+        }
+
+        if (IsForgeryDomain(type))
+        {
+            return _domainForgeryBrush;
+        }
+
+        if (IsMasteryDomain(type))
+        {
+            return _domainMasteryBrush;
+        }
+
+        if (IsTrounceDomain(type))
+        {
+            return _domainTrounceBrush;
+        }
+
+        if (IsOneTimeDomain(type))
+        {
+            return _domainOneTimeBrush;
+        }
+
+        return IsDomain(type) ? _domainBrush : _teleportBrush;
+    }
+
+    private static string FormatTeleportType(string? type)
+    {
+        if (IsGoddess(type))
+        {
+            return "七天神像";
+        }
+
+        if (IsBlessDomain(type))
+        {
+            return "祝圣秘境";
+        }
+
+        if (IsForgeryDomain(type))
+        {
+            return "炼武秘境";
+        }
+
+        if (IsMasteryDomain(type))
+        {
+            return "精通秘境";
+        }
+
+        if (IsTrounceDomain(type))
+        {
+            return "征讨领域";
+        }
+
+        if (IsOneTimeDomain(type))
+        {
+            return "一次性秘境";
+        }
+
+        if (IsSpecialTeleport(type))
+        {
+            return string.Equals(type, "NatlanObsidianTotemPole", StringComparison.OrdinalIgnoreCase)
+                ? "曜石图腾柱"
+                : "聚所";
+        }
+
+        if (IsDomain(type))
+        {
+            return "秘境";
+        }
+
+        return "传送锚点";
+    }
+
+    private Point2f ConvertToMapPoint(Waypoint waypoint)
+    {
+        return ConvertGameCoordinateToImagePoint(new Point2f((float)waypoint.X, (float)waypoint.Y));
+    }
+
+    private void RefreshCurrentPathingPoints()
+    {
+        if (_currentPathingTask?.Positions == null)
+        {
+            _pathPoints = [];
+            _currentPathPoints = [];
+            return;
+        }
+
+        if (!IsPathingTaskForCurrentMap(_currentPathingTask))
+        {
+            _pathPoints = [];
+            _currentPathPoints = [];
+            return;
+        }
+
+        _currentPathPoints = _currentPathingTask.Positions.Select(CreateRecordedMapPoint).ToList();
+        _pathPoints = _currentPathPoints.Select(point => point.Point).ToList();
+    }
+
+    private bool IsPathingTaskForCurrentMap(PathingTask pathingTask)
+    {
+        var taskMapName = pathingTask.Info?.MapName;
+        if (string.IsNullOrWhiteSpace(taskMapName))
+        {
+            return true;
+        }
+
+        return TryNormalizeMapName(taskMapName, out var normalizedTaskMapName) &&
+               TryNormalizeMapName(MapName, out var normalizedCurrentMapName) &&
+               string.Equals(normalizedTaskMapName, normalizedCurrentMapName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private RecordedMapPoint CreateRecordedMapPoint(Waypoint waypoint, int index)
+    {
+        return new RecordedMapPoint(ConvertToMapPoint(waypoint), waypoint.Type, index);
+    }
+
+    private static bool IsTeleportWaypoint(string? type)
+    {
+        return string.Equals(type, WaypointType.Teleport.Code, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsOrientationWaypoint(string? type)
+    {
+        return string.Equals(type, WaypointType.Orientation.Code, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<(int StartIndex, int EndIndex)> EnumerateDrawableConnections(IReadOnlyList<RecordedMapPoint> points)
+    {
+        int? startIndex = null;
+        for (var i = 0; i < points.Count; i++)
+        {
+            if (IsOrientationWaypoint(points[i].Type))
+            {
+                continue;
+            }
+
+            if (startIndex.HasValue && !IsTeleportWaypoint(points[i].Type))
+            {
+                yield return (startIndex.Value, i);
+            }
+
+            startIndex = i;
+        }
+    }
+
+    private static bool TryNormalizeMapName(string? mapName, out string normalizedMapName)
+    {
+        if (Enum.TryParse<MapTypes>(mapName, true, out var mapType))
+        {
+            normalizedMapName = mapType.ToString();
+            return true;
+        }
+
+        normalizedMapName = string.Empty;
+        return false;
+    }
+
+    private Point2f ConvertGameCoordinateToImagePoint(Point2f point)
+    {
+        return ConvertFeatureImageCoordinateToDisplayPoint(ConvertGameCoordinateToFeatureImagePoint(point));
+    }
+
+    private Point2f ConvertGameCoordinateToFeatureImagePoint(Point2f point)
+    {
+        var geometry = GetMapGeometry(MapName);
+        return new Point2f(
+            geometry.Origin.X - point.X * geometry.GameToImageScale,
+            geometry.Origin.Y - point.Y * geometry.GameToImageScale);
+    }
+
+    private Point2f ConvertImageCoordinateToGamePoint(Point2f point)
+    {
+        return ConvertFeatureImageCoordinateToGamePoint(ConvertDisplayCoordinateToFeatureImagePoint(point));
+    }
+
+    private Point2f ConvertFeatureImageCoordinateToGamePoint(Point2f point)
+    {
+        var geometry = GetMapGeometry(MapName);
+        return new Point2f(
+            (geometry.Origin.X - point.X) / geometry.GameToImageScale,
+            (geometry.Origin.Y - point.Y) / geometry.GameToImageScale);
+    }
+
+    private string FormatGameCoordinate(Point2f featurePoint)
+    {
+        try
+        {
+            var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+            var gamePoint = MapManager.GetMap(MapName, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(featurePoint);
+            if (gamePoint is { } point)
+            {
+                return $"{point.X:F2}, {point.Y:F2}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
+        var fallback = ConvertFeatureImageCoordinateToGamePoint(featurePoint);
+        return $"{fallback.X:F2}, {fallback.Y:F2}";
+    }
+
+    private Point2f ConvertFeatureImageCoordinateToDisplayPoint(Point2f point)
+    {
+        var scale = GetFeatureToDisplayScale();
+        return new Point2f((float)(point.X / scale), (float)(point.Y / scale));
+    }
+
+    private Point2f ConvertDisplayCoordinateToFeatureImagePoint(Point2f point)
+    {
+        var scale = GetFeatureToDisplayScale();
+        return new Point2f((float)(point.X * scale), (float)(point.Y * scale));
+    }
+
+    private double GetFeatureToDisplayScale()
+    {
+        return _sourceScaleY > 0 && !double.IsNaN(_sourceScaleY) && !double.IsInfinity(_sourceScaleY)
+            ? _sourceScaleY
+            : 1;
+    }
+
+    private static MapGeometry GetMapGeometry(string mapName)
+    {
+        return mapName switch
+        {
+            nameof(MapTypes.TheChasm) => new MapGeometry(2, 2, 1, 1, 1024),
+            nameof(MapTypes.Enkanomiya) => new MapGeometry(3, 3, 1, 1, 1024),
+            nameof(MapTypes.SeaOfBygoneEras) => new MapGeometry(3, 4, 2, 5, 1024),
+            nameof(MapTypes.AncientSacredMountain) => new MapGeometry(4, 4, 1, 1, 1024),
+            nameof(MapTypes.TempleOfSpace) => new MapGeometry(4, 3, 1, 1, 1024),
+            _ => new MapGeometry(15, 22, 7, 15, 2048)
+        };
+    }
+
+    private WpfPoint MapToScreen(Point2f point)
+    {
+        return new WpfPoint(point.X * _zoom + _pan.X, point.Y * _zoom + _pan.Y);
+    }
+
+    private WpfRect MapToScreen(WpfRect mapRect)
+    {
+        return new WpfRect(mapRect.X * _zoom + _pan.X, mapRect.Y * _zoom + _pan.Y, mapRect.Width * _zoom, mapRect.Height * _zoom);
+    }
+
+    private Point2f ScreenToMap(WpfPoint point)
+    {
+        return new Point2f((float)((point.X - _pan.X) / _zoom), (float)((point.Y - _pan.Y) / _zoom));
+    }
+
+    private WpfRect ScreenToMap(WpfRect rect)
+    {
+        return new WpfRect(
+            Math.Floor((rect.X - _pan.X) / _zoom),
+            Math.Floor((rect.Y - _pan.Y) / _zoom),
+            Math.Ceiling(rect.Width / _zoom),
+            Math.Ceiling(rect.Height / _zoom));
+    }
+
+    private readonly record struct TileKey(int X, int Y);
+
+    private sealed record LoadedMapResult(int Version, string MapName, Mat Image, BitmapSource? Bitmap, double SourceScaleX, double SourceScaleY);
+
+    private sealed record RecordedMapPoint(Point2f Point, string? Type, int Index);
+
+    private sealed record RecordedMapEdge(int StartIndex, int EndIndex, Point2f StartPoint, Point2f EndPoint, Point2f InsertPoint);
+
+    private sealed record MapTeleportPoint(Point2f DisplayPoint, double GameX, double GameY, string Name, string Type);
+
+    private readonly record struct MapGeometry(int Rows, int Cols, int UpRows, int LeftCols, int BlockWidth)
+    {
+        public double LogicalWidth => Cols * BlockWidth;
+
+        public double LogicalHeight => Rows * BlockWidth;
+
+        public Point2f Origin => new((LeftCols + 1) * BlockWidth, (UpRows + 1) * BlockWidth);
+
+        public float GameToImageScale => BlockWidth / 1024f;
+    }
+}
+
+public sealed record RecorderWaypointMapUpdate(int Index, Point2f Point);
+
+public sealed record RecorderRouteEdgeSelection(int InsertIndex, Point2f Point);

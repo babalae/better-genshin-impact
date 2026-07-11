@@ -212,6 +212,27 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _addWaypointHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
+    // 移除上一个路径记录点
+    [ObservableProperty]
+    private string _removeLastWaypointHotkey = "";
+
+    [ObservableProperty]
+    private string _removeLastWaypointHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 增大地图小窗缩放
+    [ObservableProperty]
+    private string _increaseMapMiniFollowZoomHotkey = "";
+
+    [ObservableProperty]
+    private string _increaseMapMiniFollowZoomHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 减小地图小窗缩放
+    [ObservableProperty]
+    private string _decreaseMapMiniFollowZoomHotkey = "";
+
+    [ObservableProperty]
+    private string _decreaseMapMiniFollowZoomHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
     // 路径执行
     [ObservableProperty]
     private string _executePathHotkey = "";
@@ -258,4 +279,18 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _mapMaskEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 实时追踪地图跟随当前坐标开关
+    [ObservableProperty]
+    private string _mapViewerFollowHotkey = "";
+
+    [ObservableProperty]
+    private string _mapViewerFollowHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 实时追踪地图小窗显示/隐藏
+    [ObservableProperty]
+    private string _mapMiniFollowWindowHotkey = "Ctrl + Shift + M";
+
+    [ObservableProperty]
+    private string _mapMiniFollowWindowHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
 }

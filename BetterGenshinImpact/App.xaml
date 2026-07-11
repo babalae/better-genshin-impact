@@ -17,6 +17,13 @@
 
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
+            <SolidColorBrush x:Key="InfoBadgeInformationSeverityBackgroundBrush" Color="#0E7490" />
+            <DropShadowEffect x:Key="ControlElevationBorderShadow"
+                              BlurRadius="16"
+                              ShadowDepth="2"
+                              Direction="270"
+                              Opacity="0.35"
+                              Color="#000000" />
             <bgivc:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
             <bgivc:AutoBossNameToCascadingItemConverter x:Key="AutoBossNameConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />

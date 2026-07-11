@@ -1904,7 +1904,6 @@
                                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                           HorizontalAlignment="Left"
                                                           VerticalAlignment="Center"
-                                                          IsEnabled="{Binding SelectedConfig.SecretTreasureObjects[1], Mode=TwoWay}"
                                                           x:Name="ClothCheckBox"/>
                                                 <ui:TextBlock Grid.Row="3" 
                                                               Grid.Column="1"

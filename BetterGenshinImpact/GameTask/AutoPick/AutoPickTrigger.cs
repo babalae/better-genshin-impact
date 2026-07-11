@@ -24,6 +24,8 @@ namespace BetterGenshinImpact.GameTask.AutoPick;
 
 public partial class AutoPickTrigger : ITaskTrigger
 {
+    public static event Action<string>? OnItemPicked;
+
     private readonly ILogger<AutoPickTrigger> _logger = App.GetLogger<AutoPickTrigger>();
 
     public string Name => "自动拾取";
@@ -462,6 +464,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (_lastText != text || (_lastText == text && Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 5))
         {
             _logger.LogInformation("交互或拾取：{Text}", text);
+            OnItemPicked?.Invoke(text);
         }
 
         _lastText = text;
