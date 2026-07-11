@@ -137,7 +137,7 @@ namespace BetterGenshinImpact.ViewModel
         private readonly HashSet<string> _hiddenMapPointIds = new(StringComparer.Ordinal);
         private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
         private readonly OverlayMetricsService? _overlayMetricsService = App.GetService<OverlayMetricsService>();
-        private bool _isRestoringMapMaskConfig;
+        private bool _isRestoringMapMaskState;
         private bool _metricsSubscribed;
         private bool _fpsStarted;
 
@@ -216,7 +216,7 @@ namespace BetterGenshinImpact.ViewModel
                 await EnsureIconLoadedAsync(item, CancellationToken.None);
             }
 
-            SaveSelectedMapLabelItemsToConfig();
+            SaveSelectedMapLabelItemsToStorage();
             StartRefreshSelectedMapPoints();
         }
 
@@ -229,8 +229,8 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             SelectedMapLabelItems.Clear();
-            SaveSelectedMapLabelItemsToConfig();
-            ClearHiddenMapPointConfig();
+            SaveSelectedMapLabelItemsToStorage();
+            ClearHiddenMapPointState();
             StartRefreshSelectedMapPoints();
         }
 
@@ -247,7 +247,7 @@ namespace BetterGenshinImpact.ViewModel
 
             SyncSelectedMapPointApiProviderFromConfig();
             SyncSelectedHoYoLabLanguageFromConfig();
-            LoadHiddenMapPointKeysFromConfig();
+            LoadHiddenMapPointKeysFromStorage();
             InitMetrics();
         }
 
@@ -358,7 +358,7 @@ namespace BetterGenshinImpact.ViewModel
             _mapLabelItemsCts?.Cancel();
             _mapPointListCts?.Cancel();
             PointInfoPopup.Close();
-            ClearSavedMapMaskPointConfig();
+            ClearSavedMapMaskPointState();
 
             Interlocked.Increment(ref _mapLabelTreeLoadVersion);
             _isMapLabelTreeLoaded = false;
@@ -567,7 +567,7 @@ namespace BetterGenshinImpact.ViewModel
                 var vms = categories.Select(x => new MapLabelCategoryVm(x)).ToList();
                 MapLabelCategories = new ObservableCollection<MapLabelCategoryVm>(vms);
                 await SelectMapLabelCategory(MapLabelCategories.FirstOrDefault());
-                await RestoreSelectedMapLabelItemsFromConfigAsync();
+                await RestoreSelectedMapLabelItemsFromStorageAsync();
                 _isMapLabelTreeLoaded = true;
             }
             catch (Exception ex)
@@ -586,18 +586,18 @@ namespace BetterGenshinImpact.ViewModel
 
         private bool HasSavedMapLabelSelection()
         {
-            return TaskContext.Instance().Config.MapMaskConfig.SelectedLabelItems?.Count > 0;
+            return MapMaskStateStorage.Read().SelectedLabelItems.Count > 0;
         }
 
-        private async Task RestoreSelectedMapLabelItemsFromConfigAsync()
+        private async Task RestoreSelectedMapLabelItemsFromStorageAsync()
         {
-            var savedItems = TaskContext.Instance().Config.MapMaskConfig.SelectedLabelItems ?? [];
+            var savedItems = MapMaskStateStorage.Read().SelectedLabelItems;
             if (savedItems.Count == 0)
             {
                 return;
             }
 
-            _isRestoringMapMaskConfig = true;
+            _isRestoringMapMaskState = true;
             try
             {
                 SelectedMapLabelItems.Clear();
@@ -625,7 +625,7 @@ namespace BetterGenshinImpact.ViewModel
             }
             finally
             {
-                _isRestoringMapMaskConfig = false;
+                _isRestoringMapMaskState = false;
             }
 
             if (SelectedMapLabelItems.Count > 0)
@@ -646,15 +646,16 @@ namespace BetterGenshinImpact.ViewModel
                 .FirstOrDefault(x => x.Id == id);
         }
 
-        private void SaveSelectedMapLabelItemsToConfig()
+        private void SaveSelectedMapLabelItemsToStorage()
         {
-            if (_isRestoringMapMaskConfig)
+            if (_isRestoringMapMaskState)
             {
                 return;
             }
 
-            TaskContext.Instance().Config.MapMaskConfig.SelectedLabelItems = SelectedMapLabelItems
-                .Select(x => new MapMaskSelectedLabelConfig
+            var state = MapMaskStateStorage.Read();
+            state.SelectedLabelItems = SelectedMapLabelItems
+                .Select(x => new MapMaskSelectedLabelState
                 {
                     Id = x.Id,
                     LabelIds = x.LabelIds.ToList(),
@@ -664,13 +665,12 @@ namespace BetterGenshinImpact.ViewModel
                     PointCount = x.PointCount
                 })
                 .ToList();
+            MapMaskStateStorage.Save(state);
         }
 
-        private void ClearSavedMapMaskPointConfig()
+        private void ClearSavedMapMaskPointState()
         {
-            var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
-            mapMaskConfig.SelectedLabelItems = [];
-            mapMaskConfig.HiddenMapPointKeys = [];
+            MapMaskStateStorage.Clear();
             _hiddenMapPointIds.Clear();
         }
 
@@ -932,7 +932,7 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             ApplyMapPointHiddenStates();
-            SaveHiddenMapPointKeysToConfig();
+            SaveHiddenMapPointKeysToStorage();
             SyncPointInfoPopupHiddenState();
         }
 
@@ -951,7 +951,7 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             ApplyMapPointHiddenStates();
-            SaveHiddenMapPointKeysToConfig();
+            SaveHiddenMapPointKeysToStorage();
             SyncPointInfoPopupHiddenState();
         }
 
@@ -965,13 +965,13 @@ namespace BetterGenshinImpact.ViewModel
 
             _hiddenMapPointIds.Clear();
             ApplyMapPointHiddenStates();
-            SaveHiddenMapPointKeysToConfig();
+            SaveHiddenMapPointKeysToStorage();
             SyncPointInfoPopupHiddenState();
         }
 
         private void ReplaceMapPoints(IEnumerable<MaskMapPoint> points)
         {
-            LoadHiddenMapPointKeysFromConfig();
+            LoadHiddenMapPointKeysFromStorage();
             var pointList = points.ToList();
             foreach (var point in pointList)
             {
@@ -1013,11 +1013,11 @@ namespace BetterGenshinImpact.ViewModel
             return $"{provider}:{language}:{point.Id}";
         }
 
-        private void LoadHiddenMapPointKeysFromConfig()
+        private void LoadHiddenMapPointKeysFromStorage()
         {
             _hiddenMapPointIds.Clear();
 
-            var keys = TaskContext.Instance().Config.MapMaskConfig.HiddenMapPointKeys ?? [];
+            var keys = MapMaskStateStorage.Read().HiddenMapPointKeys;
             foreach (var key in keys)
             {
                 if (!string.IsNullOrWhiteSpace(key))
@@ -1027,22 +1027,24 @@ namespace BetterGenshinImpact.ViewModel
             }
         }
 
-        private void SaveHiddenMapPointKeysToConfig()
+        private void SaveHiddenMapPointKeysToStorage()
         {
-            if (_isRestoringMapMaskConfig)
+            if (_isRestoringMapMaskState)
             {
                 return;
             }
 
-            TaskContext.Instance().Config.MapMaskConfig.HiddenMapPointKeys = _hiddenMapPointIds
+            var state = MapMaskStateStorage.Read();
+            state.HiddenMapPointKeys = _hiddenMapPointIds
                 .OrderBy(x => x, StringComparer.Ordinal)
                 .ToList();
+            MapMaskStateStorage.Save(state);
         }
 
-        private void ClearHiddenMapPointConfig()
+        private void ClearHiddenMapPointState()
         {
             _hiddenMapPointIds.Clear();
-            SaveHiddenMapPointKeysToConfig();
+            SaveHiddenMapPointKeysToStorage();
         }
 
         private void SyncPointInfoPopupHiddenState()
