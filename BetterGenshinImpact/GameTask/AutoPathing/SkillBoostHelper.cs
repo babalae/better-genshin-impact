@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -133,8 +133,8 @@ public partial class PathExecutor
             && waypoint?.MoveMode != MoveModeEnum.Dash.Code)
             return false;
 
-        Logger.LogInformation("[赶路调试] ExecuteHurryOnAsync: avatar={a}, dist={d}, nextDist={nd}, moveMode={m}, type={t}, num={n}, pending={pa}",
-            avatar.Name, Math.Round(distance, 1), nextDistance, waypoint?.MoveMode, waypoint?.Type, num, state.PendingApproach);
+        // Logger.LogInformation("[赶路调试] ExecuteHurryOnAsync: avatar={a}, dist={d}, nextDist={nd}, moveMode={m}, type={t}, num={n}, pending={pa}",
+        //     avatar.Name, Math.Round(distance, 1), nextDistance, waypoint?.MoveMode, waypoint?.Type, num, state.PendingApproach);
 
         switch (avatar.Name)
         {
@@ -183,8 +183,8 @@ public partial class PathExecutor
                         && GetMavikaColorDifference(screen2) > 15
                         && await ReadEskillCdAsync("玛薇卡") <= 0)
                     {
-                        Logger.LogInformation("[赶路调试] 玛薇卡 启动摩托: dist={d}, colorDiff={cd}",
-                            Math.Round(distance, 1), Math.Round(GetMavikaColorDifference(screen2), 1));
+                        // Logger.LogInformation("[赶路调试] 玛薇卡 启动摩托: dist={d}, colorDiff={cd}",
+                        //     Math.Round(distance, 1), Math.Round(GetMavikaColorDifference(screen2), 1));
                         _lastMavikaBoardTime = DateTime.UtcNow;
                         boarded = true;
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
@@ -464,8 +464,8 @@ public partial class PathExecutor
 
                     if (shouldApproach)
                     {
-                        Logger.LogInformation("[赶路调试] 希诺宁 触发接近: dist={d}, spaceExist={s}",
-                            Math.Round(distance, 1), SpaceAtSecondPlaceExist(state));
+                        // Logger.LogInformation("[赶路调试] 希诺宁 触发接近: dist={d}, spaceExist={s}",
+                        //     Math.Round(distance, 1), SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
                         if (PartyConfig.SwitchToWalkEnabled)
                         {
@@ -549,7 +549,7 @@ public partial class PathExecutor
                         var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
                         if (needsApproach)
                         {
-                            Logger.LogInformation("[赶路调试] 桑多涅 触发接近: dist={d}, dashExist={de}", Math.Round(distance, 1), DashAtSecondPlaceExist());
+                            // Logger.LogInformation("[赶路调试] 桑多涅 触发接近: dist={d}, dashExist={de}", Math.Round(distance, 1), DashAtSecondPlaceExist());
                             state.FlyingState = false;
                             if (DashAtSecondPlaceExist())
                             {
@@ -651,8 +651,8 @@ public partial class PathExecutor
 
                         if (shouldApproachX)
                         {
-                            Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
-                                avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
+                            // Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
+                            //     avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                             state.PendingApproach = false;
                             // 同时检查状态字段和实时像素，确保终点（新 HurryOnState，FlyingState=false）也能下车
                             if (state.FlyingState || SpaceAtSecondPlaceExist(state))
@@ -746,8 +746,8 @@ public partial class PathExecutor
 
                     if (shouldApproachX)
                     {
-                        Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
-                            Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
+                        // Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
+                        //     Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
                         // 同时检查状态字段和实时像素，确保终点（新 HurryOnState，FlyingState=false）也能下车
                         if (state.FlyingState || SpaceAtSecondPlaceExist(state))
@@ -802,8 +802,8 @@ public partial class PathExecutor
                         var cd = await ReadEskillCdAsync("流浪者");
                         if (cd <= 0)
                         {
-                            Logger.LogInformation("[赶路调试] 流浪者 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
-                                Math.Round(distance, 1), state.RotationStableCount, cd);
+                            // Logger.LogInformation("[赶路调试] 流浪者 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
+                            //     Math.Round(distance, 1), state.RotationStableCount, cd);
                             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                             await Delay(50, ct);
@@ -878,8 +878,8 @@ public partial class PathExecutor
         {
             if (distance < effectiveStopDist)
             {
-                Logger.LogInformation("[赶路调试] ShouldApproach 非RunDash节点接近: dist={d}, stopDist={s}, nextMode={m}",
-                    Math.Round(distance, 1), effectiveStopDist, nextWaypoint.MoveMode);
+                // Logger.LogInformation("[赶路调试] ShouldApproach 非RunDash节点接近: dist={d}, stopDist={s}, nextMode={m}",
+                //     Math.Round(distance, 1), effectiveStopDist, nextWaypoint.MoveMode);
                 return true;
             }
             return false;
@@ -888,8 +888,8 @@ public partial class PathExecutor
         // 连续赶路模式下飞行角色转弯表现差，强制使用精确接近阈值
         if (distance < effectiveStopDist && (PartyConfig.TravelMode == "精准靠近" || (PartyConfig.TravelMode == "连续赶路" && (avatarName == "恰斯卡" || avatarName == "伊法" || avatarName == "流浪者"))))
         {
-            Logger.LogInformation("[赶路调试] ShouldApproach 精确接近阈值: dist={d}, stopDist={s}, mode={tm}, avatar={a}",
-                Math.Round(distance, 1), effectiveStopDist, PartyConfig.TravelMode, avatarName);
+            // Logger.LogInformation("[赶路调试] ShouldApproach 精确接近阈值: dist={d}, stopDist={s}, mode={tm}, avatar={a}",
+            //     Math.Round(distance, 1), effectiveStopDist, PartyConfig.TravelMode, avatarName);
             return true;
         }
 
@@ -897,13 +897,13 @@ public partial class PathExecutor
             (nextDistance < 25 || nextWaypoint?.Type == WaypointType.Target.Code || waypoint.Type == WaypointType.Target.Code
              || waypoint?.Action == ActionEnum.CombatScript.Code))
         {
-            Logger.LogInformation("[赶路调试] ShouldApproach 连续赶路+特殊条件: dist={d}, stopDist={s}, nextDist={nd}, nextType={nt}, waypointType={wt}",
-                Math.Round(distance, 1), effectiveStopDist, nextDistance, nextWaypoint?.Type, waypoint?.Type);
+            // Logger.LogInformation("[赶路调试] ShouldApproach 连续赶路+特殊条件: dist={d}, stopDist={s}, nextDist={nd}, nextType={nt}, waypointType={wt}",
+            //     Math.Round(distance, 1), effectiveStopDist, nextDistance, nextWaypoint?.Type, waypoint?.Type);
             return true;
         }
 
-        Logger.LogInformation("[赶路调试] ShouldApproach 不触发: dist={d}, stopDist={s}, travelMode={tm}, avatar={a}",
-            Math.Round(distance, 1), effectiveStopDist, PartyConfig.TravelMode, avatarName);
+        // Logger.LogInformation("[赶路调试] ShouldApproach 不触发: dist={d}, stopDist={s}, travelMode={tm}, avatar={a}",
+        //     Math.Round(distance, 1), effectiveStopDist, PartyConfig.TravelMode, avatarName);
         return false;
     }
 
@@ -1021,8 +1021,8 @@ public partial class PathExecutor
             }
 
             var avatar = _combatScenes?.SelectAvatar(_hurryOnAvatar);
-            Logger.LogInformation("[赶路调试] TryHurryOnAsync  entry: avatar={a}(hurryOn={ha}), dist={d}, moveMode={m}, type={t}, diff={df}, rotStable={rs}",
-                _hurryOnAvatar, PartyConfig.HurryOnAvatar, Math.Round(distance, 1), waypoint?.MoveMode, waypoint?.Type, Math.Round(diff, 1), hurryOnState.RotationStableCount);
+            // Logger.LogInformation("[赶路调试] TryHurryOnAsync  entry: avatar={a}(hurryOn={ha}), dist={d}, moveMode={m}, type={t}, diff={df}, rotStable={rs}",
+            //     _hurryOnAvatar, PartyConfig.HurryOnAvatar, Math.Round(distance, 1), waypoint?.MoveMode, waypoint?.Type, Math.Round(diff, 1), hurryOnState.RotationStableCount);
             // 从当前路线上下文解析下一个路径点
             WaypointForTrack? nextWaypoint = null;
             double? nextDistance = null;
@@ -1089,7 +1089,7 @@ public partial class PathExecutor
             PartyConfig.TravelMode = "精准靠近";
         }
 
-        Logger.LogInformation("[赶路调试] InitHurryOnConfig: avatar={a}, travelMode={tm}, hurryOnAvatar={ha}",
-            _hurryOnAvatar, PartyConfig.TravelMode, PartyConfig.HurryOnAvatar);
+        // Logger.LogInformation("[赶路调试] InitHurryOnConfig: avatar={a}, travelMode={tm}, hurryOnAvatar={ha}",
+        //     _hurryOnAvatar, PartyConfig.TravelMode, PartyConfig.HurryOnAvatar);
     }
 }
