@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -562,6 +562,7 @@ public partial class PathExecutor
                         {
                             state.FlyingState = false;
                             await SafeLanding(ct);
+                            _lastSandroneSkillTime = DateTime.UtcNow;
                             Logger.LogInformation("自动赶路：桑多涅技能耗尽，安全降落");
                         }
                         return true;
@@ -581,19 +582,20 @@ public partial class PathExecutor
                                 var sandroneCd = await ReadEskillCdAsync("桑多涅");
                                 if (sandroneCd <= 0)
                                 {
-                                    _lastSandroneSkillTime = DateTime.UtcNow;
                                     Logger.LogInformation("[赶路调试] 桑多涅 启动E技能: dist={d}, sandroneCd={cd}",
                                         Math.Round(distance, 1), sandroneCd);
                                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                     await Delay(150, ct);
                                     if (DashAtSecondPlaceExist())
                                     {
+                                        _lastSandroneSkillTime = DateTime.UtcNow;
                                         state.FlyingState = true;
                                         _sandroneCount++;
                                     }
                                     else
                                     {
                                         await SafeLanding(ct);
+                                        _lastSandroneSkillTime = DateTime.UtcNow;
                                     }
                                 }
                             }
