@@ -202,6 +202,11 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
 
     private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
     {
+        if (point.IsHidden)
+        {
+            dc.PushOpacity(0.35);
+        }
+
         var radius = width / 2.0;
         const double strokeThickness = 2.0;
 
@@ -252,6 +257,11 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
             var brush = new SolidColorBrush(GenerateRandomColor(point.Id));
             brush.Freeze();
             dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
+        }
+
+        if (point.IsHidden)
+        {
+            dc.Pop();
         }
     }
 

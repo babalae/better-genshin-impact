@@ -76,8 +76,6 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPoint> _mapPoints = [];
 
-        [ObservableProperty] private ObservableCollection<MaskMapPoint> _visibleMapPoints = [];
-
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
         [ObservableProperty] private bool _isMapPointsLoading;
@@ -86,7 +84,7 @@ namespace BetterGenshinImpact.ViewModel
 
         public int MapPointTotalCount => MapPoints.Count;
 
-        public int VisibleMapPointCount => VisibleMapPoints.Count;
+        public int VisibleMapPointCount => MapPoints.Count(x => !x.IsHidden);
 
         public int HiddenMapPointCount => MapPoints.Count(IsMapPointHidden);
 
@@ -830,7 +828,7 @@ namespace BetterGenshinImpact.ViewModel
                 _hiddenMapPointIds.Remove(key);
             }
 
-            RebuildVisibleMapPoints();
+            ApplyMapPointHiddenStates();
             SyncPointInfoPopupHiddenState();
         }
 
@@ -848,7 +846,7 @@ namespace BetterGenshinImpact.ViewModel
                 _hiddenMapPointIds.Add(GetMapPointKey(point));
             }
 
-            RebuildVisibleMapPoints();
+            ApplyMapPointHiddenStates();
             SyncPointInfoPopupHiddenState();
         }
 
@@ -861,21 +859,33 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             _hiddenMapPointIds.Clear();
-            RebuildVisibleMapPoints();
+            ApplyMapPointHiddenStates();
             SyncPointInfoPopupHiddenState();
         }
 
         private void ReplaceMapPoints(IEnumerable<MaskMapPoint> points)
         {
             _hiddenMapPointIds.Clear();
-            MapPoints = new ObservableCollection<MaskMapPoint>(points);
-            RebuildVisibleMapPoints();
+            var pointList = points.ToList();
+            foreach (var point in pointList)
+            {
+                point.IsHidden = false;
+            }
+
+            MapPoints = new ObservableCollection<MaskMapPoint>(pointList);
+            NotifyMapPointVisibilityPropertiesChanged();
             SyncPointInfoPopupHiddenState();
         }
 
-        private void RebuildVisibleMapPoints()
+        private void ApplyMapPointHiddenStates()
         {
-            VisibleMapPoints = new ObservableCollection<MaskMapPoint>(MapPoints.Where(x => !IsMapPointHidden(x)));
+            var pointList = MapPoints.ToList();
+            foreach (var point in pointList)
+            {
+                point.IsHidden = IsMapPointHidden(point);
+            }
+
+            MapPoints = new ObservableCollection<MaskMapPoint>(pointList);
             NotifyMapPointVisibilityPropertiesChanged();
         }
 
@@ -899,11 +909,6 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         partial void OnMapPointsChanged(ObservableCollection<MaskMapPoint> value)
-        {
-            NotifyMapPointVisibilityPropertiesChanged();
-        }
-
-        partial void OnVisibleMapPointsChanged(ObservableCollection<MaskMapPoint> value)
         {
             NotifyMapPointVisibilityPropertiesChanged();
         }

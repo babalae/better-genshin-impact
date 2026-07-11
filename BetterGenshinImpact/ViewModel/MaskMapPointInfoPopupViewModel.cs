@@ -33,7 +33,6 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private MaskMapPoint? _currentPoint;
     [ObservableProperty] private bool _isCurrentPointHidden;
-    [ObservableProperty] private string _hiddenToggleText = "隐藏";
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private IReadOnlyList<MaskMapLink> _urlList = Array.Empty<MaskMapLink>();
     [ObservableProperty] private bool _hasUrlList;
@@ -163,7 +162,6 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     public void SetHiddenState(bool isHidden)
     {
         IsCurrentPointHidden = isHidden;
-        HiddenToggleText = isHidden ? "显示" : "隐藏";
     }
 
     private void DisposeImageStream()

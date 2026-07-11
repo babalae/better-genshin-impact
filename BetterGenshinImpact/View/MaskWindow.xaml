@@ -88,7 +88,7 @@
                     ClipToBounds="True">
                 <controls:MiniMapPointsCanvas x:Name="MiniMapPointsCanvasControl"
                                               Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                              PointsSource="{Binding VisibleMapPoints}"
+                                              PointsSource="{Binding MapPoints}"
                                               LabelsSource="{Binding MapPointLabels}"
                                               IsHitTestVisible="False">
                     <Canvas.Left>
@@ -548,7 +548,7 @@
                                    x:Name="PointsCanvasControl"
                                    Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                   PointsSource="{Binding VisibleMapPoints}"
+                                   PointsSource="{Binding MapPoints}"
                                    LabelsSource="{Binding MapPointLabels}"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
@@ -621,8 +621,22 @@
                                        BorderBrush="#26FFFFFF"
                                        Cursor="Hand"
                                        Icon="{ui:SymbolIcon EyeOff24}"
-                                       Content="{Binding HiddenToggleText}"
-                                       ToolTip="{Binding HiddenToggleText}"
+                                       Content="隐藏"
+                                       ToolTip="隐藏"
+                                       Visibility="{Binding IsCurrentPointHidden, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
+                                       Command="{Binding ToggleHiddenCommand}" />
+                            <ui:Button Grid.Column="1"
+                                       MinWidth="58"
+                                       Height="28"
+                                       Padding="8,0"
+                                       Margin="8,-2,0,0"
+                                       Background="#2FFFFFFF"
+                                       BorderBrush="#26FFFFFF"
+                                       Cursor="Hand"
+                                       Icon="{ui:SymbolIcon Eye24}"
+                                       Content="显示"
+                                       ToolTip="显示"
+                                       Visibility="{Binding IsCurrentPointHidden, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        Command="{Binding ToggleHiddenCommand}" />
                             <ui:Button Grid.Column="2"
                                        Width="28"
