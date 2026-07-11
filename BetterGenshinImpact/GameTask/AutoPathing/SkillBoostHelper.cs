@@ -910,4 +910,81 @@ public partial class PathExecutor
         }
         return cd;
     }
+
+    /// <summary>
+    /// 尝试执行赶路技能逻辑（含旋转稳定性跟踪、节点类型过滤）
+    /// </summary>
+    /// <returns>true 表示赶路逻辑已处理，主循环应 continue</returns>
+    private async Task<bool> TryHurryOnAsync(double diff, WaypointForTrack waypoint, double distance, ImageRegion screen, int num, HurryOnState hurryOnState)
+    {
+        try
+        {
+            // 更新旋转稳定性计数
+            if (Math.Abs(diff) <= 60)
+            {
+                hurryOnState.RotationStableCount++;
+            }
+            else
+            {
+                hurryOnState.RotationStableCount = 0;
+            }
+
+            // 仅 Path/Target 类型节点触发赶路
+            if (waypoint.Type != WaypointType.Path.Code && waypoint.Type != WaypointType.Target.Code)
+                return false;
+
+            var avatar = _combatScenes?.SelectAvatar(PartyConfig.HurryOnAvatar);
+            return await ExecuteHurryOnAsync(waypoint, null, distance, null, true, avatar, screen, num, hurryOnState, default);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "赶路逻辑执行异常");
+            return false;
+        }
+    }
+
+    private void InitHurryOnConfig()
+    {
+        if (PartyConfig.HurryOnAvatar == "自动" && _combatScenes != null)
+        {
+            var avatars = _combatScenes.GetAvatars();
+
+            // 第一步：检查行走位（MainAvatarIndex）对应的角色是否为赶路角色
+            if (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex)
+                && int.TryParse(PartyConfig.MainAvatarIndex, out var mainIdx)
+                && mainIdx >= 1 && mainIdx <= avatars.Count)
+            {
+                var mainAvatar = avatars[mainIdx - 1];
+                if (PartyConfig.HurryOnAvatarList.Contains(mainAvatar.Name))
+                {
+                    _hurryOnAvatar = mainAvatar.Name;
+                    Logger.LogInformation("自动赶路角色：行走位 {Name}({Index})", mainAvatar.Name, mainIdx);
+                    return;
+                }
+            }
+
+            // 第二步：按 HurryOnAvatarList 顺序依次检查是否在队伍中
+            foreach (var name in PartyConfig.HurryOnAvatarList)
+            {
+                if (string.IsNullOrEmpty(name) || name == "自动") continue;
+                if (avatars.Any(a => a.Name == name))
+                {
+                    _hurryOnAvatar = name;
+                    Logger.LogInformation("自动赶路角色：按优先级选择 {Name}", name);
+                    return;
+                }
+            }
+
+            _hurryOnAvatar = "";
+        }
+        else
+        {
+            _hurryOnAvatar = PartyConfig.HurryOnAvatar;
+        }
+
+        if (string.IsNullOrEmpty(PartyConfig.TravelMode))
+        {
+            PartyConfig.TravelMode = "精准靠近";
+        }
+    }
 }

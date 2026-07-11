@@ -368,6 +368,7 @@ public partial class PathExecutor
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
+        InitHurryOnConfig();
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
     }
@@ -887,23 +888,10 @@ public partial class PathExecutor
             }
 
             // 赶路逻辑（使用角色技能加速赶路）
-            if (Math.Abs(diff) <= 60)
+            var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
+            if (hurryOnResult)
             {
-                hurryOnState.RotationStableCount++;
-            }
-            else
-            {
-                hurryOnState.RotationStableCount = 0;
-            }
-            
-            if (waypoint.Type == WaypointType.Target.Code)
-            {
-                var avatar = _combatScenes?.SelectAvatar(PartyConfig.MainAvatarIndex);
-                var result = await ExecuteHurryOnAsync(waypoint, null, distance, null, true, avatar, screen, num, hurryOnState, null);
-                if (result)
-                {
-                    continue;
-                }
+                continue;
             }
 
             // 根据指定方式进行移动
