@@ -352,22 +352,32 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 旧格式兼容：TaskDefinitions 为空时，TaskEnabledList 键为任务名
         bool isOldFormat = SelectedConfig.TaskDefinitions == null || SelectedConfig.TaskDefinitions.Count == 0;
 
-        foreach (var kvp in SelectedConfig.TaskEnabledList)
+        // 使用 TaskOrder 恢复顺序；若无则回退到 TaskEnabledList 的键顺序
+        var orderedKeys = SelectedConfig.TaskOrder?.Count > 0
+            ? SelectedConfig.TaskOrder
+            : SelectedConfig.TaskEnabledList.Keys.ToList();
+
+        foreach (var key in orderedKeys)
         {
+            if (!SelectedConfig.TaskEnabledList.TryGetValue(key, out var enabled))
+            {
+                continue;
+            }
+
             OneDragonTaskItem taskItem;
             if (isOldFormat)
             {
                 // 旧格式：键=任务名 → 创建新 Id
-                taskItem = new OneDragonTaskItem(kvp.Key) { IsEnabled = kvp.Value };
+                taskItem = new OneDragonTaskItem(key) { IsEnabled = enabled };
             }
             else
             {
                 // 新格式：键=Id，从 TaskDefinitions 取任务名
-                if (!SelectedConfig.TaskDefinitions.TryGetValue(kvp.Key, out var name))
+                if (!SelectedConfig.TaskDefinitions.TryGetValue(key, out var name))
                 {
                     continue;
                 }
-                taskItem = new OneDragonTaskItem(name, kvp.Key) { IsEnabled = kvp.Value };
+                taskItem = new OneDragonTaskItem(name, key) { IsEnabled = enabled };
             }
             TaskList.Add(taskItem);
         }
@@ -406,10 +416,12 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         SelectedConfig.TaskDefinitions.Clear();
         SelectedConfig.TaskEnabledList.Clear();
+        SelectedConfig.TaskOrder.Clear();
         foreach (var task in TaskList)
         {
             SelectedConfig.TaskDefinitions[task.Id] = task.Name;
             SelectedConfig.TaskEnabledList[task.Id] = task.IsEnabled;
+            SelectedConfig.TaskOrder.Add(task.Id);
         }
 
         WriteConfig(SelectedConfig);
@@ -563,7 +575,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         int finishOneTaskcount = 1;
         int finishTaskcount = 1;
-        int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
+        int enabledTaskCountall = taskListCopy.Count(t => t.IsEnabled);
         _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
         
         ReadScriptGroup();
@@ -579,7 +591,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
-        int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
+        int enabledoneTaskCount = taskListCopy.Count(t => t.IsEnabled);
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
         await ScriptService.StartGameTask();
@@ -590,7 +602,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SaveConfig();
-        int enabledTaskCount = TaskList.Count(t =>
+        int enabledTaskCount = taskListCopy.Count(t =>
             t.IsEnabled && !ScriptGroupsdefault.Any(d => d.Name == t.Name));
         _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
 
