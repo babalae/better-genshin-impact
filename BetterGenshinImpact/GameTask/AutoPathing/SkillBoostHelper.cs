@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -127,7 +127,10 @@ public partial class PathExecutor
         }
 
         // 赶路逻辑只在 Run/Dash 路段触发，Fly 路段不处理
-        if (waypoint?.MoveMode != MoveModeEnum.Run.Code && waypoint?.MoveMode != MoveModeEnum.Dash.Code)
+        // 终点（nextWaypoint == null）不受此限制，需要进入角色分支执行接近下车
+        if (nextWaypoint != null
+            && waypoint?.MoveMode != MoveModeEnum.Run.Code
+            && waypoint?.MoveMode != MoveModeEnum.Dash.Code)
             return false;
 
         Logger.LogInformation("[赶路调试] ExecuteHurryOnAsync: avatar={a}, dist={d}, nextDist={nd}, moveMode={m}, type={t}, num={n}, pending={pa}",
@@ -651,7 +654,8 @@ public partial class PathExecutor
                             Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
                                 avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                             state.PendingApproach = false;
-                            if (state.FlyingState)
+                            // 同时检查状态字段和实时像素，确保终点（新 HurryOnState，FlyingState=false）也能下车
+                            if (state.FlyingState || SpaceAtSecondPlaceExist(state))
                             {
                                 if (SpaceAtSecondPlaceExist(state))
                                 {
@@ -687,10 +691,6 @@ public partial class PathExecutor
                             Logger.LogInformation($"自动赶路：{avatar.Name}飞行结束");
                             await SafeLanding(ct);
                             return false;
-                        }
-                        if (distance < 45)
-                        {
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                         }
                         return true;
                     }
@@ -749,7 +749,8 @@ public partial class PathExecutor
                         Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
                             Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
-                        if (state.FlyingState)
+                        // 同时检查状态字段和实时像素，确保终点（新 HurryOnState，FlyingState=false）也能下车
+                        if (state.FlyingState || SpaceAtSecondPlaceExist(state))
                         {
                             if (SpaceAtSecondPlaceExist(state))
                             {
@@ -778,10 +779,6 @@ public partial class PathExecutor
                         return false;
                     }
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    if (distance < 45)
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                    }
                     state.WandererFlightCheckCount++;
                     if (state.WandererFlightCheckCount % 3 == 0)
                         Simulation.SendInput.Mouse.MiddleButtonClick();
