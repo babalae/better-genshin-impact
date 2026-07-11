@@ -76,11 +76,27 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPoint> _mapPoints = [];
 
+        [ObservableProperty] private ObservableCollection<MaskMapPoint> _visibleMapPoints = [];
+
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
         [ObservableProperty] private bool _isMapPointsLoading;
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
+
+        public int MapPointTotalCount => MapPoints.Count;
+
+        public int VisibleMapPointCount => VisibleMapPoints.Count;
+
+        public int HiddenMapPointCount => MapPoints.Count(IsMapPointHidden);
+
+        public bool HasMapPoints => MapPointTotalCount > 0;
+
+        public bool HasHiddenMapPoints => HiddenMapPointCount > 0;
+
+        public string MapPointVisibilitySummary => HasMapPoints
+            ? $"{VisibleMapPointCount}/{MapPointTotalCount}"
+            : "0/0";
 
         public double MiniMapOverlayLeftRatio => MapAssets.MimiMapRect1080P.X / 1920d;
 
@@ -120,6 +136,7 @@ namespace BetterGenshinImpact.ViewModel
         private CancellationTokenSource? _mapPointListCts;
         private int _mapLabelItemsLoadVersion;
         private int _mapPointsLoadVersion;
+        private readonly HashSet<string> _hiddenMapPointIds = new(StringComparer.Ordinal);
         private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
         private readonly OverlayMetricsService? _overlayMetricsService = App.GetService<OverlayMetricsService>();
         private bool _metricsSubscribed;
@@ -127,6 +144,8 @@ namespace BetterGenshinImpact.ViewModel
 
         public MaskWindowViewModel()
         {
+            PointInfoPopup.ToggleHiddenRequested += (_, point) => ToggleMapPointHidden(point);
+
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
             {
                 if (msg.PropertyName == "RefreshSettings")
@@ -348,7 +367,7 @@ namespace BetterGenshinImpact.ViewModel
                 MapLabelCategories = [];
                 MapLabelItems = [];
                 MapPointLabels = [];
-                MapPoints = [];
+                ReplaceMapPoints(Array.Empty<MaskMapPoint>());
             }, DispatcherPriority.Background);
 
             if (IsMapPointPickerOpen)
@@ -581,7 +600,7 @@ namespace BetterGenshinImpact.ViewModel
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         MapPointLabels = [];
-                        MapPoints = [];
+                        ReplaceMapPoints(Array.Empty<MaskMapPoint>());
                     }, DispatcherPriority.Background);
                     return;
                 }
@@ -599,7 +618,7 @@ namespace BetterGenshinImpact.ViewModel
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MapPointLabels = new ObservableCollection<MaskMapPointLabel>(result.Labels);
-                    MapPoints = new ObservableCollection<MaskMapPoint>(result.Points);
+                    ReplaceMapPoints(result.Points);
                 }, DispatcherPriority.Background);
             }
             catch (OperationCanceledException)
@@ -764,7 +783,8 @@ namespace BetterGenshinImpact.ViewModel
             {
                 return;
             }
-            await PointInfoPopup.ShowAsync(point, args!.AnchorPosition, ResolvePointTitle(point));
+
+            await PointInfoPopup.ShowAsync(point, args!.AnchorPosition, ResolvePointTitle(point), IsMapPointHidden(point));
         }
 
         private string ResolvePointTitle(MaskMapPoint point)
@@ -781,11 +801,7 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private Task OnPointRightClick(MaskMapPoint? point)
         {
-            if (point != null)
-            {
-                // 自定义右键逻辑
-            }
-
+            ToggleMapPointHidden(point);
             return Task.CompletedTask;
         }
 
@@ -798,6 +814,108 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             return Task.CompletedTask;
+        }
+
+        [RelayCommand]
+        private void ToggleMapPointHidden(MaskMapPoint? point)
+        {
+            if (point == null)
+            {
+                return;
+            }
+
+            var key = GetMapPointKey(point);
+            if (!_hiddenMapPointIds.Add(key))
+            {
+                _hiddenMapPointIds.Remove(key);
+            }
+
+            RebuildVisibleMapPoints();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        [RelayCommand]
+        private void HideAllMapPoints()
+        {
+            if (MapPoints.Count == 0)
+            {
+                return;
+            }
+
+            _hiddenMapPointIds.Clear();
+            foreach (var point in MapPoints)
+            {
+                _hiddenMapPointIds.Add(GetMapPointKey(point));
+            }
+
+            RebuildVisibleMapPoints();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        [RelayCommand]
+        private void ShowAllMapPoints()
+        {
+            if (_hiddenMapPointIds.Count == 0)
+            {
+                return;
+            }
+
+            _hiddenMapPointIds.Clear();
+            RebuildVisibleMapPoints();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        private void ReplaceMapPoints(IEnumerable<MaskMapPoint> points)
+        {
+            _hiddenMapPointIds.Clear();
+            MapPoints = new ObservableCollection<MaskMapPoint>(points);
+            RebuildVisibleMapPoints();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        private void RebuildVisibleMapPoints()
+        {
+            VisibleMapPoints = new ObservableCollection<MaskMapPoint>(MapPoints.Where(x => !IsMapPointHidden(x)));
+            NotifyMapPointVisibilityPropertiesChanged();
+        }
+
+        private bool IsMapPointHidden(MaskMapPoint point)
+        {
+            return _hiddenMapPointIds.Contains(GetMapPointKey(point));
+        }
+
+        private static string GetMapPointKey(MaskMapPoint point)
+        {
+            return point.Id;
+        }
+
+        private void SyncPointInfoPopupHiddenState()
+        {
+            var currentPoint = PointInfoPopup.CurrentPoint;
+            if (currentPoint != null)
+            {
+                PointInfoPopup.SetHiddenState(IsMapPointHidden(currentPoint));
+            }
+        }
+
+        partial void OnMapPointsChanged(ObservableCollection<MaskMapPoint> value)
+        {
+            NotifyMapPointVisibilityPropertiesChanged();
+        }
+
+        partial void OnVisibleMapPointsChanged(ObservableCollection<MaskMapPoint> value)
+        {
+            NotifyMapPointVisibilityPropertiesChanged();
+        }
+
+        private void NotifyMapPointVisibilityPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(MapPointTotalCount));
+            OnPropertyChanged(nameof(VisibleMapPointCount));
+            OnPropertyChanged(nameof(HiddenMapPointCount));
+            OnPropertyChanged(nameof(HasMapPoints));
+            OnPropertyChanged(nameof(HasHiddenMapPoints));
+            OnPropertyChanged(nameof(MapPointVisibilitySummary));
         }
     }
 
