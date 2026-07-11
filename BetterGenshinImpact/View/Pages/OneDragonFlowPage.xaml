@@ -36,15 +36,17 @@
         </Grid.ColumnDefinitions>
 
         <!--  左侧任务列表  -->
-       <DockPanel Grid.Column="0">
+       <DockPanel Grid.Column="0"
+                  ContextMenuOpening="DockPanel_ContextMenuOpening">
            <DockPanel.ContextMenu>
                <ContextMenu>
                    <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                              CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                             Header="删除配置" />
+                             Header="删除" />
                    <Separator />
                    <MenuItem Command="{Binding NextTaskGroupCommand}"
+                             CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
                              Header="从此执行" />
                    <MenuItem Command="{Binding ClearNextTaskGroupCommand}"
                              Header="清除标记" />
@@ -151,21 +153,6 @@
                             <ui:ListView.ItemTemplate>
                                 <DataTemplate>
                                     <ui:Card Margin="0,2,14,2">
-                                        <ui:Card.ContextMenu>
-                                            <ContextMenu>
-                                                <MenuItem Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.AddTaskGroupCommand}"
-                                                          Header="新增配置" />
-                                                <MenuItem Header="删除"
-                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.DeleteTaskCommand}"
-                                                          CommandParameter="{Binding}" />
-                                                <Separator />
-                                                <MenuItem Header="从此执行"
-                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.SetTaskAsNextCommand}"
-                                                          CommandParameter="{Binding}" />
-                                                <MenuItem Header="清除标记"
-                                                          Command="{Binding RelativeSource={RelativeSource AncestorType=ui:ListView}, Path=DataContext.ClearNextTaskGroupCommand}" />
-                                            </ContextMenu>
-                                        </ui:Card.ContextMenu>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />

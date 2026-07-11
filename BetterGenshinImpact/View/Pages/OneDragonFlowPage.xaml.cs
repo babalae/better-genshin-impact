@@ -154,6 +154,30 @@ public partial class OneDragonFlowPage
         return null;
     }
     
+    private void DockPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        var dockPanel = sender as DockPanel;
+        if (dockPanel == null) return;
+        
+        var hitTest = System.Windows.Media.VisualTreeHelper.HitTest(dockPanel, System.Windows.Input.Mouse.GetPosition(dockPanel));
+        if (hitTest != null)
+        {
+            var listViewItem = FindVisualParent<ListViewItem>(hitTest.VisualHit);
+            if (listViewItem != null)
+            {
+                listViewItem.IsSelected = true;
+            }
+        }
+    }
+    
+    private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        if (parent == null) return null;
+        if (parent is T result) return result;
+        return FindVisualParent<T>(parent);
+    }
+    
     private async void SereniteaPotTpType_Clicked(object sender, RoutedEventArgs e)
     {
         if (ViewModel.SelectedConfig == null)
