@@ -138,6 +138,22 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private int _approachStopDistance = 25;
 
+    partial void OnDistanceChanged(int value)
+    {
+        if (ApproachStopDistance > value)
+        {
+            ApproachStopDistance = value;
+        }
+    }
+
+    partial void OnApproachStopDistanceChanged(int value)
+    {
+        if (value > Distance)
+        {
+            _approachStopDistance = Distance;
+        }
+    }
+
     [JsonIgnore]
     public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁"];
 

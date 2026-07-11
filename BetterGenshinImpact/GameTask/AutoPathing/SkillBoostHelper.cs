@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -42,12 +42,13 @@ public partial class PathExecutor
         public int MavikaSlopeCount;
         public int ClimbLogo;
         public int RotationStableCount;
+        public string? OriginalMoveMode;
         public bool FlyingState;
         public int ChascaFlightCheckCount;
         public int WandererFlightCheckCount;
     }
     // 赶路切换角色黑名单，防止切人后触发夜魂传递
-    private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦蕾莎", "茜特菈莉"];
+    private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉"];
 
     private string _hurryOnAvatar = "";
     private DateTime _lastJumpFlyTime = DateTime.MinValue;
@@ -135,6 +136,12 @@ public partial class PathExecutor
         switch (avatar.Name)
         {
             case "玛薇卡":
+                if (state.OriginalMoveMode != null)
+                {
+                    waypoint.MoveMode = state.OriginalMoveMode;
+                    state.OriginalMoveMode = null;
+                }
+
                 bool boarded = false;
 
                 if (state.PendingApproach)
@@ -153,10 +160,7 @@ public partial class PathExecutor
                                 var nextIdx = GetSwitchToWalkIndex();
                                 Logger.LogInformation("自动赶路：{t} 节点接近...-i {t2} {t3} {t4}", PartyConfig.TravelMode, nextIdx, waypoint?.MoveMode, Math.Round(colorDiff));
 
-                                Task.Run(async () =>
-                                {
-                                    await SwitchAvatar(nextIdx);
-                                }, ct);
+                                await SwitchAvatar(nextIdx);
                             }
                             else
                             {
@@ -247,11 +251,12 @@ public partial class PathExecutor
                     {
                         state.RunToDash = true;
                         state.DistanceHalf = distance * 2 / 4;
+                        state.OriginalMoveMode = waypoint.MoveMode;
                         waypoint.MoveMode = MoveModeEnum.Dash.Code;
                     }
                     else if (state.RunToDash == true && distance < state.DistanceHalf)
                     {
-                        waypoint.MoveMode = MoveModeEnum.Run.Code;
+                        waypoint.MoveMode = state.OriginalMoveMode ?? MoveModeEnum.Run.Code;
                         Task.Run(async () =>
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
@@ -607,15 +612,21 @@ public partial class PathExecutor
                     // ④ 已上车：跳过行走逻辑
                     if (state.FlyingState)
                     {
-                        if (nextWaypoint?.Action == MoveModeEnum.Fly.Code)
+                        if (nextWaypoint?.MoveMode == MoveModeEnum.Fly.Code)
                         {
                             return true;
                         }
-
-                        if (SandroneShouldSkip(_sandroneCount))
+                        else if (SandroneShouldSkip(_sandroneCount))
                         {
                             return true;
                         }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
                         return false;
                     }
                 }
