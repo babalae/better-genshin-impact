@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
@@ -929,7 +929,7 @@ public class TpTask
         double targetClickX,
         double targetClickY)
     {
-        if (targetTp == null || !MapLazyAssets.Instance.ScenesDic.TryGetValue(mapName, out var scene))
+        if (targetTp == null || !MapLazyAssets.Get().ScenesDic.TryGetValue(mapName, out var scene))
         {
             return double.NaN;
         }
@@ -2112,7 +2112,7 @@ public class TpTask
 
     private static bool TryGetCountryCenterPoint(string country, out Point2f centerPoint)
     {
-        if (MapLazyAssets.Instance.CountryPositions.TryGetValue(country, out var position) && position.Length >= 2)
+        if (MapLazyAssets.Get().CountryPositions.TryGetValue(country, out var position) && position.Length >= 2)
         {
             centerPoint = new Point2f((float)position[0], (float)position[1]);
             return true;
@@ -2327,7 +2327,7 @@ public class TpTask
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
         {
             using var capture = CaptureToRectArea();
-            using var groundButton = capture.Find(_assets.MapUndergroundToGroundButtonRo);
+            using var groundButton = capture.Find(GetQuickTeleportRecognitionObject("MapUndergroundToGroundButton", capture));
             if (groundButton.IsExist())
             {
                 groundButton.Click();
@@ -2344,7 +2344,7 @@ public class TpTask
 
             if (!layerSwitchClicked)
             {
-                using var layerSwitchButton = capture.Find(_assets.MapUndergroundSwitchButtonRo);
+                using var layerSwitchButton = capture.Find(GetQuickTeleportRecognitionObject("MapUndergroundSwitchButton", capture));
                 if (layerSwitchButton.IsExist())
                 {
                     layerSwitchButton.Click();
@@ -2401,7 +2401,7 @@ public class TpTask
             return TeleportPanelResult.Confirmed;
         }
 
-        using var teleportButton = imageRegion.Find(_assets.TeleportButtonRo);
+        using var teleportButton = imageRegion.Find(GetQuickTeleportRecognitionObject("TeleportButton", imageRegion));
         if (!teleportButton.IsEmpty())
         {
             PressTeleportConfirmKey();
@@ -2437,7 +2437,7 @@ public class TpTask
                 return true;
             }
 
-            using var teleportButton = screen.Find(_assets.TeleportButtonRo);
+            using var teleportButton = screen.Find(GetQuickTeleportRecognitionObject("TeleportButton", screen));
             if (!teleportButton.IsEmpty())
             {
                 PressTeleportConfirmKey();
@@ -2715,7 +2715,7 @@ public class TpTask
         double searchRadius)
     {
         var result = new List<ExpectedNearbyMapIcon>();
-        if (!MapLazyAssets.Instance.ScenesDic.TryGetValue(mapName, out var scene))
+        if (!MapLazyAssets.Get().ScenesDic.TryGetValue(mapName, out var scene))
         {
             return result;
         }
