@@ -63,7 +63,7 @@ public class AutoCookTask : ISoloTask
                 {
                     if (stopTaskWhenRecoverButtonDetected)
                     {
-                        var e = captureRegion.Find(ElementAssets.Instance.BtnWhiteRecover);
+                        var e = captureRegion.Find(ElementRecognition.Get("BtnWhiteRecover", captureRegion));
                         if (e.IsExist())
                         {
                             _logger.LogInformation("自动烹饪：{Text}", "检测到自动烹饪按钮，结束任务");
@@ -157,7 +157,7 @@ public class AutoCookTask : ISoloTask
 
     private bool IsInCookUi(ImageRegion captureRegion)
     {
-        using var cookIcon = captureRegion.Find(ElementAssets.Instance.UiLeftTopCookIcon);
+        using var cookIcon = captureRegion.Find(ElementRecognition.Get("UiLeftTopCookIcon", captureRegion));
         return cookIcon.IsExist();
     }
 

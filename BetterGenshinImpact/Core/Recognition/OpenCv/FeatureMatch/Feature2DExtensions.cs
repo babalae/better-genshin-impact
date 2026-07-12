@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
@@ -190,6 +191,53 @@ public static class Feature2DExtensions
         speedTimer.DebugPrint();
         // 返回小地图在大地图中的中心坐标
         return transformedCenter[0];
+    }
+
+    public static Point2f KnnMatchLocal(
+        this Feature2D feature2D,
+        KeyPointFeatureBlock[][] splitBlocks,
+        Mat trainDescriptors,
+        Size trainImageSize,
+        Rect searchRect,
+        Mat queryMat,
+        Mat? queryMatMask = null,
+        int expandCells = 2)
+    {
+        if (splitBlocks.Length == 0 || splitBlocks[0].Length == 0)
+        {
+            return default;
+        }
+
+        try
+        {
+            var (rowStart, rowEnd, colStart, colEnd) = KeyPointFeatureBlockHelper.GetCellRange(
+                trainImageSize,
+                splitBlocks.Length,
+                splitBlocks[0].Length,
+                searchRect);
+            var mergedBlock = KeyPointFeatureBlockHelper.MergeFeaturesInRange(
+                splitBlocks,
+                trainDescriptors,
+                rowStart - expandCells,
+                rowEnd + expandCells,
+                colStart - expandCells,
+                colEnd + expandCells);
+            var descriptors = mergedBlock.Descriptor;
+            if (mergedBlock.KeyPointArray.Length == 0 || descriptors == null || descriptors.Empty())
+            {
+                descriptors?.Dispose();
+                return default;
+            }
+
+            using (descriptors)
+            {
+                return feature2D.KnnMatch(mergedBlock.KeyPointArray, descriptors, queryMat, queryMatMask);
+            }
+        }
+        catch
+        {
+            return default;
+        }
     }
 
     public static Point2f[] KnnMatchCorners(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,

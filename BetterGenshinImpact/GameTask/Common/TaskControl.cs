@@ -271,19 +271,23 @@ public class TaskControl
 
     public static Mat CaptureGameImage(IGameCapture? gameCapture)
     {
-        var image = gameCapture?.Capture();
+        var captureFrame = gameCapture?.Capture();
+        var image = captureFrame?.Frame;
         if (image == null)
         {
+            captureFrame?.Dispose();
             Logger.LogWarning("截图失败!");
             // 重试3次
             for (var i = 0; i < 3; i++)
             {
-                image = gameCapture?.Capture();
+                captureFrame = gameCapture?.Capture();
+                image = captureFrame?.Frame;
                 if (image != null)
                 {
                     return image;
                 }
 
+                captureFrame?.Dispose();
                 Sleep(30);
             }
 
@@ -297,7 +301,7 @@ public class TaskControl
 
     public static Mat? CaptureGameImageNoRetry(IGameCapture? gameCapture)
     {
-        return gameCapture?.Capture();
+        return gameCapture?.Capture()?.Frame;
     }
 
     /// <summary>

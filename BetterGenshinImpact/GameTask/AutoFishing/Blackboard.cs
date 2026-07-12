@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using OpenCvSharp;
 
@@ -82,21 +81,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
         internal Action<int> Sleep { get; set; }
 
-        private readonly AutoFishingAssets? autoFishingAssets;
-        internal AutoFishingAssets AutoFishingAssets
-        {
-            get
-            {
-                return autoFishingAssets ?? throw new MissingMemberException();
-            }
-        }
-
-
-        public Blackboard(BgiYoloPredictor? predictor = null, Action<int>? sleep = null, AutoFishingAssets? autoFishingAssets = null)
+        public Blackboard(BgiYoloPredictor? predictor = null, Action<int>? sleep = null)
         {
             this.predictor = predictor;
             this.Sleep = sleep ?? (_ => throw new NotImplementedException());
-            this.autoFishingAssets = autoFishingAssets;
         }
         #endregion
 

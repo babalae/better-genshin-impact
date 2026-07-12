@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
@@ -29,7 +29,24 @@ public partial class PathingConditionConfig : ObservableObject
     // 只在传送传送点时复活
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
-    
+
+    // 低血量回复时机
+    private RecoverTiming? _recoverTiming;
+
+    public RecoverTiming RecoverTiming
+    {
+        get
+        {
+            if (_recoverTiming is null)
+            {
+                // 首次读取时从旧字段自动迁移
+                _recoverTiming = RecoverTimingMigration.Migrate(_onlyInTeleportRecover);
+            }
+            return _recoverTiming.Value;
+        }
+        set => SetProperty(ref _recoverTiming, value);
+    }
+
     // 使用小道具的间隔时间(ms)
     [ObservableProperty]
     private int _useGadgetIntervalMs = 0;

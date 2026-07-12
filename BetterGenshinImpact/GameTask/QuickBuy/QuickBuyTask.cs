@@ -1,8 +1,8 @@
-﻿using System;
+using System;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.QuickBuy.Assets;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
@@ -29,7 +29,7 @@ public class QuickBuyTask
         try
         {
             ImageRegion ra = TaskControl.CaptureToRectArea();
-            if (ra.Find(QuickBuyAssets.Instance.SereniteaPotCoin).IsExist())
+            if (ra.Find(RecognitionAssets.Get("QuickBuy", "SereniteaPotCoin", ra)).IsExist())
             {
                 // _logger.LogInformation("触发尘歌壶快速购买逻辑");
                 // 尘歌壶购买逻辑

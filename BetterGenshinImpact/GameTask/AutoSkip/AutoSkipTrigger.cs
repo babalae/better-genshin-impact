@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -70,8 +70,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
     
     private const int PlayingFlagDisappearDelaySeconds = 10; // 播放标识消失后继续识别的秒数
 
-    private readonly AutoSkipAssets _autoSkipAssets;
-
     private readonly AutoSkipConfig _config;
     private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter = new();
 
@@ -94,9 +92,13 @@ public partial class AutoSkipTrigger : ITaskTrigger
     
     private readonly bool _isCustomConfiguration;
 
+    private static RecognitionObject GetRecognitionObject(string objectName, ImageRegion region)
+    {
+        return RecognitionAssets.Get("AutoSkip", objectName, region.Width, region.Height);
+    }
+
     public AutoSkipTrigger()
     {
-        _autoSkipAssets = AutoSkipAssets.Instance;
         _config = TaskContext.Instance().Config.AutoSkipConfig;
     }
     
@@ -106,7 +108,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// <param name="config"></param>
     public AutoSkipTrigger(AutoSkipConfig config)
     {
-        _autoSkipAssets = AutoSkipAssets.Instance;
         _config = config;
         _isCustomConfiguration = true;
     }
@@ -371,8 +372,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private void HangoutOptionChoose(ImageRegion captureRegion)
     {
-        var selectedRects = captureRegion.FindMulti(_autoSkipAssets.HangoutSelectedRo);
-        var unselectedRects = captureRegion.FindMulti(_autoSkipAssets.HangoutUnselectedRo);
+        var selectedRects = captureRegion.FindMulti(GetRecognitionObject("HangoutSelected", captureRegion));
+        var unselectedRects = captureRegion.FindMulti(GetRecognitionObject("HangoutUnselected", captureRegion));
         if (selectedRects.Count > 0 || unselectedRects.Count > 0)
         {
             List<HangoutOption> hangoutOptionList =
@@ -446,7 +447,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             // 没有邀约选项 寻找跳过按钮
             if (_config.AutoHangoutPressSkipEnabled)
             {
-                using var skipRa = captureRegion.Find(_autoSkipAssets.HangoutSkipRo);
+                using var skipRa = captureRegion.Find(GetRecognitionObject("HangoutSkip", captureRegion));
                 if (skipRa.IsExist())
                 {
                     if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
@@ -495,7 +496,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-        content.CaptureRectArea.Find(_autoSkipAssets.PrimogemRo, primogemRa =>
+        content.CaptureRectArea.Find(GetRecognitionObject("Primogem", content.CaptureRectArea), primogemRa =>
         {
             Thread.Sleep(100);
             GameCaptureRegion.GameRegion1080PPosMove(960, 900);
@@ -520,12 +521,12 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return false;
         }
         
-        using var chatOptionResult = region.Find(_autoSkipAssets.OptionIconRo);
+        using var chatOptionResult = region.Find(GetRecognitionObject("OptionIcon", region));
         var isInChat = false;
         isInChat = chatOptionResult.IsExist();
         if (!isInChat)
         {
-            using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+            using var pickRa = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).ChatPickRo);
             isInChat = pickRa.IsExist();
         }
 
@@ -536,7 +537,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 return true;
             }
 
-            var fKey = AutoPickAssets.Instance.PickVk;
+            var fKey = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk;
             if (_config.IsClickFirstChatOption())
             {
                 _postMessageSimulator?.KeyPressBackground(fKey);
@@ -581,7 +582,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         if (!_config.IsClickNoneChatOption())
         {
             // 感叹号识别 遇到直接点击
-            using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
+            using var exclamationIconRa = region.Find(GetRecognitionObject("ExclamationIcon", region));
             if (!exclamationIconRa.IsEmpty())
             {
                 if (!PrepareBeforeChooseOption())
@@ -596,7 +597,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
 
         // 气泡识别
-        var chatOptionResultList = region.FindMulti(_autoSkipAssets.OptionIconRo);
+        var chatOptionResultList = region.FindMulti(GetRecognitionObject("OptionIcon", region));
         if (chatOptionResultList.Count > 0)
         {
             // 第一个元素就是最下面的
@@ -728,7 +729,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 }
 
                                 Thread.Sleep(800); // 等待探索派遣界面打开
-                                new OneKeyExpeditionTask().Run(_autoSkipAssets);
+                                new OneKeyExpeditionTask().Run();
                             }
                             else if (!item.Text.Contains("每日")
                                 && !item.Text.Contains("委托")
@@ -796,10 +797,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 没有气泡的时候识别 F 选项
-            using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+            var pickAssets = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+            using var pickRa = region.Find(pickAssets.ChatPickRo);
             if (pickRa.IsExist())
             {
-                _postMessageSimulator?.KeyPressBackground(AutoPickAssets.Instance.PickVk);
+                _postMessageSimulator?.KeyPressBackground(pickAssets.PickVk);
                 AutoSkipLog("无气泡图标，但存在交互键，直接按下交互键");
             }
         }
@@ -921,19 +923,19 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private bool HasDialogueOption(ImageRegion region)
     {
-        using var chatOptionResult = region.Find(_autoSkipAssets.OptionIconRo);
+        using var chatOptionResult = region.Find(GetRecognitionObject("OptionIcon", region));
         if (chatOptionResult.IsExist())
         {
             return true;
         }
 
-        using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+        using var pickRa = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).ChatPickRo);
         if (pickRa.IsExist())
         {
             return true;
         }
 
-        using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
+        using var exclamationIconRa = region.Find(GetRecognitionObject("ExclamationIcon", region));
         return !exclamationIconRa.IsEmpty();
     }
 
@@ -1009,7 +1011,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return;
         }
         
-        content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
+        content.CaptureRectArea.Find(GetRecognitionObject("PageClose", content.CaptureRectArea), pageCloseRoRa =>
         {
             if (!Bv.IsInBigMapUi(content.CaptureRectArea))
             {
@@ -1171,7 +1173,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private bool SubmitGoods(CaptureContent content)
     {
-        using var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
+        using var exclamationRa = content.CaptureRectArea.Find(GetRecognitionObject("SubmitExclamationIcon", content.CaptureRectArea));
         if (!exclamationRa.IsEmpty())
         {
             // var rects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcMat.CvtColor(ColorConversionCodes.BGRA2BGR),
@@ -1196,7 +1198,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
                 TaskControl.Sleep(800);
 
-                var btnBlackConfirmRa = TaskControl.CaptureToRectArea(forceNew: true).Find(ElementAssets.Instance.BtnBlackConfirm);
+                using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
+                var btnBlackConfirmRa = ra1.Find(ElementRecognition.Get("BtnBlackConfirm", ra1));
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
                     btnBlackConfirmRa.Click();
@@ -1207,8 +1210,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
             TaskControl.Sleep(500);
 
-            using var ra = TaskControl.CaptureToRectArea(forceNew: true);
-            using var btnWhiteConfirmRa = ra.Find(ElementAssets.Instance.BtnWhiteConfirm);
+            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true);
+            using var btnWhiteConfirmRa = ra2.Find(ElementRecognition.Get("BtnWhiteConfirm", ra2));
             if (!btnWhiteConfirmRa.IsEmpty())
             {
                 btnWhiteConfirmRa.Click();

@@ -272,6 +272,11 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
     {
+        if (point.IsHidden)
+        {
+            dc.PushOpacity(0.35);
+        }
+
         double radius = width / 2.0;
         double strokeThickness = 2.0;
 
@@ -334,6 +339,11 @@ public class PointsCanvas : FrameworkElement
             brush.Freeze();
 
             dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
+        }
+
+        if (point.IsHidden)
+        {
+            dc.Pop();
         }
     }
 
