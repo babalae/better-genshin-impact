@@ -257,7 +257,11 @@ public class PathExecutor
                 }
                 catch (NormalEndException normalEndException)
                 {
-                    Logger.LogInformation(normalEndException.Message);
+                    if (!ct.IsCancellationRequested)
+                    {
+                        Logger.LogInformation(normalEndException.Message);
+                    }
+
                     if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
                         throw;
@@ -267,7 +271,7 @@ public class PathExecutor
                         break;
                     }
                 }
-                catch (TaskCanceledException e)
+                catch (OperationCanceledException)
                 {
                     if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
