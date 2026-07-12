@@ -989,7 +989,7 @@ public partial class PathExecutor
     private async Task<double> ReadEskillCdAsync(string avatarName)
     {
         using var cdRegion = CaptureToRectArea();
-        var eRa = cdRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        var eRa = cdRegion.DeriveCrop(AutoFightAssets.Get(cdRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
