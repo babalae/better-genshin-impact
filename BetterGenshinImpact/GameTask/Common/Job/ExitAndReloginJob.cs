@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -15,7 +14,6 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 public class ExitAndReloginJob
 {
-    private AutoWoodAssets _assets = AutoWoodAssets.Instance;
     private readonly Login3rdParty _login3rdParty = new();
 
     private static RecognitionObject GetAutoWoodRecognitionObject(string objectName)

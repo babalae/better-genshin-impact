@@ -1,44 +1,50 @@
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.Model.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 
-public class QuickTeleportAssets : Singleton<QuickTeleportAssets>
+public sealed class QuickTeleportAssets
 {
-    private readonly ISystemInfo systemInfo;
+    private static readonly CaptureAssetsCache<QuickTeleportAssets> Cache = new(static size => new QuickTeleportAssets(size));
 
-    public Rect MapChooseIconRoi;
-    public List<RecognitionObject> MapChooseIconRoList;
-    public List<Mat> MapChooseIconGreyMatList;
+    public Rect MapChooseIconRoi { get; }
+    public IReadOnlyList<RecognitionObject> MapChooseIconRoList { get; }
+    public IReadOnlyList<Mat> MapChooseIconGreyMatList { get; }
 
-    private Rect CaptureRect => systemInfo.ScaleMax1080PCaptureRect;
-    private double AssetScale => systemInfo.AssetScale;
-
-    private QuickTeleportAssets()
+    private QuickTeleportAssets(CaptureSize captureSize)
     {
-        systemInfo = TaskContext.Instance().SystemInfo;
-
-        MapChooseIconRoi = new Rect((int)(1270 * AssetScale),
-            (int)(100 * AssetScale),
-            (int)(50 * AssetScale),
-            CaptureRect.Height - (int)(200 * AssetScale));
-        MapChooseIconRoList =
+        MapChooseIconRoi = new Rect((int)(1270 * captureSize.AssetScale),
+            (int)(100 * captureSize.AssetScale),
+            (int)(50 * captureSize.AssetScale),
+            captureSize.Height - (int)(200 * captureSize.AssetScale));
+        List<RecognitionObject> mapChooseIconRoList =
         [
-            BuildMapChooseIconRo("TeleportWaypoint.png"),
-            BuildMapChooseIconRo("StatueOfTheSeven.png"),
-            BuildMapChooseIconRo("Domain.png"),
-            BuildMapChooseIconRo("Domain2.png"),
-            BuildMapChooseIconRo("ObsidianTotemPole.png"),
-            BuildMapChooseIconRo("PortableWaypoint.png"),
-            BuildMapChooseIconRo("Mansion.png"),
-            BuildMapChooseIconRo("SubSpaceWaypoint.png"),
-            BuildMapChooseIconRo("NodKraiMeetingPoint.png"),
-            BuildMapChooseIconRo("TabletOfTona.png"),
+            BuildMapChooseIconRo("TeleportWaypoint.png", captureSize),
+            BuildMapChooseIconRo("StatueOfTheSeven.png", captureSize),
+            BuildMapChooseIconRo("Domain.png", captureSize),
+            BuildMapChooseIconRo("Domain2.png", captureSize),
+            BuildMapChooseIconRo("ObsidianTotemPole.png", captureSize),
+            BuildMapChooseIconRo("PortableWaypoint.png", captureSize),
+            BuildMapChooseIconRo("Mansion.png", captureSize),
+            BuildMapChooseIconRo("SubSpaceWaypoint.png", captureSize),
+            BuildMapChooseIconRo("NodKraiMeetingPoint.png", captureSize),
+            BuildMapChooseIconRo("TabletOfTona.png", captureSize),
         ];
-        MapChooseIconGreyMatList = MapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat());
+        MapChooseIconRoList = mapChooseIconRoList.AsReadOnly();
+        MapChooseIconGreyMatList = mapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat()).AsReadOnly();
+    }
+
+    public static QuickTeleportAssets Get(Region region)
+    {
+        return Cache.Get(region);
+    }
+
+    public static QuickTeleportAssets Get(int captureWidth, int captureHeight)
+    {
+        return Cache.Get(captureWidth, captureHeight);
     }
 
     /// <summary>
@@ -49,13 +55,13 @@ public class QuickTeleportAssets : Singleton<QuickTeleportAssets>
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    public RecognitionObject BuildMapChooseIconRo(string name)
+    private RecognitionObject BuildMapChooseIconRo(string name, CaptureSize captureSize)
     {
         var ro = new RecognitionObject
         {
             Name = name + "MapChooseIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", name),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", name, captureSize.Width, captureSize.Height),
             RegionOfInterest = MapChooseIconRoi,
             DrawOnWindow = false
         }.InitTemplate();

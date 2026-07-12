@@ -77,7 +77,6 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
-        AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
@@ -292,7 +291,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 传送到秘境
         if (!string.IsNullOrEmpty(_taskParam.DomainName))
         {
-            if (MapLazyAssets.Instance.DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
+            if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
             {
                 Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
                 await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
@@ -300,10 +299,15 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 await Bv.WaitForMainUi(_ct);
 
                 var menuFound = false;
+                AutoPickAssets pickAssets;
+                using (var gameCaptureRegion = CaptureToRectArea())
+                {
+                    pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+                }
                 if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
                         _ct,
                         20,
@@ -318,7 +322,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
                         _ct,
                         20,
@@ -329,7 +333,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 else if ("太山府".Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => { },
                         _ct,
                         20,
@@ -339,7 +343,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 else
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
                         _ct,
                         20,
@@ -381,11 +385,17 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private async Task EnterDomain()
     {
-        var fightAssets = AutoFightAssets.Instance;
+        AutoFightAssets fightAssets;
+        AutoPickAssets pickAssets;
+        using (var gameCaptureRegion = CaptureToRectArea())
+        {
+            fightAssets = AutoFightAssets.Get(gameCaptureRegion);
+            pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+        }
 
         await NewRetry.WaitForElementDisappear(
-            AutoPickAssets.Instance.PickRo,
-            () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
+            pickAssets.PickRo,
+            () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
             _ct,
             20,
             500
@@ -629,7 +639,9 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 var startTime = DateTime.Now;
                 while (!_ct.IsCancellationRequested)
                 {
-                    using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
+                    using var gameCaptureRegion = Common.TaskControl.CaptureToRectArea();
+                    var pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+                    using var fRectArea = gameCaptureRegion.Find(pickAssets.PickRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _ct);
@@ -637,7 +649,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     else
                     {
                         Logger.LogInformation("检测到交互键");
-                        Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                        Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk);
                         break;
                     }
 
@@ -792,7 +804,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     {
         using var ra = CaptureToRectArea();
 
-        var endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsUpperRect);
+        var fightAssets = AutoFightAssets.Get(ra);
+        var endTipsRect = ra.DeriveCrop(fightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.challengeCompletedLocalizedString))
         {
@@ -800,7 +813,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             return true;
         }
 
-        endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsRect);
+        endTipsRect = ra.DeriveCrop(fightAssets.EndTipsRect);
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.autoLeavingLocalizedString))
         {

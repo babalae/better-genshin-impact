@@ -526,7 +526,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         isInChat = chatOptionResult.IsExist();
         if (!isInChat)
         {
-            using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+            using var pickRa = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).ChatPickRo);
             isInChat = pickRa.IsExist();
         }
 
@@ -537,7 +537,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 return true;
             }
 
-            var fKey = AutoPickAssets.Instance.PickVk;
+            var fKey = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk;
             if (_config.IsClickFirstChatOption())
             {
                 _postMessageSimulator?.KeyPressBackground(fKey);
@@ -797,10 +797,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 没有气泡的时候识别 F 选项
-            using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+            var pickAssets = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+            using var pickRa = region.Find(pickAssets.ChatPickRo);
             if (pickRa.IsExist())
             {
-                _postMessageSimulator?.KeyPressBackground(AutoPickAssets.Instance.PickVk);
+                _postMessageSimulator?.KeyPressBackground(pickAssets.PickVk);
                 AutoSkipLog("无气泡图标，但存在交互键，直接按下交互键");
             }
         }
@@ -928,7 +929,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return true;
         }
 
-        using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+        using var pickRa = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).ChatPickRo);
         if (pickRa.IsExist())
         {
             return true;

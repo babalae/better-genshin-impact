@@ -68,14 +68,9 @@ public class CombatScenes : IDisposable
             _predictor = predictor;
             _ownsPredictor = false;
         }
-        if (autoFightAssets == null)
-        {
-            _autoFightAssets = AutoFightAssets.Instance;    // todo BaseAssets重构后直接由systemInfo构建，省去传入？
-        }
-        else
-        {
-            _autoFightAssets = autoFightAssets;
-        }
+        _systemInfo = systemInfo ?? TaskContext.Instance().SystemInfo;
+        var captureRect = _systemInfo.ScaleMax1080PCaptureRect;
+        _autoFightAssets = autoFightAssets ?? AutoFightAssets.Get(captureRect.Width, captureRect.Height);    // todo BaseAssets重构后直接由systemInfo构建，省去传入？
         if (logger == null)
         {
             _logger = TaskControl.Logger;
@@ -83,14 +78,6 @@ public class CombatScenes : IDisposable
         else
         {
             _logger = logger;
-        }
-        if (systemInfo == null)
-        {
-            _systemInfo = TaskContext.Instance().SystemInfo;
-        }
-        else
-        {
-            _systemInfo = systemInfo;
         }
     }
 
@@ -370,7 +357,7 @@ public class CombatScenes : IDisposable
         var cdConfig = autoFightConfig.ActionSchedulerByCd;
         if (avatarIndexRectList == null && ExpectedTeamAvatarNum == 4)
         {
-            avatarIndexRectList = _autoFightAssets.AvatarIndexRectList;
+            avatarIndexRectList = [.. _autoFightAssets.AvatarIndexRectList];
         }
 
         if (avatarIndexRectList == null)

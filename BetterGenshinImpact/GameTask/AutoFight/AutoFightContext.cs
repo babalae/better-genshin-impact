@@ -1,4 +1,4 @@
-﻿// using BetterGenshinImpact.Core.Simulator;
+// using BetterGenshinImpact.Core.Simulator;
 // using BetterGenshinImpact.GameTask.AutoFight.Assets;
 // using BetterGenshinImpact.Model;
 //
@@ -18,7 +18,7 @@
 //     /// <summary>
 //     /// find资源
 //     /// </summary>
-//     public AutoFightAssets FightAssets => AutoFightAssets.Instance;
+//     public AutoFightAssets FightAssets => AutoFightAssets.Get(CaptureRegion);
 //
 //     /// <summary>
 //     /// 战斗专用的PostMessage模拟键鼠操作

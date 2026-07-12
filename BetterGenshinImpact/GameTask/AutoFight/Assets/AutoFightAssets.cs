@@ -1,5 +1,5 @@
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Assets;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -7,59 +7,58 @@ using System.IO;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
-using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 
-public class AutoFightAssets : Singleton<AutoFightAssets>
+public sealed class AutoFightAssets
 {
-    private readonly ISystemInfo systemInfo;
-    public Rect TeamRectNoIndex;
-    public Rect TeamRect;
-    public List<Rect> AvatarSideIconRectList; // 侧边栏角色头像 非联机状态下
-    public List<Rect> AvatarIndexRectList; // 侧边栏角色头像对应的白色块 非联机状态下
-    public List<Rect> AvatarQRectListMap; // 角色头像对应的Q技能图标 
+    private static readonly CaptureAssetsCache<AutoFightAssets> Cache = new(static size => new AutoFightAssets(size));
+    private readonly int _captureWidth;
+    private readonly int _captureHeight;
+    public Rect TeamRectNoIndex { get; private set; }
+    public Rect TeamRect { get; private set; }
+    public IReadOnlyList<Rect> AvatarSideIconRectList { get; private set; } // 侧边栏角色头像 非联机状态下
+    public IReadOnlyList<Rect> AvatarIndexRectList { get; private set; } // 侧边栏角色头像对应的白色块 非联机状态下
+    public IReadOnlyList<Rect> AvatarQRectListMap { get; private set; } // 角色头像对应的Q技能图标
 
-    public Rect ERect;
-    public Rect ECooldownRect;
-    public Rect QRect;
-    public Rect QRectForClassify;
-    public Rect ZCooldownRect;
-    public Rect EndTipsUpperRect; // 挑战达成提示
-    public Rect EndTipsRect;
+    public Rect ERect { get; private set; }
+    public Rect ECooldownRect { get; private set; }
+    public Rect QRect { get; private set; }
+    public Rect QRectForClassify { get; private set; }
+    public Rect ZCooldownRect { get; private set; }
+    public Rect EndTipsUpperRect { get; private set; } // 挑战达成提示
+    public Rect EndTipsRect { get; private set; }
 
-    public Dictionary<string, string> AvatarCostumeMap;
+    public IReadOnlyDictionary<string, string> AvatarCostumeMap { get; private set; }
 
-    public Dictionary<string, List<Rect>> AvatarSideIconRectListMap; // 侧边栏角色头像 联机状态下
-    public Dictionary<string, List<Rect>> AvatarIndexRectListMap; // 侧边栏角色头像对应的白色块 联机状态下
+    public IReadOnlyDictionary<string, List<Rect>> AvatarSideIconRectListMap { get; private set; } // 侧边栏角色头像 联机状态下
+    public IReadOnlyDictionary<string, List<Rect>> AvatarIndexRectListMap { get; private set; } // 侧边栏角色头像对应的白色块 联机状态下
 
     // 小道具位置
-    public Rect GadgetRect;
+    public Rect GadgetRect { get; private set; }
 
     /// <summary>
     /// 经验值模板识别对象列表，用于检测怪物死亡时掉落的经验值数字图标
     /// </summary>
     public IReadOnlyList<RecognitionObject> ExperienceRecognitionObjects { get; private set; } = Array.Empty<RecognitionObject>();
 
-    private Rect CaptureRect => systemInfo.ScaleMax1080PCaptureRect;
-    private double AssetScale => systemInfo.AssetScale;
+    private Rect CaptureRect { get; }
+    private double AssetScale { get; }
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
-    private AutoFightAssets()
+    private AutoFightAssets(CaptureSize captureSize)
     {
-        this.systemInfo = TaskContext.Instance().SystemInfo;
-        Initialization(this.systemInfo);
-    }
-
-    protected AutoFightAssets(ISystemInfo systemInfo)
-    {
-        this.systemInfo = systemInfo;
-        Initialization(systemInfo);
+        _captureWidth = captureSize.Width;
+        _captureHeight = captureSize.Height;
+        CaptureRect = captureSize.CaptureRect;
+        AssetScale = captureSize.AssetScale;
+        Initialization();
     }
 #pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
-    private void Initialization(ISystemInfo systemInfo)
+    private void Initialization()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
             (int)((355 - 85) * AssetScale), (int)(465 * AssetScale));
@@ -191,6 +190,16 @@ public class AutoFightAssets : Singleton<AutoFightAssets>
         }
     }
 
+    public static AutoFightAssets Get(Region region)
+    {
+        return Cache.Get(region);
+    }
+
+    public static AutoFightAssets Get(int captureWidth, int captureHeight)
+    {
+        return Cache.Get(captureWidth, captureHeight);
+    }
+
     /// <summary>
     /// 加载经验值模板图片，文件缺失时跳过，不影响其他功能
     /// </summary>
@@ -214,7 +223,7 @@ public class AutoFightAssets : Singleton<AutoFightAssets>
                 {
                     Name = $"Experience_{exp}",
                     RecognitionType = RecognitionTypes.TemplateMatch,
-                    TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", fileName, this.systemInfo),
+                    TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", fileName, _captureWidth, _captureHeight),
                     RegionOfInterest = roi,
                     UseMask = true,
                     Threshold = threshold,

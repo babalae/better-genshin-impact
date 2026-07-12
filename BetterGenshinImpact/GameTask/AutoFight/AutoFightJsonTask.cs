@@ -325,7 +325,8 @@ public class AutoFightJsonTask : ISoloTask
         ExperienceDetector? expDetector = null;
         if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
         {
-            var expRos = AutoFightAssets.Instance.ExperienceRecognitionObjects;
+            using var gameCaptureRegion = CaptureToRectArea();
+            var expRos = AutoFightAssets.Get(gameCaptureRegion).ExperienceRecognitionObjects;
             expDetector = new ExperienceDetector(expRos, cts2.Token);
             expDetector.Start();
         }
@@ -846,7 +847,7 @@ public class AutoFightJsonTask : ISoloTask
                                                 {
                                                     using (var imagePick = CaptureToRectArea())
                                                     {
-                                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
                                                         {
                                                             find = false;
                                                         }

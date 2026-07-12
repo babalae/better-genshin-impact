@@ -34,7 +34,7 @@ public class PartyAvatarSideIndexHelper
     {
         if (autoFightAssets == null)
         {
-            autoFightAssets = AutoFightAssets.Instance;
+            autoFightAssets = AutoFightAssets.Get(imageRegion);
         }
 
         if (logger == null)
@@ -126,18 +126,19 @@ public class PartyAvatarSideIndexHelper
 
     private static (List<Rect>, List<Rect>) GetAllIndexRectsOld(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
     {
+        var autoFightAssets = AutoFightAssets.Get(imageRegion);
         List<Rect> avatarSideIconRectList;
         List<Rect> avatarIndexRectList;
         if (multiGameStatus.IsInMultiGame)
         {
             var p = multiGameStatus.IsHost ? "1p" : "p";
-            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
-            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
+            avatarSideIconRectList = new List<Rect>(autoFightAssets.AvatarSideIconRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
+            avatarIndexRectList = new List<Rect>(autoFightAssets.AvatarIndexRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
         }
         else
         {
-            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectList);
-            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectList);
+            avatarSideIconRectList = new List<Rect>(autoFightAssets.AvatarSideIconRectList);
+            avatarIndexRectList = new List<Rect>(autoFightAssets.AvatarIndexRectList);
         }
 
         // 6.0 版本 队伍下的 草露 进度条 导致位置偏移

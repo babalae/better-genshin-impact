@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
@@ -40,6 +40,9 @@ public class GeniusInvokationControl
     // 定义私有构造函数，使外界不能创建该类实例
     private GeniusInvokationControl()
     {
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        _assets = AutoGeniusInvokationAssets.Get(captureRect.Width, captureRect.Height);
+        _actionPhaseDiceMats = _assets.ActionPhaseDiceMats;
         _config = TaskContext.Instance().Config.AutoGeniusInvokationConfig;
     }
 
@@ -64,7 +67,8 @@ public class GeniusInvokationControl
 
     private CancellationToken _ct;
 
-    private readonly AutoGeniusInvokationAssets _assets = AutoGeniusInvokationAssets.Instance;
+    private readonly AutoGeniusInvokationAssets _assets;
+    private IReadOnlyDictionary<string, Mat> _actionPhaseDiceMats;
 
     // private IGameCapture? _gameCapture;
 
@@ -160,7 +164,7 @@ public class GeniusInvokationControl
 
     public void SortActionPhaseDiceMats(HashSet<ElementalType> elementSet)
     {
-        _assets.ActionPhaseDiceMats = _assets.ActionPhaseDiceMats.OrderByDescending(kvp =>
+        _actionPhaseDiceMats = _actionPhaseDiceMats.OrderByDescending(kvp =>
             {
                 for (var i = 0; i < elementSet.Count; i++)
                 {
@@ -174,7 +178,7 @@ public class GeniusInvokationControl
             })
             .ToDictionary(x => x.Key, x => x.Value);
         // 打印排序后的顺序
-        var msg = _assets.ActionPhaseDiceMats.Aggregate("",
+        var msg = _actionPhaseDiceMats.Aggregate("",
             (current, kvp) => current + $"{kvp.Key.ToElementalType().ToChinese()}| ");
         _logger.LogDebug("当前骰子排序：{Msg}", msg);
     }
@@ -373,7 +377,7 @@ public class GeniusInvokationControl
     }*/
 
     public static Dictionary<string, List<Point>> FindMultiPicFromOneImage2OneByOne(Mat srcMat,
-        Dictionary<string, Mat> imgSubDictionary, double threshold = 0.8)
+        IReadOnlyDictionary<string, Mat> imgSubDictionary, double threshold = 0.8)
     {
         var dictionary = new Dictionary<string, List<Point>>();
         foreach (var kvp in imgSubDictionary)
@@ -540,7 +544,7 @@ public class GeniusInvokationControl
         Cv2.CvtColor(srcMat, srcMat, ColorConversionCodes.BGRA2BGR);
         // 切割图片后再识别 加快速度 位置没啥用，所以切割后比较方便
         var dictionary =
-            FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _assets.ActionPhaseDiceMats, 0.7);
+            FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _actionPhaseDiceMats, 0.7);
 
         var msg = "";
         var result = new Dictionary<string, int>();

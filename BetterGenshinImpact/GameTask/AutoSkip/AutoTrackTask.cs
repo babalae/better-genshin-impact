@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script;
@@ -123,7 +123,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
             // 寻找所有传送点
             ra = CaptureToRectArea();
-            var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(ra.CacheGreyMat, QuickTeleportAssets.Instance.MapChooseIconGreyMatList);
+            var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(ra.CacheGreyMat, QuickTeleportAssets.Get(ra).MapChooseIconGreyMatList);
             if (tpPointList.Count > 0)
             {
                 // 选中离中心点最近的传送点

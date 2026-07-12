@@ -86,7 +86,6 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private LowerHeadThenWalkToTask? _lowerHeadThenWalkToTask;
     public AutoStygianOnslaughtTask(AutoStygianOnslaughtParam taskParam)
     {
-        AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
         if (taskParam.CombatScriptBagPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
         {
@@ -104,7 +103,6 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     }
     public AutoStygianOnslaughtTask(AutoStygianOnslaughtParam taskParam, string path)
     {
-        AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
         if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
         {

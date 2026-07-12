@@ -1,8 +1,7 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -10,6 +9,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -33,8 +33,6 @@ public partial class AutoWoodTask : ISoloTask
 {
     public string Name => "自动伐木";
 
-    private AutoWoodAssets _assets;
-
     private bool _first = true;
 
     private WoodStatisticsPrinter _printer;
@@ -53,7 +51,6 @@ public partial class AutoWoodTask : ISoloTask
     {
         this._taskParam = taskParam;
         _login3rdParty = new();
-        AutoWoodAssets.DestroyInstance();
     }
 
     private static RecognitionObject GetRecognitionObject(string objectName, Region region)
@@ -63,8 +60,7 @@ public partial class AutoWoodTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
-        _assets = AutoWoodAssets.Instance;
-        _printer = new WoodStatisticsPrinter(_assets);
+        _printer = new WoodStatisticsPrinter();
         _enterAndExitWonderlandJob = new EnterAndExitWonderlandJob();
         var runTimeWatch = new Stopwatch();
         _ct = ct;
@@ -139,7 +135,7 @@ public partial class AutoWoodTask : ISoloTask
         }
     }
 
-    private partial class WoodStatisticsPrinter(AutoWoodAssets assert)
+    private partial class WoodStatisticsPrinter
     {
         public bool ReachedWoodMaxCount;
         public int NothingCount;
@@ -237,8 +233,15 @@ public partial class AutoWoodTask : ISoloTask
         private string WoodTextAreaOcr()
         {
             // OCR识别文本区域
-            var woodCountRect = CaptureToRectArea().DeriveCrop(assert.WoodCountUpperRect);
-            return OcrFactory.Paddle.Ocr(woodCountRect.SrcMat);
+            using var gameCaptureRegion = CaptureToRectArea();
+            var assetScale = Math.Min(gameCaptureRegion.Width / 1920d, 1d);
+            var woodCountRect = new Rect(
+                (int)(100 * assetScale),
+                (int)(450 * assetScale),
+                (int)(300 * assetScale),
+                (int)(250 * assetScale));
+            using var woodCountRegion = gameCaptureRegion.DeriveCrop(woodCountRect);
+            return OcrFactory.Paddle.Ocr(woodCountRegion.SrcMat);
         }
 
         private bool HasDetectedWoodText(string recognizedText)

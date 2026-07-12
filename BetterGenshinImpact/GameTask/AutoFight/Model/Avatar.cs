@@ -440,7 +440,7 @@ public class Avatar
         {
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // 剪裁出队伍区域
-            var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightAssets.Get(region).TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var block = teamRa.DeriveCrop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
             // Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
@@ -465,7 +465,7 @@ public class Avatar
         else
         {
             // 剪裁出IndexRect区域
-            var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightAssets.Get(region).TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width,
                 IndexRect.Height));
@@ -586,7 +586,7 @@ public class Avatar
     /// </summary>
     private double GetSkillCurrentCd(ImageRegion imageRegion)
     {
-        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
@@ -648,7 +648,7 @@ public class Avatar
 
     private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
-        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.QRectForClassify);
+        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).QRectForClassify);
         var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
@@ -681,7 +681,7 @@ public class Avatar
     // /// </summary>
     // public double GetBurstCurrentCd(CaptureContent content)
     // {
-    //     var qRa = content.CaptureRectArea.Crop(AutoFightAssets.Instance.QRect);
+    //     var qRa = content.CaptureRectArea.Crop(AutoFightAssets.Get(content.CaptureRectArea).QRect);
     //     var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
     //     return StringUtils.TryParseDouble(text);
     // }

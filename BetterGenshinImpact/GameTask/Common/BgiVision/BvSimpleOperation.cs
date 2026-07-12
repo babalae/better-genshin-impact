@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -128,7 +128,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool FindF(ImageRegion captureRa, params string[] text)
     {
-        using var ra = captureRa.Find(AutoPickAssets.Instance.PickRo);
+        using var ra = captureRa.Find(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo);
         if (ra.IsExist())
         {
             if (text.Length == 0)
@@ -172,7 +172,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 
@@ -183,7 +183,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 

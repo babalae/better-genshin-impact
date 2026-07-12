@@ -31,7 +31,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     public int Priority => 30;
     public bool IsExclusive => false;
 
-    private readonly AutoPickAssets _autoPickAssets;
+    private AutoPickAssets _autoPickAssets = null!;
 
     /// <summary>
     /// 拾取黑名单
@@ -48,15 +48,13 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private HashSet<string> _whiteList = [];
 
-    private RecognitionObject _pickRo;
+    private RecognitionObject _pickRo = null!;
 
     // 外部配置
     private AutoPickExternalConfig? _externalConfig;
 
     public AutoPickTrigger()
     {
-        _autoPickAssets = AutoPickAssets.Instance;
-        _pickRo = _autoPickAssets.PickRo;
     }
 
     public AutoPickTrigger(AutoPickExternalConfig? config) : this()
@@ -161,6 +159,8 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        _autoPickAssets = AutoPickAssets.Get(content.CaptureRectArea, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+        _pickRo = _autoPickAssets.PickRo;
         while (RunnerContext.Instance.AutoPickTriggerStopCount > 0)
         {
             Thread.Sleep(1000);
@@ -188,7 +188,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (_externalConfig is { ForceInteraction: true })
         {
             LogPick(content, "直接拾取");
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
             return;
         }
 
@@ -238,7 +238,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (!config.WhiteListEnabled && !config.BlackListEnabled && !isExcludeIcon)
         {
             // 没有黑白名单直接拾取
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
             LogPick(content, "黑名单未启用，直接拾取");
         }
 
@@ -336,7 +336,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (config.WhiteListEnabled && _whiteList.Contains(text))
             {
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
                 return;
             }
 
@@ -367,7 +367,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             speedTimer.Record("黑名单判断");
 
             LogPick(content, text);
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
         }
 
         speedTimer.DebugPrint();
