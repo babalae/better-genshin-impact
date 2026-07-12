@@ -79,7 +79,7 @@ public class CombatScriptResourceTests
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldCoverUpperAndLowerViewBands()
+    public void SeekCameraOffset_ShouldProduceAWaveDuringHorizontalSweep()
     {
         var offsets = Enumerable.Range(0, 18)
             .Select(retryCount => AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount))
@@ -88,53 +88,45 @@ public class CombatScriptResourceTests
         Assert.All(offsets, offset => Assert.True(offset.x > 0));
         Assert.Contains(offsets, offset => offset.y > 0);
         Assert.Contains(offsets, offset => offset.y < 0);
-        Assert.Contains(offsets, offset => offset.y >= 300);
-        Assert.Contains(offsets, offset => offset.y <= -300);
-        Assert.True(offsets.Select(offset => offset.y).Distinct().Count() >= 3, "seek scan should not collapse to horizontal-only rotation");
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldApplyGradualVerticalOffsetEarly()
+    public void SeekCameraOffset_HorizontalStepShouldNotDependOnVerticalWavePhase()
     {
         var firstOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 0);
         var secondOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 1);
 
-        Assert.Equal(0, firstOffset.y);
-        Assert.InRange(Math.Abs(secondOffset.y), 300, 400);
+        Assert.Equal(firstOffset.x, secondOffset.x);
+        Assert.NotEqual(firstOffset.y, secondOffset.y);
     }
 
     [Fact]
-    public void SeekCameraOffset_TargetOffsetShouldCoverCenterAndBothPitchDirections()
+    public void SeekCameraOffset_ThreeRotationsShouldCoverParallelWaveTracks()
     {
-        var targets = Enumerable.Range(0, 13)
-            .Select(retryCount => AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount))
+        var targets = Enumerable.Range(0, 3)
+            .Select(rotationCount => AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount, retryCount: 0))
             .ToList();
 
-        Assert.Contains(0, targets);
-        Assert.Contains(1080, targets);
-        Assert.Contains(-1080, targets);
-        Assert.Equal(targets.Max(), -targets.Min());
-        Assert.Equal(0, targets[^1]);
+        Assert.Equal(new[] { -720, 0, 720 }, targets);
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldMoveGraduallyBetweenAdjacentVerticalTargets()
+    public void SeekCameraOffset_ParallelTracksShouldCoverTheFullVerticalStripAtEachPhase()
     {
-        var retryOneTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 1);
-        var retryTwoTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 2);
-        var retryTwoOffset = AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount: 0, retryCount: 2);
+        var targets = Enumerable.Range(0, 3)
+            .Select(rotationCount => AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount, retryCount: 1))
+            .ToList();
 
-        Assert.Equal(-360, retryOneTarget);
-        Assert.Equal(-720, retryTwoTarget);
-        Assert.Equal(-360, retryTwoOffset.y);
-        Assert.Equal(retryTwoTarget - retryOneTarget, retryTwoOffset.y);
+        Assert.Equal(new[] { -1080, -360, 360 }, targets);
+        Assert.Equal(720, targets[1] - targets[0]);
+        Assert.Equal(720, targets[2] - targets[1]);
     }
 
     [Fact]
     public void SeekCameraOffset_TargetOffsetShouldUseLargerVerticalClampForFarBands()
     {
-        var upperTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 9);
-        var lowerTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 3);
+        var upperTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 2, retryCount: 3);
+        var lowerTarget = AutoFightSeek.GetSeekCameraVerticalTargetOffset(3000, rotationCount: 0, retryCount: 1);
 
         Assert.Equal(3200, upperTarget);
         Assert.Equal(-3200, lowerTarget);
@@ -143,15 +135,13 @@ public class CombatScriptResourceTests
     }
 
     [Fact]
-    public void SeekCameraOffset_ShouldStartDifferentVerticalBandsAfterFailedRotations()
+    public void SeekCameraOffset_SecondTrackSetShouldUseOppositeWavePhase()
     {
-        var startingBands = Enumerable.Range(0, AutoFightParam.MaxSeekRotationCount)
-            .Select(rotationCount => AutoFightSeek.GetSeekCameraOffset(1500, 900, rotationCount, retryCount: 0).y)
-            .ToList();
+        var firstSet = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 0, retryCount: 1);
+        var secondSet = AutoFightSeek.GetSeekCameraVerticalTargetOffset(900, rotationCount: 3, retryCount: 1);
 
-        Assert.Contains(startingBands, y => y > 0);
-        Assert.Contains(startingBands, y => y < 0);
-        Assert.True(startingBands.Distinct().Count() >= 4);
+        Assert.Equal(-1080, firstSet);
+        Assert.Equal(-360, secondSet);
     }
 
     [Theory]

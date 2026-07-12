@@ -189,8 +189,10 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         private const int VerticalSeekScaleDenominator = 10;
         private const int VerticalSeekMaxTargetOffset = 3200;
         private const int MaxVerticalMouseStep = 240;
+        private const int SeekViewportHeight = 900;
 
-        private static readonly int[] VerticalSeekBands = { 0, -1, -2, -3, -2, -1, 0, 1, 2, 3, 2, 1, 0 };
+        private static readonly int[] VerticalSeekWave = { 0, -1, 0, 1 };
+        private static readonly int[] VerticalSeekTrackCenters = { -2, 0, 2 };
         
         private static readonly Dictionary<int, int> RotaryFactorMapping = new Dictionary<int, int> //旋转因子映射表
         {
@@ -214,6 +216,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             {
                 await ResetSeekCameraPitchAsync(logger, ct);
             }
+
+            currentVerticalTarget = GetSeekCameraVerticalTargetOffset(SeekViewportHeight, RotationCount, retryCount);
+            logger.LogDebug("寻敌进入波浪轨迹: y={Y}, rotation={RotationCount}, retry={RetryCount}",
+                currentVerticalTarget, RotationCount, retryCount);
+            await MoveSeekCameraVerticallyAsync(currentVerticalTarget, ct);
 
             while (retryCount < 25+(int)(adjustedX / 5))
             {
@@ -315,7 +322,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 }
 
                 var offset = GetSeekCameraOffset(image.Width, image.Height, RotationCount, retryCount);
-                currentVerticalTarget = GetSeekCameraVerticalTargetOffset(image.Height, RotationCount, retryCount);
+                currentVerticalTarget = GetSeekCameraVerticalTargetOffset(image.Height, RotationCount, retryCount + 1);
                 logger.LogDebug("寻敌调整视角: x={X}, y={Y}, rotation={RotationCount}, retry={RetryCount}",
                     offset.x, offset.y, RotationCount, retryCount);
                 await MoveSeekCameraAsync(offset, ct);
@@ -394,24 +401,17 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         {
             var horizontalStep = Math.Max(80, imageWidth / 6);
             var currentVerticalTarget = GetSeekCameraVerticalTargetOffset(imageHeight, rotationCount, retryCount);
-            var previousVerticalTarget = retryCount <= 0
-                ? 0
-                : GetSeekCameraVerticalTargetOffset(imageHeight, rotationCount, retryCount - 1);
-            var verticalStep = currentVerticalTarget - previousVerticalTarget;
-
-            // Widen the horizontal sweep once per vertical cycle so abnormal view angles do not get stuck in a narrow arc.
-            if (retryCount > 0 && retryCount % VerticalSeekBands.Length == 0)
-            {
-                horizontalStep *= 2;
-            }
-
-            return (horizontalStep, verticalStep);
+            var nextVerticalTarget = GetSeekCameraVerticalTargetOffset(imageHeight, rotationCount, retryCount + 1);
+            return (horizontalStep, nextVerticalTarget - currentVerticalTarget);
         }
 
         internal static int GetSeekCameraVerticalTargetOffset(int imageHeight, int rotationCount, int retryCount)
         {
-            var phase = Math.Max(0, rotationCount) * 5 + Math.Max(0, retryCount);
-            var verticalBand = VerticalSeekBands[phase % VerticalSeekBands.Length];
+            var safeRotationCount = Math.Max(0, rotationCount);
+            var trackCenter = VerticalSeekTrackCenters[safeRotationCount % VerticalSeekTrackCenters.Length];
+            var phaseOffset = safeRotationCount / VerticalSeekTrackCenters.Length * 2;
+            var waveBand = VerticalSeekWave[(Math.Max(0, retryCount) + phaseOffset) % VerticalSeekWave.Length];
+            var verticalBand = trackCenter + waveBand;
             return Math.Clamp(
                 imageHeight * verticalBand * VerticalSeekScaleNumerator / VerticalSeekScaleDenominator,
                 -VerticalSeekMaxTargetOffset,
