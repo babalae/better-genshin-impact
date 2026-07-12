@@ -28,11 +28,11 @@ public class ScanPickTask
     private readonly RECT _realCaptureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
 
 
-    public async Task Start(CancellationToken ct)
+    public async Task Start(CancellationToken ct, int? seconds = null)
     {
         try
         {
-            await DoOnce(ct);
+            await DoOnce(ct, seconds);
         }
         catch (Exception e)
         {
@@ -45,9 +45,9 @@ public class ScanPickTask
         }
     }
 
-    public async Task DoOnce(CancellationToken ct)
+    public async Task DoOnce(CancellationToken ct, int? seconds = null)
     {
-        var sec = TaskContext.Instance().Config.AutoFightConfig.PickDropsAfterFightSeconds;
+        var sec = seconds ?? TaskContext.Instance().Config.AutoFightConfig.PickDropsAfterFightSeconds;
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
         TimeSpan finishTime = TimeSpan.FromSeconds(sec);
 

@@ -1046,14 +1046,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return;
         }
 
-        var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
-        var originalSeconds = autoFightConfig.PickDropsAfterFightSeconds;
-
         try
         {
-            autoFightConfig.PickDropsAfterFightSeconds = scanSeconds;
             _logger.LogInformation("领取奖励后开始扫描掉落物光柱，时长 {Seconds} 秒", scanSeconds);
-            await new ScanPickTask().Start(_ct);
+            await new ScanPickTask().Start(_ct, scanSeconds);
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
         {
@@ -1065,7 +1061,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
         finally
         {
-            autoFightConfig.PickDropsAfterFightSeconds = originalSeconds;
             Simulation.ReleaseAllKey();
         }
     }
