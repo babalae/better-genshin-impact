@@ -18,7 +18,6 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
-using BetterGenshinImpact.GameTask.QuickClaimReward.Assets;
 using BetterGenshinImpact.GameTask.SkillCd;
 using System;
 

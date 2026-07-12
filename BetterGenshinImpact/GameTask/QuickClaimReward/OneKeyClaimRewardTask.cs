@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.QuickClaimReward.Assets;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using System;
@@ -201,12 +201,11 @@ public class OneKeyClaimRewardTask : Singleton<OneKeyClaimRewardTask>
 
     private static List<RewardCandidate> FindRewardCandidates(ImageRegion capture)
     {
-        var assets = QuickClaimRewardAssets.Instance;
         var candidates = new List<RewardCandidate>();
 
-        candidates.AddRange(capture.FindMulti(assets.ClaimTextRo)
+        candidates.AddRange(capture.FindMulti(RecognitionAssets.Get("QuickClaimReward", "ClaimText", capture))
             .Select(region => new RewardCandidate(region, "领取")));
-        candidates.AddRange(capture.FindMulti(assets.ClaimGiftRo)
+        candidates.AddRange(capture.FindMulti(RecognitionAssets.Get("QuickClaimReward", "ClaimGift", capture))
             .Select(region => new RewardCandidate(region, "礼物领取")));
 
         return [.. candidates.OrderBy(candidate => candidate.Region.Top).ThenBy(candidate => candidate.Region.Left)];
@@ -219,7 +218,7 @@ public class OneKeyClaimRewardTask : Singleton<OneKeyClaimRewardTask>
             await Delay(160, ct);
 
             using var capture = TaskControl.CaptureToRectArea();
-            using var continueTip = capture.Find(QuickClaimRewardAssets.Instance.ClickBlankContinueRo);
+            using var continueTip = capture.Find(RecognitionAssets.Get("QuickClaimReward", "ClickBlankContinue", capture));
             if (continueTip.IsEmpty())
             {
                 continue;
