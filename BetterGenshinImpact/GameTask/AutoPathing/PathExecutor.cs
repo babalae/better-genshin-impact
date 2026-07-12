@@ -41,7 +41,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class PathExecutor
+public partial class PathExecutor
 {
     private readonly CameraRotateTask _rotateTask;
     private readonly TrapEscaper _trapEscaper;
@@ -377,6 +377,7 @@ public class PathExecutor
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
+        InitHurryOnConfig();
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
     }
@@ -761,6 +762,7 @@ public class PathExecutor
         var fastModeColdTime = DateTime.MinValue;
         var prevNotTooFarPosition = position;
         int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
+        var hurryOnState = new HurryOnState();
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
@@ -899,7 +901,17 @@ public class PathExecutor
                     await WaitUntilRotatedTo(targetOrientation, 2);
                 }
             }
-            
+
+            // 赶路逻辑（使用角色技能加速赶路）
+            var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
+            if (hurryOnResult)
+            {
+                // continue 会跳过底部 await Delay(100, ct)，
+                // 导致 async state machine 的 MoveNext() 永不返回，调用栈逐轮叠加直到溢出。
+                // 在此处显式等待以展开栈。
+                await Delay(100, ct);
+                continue;
+            }
 
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
