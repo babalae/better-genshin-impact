@@ -12,6 +12,7 @@ public class BitBltCapture : IGameCapture
     private readonly ReaderWriterLockSlim _lockSlim = new();
     private volatile nint _hWnd; // 需要加锁
     private BitBltSession? _session; // 需要加锁
+    private RECT? _captureRect;
 
     private volatile bool _lastCaptureFailed;
 
@@ -21,7 +22,7 @@ public class BitBltCapture : IGameCapture
         GC.SuppressFinalize(this);
     }
 
-    public Mat? Capture() => Capture(false);
+    public GameCaptureFrame? Capture() => Capture(false);
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -75,17 +76,24 @@ public class BitBltCapture : IGameCapture
                 _session = null;
             }
 
-            if (!User32.GetClientRect(_hWnd, out var windowRect) || windowRect == default)
+            if (!User32.GetClientRect(_hWnd, out var clientRect) || clientRect == default)
             {
                 //    Debug.Fail("Failed to get client rectangle");
                 // 窗口获取不到或者最小化
                 _session?.Dispose();
                 _session = null;
+                _captureRect = null;
                 return;
             }
 
-            var width = windowRect.right - windowRect.left;
-            var height = windowRect.bottom - windowRect.top;
+            var width = clientRect.right - clientRect.left;
+            var height = clientRect.bottom - clientRect.top;
+            DwmApi.DwmGetWindowAttribute<RECT>(_hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
+            var left = windowRect.Left;
+            var top = windowRect.Top + windowRect.Height - clientRect.Height;
+            var right = left + clientRect.Width;
+            var bottom = top + clientRect.Height;
+            _captureRect = new RECT(left, top, right, bottom);
 
             if (_session != null)
             {
@@ -116,7 +124,7 @@ public class BitBltCapture : IGameCapture
     /// </summary>
     /// <param name="recursive">递归标志</param>
     /// <returns>截图</returns>
-    private Mat? Capture(bool recursive)
+    private GameCaptureFrame? Capture(bool recursive)
     {
         if (_hWnd == IntPtr.Zero)
         {
@@ -140,7 +148,10 @@ public class BitBltCapture : IGameCapture
         try
         {
             _lockSlim.EnterReadLock();
-            var result = Capture0();
+            var mat = Capture0();
+            var result = mat == null
+                ? null
+                : new GameCaptureFrame(mat, _captureRect);
             if (result is not null)
             {
                 // 成功截图
@@ -197,6 +208,8 @@ public class BitBltCapture : IGameCapture
                 _session.Dispose();
                 _session = null;
             }
+
+            _captureRect = null;
         }
         finally
         {

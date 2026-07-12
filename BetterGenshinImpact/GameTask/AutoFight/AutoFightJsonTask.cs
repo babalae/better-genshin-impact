@@ -325,7 +325,8 @@ public class AutoFightJsonTask : ISoloTask
         ExperienceDetector? expDetector = null;
         if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
         {
-            var expRos = AutoFightAssets.Instance.ExperienceRecognitionObjects;
+            using var gameCaptureRegion = CaptureToRectArea();
+            var expRos = AutoFightAssets.Get(gameCaptureRegion).ExperienceRecognitionObjects;
             expDetector = new ExperienceDetector(expRos, cts2.Token);
             expDetector.Start();
         }
@@ -701,7 +702,7 @@ public class AutoFightJsonTask : ISoloTask
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
-                        ElementAssets.Instance.PartyBtnChooseView,
+                        ElementRecognition.Get("PartyBtnChooseView"),
                         () => { },
                         _ct,
                         15,
@@ -723,7 +724,7 @@ public class AutoFightJsonTask : ISoloTask
                 while (timeWaitStart < 6000)
                 {
                     using var ra = CaptureToRectArea();
-                    var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+                    var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView"));
                     if (partyViewBtn.IsExist())
                     {
                         var rawPartyName = ra.Find(new RecognitionObject
@@ -846,7 +847,7 @@ public class AutoFightJsonTask : ISoloTask
                                                 {
                                                     using (var imagePick = CaptureToRectArea())
                                                     {
-                                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
                                                         {
                                                             find = false;
                                                         }

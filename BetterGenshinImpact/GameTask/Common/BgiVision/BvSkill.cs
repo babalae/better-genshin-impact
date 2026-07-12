@@ -2,6 +2,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
+using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -22,7 +23,7 @@ public static partial class Bv
     public static bool IsSkillReady(ImageRegion image, int index, bool isBurst)
     {
         if (image == null) return false;
-        var avatarRects = AutoFightAssets.Instance.AvatarIndexRectList;
+        var avatarRects = AutoFightAssets.Get(image).AvatarIndexRectList;
         if (index < 1 || index > avatarRects.Count) return false;
 
         // 1. 判断是否为当前活跃角色
@@ -53,7 +54,7 @@ public static partial class Bv
             if (isBurst)
             {
                 // 通过侧边栏图标的 Hough 圆变换识别明亮的高能环
-                var qRects = AutoFightAssets.Instance.AvatarQRectListMap;
+                var qRects = AutoFightAssets.Get(image).AvatarQRectListMap;
                 if (index > qRects.Count) return false;
                 var qArea = qRects[index - 1];
                 using var grayImage = image.DeriveCrop(qArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
@@ -81,7 +82,7 @@ public static partial class Bv
 
     public static bool IsCharacterActive(ImageRegion image, int index)
     {
-        var rectList = AutoFightAssets.Instance.AvatarIndexRectList;
+        var rectList = AutoFightAssets.Get(image).AvatarIndexRectList;
         if (index < 1 || index > rectList.Count) return false;
 
         // 使用 PartyAvatarSideIndexHelper 的综合判断逻辑（包含颜色对比、箭头检测等）

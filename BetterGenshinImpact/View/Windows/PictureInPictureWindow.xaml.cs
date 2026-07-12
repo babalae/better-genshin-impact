@@ -56,7 +56,8 @@ public partial class PictureInPictureWindow : Window
             return;
         }
 
-        using var mat = TaskTriggerDispatcher.GlobalGameCapture?.Capture();
+        using var captureFrame = TaskTriggerDispatcher.GlobalGameCapture?.Capture();
+        var mat = captureFrame?.Frame;
         if (mat != null)
         {
             if (_cacheSize != mat.Size() || PreviewImage.Source == null)
