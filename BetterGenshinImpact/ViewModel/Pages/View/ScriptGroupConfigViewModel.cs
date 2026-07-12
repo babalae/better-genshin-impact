@@ -51,7 +51,15 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     {
         new KeyValuePair<string, string>("StartTime", "开始时间"),
         new KeyValuePair<string, string>("EndTime", "结束时间")
-    };  
+    };
+
+    [ObservableProperty]
+    private ObservableCollection<KeyValuePair<RecoverTiming, string>> _recoverTimingSource = new()
+    {
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.AnyWaypoint, "任何路径点"),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.OnlyTeleport, "只在传送点"),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.Never, "不回复"),
+    };
     public ScriptGroupConfigViewModel(AllConfig config, ScriptGroupConfig scriptGroupConfig)
     {
         ScriptGroupConfig = scriptGroupConfig;

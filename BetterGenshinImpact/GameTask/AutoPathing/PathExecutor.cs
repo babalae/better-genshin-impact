@@ -628,7 +628,13 @@ public class PathExecutor
 
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
-        if (PartyConfig.OnlyInTeleportRecover && waypoint.Type != WaypointType.Teleport.Code)
+        var timing = PartyConfig.RecoverTiming;
+        if (timing == RecoverTiming.Never)
+        {
+            return;
+        }
+
+        if (timing == RecoverTiming.OnlyTeleport && waypoint.Type != WaypointType.Teleport.Code)
         {
             return;
         }
