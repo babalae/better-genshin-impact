@@ -474,15 +474,17 @@ namespace BetterGenshinImpact.GameTask
             }
             else if (_gameRect != currentRect)
             {
-                // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 现在已经可以取消了，但是一些Assets要重新加载
-                if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
-                    && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
-                {
-                    _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
-                    UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
-                    UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
-                    _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
-                }
+                // // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 现在已经可以取消了，但是一些Assets要重新加载
+                // if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
+                //     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
+                // {
+                //     _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                //     UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
+                //     UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
+                //     _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
+                // }
+                
+                _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 无需重新启动截图器。", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
 
                 _gameRect = new RECT(currentRect);
                 TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
