@@ -4,7 +4,7 @@ using System;
 namespace BetterGenshinImpact.GameTask.AutoBoss;
 
 /// <summary>
-/// 自动首领讨伐的持久化配置，由独立任务页和一条龙入口复用。
+/// 自动首领讨伐的持久化配置，由独立任务页使用。
 /// </summary>
 [Serializable]
 public partial class AutoBossConfig : ObservableObject

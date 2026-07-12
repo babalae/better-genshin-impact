@@ -37,6 +37,67 @@ public partial class OneDragonFlowConfig : ObservableObject
 
     [ObservableProperty]
     private bool _weeklyDomainEnabled = false;
+
+    #region 自动首领讨伐配置
+
+    [ObservableProperty]
+    private string _autoBossName = string.Empty;
+
+    [ObservableProperty]
+    private string _autoBossStrategyName = "根据队伍自动选择";
+
+    [ObservableProperty]
+    private string _autoBossTeamName = string.Empty;
+
+    [ObservableProperty]
+    private bool _autoBossSpecifyRunCount = false;
+
+    [ObservableProperty]
+    private int _autoBossRunCount = 1;
+
+    [ObservableProperty]
+    private bool _autoBossUseTransientResin = false;
+
+    [ObservableProperty]
+    private bool _autoBossUseFragileResin = false;
+
+    [ObservableProperty]
+    private int _autoBossReviveRetryCount = 3;
+
+    [ObservableProperty]
+    private bool _autoBossReturnToStatueAfterEachRound = false;
+
+    [ObservableProperty]
+    private bool _autoBossRewardRecognitionEnabled = false;
+
+    partial void OnAutoBossSpecifyRunCountChanged(bool value)
+    {
+        if (value)
+        {
+            return;
+        }
+
+        AutoBossUseTransientResin = false;
+        AutoBossUseFragileResin = false;
+    }
+
+    partial void OnAutoBossRunCountChanged(int value)
+    {
+        if (value < 1)
+        {
+            AutoBossRunCount = 1;
+        }
+    }
+
+    partial void OnAutoBossReviveRetryCountChanged(int value)
+    {
+        if (value < 0)
+        {
+            AutoBossReviveRetryCount = 0;
+        }
+    }
+
+    #endregion
     
     // 领取每日奖励的好感队伍名称
     [ObservableProperty]
