@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Model;
 using OpenCvSharp;
 using System;
 using System.Threading;
@@ -28,6 +29,12 @@ public class BaseAssets<T> : Singleton<T> where T : class
 
     protected Rect CaptureRect => systemInfo.ScaleMax1080PCaptureRect;
     protected double AssetScale => systemInfo.AssetScale;
+
+    protected RecognitionObject LoadRecognitionObject(string taskName, string objectName)
+    {
+        return RecognitionAssets.Get(taskName, objectName, CaptureRect.Width, CaptureRect.Height);
+    }
+
     // private int _gameWidth;
     // private int _gameHeight;
     //

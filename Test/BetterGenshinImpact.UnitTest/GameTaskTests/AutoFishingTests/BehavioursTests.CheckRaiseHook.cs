@@ -28,12 +28,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             FakeInputSimulator input = new FakeInputSimulator();
             FakeDrawContent drawContent = new FakeDrawContent();
-            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
-            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
-
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(input.Mouse), converter: new ScaleConverter(1d), drawContent);
 
-            var blackboard = new Blackboard(sleep: i => { }, autoFishingAssets: autoFishingAssets)
+            var blackboard = new Blackboard(sleep: i => { })
             {
             };
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -23,6 +22,11 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 public partial class ChooseTalkOptionTask
 {
     private readonly ILogger<ChooseTalkOptionTask> _logger = App.GetLogger<ChooseTalkOptionTask>();
+
+    private static RecognitionObject GetOptionIconRecognitionObject(ImageRegion region)
+    {
+        return RecognitionAssets.Get("AutoSkip", "OptionIcon", region.Width, region.Height);
+    }
 
     public string Name => "持续对话并选择目标选项";
 
@@ -95,7 +99,7 @@ public partial class ChooseTalkOptionTask
         var region = CaptureToRectArea();
         if (Bv.IsInTalkUi(region))
         {
-            var chatOptionResultList = region.FindMulti(AutoSkipAssets.Instance.OptionIconRo);
+            var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));
             chatOptionResultList = [.. chatOptionResultList.OrderByDescending(r => r.Y)];
             if (chatOptionResultList.Count > 0)
             {
@@ -112,7 +116,7 @@ public partial class ChooseTalkOptionTask
             var region = CaptureToRectArea();
             if (Bv.IsInTalkUi(region))
             {
-                var chatOptionResultList = region.FindMulti(AutoSkipAssets.Instance.OptionIconRo);
+                var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));
                 chatOptionResultList = [.. chatOptionResultList.OrderByDescending(r => r.Y)];
                 if (chatOptionResultList.Count > 0)
                 {
@@ -149,7 +153,7 @@ public partial class ChooseTalkOptionTask
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
         // 气泡识别
-        var chatOptionResultList = region.FindMulti(AutoSkipAssets.Instance.OptionIconRo);
+        var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));
         if (chatOptionResultList.Count > 0)
         {
             // 第一个元素就是最下面的

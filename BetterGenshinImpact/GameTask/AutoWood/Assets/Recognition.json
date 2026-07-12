@@ -1,0 +1,27 @@
+{
+  "objects": {
+    "TheBoonOfTheElderTree": {
+      "type": "TemplateMatch",
+      "template": "TheBoonOfTheElderTree.png",
+      "roi": "rect(cw - cw / 4, ch / 2, cw / 4, ch / 2)",
+      "draw": false
+    },
+    "MenuBag": {
+      "type": "TemplateMatch",
+      "template": "menu_bag.png",
+      "roi": "rect(0, 0, cw / 2, ch)",
+      "draw": false
+    },
+    "Confirm": {
+      "type": "TemplateMatch",
+      "template": "confirm.png",
+      "draw": false
+    },
+    "EnterGame": {
+      "type": "TemplateMatch",
+      "template": "exit_welcome.png",
+      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "draw": false
+    }
+  }
+}

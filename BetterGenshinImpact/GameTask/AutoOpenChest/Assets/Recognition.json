@@ -1,0 +1,22 @@
+{
+  "objects": {
+    "ChestIcon": {
+      "type": "TemplateMatch",
+      "template": "chest.png",
+      "roi": "rect(330 * s, 130 * s, 1250 * s, 840 * s)",
+      "draw": false
+    },
+    "ChestFIcon": {
+      "type": "TemplateMatch",
+      "template": "chest_F_icon.png",
+      "roi": "rect(1150 * s, 450 * s, 100 * s, 300 * s)",
+      "draw": false
+    },
+    "FlowerFIcon": {
+      "type": "TemplateMatch",
+      "template": "flower_F_icon.png",
+      "roi": "rect(1150 * s, 450 * s, 100 * s, 300 * s)",
+      "draw": false
+    }
+  }
+}

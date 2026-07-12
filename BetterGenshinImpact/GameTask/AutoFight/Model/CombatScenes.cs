@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -51,13 +52,11 @@ public class CombatScenes : IDisposable
 
     private readonly AutoFightAssets _autoFightAssets;
 
-    private readonly ElementAssets _elementAssets;
-
     private readonly ILogger _logger;
 
     private readonly ISystemInfo _systemInfo;
 
-    public CombatScenes(BgiYoloPredictor? predictor = null, AutoFightAssets? autoFightAssets = null, ILogger? logger = null, ElementAssets? elementAssets = null, ISystemInfo? systemInfo = null)
+    public CombatScenes(BgiYoloPredictor? predictor = null, AutoFightAssets? autoFightAssets = null, ILogger? logger = null, ISystemInfo? systemInfo = null)
     {
         if (predictor == null)
         {
@@ -69,14 +68,9 @@ public class CombatScenes : IDisposable
             _predictor = predictor;
             _ownsPredictor = false;
         }
-        if (autoFightAssets == null)
-        {
-            _autoFightAssets = AutoFightAssets.Instance;    // todo BaseAssets重构后直接由systemInfo构建，省去传入？
-        }
-        else
-        {
-            _autoFightAssets = autoFightAssets;
-        }
+        _systemInfo = systemInfo ?? TaskContext.Instance().SystemInfo;
+        var captureRect = _systemInfo.ScaleMax1080PCaptureRect;
+        _autoFightAssets = autoFightAssets ?? AutoFightAssets.Get(captureRect.Width, captureRect.Height);    // todo BaseAssets重构后直接由systemInfo构建，省去传入？
         if (logger == null)
         {
             _logger = TaskControl.Logger;
@@ -84,22 +78,6 @@ public class CombatScenes : IDisposable
         else
         {
             _logger = logger;
-        }
-        if (elementAssets == null)
-        {
-            _elementAssets = ElementAssets.Instance;
-        }
-        else
-        {
-            _elementAssets = elementAssets;
-        }
-        if (systemInfo == null)
-        {
-            _systemInfo = TaskContext.Instance().SystemInfo;
-        }
-        else
-        {
-            _systemInfo = systemInfo;
         }
     }
 
@@ -138,7 +116,7 @@ public class CombatScenes : IDisposable
         // 判断联机状态
         CurrentMultiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(imageRegion, _autoFightAssets, _logger);
         // 队伍角色编号和侧面头像位置
-        var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus, _logger, _elementAssets, _systemInfo);
+        var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus, _logger, _systemInfo);
         ExpectedTeamAvatarNum = avatarIndexRectList.Count;
 
         // 识别队伍
@@ -224,7 +202,7 @@ public class CombatScenes : IDisposable
             var nullLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
             CurrentMultiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(imageRegion, _autoFightAssets, nullLogger);
-            var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus, nullLogger, _elementAssets, _systemInfo);
+            var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus, nullLogger, _systemInfo);
             ExpectedTeamAvatarNum = avatarIndexRectList.Count;
             
             var names = new string[avatarSideIconRectList.Count];
@@ -257,7 +235,7 @@ public class CombatScenes : IDisposable
         // 只用新方法判断
         try
         {
-            var (avatarIndexRectList, _) = PartyAvatarSideIndexHelper.GetAllIndexRectsNew(imageRegion, CurrentMultiGameStatus!, _logger, _elementAssets, _systemInfo);
+            var (avatarIndexRectList, _) = PartyAvatarSideIndexHelper.GetAllIndexRectsNew(imageRegion, CurrentMultiGameStatus!, _logger, _systemInfo);
             if (avatarIndexRectList.Count != ExpectedTeamAvatarNum)
             {
                 _logger.LogWarning("重新识别到的队伍角色数量与之前不一致，之前{Old}个，现在{New}个", ExpectedTeamAvatarNum, avatarIndexRectList.Count);
@@ -379,7 +357,7 @@ public class CombatScenes : IDisposable
         var cdConfig = autoFightConfig.ActionSchedulerByCd;
         if (avatarIndexRectList == null && ExpectedTeamAvatarNum == 4)
         {
-            avatarIndexRectList = _autoFightAssets.AvatarIndexRectList;
+            avatarIndexRectList = [.. _autoFightAssets.AvatarIndexRectList];
         }
 
         if (avatarIndexRectList == null)
@@ -600,10 +578,10 @@ public class CombatScenes : IDisposable
         {
             // 流浪者特殊处理
             // 4人以上的队伍，不支持流浪者的识别
-            var wanderer = rectArea.Find(_autoFightAssets.WandererIconRa);
+            var wanderer = rectArea.Find(RecognitionAssets.Get("AutoFight", "WandererIcon", rectArea));
             if (wanderer.IsEmpty())
             {
-                wanderer = rectArea.Find(_autoFightAssets.WandererIconNoActiveRa);
+                wanderer = rectArea.Find(RecognitionAssets.Get("AutoFight", "WandererIconNoActive", rectArea));
             }
 
             if (wanderer.IsEmpty())

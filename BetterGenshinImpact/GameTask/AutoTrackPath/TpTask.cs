@@ -41,7 +41,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// </summary>
 public class TpTask
 {
-    private readonly QuickTeleportAssets _assets = QuickTeleportAssets.Instance;
+    private readonly QuickTeleportAssets _assets;
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
@@ -221,9 +221,20 @@ public class TpTask
     public TpTask(CancellationToken ct)
     {
         this.ct = ct;
+        _assets = QuickTeleportAssets.Get(_captureRect.Width, _captureRect.Height);
         TpTaskParam param = new TpTaskParam();
         this.cultureInfo = param.GameCultureInfo;
         this.stringLocalizer = param.StringLocalizer;
+    }
+
+    private static RecognitionObject GetQuickTeleportRecognitionObject(string objectName)
+    {
+        return RecognitionAssets.Get("QuickTeleport", objectName);
+    }
+
+    private static RecognitionObject GetQuickTeleportRecognitionObject(string objectName, Region region)
+    {
+        return RecognitionAssets.Get("QuickTeleport", objectName, region);
     }
 
     /// <summary>
@@ -306,7 +317,7 @@ public class TpTask
     {
         GiTpPosition? nearestGiTpPosition = null;
         double minDistance = double.MaxValue;
-        foreach (var (_, goddessPosition) in MapLazyAssets.Instance.GoddessPositions)
+        foreach (var (_, goddessPosition) in MapLazyAssets.Get().GoddessPositions)
         {
             var distance = Math.Sqrt(Math.Pow(goddessPosition.X - x, 2) + Math.Pow(goddessPosition.Y - y, 2));
             if (distance < minDistance)
@@ -1968,7 +1979,7 @@ public class TpTask
         {
             // 判断是否在地图界面
             using var ra = CaptureToRectArea();
-            using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+            using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
             if (mapScaleButtonRa.IsExist())
             {
                 try
@@ -2015,7 +2026,7 @@ public class TpTask
     {
         // 判断是否在地图界面
         using var ra = CaptureToRectArea();
-        using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
         if (mapScaleButtonRa.IsExist())
         {
             var p = RecognizeBigMapCenterPoint(mapName, ra.CacheGreyMat, expectedCenterPoint);
@@ -2072,7 +2083,7 @@ public class TpTask
         {
             string targetCountry = "当前位置";
             double minDistance = double.MaxValue;
-            foreach (var (country, position) in MapLazyAssets.Instance.CountryPositions)
+            foreach (var (country, position) in MapLazyAssets.Get().CountryPositions)
             {
                 var distance = Math.Sqrt(Math.Pow(position[0] - x, 2) + Math.Pow(position[1] - y, 2));
                 if (distance < minDistance)
@@ -2166,7 +2177,7 @@ public class TpTask
         }
 
         // 按距离排序并选择前 n 个点
-        return MapLazyAssets.Instance.ScenesDic[mapName].Points
+        return MapLazyAssets.Get().ScenesDic[mapName].Points
             .OrderBy(tp => Math.Pow(tp.X - x, 2) + Math.Pow(tp.Y - y, 2))
             .Take(n)
             .ToList();
@@ -2190,7 +2201,7 @@ public class TpTask
         }
 
         string minCountry = "当前位置";
-        foreach (var (country, position) in MapLazyAssets.Instance.CountryPositions)
+        foreach (var (country, position) in MapLazyAssets.Get().CountryPositions)
         {
             var distance = Math.Sqrt(Math.Pow(position[0] - x, 2) + Math.Pow(position[1] - y, 2));
             if (distance < minDistance)

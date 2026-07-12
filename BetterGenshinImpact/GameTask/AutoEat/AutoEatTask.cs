@@ -121,7 +121,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                         await Delay(300, ct);
                         // 点击确定
                         using var ra0 = CaptureToRectArea();
-                        using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
+                        using var ra = ra0.Find(ElementRecognition.Get("BtnWhiteConfirm", ra0));
                         if (ra.IsExist())
                         {
                             ra.Click();
