@@ -558,20 +558,10 @@ public partial class OneDragonFlowViewModel : ViewModel
             task.InitAction(SelectedConfig);
         }
 
-        int finishOneTaskcount = 1;
-        int finishTaskcount = 1;
-        int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
-        _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
-        
         ReadScriptGroup();
         foreach (var task in ScriptGroupsdefault)
         {
             ScriptGroups.Remove(task);
-        }
-
-        foreach (var scriptGroup in ScriptGroups)
-        {
-            SelectedConfig.TaskEnabledList.Remove(scriptGroup.Name);
         }
 
         if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
@@ -581,7 +571,13 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
-        int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
+        int finishOneTaskcount = 1;
+        int finishTaskcount = 1;
+        int enabledTaskCountall = taskListCopy.Count(t => t.IsEnabled);
+        _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
+
+        int enabledoneTaskCount = taskListCopy.Count(t =>
+            t.IsEnabled && ScriptGroupsdefault.Any(defaultTask => defaultTask.Name == t.Name));
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
         await ScriptService.StartGameTask();
@@ -592,8 +588,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SaveConfig();
-        int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
-            t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
+        int enabledTaskCount = taskListCopy.Count(t =>
+            t.IsEnabled && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Name));
         _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
 
         if (enabledoneTaskCount <= 0)
@@ -627,16 +623,13 @@ public partial class OneDragonFlowViewModel : ViewModel
 
                         Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
 
-                        if (SelectedConfig.TaskEnabledList[task.Name])
-                        {
-                            _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
-                            await Task.Delay(500);
-                            string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
-                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
-                            IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
-                            await Task.Delay(1000);
-                        }
+                        _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
+                        await Task.Delay(500);
+                        string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
+                        var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
+                        IScriptService? scriptService = App.GetService<IScriptService>();
+                        await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
+                        await Task.Delay(1000);
                     }
                     catch (Exception e)
                     {
