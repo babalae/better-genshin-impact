@@ -516,6 +516,8 @@ public class AutoFightJsonTask : ISoloTask
                 cmd.Execute(combatScenes, lastSubCmd);
                 lastSubCmd = cmd;
 
+                if (_fightEndFlag) break;
+
                 // 仅由 check 指令触发战斗结束检测
                 if (cmd.Method == Method.Check && _taskParam.FightFinishDetectEnabled)
                 {
@@ -523,6 +525,7 @@ public class AutoFightJsonTask : ISoloTask
                     if (_fightEndFlag)
                     {
                         Logger.LogInformation("{Name} 检测到战斗结束", action.Name);
+                        break;
                     }
                 }
             }
