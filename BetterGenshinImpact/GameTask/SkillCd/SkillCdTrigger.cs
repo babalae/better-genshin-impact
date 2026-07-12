@@ -553,7 +553,7 @@ public class SkillCdTrigger : ITaskTrigger
     {
         var validRects = _teamIndexRects.Any(r => r != default)
             ? _teamIndexRects.Where(r => r != default).ToArray()
-            : AutoFightAssets.Instance.AvatarIndexRectList.ToArray();
+            : AutoFightAssets.Get(region).AvatarIndexRectList.ToArray();
 
         return PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(region, validRects, context);
     }
@@ -562,7 +562,7 @@ public class SkillCdTrigger : ITaskTrigger
     {
         try
         {
-            var eCdRect = AutoFightAssets.Instance.ECooldownRect;
+            var eCdRect = AutoFightAssets.Get(image).ECooldownRect;
             using var crop = image.DeriveCrop(eCdRect);
             var roi = crop.SrcMat;
             using var whiteMask = new Mat();
@@ -593,7 +593,9 @@ public class SkillCdTrigger : ITaskTrigger
     private void UpdateOverlay()
     {
         var drawContent = VisionContext.Instance().DrawContent;
-        var sideRects = AutoFightAssets.Instance.AvatarSideIconRectList;
+        var systemInfo = TaskContext.Instance().SystemInfo;
+        var captureRect = systemInfo.ScaleMax1080PCaptureRect;
+        var sideRects = AutoFightAssets.Get(captureRect.Width, captureRect.Height).AvatarSideIconRectList;
         var config = TaskContext.Instance().Config.SkillCdConfig;
         
         if (sideRects == null || sideRects.Count < 4)
@@ -602,7 +604,6 @@ public class SkillCdTrigger : ITaskTrigger
             return;
         }
 
-        var systemInfo = TaskContext.Instance().SystemInfo;
         double factor = (double)systemInfo.GameScreenSize.Width / systemInfo.ScaleMax1080PCaptureRect.Width;
         
         // 使用配置中的坐标（保留一位小数）

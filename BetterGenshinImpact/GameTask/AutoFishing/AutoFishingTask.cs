@@ -1,11 +1,11 @@
 using BehaviourTree;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -58,7 +58,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             IOcrService ocrService = OcrFactory.Paddle;
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
-            Blackboard blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
+            Blackboard blackboard = new Blackboard(_predictor, this.Sleep);
 
             // @formatter:off
             var behaviourTree = FluentBuilder.Create<ImageRegion>()
@@ -170,7 +170,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             using var ra = TaskControl.CaptureToRectArea(forceNew: true);
-            if (ra.FindMulti(AutoFightAssets.Instance.PRa).Count != 0)
+            if (ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)).Count != 0)
             {
                 _logger.LogInformation("当前处于联机状态，不使用昼夜设置");
                 tickARound();
@@ -413,7 +413,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return BehaviourStatus.Running;
                 }
 
-                if (imageRegion.Find(blackboard.AutoFishingAssets.ExitFishingButtonRo).IsEmpty())
+                if (imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion)).IsEmpty())
                 {
                     if (overallWaitEndTime < timeProvider.GetLocalNow())
                     {

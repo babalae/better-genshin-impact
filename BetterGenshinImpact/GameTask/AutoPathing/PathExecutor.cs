@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -8,7 +8,6 @@ using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoSkip;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -24,6 +23,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common;
@@ -100,6 +100,11 @@ public class PathExecutor
 
     // 最近一次获取派遣奖励的时间
     private DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
+
+    private static RecognitionObject GetAutoSkipRecognitionObject(string objectName, ImageRegion region)
+    {
+        return RecognitionAssets.Get("AutoSkip", objectName, region.Width, region.Height);
+    }
 
 
     //当到达恢复点位
@@ -252,7 +257,11 @@ public class PathExecutor
                 }
                 catch (NormalEndException normalEndException)
                 {
-                    Logger.LogInformation(normalEndException.Message);
+                    if (!ct.IsCancellationRequested)
+                    {
+                        Logger.LogInformation(normalEndException.Message);
+                    }
+
                     if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
                         throw;
@@ -262,7 +271,7 @@ public class PathExecutor
                         break;
                     }
                 }
-                catch (TaskCanceledException e)
+                catch (OperationCanceledException)
                 {
                     if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
@@ -335,7 +344,7 @@ public class PathExecutor
             return true;
         }
 
-        var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
+        var pRaList = ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)); // 判断是否联机
         if (pRaList.Count > 0)
         {
             Logger.LogInformation("处于联机状态下，不切换队伍");
@@ -1313,10 +1322,10 @@ public class PathExecutor
         }
 
         // 一些异常界面处理
-        var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
-        var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-        var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
-        var closeRa3 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo);
+        var cookRa = imageRegion.Find(GetAutoSkipRecognitionObject("Cook", imageRegion));
+        var closeRa = imageRegion.Find(GetAutoSkipRecognitionObject("PageCloseMain", imageRegion));
+        var closeRa2 = imageRegion.Find(ElementRecognition.Get("PageCloseWhite", imageRegion));
+        var closeRa3 = imageRegion.Find(GetAutoSkipRecognitionObject("PageClose", imageRegion));
         if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist() || closeRa3.IsExist())
         {
             // 排除大地图
@@ -1344,7 +1353,7 @@ public class PathExecutor
     private async Task AutoSkip()
     {
         var ra = CaptureToRectArea();
-        var disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+        var disabledUiButtonRa = ra.Find(GetAutoSkipRecognitionObject("DisabledUiButton", ra));
         if (disabledUiButtonRa.IsExist())
         {
             Logger.LogWarning("进入剧情，自动点击剧情直到结束");
@@ -1366,7 +1375,7 @@ public class PathExecutor
             while (true)
             {
                 ra = CaptureToRectArea();
-                disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+                disabledUiButtonRa = ra.Find(GetAutoSkipRecognitionObject("DisabledUiButton", ra));
                 if (disabledUiButtonRa.IsExist())
                 {
                     _autoSkipTrigger.OnCapture(new CaptureContent(ra));

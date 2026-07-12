@@ -1,0 +1,28 @@
+{
+  "objects": {
+    "ChooseEnterGame": {
+      "type": "TemplateMatch",
+      "template": "choose_enter_game.png",
+      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "draw": false
+    },
+    "EnterGame": {
+      "type": "TemplateMatch",
+      "template": "enter_game.png",
+      "roi": "rect(cw / 3, ch / 2, cw / 3, ch / 2)",
+      "draw": false
+    },
+    "WelkinMoon": {
+      "type": "TemplateMatch",
+      "template": "welkin_moon_logo.png",
+      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "draw": false
+    },
+    "GirlMoon": {
+      "type": "TemplateMatch",
+      "template": "girl_moon.png",
+      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "draw": false
+    }
+  }
+}

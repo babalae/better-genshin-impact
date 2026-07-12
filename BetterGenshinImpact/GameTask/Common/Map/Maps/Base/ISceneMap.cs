@@ -19,6 +19,11 @@ public interface ISceneMap
     Point2f GetBigMapPosition(Mat greyBigMapMat);
 
     /// <summary>
+    /// 根据预期中心缩小匹配范围，获取大地图在整张地图上的位置
+    /// </summary>
+    Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter);
+
+    /// <summary>
     /// 获取大地图在整张地图上的位置（矩形，含缩放信息）
     /// </summary>
     /// <param name="greyBigMapMat"></param>

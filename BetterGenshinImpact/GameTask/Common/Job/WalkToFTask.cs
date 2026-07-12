@@ -30,12 +30,17 @@ public class WalkToFTask
 
         try
         {
-            bool res = await NewRetry.WaitForElementAppear(AutoPickAssets.Instance.PickRo, null, ct, timeoutMilliseconds / 100 + 1, 100);
+            AutoPickAssets pickAssets;
+            using (var gameCaptureRegion = CaptureToRectArea())
+            {
+                pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+            }
+            bool res = await NewRetry.WaitForElementAppear(pickAssets.PickRo, null, ct, timeoutMilliseconds / 100 + 1, 100);
             if (res)
             {
                 if (needPress)
                 {
-                    Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                    Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk);
                 }
 
                 Logger.LogInformation("检测到交互键");

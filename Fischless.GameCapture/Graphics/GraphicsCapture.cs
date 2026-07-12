@@ -26,6 +26,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     public bool IsCapturing { get; private set; }
 
     private ResourceRegion? _region;
+    private RECT? _captureRect;
 
     // HDR相关
     private bool _isHdrEnabled = captureHdr;
@@ -57,8 +58,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
         _hWnd = hWnd;
-
-        _region = GetGameScreenRegion(hWnd);
+        (_region, _captureRect) = GetGameScreenInfo(hWnd);
 
         IsCapturing = true;
 
@@ -130,12 +130,12 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    private static ResourceRegion? GetGameScreenRegion(nint hWnd)
+    private static (ResourceRegion? Region, RECT? CaptureRect) GetGameScreenInfo(nint hWnd)
     {
         var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
         if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
         {
-            return null;
+            return (null, null);
         }
 
         ResourceRegion region = new();
@@ -152,7 +152,12 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         region.Front = 0;
         region.Back = 1;
 
-        return region;
+        var left = windowRect.Left;
+        var top = windowRect.Top + windowRect.Height - clientRect.Height;
+        var right = left + clientRect.Width;
+        var bottom = top + clientRect.Height;
+
+        return (region, new RECT(left, top, right, bottom));
     }
 
     private Texture2D ProcessHdrTexture(Texture2D hdrTexture)
@@ -223,7 +228,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 _stagingTexture = null;
                 _surfaceWidth = captureSize.Width;
                 _surfaceHeight = captureSize.Height;
-                _region = GetGameScreenRegion(_hWnd);
+                (_region, _captureRect) = GetGameScreenInfo(_hWnd);
                 return;
             }
 
@@ -253,14 +258,17 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         }
     }
 
-    public Mat? Capture()
+    public GameCaptureFrame? Capture()
     {
         // 使用读锁获取最新帧
         _frameAccessLock.EnterReadLock();
         try
         {
             // 返回最新帧的副本（这里我们必须克隆，因为Mat是不线程安全的）
-            return _latestFrame?.Clone();
+            var frame = _latestFrame?.Clone();
+            return frame == null
+                ? null
+                : new GameCaptureFrame(frame, _captureRect);
         }
         finally
         {
@@ -278,6 +286,9 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             _captureFramePool?.Dispose();
             _captureFramePool = null;
             _captureItem = null;
+            _latestFrame?.Dispose();
+            _latestFrame = null;
+            _captureRect = null;
             _stagingTexture?.Dispose();
             _stagingTexture = null;
             _hdrOutputTexture?.Dispose();
