@@ -677,7 +677,15 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
         }
         
-        //全队Q检测函数，备用，后续可用于自动EQ开发
+        /// <summary>
+        /// 全队Q检测函数，备用，后续可用于自动EQ开发
+        /// 不再推荐使用原因，可以参考使用 BetterGenshinImpact.GameTask.AutoFight.Model.Avatar.IsBurstReadyByClassify 方法，识别速度更快，效果更好
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="useEqList"></param>
+        /// <param name="avatarCurrent"></param>
+        /// <returns></returns>
+        [Obsolete]
         public static Task<List<int>> AvatarQSkillAsync(ImageRegion? image = null, List<int>? useEqList = null,int? avatarCurrent = null)
         {
             var ownImage = image == null;
