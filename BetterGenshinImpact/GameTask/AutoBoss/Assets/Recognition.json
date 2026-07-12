@@ -1,0 +1,40 @@
+{
+  "objects": {
+    "OriginalResinTopIcon": {
+      "type": "TemplateMatch",
+      "template": "original_resin_top_icon.png",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "RewardBox": {
+      "type": "TemplateMatch",
+      "template": "box.png",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "OpenResinSupplementPaneButton": {
+      "type": "TemplateMatch",
+      "template": "open_resin_supplement_pane_button.png",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "TransientResinInSupplementPane": {
+      "type": "TemplateMatch",
+      "template": "transient_resin_in_supplement_pane.png",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "FragileResinInSupplementPane": {
+      "type": "TemplateMatch",
+      "template": "fragile_resin_in_supplement_pane.png",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "IncreaseResinUsageQuantityButton": {
+      "type": "TemplateMatch",
+      "template": "increase_resin_usage_quantity_button.png",
+      "threshold": 0.8,
+      "draw": false
+    }
+  }
+}

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -42,7 +42,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickReduceButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.Keyreduce);
+        => FindAndClick(captureRa, ElementRecognition.Get("Keyreduce", captureRa));
 
     /// <summary>
     /// 点击增加按钮
@@ -50,7 +50,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickAddButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.Keyincrease);
+        => FindAndClick(captureRa, ElementRecognition.Get("Keyincrease", captureRa));
 
     /// <summary>
     /// 点击白色确认按钮
@@ -58,7 +58,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickWhiteConfirmButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnWhiteConfirm);
+        => FindAndClick(captureRa, ElementRecognition.Get("BtnWhiteConfirm", captureRa));
 
     /// <summary>
     /// 点击白色取消按钮
@@ -66,7 +66,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickWhiteCancelButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnWhiteCancel);
+        => FindAndClick(captureRa, ElementRecognition.Get("BtnWhiteCancel", captureRa));
 
     /// <summary>
     /// 点击黑色确认按钮
@@ -74,7 +74,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickBlackConfirmButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnBlackConfirm);
+        => FindAndClick(captureRa, ElementRecognition.Get("BtnBlackConfirm", captureRa));
 
     /// <summary>
     /// 点击黑色取消按钮
@@ -82,7 +82,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickBlackCancelButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnBlackCancel);
+        => FindAndClick(captureRa, ElementRecognition.Get("BtnBlackCancel", captureRa));
 
     /// <summary>
     /// 点击联机确认按钮
@@ -90,7 +90,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickOnlineYesButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnOnlineYes);
+        => FindAndClick(captureRa, ElementRecognition.Get("BtnOnlineYes", captureRa));
 
     /// <summary>
     /// 点击联机取消按钮
@@ -98,7 +98,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickOnlineNoButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnOnlineNo);
+        => FindAndClick(captureRa, ElementRecognition.Get("BtnOnlineNo", captureRa));
 
     /// <summary>
     /// 点击确认按钮（优先点击白色背景的确认按钮）
@@ -128,7 +128,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool FindF(ImageRegion captureRa, params string[] text)
     {
-        using var ra = captureRa.Find(AutoPickAssets.Instance.PickRo);
+        using var ra = captureRa.Find(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo);
         if (ra.IsExist())
         {
             if (text.Length == 0)
@@ -172,7 +172,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 
@@ -183,7 +183,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 

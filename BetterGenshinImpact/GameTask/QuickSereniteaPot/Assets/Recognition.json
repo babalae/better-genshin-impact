@@ -1,0 +1,16 @@
+{
+  "objects": {
+    "BagCloseButton": {
+      "type": "TemplateMatch",
+      "template": "MapCloseButton.png",
+      "roi": "rect(cw - 107 * s, 19 * s, 58 * s, 58 * s)",
+      "draw": true
+    },
+    "SereniteaPotIcon": {
+      "type": "TemplateMatch",
+      "template": "SereniteaPotIcon.png",
+      "roi": "rect(100 * s, 100 * s, 1190 * s, 860 * s)",
+      "draw": true
+    }
+  }
+}

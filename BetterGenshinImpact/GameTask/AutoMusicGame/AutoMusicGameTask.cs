@@ -60,7 +60,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
             var taskList = new List<Task>();
 
             // 计算按键位置
-            var gameCaptureRegion = CaptureToRectArea();
+            using var gameCaptureRegion = CaptureToRectArea();
 
             foreach (var keyValuePair in _keyX)
             {

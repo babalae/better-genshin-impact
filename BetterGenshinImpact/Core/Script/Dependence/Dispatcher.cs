@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFishing;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -189,8 +191,16 @@ public class Dispatcher
                     return null;
                 }
 
-                await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
-                return null;
+                return await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
+
+            case "AutoBoss":
+                var autoBossConfig = TaskContext.Instance().Config.AutoBossConfig;
+                if (taskSettingsPageViewModel.GetFightStrategy(autoBossConfig.StrategyName, out var autoBossPath))
+                {
+                    return null;
+                }
+
+                return await new AutoBossTask(new AutoBossParam(autoBossPath)).Start(cancellationToken);
 
             case "AutoFishing":
                 await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
@@ -271,16 +281,15 @@ public class Dispatcher
                     GridScreenName gridScreenName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "gridScreenName", (GridScreenName?)null) ?? throw new Exception("gridScreenName为空或错误");
                     string? itemName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "itemName", (string?)null);
                     IEnumerable<string>? itemNames = ScriptObjectConverter.GetValue<string>((ScriptObject)soloTask.Config, "itemNames");
-                    if (itemName != null && itemNames != null)
+                    CountInventoryItemParam param = new()
                     {
-                        throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时使用");
-                    }
-                    if (itemName == null && itemNames == null)
-                    {
-                        throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时为空");
-                    }
-                    var result = await new CountInventoryItem(gridScreenName, itemName, itemNames).Start(cancellationToken);
-                    if (itemName != null)
+                        GridScreenName = gridScreenName,
+                        ItemName = itemName,
+                        ItemNames = itemNames?.ToList() ?? []
+                    };
+
+                    var result = await new CountInventoryItem(param).Start(cancellationToken);
+                    if (param.ItemName != null)
                     {
                         return result;
                     }
@@ -318,7 +327,7 @@ public class Dispatcher
     /// <param name="param">秘境任务参数</param>  
     /// <param name="customCt">自定义取消令牌</param>  
     /// <returns></returns>  
-    public async Task RunAutoDomainTask(AutoDomainParam param, CancellationToken? customCt = null)  
+    public async Task<Dictionary<string, int>> RunAutoDomainTask(AutoDomainParam param, CancellationToken? customCt = null)
     {  
         if (param == null)  
         {  
@@ -326,9 +335,26 @@ public class Dispatcher
         }  
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
-        await new AutoDomainTask(param).Start(cancellationToken);  
+        return await new AutoDomainTask(param).Start(cancellationToken);
     }  
-  
+
+    /// <summary>
+    /// 运行自动首领讨伐任务
+    /// </summary>
+    /// <param name="param">自动首领讨伐任务参数</param>
+    /// <param name="customCt">自定义取消令牌</param>
+    /// <returns></returns>
+    public async Task<Dictionary<string, int>> RunAutoBossTask(AutoBossParam param, CancellationToken? customCt = null)
+    {
+        if (param == null)
+        {
+            throw new ArgumentNullException(nameof(param), "自动首领讨伐任务参数不能为空");
+        }
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        return await new AutoBossTask(param).Start(cancellationToken);
+    }
+
     /// <summary>  
     /// 运行自动战斗任务
     /// </summary>  
@@ -343,7 +369,9 @@ public class Dispatcher
         }  
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
-        await new AutoFightTask(param).Start(cancellationToken);  
+        var factory = GameTask.AutoFight.Factory.CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
+        var fightTask = factory.CreateTask(param);
+        await fightTask.Start(cancellationToken);  
     }
     
     /// <summary>  
@@ -362,22 +390,55 @@ public class Dispatcher
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
         await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
     }
-    
-        
+
+
     /// <summary>  
     /// 运行自动幽境危战任务
     /// </summary>  
     /// <param name="param">自动幽境危战任务参数</param>  
     /// <param name="customCt">自定义取消令牌</param>  
     /// <returns></returns>  
-    public async Task RunAutoStygianOnslaughtTask(AutoStygianOnslaughtParam param, CancellationToken? customCt = null)  
-    {  
-        if (param == null)  
-        {  
-            throw new ArgumentNullException(nameof(param), "自动幽境危战任务参数不能为空");  
-        }  
-  
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
-        await new AutoStygianOnslaughtTask(param).Start(cancellationToken);  
+    public async Task RunAutoStygianOnslaughtTask(AutoStygianOnslaughtParam param, CancellationToken? customCt = null)
+    {
+        if (param == null)
+        {
+            throw new ArgumentNullException(nameof(param), "自动幽境危战任务参数不能为空");
+        }
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        await new AutoStygianOnslaughtTask(param).Start(cancellationToken);
+    }
+    
+    /// <summary>
+    /// 运行背包物品计数任务。
+    /// </summary>
+    /// <param name="param">背包物品计数参数。</param>
+    /// <param name="customCt">自定义取消令牌。</param>
+    /// <returns>单物品返回数量；多物品返回名称到数量的脚本对象。</returns>
+    public async Task<object?> RunCountInventoryItemTask(CountInventoryItemParam param, CancellationToken? customCt = null)
+    {
+        if (param == null)
+        {
+            throw new ArgumentNullException(nameof(param), "背包物品计数参数不能为空");
+        }
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        object result = await new CountInventoryItem(param).Start(cancellationToken);
+
+        if (param.ItemName != null)
+        {
+            return result;
+        }
+        else
+        {
+            dynamic expando = new ExpandoObject();
+            var expandoDict = (IDictionary<string, object>)expando;
+            foreach (var kvp in (Dictionary<string, int>)result)
+            {
+                expandoDict[kvp.Key] = kvp.Value;
+            }
+
+            return expandoDict;
+        }
     }
 }

@@ -32,6 +32,8 @@ public class MaskMapPoint
 
     public List<MaskMapLink> VideoUrls { get; set; } = new();
 
+    public bool IsHidden { get; set; }
+
     public bool Contains(double px, double py)
     {
         return px >= X - MaskMapPointStatic.Width / 2 && px <= X + MaskMapPointStatic.Width / 2 &&

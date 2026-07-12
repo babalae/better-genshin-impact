@@ -11,6 +11,7 @@ using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 
@@ -377,7 +378,7 @@ public partial class HtmlMaskWindow : Window
             // 本地文件：必须在脚本目录内
             if (uri.Scheme == "file")
             {
-                var localPath = Uri.UnescapeDataString(uri.AbsolutePath);
+                var localPath = uri.LocalPath;
                 var fullDir = Path.GetFullPath(_workDir);
                 var fullFile = Path.GetFullPath(localPath);
                 if (fullFile.StartsWith(fullDir, StringComparison.OrdinalIgnoreCase)) return;
@@ -434,12 +435,13 @@ public partial class HtmlMaskWindow : Window
             var currentRect = SystemControl.GetCaptureRect(gameHandle);
             if (currentRect.Width <= 0 || currentRect.Height <= 0) return;
 
+            var dpiScale = DpiHelper.GetScale(gameHandle);
             Dispatcher.Invoke(() =>
             {
-                Left = currentRect.Left;
-                Top = currentRect.Top;
-                Width = currentRect.Width;
-                Height = currentRect.Height;
+                Left = currentRect.Left / dpiScale.X;
+                Top = currentRect.Top / dpiScale.Y;
+                Width = currentRect.Width / dpiScale.X;
+                Height = currentRect.Height / dpiScale.Y;
             });
         }
         catch (Exception ex)

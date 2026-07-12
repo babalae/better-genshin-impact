@@ -4,8 +4,10 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoCook;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Factory;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -86,6 +88,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoDomainButtonText = "启动";
 
     [ObservableProperty]
+    private bool _switchAutoBossEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoBossButtonText = "启动";
+
+    [ObservableProperty]
     private int _autoStygianOnslaughtRoundNum;
 
     [ObservableProperty]
@@ -130,6 +138,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
 
     public static List<int> BossNumList = [1, 2, 3];
+
+    public static List<string> AutoBossNameList = [.. AutoBossData.SupportedBossNames];
 
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
     public static List<string> LeyLineOutcropTypeList = ["启示之花", "藏金之花"];
@@ -226,7 +236,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
-        _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
+        _domainNameList = ["", .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
     }
@@ -325,6 +335,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoGeniusInvokationEnabled = false;
         SwitchAutoWoodEnabled = false;
         SwitchAutoDomainEnabled = false;
+        SwitchAutoBossEnabled = false;
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
         SwitchAutoAlbumEnabled = false;
@@ -417,9 +428,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
-        await new TaskRunner()
-            .RunSoloTaskAsync(new AutoFightTask(param));
-        SwitchAutoFightEnabled = false;
+        try
+        {
+            var factory = CombatTaskFactoryProvider.GetFactory(path);
+            await new TaskRunner()
+                .RunSoloTaskAsync(factory.CreateTask(param));
+        }
+        finally
+        {
+            SwitchAutoFightEnabled = false;
+        }
     }
 
     [RelayCommand]
@@ -456,10 +474,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
             return true;
         }
 
-        path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
         if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
+        }
+        else
+        {
+            (path, _) = AutoFightParam.ResolveStrategyPath(strategyName);
         }
 
         if (!File.Exists(path) && !Directory.Exists(path))
@@ -469,6 +490,22 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         return false;
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoBoss()
+    {
+        if (GetFightStrategy(Config.AutoBossConfig.StrategyName, out var path))
+        {
+            return;
+        }
+
+        SwitchAutoBossEnabled = true;
+        AutoBossParam param = new AutoBossParam(path);
+        param.SetAutoBossConfig(Config.AutoBossConfig);
+        await new TaskRunner()
+            .RunSoloTaskAsync(new AutoBossTask(param));
+        SwitchAutoBossEnabled = false;
     }
 
     [RelayCommand]

@@ -1089,7 +1089,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         using (var region = CaptureToRectArea())
         {
             // 裁剪技能 CD 区域并做 HSV 颜色过滤，分离出白色的 CD 数字
-            using var eRa = region.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+            using var eRa = region.DeriveCrop(AutoFightAssets.Get(region).ECooldownRect);
             using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
             var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
             
@@ -1144,7 +1144,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                                     if (find)
                                     {
                                         using var imagePick = CaptureToRectArea();
-                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
                                         {
                                             find = false;
                                         }
@@ -1241,19 +1241,36 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         var autoFightConfig = BuildLeyLineAutoFightConfig();
         var strategyPath = BuildAutoFightStrategyPath(autoFightConfig);
-        var taskParam = new AutoFightParam(strategyPath, autoFightConfig)
+
+        if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
         {
-            FightFinishDetectEnabled = false,
-            CheckBeforeBurst = false
-        };
-        // Avoid false finish signals for ley line fights.
-        taskParam.FinishDetectConfig.FastCheckEnabled = false;
-        taskParam.FinishDetectConfig.RotateFindEnemyEnabled = false;
-        taskParam.PickDropsAfterFightEnabled = false;
-        taskParam.KazuhaPickupEnabled = false;
-        taskParam.QinDoublePickUp = false;
-        taskParam.OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite";
-        return new AutoFightTask(taskParam).Start(ct);
+            var jsonParam = new AutoFightParam
+            {
+                CombatStrategyPath = strategyPath,
+                FightFinishDetectEnabled = false,
+                ExpBasedPickupEnabled = false,
+                KazuhaPickupEnabled = false,
+                PickDropsAfterFightEnabled = false,
+                Timeout = autoFightConfig.Timeout > 0 ? autoFightConfig.Timeout : 600,
+            };
+            var jsonTask = new AutoFightJsonTask(jsonParam);
+            return jsonTask.Start(ct);
+        }
+        else
+        {
+            var taskParam = new AutoFightParam(strategyPath, autoFightConfig)
+            {
+                FightFinishDetectEnabled = false,
+                CheckBeforeBurst = false
+            };
+            taskParam.FinishDetectConfig.FastCheckEnabled = false;
+            taskParam.FinishDetectConfig.RotateFindEnemyEnabled = false;
+            taskParam.PickDropsAfterFightEnabled = false;
+            taskParam.KazuhaPickupEnabled = false;
+            taskParam.QinDoublePickUp = false;
+            taskParam.OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite";
+            return new AutoFightTask(taskParam).Start(ct);
+        }
     }
 
     private IDisposable UseLeyLineAutoFightConfigScope()
@@ -1284,12 +1301,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private static string BuildAutoFightStrategyPath(AutoFightConfig config)
     {
-        var path = Global.Absolute(@"User\AutoFight\" + config.StrategyName + ".txt");
-        if ("根据队伍自动选择".Equals(config.StrategyName))
-        {
-            path = Global.Absolute(@"User\AutoFight\");
-        }
-
+        var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
         if (!File.Exists(path) && !Directory.Exists(path))
         {
             throw new Exception("战斗策略文件不存在");
