@@ -230,7 +230,6 @@ namespace BetterGenshinImpact.ViewModel
 
             SelectedMapLabelItems.Clear();
             SaveSelectedMapLabelItemsToStorage();
-            ClearHiddenMapPointState();
             StartRefreshSelectedMapPoints();
         }
 
@@ -1043,12 +1042,6 @@ namespace BetterGenshinImpact.ViewModel
                 .OrderBy(x => x, StringComparer.Ordinal)
                 .ToList();
             MapMaskStateStorage.Update(GetMapMaskDataSourceKey(), state => state.HiddenMapPointKeys = hiddenMapPointKeys);
-        }
-
-        private void ClearHiddenMapPointState()
-        {
-            _hiddenMapPointIds.Clear();
-            SaveHiddenMapPointKeysToStorage();
         }
 
         private void SyncPointInfoPopupHiddenState()
