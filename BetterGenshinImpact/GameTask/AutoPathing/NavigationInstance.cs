@@ -26,7 +26,7 @@ public class NavigationInstance
 
     public Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
+        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
         var p = MapManager.GetMap(mapName, mapMatchMethod).GetMiniMapPosition(colorMat, _prevX, _prevY);
         if (p != default && captureTime > _captureTime)
@@ -48,7 +48,7 @@ public class NavigationInstance
     /// <returns>当前位置坐标</returns>
     public Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
+        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
 
         // 先尝试使用局部匹配

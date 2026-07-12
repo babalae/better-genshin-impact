@@ -1089,7 +1089,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         using (var region = CaptureToRectArea())
         {
             // 裁剪技能 CD 区域并做 HSV 颜色过滤，分离出白色的 CD 数字
-            using var eRa = region.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+            using var eRa = region.DeriveCrop(AutoFightAssets.Get(region).ECooldownRect);
             using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
             var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
             
@@ -1144,7 +1144,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                                     if (find)
                                     {
                                         using var imagePick = CaptureToRectArea();
-                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
                                         {
                                             find = false;
                                         }

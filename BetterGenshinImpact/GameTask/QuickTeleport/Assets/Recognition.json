@@ -1,0 +1,47 @@
+{
+  "objects": {
+    "TeleportButton": {
+      "type": "TemplateMatch",
+      "template": "GoTeleport.png",
+      "roi": "rect(1440 * s, ch - 120 * s, 100 * s, 120 * s)",
+      "draw": false
+    },
+    "MapScaleButton": {
+      "type": "TemplateMatch",
+      "template": "MapScaleButton.png",
+      "roi": "rect(30 * s, 440 * s, 40 * s, 200 * s)",
+      "draw": false
+    },
+    "MapCloseButton": {
+      "type": "TemplateMatch",
+      "template": "MapCloseButton.png",
+      "roi": "rect(cw - 107 * s, 19 * s, 58 * s, 58 * s)",
+      "draw": false
+    },
+    "MapSettingsButton": {
+      "type": "TemplateMatch",
+      "template": "MapSettingsButton.png",
+      "roi": "rect(25 * s, 990 * s, 58 * s, 62 * s)",
+      "draw": false
+    },
+    "MapChoose": {
+      "type": "TemplateMatch",
+      "template": "MapChoose.png",
+      "roi": "rect(cw - 480 * s, 0, 100 * s, 70 * s)",
+      "draw": false
+    },
+    "MapUndergroundSwitchButton": {
+      "type": "TemplateMatch",
+      "template": "MapUndergroundSwitchButton.png",
+      "roi": "rect(cw - 120 * s, 250 * s, 90 * s, 570 * s)",
+      "use3Channels": true,
+      "draw": false
+    },
+    "MapUndergroundToGroundButton": {
+      "type": "TemplateMatch",
+      "template": "MapUndergroundToGroundButton.png",
+      "roi": "rect(cw - 120 * s, 250 * s, 90 * s, 570 * s)",
+      "draw": false
+    }
+  }
+}
