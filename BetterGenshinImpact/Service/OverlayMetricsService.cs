@@ -1,4 +1,6 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service.Interface;
 using LibreHardwareMonitor.Hardware;
 using Microsoft.Extensions.Logging;
@@ -16,6 +18,7 @@ public sealed class OverlayMetricsService : IDisposable
     // 调度器可能按几十毫秒上报一次，遮罩文本和硬件传感器分别节流，避免 UI 与 LibreHardwareMonitor 高频刷新。
     private static readonly TimeSpan PublishInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan HardwareRefreshInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan GpuQueryResetInterval = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan PeakProcessingCostWindow = TimeSpan.FromSeconds(5);
 
     private readonly ILogger<OverlayMetricsService> _logger = App.GetLogger<OverlayMetricsService>();
@@ -27,6 +30,9 @@ public sealed class OverlayMetricsService : IDisposable
     private Computer? _computer;
     private bool _hardwareInitialized;
     private bool _hardwareWarningLogged;
+    private GameGpuUsageProvider? _gameGpuUsageProvider;
+    private bool _gpuMetricsUnavailable;
+    private bool _gpuWarningLogged;
 
     private double? _gameFps;
     private double? _processingCostMs;
@@ -114,6 +120,7 @@ public sealed class OverlayMetricsService : IDisposable
         }
 
         config.EnsureOverlayMetricItems();
+        MaintainGpuMetricsLifecycle(config);
         var now = DateTime.UtcNow;
         // 即使实时触发器高频运行，遮罩只需要半秒级更新；手动刷新和配置变更用 force 立即同步。
         if (!force && now - _lastPublishTime < PublishInterval)
@@ -124,7 +131,7 @@ public sealed class OverlayMetricsService : IDisposable
         // 硬件采样相对更重，只有用户开启对应指标时才按秒级刷新。
         if (refreshHardware && ShouldRefreshHardware(config, now))
         {
-            RefreshHardwareMetrics();
+            RefreshHardwareMetrics(config, now);
         }
 
         OverlayMetricsSnapshot snapshot;
@@ -160,6 +167,24 @@ public sealed class OverlayMetricsService : IDisposable
         return config.IsOverlayMetricEnabled(OverlayMetricItem.CpuUsage)
                || config.IsOverlayMetricEnabled(OverlayMetricItem.GpuUsage)
                || config.IsOverlayMetricEnabled(OverlayMetricItem.MemoryUsage);
+    }
+
+    private void MaintainGpuMetricsLifecycle(MaskWindowConfig config)
+    {
+        if (config.ShowOverlayMetrics && config.IsOverlayMetricEnabled(OverlayMetricItem.GpuUsage))
+        {
+            return;
+        }
+
+        if (_gameGpuUsageProvider == null && !_gpuMetricsUnavailable)
+        {
+            return;
+        }
+
+        lock (_hardwareLocker)
+        {
+            ReleaseGpuUsageProvider(resetAvailability: true);
+        }
     }
 
     private OverlayMetricsSnapshot BuildSnapshot(MaskWindowConfig config, double skippedPerSecond)
@@ -209,57 +234,122 @@ public sealed class OverlayMetricsService : IDisposable
             : _processingCostSamples.Max(sample => sample.Value);
     }
 
-    private void RefreshHardwareMetrics()
+    private void RefreshHardwareMetrics(MaskWindowConfig config, DateTime now)
     {
-        // LibreHardwareMonitor 在不同硬件上的传感器名称不完全一致，先匹配常见总量名称，再退回首个可用 Load 传感器。
         lock (_hardwareLocker)
         {
-            _lastHardwareRefreshTime = DateTime.UtcNow;
-
-            if (!EnsureHardwareInitialized())
+            var previousRefreshTime = _lastHardwareRefreshTime;
+            _lastHardwareRefreshTime = now;
+            if (previousRefreshTime != DateTime.MinValue && now - previousRefreshTime > GpuQueryResetInterval)
             {
-                return;
+                // 休眠或长时间暂停后重新建立 PDH 基线，避免展示跨越长时间窗口的平均值。
+                ReleaseGpuUsageProvider(resetAvailability: true);
             }
 
-            try
+            var cpuEnabled = config.IsOverlayMetricEnabled(OverlayMetricItem.CpuUsage);
+            var gpuEnabled = config.IsOverlayMetricEnabled(OverlayMetricItem.GpuUsage);
+            var memoryEnabled = config.IsOverlayMetricEnabled(OverlayMetricItem.MemoryUsage);
+
+            double? cpuUsage = null;
+            double? memoryUsage = null;
+            if (cpuEnabled || memoryEnabled)
             {
-                double? cpuUsage = null;
-                double? gpuUsage = null;
-                double? memoryUsage = null;
+                (cpuUsage, memoryUsage) = ReadSystemHardwareMetrics(cpuEnabled, memoryEnabled);
+            }
 
-                foreach (var hardware in _computer!.Hardware)
+            var gpuUsage = gpuEnabled ? ReadGameGpuUsage() : null;
+
+            lock (_locker)
+            {
+                _cpuUsage = cpuEnabled ? cpuUsage : null;
+                _gpuUsage = gpuEnabled ? gpuUsage : null;
+                _memoryUsage = memoryEnabled ? memoryUsage : null;
+            }
+        }
+    }
+
+    private (double? CpuUsage, double? MemoryUsage) ReadSystemHardwareMetrics(bool cpuEnabled, bool memoryEnabled)
+    {
+        // LibreHardwareMonitor 仅保留系统 CPU/内存采样；GPU 由按游戏进程归因的 PDH 数据提供。
+        if (!EnsureHardwareInitialized())
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            double? cpuUsage = null;
+            double? memoryUsage = null;
+            foreach (var hardware in _computer!.Hardware)
+            {
+                hardware.Update();
+                foreach (var subHardware in hardware.SubHardware)
                 {
-                    hardware.Update();
-                    foreach (var subHardware in hardware.SubHardware)
-                    {
-                        subHardware.Update();
-                    }
-
-                    if (hardware.HardwareType == HardwareType.Cpu)
-                    {
-                        cpuUsage = TryGetLoad(hardware, "CPU Total") ?? TryGetFirstSensorValue(hardware, SensorType.Load);
-                    }
-                    else if (IsGpu(hardware.HardwareType))
-                    {
-                        gpuUsage = TryGetLoad(hardware, "GPU Core") ?? TryGetFirstSensorValue(hardware, SensorType.Load) ?? gpuUsage;
-                    }
-                    else if (hardware.HardwareType == HardwareType.Memory)
-                    {
-                        memoryUsage = TryGetLoad(hardware, "Memory") ?? TryGetFirstSensorValue(hardware, SensorType.Load);
-                    }
+                    subHardware.Update();
                 }
 
-                lock (_locker)
+                if (cpuEnabled && hardware.HardwareType == HardwareType.Cpu)
                 {
-                    _cpuUsage = cpuUsage;
-                    _gpuUsage = gpuUsage;
-                    _memoryUsage = memoryUsage;
+                    cpuUsage = TryGetLoad(hardware, "CPU Total") ?? TryGetFirstSensorValue(hardware, SensorType.Load);
+                }
+                else if (memoryEnabled && hardware.HardwareType == HardwareType.Memory)
+                {
+                    memoryUsage = TryGetLoad(hardware, "Memory") ?? TryGetFirstSensorValue(hardware, SensorType.Load);
                 }
             }
-            catch (Exception ex)
+
+            return (cpuUsage, memoryUsage);
+        }
+        catch (Exception ex)
+        {
+            LogHardwareWarning(ex);
+            return (null, null);
+        }
+    }
+
+    private double? ReadGameGpuUsage()
+    {
+        if (WinePlatformAddon.IsRunningOnWine || _gpuMetricsUnavailable)
+        {
+            return null;
+        }
+
+        var gameProcessId = TryGetGameProcessId();
+        if (gameProcessId == null)
+        {
+            ReleaseGpuUsageProvider(resetAvailability: true);
+            return null;
+        }
+
+        try
+        {
+            _gameGpuUsageProvider ??= new GameGpuUsageProvider();
+            return _gameGpuUsageProvider.Sample(gameProcessId.Value);
+        }
+        catch (Exception ex)
+        {
+            ReleaseGpuUsageProvider(resetAvailability: false);
+            _gpuMetricsUnavailable = true;
+            LogGpuWarning(ex);
+            return null;
+        }
+    }
+
+    private static int? TryGetGameProcessId()
+    {
+        try
+        {
+            var context = TaskContext.Instance();
+            if (!context.IsInitialized || context.SystemInfo.GameProcess.HasExited)
             {
-                LogHardwareWarning(ex);
+                return null;
             }
+
+            return context.SystemInfo.GameProcessId;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -277,7 +367,7 @@ public sealed class OverlayMetricsService : IDisposable
             _computer = new Computer
             {
                 IsCpuEnabled = true,
-                IsGpuEnabled = true,
+                IsGpuEnabled = false,
                 IsMemoryEnabled = true
             };
             _computer.Open();
@@ -300,12 +390,33 @@ public sealed class OverlayMetricsService : IDisposable
         }
 
         _hardwareWarningLogged = true;
-        _logger.LogWarning(ex, "遮罩硬件指标初始化或读取失败，将自动隐藏不可用指标");
+        _logger.LogWarning(ex, "遮罩 CPU/内存指标初始化或读取失败，将自动隐藏不可用指标");
     }
 
-    private static bool IsGpu(HardwareType hardwareType)
+    private void LogGpuWarning(Exception ex)
     {
-        return hardwareType is HardwareType.GpuAmd or HardwareType.GpuIntel or HardwareType.GpuNvidia;
+        if (_gpuWarningLogged)
+        {
+            return;
+        }
+
+        _gpuWarningLogged = true;
+        _logger.LogWarning(ex, "遮罩原神显卡占用率初始化或读取失败，将自动隐藏该指标");
+    }
+
+    private void ReleaseGpuUsageProvider(bool resetAvailability)
+    {
+        _gameGpuUsageProvider?.Dispose();
+        _gameGpuUsageProvider = null;
+        if (resetAvailability)
+        {
+            _gpuMetricsUnavailable = false;
+        }
+
+        lock (_locker)
+        {
+            _gpuUsage = null;
+        }
     }
 
     private static double? TryGetLoad(IHardware hardware, string preferredName)
@@ -338,6 +449,12 @@ public sealed class OverlayMetricsService : IDisposable
             _maskWindowConfig.PropertyChanged -= MaskWindowConfigOnPropertyChanged;
         }
 
-        _computer?.Close();
+        lock (_hardwareLocker)
+        {
+            _gameGpuUsageProvider?.Dispose();
+            _gameGpuUsageProvider = null;
+            _computer?.Close();
+            _computer = null;
+        }
     }
 }
