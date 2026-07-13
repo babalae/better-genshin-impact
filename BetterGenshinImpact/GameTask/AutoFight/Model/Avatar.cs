@@ -10,6 +10,7 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -958,6 +959,57 @@ public class Avatar
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
+        else if (Name == "桑多涅")
+        {
+            var dpi = TaskContext.Instance().DpiScale;
+            const int preAimX = 960;
+            const int preAimY = 480;
+            const int frameIntervalMs = 50;
+
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+            while (!Ct.IsCancellationRequested && ms >= 0)
+            {
+                var bars = FindBloodBars();
+                var valid = bars.Where(b => b.x > 200).ToList();
+
+                using (var drawRegion = CaptureToRectArea())
+                {
+                    var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>
+                    {
+                        drawRegion.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
+                    };
+
+                    if (valid.Count > 0)
+                    {
+                        var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                        var offsetX = (nearest.x + nearest.width / 2) - preAimX;
+                        var offsetY = (nearest.y + nearest.height / 2) - preAimY;
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.5 * dpi), (int)(offsetY * 0.5 * dpi));
+
+                        foreach (var b in valid)
+                        {
+                            var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                            if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
+                                drawList.Add(drawRegion.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                            else
+                                drawList.Add(drawRegion.ToRectDrawable(rect, "blood"));
+                        }
+                    }
+                    else
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), 0);
+                    }
+
+                    View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                }
+
+                Sleep(frameIntervalMs);
+                ms -= frameIntervalMs;
+            }
+
+            View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+        }
         else
         {
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
@@ -1158,5 +1210,38 @@ public class Avatar
         }
 
         return null;
+    }
+
+    public static List<(int x, int y, int width, int height)> FindBloodBars()
+    {
+        var results = new List<(int x, int y, int width, int height)>();
+
+        using var image = CaptureToRectArea();
+        var bloodLower = new OpenCvSharp.Scalar(255, 90, 90); // BGR 红色
+
+        using Mat mask = Core.Recognition.OpenCv.OpenCvCommonHelper.Threshold(
+            image.DeriveCrop(0, 0, 1500, 900).SrcMat, bloodLower);
+
+        using Mat labels = new Mat();
+        using Mat stats = new Mat();
+        using Mat centroids = new Mat();
+
+        int numLabels = Cv2.ConnectedComponentsWithStats(
+            mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        for (int i = 1; i < numLabels; i++)
+        {
+            using Mat row = stats.Row(i);
+            if (row.GetArray(out int[] arr))
+            {
+                int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
+                if (y < 50)
+                    continue;
+                results.Add((x, y, width, height));
+            }
+        }
+
+        return results;
     }
 }
