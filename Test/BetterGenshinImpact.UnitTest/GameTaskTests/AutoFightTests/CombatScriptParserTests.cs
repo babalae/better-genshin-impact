@@ -45,4 +45,20 @@ public class CombatScriptParserTests
         Assert.Equal("s", script.CombatCommands[0].Args[0]);
         Assert.Equal("0.2", script.CombatCommands[0].Args[1]);
     }
+
+    /// <summary>
+    /// 无角色前缀时传入 defaultAvatarName，应使用该名称作为角色名并正常解析指令
+    /// </summary>
+    [Fact]
+    public void ParseLine_NoPrefixWithDefaultAvatarName_UsesProvidedName()
+    {
+        var script = CombatScriptParser.ParseContext("walk(s, 0.2)", validate: true, defaultAvatarName: "娜维娅");
+        Assert.Single(script.CombatCommands);
+        Assert.Equal("娜维娅", script.CombatCommands[0].Name);
+        Assert.Contains("walk", script.CombatCommands[0].Method.Alias);
+        Assert.NotNull(script.CombatCommands[0].Args);
+        Assert.Equal(2, script.CombatCommands[0].Args.Count);
+        Assert.Equal("s", script.CombatCommands[0].Args[0]);
+        Assert.Equal("0.2", script.CombatCommands[0].Args[1]);
+    }
 }

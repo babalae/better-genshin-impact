@@ -140,7 +140,12 @@ public class CombatScriptParser
         }
         else
         {
-            if (validate && separatorIndex == -1)
+            // 无显式前缀时，若提供了 defaultAvatarName 则对其标准化；否则走验证失败
+            if (defaultAvatarName != null)
+            {
+                character = DefaultAutoFightConfig.AvatarAliasToStandardName(defaultAvatarName);
+            }
+            else if (validate)
             {
                 Logger.LogError("战斗脚本格式错误，必须以空格分隔角色和指令");
                 throw new Exception("战斗脚本格式错误，必须以空格分隔角色和指令");
