@@ -961,19 +961,35 @@ public class Avatar
         }
         else if (Name == "桑多涅")
         {
+            // 桑多涅重击特化逻辑（简化版）
+            // 按下重击后，以固定帧间隔循环执行以下操作：
+            // 1. 截取屏幕检测血条（红色连通域）
+            // 2. 若有血条存在，取离预瞄点(960, 480)最近的血条，移动鼠标对准
+            // 3. 若无血条，且不存在传奇血条（y 50~96）时，向右旋转搜索敌人
+            // 4. 绘制预瞄准星和血条框用于调试
             var dpi = TaskContext.Instance().DpiScale;
-            const int preAimX = 960;
-            const int preAimY = 480;
-            const int frameIntervalMs = 50;
+            const int preAimX = 960;   // 预瞄准星 X 坐标（屏幕中心）
+            const int preAimY = 480;   // 预瞄准星 Y 坐标（屏幕垂直中心偏上）
+            const int frameIntervalMs = 50;  // 每帧间隔（与主循环帧率对齐）
 
+            // 按下重击键，进入蓄力状态
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+
+            // 连续未找到血条的计时，超过1秒时提前退出
+            var lastSeenBlood = DateTime.UtcNow;
+
+            // 主循环：持续到取消或重击时间耗尽
             while (!Ct.IsCancellationRequested && ms >= 0)
             {
+                // 检测屏幕中的血条（红色连通域），结果坐标在 1500×900 裁剪空间内
                 var bars = FindBloodBars();
+                // 过滤掉 x <= 200 的非敌人血条（如 UI 元素、角色自身元素等误检）
                 var valid = bars.Where(b => b.x > 200).ToList();
 
+                // 每帧重新截图，用于绘制覆盖层
                 using (var drawRegion = CaptureToRectArea())
                 {
+                    // 构建绘制列表，初始包含预瞄准星（红色方框，中心(960, 540)）
                     var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>
                     {
                         drawRegion.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
@@ -981,11 +997,18 @@ public class Avatar
 
                     if (valid.Count > 0)
                     {
+                        // 有可瞄准的血条：更新最后见到血条的时间
+                        lastSeenBlood = DateTime.UtcNow;
+
+                        // 选择距离预瞄点(960, 480)最近的血条作为目标
                         var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                        // 计算准星到目标中心的偏移量（像素）
                         var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                         var offsetY = (nearest.y + nearest.height / 2) - preAimY;
-                        Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.5 * dpi), (int)(offsetY * 0.5 * dpi));
+                        // 以 0.25 系数移动鼠标（平滑跟踪，避免剧烈抖动）
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.25 * dpi), (int)(offsetY * 0.25 * dpi));
 
+                        // 血条框绘制：追踪目标用绿色框，其他血条用红色框
                         foreach (var b in valid)
                         {
                             var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
@@ -997,16 +1020,35 @@ public class Avatar
                     }
                     else
                     {
-                        Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), 0);
+                        // 无可瞄准血条时：向右旋转搜索敌人
+                        // 但若存在传奇血条（y 50~96，即屏幕顶部附近的特殊血条），无法定位，不转动
+                        if (!bars.Any(b => b.y > 50 && b.y < 96))
+                        {
+                            // 连续超过1秒未找到任何血条，提前退出
+                            if ((DateTime.UtcNow - lastSeenBlood).TotalSeconds >= 1)
+                            {
+                                Logger.LogInformation("桑多涅重击特化：超过1秒未找到血条，提前退出");
+                                View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                                break;
+                            }
+
+                            Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), 0);
+                            // 大旋转后额外等待一帧，避免连续快速旋转导致视角失控
+                            Sleep(frameIntervalMs);
+                            ms -= frameIntervalMs;
+                        }
                     }
 
+                    // 将本帧绘制列表提交到遮罩窗口显示
                     View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
                 }
 
+                // 等待一帧间隔后继续
                 Sleep(frameIntervalMs);
                 ms -= frameIntervalMs;
             }
 
+            // 循环结束：清除绘制、松开重击键
             View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
