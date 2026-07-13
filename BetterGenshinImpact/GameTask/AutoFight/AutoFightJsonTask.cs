@@ -655,31 +655,21 @@ public class AutoFightJsonTask : ISoloTask
         {
             if (_ct.IsCancellationRequested) break;
 
-            try
+            var firstSpaceIndex = preAction.IndexOf(' ');
+            var character = CombatScriptParser.CurrentAvatarName;
+            var commands = preAction;
+            if (firstSpaceIndex > 0)
             {
-                var firstSpaceIndex = preAction.IndexOf(' ');
-                var character = CombatScriptParser.CurrentAvatarName;
-                var commands = preAction;
-                if (firstSpaceIndex > 0)
-                {
-                    character = preAction[..firstSpaceIndex];
-                    commands = preAction[(firstSpaceIndex + 1)..];
-                }
-
-                var cmdList = CombatScriptParser.ParseLineCommands(commands, character);
-                foreach (var cmd in cmdList)
-                {
-                    if (_ct.IsCancellationRequested) break;
-                    cmd.Execute(combatScenes);
-                    await Delay(300, _ct);
-                }
-
-                Logger.LogInformation("战斗前动作：{Action}", preAction);
+                character = preAction[..firstSpaceIndex];
+                commands = preAction[(firstSpaceIndex + 1)..];
             }
-            catch (Exception e)
-            {
-                Logger.LogWarning("战斗前动作执行失败：{Action}，{Msg}", preAction, e.Message);
-            }
+
+            var cmdList = CombatScriptParser.ParseLineCommands(commands, character);
+            var combatScript = new CombatScript([character], cmdList);
+
+            await CombatScriptExecutor.ExecuteAsync(combatScript, _ct, Logger, combatScenes);
+            Logger.LogInformation("战斗前动作：{Action}", preAction);
+            await Delay(300, _ct);
         }
     }
 
