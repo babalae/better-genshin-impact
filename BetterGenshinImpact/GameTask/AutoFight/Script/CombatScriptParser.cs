@@ -115,18 +115,32 @@ public class CombatScriptParser
         var oneLineCombatCommands = new List<CombatCommand>();
         // 以空格分隔角色和指令 截取第一个空格前的内容为角色名称，后面的为指令
         // 20241116更新 不输入角色名称时，直接以当前角色为准
-        var firstSpaceIndex = line.IndexOf(' ');
+        // 用括号嵌套深度查找角色分隔符：深度为 0 时的空格才是角色名和指令的分隔
+        // 无角色前缀时（如 walk(s, 0.2)），所有空格都在括号内，separatorIndex 保持 -1
+        var depth = 0;
+        var separatorIndex = -1;
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '(') depth++;
+            else if (line[i] == ')') depth--;
+            else if (line[i] == ' ' && depth == 0)
+            {
+                separatorIndex = i;
+                break;
+            }
+        }
+
         var character = defaultAvatarName ?? CurrentAvatarName;
         var commands = line;
-        if (firstSpaceIndex > 0)
+        if (separatorIndex > 0)
         {
-            character = line[..firstSpaceIndex];
+            character = line[..separatorIndex];
             character = DefaultAutoFightConfig.AvatarAliasToStandardName(character);
-            commands = line[(firstSpaceIndex + 1)..];
+            commands = line[(separatorIndex + 1)..];
         }
         else
         {
-            if (validate)
+            if (validate && separatorIndex == -1)
             {
                 Logger.LogError("战斗脚本格式错误，必须以空格分隔角色和指令");
                 throw new Exception("战斗脚本格式错误，必须以空格分隔角色和指令");
