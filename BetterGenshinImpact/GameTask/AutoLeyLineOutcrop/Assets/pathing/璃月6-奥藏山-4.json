@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "路途需处理风萨满",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 860.72,
+      "y": 1208.27,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "fight",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 833.48,
+      "y": 1181.69,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

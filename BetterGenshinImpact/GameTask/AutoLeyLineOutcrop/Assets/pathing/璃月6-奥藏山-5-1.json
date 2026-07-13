@@ -1,0 +1,42 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-5-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749421996120
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 489.78,
+      "y": 1435.16,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 566.28,
+      "y": 1336.32,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 632.03,
+      "y": 1331.15,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    }
+  ]
+}

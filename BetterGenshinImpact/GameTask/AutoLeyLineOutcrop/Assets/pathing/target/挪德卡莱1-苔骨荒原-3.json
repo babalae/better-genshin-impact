@@ -1,0 +1,24 @@
+{
+  "info": {
+    "authors": [],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1757822564336,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "挪德卡莱1-苔骨荒原-3",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 9132.021484375,
+      "y": 2155.611328125,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

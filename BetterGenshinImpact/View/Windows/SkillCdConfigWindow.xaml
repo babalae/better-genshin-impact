@@ -1,0 +1,104 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.SkillCdConfigWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:skillCd="clr-namespace:BetterGenshinImpact.GameTask.SkillCd"
+        mc:Ignorable="d"
+        Title="角色CD配置"
+        Height="600"
+        Width="450"
+        WindowStartupLocation="CenterOwner"
+        WindowBackdropType="Auto"
+        ExtendsContentIntoTitleBar="True">
+
+    <ui:FluentWindow.Resources>
+        <Style TargetType="ui:TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Title="角色 CD 配置" Grid.Row="0">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="Settings24" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <Grid Grid.Row="1" Margin="20,0,10,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 说明文本 -->
+            <TextBlock Grid.Row="0" 
+                       Text="为指定的角色配置未识别到 CD 数字时的默认值。如玛薇卡开 E 会显示摩托车，识别不到 CD 。&#x0a;仅填写了角色名的角色将使用默认 CD。" 
+                       Margin="0,0,10,15" 
+                       TextWrapping="Wrap" />
+
+            <!-- 列表 -->
+            <ScrollViewer Grid.Row="1" 
+                          VerticalScrollBarVisibility="Auto"
+                          Padding="0,0,25,0">
+                <ItemsControl ItemsSource="{Binding Rules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type skillCd:SkillCdRule}">
+                            <Grid Margin="0,5,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="角色名:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <ui:TextBox Grid.Column="1"
+                                            Text="{Binding RoleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Margin="0,0,10,0"
+                                            MinWidth="120"
+                                            VerticalAlignment="Center"
+                                            VerticalContentAlignment="Center" />
+
+                                <TextBlock Grid.Column="2" Text="CD(秒):" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <ui:TextBox Grid.Column="3"
+                                            Text="{Binding CdValueText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            MinWidth="80"
+                                            VerticalAlignment="Center"
+                                            VerticalContentAlignment="Center" />
+
+                                <ui:Button Grid.Column="4"
+                                           Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                           Appearance="Secondary"
+                                           Margin="10,0,0,0"
+                                           Width="36"
+                                           Padding="0"
+                                           VerticalAlignment="Stretch"
+                                           Click="OnDeleteClick"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 底部按钮 -->
+            <StackPanel Grid.Row="2" Margin="0,15,10,0">
+                <ui:Button Content="新增配置" 
+                           Icon="{ui:SymbolIcon Symbol=Add24}" 
+                           Appearance="Primary" 
+                           HorizontalAlignment="Stretch" 
+                           Click="OnAddClick" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

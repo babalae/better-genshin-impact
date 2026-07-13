@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "纳塔8-花羽会-1-rerun",
+    "type": "collect",
+    "author": "起个名字好难的喵",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9548.24,
+      "y": -1116.54,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 9556.45,
+      "y": -1106.74,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 9622.97,
+      "y": -1042.67,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "3000"
+    },
+    {
+      "id": 4,
+      "x": 9636.29,
+      "y": -1038.41,
+      "type": "target",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+﻿{
+  "info": {
+    "authors": [],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1757822946823,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "挪德卡莱3-蓝泊湖-2-rerun",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9099.5234375,
+      "y": 2296.4248046875
+    },
+    {
+      "action": "stop_flying",
+      "action_params": "",
+      "id": 2,
+      "move_mode": "fly",
+      "type": "path",
+      "x": 9094.8037109375,
+      "y": 2281.67529296875
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 3,
+      "move_mode": "dash",
+      "type": "path",
+      "x": 9068.869140625,
+      "y": 2268.197021484375
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 4,
+      "move_mode": "dash",
+      "type": "path",
+      "x": 9058.2861328125,
+      "y": 2253.7373046875
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 5,
+      "move_mode": "run",
+      "type": "path",
+      "x": 9041.37890625,
+      "y": 2250.19384765625
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 6,
+      "move_mode": "dash",
+      "type": "path",
+      "x": 9026.62109375,
+      "y": 2235.5322265625
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 7,
+      "move_mode": "dash",
+      "type": "path",
+      "x": 9024.693359375,
+      "y": 2198.438720703125
+    },
+    {
+      "action": "stop_flying",
+      "action_params": "1000",
+      "id": 8,
+      "move_mode": "fly",
+      "type": "path",
+      "x": 9018.0087890625,
+      "y": 2152.14990234375
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 9,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 9018.50390625,
+      "y": 2146.216064453125
+    }
+  ]
+}

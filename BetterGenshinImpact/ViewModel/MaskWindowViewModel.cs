@@ -1,0 +1,1138 @@
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls.Overlay;
+using BetterGenshinImpact.GameTask.MapMask;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
+using PresentMonFps;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Threading;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Model.MaskMap;
+using BetterGenshinImpact.Service.Model;
+using BetterGenshinImpact.Service.Model.OverlayMetric;
+using Vanara.PInvoke;
+using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
+using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
+using Rect = System.Windows.Rect;
+
+namespace BetterGenshinImpact.ViewModel
+{
+    public partial class MaskWindowViewModel : ObservableRecipient
+    {
+        private readonly ILogger<MaskWindowViewModel> _logger = App.GetLogger<MaskWindowViewModel>();
+
+        [ObservableProperty] private Rect _windowRect;
+
+        [ObservableProperty] private ObservableCollection<StatusItem> _statusList = [];
+
+        public AllConfig? Config { get; set; }
+
+        [ObservableProperty] private string _fps = "0";
+
+        [ObservableProperty] private string _overlayMetricsText = string.Empty;
+
+        [ObservableProperty] private IReadOnlyList<OverlayMetricDisplayItem> _overlayMetricDisplayItems = [];
+
+        public bool HasOverlayMetricsText => OverlayMetricDisplayItems.Count > 0;
+
+        public bool IsOverlayMetricsVisible => Config?.MaskWindowConfig.ShowOverlayMetrics == true && HasOverlayMetricsText;
+        
+        [ObservableProperty] private double _maskWindowWidth;
+
+        [ObservableProperty] private double _maskWindowHeight;
+
+        [ObservableProperty] private bool _isInBigMapUi;
+
+        [ObservableProperty] private bool _isMapPointPickerOpen;
+
+        [ObservableProperty] private bool _isMapLabelTreeLoading;
+
+        [ObservableProperty] private bool _isMapLabelItemsLoading;
+
+        [ObservableProperty] private string _mapLabelSearchText = string.Empty;
+
+        [ObservableProperty] private ObservableCollection<MapLabelCategoryVm> _mapLabelCategories = [];
+
+        [ObservableProperty] private ObservableCollection<MapLabelItemVm> _mapLabelItems = [];
+
+        [ObservableProperty] private MapLabelCategoryVm? _selectedMapLabelCategory;
+
+        [ObservableProperty] private ObservableCollection<MapLabelItemVm> _selectedMapLabelItems = [];
+
+        [ObservableProperty] private ObservableCollection<MaskMapPoint> _mapPoints = [];
+
+        [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
+
+        [ObservableProperty] private bool _isMapPointsLoading;
+
+        [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
+
+        public int MapPointTotalCount => MapPoints.Count;
+
+        public int VisibleMapPointCount => MapPoints.Count(x => !x.IsHidden);
+
+        public int HiddenMapPointCount => MapPoints.Count(IsMapPointHidden);
+
+        public bool HasMapPoints => MapPointTotalCount > 0;
+
+        public bool HasHiddenMapPoints => HiddenMapPointCount > 0;
+
+        public string MapPointVisibilitySummary => HasMapPoints
+            ? $"{VisibleMapPointCount}/{MapPointTotalCount}"
+            : "0/0";
+
+        public double MiniMapOverlayLeftRatio => MapAssets.MimiMapRect1080P.X / 1920d;
+
+        public double MiniMapOverlayTopRatio => MapAssets.MimiMapRect1080P.Y / 1080d;
+
+        public double MiniMapOverlaySizeRatio => MapAssets.MimiMapRect1080P.Width / 1080d;
+
+        public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
+
+        public sealed record MapLanguageOption(string Code, string DisplayName);
+
+        public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
+        [
+            new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
+            new(MapPointApiProvider.KongyingTavern, "空荧酒馆"),
+            new(MapPointApiProvider.HoYoLab, "HoYoLab")
+        ];
+
+        public IReadOnlyList<MapLanguageOption> HoYoLabLanguageOptions { get; } =
+        [
+            new(MapMaskConfig.HoYoLabLanguageEnUs, "English (en-us)"),
+            new(MapMaskConfig.HoYoLabLanguagePtPt, "Português (pt-pt)"),
+            new(MapMaskConfig.HoYoLabLanguageEsEs, "Español (es-es)")
+        ];
+
+        [ObservableProperty] private MapPointApiProviderOption? _selectedMapPointApiProviderOption;
+
+        [ObservableProperty] private MapLanguageOption? _selectedHoYoLabLanguageOption;
+
+        public bool IsHoYoLabProviderSelected => SelectedMapPointApiProviderOption?.Provider == MapPointApiProvider.HoYoLab;
+
+        public MaskMapPointInfoPopupViewModel PointInfoPopup { get; } = new();
+
+        private bool _isMapLabelTreeLoaded;
+        private int _mapLabelTreeLoadVersion;
+        private CancellationTokenSource? _mapLabelItemsCts;
+        private CancellationTokenSource? _mapPointListCts;
+        private int _mapLabelItemsLoadVersion;
+        private int _mapPointsLoadVersion;
+        private readonly HashSet<string> _hiddenMapPointIds = new(StringComparer.Ordinal);
+        private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
+        private readonly OverlayMetricsService? _overlayMetricsService = App.GetService<OverlayMetricsService>();
+        private bool _isRestoringMapMaskState;
+        private bool _metricsSubscribed;
+        private bool _fpsStarted;
+
+        public MaskWindowViewModel()
+        {
+            PointInfoPopup.ToggleHiddenRequested += (_, point) => ToggleMapPointHidden(point);
+
+            WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
+            {
+                if (msg.PropertyName == "RefreshSettings")
+                {
+                    UIDispatcherHelper.Invoke(RefreshSettings);
+                }
+            });
+        }
+
+        private void InitializeStatusList()
+        {
+            if (Config != null)
+            {
+                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
+                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig));
+            }
+        }
+
+        [RelayCommand]
+        private void OnLoaded()
+        {
+            RefreshSettings();
+            InitializeStatusList();
+            InitMetrics();
+        }
+
+        [RelayCommand]
+        private async Task ToggleMapPointPickerAsync()
+        {
+            if (!IsInBigMapUi)
+            {
+                IsMapPointPickerOpen = false;
+                return;
+            }
+
+            IsMapPointPickerOpen = !IsMapPointPickerOpen;
+            if (IsMapPointPickerOpen)
+            {
+                await EnsureLabelTreeLoadedAsync();
+            }
+        }
+
+        [RelayCommand(AllowConcurrentExecutions = true)]
+        private async Task SelectMapLabelCategory(MapLabelCategoryVm? category)
+        {
+            SelectedMapLabelCategory = category;
+            await StartPopulateRightListAsync(category, MapLabelSearchText);
+        }
+
+        [RelayCommand]
+        private async Task SelectMapLabelItem(MapLabelItemVm? item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            var existing = SelectedMapLabelItems.FirstOrDefault(x => x.Id == item.Id);
+            if (existing != null)
+            {
+                SelectedMapLabelItems.Remove(existing);
+            }
+            else
+            {
+                SelectedMapLabelItems.Add(item);
+                await EnsureIconLoadedAsync(item, CancellationToken.None);
+            }
+
+            SaveSelectedMapLabelItemsToStorage();
+            StartRefreshSelectedMapPoints();
+        }
+
+        [RelayCommand]
+        private void ResetSelectedMapLabelSelection()
+        {
+            if (SelectedMapLabelItems.Count == 0)
+            {
+                return;
+            }
+
+            SelectedMapLabelItems.Clear();
+            SaveSelectedMapLabelItemsToStorage();
+            StartRefreshSelectedMapPoints();
+        }
+
+        private void RefreshSettings()
+        {
+            InitConfig();
+            if (Config != null)
+            {
+                Config.MaskWindowConfig.EnsureOverlayMetricItems();
+                Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
+                OnPropertyChanged(nameof(Config));
+                OnPropertyChanged(nameof(IsOverlayMetricsVisible));
+            }
+
+            SyncSelectedMapPointApiProviderFromConfig();
+            SyncSelectedHoYoLabLanguageFromConfig();
+            LoadHiddenMapPointKeysFromStorage();
+            InitMetrics();
+        }
+
+        /// <summary>
+        /// 这个窗口比较特殊，无法直接使用构造函数依赖注入
+        /// </summary>
+        private void InitConfig()
+        {
+            if (Config == null)
+            {
+                var configService = App.GetService<IConfigService>();
+                if (configService != null)
+                {
+                    Config = configService.Get();
+                }
+            }
+        }
+
+        private void SyncSelectedMapPointApiProviderFromConfig()
+        {
+            var provider = TaskContext.Instance().Config.MapMaskConfig.MapPointApiProvider;
+            SelectedMapPointApiProviderOption = MapPointApiProviderOptions.FirstOrDefault(x => x.Provider == provider)
+                                                ?? MapPointApiProviderOptions.FirstOrDefault();
+        }
+
+        partial void OnSelectedMapPointApiProviderOptionChanged(MapPointApiProviderOption? value)
+        {
+            OnPropertyChanged(nameof(IsHoYoLabProviderSelected));
+            if (value == null)
+            {
+                return;
+            }
+
+            _ = SwitchMapPointApiProviderAsync(value.Provider);
+        }
+
+        partial void OnSelectedHoYoLabLanguageOptionChanged(MapLanguageOption? value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            _ = SwitchHoYoLabLanguageAsync(value.Code);
+        }
+
+        private void SyncSelectedHoYoLabLanguageFromConfig()
+        {
+            var lang = HoYoLabMapApiService.NormalizeLanguage(TaskContext.Instance().Config.MapMaskConfig.HoYoLabLanguage);
+            SelectedHoYoLabLanguageOption = HoYoLabLanguageOptions.FirstOrDefault(x => x.Code == lang)
+                                         ?? HoYoLabLanguageOptions.FirstOrDefault();
+        }
+
+        private async Task SwitchHoYoLabLanguageAsync(string language)
+        {
+            try
+            {
+                var normalized = HoYoLabMapApiService.NormalizeLanguage(language);
+                var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+                if (mapMaskConfig.HoYoLabLanguage == normalized)
+                {
+                    return;
+                }
+
+                mapMaskConfig.HoYoLabLanguage = normalized;
+                if (Config != null)
+                {
+                    Config.MapMaskConfig.HoYoLabLanguage = normalized;
+                }
+
+                if (mapMaskConfig.MapPointApiProvider == MapPointApiProvider.HoYoLab)
+                {
+                    await ResetAndReloadMapPointPickerAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "切换HoYoLab语言时发生异常");
+            }
+        }
+
+        private async Task SwitchMapPointApiProviderAsync(MapPointApiProvider provider)
+        {
+            try
+            {
+                var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+                if (mapMaskConfig.MapPointApiProvider == provider)
+                {
+                    return;
+                }
+
+                mapMaskConfig.MapPointApiProvider = provider;
+                if (Config != null)
+                {
+                    Config.MapMaskConfig.MapPointApiProvider = provider;
+                }
+
+                await ResetAndReloadMapPointPickerAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "切换地图点位来源时发生异常");
+            }
+        }
+
+        private async Task ResetAndReloadMapPointPickerAsync()
+        {
+            _mapLabelItemsCts?.Cancel();
+            _mapPointListCts?.Cancel();
+            PointInfoPopup.Close();
+
+            Interlocked.Increment(ref _mapLabelTreeLoadVersion);
+            _isMapLabelTreeLoaded = false;
+            MapLabelSearchText = string.Empty;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                SelectedMapLabelItems.Clear();
+                SelectedMapLabelCategory = null;
+                MapLabelCategories = [];
+                MapLabelItems = [];
+                MapPointLabels = [];
+                ReplaceMapPoints(Array.Empty<MaskMapPoint>());
+            }, DispatcherPriority.Background);
+
+            if (IsMapPointPickerOpen)
+            {
+                await EnsureLabelTreeLoadedAsync();
+            }
+        }
+
+        private void InitMetrics()
+        {
+            if (_overlayMetricsService != null && !_metricsSubscribed)
+            {
+                _overlayMetricsService.MetricsUpdated += OverlayMetricsServiceOnMetricsUpdated;
+                _metricsSubscribed = true;
+                OverlayMetricDisplayItems = _overlayMetricsService.CurrentSnapshot.Items;
+                OverlayMetricsText = _overlayMetricsService.CurrentSnapshot.CombinedText;
+            }
+
+            if (Config?.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true && !_fpsStarted)
+            {
+                // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动一次，避免无意义后台采样。
+                _fpsStarted = true;
+                nint targetHWnd = TaskContext.Instance().GameHandle;
+                _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
+                Task.Run(async () =>
+                {
+                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), result =>
+                    {
+                        Fps = $"{result.Fps:0}";
+                        _overlayMetricsService?.UpdateGameFps(result.Fps);
+                    });
+                });
+            }
+
+            _overlayMetricsService?.Refresh();
+        }
+
+        private void OverlayMetricsServiceOnMetricsUpdated(object? sender, OverlayMetricsSnapshot snapshot)
+        {
+            // OverlayMetricsService 可能在计时器线程发布事件，绑定集合必须切回 UI 线程更新。
+            UIDispatcherHelper.Invoke(() =>
+            {
+                OverlayMetricDisplayItems = snapshot.Items;
+                OverlayMetricsText = snapshot.CombinedText;
+            });
+        }
+
+        [RelayCommand]
+        private void OnOverlayLayoutCommitted(OverlayLayoutCommittedEventArgs args)
+        {
+            if (Config == null)
+            {
+                return;
+            }
+
+            if (args.Width <= 0 || args.Height <= 0)
+            {
+                return;
+            }
+
+            if (MaskWindowWidth <= 0 || MaskWindowHeight <= 0)
+            {
+                return;
+            }
+
+            var leftRatio = ToRatio(args.Left, MaskWindowWidth);
+            var topRatio = ToRatio(args.Top, MaskWindowHeight);
+            var widthRatio = ToRatio(args.Width, MaskWindowWidth);
+            var heightRatio = ToRatio(args.Height, MaskWindowHeight);
+
+            switch (args.LayoutKey)
+            {
+                case "LogTextBox":
+                    Config.MaskWindowConfig.LogTextBoxLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.LogTextBoxTopRatio = topRatio;
+                    Config.MaskWindowConfig.LogTextBoxWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.LogTextBoxHeightRatio = heightRatio;
+                    break;
+                case "StatusList":
+                    Config.MaskWindowConfig.StatusListLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.StatusListTopRatio = topRatio;
+                    Config.MaskWindowConfig.StatusListWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.StatusListHeightRatio = heightRatio;
+                    break;
+                case "Metrics":
+                    Config.MaskWindowConfig.MetricsLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.MetricsTopRatio = topRatio;
+                    Config.MaskWindowConfig.MetricsWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.MetricsHeightRatio = heightRatio;
+                    break;
+            }
+        }
+
+        [RelayCommand]
+        private void OnWindowSizeChanged(SizeChangedEventArgs args)
+        {
+            MaskWindowWidth = args.NewSize.Width;
+            MaskWindowHeight = args.NewSize.Height;
+        }
+
+        [RelayCommand]
+        private void OnExitOverlayLayoutEditMode()
+        {
+            if (Config == null)
+            {
+                return;
+            }
+
+            Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
+            SystemControl.ActivateWindow();
+        }
+
+        private static double ToRatio(double value, double baseSize)
+        {
+            if (double.IsNaN(value) || double.IsNaN(baseSize) || baseSize <= 0)
+            {
+                return 0;
+            }
+
+            var ratio = value / baseSize;
+            return ratio switch
+            {
+                < 0 => 0,
+                > 1 => 1,
+                _ => ratio
+            };
+        }
+
+        partial void OnOverlayMetricsTextChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsOverlayMetricsVisible));
+        }
+
+        partial void OnOverlayMetricDisplayItemsChanged(IReadOnlyList<OverlayMetricDisplayItem> value)
+        {
+            OnPropertyChanged(nameof(HasOverlayMetricsText));
+            OnPropertyChanged(nameof(IsOverlayMetricsVisible));
+        }
+
+        partial void OnIsInBigMapUiChanged(bool value)
+        {
+            if (!value)
+            {
+                IsMapPointPickerOpen = false;
+                PointInfoPopup.Close();
+                return;
+            }
+
+            if (!_isMapLabelTreeLoaded && HasSavedMapLabelSelection())
+            {
+                _ = EnsureLabelTreeLoadedAsync();
+            }
+        }
+
+        partial void OnMapLabelSearchTextChanged(string value)
+        {
+            _ = StartPopulateRightListAsync(SelectedMapLabelCategory, value);
+        }
+
+        private async Task EnsureLabelTreeLoadedAsync()
+        {
+            if (_isMapLabelTreeLoaded || IsMapLabelTreeLoading)
+            {
+                return;
+            }
+
+            var loadVersion = _mapLabelTreeLoadVersion;
+            IsMapLabelTreeLoading = true;
+            try
+            {
+                var service = App.GetService<IMaskMapPointService>();
+                if (service == null)
+                {
+                    MapLabelCategories = [];
+                    MapLabelItems = [];
+                    SelectedMapLabelCategory = null;
+                    return;
+                }
+
+                var categories = await service.GetLabelCategoriesAsync();
+                if (loadVersion != _mapLabelTreeLoadVersion)
+                {
+                    return;
+                }
+                if (categories.Count == 0)
+                {
+                    MapLabelCategories = [];
+                    MapLabelItems = [];
+                    SelectedMapLabelCategory = null;
+                    return;
+                }
+
+                var vms = categories.Select(x => new MapLabelCategoryVm(x)).ToList();
+                MapLabelCategories = new ObservableCollection<MapLabelCategoryVm>(vms);
+                await SelectMapLabelCategory(MapLabelCategories.FirstOrDefault());
+                await RestoreSelectedMapLabelItemsFromStorageAsync();
+                _isMapLabelTreeLoaded = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "加载地图点位树时发生异常");
+            }
+            finally
+            {
+                IsMapLabelTreeLoading = false;
+                // if (!_isMapLabelTreeLoaded && IsMapPointPickerOpen && loadVersion != _mapLabelTreeLoadVersion)
+                // {
+                //     _ = EnsureLabelTreeLoadedAsync();
+                // }
+            }
+        }
+
+        private bool HasSavedMapLabelSelection()
+        {
+            return MapMaskStateStorage.Read(GetMapMaskDataSourceKey()).SelectedLabelItems.Count > 0;
+        }
+
+        private async Task RestoreSelectedMapLabelItemsFromStorageAsync()
+        {
+            var savedItems = MapMaskStateStorage.Read(GetMapMaskDataSourceKey()).SelectedLabelItems;
+            if (savedItems.Count == 0)
+            {
+                return;
+            }
+
+            _isRestoringMapMaskState = true;
+            try
+            {
+                SelectedMapLabelItems.Clear();
+                foreach (var savedItem in savedItems)
+                {
+                    var item = FindMapLabelItem(savedItem.Id)
+                               ?? new MapLabelItemVm(new MaskMapPointLabel
+                               {
+                                   LabelId = savedItem.Id,
+                                   LabelIds = savedItem.LabelIds ?? [],
+                                   ParentId = savedItem.ParentId,
+                                   Name = savedItem.Name,
+                                   IconUrl = savedItem.IconUrl,
+                                   PointCount = savedItem.PointCount
+                               });
+
+                    if (SelectedMapLabelItems.Any(x => x.Id == item.Id))
+                    {
+                        continue;
+                    }
+
+                    SelectedMapLabelItems.Add(item);
+                    await EnsureIconLoadedAsync(item, CancellationToken.None);
+                }
+            }
+            finally
+            {
+                _isRestoringMapMaskState = false;
+            }
+
+            if (SelectedMapLabelItems.Count > 0)
+            {
+                StartRefreshSelectedMapPoints();
+            }
+        }
+
+        private MapLabelItemVm? FindMapLabelItem(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return null;
+            }
+
+            return MapLabelCategories
+                .SelectMany(x => x.Items)
+                .FirstOrDefault(x => x.Id == id);
+        }
+
+        private void SaveSelectedMapLabelItemsToStorage()
+        {
+            if (_isRestoringMapMaskState)
+            {
+                return;
+            }
+
+            var selectedItems = SelectedMapLabelItems
+                .Select(x => new MapMaskSelectedLabelState
+                {
+                    Id = x.Id,
+                    LabelIds = x.LabelIds.ToList(),
+                    ParentId = x.ParentId,
+                    Name = x.Name,
+                    IconUrl = x.IconUrl,
+                    PointCount = x.PointCount
+                })
+                .ToList();
+            MapMaskStateStorage.Update(GetMapMaskDataSourceKey(), state => state.SelectedLabelItems = selectedItems);
+        }
+
+        private void StartRefreshSelectedMapPoints()
+        {
+            var loadVersion = Interlocked.Increment(ref _mapPointsLoadVersion);
+            _mapPointListCts?.Cancel();
+            _mapPointListCts = new CancellationTokenSource();
+            var ct = _mapPointListCts.Token;
+            _ = RefreshSelectedMapPointsAsync(loadVersion, ct);
+        }
+
+        private async Task RefreshSelectedMapPointsAsync(int loadVersion, CancellationToken ct)
+        {
+            try
+            {
+                if (loadVersion == _mapPointsLoadVersion)
+                {
+                    IsMapPointsLoading = true;
+                }
+
+                var selectedItems = await Application.Current.Dispatcher.InvokeAsync(
+                    () => SelectedMapLabelItems.ToList(),
+                    DispatcherPriority.Background);
+                ct.ThrowIfCancellationRequested();
+                if (selectedItems.Count == 0)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        MapPointLabels = [];
+                        ReplaceMapPoints(Array.Empty<MaskMapPoint>());
+                    }, DispatcherPriority.Background);
+                    return;
+                }
+
+                var service = App.GetService<IMaskMapPointService>();
+                if (service == null)
+                {
+                    return;
+                }
+
+                var selectedModels = selectedItems.Select(x => x.ToModel()).ToList();
+                var result = await service.GetPointsAsync(selectedModels, ct);
+                ct.ThrowIfCancellationRequested();
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MapPointLabels = new ObservableCollection<MaskMapPointLabel>(result.Labels);
+                    ReplaceMapPoints(result.Points);
+                }, DispatcherPriority.Background);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "刷新地图点位列表时发生异常");
+            }
+            finally
+            {
+                if (loadVersion == _mapPointsLoadVersion)
+                {
+                    IsMapPointsLoading = false;
+                }
+            }
+        }
+
+        private Task StartPopulateRightListAsync(MapLabelCategoryVm? category, string? searchText)
+        {
+            var loadVersion = Interlocked.Increment(ref _mapLabelItemsLoadVersion);
+            _mapLabelItemsCts?.Cancel();
+            _mapLabelItemsCts?.Dispose();
+            _mapLabelItemsCts = new CancellationTokenSource();
+            var ct = _mapLabelItemsCts.Token;
+            return PopulateRightListAsync(loadVersion, category, searchText, ct);
+        }
+
+        private async Task PopulateRightListAsync(int loadVersion, MapLabelCategoryVm? category, string? searchText, CancellationToken ct)
+        {
+            try
+            {
+                if (loadVersion == _mapLabelItemsLoadVersion)
+                {
+                    IsMapLabelItemsLoading = true;
+                }
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (loadVersion == _mapLabelItemsLoadVersion)
+                    {
+                        MapLabelItems = [];
+                    }
+                }, DispatcherPriority.Background);
+
+                if (category?.Items == null)
+                {
+                    return;
+                }
+
+                var src = category.Items.AsEnumerable();
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    var q = searchText.Trim();
+                    src = src.Where(x => x.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+                }
+
+                const int batchSize = 24;
+                var batch = new List<MapLabelItemVm>(batchSize);
+
+                foreach (var item in src)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (loadVersion != _mapLabelItemsLoadVersion)
+                    {
+                        return;
+                    }
+                    batch.Add(item);
+                    if (batch.Count < batchSize)
+                    {
+                        continue;
+                    }
+
+                    var snapshot = batch.ToArray();
+                    batch.Clear();
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        if (loadVersion != _mapLabelItemsLoadVersion)
+                        {
+                            return;
+                        }
+                        foreach (var it in snapshot)
+                        {
+                            MapLabelItems.Add(it);
+                        }
+                    }, DispatcherPriority.Background);
+
+                    foreach (var it in snapshot)
+                    {
+                        _ = EnsureIconLoadedAsync(it, ct);
+                    }
+
+                    await Task.Delay(1, ct);
+                }
+
+                if (batch.Count > 0)
+                {
+                    var snapshot = batch.ToArray();
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        if (loadVersion != _mapLabelItemsLoadVersion)
+                        {
+                            return;
+                        }
+                        foreach (var it in snapshot)
+                        {
+                            MapLabelItems.Add(it);
+                        }
+                    }, DispatcherPriority.Background);
+
+                    foreach (var it in snapshot)
+                    {
+                        _ = EnsureIconLoadedAsync(it, ct);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                if (loadVersion == _mapLabelItemsLoadVersion)
+                {
+                    IsMapLabelItemsLoading = false;
+                }
+            }
+        }
+
+        private async Task EnsureIconLoadedAsync(MapLabelItemVm item, CancellationToken ct)
+        {
+            if (item.IconImage != null || string.IsNullOrEmpty(item.IconUrl))
+            {
+                return;
+            }
+
+
+            try
+            {
+                await _iconLoadSemaphore.WaitAsync(ct);
+                try
+                {
+                    await item.LoadIconAsync(ct);
+                }
+                finally
+                {
+                    _iconLoadSemaphore.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "加载地图点位图标失败");
+            }
+        }
+
+        [RelayCommand]
+        private async Task OnPointClick(MaskMapPointClickArgs? args)
+        {
+            var point = args?.Point;
+            if (point == null || !IsInBigMapUi)
+            {
+                return;
+            }
+
+            await PointInfoPopup.ShowAsync(point, args!.AnchorPosition, ResolvePointTitle(point), IsMapPointHidden(point));
+        }
+
+        private string ResolvePointTitle(MaskMapPoint point)
+        {
+            var labelName = MapPointLabels.FirstOrDefault(x => x.LabelId == point.LabelId)?.Name;
+            if (!string.IsNullOrWhiteSpace(labelName))
+            {
+                return labelName;
+            }
+
+            return $"点位 {point.Id}";
+        }
+
+        [RelayCommand]
+        private Task OnPointRightClick(MaskMapPoint? point)
+        {
+            ToggleMapPointHidden(point);
+            return Task.CompletedTask;
+        }
+
+        [RelayCommand]
+        private Task OnPointHover(MaskMapPoint? point)
+        {
+            if (point != null)
+            {
+                // 悬停逻辑
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RelayCommand]
+        private void ToggleMapPointHidden(MaskMapPoint? point)
+        {
+            if (point == null)
+            {
+                return;
+            }
+
+            var key = GetMapPointKey(point);
+            if (!_hiddenMapPointIds.Add(key))
+            {
+                _hiddenMapPointIds.Remove(key);
+            }
+
+            ApplyMapPointHiddenStates();
+            SaveHiddenMapPointKeysToStorage();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        [RelayCommand]
+        private void HideAllMapPoints()
+        {
+            if (MapPoints.Count == 0)
+            {
+                return;
+            }
+
+            _hiddenMapPointIds.Clear();
+            foreach (var point in MapPoints)
+            {
+                _hiddenMapPointIds.Add(GetMapPointKey(point));
+            }
+
+            ApplyMapPointHiddenStates();
+            SaveHiddenMapPointKeysToStorage();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        [RelayCommand]
+        private void ShowAllMapPoints()
+        {
+            if (_hiddenMapPointIds.Count == 0)
+            {
+                return;
+            }
+
+            _hiddenMapPointIds.Clear();
+            ApplyMapPointHiddenStates();
+            SaveHiddenMapPointKeysToStorage();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        private void ReplaceMapPoints(IEnumerable<MaskMapPoint> points)
+        {
+            LoadHiddenMapPointKeysFromStorage();
+            var pointList = points.ToList();
+            foreach (var point in pointList)
+            {
+                point.IsHidden = IsMapPointHidden(point);
+            }
+
+            MapPoints = new ObservableCollection<MaskMapPoint>(pointList);
+            NotifyMapPointVisibilityPropertiesChanged();
+            SyncPointInfoPopupHiddenState();
+        }
+
+        private void ApplyMapPointHiddenStates()
+        {
+            var pointList = MapPoints.ToList();
+            foreach (var point in pointList)
+            {
+                point.IsHidden = IsMapPointHidden(point);
+            }
+
+            MapPoints = new ObservableCollection<MaskMapPoint>(pointList);
+            NotifyMapPointVisibilityPropertiesChanged();
+        }
+
+        private bool IsMapPointHidden(MaskMapPoint point)
+        {
+            return _hiddenMapPointIds.Contains(GetMapPointKey(point));
+        }
+
+        private static string GetMapPointKey(MaskMapPoint point)
+        {
+            var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+            var provider = mapMaskConfig.MapPointApiProvider.ToString();
+            if (mapMaskConfig.MapPointApiProvider != MapPointApiProvider.HoYoLab)
+            {
+                return $"{provider}:{point.Id}";
+            }
+
+            var language = HoYoLabMapApiService.NormalizeLanguage(mapMaskConfig.HoYoLabLanguage);
+            return $"{provider}:{language}:{point.Id}";
+        }
+
+        private static string GetMapMaskDataSourceKey()
+        {
+            var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+            var provider = mapMaskConfig.MapPointApiProvider.ToString();
+            if (mapMaskConfig.MapPointApiProvider != MapPointApiProvider.HoYoLab)
+            {
+                return provider;
+            }
+
+            var language = HoYoLabMapApiService.NormalizeLanguage(mapMaskConfig.HoYoLabLanguage);
+            return $"{provider}_{language}";
+        }
+
+        private void LoadHiddenMapPointKeysFromStorage()
+        {
+            _hiddenMapPointIds.Clear();
+
+            var keys = MapMaskStateStorage.Read(GetMapMaskDataSourceKey()).HiddenMapPointKeys;
+            foreach (var key in keys)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    _hiddenMapPointIds.Add(key);
+                }
+            }
+        }
+
+        private void SaveHiddenMapPointKeysToStorage()
+        {
+            if (_isRestoringMapMaskState)
+            {
+                return;
+            }
+
+            var hiddenMapPointKeys = _hiddenMapPointIds
+                .OrderBy(x => x, StringComparer.Ordinal)
+                .ToList();
+            MapMaskStateStorage.Update(GetMapMaskDataSourceKey(), state => state.HiddenMapPointKeys = hiddenMapPointKeys);
+        }
+
+        private void SyncPointInfoPopupHiddenState()
+        {
+            var currentPoint = PointInfoPopup.CurrentPoint;
+            if (currentPoint != null)
+            {
+                PointInfoPopup.SetHiddenState(IsMapPointHidden(currentPoint));
+            }
+        }
+
+        partial void OnMapPointsChanged(ObservableCollection<MaskMapPoint> value)
+        {
+            NotifyMapPointVisibilityPropertiesChanged();
+        }
+
+        private void NotifyMapPointVisibilityPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(MapPointTotalCount));
+            OnPropertyChanged(nameof(VisibleMapPointCount));
+            OnPropertyChanged(nameof(HiddenMapPointCount));
+            OnPropertyChanged(nameof(HasMapPoints));
+            OnPropertyChanged(nameof(HasHiddenMapPoints));
+            OnPropertyChanged(nameof(MapPointVisibilitySummary));
+        }
+    }
+
+    public partial class MapLabelCategoryVm : ObservableObject
+    {
+        public string Id { get; }
+        public string Name { get; }
+        public string IconUrl { get; }
+        public ObservableCollection<MapLabelItemVm> Items { get; }
+
+        public MapLabelCategoryVm(MaskMapPointLabel category)
+        {
+            Id = category.LabelId;
+            Name = category.Name;
+            IconUrl = category.IconUrl;
+            Items = new ObservableCollection<MapLabelItemVm>((category.Children ?? Array.Empty<MaskMapPointLabel>()).Select(x => new MapLabelItemVm(x)));
+        }
+    }
+
+    public partial class MapLabelItemVm : ObservableObject
+    {
+        public string Id { get; }
+        public IReadOnlyList<string> LabelIds { get; }
+        public string Name { get; }
+        public string IconUrl { get; }
+        public int PointCount { get; }
+        public string ParentId { get; }
+
+        [ObservableProperty] private ImageSource? _iconImage;
+
+        public MapLabelItemVm(MaskMapPointLabel item)
+        {
+            Id = item.LabelId;
+            LabelIds = item.LabelIds is { Count: > 0 } ? item.LabelIds : new[] { item.LabelId };
+            Name = item.Name;
+            IconUrl = item.IconUrl;
+            PointCount = item.PointCount;
+            ParentId = item.ParentId;
+        }
+
+        public MaskMapPointLabel ToModel()
+        {
+            return new MaskMapPointLabel
+            {
+                LabelId = Id,
+                LabelIds = LabelIds,
+                ParentId = ParentId,
+                Name = Name,
+                IconUrl = IconUrl,
+                PointCount = PointCount
+            };
+        }
+
+        public async Task LoadIconAsync(CancellationToken ct)
+        {
+            if (IconImage != null || string.IsNullOrEmpty(IconUrl))
+            {
+                return;
+            }
+
+            var img = await MapIconImageCache.GetAsync(IconUrl, ct);
+            if (img == null)
+            {
+                return;
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(() => { IconImage = img; }, DispatcherPriority.Background);
+        }
+    }
+}

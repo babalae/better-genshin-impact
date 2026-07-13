@@ -1,0 +1,107 @@
+{
+  "info": {
+    "authors": [],
+    "bgi_version": "0.52.0",
+    "map_match_method": "TemplateMatch",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1755828864835,
+    "map_name": "Teyvat",
+    "name": "未命名路径",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 2289.0078125,
+      "y": -1197.31640625
+    },
+    {
+      "action": "combat_script",
+      "action_params": "wait(1.5)",
+      "id": 2,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 2270.921875,
+      "y": -1181.94580078125
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 3,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 2266.435546875,
+      "y": -1173.31787109375
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 4,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 2238.7578125,
+      "y": -1184.73046875
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 5,
+      "move_mode": "fly",
+      "type": "path",
+      "x": 2215.11328125,
+      "y": -1197.294921875
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 6,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 2191.3359375,
+      "y": -1214.46533203125
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 7,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 2119.0048828125,
+      "y": -1231.728515625
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 8,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 2117.5,
+      "y": -1254.09521484375
+    },
+    {
+      "action": "stop_flying",
+      "action_params": "",
+      "id": 9,
+      "move_mode": "fly",
+      "type": "path",
+      "x": 2114.4345703125,
+      "y": -1308.1357421875
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 10,
+      "move_mode": "run",
+      "type": "path",
+      "x": 2110.509765625,
+      "y": -1331.59130859375
+    }
+  ]
+}

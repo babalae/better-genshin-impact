@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "纳塔9-翘枝崖-3",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path",
+      "x": 9887.12,
+      "y": -1042.13,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 9936.5,
+      "y": -1002.74,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 9944.54,
+      "y": -938.69,
+      "type": "path",
+      "move_mode": "swim",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 9938.82,
+      "y": -933.87,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

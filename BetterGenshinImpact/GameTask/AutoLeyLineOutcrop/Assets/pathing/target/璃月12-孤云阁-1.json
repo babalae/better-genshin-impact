@@ -1,0 +1,22 @@
+{
+  "info": {
+    "name": "璃月12-孤云阁-1",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "孤云阁小地图无法识别，需要开图识别",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749741708513
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -643.79,
+      "y": -42.59,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

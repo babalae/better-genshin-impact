@@ -1,0 +1,259 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<AssemblyName>BetterGI</AssemblyName>
+		<Version>0.62.1-alpha.1</Version>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>true</UseWindowsForms>
+		<LangVersion>12.0</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ApplicationIcon>Resources\Images\logo.ico</ApplicationIcon>
+		<Platforms>x64</Platforms>
+		<DebugType>embedded</DebugType>
+	</PropertyGroup>
+
+<!--	<ItemGroup>
+		<None Remove="Assets\Images\*.jpg" />
+		<None Remove="Assets\Images\*" />
+		<None Remove="Assets\Images\*.png" />
+		<None Remove="Assets\Images\*.ico" />
+		<None Remove="Assets\Fonts\*.ttf" />
+		<None Remove="Assets\Highlighting\*.xshd" />
+		<None Remove="Assets\Strings\*.html" />
+		<None Remove="Assets\Strings\*.md" />
+		<None Remove="Assets\Audios\*.mp3" />
+		<None Update="Assets\Config\*"/>
+	</ItemGroup>-->
+
+	<ItemGroup>
+		<Resource Include="Resources\Images\*.jpg" />
+		<Resource Include="Resources\Images\Anniversary\*" />
+		<Resource Include="Resources\Images\*.png" />
+		<Resource Include="Resources\Images\*.ico" />
+		<Resource Include="Resources\Fonts\*.ttf" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+		<PackageReference Include="BehaviourTree" Version="1.0.73" />
+
+		
+		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.19" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.28" />
+		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.17" />
+		
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+		<PackageReference Include="DeviceId" Version="6.9.0" />
+		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
+		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
+		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
+		<PackageReference Include="HungarianAlgorithm" Version="2.3.5" />
+		<PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+		<PackageReference Include="LazyCache" Version="2.4.0" />
+		<PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+		<PackageReference Include="MailKit" Version="4.14.0" />
+		<PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+		<!--排除掉cpu的runtime dll-->
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
+		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
+		<PackageReference Include="MimeKit" Version="4.15.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
+		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
+		<PackageReference Include="OpenCvSharp4.Windows" Version="4.11.0.20250507" />
+		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
+		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
+		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
+		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
+		<PackageReference Include="NCalc" Version="6.2.0" />
+		<PackageReference Include="PresentMonFps" Version="2.0.5" />
+		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
+		<PackageReference Include="Semver" Version="3.0.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
+<!--		<PackageReference Include="supabase-csharp" Version="0.16.2" />-->
+		<PackageReference Include="System.Drawing.Common" Version="10.0.7" />
+		<PackageReference Include="System.IO.Hashing" Version="9.0.4" />
+		<PackageReference Include="TorchSharp" Version="0.105.0" />
+		<PackageReference Include="Vanara.PInvoke.CoreAudio" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
+		<PackageReference Include="XamlAnimatedGif" Version="2.3.1" />
+		<PackageReference Include="WPF-UI" Version="4.3.0" />
+		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.3.0" />
+		<PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.0" />
+		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
+		<PackageReference Include="YamlDotNet" Version="16.3.0" />
+		<PackageReference Include="YoloSharp" Version="6.0.3" />
+	</ItemGroup>
+
+	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
+		<ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
+		<ProjectReference Include="..\Fischless.WindowsInput\Fischless.WindowsInput.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="GameTask\**\Recognition.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\**">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\**">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Config\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoLeyLineOutcrop\Assets\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\LogParse\Assets\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\tcg_character_card.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoPick\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\*.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoTrackPath\Assets\tp.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\Json\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoMusicGame\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\GameLoading\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoEat\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickBuy\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickClaimReward\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\LogParse\Assets\log.css">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\LogParse\Assets\log.js">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\GameLoading\Assets\1920x1080\enter_game.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\in_domain.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoDomain\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoBoss\Assets\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\I18n\en.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="GameTask\OneDragon\" />
+	  <Folder Include="GameTask\UseRedeemCode\Assets\1920x1080\" />
+	  <Folder Include="Resources\" />
+	  <Folder Include="Service\Notification\Builder\" />
+	  <Folder Include="User\AutoPathing\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Page Update="View\Windows\WelcomeDialog.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	    <XamlRuntime>Wpf</XamlRuntime>
+	    <SubType>Designer</SubType>
+	  </Page>
+	  <Page Update="View\Windows\MapPathingDevWindow.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	    <XamlRuntime>Wpf</XamlRuntime>
+	    <SubType>Designer</SubType>
+	  </Page>
+	  <Page Update="View\Pages\View\HardwareAccelerationView.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	    <XamlRuntime>Wpf</XamlRuntime>
+	    <SubType>Designer</SubType>
+	  </Page>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="View\Windows\WelcomeDialog.xaml.cs">
+	    <SubType>Code</SubType>
+	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
+	</ItemGroup>
+	
+</Project>

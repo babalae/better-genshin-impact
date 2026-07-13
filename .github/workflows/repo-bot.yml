@@ -1,0 +1,55 @@
+name: Repo Bot
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+      - labeled
+  issue_comment:
+    types:
+      - created
+      - edited
+
+jobs:
+  repo-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Detect GitHub App configuration
+        id: auth-mode
+        shell: bash
+        env:
+          REPO_BOT_GITHUB_APP_ID: ${{ vars.REPO_BOT_GITHUB_APP_ID }}
+          REPO_BOT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$REPO_BOT_GITHUB_APP_ID" ] && [ -n "$REPO_BOT_GITHUB_APP_PRIVATE_KEY" ]; then
+            echo "use_app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "use_app=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create GitHub App token
+        if: ${{ steps.auth-mode.outputs.use_app == 'true' }}
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.REPO_BOT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Run Repo Bot
+        uses: ddaodan/bettergi-github-bot@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO_BOT_GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO_BOT_AI_API_KEY: ${{ secrets.REPO_BOT_AI_API_KEY }}
+          REPO_BOT_AI_BASE_URL: ${{ vars.REPO_BOT_AI_BASE_URL }}
+        with:
+          config-path: .github/repo-bot.yml
+          config-overrides-json: ${{ vars.REPO_BOT_CONFIG_OVERRIDES_JSON }}

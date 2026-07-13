@@ -1,0 +1,22 @@
+name: Feel free to express / 自由描述
+description: 记录你想反馈的内容 / Share general feedback
+title: "[feedback] "
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认 / Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: 我已经搜索过现有 issue，确认这不是重复反馈 / I have searched existing issues and confirmed this is not duplicate feedback
+          required: true
+        - label: "我已阅读过[文档](https://www.bettergi.com/doc.html)，确认文档的内容无法解决我的问题或覆盖我的反馈 / I have read the [documentation](https://www.bettergi.com/doc.html) and confirmed it does not solve my problem or cover my feedback"
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 描述
+      description: Description
+      placeholder: 请描述你想反馈的内容 / Describe what you want to share
+    validations:
+      required: true

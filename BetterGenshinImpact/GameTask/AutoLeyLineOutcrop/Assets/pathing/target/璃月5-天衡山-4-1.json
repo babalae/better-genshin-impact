@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月5-天衡山-4-1",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "分支1，有丘丘人弓箭手和炸药桶，最好带盾",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 936.52,
+      "y": -489.9,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+<Window x:Class="BetterGenshinImpact.View.Windows.PictureInPictureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="原神 - 画中画"
+        Width="420"
+        Height="240"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        MouseWheel="OnMouseWheel"
+        MouseLeftButtonDown="OnMouseLeftButtonDown"
+        MouseLeftButtonUp="OnMouseLeftButtonUp"
+        MouseMove="OnMouseMove"
+        MouseRightButtonUp="OnMouseRightButtonUp">
+    <Border x:Name="ContainerBorder"
+            BorderBrush="#40FFFFFF"
+            BorderThickness="1"
+            CornerRadius="16"
+            SnapsToDevicePixels="True"
+            SizeChanged="OnBorderSizeChanged">
+        <Image x:Name="PreviewImage"
+               Stretch="Uniform"
+               RenderOptions.BitmapScalingMode="Fant"
+               RenderOptions.EdgeMode="Aliased" />
+    </Border>
+</Window>

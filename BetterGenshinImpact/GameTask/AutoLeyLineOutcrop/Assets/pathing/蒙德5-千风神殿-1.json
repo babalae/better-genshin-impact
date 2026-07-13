@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "蒙德5-千风神殿-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -1505.87,
+      "y": 2296.26,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -1493.72,
+      "y": 2292.88,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -1449.97,
+      "y": 2280.91,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": -1453.46,
+      "y": 2282.88,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

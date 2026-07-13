@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "纳塔9-翘枝崖-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.2",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 9945.54,
+      "y": -1192.6,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "info": {
+    "name": "须弥5-阿如村-5-rerun",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "阿如村的石山代码，完全是由于，中间没有任何锚点可以中转，导致每一个js都必须从上一个点开始跑，这应该怪ch，使我多花了1h确保它能运行。",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 4409.72,
+      "y": -1874.67,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4365.79,
+      "y": -1855.4,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4365.79,
+      "y": -1855.4,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "j,wait(0.2),j"
+    },
+    {
+      "id": 4,
+      "x": 4368.56,
+      "y": -1824.02,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 4358.81,
+      "y": -1790.16,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 6,
+      "x": 4295.9,
+      "y": -1842.23,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 7,
+      "x": 4263.28,
+      "y": -1895.46,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "100"
+    },
+    {
+      "id": 8,
+      "x": 4234.8,
+      "y": -1912.06,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 9,
+      "x": 4205.16,
+      "y": -1921.99,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 10,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 11,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 12,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 13,
+      "x": 4148.92,
+      "y": -2006.51,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 14,
+      "x": 4237.24,
+      "y": -1915.67,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 15,
+      "x": 4205.1,
+      "y": -1922.03,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 16,
+      "x": 4156.99,
+      "y": -1991.5,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "down",
+      "locked": false
+    },
+    {
+      "id": 17,
+      "x": 4156.99,
+      "y": -1991.5,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "down",
+      "locked": false
+    },
+    {
+      "id": 18,
+      "x": 4156.99,
+      "y": -1991.5,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "down"
+    },
+    {
+      "id": 19,
+      "x": 4144.18,
+      "y": -2014.48,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 20,
+      "x": 4164.4,
+      "y": -2100.69,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 21,
+      "x": 4206.02,
+      "y": -2160.05,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 22,
+      "x": 4211.01,
+      "y": -2165.65,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

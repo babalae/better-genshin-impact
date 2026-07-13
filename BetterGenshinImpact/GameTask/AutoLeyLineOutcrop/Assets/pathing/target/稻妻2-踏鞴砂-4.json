@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "稻妻2-踏鞴砂-4",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -3429.72,
+      "y": -3419.55,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

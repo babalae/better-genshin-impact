@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "枫丹6-厄里那斯-5",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 4607.19,
+      "y": 2316.91,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Build results
+Build/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Mine
+Tmp/
+/packages/
+node_modules/
+github_actions_cache/
+
+*.zip
+
+# Rider
+.idea
+
+__pycache__/
+
+
+# Trae
+.trae/*
+!.trae/rules/
+!.trae/rules/**
+!.trae/skills/
+!.trae/skills/**
+
+# Claude
+.claude/*

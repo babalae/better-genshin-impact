@@ -1,0 +1,27 @@
+main:
+  # 自定义按钮可触发的事件
+  web_trigger_one:
+    - docker:
+        image: python:3.11
+      imports:
+        - https://cnb.cool/bettergi/secret/-/blob/main/env.yml
+      stages:
+        - name: 下载构建物并上传
+          script: |
+              cd .github/workflows
+              pip install -r requirements.txt
+              python github_download_and_cnb_upload.py --cnb-token $CNB_TOKEN --github-token $GITHUB_TOKEN
+              echo done!
+  api_trigger_one:
+    - docker:
+        image: python:3.11
+      imports:
+        - https://cnb.cool/bettergi/secret/-/blob/main/env.yml
+      stages:
+        - name: API触发上传
+          script: |
+              echo run id: $RUN_ID
+              cd .github/workflows
+              pip install -r requirements.txt
+              python github_download_and_cnb_upload.py --cnb-token $CNB_TOKEN --github-token $GITHUB_TOKEN --run-id $RUN_ID
+              echo api done!

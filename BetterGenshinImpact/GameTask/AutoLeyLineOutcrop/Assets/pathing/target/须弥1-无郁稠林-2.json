@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "须弥1-无郁稠林-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "实际使用时，录制器朝向几乎不能起到任何作用（不是“应起到的作用”）",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 2317.29,
+      "y": -115.35,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

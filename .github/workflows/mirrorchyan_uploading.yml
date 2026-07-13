@@ -1,0 +1,89 @@
+name: mirrorchyan_uploading
+
+on:
+  workflow_dispatch:
+  release:
+    types: [released]
+
+jobs:
+  mirrorchyan:
+    if: github.repository_owner == 'babalae'
+    runs-on: windows-latest
+    steps:
+      - name: 📥 Download release
+        uses: robinraju/release-downloader@v1.8
+        with:
+          latest: true
+          fileName: "*"
+
+      - name: 📥 Download kachina-builder release
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "YuehaiTeam/kachina-installer"
+          latest: true
+          fileName: "kachina-builder.exe"
+
+      - name: Embed Dotnet and VCRedist
+        shell: bash
+        run: |
+          # dotnet
+          VERSION_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0/latest.version"
+          VERSION=$(curl -fsSL "$VERSION_URL" | tr -d '\r\n')
+          if [ -z "$VERSION" ]; then
+              echo "Cannot get the latest version from $VERSION_URL"
+              exit 1
+          fi
+          INSTALLER_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/${VERSION}/windowsdesktop-runtime-${VERSION}-win-x64.exe"
+          OUTPUT="windowsdesktop-runtime-${VERSION}-win-x64.exe"
+          echo "Downloading Windows Desktop Runtime version $VERSION from $INSTALLER_URL"
+          curl -fSL -o "$OUTPUT" "$INSTALLER_URL"
+          # vcredist
+          echo "Downloading VCRedist"
+          curl -fSL -o "vc_redist.x64.exe" "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+          # embed
+          echo "Embedding runtimes"
+          ./kachina-builder.exe append -o  ./BetterGI.Install.*.exe -f "$OUTPUT" -n "Microsoft.DotNet.DesktopRuntime.8" -f "vc_redist.x64.exe" -n "Microsoft.VCRedist.2015+.x64"
+          ./kachina-builder.exe extract -i ./BetterGI.Install.*.exe -f ./metadata.json -n "\0META"
+      
+      - name: Extract 7z and create zip
+        shell: bash
+        run: |
+          7z a -tzip BetterGI.Install.zip ./BetterGI.Install.*.exe -mx=1 -r -y
+          choco install wget --no-progress 
+          7z x BetterGI_v*.7z -oun7z
+          mv ./metadata.json ./un7z/BetterGI/.metadata.json
+          cd un7z
+          7z a -tzip ../BetterGI.zip ./BetterGI -mx=5 -r -y
+
+      - name: Determine version number
+        id: get-version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            LATEST_TAG=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${{ github.repository }}/releases/latest \
+              | jq -r '.tag_name')
+            echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Zip
+        uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: local
+          mirrorchyan_rid: BGI
+          filename: "BetterGI.zip"
+          version_name: ${{ steps.get-version.outputs.version }}
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          os: win
+          arch: x64
+      - name: Upload Exe
+        uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: local
+          mirrorchyan_rid: BGI
+          filename: "BetterGI.Install.zip"
+          version_name: ${{ steps.get-version.outputs.version }}
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+

@@ -1,0 +1,75 @@
+{
+  "info": {
+    "name": "璃月12-孤云阁-1",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "孤云阁小地图无法识别，需要开图识别",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749741708513
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -355.11,
+      "y": -271.78,
+      "action_params": "",
+      "point_ext_params": {
+        "misidentification": {
+          "type": [
+            "unrecognized"
+          ],
+          "handling_mode": "mapRecognition",
+          "arrival_time": 0
+        },
+        "description": "",
+        "monster_tag": ""
+      }
+    },
+    {
+      "id": 2,
+      "x": -636.7,
+      "y": -54.87,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "point_ext_params": {
+        "misidentification": {
+          "type": [
+            "unrecognized"
+          ],
+          "handling_mode": "mapRecognition",
+          "arrival_time": 0
+        },
+        "description": "孤云阁小地图无法识别",
+        "monster_tag": ""
+      }
+    },
+    {
+      "id": 3,
+      "x": -643.79,
+      "y": -42.59,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "point_ext_params": {
+        "misidentification": {
+          "type": [
+            "unrecognized"
+          ],
+          "handling_mode": "mapRecognition",
+          "arrival_time": 0
+        },
+        "description": "",
+        "monster_tag": ""
+      }
+    }
+  ]
+}

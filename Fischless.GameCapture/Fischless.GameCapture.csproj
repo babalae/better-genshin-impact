@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>x64</Platforms>
+		<UseWindowsForms>True</UseWindowsForms>
+		<UseWPF>True</UseWPF>
+		<LangVersion>12.0</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SharpDX.D3DCompiler" Version="4.2.0" />
+		<PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+		<PackageReference Include="SharpDX.DirectInput" Version="4.2.0" />
+		<PackageReference Include="Vanara.PInvoke.DwmApi" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.Gdi32" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
+		<PackageReference Include="Vanara.Windows.Extensions" Version="4.1.3" />
+		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
+		<PackageReference Include="OpenCvSharp4.Windows" Version="4.11.0.20250507" />
+		<PackageReference Include="System.Drawing.Common" Version="10.0.7" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "璃月5-天衡山-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "花边上有爆炸果子",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 710.68,
+      "y": -772.44,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 883.52,
+      "y": -789.21,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 885.79,
+      "y": -780.15,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

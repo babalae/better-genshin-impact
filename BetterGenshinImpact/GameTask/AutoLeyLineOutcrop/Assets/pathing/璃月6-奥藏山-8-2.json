@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-8-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "绕开冰雾花",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 628.42,
+      "y": 468.43,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 674.7,
+      "y": 477.64,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 673.21,
+      "y": 528.26,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "100"
+    },
+    {
+      "id": 4,
+      "x": 683.1,
+      "y": 529.06,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "info": {
+    "name": "纳塔12-浪浪湾-1",
+    "bgi_version": "0.45.0",
+    "type": "collect",
+    "order": 0,
+    "tags": [],
+    "enable_monster_loot_split": false,
+    "map_name": "Teyvat",
+    "map_match_method": "",
+    "items": [],
+    "authors": [],
+    "version": "1.0",
+    "description": "",
+    "last_modified_time": 1754569850355
+  },
+  "config": {
+    "realtime_triggers": {
+      "AutoPick": true
+    }
+  },
+  "farming_info": {
+    "allow_farming_count": false,
+    "normal_mob_count": 0,
+    "elite_mob_count": 0,
+    "primary_target": "",
+    "duration_seconds": 0,
+    "elite_details": "",
+    "total_mora": 0
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 14733.1484375,
+      "y": 724.59521484375,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "point_ext_params": {
+        "misidentification": {
+          "type": [
+            "unrecognized"
+          ],
+          "handling_mode": "previousDetectedPoint",
+          "arrival_time": 0
+        },
+        "description": "",
+        "enable_monster_loot_split": false
+      }
+    },
+    {
+      "id": 2,
+      "x": 14799.513671875,
+      "y": 631.3671875,
+      "type": "target",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}
