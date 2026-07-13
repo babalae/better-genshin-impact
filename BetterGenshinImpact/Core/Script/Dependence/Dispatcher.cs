@@ -393,7 +393,7 @@ public class Dispatcher
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
 
         // 1. 解析策略字符串（ParseContext 已处理全角符号、注释、分号/逗号分隔）
-        var combatScript = CombatScriptParser.ParseContext(script, validate: false);
+        var combatScript = CombatScriptParser.ParseContext(script, validate: false, defaultAvatarName: avatarName);
         if (combatScript.CombatCommands.Count == 0) return;
 
         _logger.LogInformation("执行 {Text}", "简易策略脚本");

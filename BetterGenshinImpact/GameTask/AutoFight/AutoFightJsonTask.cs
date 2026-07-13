@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -667,7 +668,14 @@ public class AutoFightJsonTask : ISoloTask
             var cmdList = CombatScriptParser.ParseLineCommands(commands, character);
             var combatScript = new CombatScript([character], cmdList);
 
-            await CombatScriptExecutor.ExecuteAsync(combatScript, _ct, Logger, combatScenes);
+            try
+            {
+                await CombatScriptExecutor.ExecuteAsync(combatScript, _ct, Logger, combatScenes);
+            }
+            catch (RetryException e)
+            {
+                Logger.LogWarning("战斗前动作重试异常，跳过此动作继续：{Msg}", e.Message);
+            }
             Logger.LogInformation("战斗前动作：{Action}", preAction);
             await Delay(300, _ct);
         }

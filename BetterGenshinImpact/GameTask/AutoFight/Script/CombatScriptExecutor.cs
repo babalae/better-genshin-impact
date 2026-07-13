@@ -33,12 +33,13 @@ public static class CombatScriptExecutor
             using var capture = CaptureToRectArea();
             combatScenes = new CombatScenes();
             combatScenes.InitializeTeam(capture);
-            ownsScenes = true;
             if (!combatScenes.CheckTeamInitialized())
             {
                 logger.LogError("队伍识别未初始化成功！");
+                combatScenes.Dispose();
                 return;
             }
+            ownsScenes = true;
         }
 
         try
