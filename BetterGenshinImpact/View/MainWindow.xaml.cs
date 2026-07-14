@@ -21,12 +21,18 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
     private ScrollViewer? _currentScrollViewer;
     private double _targetOffset;
-    private double _velocity;
+    private double _inputVelocity;
     private double _lastInputTime;
-    private readonly double _lerpFactor = 0.35;
+    private bool _isContinuousInput;
+    private bool _isInertiaActive;
+    private bool _isRenderingSubscribed;
+    private DateTime _lastFrameTime = DateTime.Now;
+    private readonly double _continuousLerpFactor = 0.35;
+    private readonly double _discreteLerpFactor = 0.85;
     private readonly double _scrollSensitivity = 0.27;
     private readonly double _inertiaDecay = 0.94;
     private readonly double _minVelocity = 0.3;
+    private const double TargetFps = 60.0;
 
     public MainWindowViewModel ViewModel { get; }
 
@@ -45,27 +51,25 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
         AddHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel), true);
 
-        Loaded += (s, e) =>
-        {
-            Activate();
-            CompositionTarget.Rendering += OnCompositionTargetRendering;
-        };
+        Loaded += (s, e) => Activate();
     }
 
     private void OnGlobalPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        e.Handled = true;
-
         var scrollViewer = FindScrollViewerUnderMouse(e);
         if (scrollViewer == null)
             return;
 
+        e.Handled = true;
+
         if (_currentScrollViewer != scrollViewer)
         {
-            scrollViewer.CanContentScroll = false;
             _currentScrollViewer = scrollViewer;
+            scrollViewer.CanContentScroll = false;
             _targetOffset = scrollViewer.VerticalOffset;
         }
+
+        double now = Environment.TickCount;
 
         double delta = e.Delta;
         double scrollAmount = delta * _scrollSensitivity;
@@ -73,7 +77,30 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         _targetOffset -= scrollAmount;
         _targetOffset = Math.Max(0, Math.Min(_targetOffset, scrollViewer.ScrollableHeight));
 
-        _lastInputTime = Environment.TickCount;
+        // 鼠标滚轮 delta 固定为 ±120，触控板 delta 小且变化（通常 < 50）
+        bool isMouseWheel = Math.Abs(delta) >= 100;
+
+        if (!isMouseWheel)
+        {
+            // 触控板：累积速度用于后续惯性
+            _isContinuousInput = true;
+            _inputVelocity = -scrollAmount * 0.35;
+        }
+        else
+        {
+            // 鼠标滚轮：目标位移已在 _targetOffset 中，无需惯性
+            _isContinuousInput = false;
+            _inputVelocity = 0;
+        }
+        _isInertiaActive = false;
+        _lastInputTime = now;
+
+        // 按需订阅：有滚动活动才监听渲染帧
+        if (!_isRenderingSubscribed)
+        {
+            _isRenderingSubscribed = true;
+            CompositionTarget.Rendering += OnCompositionTargetRendering;
+        }
     }
 
     private ScrollViewer? FindScrollViewerUnderMouse(MouseWheelEventArgs e)
@@ -105,27 +132,52 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         double current = _currentScrollViewer.VerticalOffset;
         double diff = _targetOffset - current;
 
-        if (Math.Abs(diff) < 0.1 && Math.Abs(_velocity) < _minVelocity)
+        if (Math.Abs(diff) < 0.1 && Math.Abs(_inputVelocity) < _minVelocity)
+        {
+            // 滚动结束，取消渲染订阅
+            if (_isRenderingSubscribed)
+            {
+                _isRenderingSubscribed = false;
+                CompositionTarget.Rendering -= OnCompositionTargetRendering;
+            }
             return;
+        }
+
+        double deltaTime = (DateTime.Now - _lastFrameTime).TotalSeconds;
+        _lastFrameTime = DateTime.Now;
+        deltaTime = Math.Min(deltaTime, 0.1);
+
+        double dtScale = deltaTime * TargetFps;
+        double effectiveLerp = _isContinuousInput ? _continuousLerpFactor : _discreteLerpFactor;
+        double normalizedLerp = 1.0 - Math.Pow(1.0 - effectiveLerp, dtScale);
+        double normalizedDecay = Math.Pow(_inertiaDecay, dtScale);
 
         double now = Environment.TickCount;
         double timeSinceLastInput = now - _lastInputTime;
 
         if (timeSinceLastInput > 80 && Math.Abs(diff) < 1.0)
         {
-            if (Math.Abs(_velocity) > _minVelocity)
+            _isInertiaActive = true;
+        }
+
+        if (_isInertiaActive)
+        {
+            if (Math.Abs(_inputVelocity) > _minVelocity)
             {
-                _velocity *= _inertiaDecay;
-                _targetOffset += _velocity;
+                _inputVelocity *= normalizedDecay;
+                _targetOffset += _inputVelocity;
                 _targetOffset = Math.Max(0, Math.Min(_targetOffset, _currentScrollViewer.ScrollableHeight));
+            }
+            else
+            {
+                _isInertiaActive = false;
             }
         }
 
         diff = _targetOffset - current;
         if (Math.Abs(diff) > 0.1)
         {
-            double newPosition = current + diff * _lerpFactor;
-            _velocity = newPosition - current;
+            double newPosition = current + diff * normalizedLerp;
             _currentScrollViewer.ScrollToVerticalOffset(newPosition);
         }
     }
