@@ -37,7 +37,7 @@ public partial class ChooseTalkOptionTask
     /// </summary>
     /// <param name="option"></param>
     /// <param name="ct"></param>
-    /// <param name="skipTimes">200ms一次，点击几次空格</param>
+    /// <param name="skipTimes">內部文字識別失敗後的最大重試次數，不填時默認爲 10</param>
     /// <param name="isOrange"></param>
     /// <returns></returns>
     public async Task<TalkOptionRes> SingleSelectText(string option, CancellationToken ct, int skipTimes = 10, bool isOrange = false)
@@ -48,49 +48,51 @@ public partial class ChooseTalkOptionTask
             return TalkOptionRes.NotFound;
         }
 
-        await Task.Delay(500, ct);
-
         bool firstOcrOption = true;
+        bool textFound = false;
         for (var i = 0; i < skipTimes; i++) // 重试N次
         {
+            await Task.Delay(500, ct);
+
             var region = CaptureToRectArea();
             var optionRegions = RecognizeOption(region, ct);
             if (optionRegions == null)
             {
                 TaskContext.Instance().PostMessageSimulator.KeyPressBackground(User32.VK.VK_SPACE);
-                await Delay(500, ct);
-                continue; // retry
             }
-            else
+            // 首次识别到文字，延迟 1s 保证文字已经完全展示
+            if (firstOcrOption)
             {
-                // 首次识别到文字，延迟1s重新识别一次，保证文字已经完全展示
-                if (firstOcrOption)
-                {
-                    await Delay(1000, ct);
-                    firstOcrOption = false;
-                }
+                await Delay(1000, ct);
+                firstOcrOption = false;
             }
 
-            foreach (var optionRa in optionRegions)
+            if (optionRegions != null)
             {
-                if (optionRa.Text.Contains(option))
+                foreach (var optionRa in optionRegions)
                 {
-                    if (isOrange)
+                    if (optionRa.Text.Contains(option))
                     {
+                        textFound = true;
+                        // 在未識別到橙色字樣時重試，而非直接返回
                         // region.DeriveCrop(optionRa.ToRect()).SrcMat.SaveImage(Global.Absolute($"log\\t{optionRa.Text}.png"));
-                        if (!IsOrangeOption(region.DeriveCrop(optionRa.ToRect()).SrcMat))
+                        if (isOrange && !IsOrangeOption(region.DeriveCrop(optionRa.ToRect()).SrcMat))
                         {
-                            return TalkOptionRes.FoundButNotOrange;
+                            break;
                         }
-                    }
 
-                    ClickOcrRegion(optionRa);
-                    await Task.Delay(300, ct);
-                    return TalkOptionRes.FoundAndClick;
+                        ClickOcrRegion(optionRa);
+                        await Task.Delay(300, ct);
+                        return TalkOptionRes.FoundAndClick;
+                    }
                 }
             }
         }
 
+        if (isOrange && textFound)
+        {
+            return TalkOptionRes.FoundButNotOrange;
+        }
         return TalkOptionRes.NotFound;
     }
 
