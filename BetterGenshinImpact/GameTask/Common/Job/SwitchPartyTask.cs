@@ -234,7 +234,7 @@ public class SwitchPartyTask
 
     private async Task ConfirmParty(ImageRegion page, CancellationToken ct, bool isInPartyViewUi = false)
     {
-        var r1 = Bv.ClickWhiteConfirmButton(page.DeriveCrop(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
+        var r1 = Bv.ClickWhiteConfirmButton(page, new Rect(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
         {
             using var ra2 = CaptureToRectArea();
@@ -246,7 +246,7 @@ public class SwitchPartyTask
         }
         await Delay(200, ct);
         using var ra = CaptureToRectArea();
-        var r2 = Bv.ClickWhiteConfirmButton(ra.DeriveCrop(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
+        var r2 = Bv.ClickWhiteConfirmButton(ra, new Rect(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);
         if (isInPartyViewUi) await _returnMainUiTask.Start(ct);
     }
