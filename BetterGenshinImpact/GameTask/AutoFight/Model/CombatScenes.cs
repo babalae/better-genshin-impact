@@ -478,9 +478,10 @@ public class CombatScenes : IDisposable
         if (index > 0)
         {
             LastActiveAvatarIndex = index;
+            return Avatars[LastActiveAvatarIndex - 1].Name;
         }
 
-        return Avatars[LastActiveAvatarIndex - 1].Name;
+        return null;
     }
 
     /// <summary>

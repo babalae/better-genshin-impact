@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -655,31 +656,28 @@ public class AutoFightJsonTask : ISoloTask
         {
             if (_ct.IsCancellationRequested) break;
 
+            var firstSpaceIndex = preAction.IndexOf(' ');
+            var character = CombatScriptParser.CurrentAvatarName;
+            var commands = preAction;
+            if (firstSpaceIndex > 0)
+            {
+                character = preAction[..firstSpaceIndex];
+                commands = preAction[(firstSpaceIndex + 1)..];
+            }
+
+            var cmdList = CombatScriptParser.ParseLineCommands(commands, character);
+            var combatScript = new CombatScript([character], cmdList);
+
             try
             {
-                var firstSpaceIndex = preAction.IndexOf(' ');
-                var character = CombatScriptParser.CurrentAvatarName;
-                var commands = preAction;
-                if (firstSpaceIndex > 0)
-                {
-                    character = preAction[..firstSpaceIndex];
-                    commands = preAction[(firstSpaceIndex + 1)..];
-                }
-
-                var cmdList = CombatScriptParser.ParseLineCommands(commands, character);
-                foreach (var cmd in cmdList)
-                {
-                    if (_ct.IsCancellationRequested) break;
-                    cmd.Execute(combatScenes);
-                    await Delay(300, _ct);
-                }
-
-                Logger.LogInformation("战斗前动作：{Action}", preAction);
+                await CombatScriptExecutor.ExecuteAsync(combatScript, _ct, Logger, combatScenes);
             }
-            catch (Exception e)
+            catch (RetryException e)
             {
-                Logger.LogWarning("战斗前动作执行失败：{Action}，{Msg}", preAction, e.Message);
+                Logger.LogWarning("战斗前动作重试异常，跳过此动作继续：{Msg}", e.Message);
             }
+            Logger.LogInformation("战斗前动作：{Action}", preAction);
+            await Delay(300, _ct);
         }
     }
 
