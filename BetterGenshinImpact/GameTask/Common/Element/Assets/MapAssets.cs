@@ -1,25 +1,35 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
-using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Service;
+using BetterGenshinImpact.GameTask.Model.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
-public class MapAssets : BaseAssets<MapAssets>
+public sealed class MapAssets
 {
+    private static readonly CaptureAssetsCache<MapAssets> Cache = new(static size => new MapAssets(size));
+
     public Rect MimiMapRect { get; }
     
     public static Rect MimiMapRect1080P =  new Rect(62, 19,212,212);
 
 
-    public MapAssets()
+    private MapAssets(CaptureSize captureSize)
     {
-        MimiMapRect = new Rect((int)Math.Round(62 * AssetScale), (int)Math.Round(19 * AssetScale), (int)Math.Round(212 * AssetScale), (int)Math.Round(212 * AssetScale));
+        MimiMapRect = new Rect(
+            (int)Math.Round(62 * captureSize.AssetScale),
+            (int)Math.Round(19 * captureSize.AssetScale),
+            (int)Math.Round(212 * captureSize.AssetScale),
+            (int)Math.Round(212 * captureSize.AssetScale));
+    }
+
+    public static MapAssets Get(Region region)
+    {
+        return Cache.Get(region);
+    }
+
+    public static MapAssets Get(int captureWidth, int captureHeight)
+    {
+        return Cache.Get(captureWidth, captureHeight);
     }
 }

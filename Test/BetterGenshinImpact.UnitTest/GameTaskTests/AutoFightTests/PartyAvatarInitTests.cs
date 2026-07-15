@@ -24,19 +24,6 @@ public class PartyAvatarInitTests
                     .CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide));
         }
     }
-    internal class AutoFightAssets : GameTask.AutoFight.Assets.AutoFightAssets
-    {
-        internal AutoFightAssets(ISystemInfo systemInfo) : base(systemInfo)
-        {
-        }
-    }
-    internal class ElementAssets : GameTask.Common.Element.Assets.ElementAssets
-    {
-        internal ElementAssets(ISystemInfo systemInfo) : base(systemInfo)
-        {
-        }
-    }
-
     /// <summary>
     /// 测试普通的多人游戏下的角色头像识别
     /// </summary>
@@ -68,7 +55,7 @@ public class PartyAvatarInitTests
         FakeLogger logger = new FakeLogger();
 
         //
-        var combatScenes = new CombatScenes(Predictor, new AutoFightAssets(systemInfo), logger, new ElementAssets(systemInfo), systemInfo).InitializeTeam(imageRegion, autoFightConfig);
+        var combatScenes = new CombatScenes(Predictor, GameTask.AutoFight.Assets.AutoFightAssets.Get(imageRegion), logger, systemInfo).InitializeTeam(imageRegion, autoFightConfig);
 
         //
         Assert.True(combatScenes.CheckTeamInitialized());

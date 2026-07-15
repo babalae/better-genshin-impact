@@ -1,0 +1,18 @@
+{
+  "objects": {
+    "ResinSwitchBtn": {
+      "type": "TemplateMatch",
+      "template": "resin_switch_btn.png",
+      "roi": "rect(960 * s, 430 * s, 400 * s, 130 * s)",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "ResinSwitchBtnNoActive": {
+      "type": "TemplateMatch",
+      "template": "resin_switch_btn_no_active.png",
+      "roi": "rect(960 * s, 430 * s, 400 * s, 130 * s)",
+      "threshold": 0.8,
+      "draw": false
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.62.0</Version>
+		<Version>0.62.1-alpha.2</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -53,6 +53,7 @@
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
+		<PackageReference Include="HungarianAlgorithm" Version="2.3.5" />
 		<PackageReference Include="LibGit2Sharp" Version="0.31.0" />
 		<PackageReference Include="LazyCache" Version="2.4.0" />
 		<PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
@@ -81,6 +82,7 @@
 		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
+		<PackageReference Include="NCalc" Version="6.2.0" />
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
 		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Semver" Version="3.0.0" />
@@ -117,6 +119,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="GameTask\**\Recognition.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="Assets\Map\**">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -132,7 +137,7 @@
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\**">
+		<None Update="GameTask\AutoFishing\Assets\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoLeyLineOutcrop\Assets\**">
@@ -153,7 +158,7 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoSkip\Assets\hangout.json">
+		<None Update="GameTask\AutoSkip\Assets\*.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoTrackPath\Assets\tp.json">
@@ -184,6 +189,9 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\QuickBuy\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickClaimReward\Assets\1920x1080\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">

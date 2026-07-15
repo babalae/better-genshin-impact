@@ -522,7 +522,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 using var image = CaptureToRectArea();
                 if (!guardianAvatar.IsActive(image))
                 {
-                    var skillArea = AutoFightAssets.Instance.AvatarQRectListMap[guardianAvatar.Index - 1];//Q技能区域
+                    var skillArea = AutoFightAssets.Get(image).AvatarQRectListMap[guardianAvatar.Index - 1];//Q技能区域
                     // 首先对图像进行预处理，转为灰度图
                     using var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
                 
@@ -677,44 +677,58 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
         }
         
-        //全队Q检测函数，备用，后续可用于自动EQ开发
+        /// <summary>
+        /// 全队Q检测函数，备用，后续可用于自动EQ开发
+        /// 不再推荐使用原因，可以参考使用 BetterGenshinImpact.GameTask.AutoFight.Model.Avatar.IsBurstReadyByClassify 方法，识别速度更快，效果更好
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="useEqList"></param>
+        /// <param name="avatarCurrent"></param>
+        /// <returns></returns>
+        [Obsolete]
         public static Task<List<int>> AvatarQSkillAsync(ImageRegion? image = null, List<int>? useEqList = null,int? avatarCurrent = null)
         {
+            var ownImage = image == null;
             image ??= CaptureToRectArea();
-            image.SrcMat.ConvertTo(image.SrcMat, MatType.CV_8UC3, alpha: 2, beta: -200); // 增加亮度和对比度
-            var useMedicine = new List<int>();
-            var eqList = useEqList ?? new List<int> { 1, 2, 3, 4 };
-        
-            foreach (var i in eqList)
+            try
             {
-                var skillArea = i != avatarCurrent ? AutoFightAssets.Instance.AvatarQRectListMap[i - 1]: new Rect(1762, 915, 114, 111);
-                
-                using var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
-        
-                var meanBrightness = Cv2.Mean(grayImage);
-                var avgBrightness = meanBrightness.Val0;
-                var threshold1 = avgBrightness * 0.9;
-                var threshold2 = avgBrightness * 2;
-        
-                Cv2.Canny(grayImage, grayImage, threshold1: (float)threshold1, threshold2: (float)threshold2);
-        
-                var circles = Cv2.HoughCircles(grayImage, HoughModes.Gradient, dp: 1.2, minDist: 20,
-                    param1: 90, param2:i != avatarCurrent ? 25 : 35, minRadius: i != avatarCurrent ? 25 : 50, maxRadius:i != avatarCurrent ? 34 : 60);
-        
-                if (circles.Length > 0)
+                image.SrcMat.ConvertTo(image.SrcMat, MatType.CV_8UC3, alpha: 2, beta: -200); // 增加亮度和对比度
+                var useMedicine = new List<int>();
+                var eqList = useEqList ?? new List<int> { 1, 2, 3, 4 };
+
+                foreach (var i in eqList)
                 {
-                    useMedicine.Add(i);
+                    var skillArea = i != avatarCurrent ? AutoFightAssets.Get(image).AvatarQRectListMap[i - 1]: new Rect(1762, 915, 114, 111);
+
+                    using var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
+
+                    var meanBrightness = Cv2.Mean(grayImage);
+                    var avgBrightness = meanBrightness.Val0;
+                    var threshold1 = avgBrightness * 0.9;
+                    var threshold2 = avgBrightness * 2;
+
+                    Cv2.Canny(grayImage, grayImage, threshold1: (float)threshold1, threshold2: (float)threshold2);
+
+                    var circles = Cv2.HoughCircles(grayImage, HoughModes.Gradient, dp: 1.2, minDist: 20,
+                        param1: 90, param2:i != avatarCurrent ? 25 : 35, minRadius: i != avatarCurrent ? 25 : 50, maxRadius:i != avatarCurrent ? 34 : 60);
+
+                    if (circles.Length > 0)
+                    {
+                        useMedicine.Add(i);
+                    }
                 }
+
+                if (useMedicine.Count > 0)
+                {
+                    return Task.FromResult(useMedicine);
+                }
+
+                return Task.FromResult(new List<int>());
             }
-            
-            image.Dispose();
-        
-            if (useMedicine.Count > 0)
+            finally
             {
-                return Task.FromResult(useMedicine);
+                if (ownImage) image.Dispose();
             }
-        
-            return Task.FromResult(new List<int>());
         }
     }
 

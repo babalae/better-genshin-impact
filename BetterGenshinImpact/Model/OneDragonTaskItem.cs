@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,9 +21,13 @@ public partial class OneDragonTaskItem : ObservableObject
 {
     [ObservableProperty] private string _name;
 
+    [ObservableProperty] private string _id = Guid.NewGuid().ToString();
+
     [ObservableProperty] private Brush _statusColor = Brushes.Gray;
 
     [ObservableProperty] private bool _isEnabled = true;
+
+    [ObservableProperty] private bool _isNextTask = false;
 
     [ObservableProperty] private OneDragonBaseViewModel? _viewModel;
 
@@ -32,6 +36,11 @@ public partial class OneDragonTaskItem : ObservableObject
     public OneDragonTaskItem(string name)
     {
         Name = name;
+    }
+
+    public OneDragonTaskItem(string name, string id) : this(name)
+    {
+        _id = id;
     }
 
     // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
@@ -47,13 +56,14 @@ public partial class OneDragonTaskItem : ObservableObject
 
     public void InitAction(OneDragonFlowConfig config)
     {
-        if (config.TaskEnabledList.TryGetValue(Name, out _))
+        if (config.TaskEnabledList.ContainsKey(Id))
         {
-            config.TaskEnabledList[Name] = IsEnabled;
+            config.TaskEnabledList[Id] = IsEnabled;
         }
         else
         {
-            config.TaskEnabledList.Add(Name, IsEnabled);
+            config.TaskEnabledList.Add(Id, IsEnabled);
+            config.TaskDefinitions[Id] = Name;
         }
 
         switch (Name)
@@ -116,26 +126,35 @@ public partial class OneDragonTaskItem : ObservableObject
             case "自动首领讨伐":
                 Action = async () =>
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoBossConfig.StrategyName))
+                    if (string.IsNullOrEmpty(config.AutoBossStrategyName))
                     {
-                        TaskContext.Instance().Config.AutoBossConfig.StrategyName = "根据队伍自动选择";
+                        config.AutoBossStrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoBossConfig.StrategyName, out var path))
+                    if (taskSettingsPageViewModel!.GetFightStrategy(config.AutoBossStrategyName, out var path))
                     {
                         TaskControl.Logger.LogError("自动首领讨伐战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
-                    if (string.IsNullOrWhiteSpace(TaskContext.Instance().Config.AutoBossConfig.BossName))
+                    if (string.IsNullOrWhiteSpace(config.AutoBossName))
                     {
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要讨伐的首领，跳过", "未选择");
                         return;
                     }
 
-                    AutoBossParam param = new AutoBossParam(path);
-                    param.SetAutoBossConfig(TaskContext.Instance().Config.AutoBossConfig);
+                    AutoBossParam param = AutoBossParam.CreateWithoutDefaultConfig(path);
+                    param.BossName = config.AutoBossName;
+                    param.StrategyName = config.AutoBossStrategyName;
+                    param.TeamName = config.AutoBossTeamName;
+                    param.SpecifyRunCount = config.AutoBossSpecifyRunCount;
+                    param.RunCount = config.AutoBossRunCount;
+                    param.UseTransientResin = config.AutoBossUseTransientResin;
+                    param.UseFragileResin = config.AutoBossUseFragileResin;
+                    param.ReviveRetryCount = config.AutoBossReviveRetryCount;
+                    param.ReturnToStatueAfterEachRound = config.AutoBossReturnToStatueAfterEachRound;
+                    param.RewardRecognitionEnabled = config.AutoBossRewardRecognitionEnabled;
                     await new AutoBossTask(param).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;

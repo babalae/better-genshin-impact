@@ -36,15 +36,22 @@
         </Grid.ColumnDefinitions>
 
         <!--  左侧任务列表  -->
-       <DockPanel Grid.Column="0">
+       <DockPanel Grid.Column="0"
+                  ContextMenuOpening="DockPanel_ContextMenuOpening">
            <DockPanel.ContextMenu>
                <ContextMenu>
                    <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                              CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                             Header="删除配置" />
-           </ContextMenu>
-       </DockPanel.ContextMenu>
+                             Header="删除" />
+                   <Separator />
+                   <MenuItem Command="{Binding NextTaskGroupCommand}"
+                             CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                             Header="从此执行" />
+                   <MenuItem Command="{Binding ClearNextTaskGroupCommand}"
+                             Header="清除标记" />
+               </ContextMenu>
+           </DockPanel.ContextMenu>
        <Grid DockPanel.Dock="Top"
         Margin="0,0,0,10">
         <Grid.ColumnDefinitions>
@@ -165,7 +172,18 @@
                                             <TextBlock Grid.Column="2"
                                                        VerticalAlignment="Center"
                                                        IsHitTestVisible="False"
-                                                       Text="{Binding Name}" Width="100"/>
+                                                       Text="{Binding Name}" Width="100">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsNextTask}" Value="True">
+                                                                <Setter Property="Foreground" Value="DodgerBlue" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                             
                                             
                                             <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
@@ -1168,7 +1186,7 @@
                                           Width="200"
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoBossConfig.StrategyName, Mode=TwoWay}">
+                                          SelectedItem="{Binding SelectedConfig.AutoBossStrategyName, Mode=TwoWay}">
                                     <b:Interaction.Triggers>
                                         <b:EventTrigger EventName="DropDownOpened">
                                             <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
@@ -1204,7 +1222,7 @@
                                                        Margin="0,0,36,0"
                                                        behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                                        ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
-                                                       SelectedCascadingItem="{Binding Config.AutoBossConfig.BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}" />
+                                                       SelectedCascadingItem="{Binding SelectedConfig.AutoBossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}" />
                             </Grid>
 
                             <Grid Margin="16">
@@ -1231,7 +1249,7 @@
                                             Grid.Column="1"
                                             Width="200"
                                             Margin="0,0,36,0"
-                                            Text="{Binding Config.AutoBossConfig.TeamName, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.AutoBossTeamName, Mode=TwoWay}"
                                             PlaceholderText="例如：首领队" />
                             </Grid>
 
@@ -1258,7 +1276,7 @@
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
                                                  Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoBossConfig.SpecifyRunCount, Mode=TwoWay}" />
+                                                 IsChecked="{Binding SelectedConfig.AutoBossSpecifyRunCount, Mode=TwoWay}" />
                             </Grid>
 
                             <Border Margin="16,8,16,16"
@@ -1266,14 +1284,14 @@
                                     BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                                     Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
                                     CornerRadius="8"
-                                    Visibility="{Binding Config.AutoBossConfig.SpecifyRunCount, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
+                                    Visibility="{Binding SelectedConfig.AutoBossSpecifyRunCount, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
                                 <StackPanel Margin="12">
                                     <StackPanel Orientation="Horizontal"
                                                 Margin="0,8,0,12">
                                         <ui:TextBlock Text="讨伐次数："
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,8,0" />
-                                        <ui:NumberBox Value="{Binding Config.AutoBossConfig.RunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        <ui:NumberBox Value="{Binding SelectedConfig.AutoBossRunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                       Minimum="1"
                                                       MaxDecimalPlaces="0"
                                                       SmallChange="1"
@@ -1288,14 +1306,14 @@
                                         <ui:TextBlock Text="原粹不足时使用须臾树脂补充："
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,8,0" />
-                                        <ui:ToggleSwitch IsChecked="{Binding Config.AutoBossConfig.UseTransientResin, Mode=TwoWay}" />
+                                        <ui:ToggleSwitch IsChecked="{Binding SelectedConfig.AutoBossUseTransientResin, Mode=TwoWay}" />
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal">
                                         <ui:TextBlock Text="原粹不足时使用脆弱树脂补充："
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,8,0" />
-                                        <ui:ToggleSwitch IsChecked="{Binding Config.AutoBossConfig.UseFragileResin, Mode=TwoWay}" />
+                                        <ui:ToggleSwitch IsChecked="{Binding SelectedConfig.AutoBossUseFragileResin, Mode=TwoWay}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -1323,7 +1341,7 @@
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
                                                  Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoBossConfig.ReturnToStatueAfterEachRound, Mode=TwoWay}" />
+                                                 IsChecked="{Binding SelectedConfig.AutoBossReturnToStatueAfterEachRound, Mode=TwoWay}" />
                             </Grid>
 
                             <Grid Margin="16">
@@ -1349,7 +1367,7 @@
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
                                                  Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoBossConfig.RewardRecognitionEnabled, Mode=TwoWay}" />
+                                                 IsChecked="{Binding SelectedConfig.AutoBossRewardRecognitionEnabled, Mode=TwoWay}" />
                             </Grid>
 
                             <Grid Margin="16">
@@ -1382,7 +1400,7 @@
                                               LargeChange="3"
                                               SpinButtonPlacementMode="Hidden"
                                               AcceptsExpression="False"
-                                              Value="{Binding Config.AutoBossConfig.ReviveRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                              Value="{Binding SelectedConfig.AutoBossReviveRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>

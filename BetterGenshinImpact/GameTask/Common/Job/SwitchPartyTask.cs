@@ -83,7 +83,7 @@ public class SwitchPartyTask
         await Delay(500, ct);
 
         using var ra = CaptureToRectArea();
-        var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+        var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView", ra));
 
         // OCR 当前队伍名称（无法单字，中间禁止空格）
         var currTeamName = ra.Find(new RecognitionObject
@@ -123,7 +123,7 @@ public class SwitchPartyTask
         }
 
         var menu = await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PartyBtnDelete,
+            ElementRecognition.Get("PartyBtnDelete"),
             () => partyViewBtn.Click(),// 点击队伍选择按钮
             ct,
             4,
@@ -141,7 +141,7 @@ public class SwitchPartyTask
             var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
             {
                 switchRa = ocrRa;
-                partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
+                partyDeleteBtn = switchRa.Find(ElementRecognition.Get("PartyBtnDelete", switchRa));
                 return partyDeleteBtn.IsExist();
             }, ct, 5);
 
@@ -234,11 +234,11 @@ public class SwitchPartyTask
 
     private async Task ConfirmParty(ImageRegion page, CancellationToken ct, bool isInPartyViewUi = false)
     {
-        var r1 = Bv.ClickWhiteConfirmButton(page.DeriveCrop(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
+        var r1 = Bv.ClickWhiteConfirmButton(page, new Rect(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
         {
             using var ra2 = CaptureToRectArea();
-            return ra2.Find(ElementAssets.Instance.PartyBtnDelete).IsEmpty();
+            return ra2.Find(ElementRecognition.Get("PartyBtnDelete", ra2)).IsEmpty();
         }, ct, 10);
         if (!partyChooseUiClosed)
         {
@@ -246,7 +246,7 @@ public class SwitchPartyTask
         }
         await Delay(200, ct);
         using var ra = CaptureToRectArea();
-        var r2 = Bv.ClickWhiteConfirmButton(ra.DeriveCrop(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
+        var r2 = Bv.ClickWhiteConfirmButton(ra, new Rect(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);
         if (isInPartyViewUi) await _returnMainUiTask.Start(ct);
     }

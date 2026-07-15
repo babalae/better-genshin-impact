@@ -62,6 +62,12 @@ public class BgiOnnxModel
         Register("BgiQClassify", @"Assets\Model\Common\q_classify_sim.onnx");
 
     /// <summary>
+    /// 队伍配置角色头像识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel AvatarGridIcon =
+        Register("AvatarGridIcon", @"Assets\Model\AvatarGridIcon\avatar.onnx");
+
+    /// <summary>
     /// Silero 人声检测模型
     /// </summary>
     public static readonly BgiOnnxModel SileroVad =

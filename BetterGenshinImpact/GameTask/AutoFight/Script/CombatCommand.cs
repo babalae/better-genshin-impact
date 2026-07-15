@@ -1,8 +1,11 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using TimeSpan = System.TimeSpan;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
@@ -81,7 +84,8 @@ public class CombatCommand
         Avatar? avatar;
         if (Name == CombatScriptParser.CurrentAvatarName)
         {
-            avatar = combatScenes.SelectAvatar(1);
+            var currentName = combatScenes.CurrentAvatar(true);
+            avatar = currentName != null ? combatScenes.SelectAvatar(currentName) : combatScenes.SelectAvatar(1);
         }
         else
         {
@@ -281,10 +285,12 @@ public class CombatCommand
         else if (Method == Method.KeyUp)
         {
             avatar.KeyUp(Args![0]);
+            TryTriggerESkillCdCheck(avatar, Args![0]);
         }
         else if (Method == Method.KeyPress)
         {
             avatar.KeyPress(Args![0]);
+            TryTriggerESkillCdCheck(avatar, Args![0]);
         }
         else if (Method == Method.Scroll)
         {
@@ -298,5 +304,45 @@ public class CombatCommand
         {
             throw new NotImplementedException();
         }
+    }
+
+    /// <summary>
+    /// KeyUp/KeyPress 为 E 键时，触发 E 技能 CD 检测（由调度层处理，不入侵按键层）。
+    /// 内联实现：最多重试 4 次 OCR 截屏检测，防抖由 ESkillCdTracker.TriggerECheck 处理。
+    /// </summary>
+    private static void TryTriggerESkillCdCheck(Avatar avatar, string key)
+    {
+        try
+        {
+            if (User32Helper.ToVk(key) != User32.VK.VK_E) return;
+        }
+        catch
+        {
+            return;
+        }
+
+        ESkillCdTracker.TriggerECheck(() =>
+        {
+            try
+            {
+                double cd = 0;
+                for (var attempt = 0; attempt < 4; attempt++)
+                {
+                    using var region = TaskControl.CaptureToRectArea();
+                    cd = avatar.AfterUseSkill(region);
+                    if (cd > 0) break;
+                    if (attempt < 3) Thread.Sleep(100);
+                }
+                return cd;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return 0;
+            }
+        }, avatar.Name, avatar.Ct);
     }
 }
