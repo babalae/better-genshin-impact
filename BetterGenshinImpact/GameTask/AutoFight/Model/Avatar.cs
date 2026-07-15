@@ -1046,9 +1046,9 @@ public class Avatar
                             if (!damageResult.HasValue)
                             {
                                 // 不存在传奇血条时：连续超过1秒未找到目标，提前退出
-                                if (!hasLegendaryBar && (DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1)
+                                if (!hasLegendaryBar && (DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1.5)
                                 {
-                                    Logger.LogInformation("桑多涅重击特化：超过1秒未找到目标，提前退出");
+                                    Logger.LogInformation("桑多涅重击特化：超过1.5秒未找到目标，提前退出");
                                     View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
                                     break;
                                 }
