@@ -977,12 +977,14 @@ public class Avatar
 
             // 连续未找到血条的计时，超过1秒时提前退出
             var lastSeenBlood = DateTime.UtcNow;
+            var startTime = DateTime.UtcNow;
+            var maxDurationMs = ms;
 
             // 主循环：持续到取消或重击时间耗尽
             // 使用 try/finally 确保异常时也会清理绘制并松开按键
             try
             {
-                while (!Ct.IsCancellationRequested && ms >= 0)
+                while (!Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
                 {
                     // 每帧截图一次，复用给 FindBloodBars 和绘制覆盖层
                     using (var capture = CaptureToRectArea())
@@ -1038,7 +1040,6 @@ public class Avatar
                                 Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), 0);
                                 // 大旋转后额外等待一帧，避免连续快速旋转导致视角失控
                                 Sleep(frameIntervalMs);
-                                ms -= frameIntervalMs;
                             }
                         }
 
@@ -1048,7 +1049,6 @@ public class Avatar
 
                     // 等待一帧间隔后继续
                     Sleep(frameIntervalMs);
-                    ms -= frameIntervalMs;
                 }
             }
             finally
