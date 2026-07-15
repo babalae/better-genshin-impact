@@ -53,7 +53,7 @@ public partial class ChooseTalkOptionTask
         bool firstOcrOption = true;
         for (var i = 0; i < skipTimes; i++) // 重试N次
         {
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             var optionRegions = RecognizeOption(region, ct);
             if (optionRegions == null)
             {
@@ -68,6 +68,7 @@ public partial class ChooseTalkOptionTask
                 {
                     await Delay(1000, ct);
                     firstOcrOption = false;
+                    continue; // 下一轮重新截图并识别
                 }
             }
 
