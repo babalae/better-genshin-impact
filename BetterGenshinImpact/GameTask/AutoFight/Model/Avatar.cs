@@ -1008,7 +1008,7 @@ public class Avatar
 
                             // 选择距离预瞄点(960, 480)最近的血条作为目标
                             var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
-                            Logger.LogDebug("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
+                            Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
                             // 计算准星到目标中心的偏移量（像素）
                             var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                             var offsetY = (nearest.y + nearest.height / 2) - preAimY;
