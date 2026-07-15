@@ -1035,7 +1035,7 @@ public class Avatar
                             if (damageResult.HasValue)
                             {
                                 var (dcx, dcy, dtext) = damageResult.Value;
-                                Logger.LogInformation("伤害数字追踪: 坐标({X},{Y}) 文本:{Text}", dcx, dcy, dtext);
+                                // Logger.LogInformation("伤害数字追踪: 坐标({X},{Y}) 文本:{Text}", dcx, dcy, dtext);
                                 lastSeenTargetTime = DateTime.UtcNow;
                                 var offsetX = dcx - preAimX;
                                 var offsetY = dcy - preAimY;
