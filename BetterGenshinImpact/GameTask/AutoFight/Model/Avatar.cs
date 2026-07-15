@@ -1001,53 +1001,36 @@ public class Avatar
                             capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
                         };
 
-                        if (valid.Count > 0)
+                        // 检测是否存在传奇血条（y 50~96 范围，位于屏幕顶部的特殊血条）
+                        bool hasLegendaryBar = bars.Any(b => b.y > 50 && b.y < 96);
+
+                        if (valid.Count > 0 && !hasLegendaryBar)
                         {
-                            // 检测是否存在传奇血条（y 50~96 范围，位于屏幕顶部的特殊血条）
-                            bool hasLegendaryBar = bars.Any(b => b.y > 50 && b.y < 96);
+                            // 有可瞄准的普通血条：更新最后见到目标的时间
+                            lastSeenTargetTime = DateTime.UtcNow;
 
-                            if (hasLegendaryBar)
+                            // 选择距离预瞄点(960, 480)最近的血条作为目标
+                            var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                            Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
+                            // 计算准星到目标中心的偏移量（像素）
+                            var offsetX = (nearest.x + nearest.width / 2) - preAimX;
+                            var offsetY = (nearest.y + nearest.height / 2) - preAimY;
+                            // 以 0.35 系数移动鼠标（平滑跟踪，避免剧烈抖动）
+                            Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+
+                            // 普通血条框绘制：追踪目标用绿色框，其他血条用红色框
+                            foreach (var b in valid)
                             {
-                                // 传奇血条存在时，使用 OCR 追踪伤害数字，避免直接追踪顶部血条导致视角上抬
-                                var damageResult = FindDamageNumber(capture);
-                                if (damageResult.HasValue)
-                                {
-                                    var (dcx, dcy, dtext) = damageResult.Value;
-                                    Logger.LogInformation("伤害数字追踪: 坐标({X},{Y}) 文本:{Text}", dcx, dcy, dtext);
-                                    lastSeenTargetTime = DateTime.UtcNow;
-                                    var offsetX = dcx - preAimX;
-                                    var offsetY = dcy - preAimY;
-                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
-                                }
-                            }
-                            else
-                            {
-                                // 有可瞄准的普通血条：更新最后见到目标的时间
-                                lastSeenTargetTime = DateTime.UtcNow;
-
-                                // 选择距离预瞄点(960, 480)最近的血条作为目标
-                                var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
-                                Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
-                                // 计算准星到目标中心的偏移量（像素）
-                                var offsetX = (nearest.x + nearest.width / 2) - preAimX;
-                                var offsetY = (nearest.y + nearest.height / 2) - preAimY;
-                                // 以 0.35 系数移动鼠标（平滑跟踪，避免剧烈抖动）
-                                Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
-
-                                // 普通血条框绘制：追踪目标用绿色框，其他血条用红色框
-                                foreach (var b in valid)
-                                {
-                                    var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
-                                    if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
-                                        drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
-                                    else
-                                        drawList.Add(capture.ToRectDrawable(rect, "blood"));
-                                }
+                                var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                                if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
+                                    drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                else
+                                    drawList.Add(capture.ToRectDrawable(rect, "blood"));
                             }
                         }
                         else
                         {
-                            // 无可瞄准血条时：先用 OCR 找伤害数字作为备用
+                            // 无血条或存在传奇血条：用 OCR 找伤害数字作为追踪目标
                             var damageResult = FindDamageNumber(capture);
                             if (damageResult.HasValue)
                             {
@@ -1058,9 +1041,9 @@ public class Avatar
                                 var offsetY = dcy - preAimY;
                                 Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                             }
-                            // OCR 无结果时：向右旋转搜索敌人
-                            // 但若存在传奇血条（y 50~96，即屏幕顶部附近的特殊血条），无法定位，不转动
-                            else if (!bars.Any(b => b.y > 50 && b.y < 96))
+
+                            // OCR 无结果时：若不存在传奇血条，向右旋转搜索敌人
+                            if (!damageResult.HasValue && !hasLegendaryBar)
                             {
                                 // 连续超过1秒未找到任何血条，提前退出
                                 if ((DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1)
