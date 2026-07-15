@@ -30,7 +30,7 @@
     },
     "ExitFishingButton": {
       "type": "TemplateMatch",
-      "template": "exit.png",
+      "template": "exit_fishing.png",
       "roi": "rect(cw / 8, 0, cw / 4, ch / 4)",
       "threshold": 0.7,
       "draw": false
