@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -976,7 +977,7 @@ public class Avatar
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
 
             // 连续未找到血条的计时，超过1秒时提前退出
-            var lastSeenBlood = DateTime.UtcNow;
+            var lastSeenTargetTime = DateTime.UtcNow;
             var startTime = DateTime.UtcNow;
             var maxDurationMs = ms;
 
@@ -1002,16 +1003,17 @@ public class Avatar
 
                         if (valid.Count > 0)
                         {
-                            // 有可瞄准的血条：更新最后见到血条的时间
-                            lastSeenBlood = DateTime.UtcNow;
+                            // 有可瞄准的血条：更新最后见到目标的时间
+                            lastSeenTargetTime = DateTime.UtcNow;
 
                             // 选择距离预瞄点(960, 480)最近的血条作为目标
                             var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                            Logger.LogDebug("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
                             // 计算准星到目标中心的偏移量（像素）
                             var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                             var offsetY = (nearest.y + nearest.height / 2) - preAimY;
-                            // 以 0.25 系数移动鼠标（平滑跟踪，避免剧烈抖动）
-                            Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.25 * dpi), (int)(offsetY * 0.25 * dpi));
+                            // 以 0.35 系数移动鼠标（平滑跟踪，避免剧烈抖动）
+                            Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
 
                             // 血条框绘制：追踪目标用绿色框，其他血条用红色框
                             foreach (var b in valid)
@@ -1025,14 +1027,25 @@ public class Avatar
                         }
                         else
                         {
-                            // 无可瞄准血条时：向右旋转搜索敌人
+                            // 无可瞄准血条时：先用 OCR 找伤害数字作为备用
+                            var damageResult = FindDamageNumber(capture);
+                            if (damageResult.HasValue)
+                            {
+                                var (dcx, dcy, dtext) = damageResult.Value;
+                                Logger.LogDebug("伤害数字追踪: 坐标({X},{Y}) 文本:{Text}", dcx, dcy, dtext);
+                                lastSeenTargetTime = DateTime.UtcNow;
+                                var offsetX = dcx - preAimX;
+                                var offsetY = dcy - preAimY;
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                            }
+                            // OCR 无结果时：向右旋转搜索敌人
                             // 但若存在传奇血条（y 50~96，即屏幕顶部附近的特殊血条），无法定位，不转动
-                            if (!bars.Any(b => b.y > 50 && b.y < 96))
+                            else if (!bars.Any(b => b.y > 50 && b.y < 96))
                             {
                                 // 连续超过1秒未找到任何血条，提前退出
-                                if ((DateTime.UtcNow - lastSeenBlood).TotalSeconds >= 1)
+                                if ((DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1)
                                 {
-                                    Logger.LogInformation("桑多涅重击特化：超过1秒未找到血条，提前退出");
+                                    Logger.LogInformation("桑多涅重击特化：超过1秒未找到目标，提前退出");
                                     View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
                                     break;
                                 }
@@ -1292,5 +1305,55 @@ public class Avatar
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// OCR 寻找伤害数字/反应文字作为追踪目标（备用寻敌）。
+    /// 在 450,240-1600,900 区域 OCR，过滤条件：
+    ///   - 有效项1：排除首位 '+'，去除非数字后纯数字 ≥4 位
+    ///   - 有效项2：文本包含反应关键词（免疫/蒸发/感电/结晶/扩散/绽放/冻结/超载/融化/燃烧/超导/激化），跳过数字过滤
+    /// 按面积加权得到中心坐标，返回离加权中心最近的有效项。
+    /// </summary>
+    public static (int centerX, int centerY, string text)? FindDamageNumber(ImageRegion? existingCapture = null)
+    {
+        using var ra = existingCapture ?? CaptureToRectArea();
+        var ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
+
+        string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
+        var validItems = new List<(int cx, int cy, int area, string text)>();
+
+        foreach (var r in ocrResults)
+        {
+            var text = r.Text?.Trim();
+            if (string.IsNullOrEmpty(text)) continue;
+
+            // 有效项2：反应关键词（跳过所有过滤）
+            if (reactionKeywords.Any(k => text.Contains(k)))
+            {
+                validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Width * r.Height, text));
+                continue;
+            }
+
+            // 有效项1：排除 '+' 开头
+            if (text[0] == '+') continue;
+
+            // 去除非数字，纯数字 ≥4 位
+            var digits = new string(text.Where(char.IsDigit).ToArray());
+            if (digits.Length >= 4)
+            {
+                validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Width * r.Height, text));
+            }
+        }
+
+        if (validItems.Count == 0) return null;
+
+        int totalArea = validItems.Sum(i => i.area);
+        if (totalArea == 0) return null;
+
+        double avgX = (double)validItems.Sum(i => i.cx * i.area) / totalArea;
+        double avgY = (double)validItems.Sum(i => i.cy * i.area) / totalArea;
+
+        var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
+        return (closest.cx, closest.cy, closest.text);
     }
 }
