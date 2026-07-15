@@ -102,9 +102,12 @@ public class SystemControl
 
     public static nint FindHandleByProcessName(params string[] names)
     {
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
         foreach (var name in names)
         {
-            var pros = Process.GetProcessesByName(name);
+            var pros = Process.GetProcessesByName(name)
+                .Where(p => p.SessionId == currentSessionId)
+                .ToArray();
             if (pros.Length is not 0)
             {
                 return pros[0].MainWindowHandle;
@@ -324,9 +327,10 @@ public class SystemControl
     {
         try
         {
+            var currentSessionId = Process.GetCurrentProcess().SessionId;
             var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
             var processes = processNames
-                .SelectMany(Process.GetProcessesByName)
+                .SelectMany(n => Process.GetProcessesByName(n).Where(p => p.SessionId == currentSessionId))
                 .GroupBy(p => p.Id)
                 .Select(g => g.First())
                 .ToArray();
