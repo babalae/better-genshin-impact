@@ -1053,9 +1053,7 @@ public class Avatar
                                     break;
                                 }
 
-                                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), 0);
-                                // 大旋转后额外等待一帧，避免连续快速旋转导致视角失控
-                                Sleep(frameIntervalMs);
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                             }
                         }
 
