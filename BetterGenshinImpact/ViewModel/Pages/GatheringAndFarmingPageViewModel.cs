@@ -1,11 +1,14 @@
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,6 +23,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class GatheringAndFarmingPageViewModel : ViewModel
 {
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> MaterialIconUrls = new(LoadMaterialIconUrls);
     private readonly ILogger<GatheringAndFarmingPageViewModel> _logger = App.GetLogger<GatheringAndFarmingPageViewModel>();
     private readonly IScriptService _scriptService;
     private readonly INavigationService _navigationService;
@@ -30,6 +34,12 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
     [ObservableProperty] private ObservableCollection<GatherTrackSection> _foodAndSpecialtySections = [];
     [ObservableProperty] private ObservableCollection<GatherTrackItem> _dropItems = [];
     [ObservableProperty] private ObservableCollection<GatherTrackItem> _oreItems = [];
+    [ObservableProperty] private ObservableCollection<GatherTrackItem> _filteredFoodAndSpecialtyItems = [];
+    [ObservableProperty] private ObservableCollection<GatherTrackItem> _filteredDropItems = [];
+    [ObservableProperty] private ObservableCollection<GatherTrackItem> _filteredOreItems = [];
+    [ObservableProperty] private string _foodAndSpecialtyFilterText = string.Empty;
+    [ObservableProperty] private string _dropItemFilterText = string.Empty;
+    [ObservableProperty] private string _oreItemFilterText = string.Empty;
     [ObservableProperty] private int _availablePathingTaskCount;
     [ObservableProperty] private string _taskIndexSummary = "尚未扫描路线";
 
@@ -53,6 +63,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
         }
 
         BuildDesignData();
+        _ = LoadImagesAsync();
         _ = RefreshPathingIndexAsync();
         _isInitialized = true;
     }
@@ -229,6 +240,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
                 "纳西妲",
                 "须弥 · 草系主C/辅助",
                 "纳",
+                "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
                 CreatePalette("#84C26E", "#1E3523"),
                 [
                     CreateTrack("月莲", "水边与林地特产路线", "月", "#84C26E", "#1E3523"),
@@ -239,6 +251,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
                 "芙宁娜",
                 "枫丹 · 水系辅助",
                 "芙",
+                "https://enka.network/ui/UI_AvatarIcon_Furina.png",
                 CreatePalette("#7EB7F3", "#1D2E45"),
                 [
                     CreateTrack("湖光铃兰", "枫丹湖区特产路线", "铃", "#7EB7F3", "#1D2E45"),
@@ -249,6 +262,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
                 "雷电将军",
                 "稻妻 · 充能爆发核心",
                 "雷",
+                "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
                 CreatePalette("#A887F7", "#2B2144"),
                 [
                     CreateTrack("天云草实", "清籁岛高密度特产路线", "云", "#A887F7", "#2B2144"),
@@ -259,6 +273,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
                 "钟离",
                 "璃月 · 护盾辅助",
                 "钟",
+                "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
                 CreatePalette("#D3A65C", "#43301A"),
                 [
                     CreateTrack("石珀", "璃月山体特产路线", "珀", "#D3A65C", "#43301A"),
@@ -269,6 +284,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
                 "那维莱特",
                 "枫丹 · 水系站场",
                 "那",
+                "https://enka.network/ui/UI_AvatarIcon_Neuvillette.png",
                 CreatePalette("#68C1E0", "#183743"),
                 [
                     CreateTrack("湖光铃兰", "角色专属特产路线", "铃", "#68C1E0", "#183743"),
@@ -279,6 +295,7 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
                 "娜维娅",
                 "枫丹 · 岩系输出",
                 "娜",
+                "https://enka.network/ui/UI_AvatarIcon_Navia.png",
                 CreatePalette("#E0B765", "#45371A"),
                 [
                     CreateTrack("苍晶螺", "枫丹海岸特产路线", "螺", "#73C0D4", "#203743"),
@@ -333,7 +350,81 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
             CreateTrack("铁块", "早期锻造补货路线", "块", "#B4BDC8", "#29323D")
         ];
 
+        ApplyFoodAndSpecialtyFilter();
+        ApplyDropItemFilter();
+        ApplyOreItemFilter();
         OnPropertyChanged(nameof(TrackEntryCount));
+    }
+
+    partial void OnFoodAndSpecialtyFilterTextChanged(string value)
+    {
+        ApplyFoodAndSpecialtyFilter();
+    }
+
+    partial void OnDropItemFilterTextChanged(string value)
+    {
+        ApplyDropItemFilter();
+    }
+
+    partial void OnOreItemFilterTextChanged(string value)
+    {
+        ApplyOreItemFilter();
+    }
+
+    private void ApplyFoodAndSpecialtyFilter()
+    {
+        var filteredItems = FoodAndSpecialtySections.SelectMany(section =>
+            MatchesFilter(section.Title, FoodAndSpecialtyFilterText)
+                ? section.Items
+                : section.Items.Where(item => MatchesFilter(item, FoodAndSpecialtyFilterText)));
+        FilteredFoodAndSpecialtyItems = new ObservableCollection<GatherTrackItem>(filteredItems);
+    }
+
+    private void ApplyDropItemFilter()
+    {
+        FilteredDropItems = new ObservableCollection<GatherTrackItem>(
+            DropItems.Where(item => MatchesFilter(item, DropItemFilterText)));
+    }
+
+    private void ApplyOreItemFilter()
+    {
+        FilteredOreItems = new ObservableCollection<GatherTrackItem>(
+            OreItems.Where(item => MatchesFilter(item, OreItemFilterText)));
+    }
+
+    private static bool MatchesFilter(GatherTrackItem item, string filterText)
+    {
+        return MatchesFilter(item.Name, filterText)
+               || MatchesFilter(item.Description, filterText)
+               || item.SearchKeywords.Any(keyword => MatchesFilter(keyword, filterText));
+    }
+
+    private static bool MatchesFilter(string value, string filterText)
+    {
+        return string.IsNullOrWhiteSpace(filterText)
+               || value.Contains(filterText.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task LoadImagesAsync()
+    {
+        var materialItems = Characters.SelectMany(character => character.Materials)
+            .Concat(FoodAndSpecialtySections.SelectMany(section => section.Items))
+            .Concat(DropItems)
+            .Concat(OreItems);
+        var imageTasks = Characters.Select(LoadAvatarImageAsync)
+            .Concat(materialItems.Select(LoadMaterialImageAsync));
+
+        await Task.WhenAll(imageTasks);
+    }
+
+    private static async Task LoadAvatarImageAsync(GatherCharacterCard character)
+    {
+        character.AvatarImage = await MapIconImageCache.GetAsync(character.AvatarImageUrl, default);
+    }
+
+    private static async Task LoadMaterialImageAsync(GatherTrackItem material)
+    {
+        material.IconImage = await MapIconImageCache.GetAsync(material.IconUrl, default);
     }
 
     private static GatherTrackItem CreateTrack(
@@ -351,7 +442,15 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
             shortLabel,
             palette.AccentBrush,
             palette.SurfaceBrush,
+            MaterialIconUrls.Value.GetValueOrDefault(name, string.Empty),
             keywords.Length == 0 ? [name] : keywords);
+    }
+
+    private static IReadOnlyDictionary<string, string> LoadMaterialIconUrls()
+    {
+        var json = ResourceHelper.GetString("pack://application:,,,/Resources/Json/icons.json");
+        var icons = JsonConvert.DeserializeObject<List<GatherIconResource>>(json) ?? [];
+        return icons.ToDictionary(x => x.Name, x => x.Link, StringComparer.Ordinal);
     }
 
     private static GatherPalette CreatePalette(string accentHex, string surfaceHex)
@@ -368,6 +467,12 @@ public partial class GatheringAndFarmingPageViewModel : ViewModel
     }
 
     private sealed record PathingTaskIndexEntry(string FullPath, string RelativePath, string FileName);
+
+    private sealed class GatherIconResource
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Link { get; set; } = string.Empty;
+    }
 }
 
 public sealed class GatherPalette
@@ -382,25 +487,30 @@ public sealed class GatherPalette
     }
 }
 
-public sealed class GatherCharacterCard
+public sealed partial class GatherCharacterCard : ObservableObject
 {
     public string Name { get; }
     public string Subtitle { get; }
     public string AvatarText { get; }
+    public string AvatarImageUrl { get; }
     public Brush AccentBrush { get; }
     public Brush AccentSurfaceBrush { get; }
     public ObservableCollection<GatherTrackItem> Materials { get; }
+
+    [ObservableProperty] private ImageSource? _avatarImage;
 
     public GatherCharacterCard(
         string name,
         string subtitle,
         string avatarText,
+        string avatarImageUrl,
         GatherPalette palette,
         IEnumerable<GatherTrackItem> materials)
     {
         Name = name;
         Subtitle = subtitle;
         AvatarText = avatarText;
+        AvatarImageUrl = avatarImageUrl;
         AccentBrush = palette.AccentBrush;
         AccentSurfaceBrush = palette.SurfaceBrush;
         Materials = new ObservableCollection<GatherTrackItem>(materials);
@@ -421,14 +531,17 @@ public sealed class GatherTrackSection
     }
 }
 
-public sealed class GatherTrackItem
+public sealed partial class GatherTrackItem : ObservableObject
 {
     public string Name { get; }
     public string Description { get; }
     public string ShortLabel { get; }
     public Brush AccentBrush { get; }
     public Brush AccentSurfaceBrush { get; }
+    public string IconUrl { get; }
     public IReadOnlyList<string> SearchKeywords { get; }
+
+    [ObservableProperty] private ImageSource? _iconImage;
 
     public GatherTrackItem(
         string name,
@@ -436,6 +549,7 @@ public sealed class GatherTrackItem
         string shortLabel,
         Brush accentBrush,
         Brush accentSurfaceBrush,
+        string iconUrl,
         IReadOnlyList<string> searchKeywords)
     {
         Name = name;
@@ -443,6 +557,7 @@ public sealed class GatherTrackItem
         ShortLabel = shortLabel;
         AccentBrush = accentBrush;
         AccentSurfaceBrush = accentSurfaceBrush;
+        IconUrl = iconUrl;
         SearchKeywords = searchKeywords;
     }
 }
