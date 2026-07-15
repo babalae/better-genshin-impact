@@ -1042,8 +1042,8 @@ public class Avatar
                                 Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                             }
 
-                            // OCR 无结果时：若不存在传奇血条，向右旋转搜索敌人
-                            if (!damageResult.HasValue && !hasLegendaryBar)
+                            // OCR 无结果时：向右旋转搜索敌人
+                            if (!damageResult.HasValue)
                             {
                                 // 连续超过1秒未找到任何血条，提前退出
                                 if ((DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1)
