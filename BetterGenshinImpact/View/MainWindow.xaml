@@ -9,14 +9,11 @@
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
                  xmlns:tray="http://schemas.lepo.co/wpfui/2022/xaml/tray"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             xmlns:local="clr-namespace:BetterGenshinImpact"
-             xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
-             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-                 Title="BetterGI · 更好的原神"
-                 Width="1000"
-                 Height="680"
-                 MinWidth="840"
-                 MinHeight="560"
+                 xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+                 xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                 Title="更好的原神"
+                 Width="900"
+                 Height="600"
                  d:Background="#D2D2D2"
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -31,10 +28,9 @@
                  mc:Ignorable="d">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <sys:String x:Key="RedeemCodeTitleText">有新的兑换码可用</sys:String>
+        <sys:String x:Key="RedeemCodeTitleText">🎁 有新的兑换码可用</sys:String>
         <sys:String x:Key="RedeemCodeDetailText">点击查看详情</sys:String>
     </Window.Resources>
-
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Activated">
             <b:InvokeCommandAction Command="{Binding ActivatedCommand}" />
@@ -57,22 +53,19 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <!-- ===== 左侧导航 ===== -->
         <ui:NavigationView x:Name="RootNavigation"
                            Grid.Column="0"
                            Grid.Row="1"
+                           Margin="0,0,0,5"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            IsTopSeparatorVisible="False"
-                           IsFooterSeparatorVisible="True"
-                           OpenPaneLength="172"
-                           PaneDisplayMode="Left">
+                           IsFooterSeparatorVisible="False"
+                           OpenPaneLength="160">
             <ui:NavigationView.MenuItems>
-                <!-- 核心功能 -->
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:HomePage}"
-                                       ToolTip="截图器启动与游戏联动设置">
+                                       TargetPageType="{x:Type pages:HomePage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Play24" />
                     </ui:NavigationViewItem.Icon>
@@ -80,38 +73,37 @@
 
                 <ui:NavigationViewItem Content="实时触发"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:TriggerSettingsPage}"
-                                       ToolTip="配置常驻后台的自动触发器">
+                                       TargetPageType="{x:Type pages:TriggerSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Timer24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-
                 <ui:NavigationViewItem Content="独立任务"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:TaskSettingsPage}"
-                                       ToolTip="手动启动各类自动化任务">
+                                       TargetPageType="{x:Type pages:TaskSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <!--<ui:NavigationViewItemSeparator />-->
+
                 <ui:NavigationViewItem Content="一条龙"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:OneDragonFlowPage}"
-                                       ToolTip="一键完成日常任务流程">
+                                       TargetPageType="{x:Type pages:OneDragonFlowPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="AnimalTurtle24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <!-- 全自动子菜单 -->
-                <ui:NavigationViewItem Content="全自动"
-                                       ToolTip="脚本、地图追踪与录制回放">
+                <ui:NavigationViewItem Content="全自动">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
                     <ui:NavigationViewItem.MenuItems>
+
+                        <!--<ui:NavigationViewItemSeparator />-->
+                        <!--  ConvertRange20  -->
                         <ui:NavigationViewItem Content="调度器"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:ScriptControlPage}">
@@ -119,6 +111,7 @@
                                 <ui:SymbolIcon Symbol="DeveloperBoard24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <!--  WebAsset24 | DocumentJs16 | Script16  -->
                         <ui:NavigationViewItem Content="JS 脚本"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:JsListPage}">
@@ -126,6 +119,7 @@
                                 <ui:SymbolIcon Symbol="DocumentJs16" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <!--  Map24  -->
                         <ui:NavigationViewItem Content="地图追踪"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:MapPathingPage}">
@@ -133,6 +127,7 @@
                                 <ui:SymbolIcon Symbol="Map24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <!--  Script16  -->
                         <ui:NavigationViewItem Content="录制回放"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:KeyMouseRecordPage}">
@@ -143,11 +138,9 @@
                     </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
 
-                <!-- 工具 -->
                 <ui:NavigationViewItem Content="辅助操控"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:MacroSettingsPage}"
-                                       ToolTip="键鼠宏与辅助操作">
+                                       TargetPageType="{x:Type pages:MacroSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="XboxController24" />
                     </ui:NavigationViewItem.Icon>
@@ -155,43 +148,44 @@
 
                 <ui:NavigationViewItem Content="快捷键"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:HotKeyPage}"
-                                       ToolTip="全局快捷键绑定设置">
+                                       TargetPageType="{x:Type pages:HotKeyPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-
+                <!--<ui:NavigationViewItem Content="按键绑定"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:KeyBindingsSettingsPage}" Cursor="Hand">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="KeyboardMouse16" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>-->
                 <ui:NavigationViewItem Content="通知"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:NotificationSettingsPage}"
-                                       ToolTip="任务完成通知渠道设置">
+                                       TargetPageType="{x:Type pages:NotificationSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
-
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:CommonSettingsPage}"
-                                       ToolTip="通用配置与偏好设置">
+                                       TargetPageType="{x:Type pages:CommonSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Settings24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.FooterMenuItems>
 
-            <!-- 内容区遮罩层（兑换码通知 + Snackbar） -->
             <ui:NavigationView.ContentOverlay>
                 <Grid>
-                    <!-- 兑换码通知卡片 -->
+                    <!-- 兑换码更新通知卡片 -->
                     <Border CornerRadius="8"
                             MinWidth="240"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
-                            Margin="0,10,14,0"
+                            Margin="0,8,12,0"
                             Cursor="Hand"
                             Visibility="{Binding IsRedeemCodeInfoBarOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
                         <b:Interaction.Triggers>
@@ -200,7 +194,7 @@
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
                         <Border.Effect>
-                            <DropShadowEffect Color="Black" Opacity="0.25" ShadowDepth="2" BlurRadius="20"/>
+                            <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="2" BlurRadius="16"/>
                         </Border.Effect>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -227,6 +221,7 @@
                                                Text="{Binding Source={StaticResource RedeemCodeDetailText}, Converter={StaticResource TrConverter}}"/>
                                 </StackPanel>
                             </Border>
+                            <!-- 右侧关闭按钮区域 -->
                             <Border Grid.Column="2"
                                     Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                                     CornerRadius="0,4,4,0"
@@ -248,17 +243,10 @@
             </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
 
-        <!-- ===== 标题栏 ===== -->
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0" Grid.Column="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
-            <ui:TitleBar.Header>
-                <TextBlock VerticalAlignment="Center"
-                           FontSize="12"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="{x:Static local:App.DisplayVersion}" />
-            </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
                     <ui:Button Width="40"
@@ -269,7 +257,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Gift16}"
                                Foreground="{Binding RedeemCodeButtonForeground}"
-                               ToolTip="查看兑换码" />
+                               ToolTip="获取兑换码信息" />
                     <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"
@@ -277,7 +265,7 @@
                                Command="{Binding SwitchBackdropCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Blur24}"
-                               ToolTip="切换主题或背景样式" />
+                               ToolTip="切换深浅主题或背景样式" />
                     <ui:Button Width="32"
                                Height="32"
                                Background="Transparent"
@@ -285,12 +273,11 @@
                                Command="{Binding HideCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon CaretDown24}"
-                               ToolTip="最小化到系统托盘" />
+                               ToolTip="最小化到托盘" />
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
 
-        <!-- ===== 系统托盘 ===== -->
         <tray:NotifyIcon Grid.Row="0" Grid.Column="0"
                          FocusOnLeftClick="False"
                          Icon="pack://application:,,,/Resources/Images/logo.ico"

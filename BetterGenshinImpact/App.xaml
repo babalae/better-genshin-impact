@@ -20,11 +20,8 @@
             <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
 
             <!-- ===== 设计令牌 ===== -->
-            <CornerRadius x:Key="CardCornerRadius">10</CornerRadius>
             <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
-            <CornerRadius x:Key="SmallCornerRadius">4</CornerRadius>
             <Thickness x:Key="PagePadding">48,20,48,28</Thickness>
-            <Thickness x:Key="CardPadding">20,18</Thickness>
 
             <!-- ===== 全局 Converter ===== -->
             <bgivc:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
@@ -46,36 +43,6 @@
             </Style>
             <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type ui:TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
-            </Style>
-
-            <!-- ===== 全局 Card 样式（统一所有页面的卡片风格） ===== -->
-            <Style x:Key="AppCardStyle" TargetType="{x:Type Border}">
-                <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="{StaticResource CardCornerRadius}" />
-            </Style>
-
-            <Style x:Key="AppCardHoverStyle" TargetType="{x:Type Border}" BasedOn="{StaticResource AppCardStyle}">
-                <Style.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
-
-            <!-- ===== 徽章/标签样式 ===== -->
-            <Style x:Key="StatusBadgeStyle" TargetType="{x:Type Border}">
-                <Setter Property="CornerRadius" Value="14" />
-                <Setter Property="Padding" Value="12,5" />
-                <Setter Property="Margin" Value="0,0,8,0" />
-            </Style>
-
-            <!-- ===== 分割线样式 ===== -->
-            <Style x:Key="AppSeparatorStyle" TargetType="{x:Type Separator}">
-                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
-                <Setter Property="BorderThickness" Value="0,1,0,0" />
-                <Setter Property="Margin" Value="-20,0" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>
