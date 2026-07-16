@@ -50,7 +50,8 @@ public partial class App : Application
     private static readonly IHost _host = Host.CreateDefaultBuilder()
         .CheckIntegration()
         .UseElevated()
-        .UseSingleInstance("BetterGI")
+        .UseSingleInstance("BetterGI", activationCallback: args =>
+            GetService<HomePageViewModel>()?.HandleActivation(CommandLineOptions.Parse(args)))
         .ConfigureLogging(builder => { builder.ClearProviders(); })
         .ConfigureServices((context, services) =>
             {

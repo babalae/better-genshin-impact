@@ -3,10 +3,12 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
@@ -19,6 +21,9 @@ namespace BetterGenshinImpact.Helpers;
 
 internal static class RuntimeHelper
 {
+    // Keep the named handle alive for the lifetime of the primary process.
+    private static EventWaitHandle? _singleInstanceHandle;
+
     public static bool IsElevated { get; } = GetElevated();
     public static bool IsDebuggerAttached => Debugger.IsAttached;
     public static bool IsDesignMode { get; } = GetDesignMode();
@@ -116,33 +121,57 @@ internal static class RuntimeHelper
         Environment.Exit(exitCode ?? 'r' + 'u' + 'n' + 'a' + 's');
     }
 
-    public static void CheckSingleInstance(string instanceName, Action<bool> callback = null!)
+    public static void CheckSingleInstance(string instanceName, Action<bool> callback = null!, Action<string[]> activationCallback = null!)
     {
-        EventWaitHandle? handle;
+        var pipeName = $"{instanceName}.Activation";
 
         try
         {
-            handle = EventWaitHandle.OpenExisting(instanceName);
-            handle.Set();
+            using EventWaitHandle handle = EventWaitHandle.OpenExisting(instanceName);
+            try
+            {
+                using NamedPipeClientStream pipe = new(".", pipeName, PipeDirection.Out);
+                pipe.Connect(3000);
+                using BinaryWriter writer = new(pipe);
+                writer.Write(JsonConvert.SerializeObject(Environment.GetCommandLineArgs()));
+                writer.Flush();
+            }
+            catch (Exception ex) when (ex is IOException or TimeoutException)
+            {
+                Debug.WriteLine(ex);
+            }
             callback?.Invoke(false);
             Environment.Exit(0xFFFF);
         }
         catch (WaitHandleCannotBeOpenedException)
         {
             callback?.Invoke(true);
-            handle = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName);
+            _singleInstanceHandle = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName);
         }
 
         _ = Task.Factory.StartNew(() =>
         {
-            while (handle.WaitOne())
+            while (true)
             {
-                Application.Current.Dispatcher?.BeginInvoke(() =>
+                try
                 {
-                    Application.Current.MainWindow?.Show();
-                    Application.Current.MainWindow?.Activate();
-                    SystemControl.RestoreWindow(new WindowInteropHelper(Application.Current.MainWindow).Handle);
-                });
+                    using NamedPipeServerStream pipe = new(pipeName, PipeDirection.In);
+                    pipe.WaitForConnection();
+                    using BinaryReader reader = new(pipe);
+                    var args = JsonConvert.DeserializeObject<string[]>(reader.ReadString()) ?? [];
+
+                    Application.Current.Dispatcher?.BeginInvoke(() =>
+                    {
+                        Application.Current.MainWindow?.Show();
+                        Application.Current.MainWindow?.Activate();
+                        SystemControl.RestoreWindow(new WindowInteropHelper(Application.Current.MainWindow).Handle);
+                        activationCallback?.Invoke(args);
+                    });
+                }
+                catch (Exception ex) when (ex is IOException or JsonException)
+                {
+                    // Ignore an interrupted activation and continue listening.
+                }
             }
         }, TaskCreationOptions.LongRunning).ConfigureAwait(false);
     }
@@ -170,11 +199,11 @@ internal static class RuntimeExtension
         return app;
     }
 
-    public static IHostBuilder UseSingleInstance(this IHostBuilder self, string instanceName, Action<bool> callback = null!)
+    public static IHostBuilder UseSingleInstance(this IHostBuilder self, string instanceName, Action<bool> callback = null!, Action<string[]> activationCallback = null!)
     {
         if (!Environment.GetCommandLineArgs().Contains("--no-single"))
         {
-            RuntimeHelper.CheckSingleInstance(instanceName, callback);
+            RuntimeHelper.CheckSingleInstance(instanceName, callback, activationCallback);
         }
         return self;
     }
