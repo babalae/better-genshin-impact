@@ -18,7 +18,7 @@
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
 
-    <Grid Margin="42,16,42,12">
+    <Grid Margin="{StaticResource PagePadding}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -33,34 +33,6 @@
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       Text="全局热键：只支持组合键和功能键，软件启动直接生效。键鼠监听：支持任意键盘单键、鼠标侧键，功能启动后才生效（推荐）。点击类型按钮可以切换快捷键类型。其中存在长按需求的功能不能使用全局热键。"
                       TextWrapping="Wrap" />
-
-        <!--<ItemsControl Grid.Row="2" ItemsSource="{Binding HotKeySettingModels}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type model:HotKeySettingModel}">
-                    <Grid Margin="0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="100" />
-                            <ColumnDefinition Width="180" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Column="0"
-                                      VerticalAlignment="Center"
-                                      Text="{Binding FunctionName}" />
-                        <ui:Button Grid.Column="1"
-                                   Margin="0,0,8,0"
-                                   HorizontalAlignment="Right"
-                                   Command="{Binding SwitchHotKeyTypeCommand}"
-                                   Content="{Binding HotKeyTypeName, Mode=OneWay}"
-                                   IsEnabled="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}" />
-                        <hotKey:HotKeyTextBox Grid.Column="2"
-                                              HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
-                                              Hotkey="{Binding HotKey}"
-                                              Style="{StaticResource DefaultTextBoxStyle}"
-                                              TextAlignment="Center" />
-                    </Grid>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>-->
 
         <ui:Border Grid.Row="2"
                    Background="{DynamicResource CardBackground}"

@@ -17,10 +17,11 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
-    <StackPanel Margin="42,16,42,12">
-        <ui:TextBlock Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="软件设置" />
+    <StackPanel Margin="{StaticResource PagePadding}">
+        <TextBlock Margin="0,0,0,12"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Text="软件设置" />
         
                 <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Globe24}">
             <ui:CardControl.Header>
