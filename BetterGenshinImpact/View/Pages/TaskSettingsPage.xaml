@@ -1090,7 +1090,7 @@
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 Margin="0,0,38,0">
-                        <ui:ToggleSwitch IsEnabled="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
+                        <ui:ToggleSwitch IsEnabled="{Binding Config.AutoFightConfig.KazuhaPickupEnabled}"
                                          IsChecked="{Binding Config.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
                         <ui:TextBlock Margin="4,0,0,0"
                                       VerticalAlignment="Center"
@@ -2867,7 +2867,7 @@
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 Margin="0,0,38,0">
-                        <ui:ToggleSwitch IsEnabled="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
+                        <ui:ToggleSwitch IsEnabled="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.KazuhaPickupEnabled}"
                                          IsChecked="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.QinDoublePickUp, Mode=TwoWay}" />
                         <ui:TextBlock Margin="4,0,0,0"
                                       VerticalAlignment="Center"

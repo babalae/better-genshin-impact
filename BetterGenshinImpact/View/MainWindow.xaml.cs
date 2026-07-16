@@ -98,6 +98,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         // 按需订阅：有滚动活动才监听渲染帧
         if (!_isRenderingSubscribed)
         {
+            _lastFrameTime = DateTime.Now;
             _isRenderingSubscribed = true;
             CompositionTarget.Rendering += OnCompositionTargetRendering;
         }
@@ -165,7 +166,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
             if (Math.Abs(_inputVelocity) > _minVelocity)
             {
                 _inputVelocity *= normalizedDecay;
-                _targetOffset += _inputVelocity;
+                _targetOffset += _inputVelocity * dtScale;
                 _targetOffset = Math.Max(0, Math.Min(_targetOffset, _currentScrollViewer.ScrollableHeight));
             }
             else
