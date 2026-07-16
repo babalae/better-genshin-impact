@@ -992,6 +992,8 @@ public class Avatar
                     {
                         // 检测屏幕中的血条（红色连通域），结果坐标在 1500×900 裁剪空间内
                         var bars = FindBloodBars(capture);
+                        // 更新动态传奇血条追踪
+                        UpdateLegendaryBarTracker(bars.Select(b => b.y));
                         // 过滤掉 x <= 200 的非敌人血条（如 UI 元素、角色自身元素等误检）
                         var valid = bars.Where(b => b.x > 200).ToList();
 
@@ -1001,8 +1003,8 @@ public class Avatar
                             capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
                         };
 
-                        // 检测是否存在传奇血条（y 50~96 范围，位于屏幕顶部的特殊血条）
-                        bool hasLegendaryBar = bars.Any(b => b.y > 50 && b.y < 96);
+                        // 检测是否存在传奇血条（y < 96 直接判定，y 96-200 使用动态追踪）
+                        bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
 
                         if (valid.Count > 0 && !hasLegendaryBar)
                         {
@@ -1274,6 +1276,56 @@ public class Avatar
         return null;
     }
 
+    /// <summary>
+    /// 传奇血条动态追踪字典：2px粒度的 y → 连续出现计数。
+    /// y 96-200 范围的血条在连续5帧中出现时被标记为传奇。
+    /// </summary>
+    private static readonly Dictionary<int, int> _legendaryBarTracker = new();
+    private const int LegendaryBarTrackThreshold = 5;
+
+    /// <summary>
+    /// 更新传奇血条动态追踪状态。
+    /// 对 y 96-200 的血条进行帧间连续性追踪，连续出现达到阈值后标记为传奇。
+    /// 允许1帧容错：某帧未出现时计数递减而非直接清零。
+    /// </summary>
+    private static void UpdateLegendaryBarTracker(IEnumerable<int> barYs)
+    {
+        var currentBins = barYs.Where(y => y >= 96 && y < 200)
+                               .Select(y => y / 2 * 2)
+                               .ToHashSet();
+
+        // 存在的 y：递增（上限为阈值）
+        foreach (var bin in currentBins)
+        {
+            if (_legendaryBarTracker.TryGetValue(bin, out var cnt))
+                _legendaryBarTracker[bin] = Math.Min(cnt + 1, LegendaryBarTrackThreshold);
+            else
+                _legendaryBarTracker[bin] = 1;
+        }
+
+        // 不存在的 y：递减（1帧容错），归零则移除
+        foreach (var bin in _legendaryBarTracker.Keys.ToArray())
+        {
+            if (!currentBins.Contains(bin))
+            {
+                _legendaryBarTracker[bin]--;
+                if (_legendaryBarTracker[bin] <= 0)
+                    _legendaryBarTracker.Remove(bin);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 判断指定 y 坐标的血条是否为传奇血条。
+    /// y < 96 直接判定为传奇；y 96-200 使用动态追踪结果；y >= 200 视为普通。
+    /// </summary>
+    private static bool IsLegendaryBar(int y)
+    {
+        if (y < 96) return true;
+        if (y >= 200) return false;
+        return _legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt) && cnt >= LegendaryBarTrackThreshold;
+    }
+
     public static List<(int x, int y, int width, int height)> FindBloodBars(ImageRegion? existingCapture = null)
     {
         var results = new List<(int x, int y, int width, int height)>();
@@ -1304,6 +1356,9 @@ public class Avatar
                 results.Add((x, y, width, height));
             }
         }
+
+        // 自动更新传奇血条动态追踪
+        UpdateLegendaryBarTracker(results.Select(r => r.y));
 
         return results;
     }
