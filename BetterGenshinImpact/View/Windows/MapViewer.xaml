@@ -1255,7 +1255,7 @@
                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                 <ui:Button Height="38"
                                            HorizontalAlignment="Stretch"
-                                           Command="{Binding RunModeActionCommand}"
+                                           Command="{Binding ModeActionCommand}"
                                            Content="{Binding ModeActionText}"
                                            ToolTip="{Binding ModeActionToolTip}">
                                     <ui:Button.Icon>
@@ -1271,6 +1271,13 @@
                                                             <MultiDataTrigger.Conditions>
                                                                 <Condition Binding="{Binding IsRecorderMode}" Value="True" />
                                                                 <Condition Binding="{Binding IsPathRecorderRecording}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Symbol" Value="Stop24" />
+                                                        </MultiDataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsRecorderMode}" Value="False" />
+                                                                <Condition Binding="{Binding IsTargetNavigationRunning}" Value="True" />
                                                             </MultiDataTrigger.Conditions>
                                                             <Setter Property="Symbol" Value="Stop24" />
                                                         </MultiDataTrigger>
@@ -3132,17 +3139,17 @@
                                                    FontWeight="SemiBold"
                                                    Foreground="{StaticResource MapEditorWarningBrush}"
                                                    Style="{StaticResource InfoValueTextStyle}"
-                                                   Text="{Binding TaskName}"
+                                                   Text="{Binding NavigationStatusText}"
                                                    TextTrimming="CharacterEllipsis" />
 
                                         <TextBlock Grid.Row="1"
                                                    Style="{StaticResource CaptionTextStyle}"
-                                                   Text="路线" />
+                                                   Text="详情" />
                                         <TextBlock Grid.Row="1"
                                                    Grid.Column="1"
                                                    Grid.ColumnSpan="2"
                                                    Style="{StaticResource InfoValueTextStyle}"
-                                                   Text="{Binding TaskMetaText}"
+                                                   Text="{Binding NavigationStatusDetail}"
                                                    TextTrimming="CharacterEllipsis" />
 
                                         <TextBlock Grid.Row="2"

@@ -14,6 +14,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
@@ -200,9 +201,11 @@ public sealed class MapTileViewerControl : FrameworkElement
             return;
         }
 
-        if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is Point2f target)
+        if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is RouteGraphPoint target)
         {
-            _targetPoint = ConvertGameCoordinateToImagePoint(target);
+            // 目标消息固定使用特征图坐标，避免与 PathExecutor 的游戏坐标混用。
+            _targetPoint = ConvertFeatureImageCoordinateToDisplayPoint(
+                new Point2f((float)target.X, (float)target.Y));
             if (IsCompactFollowView && !_isRecorderMode && _currentPoint == null)
             {
                 CenterOn(_targetPoint.Value, useFollowZoom: true);
@@ -1630,18 +1633,14 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (TryFindNearestTeleport(e.GetPosition(this), out var teleport))
         {
             target = teleport.DisplayPoint;
-            _targetPoint = target;
-            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
-                this,
-                "SelectPathingTargetPosition",
-                new object(),
-                new Point2f((float)teleport.GameX, (float)teleport.GameY)));
         }
-        else
-        {
-            _targetPoint = target;
-            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SelectPathingTargetPosition", new object(), ConvertImageCoordinateToGamePoint(target)));
-        }
+
+        _targetPoint = target;
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectPathingTargetPosition",
+            new object(),
+            ToRouteGraphPoint(ConvertDisplayCoordinateToFeatureImagePoint(target))));
 
         InvalidateVisual();
     }
@@ -2222,11 +2221,9 @@ public sealed class MapTileViewerControl : FrameworkElement
                 return [];
             }
 
-            var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-            var map = MapManager.GetMap(mapName, matchingMethod);
             return scene.Points
                 .Where(IsTeleportLike)
-                .Select(tp => CreateTeleportPoint(map, tp))
+                .Select(tp => CreateTeleportPoint(mapName, tp))
                 .Where(tp => tp != null)
                 .Cast<MapTeleportPoint>()
                 .ToList();
@@ -2238,10 +2235,18 @@ public sealed class MapTileViewerControl : FrameworkElement
         }
     }
 
-    private MapTeleportPoint? CreateTeleportPoint(ISceneMap map, GiTpPosition tp)
+    private MapTeleportPoint? CreateTeleportPoint(string mapName, GiTpPosition tp)
     {
-        var gamePoint = new Point2f((float)tp.X, (float)tp.Y);
-        var featurePoint = map.ConvertGenshinMapCoordinatesToImageCoordinates(gamePoint);
+        if (!RouteNavigationCoordinateService.Instance.TryGameToImage(
+                mapName,
+                TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
+                new RouteGamePoint(tp.X, tp.Y),
+                out var converted))
+        {
+            return null;
+        }
+
+        var featurePoint = new Point2f((float)converted.X, (float)converted.Y);
         var displayPoint = ConvertFeatureImageCoordinateToDisplayPoint(featurePoint);
         return new MapTeleportPoint(
             displayPoint,
@@ -2508,10 +2513,13 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private Point2f ConvertGameCoordinateToFeatureImagePoint(Point2f point)
     {
-        var geometry = GetMapGeometry(MapName);
-        return new Point2f(
-            geometry.Origin.X - point.X * geometry.GameToImageScale,
-            geometry.Origin.Y - point.Y * geometry.GameToImageScale);
+        return RouteNavigationCoordinateService.Instance.TryGameToImage(
+            MapName,
+            TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
+            new RouteGamePoint(point.X, point.Y),
+            out var converted)
+            ? new Point2f((float)converted.X, (float)converted.Y)
+            : default;
     }
 
     private Point2f ConvertImageCoordinateToGamePoint(Point2f point)
@@ -2521,19 +2529,24 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private Point2f ConvertFeatureImageCoordinateToGamePoint(Point2f point)
     {
-        var geometry = GetMapGeometry(MapName);
-        return new Point2f(
-            (geometry.Origin.X - point.X) / geometry.GameToImageScale,
-            (geometry.Origin.Y - point.Y) / geometry.GameToImageScale);
+        return RouteNavigationCoordinateService.Instance.TryImageToGame(
+            MapName,
+            TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
+            new RouteGraphPoint(point.X, point.Y),
+            out var converted)
+            ? new Point2f((float)converted.X, (float)converted.Y)
+            : default;
     }
 
     private string FormatGameCoordinate(Point2f featurePoint)
     {
         try
         {
-            var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-            var gamePoint = MapManager.GetMap(MapName, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(featurePoint);
-            if (gamePoint is { } point)
+            if (RouteNavigationCoordinateService.Instance.TryImageToGame(
+                    MapName,
+                    TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
+                    new RouteGraphPoint(featurePoint.X, featurePoint.Y),
+                    out var point))
             {
                 return $"{point.X:F2}, {point.Y:F2}";
             }
@@ -2543,8 +2556,7 @@ public sealed class MapTileViewerControl : FrameworkElement
             Debug.WriteLine(ex);
         }
 
-        var fallback = ConvertFeatureImageCoordinateToGamePoint(featurePoint);
-        return $"{fallback.X:F2}, {fallback.Y:F2}";
+        return "无法转换";
     }
 
     private Point2f ConvertFeatureImageCoordinateToDisplayPoint(Point2f point)
@@ -2557,6 +2569,11 @@ public sealed class MapTileViewerControl : FrameworkElement
     {
         var scale = GetFeatureToDisplayScale();
         return new Point2f((float)(point.X * scale), (float)(point.Y * scale));
+    }
+
+    private static RouteGraphPoint ToRouteGraphPoint(Point2f point)
+    {
+        return new RouteGraphPoint(point.X, point.Y);
     }
 
     private double GetFeatureToDisplayScale()

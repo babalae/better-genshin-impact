@@ -35,6 +35,8 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
+using BetterGenshinImpact.GameTask.AutoPathing.TargetNavigation;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Controls;
@@ -78,6 +80,7 @@ public partial class MapViewerViewModel : ObservableObject
     private readonly string _routeSaveDir = Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"));
     private readonly RouteNavigationGraphProvider _graphProvider;
     private readonly RouteNavigationPlanner _routeNavigationPlanner;
+    private readonly TargetNavigationWorkflow _targetNavigationWorkflow;
     private readonly HashSet<string> _rareActionCodes = new(StringComparer.OrdinalIgnoreCase);
 
     [ObservableProperty]
@@ -325,6 +328,18 @@ public partial class MapViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isRefreshingRouteDiagnostics;
+
+    [ObservableProperty]
+    private TargetNavigationState _navigationExecutionState = TargetNavigationState.NoTarget;
+
+    [ObservableProperty]
+    private string _navigationStatusText = "未选择目标";
+
+    [ObservableProperty]
+    private string _navigationStatusDetail = "点击地图选择目标点";
+
+    [ObservableProperty]
+    private bool _isTargetNavigationRunning;
 
     private List<Waypoint>? _recordedWaypointClipboard;
     private string? _recordedWaypointClipboardText;
@@ -604,11 +619,19 @@ public partial class MapViewerViewModel : ObservableObject
     public string RecordingToggleToolTip =>
         $"启动/停止录制：{PathRecorderHotkeyText}\n添加当前位置：{AddWaypointHotkeyText}";
 
-    public string ModeActionText => IsRecorderMode ? RecordingToggleText : "开始追踪";
+    public string ModeActionText => IsRecorderMode
+        ? RecordingToggleText
+        : IsTargetNavigationRunning ? "取消追踪" : "开始追踪";
 
     public string ModeActionToolTip => IsRecorderMode
         ? RecordingToggleToolTip
-        : "运行当前路线";
+        : IsTargetNavigationRunning
+            ? "取消当前目标导航并释放所有输入"
+            : "自动读取实时坐标、规划并执行到地图目标";
+
+    public ICommand ModeActionCommand => IsRecorderMode
+        ? ToggleRecordingCommand
+        : RunTargetNavigationCommand;
 
     public string TargetActionDisplayText => string.IsNullOrWhiteSpace(TargetAction)
         ? "无动作"
@@ -676,11 +699,26 @@ public partial class MapViewerViewModel : ObservableObject
 
     private bool _isUpdatingWaypointFromMap;
 
+    private bool _isUpdatingTargetCoordinates;
+
     private bool _isRefreshingRouteDiagnosticsLite;
 
     private bool _isSynchronizingMapName;
 
     private List<Waypoint> _currentRoutePoints = [];
+
+    // 展示、录制、规划、待执行和执行中的路线必须拥有独立的真实状态，不能只依赖 Messenger。
+    private PathingTask? _currentDisplayedTask;
+
+    private PathingTask? _currentRecordedTask;
+
+    private RouteNavigationPlan? _currentPlan;
+
+    private PathingTask? _currentExecutableTask;
+
+    private PathingTask? _executingTask;
+
+    private CancellationTokenSource? _targetNavigationCts;
 
     private double _routeTotalDistance;
 
@@ -694,6 +732,9 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _graphProvider = new RouteNavigationGraphProvider(_routeSaveDir);
         _routeNavigationPlanner = new RouteNavigationPlanner(_graphProvider);
+        _targetNavigationWorkflow = new TargetNavigationWorkflow(
+            _routeNavigationPlanner,
+            new BetterGiTargetNavigationRuntime(_graphProvider));
         _ = App.GetService<MapMiniFollowWindowController>();
 
         if (string.IsNullOrEmpty(mapName))
@@ -796,9 +837,10 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 UIDispatcherHelper.BeginInvoke(PrepareForRecordingStart);
             }
-            else if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is Point2f targetPoint)
+            else if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is RouteGraphPoint targetPoint)
             {
-                UIDispatcherHelper.BeginInvoke(() => HandleMapPointSelected(targetPoint));
+                UIDispatcherHelper.BeginInvoke(() => HandleMapPointSelected(
+                    new Point2f((float)targetPoint.X, (float)targetPoint.Y)));
             }
             else if (msg.PropertyName == "UpdateRecorderPathing" && msg.Sender is not MapViewerViewModel && msg.NewValue is PathingTask recorderTask)
             {
@@ -1226,6 +1268,7 @@ public partial class MapViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(MapStatusText));
         OnPropertyChanged(nameof(ModeActionText));
         OnPropertyChanged(nameof(ModeActionToolTip));
+        OnPropertyChanged(nameof(ModeActionCommand));
         if (value && !HasJsonEdits)
         {
             PublishRecorderPath();
@@ -1246,6 +1289,14 @@ public partial class MapViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(MapStatusText));
         OnPropertyChanged(nameof(ModeActionText));
         OnPropertyChanged(nameof(ModeActionToolTip));
+        OnPropertyChanged(nameof(ModeActionCommand));
+    }
+
+    partial void OnIsTargetNavigationRunningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ModeActionText));
+        OnPropertyChanged(nameof(ModeActionToolTip));
+        OnPropertyChanged(nameof(ModeActionCommand));
     }
 
     partial void OnIsJsonEditorModeChanged(bool value)
@@ -1553,6 +1604,7 @@ public partial class MapViewerViewModel : ObservableObject
         MiniFollow.MapName = value;
         SelectedTargetText = "目标点：点击地图选择";
         _selectedTargetPoint = null;
+        InvalidateNavigationPlanForTargetChange();
         if (!_isSynchronizingMapName && !_isSwitchingRecordedRoute)
         {
             ClearPathing();
@@ -1560,6 +1612,16 @@ public partial class MapViewerViewModel : ObservableObject
 
         PublishRecordedRouteList();
         _ = RefreshRouteDiagnosticsLiteAsync();
+    }
+
+    partial void OnTargetImageXChanged(double value)
+    {
+        SynchronizeTargetFromCoordinateEditor();
+    }
+
+    partial void OnTargetImageYChanged(double value)
+    {
+        SynchronizeTargetFromCoordinateEditor();
     }
 
     private bool ShouldRefreshMapBitmap()
@@ -1738,6 +1800,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         HasCurrentPathing = false;
+        _currentDisplayedTask = null;
         TaskName = "未加载路径";
         TaskMetaText = "等待规划结果或当前追踪任务";
         RouteDistanceText = "距离：-";
@@ -2380,93 +2443,7 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private async Task PlanRouteAsync()
     {
-        if (IsPlanning)
-        {
-            return;
-        }
-
-        PlannedEdges.Clear();
-        HasPlan = false;
-        IsPlanning = true;
-        PlanSummary = "正在规划...";
-
-        try
-        {
-            var request = new RouteNavigationPlanRequest
-            {
-                MapName = MapName,
-                CurrentImagePoint = new RouteGraphPoint(CurrentImageX, CurrentImageY),
-                TargetImagePoint = new RouteGraphPoint(TargetImageX, TargetImageY),
-                TaskName = "路网规划测试",
-                TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
-                TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim()
-            };
-
-            var options = new RouteNavigationPlanOptions
-            {
-                AllowTeleport = AllowTeleport,
-                AllowUnknownStartConnector = AllowUnknownStartConnector,
-                AllowUnknownTargetConnector = AllowUnknownTargetConnector,
-                AllowDisabledEdges = AllowDisabledEdges
-            };
-
-            var result = await Task.Run(() =>
-            {
-                var succeeded = _routeNavigationPlanner.TryPlan(request, out var plannedRoute, options);
-                return new { Succeeded = succeeded, Plan = plannedRoute };
-            });
-
-            var plan = result.Plan;
-
-            if (!result.Succeeded)
-            {
-                PlanSummary = $"规划失败：{plan.FailureReason}";
-                GraphStatus = File.Exists(RouteGraphFilePath) ? RouteGraphFilePath : "路网文件不存在";
-                return;
-            }
-
-            HasPlan = true;
-            var generatedTargetMoveMode = plan.Task?.Positions.LastOrDefault()?.MoveMode ?? "-";
-            PlanSummary =
-                $"成功：Cost {plan.Cost:F2}，Edges {plan.Edges.Count}，" +
-                $"传送 {(plan.UsesTeleport ? "是" : "否")}，" +
-                $"起点吸附 {plan.StartAttachDistance:F1}，终点吸附 {plan.TargetAttachDistance:F1}，" +
-                $"终点模式 {generatedTargetMoveMode}";
-            GraphStatus =
-                $"StartUnknown {FormatRouteBool(plan.RequiresUnknownStartConnector)} / " +
-                $"TargetUnknown {FormatRouteBool(plan.RequiresUnknownTargetConnector)} / " +
-                $"Frontier {plan.FrontierNode?.NodeId ?? "-"}";
-
-            for (var i = 0; i < plan.Edges.Count; i++)
-            {
-                var edge = plan.Edges[i];
-                PlannedEdges.Add(new RoutePlanEdgeRow
-                {
-                    Index = i + 1,
-                    FromNodeId = ShortRouteId(edge.FromNodeId),
-                    ToNodeId = ShortRouteId(edge.ToNodeId),
-                    Cost = edge.Cost,
-                    MoveMode = edge.MoveMode,
-                    Action = edge.Action,
-                    HealthStatus = edge.HealthStatus,
-                    IsSyntheticReverse = edge.IsSyntheticReverse,
-                    IsBidirectionalCandidate = edge.IsBidirectionalCandidate
-                });
-            }
-
-            if (plan.Task != null)
-            {
-                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateCurrentPathing", new object(), plan.Task));
-            }
-        }
-        catch (Exception ex)
-        {
-            PlanSummary = $"规划异常：{ex.Message}";
-        }
-        finally
-        {
-            IsPlanning = false;
-        }
+        await RunTargetNavigationWorkflowAsync(execute: false, forceReplan: true);
     }
 
     [RelayCommand]
@@ -2865,16 +2842,221 @@ public partial class MapViewerViewModel : ObservableObject
         await StartRecording();
     }
 
-    [RelayCommand]
-    private async Task RunModeAction()
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task RunTargetNavigation()
     {
-        if (IsRecorderMode)
+        if (IsTargetNavigationRunning)
         {
-            await ToggleRecording();
+            CancelTargetNavigation();
             return;
         }
 
-        await RunRecording();
+        await RunTargetNavigationWorkflowAsync(execute: true, forceReplan: false);
+    }
+
+    private async Task RunTargetNavigationWorkflowAsync(bool execute, bool forceReplan)
+    {
+        if (IsTargetNavigationRunning)
+        {
+            return;
+        }
+
+        if (_selectedTargetPoint is not { } selectedTarget)
+        {
+            ApplyTargetNavigationStatus(new TargetNavigationStatus(
+                TargetNavigationState.NoTarget,
+                "未选择目标",
+                TargetNavigationFailure.Create(TargetNavigationFailureCode.TargetNotSelected)));
+            IsSidePanelVisible = true;
+            return;
+        }
+
+        IsSidePanelVisible = true;
+        IsRecorderMode = false;
+        PlannedEdges.Clear();
+        _targetNavigationCts?.Dispose();
+        _targetNavigationCts = new CancellationTokenSource();
+        IsTargetNavigationRunning = true;
+
+        var request = new TargetNavigationRequest
+        {
+            MapName = MapName,
+            MapMatchMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
+            TargetImagePoint = new RouteGraphPoint(selectedTarget.X, selectedTarget.Y),
+            TaskName = "地图目标导航",
+            TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
+            TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim(),
+            Options = new RouteNavigationPlanOptions
+            {
+                AllowTeleport = AllowTeleport,
+                AllowUnknownStartConnector = AllowUnknownStartConnector,
+                AllowUnknownTargetConnector = AllowUnknownTargetConnector,
+                AllowDisabledEdges = AllowDisabledEdges
+            },
+            ForceReplan = forceReplan,
+            Execute = execute
+        };
+
+        try
+        {
+            var result = await _targetNavigationWorkflow.RunAsync(
+                request,
+                _currentPlan,
+                ApplyTargetNavigationStatus,
+                ApplyNavigationPlan,
+                _targetNavigationCts.Token);
+
+            if (!result.Succeeded && result.FinalState == TargetNavigationState.PlanFailed)
+            {
+                _currentPlan = null;
+                _currentExecutableTask = null;
+                HasPlan = false;
+            }
+        }
+        finally
+        {
+            _executingTask = null;
+            IsPlanning = false;
+            IsTargetNavigationRunning = false;
+            _targetNavigationCts?.Dispose();
+            _targetNavigationCts = null;
+            Simulation.ReleaseAllKey();
+        }
+    }
+
+    private void ApplyTargetNavigationStatus(TargetNavigationStatus status)
+    {
+        NavigationExecutionState = status.State;
+        NavigationStatusText = status.State switch
+        {
+            TargetNavigationState.NoTarget => "未选择目标",
+            TargetNavigationState.WaitingToStart => "等待启动",
+            TargetNavigationState.Planning => "正在规划",
+            TargetNavigationState.PlanFailed => "规划失败",
+            TargetNavigationState.PlanSucceeded => "规划成功",
+            TargetNavigationState.Executing => "正在执行",
+            TargetNavigationState.Completed => "执行完成",
+            TargetNavigationState.ExecutionFailed => "执行失败",
+            TargetNavigationState.UserCancelled => "用户取消",
+            _ => status.Text
+        };
+        IsPlanning = status.State == TargetNavigationState.Planning;
+        _executingTask = status.State == TargetNavigationState.Executing
+            ? _currentExecutableTask
+            : null;
+
+        NavigationStatusDetail = status.Failure?.Message ?? status.State switch
+        {
+            TargetNavigationState.NoTarget => "点击地图选择目标点",
+            TargetNavigationState.WaitingToStart when _currentExecutableTask != null =>
+                $"已生成 {_currentExecutableTask.Positions.Count} 个可执行点，等待 TaskRunner",
+            TargetNavigationState.WaitingToStart =>
+                $"目标 {TargetImageX:F1}, {TargetImageY:F1}，正在检查运行条件",
+            TargetNavigationState.Planning =>
+                $"从实时坐标规划到 {TargetImageX:F1}, {TargetImageY:F1}",
+            TargetNavigationState.PlanSucceeded when _currentExecutableTask != null =>
+                $"{_currentExecutableTask.Positions.Count} 个可执行点",
+            TargetNavigationState.Executing when _executingTask != null =>
+                $"PathExecutor 正在执行 {_executingTask.Positions.Count} 个点",
+            TargetNavigationState.Completed => "已到达目标附近",
+            TargetNavigationState.UserCancelled => "导航已取消，输入已释放",
+            _ => status.Text
+        };
+
+        if (status.Failure != null)
+        {
+            if (status.State == TargetNavigationState.PlanFailed)
+            {
+                PlanSummary = $"规划失败：{status.Failure.Message}";
+            }
+
+            TaskMetaText = status.Failure.Message;
+            GraphStatus = status.Failure.Code switch
+            {
+                TargetNavigationFailureCode.GraphFileMissing => $"路网文件不存在：{RouteGraphFilePath}",
+                TargetNavigationFailureCode.GraphEmpty => $"路网为空：{RouteGraphFilePath}",
+                TargetNavigationFailureCode.GraphInvalid => $"路网文件无效：{RouteGraphFilePath}",
+                _ => GraphStatus
+            };
+
+            if (status.State is TargetNavigationState.PlanFailed or TargetNavigationState.ExecutionFailed)
+            {
+                DialogOwner?.Activate();
+            }
+        }
+    }
+
+    private void ApplyNavigationPlan(RouteNavigationPlan plan)
+    {
+        if (plan.Task == null)
+        {
+            return;
+        }
+
+        _currentPlan = plan;
+        _currentExecutableTask = plan.Task;
+        HasPlan = true;
+        if (plan.Request != null)
+        {
+            CurrentImageX = Math.Round(plan.Request.CurrentImagePoint.X, 1);
+            CurrentImageY = Math.Round(plan.Request.CurrentImagePoint.Y, 1);
+        }
+
+        var generatedTargetMoveMode = plan.Task.Positions.LastOrDefault()?.MoveMode ?? "-";
+        PlanSummary =
+            $"成功：Cost {plan.Cost:F2}，Edges {plan.Edges.Count}，" +
+            $"传送 {(plan.UsesTeleport ? "是" : "否")}，" +
+            $"起点吸附 {plan.StartAttachDistance:F1}，终点吸附 {plan.TargetAttachDistance:F1}，" +
+            $"终点模式 {generatedTargetMoveMode}";
+        GraphStatus =
+            $"StartUnknown {FormatRouteBool(plan.RequiresUnknownStartConnector)} / " +
+            $"TargetUnknown {FormatRouteBool(plan.RequiresUnknownTargetConnector)} / " +
+            $"Frontier {plan.FrontierNode?.NodeId ?? "-"}";
+
+        PlannedEdges.Clear();
+        for (var i = 0; i < plan.Edges.Count; i++)
+        {
+            var edge = plan.Edges[i];
+            PlannedEdges.Add(new RoutePlanEdgeRow
+            {
+                Index = i + 1,
+                FromNodeId = ShortRouteId(edge.FromNodeId),
+                ToNodeId = ShortRouteId(edge.ToNodeId),
+                Cost = edge.Cost,
+                MoveMode = edge.MoveMode,
+                Action = edge.Action,
+                HealthStatus = edge.HealthStatus,
+                IsSyntheticReverse = edge.IsSyntheticReverse,
+                IsBidirectionalCandidate = edge.IsBidirectionalCandidate
+            });
+        }
+
+        // 先保存并直接更新 ViewModel，再通知地图控件；Messenger 不再承担状态存储职责。
+        UpdateTaskSummary(plan.Task);
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "UpdateCurrentPathing",
+            new object(),
+            plan.Task));
+    }
+
+    private void CancelTargetNavigation()
+    {
+        if (!IsTargetNavigationRunning)
+        {
+            return;
+        }
+
+        NavigationStatusText = "用户取消";
+        NavigationStatusDetail = "正在停止导航并释放输入";
+        _targetNavigationCts?.Cancel();
+        Simulation.ReleaseAllKey();
+    }
+
+    public void StopTargetNavigationForWindowClose()
+    {
+        CancelTargetNavigation();
+        Simulation.ReleaseAllKey();
     }
 
     [RelayCommand]
@@ -4892,7 +5074,11 @@ public partial class MapViewerViewModel : ObservableObject
 
         SelectedTargetText = $"目标点：{FormatCoordinate(selectedPoint.X)}, {FormatCoordinate(selectedPoint.Y)}";
         _selectedTargetPoint = selectedPoint;
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SelectPathingTargetPosition", new object(), selectedPoint));
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectPathingTargetPosition",
+            new object(),
+            new RouteGraphPoint(selectedPoint.X, selectedPoint.Y)));
     }
 
     private void UpdateRoutePlanningCurrentPosition(Point2f point)
@@ -4910,8 +5096,18 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _selectedTargetPoint = targetPoint;
         SelectedTargetText = $"目标点：{FormatCoordinate(targetPoint.X)}, {FormatCoordinate(targetPoint.Y)}";
-        TargetImageX = Math.Round(targetPoint.X, 1);
-        TargetImageY = Math.Round(targetPoint.Y, 1);
+        _isUpdatingTargetCoordinates = true;
+        try
+        {
+            TargetImageX = Math.Round(targetPoint.X, 1);
+            TargetImageY = Math.Round(targetPoint.Y, 1);
+        }
+        finally
+        {
+            _isUpdatingTargetCoordinates = false;
+        }
+
+        InvalidateNavigationPlanForTargetChange();
         TargetPickSummary = $"目标点：{TargetImageX:F1}, {TargetImageY:F1}";
         _ = RefreshRouteDiagnosticsLiteAsync();
         if (!IsRecorderMode)
@@ -4919,11 +5115,21 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
+        if (!RouteNavigationCoordinateService.Instance.TryImageToGame(
+                MapName,
+                RecordMapMatchMethod,
+                new RouteGraphPoint(targetPoint.X, targetPoint.Y),
+                out var recorderGamePoint))
+        {
+            RecordStatusText = "录制器：地图点坐标转换失败";
+            return;
+        }
+
         ClearSelectedRecorderEdgeState(notifyMap: false);
         if (UpdateSelectedPointOnMapClick && SelectedRecordedWaypoint != null)
         {
-            SelectedRecordedWaypoint.X = RoundCoordinate(targetPoint.X);
-            SelectedRecordedWaypoint.Y = RoundCoordinate(targetPoint.Y);
+            SelectedRecordedWaypoint.X = RoundCoordinate(recorderGamePoint.X);
+            SelectedRecordedWaypoint.Y = RoundCoordinate(recorderGamePoint.Y);
             RecordStatusText = $"录制器：已更新第 {SelectedRecordedWaypoint.Index} 点";
             PublishRecorderPath();
             return;
@@ -4931,11 +5137,64 @@ public partial class MapViewerViewModel : ObservableObject
 
         AddRecordedWaypoint(new Waypoint
         {
-            X = RoundCoordinate(targetPoint.X),
-            Y = RoundCoordinate(targetPoint.Y),
+            X = RoundCoordinate(recorderGamePoint.X),
+            Y = RoundCoordinate(recorderGamePoint.Y),
             Type = WaypointType.Path.Code,
             MoveMode = MoveModeEnum.Walk.Code
         });
+    }
+
+    private void SynchronizeTargetFromCoordinateEditor()
+    {
+        if (_isUpdatingTargetCoordinates ||
+            double.IsNaN(TargetImageX) || double.IsInfinity(TargetImageX) ||
+            double.IsNaN(TargetImageY) || double.IsInfinity(TargetImageY))
+        {
+            return;
+        }
+
+        _selectedTargetPoint = new Point2f((float)TargetImageX, (float)TargetImageY);
+        SelectedTargetText = $"目标点：{FormatCoordinate(TargetImageX)}, {FormatCoordinate(TargetImageY)}";
+        TargetPickSummary = $"目标点：{TargetImageX:F1}, {TargetImageY:F1}";
+        InvalidateNavigationPlanForTargetChange();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectPathingTargetPosition",
+            new object(),
+            new RouteGraphPoint(_selectedTargetPoint.Value.X, _selectedTargetPoint.Value.Y)));
+    }
+
+    private void InvalidateNavigationPlanForTargetChange()
+    {
+        if (IsTargetNavigationRunning)
+        {
+            CancelTargetNavigation();
+        }
+
+        var previousExecutableTask = _currentExecutableTask;
+        _currentPlan = null;
+        _currentExecutableTask = null;
+        HasPlan = false;
+        PlannedEdges.Clear();
+
+        if (previousExecutableTask != null && ReferenceEquals(_currentDisplayedTask, previousExecutableTask))
+        {
+            ClearPathing();
+        }
+
+        if (_selectedTargetPoint == null)
+        {
+            NavigationExecutionState = TargetNavigationState.NoTarget;
+            NavigationStatusText = "未选择目标";
+            NavigationStatusDetail = "点击地图选择目标点";
+            PlanSummary = "等待规划";
+            return;
+        }
+
+        NavigationExecutionState = TargetNavigationState.WaitingToStart;
+        NavigationStatusText = "等待启动";
+        NavigationStatusDetail = $"目标 {TargetImageX:F1}, {TargetImageY:F1}；点击开始追踪将自动规划";
+        PlanSummary = "目标已改变，等待自动规划";
     }
 
     private void SelectRecordedWaypointByIndex(int waypointIndex)
@@ -5519,6 +5778,7 @@ public partial class MapViewerViewModel : ObservableObject
         var wasRestoring = _isRestoringRecorderHistory;
         _isRestoringRecorderHistory = true;
         _recordTaskTemplate = task;
+        _currentRecordedTask = task;
         task.Info ??= new PathingTaskInfo();
         task.Positions ??= [];
         RecordedWaypoints.Clear();
@@ -5607,6 +5867,7 @@ public partial class MapViewerViewModel : ObservableObject
         task.Info.BgiVersion = Global.Version;
         task.Positions = RecordedWaypoints.Select(i => i.ToWaypoint()).ToList();
         _recordTaskTemplate = task;
+        _currentRecordedTask = task;
         return task;
     }
 
@@ -5690,7 +5951,7 @@ public partial class MapViewerViewModel : ObservableObject
                 this,
                 "SelectPathingTargetPosition",
                 new object(),
-                targetPoint));
+                new RouteGraphPoint(targetPoint.X, targetPoint.Y)));
         }
 
         if (_currentRoutePoints.Count > 0)
@@ -5781,6 +6042,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private void UpdateTaskSummary(PathingTask pathingTask)
     {
+        _currentDisplayedTask = pathingTask;
         SynchronizeTrackingMap(pathingTask.Info.MapName);
         var points = pathingTask.Positions ?? [];
         _currentRoutePoints = points.ToList();
@@ -6125,8 +6387,11 @@ public partial class MapViewerViewModel : ObservableObject
         {
             var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
             var currentMapName = ResolvePositionMapName(mapName);
-            var gamePoint = MapManager.GetMap(currentMapName, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(imagePoint);
-            if (gamePoint is { } point)
+            if (RouteNavigationCoordinateService.Instance.TryImageToGame(
+                    currentMapName,
+                    matchingMethod,
+                    new RouteGraphPoint(imagePoint.X, imagePoint.Y),
+                    out var point))
             {
                 return $"当前位置：{FormatCoordinate(point.X)}, {FormatCoordinate(point.Y)}";
             }
@@ -6523,8 +6788,16 @@ public partial class MapViewerViewModel : ObservableObject
     private Point ConvertToMapPoint(Waypoint point)
     {
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        var (x, y) = MapManager.GetMap(MapName, matchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)point.X, (float)point.Y));
-        return new Point(x, y);
+        if (!RouteNavigationCoordinateService.Instance.TryGameToImage(
+                MapName,
+                matchingMethod,
+                new RouteGamePoint(point.X, point.Y),
+                out var converted))
+        {
+            return default;
+        }
+
+        return new Point(converted.X, converted.Y);
     }
 
     private Scalar GetLineColor(Waypoint startPoint, Waypoint endPoint)

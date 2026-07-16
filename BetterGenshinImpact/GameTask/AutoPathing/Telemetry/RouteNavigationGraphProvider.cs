@@ -1,17 +1,33 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
-public sealed class RouteNavigationGraphProvider
+public enum RouteNavigationGraphLoadStatus
+{
+    Loaded,
+    FileMissing,
+    Empty,
+    Invalid
+}
+
+public interface IRouteNavigationGraphProvider
+{
+    string GraphFilePath { get; }
+
+    bool TryGetSnapshot(
+        out RouteNavigationGraphSnapshot snapshot,
+        out RouteNavigationGraphLoadStatus status,
+        bool forceReload = false);
+}
+
+public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
 {
     private const double NodeBucketSize = 64.0;
     private readonly object _syncRoot = new();
@@ -31,11 +47,20 @@ public sealed class RouteNavigationGraphProvider
 
     public bool TryGetSnapshot(out RouteNavigationGraphSnapshot snapshot, bool forceReload = false)
     {
+        return TryGetSnapshot(out snapshot, out _, forceReload);
+    }
+
+    public bool TryGetSnapshot(
+        out RouteNavigationGraphSnapshot snapshot,
+        out RouteNavigationGraphLoadStatus status,
+        bool forceReload = false)
+    {
         lock (_syncRoot)
         {
             if (!File.Exists(_graphFilePath))
             {
                 snapshot = _snapshot ?? RouteNavigationGraphSnapshot.Empty;
+                status = RouteNavigationGraphLoadStatus.FileMissing;
                 return false;
             }
 
@@ -43,7 +68,10 @@ public sealed class RouteNavigationGraphProvider
             if (!forceReload && _snapshot != null && writeTimeUtc == _loadedWriteTimeUtc)
             {
                 snapshot = _snapshot;
-                return !snapshot.IsEmpty;
+                status = snapshot.IsEmpty
+                    ? RouteNavigationGraphLoadStatus.Empty
+                    : RouteNavigationGraphLoadStatus.Loaded;
+                return status == RouteNavigationGraphLoadStatus.Loaded;
             }
 
             try
@@ -53,11 +81,15 @@ public sealed class RouteNavigationGraphProvider
                 snapshot = new RouteNavigationGraphSnapshot(graph, NodeBucketSize);
                 _snapshot = snapshot;
                 _loadedWriteTimeUtc = writeTimeUtc;
-                return !snapshot.IsEmpty;
+                status = snapshot.IsEmpty
+                    ? RouteNavigationGraphLoadStatus.Empty
+                    : RouteNavigationGraphLoadStatus.Loaded;
+                return status == RouteNavigationGraphLoadStatus.Loaded;
             }
             catch
             {
                 snapshot = _snapshot ?? RouteNavigationGraphSnapshot.Empty;
+                status = RouteNavigationGraphLoadStatus.Invalid;
                 return false;
             }
         }
@@ -66,7 +98,7 @@ public sealed class RouteNavigationGraphProvider
 
 public sealed class RouteNavigationGraphSnapshot
 {
-    public static RouteNavigationGraphSnapshot Empty { get; } = new(new RouteNavigationGraph(), 64.0);
+    public static RouteNavigationGraphSnapshot Empty { get; } = new(new RouteNavigationGraph(), 64.0, []);
 
     private readonly double _nodeBucketSize;
     private readonly Dictionary<string, RouteNavigationNode> _nodesById;
@@ -78,7 +110,10 @@ public sealed class RouteNavigationGraphSnapshot
     private readonly Dictionary<string, List<RouteGraphTeleportEntry>> _teleportsByMap;
     private readonly Dictionary<string, RouteGraphTeleportEntry> _teleportsByAnchorId;
 
-    public RouteNavigationGraphSnapshot(RouteNavigationGraph graph, double nodeBucketSize)
+    public RouteNavigationGraphSnapshot(
+        RouteNavigationGraph graph,
+        double nodeBucketSize,
+        IReadOnlyList<RouteGraphTeleportEntry>? teleports = null)
     {
         Graph = graph;
         Nodes = graph.Nodes ?? [];
@@ -105,7 +140,7 @@ public sealed class RouteNavigationGraphSnapshot
 
         _nodeBucketsByMap = BuildNodeBuckets(Nodes, nodeBucketSize);
         _edgeBucketsByMap = BuildEdgeBuckets(Edges, nodeBucketSize, GetEdgePoints);
-        Teleports = LoadTeleportEntries();
+        Teleports = teleports ?? LoadTeleportEntries();
         _teleportsByMap = Teleports
             .GroupBy(t => RouteGraphGeometry.NormalizeMapName(t.MapName), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
@@ -487,17 +522,23 @@ public sealed class RouteNavigationGraphSnapshot
             foreach (var scene in MapLazyAssets.Get().ScenesDic.Values)
             {
                 var mapName = RouteGraphGeometry.NormalizeMapName(scene.MapName);
-                var map = MapManager.GetMap(mapName, string.Empty);
-                if (map == null)
-                {
-                    continue;
-                }
-
                 foreach (var tp in scene.Points.Where(IsTeleportLike))
                 {
-                    var imagePoint = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tp.X, (float)tp.Y));
                     var spawnGamePoint = ResolveTeleportSpawnPoint(tp);
-                    var spawnImagePoint = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)spawnGamePoint.X, (float)spawnGamePoint.Y));
+                    if (!RouteNavigationCoordinateService.Instance.TryGameToImage(
+                            mapName,
+                            string.Empty,
+                            new RouteGamePoint(tp.X, tp.Y),
+                            out var imagePoint) ||
+                        !RouteNavigationCoordinateService.Instance.TryGameToImage(
+                            mapName,
+                            string.Empty,
+                            new RouteGamePoint(spawnGamePoint.X, spawnGamePoint.Y),
+                            out var spawnImagePoint))
+                    {
+                        continue;
+                    }
+
                     result.Add(new RouteGraphTeleportEntry(
                         mapName,
                         CreateTeleportAnchorId(tp),
@@ -535,15 +576,15 @@ public sealed class RouteNavigationGraphSnapshot
                string.Equals(tp.Type, "Goddess", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static RouteGraphPoint ResolveTeleportSpawnPoint(GiTpPosition tp)
+    private static RouteGamePoint ResolveTeleportSpawnPoint(GiTpPosition tp)
     {
         if (tp.TranPosition is { Length: >= 3 } &&
             (tp.TranPosition[0] != 0 || tp.TranPosition[2] != 0))
         {
-            return new RouteGraphPoint(tp.TranX, tp.TranY);
+            return new RouteGamePoint(tp.TranX, tp.TranY);
         }
 
-        return new RouteGraphPoint(tp.X, tp.Y);
+        return new RouteGamePoint(tp.X, tp.Y);
     }
 
     private static string CreateTeleportAnchorId(GiTpPosition tp)

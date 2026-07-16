@@ -231,10 +231,18 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                 await tpTask.OpenBigMapUi().ConfigureAwait(false);
                 try
                 {
-                    var mapBase = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod);
-                    if (mapBase != null)
+                    var gamePosition = tpTask.GetPositionFromBigMap(waypoint.MapName);
+                    if (Telemetry.RouteNavigationCoordinateService.Instance.TryGameToImage(
+                            waypoint.MapName,
+                            waypoint.MapMatchMethod,
+                            new Telemetry.RouteGamePoint(gamePosition.X, gamePosition.Y),
+                            out var imagePosition))
                     {
-                        position = mapBase.ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
+                        position = new Point2f((float)imagePosition.X, (float)imagePosition.Y);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("大地图坐标无法转换到特征图坐标");
                     }
                 }
                 catch (Exception ex)

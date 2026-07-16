@@ -108,11 +108,13 @@ public class TeleportWaypointStrategy : IWaypointStrategy
         double tpX = tpResult.Item1;
         double tpY = tpResult.Item2;
         
-        var mapInstance = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod);
-        if (mapInstance != null)
+        if (Telemetry.RouteNavigationCoordinateService.Instance.TryGameToImage(
+                waypoint.MapName,
+                waypoint.MapMatchMethod,
+                new Telemetry.RouteGamePoint(tpX, tpY),
+                out var imgCoord))
         {
-            var imgCoord = mapInstance.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
-            Navigation.SetPrevPosition(imgCoord.X, imgCoord.Y);
+            Navigation.SetPrevPosition((float)imgCoord.X, (float)imgCoord.Y);
         }
         
         await Delay(PostTeleportDelayMs, executor.ct);

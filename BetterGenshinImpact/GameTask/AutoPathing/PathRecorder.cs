@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
@@ -259,26 +260,24 @@ public class PathRecorder : Singleton<PathRecorder>
             return CancelStart("路径点记录启动失败：无法获取游戏截图");
         }
 
-        if (!TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: true, out var resolvedMapName, out var mapBase, out var position))
+        if (!TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: true, out var resolvedMapName, out _, out var position))
         {
             return CancelStart("路径点记录启动失败：未识别到当前位置");
         }
-        
-        var nullablePosition = mapBase.ConvertImageCoordinatesToGenshinMapCoordinates(position);
-        
-        if (nullablePosition == null)
+
+        if (!RouteNavigationCoordinateService.Instance.TryImageToGame(
+                resolvedMapName,
+                matchingMethod,
+                new RouteGraphPoint(position.X, position.Y),
+                out var gamePosition))
         {
             return CancelStart("路径点记录启动失败：未识别到当前位置");
-        }
-        else
-        {
-            position = nullablePosition.Value;
         }
 
         _pathingTask.Info.MapName = resolvedMapName;
         
-        waypoint.X = RoundCoordinate(position.X);
-        waypoint.Y = RoundCoordinate(position.Y);
+        waypoint.X = RoundCoordinate(gamePosition.X);
+        waypoint.Y = RoundCoordinate(gamePosition.Y);
         waypoint.Type = WaypointType.Teleport.Code;
         waypoint.MoveMode = MoveModeEnum.Walk.Code;
         _pathingTask.Positions.Add(waypoint);
@@ -312,28 +311,26 @@ public class PathRecorder : Singleton<PathRecorder>
         var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
         if (string.IsNullOrEmpty(matchingMethod)) return;
 
-        if (!TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: false, out var resolvedMapName, out var mapBase, out var position))
+        if (!TryResolveCurrentImagePosition(screen, matchingMethod, allowMapAutoDetect: false, out var resolvedMapName, out _, out var position))
         {
             TaskControl.Logger?.LogWarning("未识别到当前位置！");
             return;
         }
-        
-        var nullablePosition = mapBase.ConvertImageCoordinatesToGenshinMapCoordinates(position);
-        
-        if (nullablePosition == null)
+
+        if (!RouteNavigationCoordinateService.Instance.TryImageToGame(
+                resolvedMapName,
+                matchingMethod,
+                new RouteGraphPoint(position.X, position.Y),
+                out var gamePosition))
         {
             TaskControl.Logger?.LogWarning("未识别到当前位置！");
             return;
-        }
-        else
-        {
-            position = nullablePosition.Value;
         }
 
         _pathingTask.Info.MapName = resolvedMapName;
 
-        waypoint.X = RoundCoordinate(position.X);
-        waypoint.Y = RoundCoordinate(position.Y);
+        waypoint.X = RoundCoordinate(gamePosition.X);
+        waypoint.Y = RoundCoordinate(gamePosition.Y);
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;
         _pathingTask.Positions.Add(waypoint);
         TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", FormatCoordinate(waypoint.X), FormatCoordinate(waypoint.Y));

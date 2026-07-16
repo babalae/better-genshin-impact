@@ -1,8 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.GameTask.Common.Map.Maps;
-using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,13 +9,40 @@ using BetterGenshinImpact.Model.MaskMap;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
-public sealed class RouteNavigationPlanner
+public interface IRouteNavigationPlanner
 {
-    private readonly RouteNavigationGraphProvider _graphProvider;
+    bool TryPlan(
+        RouteNavigationPlanRequest request,
+        out RouteNavigationPlan plan,
+        RouteNavigationPlanOptions? options = null);
+}
 
-    public RouteNavigationPlanner(RouteNavigationGraphProvider? graphProvider = null)
+public enum RouteNavigationFailureCode
+{
+    None,
+    GraphFileMissing,
+    GraphEmpty,
+    GraphInvalid,
+    CurrentPointNotConnected,
+    TargetPointNotConnected,
+    NoRoute,
+    TeleportUnavailable,
+    CoordinateConversionFailed,
+    PlannedTaskInvalid,
+    Unexpected
+}
+
+public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
+{
+    private readonly IRouteNavigationGraphProvider _graphProvider;
+    private readonly IRouteCoordinateConverter _coordinateConverter;
+
+    public RouteNavigationPlanner(
+        IRouteNavigationGraphProvider? graphProvider = null,
+        IRouteCoordinateConverter? coordinateConverter = null)
     {
         _graphProvider = graphProvider ?? new RouteNavigationGraphProvider();
+        _coordinateConverter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
     }
 
     public bool TryPlan(
@@ -28,35 +53,56 @@ public sealed class RouteNavigationPlanner
         ArgumentNullException.ThrowIfNull(request);
         options ??= new RouteNavigationPlanOptions();
 
-        if (!_graphProvider.TryGetSnapshot(out var graph) || graph.IsEmpty)
+        if (!_graphProvider.TryGetSnapshot(out var graph, out var loadStatus) || graph.IsEmpty)
         {
-            plan = RouteNavigationPlan.Failed("navigation graph is empty");
+            var failureCode = loadStatus switch
+            {
+                RouteNavigationGraphLoadStatus.FileMissing => RouteNavigationFailureCode.GraphFileMissing,
+                RouteNavigationGraphLoadStatus.Invalid => RouteNavigationFailureCode.GraphInvalid,
+                _ => RouteNavigationFailureCode.GraphEmpty
+            };
+            plan = RouteNavigationPlan.Failed(failureCode, GetFailureReason(failureCode), request, options);
             return false;
         }
 
         var starts = BuildStartCandidates(graph, request, options);
         if (starts.Count == 0)
         {
-            plan = RouteNavigationPlan.Failed("no graph entry node found");
+            var failureCode = HasUnavailableTeleportCandidate(graph, request, options)
+                ? RouteNavigationFailureCode.TeleportUnavailable
+                : RouteNavigationFailureCode.CurrentPointNotConnected;
+            plan = RouteNavigationPlan.Failed(failureCode, GetFailureReason(failureCode), request, options);
             return false;
         }
 
         var targets = BuildTargetCandidates(graph, request, options);
         if (targets.Count == 0)
         {
-            plan = RouteNavigationPlan.Failed("no target frontier node found");
+            plan = RouteNavigationPlan.Failed(
+                RouteNavigationFailureCode.TargetPointNotConnected,
+                GetFailureReason(RouteNavigationFailureCode.TargetPointNotConnected),
+                request,
+                options);
             return false;
         }
 
         if (!TrySearch(graph, starts, targets, options, out var searchResult))
         {
-            plan = RouteNavigationPlan.Failed("no connected route found");
+            plan = RouteNavigationPlan.Failed(
+                RouteNavigationFailureCode.NoRoute,
+                GetFailureReason(RouteNavigationFailureCode.NoRoute),
+                request,
+                options);
             return false;
         }
 
-        if (!TryBuildTask(request, graph, searchResult, options, out var task, out var failureReason))
+        if (!TryBuildTask(request, graph, searchResult, options, out var task, out var taskFailureCode))
         {
-            plan = RouteNavigationPlan.Failed(failureReason);
+            plan = RouteNavigationPlan.Failed(
+                taskFailureCode,
+                GetFailureReason(taskFailureCode),
+                request,
+                options);
             return false;
         }
 
@@ -75,9 +121,47 @@ public sealed class RouteNavigationPlanner
             StartAttachDistance = Math.Round(searchResult.Start.AttachDistance, 2),
             TargetAttachDistance = Math.Round(searchResult.Target.AttachDistance, 2),
             FrontierNode = searchResult.Target.Node,
-            TargetImagePoint = request.TargetImagePoint
+            TargetImagePoint = request.TargetImagePoint,
+            Request = request,
+            Options = options
         };
         return true;
+    }
+
+    private static bool HasUnavailableTeleportCandidate(
+        RouteNavigationGraphSnapshot graph,
+        RouteNavigationPlanRequest request,
+        RouteNavigationPlanOptions options)
+    {
+        if (!options.AllowTeleport)
+        {
+            return false;
+        }
+
+        var candidates = graph.FindNearestTeleports(
+            request.MapName,
+            request.TargetImagePoint,
+            options.TeleportCandidateLimit,
+            options.TeleportSearchMaxDistance);
+        return candidates.Count > 0 && candidates.All(candidate =>
+            graph.GetTeleportEntryNodes(candidate.Teleport.AnchorId).Count == 0);
+    }
+
+    private static string GetFailureReason(RouteNavigationFailureCode code)
+    {
+        return code switch
+        {
+            RouteNavigationFailureCode.GraphFileMissing => "navigation graph file is missing",
+            RouteNavigationFailureCode.GraphEmpty => "navigation graph is empty",
+            RouteNavigationFailureCode.GraphInvalid => "navigation graph is invalid",
+            RouteNavigationFailureCode.CurrentPointNotConnected => "current point cannot attach to graph",
+            RouteNavigationFailureCode.TargetPointNotConnected => "target point cannot attach to graph",
+            RouteNavigationFailureCode.NoRoute => "no connected route found",
+            RouteNavigationFailureCode.TeleportUnavailable => "teleport entry is unavailable",
+            RouteNavigationFailureCode.CoordinateConversionFailed => "coordinate conversion failed",
+            RouteNavigationFailureCode.PlannedTaskInvalid => "planned task has insufficient points",
+            _ => "unexpected route planning failure"
+        };
     }
 
     private static List<RouteNavigationPlanSegment> BuildPlanSegments(
@@ -429,13 +513,13 @@ public sealed class RouteNavigationPlanner
         return current;
     }
 
-    private static bool TryBuildTask(
+    private bool TryBuildTask(
         RouteNavigationPlanRequest request,
         RouteNavigationGraphSnapshot graph,
         RoutePlanSearchResult searchResult,
         RouteNavigationPlanOptions options,
         out PathingTask task,
-        out string failureReason)
+        out RouteNavigationFailureCode failureCode)
     {
         task = new PathingTask
         {
@@ -450,13 +534,6 @@ public sealed class RouteNavigationPlanner
         };
         AppendResourceItem(task, request);
 
-        var map = MapManager.GetMap(task.Info.MapName, task.Info.MapMatchMethod);
-        if (map == null)
-        {
-            failureReason = "map provider not found";
-            return false;
-        }
-
         var emittedImagePoints = new List<RouteGraphPoint>();
         if (searchResult.Start.Teleport != null)
         {
@@ -469,9 +546,9 @@ public sealed class RouteNavigationPlanner
             });
             emittedImagePoints.Add(searchResult.Start.Teleport.ImagePoint);
         }
-        else if (!TryAddImageWaypoint(task.Positions, map, request.CurrentImagePoint, WaypointType.Path.Code, MoveModeEnum.Walk.Code, null, null, emittedImagePoints, 0))
+        else if (!TryAddImageWaypoint(task.Positions, task.Info, request.CurrentImagePoint, WaypointType.Path.Code, MoveModeEnum.Walk.Code, null, null, emittedImagePoints, 0))
         {
-            failureReason = "current point coordinate conversion failed";
+            failureCode = RouteNavigationFailureCode.CoordinateConversionFailed;
             return false;
         }
 
@@ -480,37 +557,45 @@ public sealed class RouteNavigationPlanner
             var points = ResolveEdgePoints(graph, edge);
             foreach (var point in points)
             {
-                TryAddImageWaypoint(
+                if (!TryAddImageWaypoint(
                     task.Positions,
-                    map,
+                    task.Info,
                     point,
                     WaypointType.Path.Code,
                     string.IsNullOrWhiteSpace(edge.MoveMode) ? MoveModeEnum.Walk.Code : edge.MoveMode,
                     null,
                     null,
                     emittedImagePoints,
-                    options.OutputPointMinDistance);
+                    options.OutputPointMinDistance))
+                {
+                    failureCode = RouteNavigationFailureCode.CoordinateConversionFailed;
+                    return false;
+                }
             }
         }
 
-        TryAddImageWaypoint(
+        if (!TryAddImageWaypoint(
             task.Positions,
-            map,
+            task.Info,
             request.TargetImagePoint,
             WaypointType.Target.Code,
             ResolveTargetMoveMode(request, searchResult),
             request.TargetAction,
             request.TargetActionParams,
             emittedImagePoints,
-            options.TargetOutputMinDistance);
-
-        if (task.Positions.Count < 2)
+            options.TargetOutputMinDistance))
         {
-            failureReason = "planned task has insufficient points";
+            failureCode = RouteNavigationFailureCode.CoordinateConversionFailed;
             return false;
         }
 
-        failureReason = string.Empty;
+        if (task.Positions.Count < 2)
+        {
+            failureCode = RouteNavigationFailureCode.PlannedTaskInvalid;
+            return false;
+        }
+
+        failureCode = RouteNavigationFailureCode.None;
         return true;
     }
 
@@ -547,9 +632,9 @@ public sealed class RouteNavigationPlanner
         });
     }
 
-    private static bool TryAddImageWaypoint(
+    private bool TryAddImageWaypoint(
         List<Waypoint> waypoints,
-        Common.Map.Maps.Base.ISceneMap map,
+        PathingTaskInfo taskInfo,
         RouteGraphPoint imagePoint,
         string type,
         string moveMode,
@@ -561,19 +646,43 @@ public sealed class RouteNavigationPlanner
         if (emittedImagePoints.Count > 0 &&
             RouteGraphGeometry.Distance(emittedImagePoints[^1], imagePoint) < minDistance)
         {
+            if (string.Equals(type, WaypointType.Target.Code, StringComparison.OrdinalIgnoreCase) && waypoints.Count > 0)
+            {
+                if (!_coordinateConverter.TryImageToGame(
+                        taskInfo.MapName,
+                        taskInfo.MapMatchMethod,
+                        imagePoint,
+                        out var exactTargetGamePoint))
+                {
+                    return false;
+                }
+
+                var last = waypoints[^1];
+                last.X = Math.Round(exactTargetGamePoint.X, 2);
+                last.Y = Math.Round(exactTargetGamePoint.Y, 2);
+                last.Type = type;
+                last.MoveMode = moveMode;
+                last.Action = action;
+                last.ActionParams = actionParams;
+                emittedImagePoints[^1] = imagePoint;
+            }
+
             return true;
         }
 
-        var gamePoint = map.ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f((float)imagePoint.X, (float)imagePoint.Y));
-        if (gamePoint == null)
+        if (!_coordinateConverter.TryImageToGame(
+                taskInfo.MapName,
+                taskInfo.MapMatchMethod,
+                imagePoint,
+                out var gamePoint))
         {
             return false;
         }
 
         waypoints.Add(new Waypoint
         {
-            X = Math.Round(gamePoint.Value.X, 2),
-            Y = Math.Round(gamePoint.Value.Y, 2),
+            X = Math.Round(gamePoint.X, 2),
+            Y = Math.Round(gamePoint.Y, 2),
             Type = type,
             MoveMode = moveMode,
             Action = action,
@@ -791,6 +900,8 @@ public sealed class RouteNavigationPlan
 {
     public bool Succeeded { get; init; }
 
+    public RouteNavigationFailureCode FailureCode { get; init; }
+
     public string FailureReason { get; init; } = string.Empty;
 
     public PathingTask? Task { get; init; }
@@ -817,13 +928,29 @@ public sealed class RouteNavigationPlan
 
     public RouteGraphPoint TargetImagePoint { get; init; }
 
-    public static RouteNavigationPlan Failed(string reason)
+    public RouteNavigationPlanRequest? Request { get; init; }
+
+    public RouteNavigationPlanOptions? Options { get; init; }
+
+    public static RouteNavigationPlan Failed(
+        RouteNavigationFailureCode code,
+        string reason,
+        RouteNavigationPlanRequest? request = null,
+        RouteNavigationPlanOptions? options = null)
     {
         return new RouteNavigationPlan
         {
             Succeeded = false,
-            FailureReason = reason
+            FailureCode = code,
+            FailureReason = reason,
+            Request = request,
+            Options = options
         };
+    }
+
+    public static RouteNavigationPlan Failed(string reason)
+    {
+        return Failed(RouteNavigationFailureCode.Unexpected, reason);
     }
 }
 

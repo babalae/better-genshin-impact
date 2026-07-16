@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Common.Map.Maps;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
@@ -261,15 +260,14 @@ public class RouteTelemetryManager
         var mapName = target.MapName ?? "Teyvat";
 
         // 执行坐标转换：将 UI 图像坐标转换为游戏内实际 1024 缩放比例的真坐标，对齐 tp.json
-        var mapProvider = MapManager.GetMap(mapName, string.Empty);
-        if (mapProvider != null)
+        if (RouteNavigationCoordinateService.Instance.TryImageToGame(
+                mapName,
+                string.Empty,
+                new RouteGraphPoint(cx, cy),
+                out var gamePoint))
         {
-            var gamePoint = mapProvider.ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f((float)cx, (float)cy));
-            if (gamePoint.HasValue)
-            {
-                cx = gamePoint.Value.X;
-                cy = gamePoint.Value.Y;
-            }
+            cx = gamePoint.X;
+            cy = gamePoint.Y;
         }
 
         if (CurrentAnchorContext.Type == Model.Enum.WaypointType.Teleport.Code)

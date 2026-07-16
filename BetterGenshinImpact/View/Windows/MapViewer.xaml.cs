@@ -637,6 +637,7 @@ public partial class MapViewer
             return;
         }
 
+        ViewModel.StopTargetNavigationForWindowClose();
         WeakReferenceMessenger.Default.UnregisterAll(this);
         WeakReferenceMessenger.Default.UnregisterAll(ViewModel);
     }
