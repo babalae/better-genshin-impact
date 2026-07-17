@@ -2154,9 +2154,11 @@
     "alias": [
       "未知"
     ],
+    "burstCD": 20,
     "id": "99999999",
     "name": "未知角色",
     "nameEn": "Unknown",
+    "skillCD": 20,
     "weapon": "0"
   }
 ]
