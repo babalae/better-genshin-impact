@@ -162,7 +162,9 @@ public class CombatScenes : IDisposable
                     }
                     else
                     {
-                        throw new Exception($"OCR识别第{i+1}位角色，结果：{rName.Text}，但是这个角色数据未维护");
+                        _logger.LogWarning("OCR识别第{Index}位角色，结果{Text}，视为未知角色", i + 1, rName.Text);
+                        names[i] = "未知角色";
+                        displayNames[i] = "未知角色";
                     }
                 }
 
