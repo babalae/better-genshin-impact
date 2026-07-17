@@ -1,9 +1,7 @@
-﻿using System;
-using System.Linq;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -25,41 +23,7 @@ public class CombatScriptHandler : IActionHandler
                 return;
             }
 
-            // 设置取消令牌到 CombatScenes 和 Avatar 对象
-            combatScenes.BeforeTask(ct);
-
-
-            // 提前校验是否存在策略要求的角色
-            if (!combatScript.AvatarNames.Contains(CombatScriptParser.CurrentAvatarName))
-            {
-                bool hasAvatar = combatScenes.GetAvatars().Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
-                if (!hasAvatar)
-                {
-                    Logger.LogError("简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：{AvatarNames}", string.Join(", ", combatScript.AvatarNames));
-                    return;
-                }
-            }
-
-            try
-            {
-                // 通用化战斗策略
-                for (var i = 0; i < combatScript.CombatCommands.Count; i++)
-                {
-                    var command = combatScript.CombatCommands[i];
-                    var lastCommand = i == 0 ? command : combatScript.CombatCommands[i - 1];
-                    ct.ThrowIfCancellationRequested();
-                    command.Execute(combatScenes, lastCommand);
-                }
-            }
-            catch (RetryException e)
-            {
-                Logger.LogWarning("简易策略脚本执行时出现重试异常，原因：{Msg}，重试中...", e.Message);
-                throw;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "执行简易策略脚本时发生错误！");
-            }
+            await CombatScriptExecutor.ExecuteAsync(combatScript, ct, Logger, combatScenes);
         }
         else
         {

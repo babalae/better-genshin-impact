@@ -80,7 +80,12 @@ public class SetTimeTask
         }
         await Delay(3000, ct);
         // 出现X的时候代表时间切换成功
-        await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
+        await NewRetry.WaitForAction(() =>
+        {
+            using var ra = CaptureToRectArea();
+            using var closeButton = ra.Find(ElementRecognition.Get("PageCloseWhite", ra));
+            return closeButton.IsExist();
+        }, ct, 25);
         await _returnMainUiTask.Start(ct);
     }
 

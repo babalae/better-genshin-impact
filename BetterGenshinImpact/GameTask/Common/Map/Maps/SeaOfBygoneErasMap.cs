@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using OpenCvSharp;
 using Microsoft.Extensions.Logging;
@@ -55,7 +55,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_-2_1024.webp"));
         Layers = BaseMapLayer.LoadLayers(this);
 
-        MapTeleports = MapLazyAssets.Instance.ScenesDic["SeaOfBygoneEras"].Points.
+        MapTeleports = MapLazyAssets.Get().ScenesDic["SeaOfBygoneEras"].Points.
             Where(i => i.Type == "TeleportWaypoint").
             Select(i => ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)i.TranX, (float)i.TranY))).
             Select(i => new Point(i.X, i.Y)).OrderBy(i => i.X).ThenBy(i => i.Y).ToList();

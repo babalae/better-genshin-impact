@@ -1,10 +1,11 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
 using OpenCvSharp;
+using System;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -37,87 +38,136 @@ public static partial class Bv
     }
 
     /// <summary>
+    /// 在整个游戏画面中按指定范围查找元素并点击
+    /// </summary>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="objectName">识别对象名称</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
+    /// <returns>是否找到并点击</returns>
+    private static bool FindElementAndClick(ImageRegion captureRa, string objectName, Rect? searchRect = null)
+    {
+        // ------- 这段后续要注释掉 ------------
+        var expectedCaptureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        if (captureRa.Width != expectedCaptureRect.Width || captureRa.Height != expectedCaptureRect.Height)
+        {
+            throw new ArgumentException(
+                $"captureRa 必须是整个游戏画面的截图区域，预期尺寸为 {expectedCaptureRect.Width}x{expectedCaptureRect.Height}，实际尺寸为 {captureRa.Width}x{captureRa.Height}。局部搜索请通过 searchRect 传入。",
+                nameof(captureRa));
+        }
+        // ------- 这段后续要注释掉 ------------
+
+        var ro = ElementRecognition.Get(objectName, captureRa);
+        if (searchRect is { } rect)
+        {
+            var effectiveSearchRect = rect.Intersect(new Rect(0, 0, captureRa.Width, captureRa.Height));
+            if (ro.RegionOfInterest != default)
+            {
+                effectiveSearchRect = effectiveSearchRect.Intersect(ro.RegionOfInterest);
+            }
+
+            if (effectiveSearchRect.Width <= 0 || effectiveSearchRect.Height <= 0)
+            {
+                return false;
+            }
+
+            ro.RegionOfInterest = effectiveSearchRect;
+        }
+
+        return FindAndClick(captureRa, ro);
+    }
+
+    /// <summary>
     /// 点击减少按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickReduceButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.Keyreduce);
+    public static bool ClickReduceButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "Keyreduce", searchRect);
 
     /// <summary>
     /// 点击增加按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickAddButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.Keyincrease);
+    public static bool ClickAddButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "Keyincrease", searchRect);
 
     /// <summary>
     /// 点击白色确认按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickWhiteConfirmButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnWhiteConfirm);
+    public static bool ClickWhiteConfirmButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "BtnWhiteConfirm", searchRect);
 
     /// <summary>
     /// 点击白色取消按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickWhiteCancelButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnWhiteCancel);
+    public static bool ClickWhiteCancelButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "BtnWhiteCancel", searchRect);
 
     /// <summary>
     /// 点击黑色确认按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickBlackConfirmButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnBlackConfirm);
+    public static bool ClickBlackConfirmButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "BtnBlackConfirm", searchRect);
 
     /// <summary>
     /// 点击黑色取消按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickBlackCancelButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnBlackCancel);
+    public static bool ClickBlackCancelButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "BtnBlackCancel", searchRect);
 
     /// <summary>
     /// 点击联机确认按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickOnlineYesButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnOnlineYes);
+    public static bool ClickOnlineYesButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "BtnOnlineYes", searchRect);
 
     /// <summary>
     /// 点击联机取消按钮
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickOnlineNoButton(ImageRegion captureRa)
-        => FindAndClick(captureRa, ElementAssets.Instance.BtnOnlineNo);
+    public static bool ClickOnlineNoButton(ImageRegion captureRa, Rect? searchRect = null)
+        => FindElementAndClick(captureRa, "BtnOnlineNo", searchRect);
 
     /// <summary>
     /// 点击确认按钮（优先点击白色背景的确认按钮）
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickConfirmButton(ImageRegion captureRa)
+    public static bool ClickConfirmButton(ImageRegion captureRa, Rect? searchRect = null)
     {
-        return ClickBlackConfirmButton(captureRa) || ClickWhiteConfirmButton(captureRa) || ClickOnlineYesButton(captureRa);
+        return ClickBlackConfirmButton(captureRa, searchRect) || ClickWhiteConfirmButton(captureRa, searchRect) || ClickOnlineYesButton(captureRa, searchRect);
     }
 
     /// <summary>
     /// 点击取消按钮（优先点击白色背景的确认按钮）
     /// </summary>
-    /// <param name="captureRa"></param>
+    /// <param name="captureRa">整个游戏画面的截图区域</param>
+    /// <param name="searchRect">可选的局部搜索区域，坐标相对于整个游戏画面</param>
     /// <returns></returns>
-    public static bool ClickCancelButton(ImageRegion captureRa)
+    public static bool ClickCancelButton(ImageRegion captureRa, Rect? searchRect = null)
     {
-        return ClickBlackCancelButton(captureRa) || ClickWhiteCancelButton(captureRa) || ClickOnlineNoButton(captureRa);
+        return ClickBlackCancelButton(captureRa, searchRect) || ClickWhiteCancelButton(captureRa, searchRect) || ClickOnlineNoButton(captureRa, searchRect);
     }
 
     /// <summary>
@@ -128,7 +178,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool FindF(ImageRegion captureRa, params string[] text)
     {
-        using var ra = captureRa.Find(AutoPickAssets.Instance.PickRo);
+        using var ra = captureRa.Find(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo);
         if (ra.IsExist())
         {
             if (text.Length == 0)
@@ -172,7 +222,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 
@@ -183,7 +233,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 

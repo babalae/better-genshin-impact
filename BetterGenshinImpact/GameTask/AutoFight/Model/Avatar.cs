@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -10,6 +11,7 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -440,7 +442,7 @@ public class Avatar
         {
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // 剪裁出队伍区域
-            var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightAssets.Get(region).TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var block = teamRa.DeriveCrop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
             // Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
@@ -465,7 +467,7 @@ public class Avatar
         else
         {
             // 剪裁出IndexRect区域
-            var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightAssets.Get(region).TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width,
                 IndexRect.Height));
@@ -586,7 +588,7 @@ public class Avatar
     /// </summary>
     private double GetSkillCurrentCd(ImageRegion imageRegion)
     {
-        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
@@ -648,7 +650,7 @@ public class Avatar
 
     private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
-        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.QRectForClassify);
+        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).QRectForClassify);
         var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
@@ -681,7 +683,7 @@ public class Avatar
     // /// </summary>
     // public double GetBurstCurrentCd(CaptureContent content)
     // {
-    //     var qRa = content.CaptureRectArea.Crop(AutoFightAssets.Instance.QRect);
+    //     var qRa = content.CaptureRectArea.Crop(AutoFightAssets.Get(content.CaptureRectArea).QRect);
     //     var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
     //     return StringUtils.TryParseDouble(text);
     // }
@@ -958,6 +960,120 @@ public class Avatar
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
+        else if (Name == "桑多涅")
+        {
+            // 桑多涅重击特化逻辑（简化版）
+            // 按下重击后，以固定帧间隔循环执行以下操作：
+            // 1. 截取屏幕检测血条（红色连通域）
+            // 2. 若有血条存在，取离预瞄点(960, 480)最近的血条，移动鼠标对准
+            // 3. 若无血条，且不存在传奇血条（y 50~96）时，向右旋转搜索敌人
+            // 4. 绘制预瞄准星和血条框用于调试
+            var dpi = TaskContext.Instance().DpiScale;
+            const int preAimX = 960;   // 预瞄准星 X 坐标（屏幕中心）
+            const int preAimY = 480;   // 预瞄准星 Y 坐标（屏幕垂直中心偏上）
+            const int frameIntervalMs = 50;  // 每帧间隔（与主循环帧率对齐）
+
+            // 按下重击键，进入蓄力状态
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+
+            // 连续未找到血条的计时，超过1秒时提前退出
+            var lastSeenTargetTime = DateTime.UtcNow;
+            var startTime = DateTime.UtcNow;
+            var maxDurationMs = ms;
+
+            // 主循环：持续到取消或重击时间耗尽
+            // 使用 try/finally 确保异常时也会清理绘制并松开按键
+            try
+            {
+                while (!Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
+                {
+                    // 每帧截图一次，复用给 FindBloodBars 和绘制覆盖层
+                    using (var capture = CaptureToRectArea())
+                    {
+                        // 检测屏幕中的血条（红色连通域），结果坐标在 1500×900 裁剪空间内
+                        var bars = FindBloodBars(capture);
+                        // 更新动态传奇血条追踪
+                        UpdateLegendaryBarTracker(bars.Select(b => b.y));
+                        // 过滤掉 x <= 200 的非敌人血条（如 UI 元素、角色自身元素等误检）
+                        var valid = bars.Where(b => b.x > 200).ToList();
+
+                        // 构建绘制列表，初始包含预瞄准星（红色方框，中心(960, 540)）
+                        var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>
+                        {
+                            capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
+                        };
+
+                        // 检测是否存在传奇血条（y < 96 直接判定，y 96-200 使用动态追踪）
+                        bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
+
+                        if (valid.Count > 0 && !hasLegendaryBar)
+                        {
+                            // 有可瞄准的普通血条：更新最后见到目标的时间
+                            lastSeenTargetTime = DateTime.UtcNow;
+
+                            // 选择距离预瞄点(960, 480)最近的血条作为目标
+                            var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                            Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
+                            // 计算准星到目标中心的偏移量（像素）
+                            var offsetX = (nearest.x + nearest.width / 2) - preAimX;
+                            var offsetY = (nearest.y + nearest.height / 2) - preAimY;
+                            // 以 0.35 系数移动鼠标（平滑跟踪，避免剧烈抖动）
+                            Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+
+                            // 普通血条框绘制：追踪目标用绿色框，其他血条用红色框
+                            foreach (var b in valid)
+                            {
+                                var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                                if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
+                                    drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                else
+                                    drawList.Add(capture.ToRectDrawable(rect, "blood"));
+                            }
+                        }
+                        else
+                        {
+                            // 无血条或存在传奇血条：用 OCR 找伤害数字作为追踪目标
+                            var damageResult = FindDamageNumber(capture);
+                            if (damageResult.HasValue)
+                            {
+                                var (dcx, dcy, dtext) = damageResult.Value;
+                                // Logger.LogInformation("伤害数字追踪: 坐标({X},{Y}) 文本:{Text}", dcx, dcy, dtext);
+                                lastSeenTargetTime = DateTime.UtcNow;
+                                var offsetX = dcx - preAimX;
+                                var offsetY = dcy - preAimY;
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                            }
+
+                            // OCR 无结果时：向右旋转搜索敌人
+                            if (!damageResult.HasValue)
+                            {
+                                // 不存在传奇血条时：连续超过1秒未找到目标，提前退出
+                                if (!hasLegendaryBar && (DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1.5)
+                                {
+                                    Logger.LogInformation("桑多涅重击特化：超过1.5秒未找到目标，提前退出");
+                                    View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                                    break;
+                                }
+
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                            }
+                        }
+
+                        // 将本帧绘制列表提交到遮罩窗口显示
+                        View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                    }
+
+                    // 等待一帧间隔后继续
+                    Sleep(frameIntervalMs);
+                }
+            }
+            finally
+            {
+                // 确保清理绘制并松开重击键
+                View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
+                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+            }
+        }
         else
         {
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
@@ -1158,5 +1274,142 @@ public class Avatar
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 传奇血条动态追踪字典：2px粒度的 y → 连续出现计数。
+    /// y 96-200 范围的血条在连续5帧中出现时被标记为传奇。
+    /// </summary>
+    private static readonly Dictionary<int, int> _legendaryBarTracker = new();
+    private const int LegendaryBarTrackThreshold = 5;
+
+    /// <summary>
+    /// 更新传奇血条动态追踪状态。
+    /// 对 y 96-200 的血条进行帧间连续性追踪，连续出现达到阈值后标记为传奇。
+    /// 允许1帧容错：某帧未出现时计数递减而非直接清零。
+    /// </summary>
+    private static void UpdateLegendaryBarTracker(IEnumerable<int> barYs)
+    {
+        var currentBins = barYs.Where(y => y >= 96 && y < 200)
+                               .Select(y => y / 2 * 2)
+                               .ToHashSet();
+
+        // 存在的 y：递增（上限为阈值）
+        foreach (var bin in currentBins)
+        {
+            if (_legendaryBarTracker.TryGetValue(bin, out var cnt))
+                _legendaryBarTracker[bin] = Math.Min(cnt + 1, LegendaryBarTrackThreshold);
+            else
+                _legendaryBarTracker[bin] = 1;
+        }
+
+        // 不存在的 y：递减（1帧容错），归零则移除
+        foreach (var bin in _legendaryBarTracker.Keys.ToArray())
+        {
+            if (!currentBins.Contains(bin))
+            {
+                _legendaryBarTracker[bin]--;
+                if (_legendaryBarTracker[bin] <= 0)
+                    _legendaryBarTracker.Remove(bin);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 判断指定 y 坐标的血条是否为传奇血条。
+    /// y < 96 直接判定为传奇；y 96-200 使用动态追踪结果；y >= 200 视为普通。
+    /// </summary>
+    private static bool IsLegendaryBar(int y)
+    {
+        if (y < 96) return true;
+        if (y >= 200) return false;
+        return _legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt) && cnt >= LegendaryBarTrackThreshold;
+    }
+
+    public static List<(int x, int y, int width, int height)> FindBloodBars(ImageRegion? existingCapture = null)
+    {
+        var results = new List<(int x, int y, int width, int height)>();
+
+        using var image = existingCapture ?? CaptureToRectArea();
+        var bloodLower = new OpenCvSharp.Scalar(255, 90, 90); // BGR 红色
+
+        using var cropped = image.DeriveCrop(0, 0, 1500, 900);
+        using Mat mask = Core.Recognition.OpenCv.OpenCvCommonHelper.Threshold(
+            cropped.SrcMat, bloodLower);
+
+        using Mat labels = new Mat();
+        using Mat stats = new Mat();
+        using Mat centroids = new Mat();
+
+        int numLabels = Cv2.ConnectedComponentsWithStats(
+            mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        for (int i = 1; i < numLabels; i++)
+        {
+            using Mat row = stats.Row(i);
+            if (row.GetArray(out int[] arr))
+            {
+                int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
+                if (y < 50)
+                    continue;
+                results.Add((x, y, width, height));
+            }
+        }
+
+        // 自动更新传奇血条动态追踪
+        UpdateLegendaryBarTracker(results.Select(r => r.y));
+
+        return results;
+    }
+
+    /// <summary>
+    /// OCR 寻找伤害数字/反应文字作为追踪目标（备用寻敌）。
+    /// 在 450,240-1600,900 区域 OCR，过滤条件：
+    ///   - 有效项1：排除首位 '+'，去除非数字后纯数字 ≥4 位
+    ///   - 有效项2：文本包含反应关键词（免疫/蒸发/感电/结晶/扩散/绽放/冻结/超载/融化/燃烧/超导/激化），跳过数字过滤
+    /// 按 h²×文本字数 加权得到中心坐标，返回离加权中心最近的有效项。
+    /// </summary>
+    public static (int centerX, int centerY, string text)? FindDamageNumber(ImageRegion? existingCapture = null)
+    {
+        using var ra = existingCapture ?? CaptureToRectArea();
+        var ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
+
+        string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
+        var validItems = new List<(int cx, int cy, int area, string text)>();
+
+        foreach (var r in ocrResults)
+        {
+            var text = r.Text?.Trim();
+            if (string.IsNullOrEmpty(text)) continue;
+
+            // 有效项2：反应关键词（跳过所有过滤）
+            if (reactionKeywords.Any(k => text.Contains(k)))
+            {
+                validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Height * r.Height * text.Length, text));
+                continue;
+            }
+
+            // 有效项1：排除 '+' 开头
+            if (text[0] == '+') continue;
+
+            // 去除非数字，纯数字 ≥4 位
+            var digits = new string(text.Where(char.IsDigit).ToArray());
+            if (digits.Length >= 4)
+            {
+                validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Height * r.Height * text.Length, text));
+            }
+        }
+
+        if (validItems.Count == 0) return null;
+
+        int totalArea = validItems.Sum(i => i.area);
+        if (totalArea == 0) return null;
+
+        double avgX = (double)validItems.Sum(i => i.cx * i.area) / totalArea;
+        double avgY = (double)validItems.Sum(i => i.cy * i.area) / totalArea;
+
+        var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
+        return (closest.cx, closest.cy, closest.text);
     }
 }

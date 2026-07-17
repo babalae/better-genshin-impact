@@ -8,6 +8,22 @@ using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Config;
 
+public enum RecoverTiming
+{
+    AnyWaypoint,
+    OnlyTeleport,
+    Never
+}
+
+/// <summary>
+/// 从旧字段 OnlyInTeleportRecover 迁移到 RecoverTiming 枚举的共享方法
+/// </summary>
+internal static class RecoverTimingMigration
+{
+    public static RecoverTiming Migrate(bool onlyInTeleportRecover)
+        => onlyInTeleportRecover ? RecoverTiming.OnlyTeleport : RecoverTiming.AnyWaypoint;
+}
+
 [Serializable]
 public partial class PathingPartyConfig : ObservableObject
 {
@@ -71,7 +87,24 @@ public partial class PathingPartyConfig : ObservableObject
     // 只在传送传送点时复活
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
-    
+
+    // 低血量回复时机
+    private RecoverTiming? _recoverTiming;
+
+    public RecoverTiming RecoverTiming
+    {
+        get
+        {
+            if (_recoverTiming is null)
+            {
+                // 首次读取时从旧字段自动迁移
+                _recoverTiming = RecoverTimingMigration.Migrate(_onlyInTeleportRecover);
+            }
+            return _recoverTiming.Value;
+        }
+        set => SetProperty(ref _recoverTiming, value);
+    }
+
     //允许在jsScript脚本中使用此地图追踪配置
     [ObservableProperty]
     private bool _jsScriptUseEnabled = true;
@@ -128,6 +161,65 @@ public partial class PathingPartyConfig : ObservableObject
 
     [ObservableProperty]
     private AutoFightConfig _autoFightConfig = new();
+    // 赶路通用临界距离（米），节点小于此距离时触发接近/切换模式
+    [ObservableProperty]
+    private int _distance = 45;
+
+    /// <summary>
+    /// 接近停止距离（米），强制小于等于 <see cref="Distance"/>，越界时自动使用 Distance 的值。
+    /// </summary>
+    [ObservableProperty]
+    private int _approachStopDistance = 25;
+
+    partial void OnDistanceChanged(int value)
+    {
+        if (ApproachStopDistance > value)
+        {
+            ApproachStopDistance = value;
+        }
+    }
+
+    partial void OnApproachStopDistanceChanged(int value)
+    {
+        if (value > Distance)
+        {
+            _approachStopDistance = Distance;
+        }
+    }
+
+    [JsonIgnore]
+    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁"];
+
+    [JsonIgnore]
+    public List<string> TravelModeList { get; } = ["精准靠近","连续赶路"];
+
+    [ObservableProperty]
+    private string _hurryOnAvatar = "";
+
+    [ObservableProperty]
+    private string _travelMode = "精准靠近";
+
+    /// <summary>
+    /// 接近节点时切人步行
+    /// </summary>
+    [ObservableProperty]
+    private bool _switchToWalkEnabled = false;
+
+    [ObservableProperty]
+    private bool _mwkFlyEnabled = true;
+
+    /// <summary>
+    /// 玛薇卡跳飞开关
+    /// </summary>
+    [ObservableProperty]
+    private bool _mwkJumpFlyEnabled = true;
+
+    /// <summary>
+    /// 跳飞间隔（秒），闲云使用其1/2值
+    /// </summary>
+    [ObservableProperty]
+    private double _mwkJumpFlyIntervalSeconds = 1;
+
     public static PathingPartyConfig BuildDefault()
     {
         // 即便是不启用的情况下也设置默认值，减少后续使用的判断
@@ -135,6 +227,7 @@ public partial class PathingPartyConfig : ObservableObject
         return new PathingPartyConfig
         {
             OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
+            RecoverTiming = pathingConditionConfig.RecoverTiming,
             UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs,
             AutoEatEnabled = pathingConditionConfig.AutoEatEnabled
         };

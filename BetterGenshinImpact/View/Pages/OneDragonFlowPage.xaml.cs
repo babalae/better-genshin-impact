@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
 using System.Windows.Controls;
@@ -66,19 +66,8 @@ public partial class OneDragonFlowPage
                 return;
             }
             
-            // 过滤已存在的配置组
-            var availableGroups = ViewModel.ScriptGroups
-                .Where(sg => ViewModel.TaskList == null || !ViewModel.TaskList.Any(task => task.Name == sg.Name))
-                .ToList();
-                
-            if (!availableGroups.Any())
-            {
-                Toast.Warning("没有可添加的配置组");
-                return;
-            }
-            
-            // 设置ItemsControl的数据源
-            ScriptGroupItemsControl.ItemsSource = availableGroups;
+            // 设置ItemsControl的数据源（不过滤已存在的，允许重复添加）
+            ScriptGroupItemsControl.ItemsSource = ViewModel.ScriptGroups;
             
             // 获取主窗口
             var mainWindow = Application.Current.MainWindow;
@@ -163,6 +152,30 @@ public partial class OneDragonFlowPage
                 return childOfChild;
         }
         return null;
+    }
+    
+    private void DockPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        var dockPanel = sender as DockPanel;
+        if (dockPanel == null) return;
+        
+        var hitTest = System.Windows.Media.VisualTreeHelper.HitTest(dockPanel, System.Windows.Input.Mouse.GetPosition(dockPanel));
+        if (hitTest != null)
+        {
+            var listViewItem = FindVisualParent<ListViewItem>(hitTest.VisualHit);
+            if (listViewItem != null)
+            {
+                listViewItem.IsSelected = true;
+            }
+        }
+    }
+    
+    private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        if (parent == null) return null;
+        if (parent is T result) return result;
+        return FindVisualParent<T>(parent);
     }
     
     private async void SereniteaPotTpType_Clicked(object sender, RoutedEventArgs e)

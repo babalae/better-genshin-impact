@@ -604,6 +604,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
                                        FontSize="14"
@@ -612,6 +613,32 @@
                                        Text="{Binding Title}"
                                        TextTrimming="CharacterEllipsis" />
                             <ui:Button Grid.Column="1"
+                                       MinWidth="58"
+                                       Height="28"
+                                       Padding="8,0"
+                                       Margin="8,-2,0,0"
+                                       Background="#2FFFFFFF"
+                                       BorderBrush="#26FFFFFF"
+                                       Cursor="Hand"
+                                       Icon="{ui:SymbolIcon EyeOff24}"
+                                       Content="隐藏"
+                                       ToolTip="隐藏"
+                                       Visibility="{Binding IsCurrentPointHidden, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
+                                       Command="{Binding ToggleHiddenCommand}" />
+                            <ui:Button Grid.Column="1"
+                                       MinWidth="58"
+                                       Height="28"
+                                       Padding="8,0"
+                                       Margin="8,-2,0,0"
+                                       Background="#2FFFFFFF"
+                                       BorderBrush="#26FFFFFF"
+                                       Cursor="Hand"
+                                       Icon="{ui:SymbolIcon Eye24}"
+                                       Content="显示"
+                                       ToolTip="显示"
+                                       Visibility="{Binding IsCurrentPointHidden, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Command="{Binding ToggleHiddenCommand}" />
+                            <ui:Button Grid.Column="2"
                                        Width="28"
                                        Height="28"
                                        Padding="0"
@@ -903,6 +930,31 @@
                                                         PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
 
                                             <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="8,0,0,0">
+                                                <TextBlock VerticalAlignment="Center"
+                                                           Margin="0,0,8,0"
+                                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                           ToolTip="当前显示/全部标点"
+                                                           Text="{Binding MapPointVisibilitySummary}" />
+                                                <ui:Button Width="32"
+                                                           Height="32"
+                                                           Margin="0,0,6,0"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Icon="{ui:SymbolIcon EyeOff24}"
+                                                           ToolTip="全部隐藏"
+                                                           IsEnabled="{Binding HasMapPoints}"
+                                                           Command="{Binding HideAllMapPointsCommand}" />
+                                                <ui:Button Width="32"
+                                                           Height="32"
+                                                           Margin="0,0,6,0"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Icon="{ui:SymbolIcon Eye24}"
+                                                           ToolTip="全部显示"
+                                                           IsEnabled="{Binding HasHiddenMapPoints}"
+                                                           Command="{Binding ShowAllMapPointsCommand}" />
                                                 <ui:Button
                                                            Width="32"
                                                            Height="32"

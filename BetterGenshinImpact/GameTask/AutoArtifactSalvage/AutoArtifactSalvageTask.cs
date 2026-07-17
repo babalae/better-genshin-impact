@@ -96,40 +96,40 @@ public class AutoArtifactSalvageTask : ISoloTask
         switch (gridScreenName)
         {
             case GridScreenName.Weapons:
-                recognitionObjectChecked = ElementAssets.Instance.BagWeaponChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagWeaponUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagWeaponChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagWeaponUnchecked");
                 break;
             case GridScreenName.Artifacts:
-                recognitionObjectChecked = ElementAssets.Instance.BagArtifactChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagArtifactUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagArtifactChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagArtifactUnchecked");
                 break;
             case GridScreenName.CharacterDevelopmentItems:
-                recognitionObjectChecked = ElementAssets.Instance.BagCharacterDevelopmentItemChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagCharacterDevelopmentItemUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagCharacterDevelopmentItemChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagCharacterDevelopmentItemUnchecked");
                 break;
             case GridScreenName.Food:
-                recognitionObjectChecked = ElementAssets.Instance.BagFoodChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagFoodUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagFoodChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagFoodUnchecked");
                 break;
             case GridScreenName.Materials:
-                recognitionObjectChecked = ElementAssets.Instance.BagMaterialChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagMaterialUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagMaterialChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagMaterialUnchecked");
                 break;
             case GridScreenName.Gadget:
-                recognitionObjectChecked = ElementAssets.Instance.BagGadgetChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagGadgetUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagGadgetChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagGadgetUnchecked");
                 break;
             case GridScreenName.Quest:
-                recognitionObjectChecked = ElementAssets.Instance.BagQuestChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagQuestUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagQuestChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagQuestUnchecked");
                 break;
             case GridScreenName.PreciousItems:
-                recognitionObjectChecked = ElementAssets.Instance.BagPreciousItemChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagPreciousItemUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagPreciousItemChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagPreciousItemUnchecked");
                 break;
             case GridScreenName.Furnishings:
-                recognitionObjectChecked = ElementAssets.Instance.BagFurnishingChecked;
-                recognitionObjectUnchecked = ElementAssets.Instance.BagFurnishingUnchecked;
+                recognitionObjectChecked = ElementRecognition.Get("BagFurnishingChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagFurnishingUnchecked");
                 break;
             default:
                 throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}");
@@ -147,7 +147,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             if (Bv.IsInPromptDialog(ra))
             {
                 // 如果存在物品过期提示，则点击确认按钮
-                Bv.ClickWhiteConfirmButton(ra.DeriveCrop(0, 0, ra.Width, ra.Height - ra.Height * 0.2));
+                Bv.ClickWhiteConfirmButton(ra, new Rect(0, 0, ra.Width, (int)Math.Round(ra.Height - ra.Height * 0.2)));
                 Sleep(300, ct);
                 return false;
             }
@@ -199,7 +199,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         // 点击分解按钮打开分解界面
         using var ra2 = CaptureToRectArea();
-        using var salvageBtn = ra2.Find(ElementAssets.Instance.BtnArtifactSalvage);
+        using var salvageBtn = ra2.Find(ElementRecognition.Get("BtnArtifactSalvage", ra2));
         if (salvageBtn.IsExist())
         {
             salvageBtn.Click();
@@ -258,7 +258,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             }
         }
 
-        using var quickSelectConfirmBtn = ra4.Find(ElementAssets.Instance.BtnWhiteConfirm);
+        using var quickSelectConfirmBtn = ra4.Find(ElementRecognition.Get("BtnWhiteConfirm", ra4));
         if (quickSelectConfirmBtn.IsExist())
         {
             quickSelectConfirmBtn.Click();
@@ -268,7 +268,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         // 点击分解
         using var ra5 = CaptureToRectArea();
-        var salvageBtnConfirm = ra5.Find(ElementAssets.Instance.BtnArtifactSalvageConfirm);
+        var salvageBtnConfirm = ra5.Find(ElementRecognition.Get("BtnArtifactSalvageConfirm", ra5));
         if (salvageBtnConfirm.IsExist())
         {
             salvageBtnConfirm.Click();
