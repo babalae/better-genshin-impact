@@ -20,15 +20,19 @@ public sealed class RouteNavigationGraphBuilder
     private readonly object _syncRoot = new();
     private readonly string _saveDir;
     private readonly string _graphFilePath;
+    private readonly IRouteCoordinateConverter _coordinateConverter;
     private IReadOnlyCollection<RouteHealthEntry> _pendingHealthEntries = [];
     private int _isBuilding;
     private volatile bool _hasPendingBuild;
 
-    public RouteNavigationGraphBuilder(string saveDir)
+    public RouteNavigationGraphBuilder(
+        string saveDir,
+        IRouteCoordinateConverter? coordinateConverter = null)
     {
         _saveDir = saveDir;
         Directory.CreateDirectory(_saveDir);
         _graphFilePath = Path.Combine(_saveDir, GraphFileName);
+        _coordinateConverter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
     }
 
     public void ScheduleBuild(IReadOnlyCollection<RouteHealthEntry> healthEntries)
@@ -47,9 +51,20 @@ public sealed class RouteNavigationGraphBuilder
         _ = Task.Run(BuildLoop);
     }
 
-    public void BuildNow(IReadOnlyCollection<RouteHealthEntry> healthEntries)
+    public RouteNavigationBuildResult BuildNow(IReadOnlyCollection<RouteHealthEntry> healthEntries)
     {
-        BuildGraph(healthEntries.Select(e => e.Clone()).ToList());
+        return BuildGraph(new RouteNavigationBuildRequest
+        {
+            HealthEntries = healthEntries.Select(e => e.Clone()).ToList(),
+            IncludeTelemetry = true,
+            NodeSnapDistance = 0
+        });
+    }
+
+    public RouteNavigationBuildResult BuildNow(RouteNavigationBuildRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return BuildGraph(request);
     }
 
     private void BuildLoop()
@@ -65,7 +80,12 @@ public sealed class RouteNavigationGraphBuilder
                     healthEntries = _pendingHealthEntries;
                 }
 
-                BuildGraph(healthEntries);
+                BuildGraph(new RouteNavigationBuildRequest
+                {
+                    HealthEntries = healthEntries,
+                    IncludeTelemetry = true,
+                    NodeSnapDistance = 0
+                });
             }
             while (_hasPendingBuild);
         }
@@ -79,15 +99,17 @@ public sealed class RouteNavigationGraphBuilder
         }
     }
 
-    private void BuildGraph(IReadOnlyCollection<RouteHealthEntry> healthEntries)
+    private RouteNavigationBuildResult BuildGraph(RouteNavigationBuildRequest request)
     {
+        PathingTaskRouteImportResult? importResult = null;
         try
         {
-            var healthBySegmentId = healthEntries
+            request.CancellationToken.ThrowIfCancellationRequested();
+            var healthBySegmentId = request.HealthEntries
                 .Where(e => !string.IsNullOrWhiteSpace(e.SegmentId))
                 .ToDictionary(e => e.SegmentId, StringComparer.OrdinalIgnoreCase);
 
-            var records = LoadTelemetryRecords();
+            var records = request.IncludeTelemetry ? LoadTelemetryRecords() : [];
             var representativeRecords = records
                 .Where(r => r.Points is { Count: >= 2 })
                 .GroupBy(GetRecordSegmentId, StringComparer.OrdinalIgnoreCase)
@@ -96,9 +118,11 @@ public sealed class RouteNavigationGraphBuilder
 
             var nodes = new Dictionary<string, RouteNavigationNode>(StringComparer.OrdinalIgnoreCase);
             var edges = new List<RouteNavigationEdge>();
+            var nodeIndex = new RouteGraphNodeSnapIndex(nodes, request.NodeSnapDistance);
 
             foreach (var record in representativeRecords)
             {
+                request.CancellationToken.ThrowIfCancellationRequested();
                 var segmentId = GetRecordSegmentId(record);
                 var segmentPoints = ResolveSegmentEndpoints(record);
                 if (segmentPoints == null)
@@ -107,8 +131,12 @@ public sealed class RouteNavigationGraphBuilder
                 }
 
                 var (start, end) = segmentPoints.Value;
-                var fromNode = GetOrAddNode(nodes, record.MapName, start.X, start.Y);
-                var toNode = GetOrAddNode(nodes, record.MapName, end.X, end.Y);
+                var fromNode = nodeIndex.GetOrAdd(record.MapName, start);
+                var toNode = nodeIndex.GetOrAdd(record.MapName, end, fromNode.NodeId);
+                if (string.Equals(fromNode.NodeId, toNode.NodeId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
                 var health = healthBySegmentId.TryGetValue(segmentId, out var entry) ? entry : null;
 
                 fromNode.AnchorIds.Add(record.AnchorId);
@@ -136,6 +164,63 @@ public sealed class RouteNavigationGraphBuilder
                 }
             }
 
+            var importedEdgeCount = 0;
+            if (request.PathingTaskDirectories.Count > 0)
+            {
+                importResult = new PathingTaskRouteImporter(_coordinateConverter).Import(
+                    request.PathingTaskDirectories,
+                    request.CancellationToken);
+                foreach (var segment in importResult.Segments)
+                {
+                    request.CancellationToken.ThrowIfCancellationRequested();
+                    var fromNode = nodeIndex.GetOrAdd(segment.MapName, segment.Start);
+                    var toNode = nodeIndex.GetOrAdd(segment.MapName, segment.End, fromNode.NodeId);
+                    if (string.Equals(fromNode.NodeId, toNode.NodeId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(segment.AnchorId))
+                    {
+                        fromNode.AnchorIds.Add(segment.AnchorId);
+                    }
+
+                    var segmentId = CreateImportedSegmentId(segment);
+                    edges.Add(RouteNavigationEdge.FromSourceSegment(
+                        segment,
+                        segmentId,
+                        fromNode.NodeId,
+                        toNode.NodeId));
+                    importedEdgeCount++;
+                    if (segment.IsBidirectionalCandidate)
+                    {
+                        edges.Add(RouteNavigationEdge.FromSourceSegment(
+                            segment,
+                            segmentId,
+                            toNode.NodeId,
+                            fromNode.NodeId,
+                        isSyntheticReverse: true));
+                    }
+                }
+
+                if (importedEdgeCount == 0)
+                {
+                    return RouteNavigationBuildResult.Failed(
+                        _graphFilePath,
+                        "所选目录没有产生任何可用历史路线边，已保留现有路网文件。",
+                        importResult.Report);
+                }
+            }
+
+            edges = MergeDuplicateEdges(edges);
+            if (edges.Count == 0)
+            {
+                return RouteNavigationBuildResult.Failed(
+                    _graphFilePath,
+                    "没有生成任何可用路网边，已保留现有路网文件。",
+                    importResult?.Report);
+            }
+
             var graph = new RouteNavigationGraph
             {
                 GeneratedAtUtc = DateTime.UtcNow,
@@ -151,11 +236,58 @@ public sealed class RouteNavigationGraphBuilder
             };
 
             WriteGraph(graph);
+            return RouteNavigationBuildResult.Succeeded(
+                _graphFilePath,
+                graph,
+                importResult?.Report);
         }
-        catch
+        catch (Exception ex)
         {
-            // Graph data is opportunistic telemetry output and must not affect route execution.
+            // Preserve the previous graph and return a user-visible failure to the caller.
+            return RouteNavigationBuildResult.Failed(
+                _graphFilePath,
+                ex.Message,
+                importResult?.Report);
         }
+    }
+
+    private static List<RouteNavigationEdge> MergeDuplicateEdges(
+        IEnumerable<RouteNavigationEdge> edges)
+    {
+        return edges
+            .GroupBy(
+                edge => string.Join('|',
+                    RouteGraphGeometry.NormalizeMapName(edge.MapName),
+                    edge.FromNodeId,
+                    edge.ToNodeId,
+                    edge.MoveMode,
+                    edge.Action,
+                    edge.ActionParams),
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var representative = group
+                    .OrderBy(edge => edge.Cost)
+                    .ThenBy(edge => edge.EdgeId, StringComparer.OrdinalIgnoreCase)
+                    .First();
+                representative.SourceCount = group.Sum(edge => Math.Max(1, edge.SourceCount));
+                if (group.Select(edge => edge.SourceKind).Distinct(StringComparer.OrdinalIgnoreCase).Skip(1).Any())
+                {
+                    representative.SourceKind = "mixed";
+                }
+
+                return representative;
+            })
+            .ToList();
+    }
+
+    private static string CreateImportedSegmentId(RouteNavigationSourceSegment segment)
+    {
+        var raw = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{segment.MapName}|{segment.Start.X:R},{segment.Start.Y:R}|{segment.End.X:R},{segment.End.Y:R}|{segment.MoveMode}|{segment.Action}|{segment.ActionParams.Length}:{segment.ActionParams}|{segment.AnchorId}");
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
+        return "path_seg_" + Convert.ToHexString(hash)[..16].ToLowerInvariant();
     }
 
     private List<RouteTelemetryRecord> LoadTelemetryRecords()
@@ -253,38 +385,210 @@ public sealed class RouteNavigationGraphBuilder
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
     }
 
-    private static RouteNavigationNode GetOrAddNode(Dictionary<string, RouteNavigationNode> nodes, string mapName, double x, double y)
-    {
-        var nodeId = RouteNavigationNode.CreateNodeId(mapName, x, y);
-        if (nodes.TryGetValue(nodeId, out var node))
-        {
-            return node;
-        }
-
-        node = new RouteNavigationNode
-        {
-            NodeId = nodeId,
-            MapName = string.IsNullOrWhiteSpace(mapName) ? "Teyvat" : mapName,
-            X = Math.Round(x, 1),
-            Y = Math.Round(y, 1)
-        };
-        nodes[nodeId] = node;
-        return node;
-    }
-
     private void WriteGraph(RouteNavigationGraph graph)
     {
         var options = new JsonSerializerOptions { WriteIndented = true };
         var tempPath = _graphFilePath + ".tmp";
-        File.WriteAllText(tempPath, JsonSerializer.Serialize(graph, options));
-        File.Copy(tempPath, _graphFilePath, true);
-        File.Delete(tempPath);
+        try
+        {
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(graph, options));
+            File.Move(tempPath, _graphFilePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+}
+
+public sealed class RouteNavigationBuildRequest
+{
+    public IReadOnlyCollection<RouteHealthEntry> HealthEntries { get; init; } = [];
+
+    public IReadOnlyList<string> PathingTaskDirectories { get; init; } = [];
+
+    public bool IncludeTelemetry { get; init; } = true;
+
+    public double NodeSnapDistance { get; init; } = 6;
+
+    public CancellationToken CancellationToken { get; init; }
+}
+
+public sealed class RouteNavigationBuildResult
+{
+    public bool Success { get; private init; }
+
+    public string ErrorMessage { get; private init; } = string.Empty;
+
+    public string OutputPath { get; private init; } = string.Empty;
+
+    public RouteNavigationGraph Graph { get; private init; } = new();
+
+    public PathingTaskImportReport? ImportReport { get; private init; }
+
+    internal static RouteNavigationBuildResult Succeeded(
+        string outputPath,
+        RouteNavigationGraph graph,
+        PathingTaskImportReport? importReport)
+    {
+        return new RouteNavigationBuildResult
+        {
+            Success = true,
+            OutputPath = outputPath,
+            Graph = graph,
+            ImportReport = importReport
+        };
+    }
+
+    internal static RouteNavigationBuildResult Failed(
+        string outputPath,
+        string errorMessage,
+        PathingTaskImportReport? importReport = null)
+    {
+        return new RouteNavigationBuildResult
+        {
+            OutputPath = outputPath,
+            ErrorMessage = errorMessage,
+            ImportReport = importReport
+        };
+    }
+}
+
+internal sealed class RouteGraphNodeSnapIndex
+{
+    private readonly Dictionary<string, RouteNavigationNode> _nodes;
+    private readonly Dictionary<string, Dictionary<(int X, int Y), List<RouteNavigationNode>>> _buckets =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly double _snapDistance;
+
+    public RouteGraphNodeSnapIndex(
+        Dictionary<string, RouteNavigationNode> nodes,
+        double snapDistance)
+    {
+        _nodes = nodes;
+        _snapDistance = Math.Max(0, snapDistance);
+    }
+
+    public RouteNavigationNode GetOrAdd(
+        string mapName,
+        RouteGraphPoint point,
+        string? excludedNodeId = null)
+    {
+        var normalizedMapName = RouteGraphGeometry.NormalizeMapName(mapName);
+        if (_snapDistance > 0 && TryFindNearby(normalizedMapName, point, excludedNodeId, out var nearby))
+        {
+            return nearby;
+        }
+
+        var nodeId = RouteNavigationNode.CreateNodeId(normalizedMapName, point.X, point.Y);
+        if (_nodes.TryGetValue(nodeId, out var existing))
+        {
+            return existing;
+        }
+
+        var node = new RouteNavigationNode
+        {
+            NodeId = nodeId,
+            MapName = normalizedMapName,
+            X = Math.Round(point.X, 1),
+            Y = Math.Round(point.Y, 1)
+        };
+        _nodes[nodeId] = node;
+        AddToBucket(node);
+        return node;
+    }
+
+    private bool TryFindNearby(
+        string mapName,
+        RouteGraphPoint point,
+        string? excludedNodeId,
+        out RouteNavigationNode node)
+    {
+        node = null!;
+        if (!_buckets.TryGetValue(mapName, out var mapBuckets))
+        {
+            return false;
+        }
+
+        var cell = GetCell(point.X, point.Y);
+        var candidates = new List<(RouteNavigationNode Node, double Distance)>();
+        for (var x = cell.X - 1; x <= cell.X + 1; x++)
+        {
+            for (var y = cell.Y - 1; y <= cell.Y + 1; y++)
+            {
+                if (!mapBuckets.TryGetValue((x, y), out var bucketNodes))
+                {
+                    continue;
+                }
+
+                foreach (var candidate in bucketNodes)
+                {
+                    if (string.Equals(candidate.NodeId, excludedNodeId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var dx = candidate.X - point.X;
+                    var dy = candidate.Y - point.Y;
+                    var distance = Math.Sqrt(dx * dx + dy * dy);
+                    if (distance <= _snapDistance)
+                    {
+                        candidates.Add((candidate, distance));
+                    }
+                }
+            }
+        }
+
+        var best = candidates
+            .OrderBy(candidate => candidate.Distance)
+            .ThenBy(candidate => candidate.Node.NodeId, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        if (best.Node == null)
+        {
+            return false;
+        }
+
+        node = best.Node;
+        return true;
+    }
+
+    private void AddToBucket(RouteNavigationNode node)
+    {
+        if (_snapDistance <= 0)
+        {
+            return;
+        }
+
+        if (!_buckets.TryGetValue(node.MapName, out var mapBuckets))
+        {
+            mapBuckets = [];
+            _buckets[node.MapName] = mapBuckets;
+        }
+
+        var cell = GetCell(node.X, node.Y);
+        if (!mapBuckets.TryGetValue(cell, out var bucketNodes))
+        {
+            bucketNodes = [];
+            mapBuckets[cell] = bucketNodes;
+        }
+
+        bucketNodes.Add(node);
+    }
+
+    private (int X, int Y) GetCell(double x, double y)
+    {
+        return (
+            (int)Math.Floor(x / _snapDistance),
+            (int)Math.Floor(y / _snapDistance));
     }
 }
 
 public sealed class RouteNavigationGraph
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = 2;
 
     public DateTime GeneratedAtUtc { get; set; }
 
@@ -364,6 +668,10 @@ public sealed class RouteNavigationEdge
 
     public string SourceFileName { get; set; } = string.Empty;
 
+    public string SourceKind { get; set; } = "telemetry";
+
+    public int SourceCount { get; set; } = 1;
+
     public string TargetResourceId { get; set; } = string.Empty;
 
     public string TargetResourceLabelId { get; set; } = string.Empty;
@@ -419,10 +727,64 @@ public sealed class RouteNavigationEdge
             LastFailureReason = health?.LastFailureReason ?? string.Empty,
             SourceRecordId = record.RecordId,
             SourceFileName = record.SourceFileName,
+            SourceKind = "telemetry",
+            SourceCount = 1,
             TargetResourceId = isSyntheticReverse ? string.Empty : record.TargetResourceId,
             TargetResourceLabelId = isSyntheticReverse ? string.Empty : record.TargetResourceLabelId,
             PickedItems = (record.PickedItems ?? []).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
             Points = ResolveEdgePoints(record.Points, isSyntheticReverse)
+        };
+    }
+
+    public static RouteNavigationEdge FromSourceSegment(
+        RouteNavigationSourceSegment segment,
+        string segmentId,
+        string fromNodeId,
+        string toNodeId,
+        bool isSyntheticReverse = false)
+    {
+        var dx = segment.End.X - segment.Start.X;
+        var dy = segment.End.Y - segment.Start.Y;
+        var distance = Math.Sqrt(dx * dx + dy * dy);
+        var cost = distance
+            * GetHealthPenalty(RouteHealthStatus.Unknown)
+            * GetSamplePenalty(null)
+            * GetMoveModePenalty(segment.MoveMode)
+            * GetActionPenalty(segment.Action);
+        var points = new List<TelemetryPoint2D>
+        {
+            new() { X = (float)segment.Start.X, Y = (float)segment.Start.Y },
+            new() { X = (float)segment.End.X, Y = (float)segment.End.Y }
+        };
+        if (isSyntheticReverse)
+        {
+            points.Reverse();
+        }
+
+        return new RouteNavigationEdge
+        {
+            EdgeId = isSyntheticReverse ? $"edge_{segmentId}_reverse" : $"edge_{segmentId}",
+            SegmentId = segmentId,
+            FromNodeId = fromNodeId,
+            ToNodeId = toNodeId,
+            MapName = segment.MapName,
+            AnchorId = segment.AnchorId,
+            SegmentKey = string.Create(
+                CultureInfo.InvariantCulture,
+                $"{segment.Start.X:F1},{segment.Start.Y:F1}->{segment.End.X:F1},{segment.End.Y:F1}"),
+            MoveMode = segment.MoveMode,
+            Action = segment.Action,
+            ActionParams = segment.ActionParams,
+            IsBidirectionalCandidate = segment.IsBidirectionalCandidate,
+            IsSyntheticReverse = isSyntheticReverse,
+            HealthStatus = RouteHealthStatus.Unknown,
+            Cost = Math.Round(cost, 2),
+            AverageDistance = Math.Round(distance, 2),
+            SourceRecordId = segment.SourceId,
+            SourceFileName = segment.SourceFileName,
+            SourceKind = segment.SourceKind,
+            SourceCount = Math.Max(1, segment.SourceCount),
+            Points = points
         };
     }
 

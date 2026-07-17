@@ -3357,6 +3357,10 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -3396,6 +3400,7 @@
                                                    Padding="0"
                                                    Command="{Binding RebuildRouteGraphCommand}"
                                                    Icon="{ui:SymbolIcon Settings24}"
+                                                   IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
                                                    ToolTip="重建路网" />
                                         <ui:Button Width="32"
                                                    Height="32"
@@ -3405,6 +3410,16 @@
                                                    Icon="{ui:SymbolIcon FolderOpen24}"
                                                    ToolTip="打开路网目录" />
                                     </StackPanel>
+                                    <ui:Button Grid.Row="1"
+                                               Grid.ColumnSpan="2"
+                                               Height="36"
+                                               Margin="0,10,0,0"
+                                               HorizontalAlignment="Stretch"
+                                               Command="{Binding ImportPathingTasksToRouteGraphCommand}"
+                                               Content="从已有路线生成路网"
+                                               Icon="{ui:SymbolIcon FolderOpen24}"
+                                               IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
+                                               ToolTip="多选路线目录，递归扫描 JSON，并与已有遥测数据一起生成可导航路网" />
                                 </Grid>
                                 <Grid Grid.Row="1" Margin="0,12,0,0">
                                     <Grid.RowDefinitions>

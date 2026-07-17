@@ -2259,11 +2259,17 @@ public partial class MapViewerViewModel : ObservableObject
         GraphSummary = "正在重建路网...";
         try
         {
-            await Task.Run(() =>
+            var result = await Task.Run(() =>
             {
                 var healthEntries = new RouteHealthStore(_routeSaveDir).GetSnapshot();
-                new RouteNavigationGraphBuilder(_routeSaveDir).BuildNow(healthEntries);
+                return new RouteNavigationGraphBuilder(_routeSaveDir).BuildNow(healthEntries);
             });
+
+            GraphSummary = RouteNavigationBuildSummaryFormatter.Format(result);
+            if (!result.Success)
+            {
+                return;
+            }
 
             IsRefreshingRouteDiagnostics = false;
             await RefreshRouteGraphDiagnosticsAsync();
@@ -2271,6 +2277,71 @@ public partial class MapViewerViewModel : ObservableObject
         catch (Exception ex)
         {
             GraphSummary = $"重建失败：{ex.Message}";
+        }
+        finally
+        {
+            IsRefreshingRouteDiagnostics = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportPathingTasksToRouteGraphAsync()
+    {
+        if (IsRefreshingRouteDiagnostics)
+        {
+            return;
+        }
+
+        var dialog = new OpenFolderDialog
+        {
+            Title = "选择已有追踪路线目录（可多选，将递归扫描 JSON）",
+            Multiselect = true,
+            InitialDirectory = Directory.Exists(MapPathingViewModel.PathJsonPath)
+                ? MapPathingViewModel.PathJsonPath
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        };
+        if (dialog.ShowDialog() != true || dialog.FolderNames.Length == 0)
+        {
+            return;
+        }
+
+        var sourceDirectories = dialog.FolderNames
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        IsRefreshingRouteDiagnostics = true;
+        GraphSummary = $"正在扫描 {sourceDirectories.Length} 个目录并生成路网...";
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                var healthEntries = new RouteHealthStore(_routeSaveDir).GetSnapshot();
+                return new RouteNavigationGraphBuilder(_routeSaveDir).BuildNow(new RouteNavigationBuildRequest
+                {
+                    HealthEntries = healthEntries,
+                    PathingTaskDirectories = sourceDirectories,
+                    IncludeTelemetry = true,
+                    NodeSnapDistance = 6
+                });
+            });
+            var summary = RouteNavigationBuildSummaryFormatter.Format(result);
+            GraphSummary = summary;
+            if (!result.Success)
+            {
+                await ThemedMessageBox.ErrorAsync(summary, "路网生成失败");
+                return;
+            }
+
+            IsRefreshingRouteDiagnostics = false;
+            await RefreshRouteGraphDiagnosticsAsync();
+            GraphSummary = summary;
+            GraphStatus = $"路网已写入：{result.OutputPath}";
+            await ThemedMessageBox.InformationAsync(summary, "路网生成完成");
+        }
+        catch (Exception ex)
+        {
+            GraphSummary = $"路网生成失败：{ex.Message}";
+            await ThemedMessageBox.ErrorAsync(GraphSummary, "路网生成失败");
         }
         finally
         {
