@@ -3362,6 +3362,7 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -3422,6 +3423,15 @@
                                                Icon="{ui:SymbolIcon FolderOpen24}"
                                                IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
                                                ToolTip="多选路线目录，递归扫描 JSON，并与已有遥测数据一起生成可导航路网" />
+                                    <ui:Button Grid.Row="2"
+                                               Grid.ColumnSpan="2"
+                                               Height="36"
+                                               Margin="0,8,0,0"
+                                               HorizontalAlignment="Stretch"
+                                               Command="{Binding OpenRouteGraphStudioCommand}"
+                                               Content="打开路网工作室"
+                                               Icon="{ui:SymbolIcon Map24}"
+                                               ToolTip="查看完整路网，审核或编辑节点、连接和传送点关联；修改保存为独立补丁" />
                                 </Grid>
                                 <Grid Grid.Row="1" Margin="0,12,0,0">
                                     <Grid.RowDefinitions>

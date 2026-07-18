@@ -116,7 +116,9 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
                 filePath,
                 mapName,
                 route,
-                "path_route_" + signature[..16].ToLowerInvariant());
+                "path_route_" + signature[..16].ToLowerInvariant(),
+                ResolveRepositoryName(filePath),
+                ResolveRelativeSourceName(filePath, directories));
         }
 
         foreach (var candidate in uniqueRoutes.Values.OrderBy(route => route.FilePath, StringComparer.OrdinalIgnoreCase))
@@ -175,8 +177,11 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
                     IsBidirectional(moveMode, action),
                     candidate.SourceCount,
                     "pathing_task",
-                    Path.GetFileName(candidate.FilePath),
-                    candidate.SourceId));
+                    candidate.RelativeSourceName,
+                    candidate.SourceId,
+                    candidate.Repository,
+                    string.IsNullOrWhiteSpace(route.Info?.Name) ? Path.GetFileNameWithoutExtension(candidate.FilePath) : route.Info.Name,
+                    route.Info?.Author ?? string.Empty));
             }
         }
 
@@ -195,10 +200,15 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
             var safeActionParams = string.IsNullOrEmpty(safeAction)
                 ? string.Empty
                 : waypoint.ActionParams ?? string.Empty;
+            // Historical target markers describe the old task, not reusable graph semantics.
+            // Only teleport remains a special graph point; every other waypoint is normalized to path.
+            var normalizedType = string.Equals(waypoint.Type, "teleport", StringComparison.OrdinalIgnoreCase)
+                ? "teleport"
+                : "path";
             signature
                 .Append('|').Append(waypoint.X.ToString("R", CultureInfo.InvariantCulture))
                 .Append(',').Append(waypoint.Y.ToString("R", CultureInfo.InvariantCulture))
-                .Append(',').Append((waypoint.Type ?? string.Empty).ToLowerInvariant())
+                .Append(',').Append(normalizedType)
                 .Append(',').Append(moveMode.ToLowerInvariant())
                 .Append(',').Append(safeAction.ToLowerInvariant())
                 .Append(',').Append(safeActionParams.Length).Append(':').Append(safeActionParams);
@@ -213,6 +223,34 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
         {
             examples.Add(value);
         }
+    }
+
+    private static string ResolveRepositoryName(string filePath)
+    {
+        var directory = new FileInfo(filePath).Directory;
+        while (directory != null)
+        {
+            if (string.Equals(directory.Name, "repo", StringComparison.OrdinalIgnoreCase) && directory.Parent != null)
+            {
+                return directory.Parent.Name;
+            }
+            if (string.Equals(directory.Name, "BetterGI", StringComparison.OrdinalIgnoreCase))
+            {
+                return directory.Name;
+            }
+            directory = directory.Parent;
+        }
+        return string.Empty;
+    }
+
+    private static string ResolveRelativeSourceName(string filePath, IReadOnlyList<string> sourceDirectories)
+    {
+        var root = sourceDirectories
+            .Where(directory => filePath.StartsWith(directory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(directory => directory.Length)
+            .FirstOrDefault();
+        return root == null ? Path.GetFileName(filePath) : Path.GetRelativePath(root, filePath);
     }
 
     private static string CreateAnchorId(ImportWaypoint waypoint)
@@ -271,7 +309,9 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
         string filePath,
         string mapName,
         ImportRouteFile route,
-        string? sourceId = null)
+        string? sourceId = null,
+        string? repository = null,
+        string? relativeSourceName = null)
     {
         public string FilePath { get; } = filePath;
 
@@ -282,6 +322,10 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
         public string SourceId { get; } = sourceId ?? string.Empty;
 
         public int SourceCount { get; set; } = 1;
+
+        public string Repository { get; } = repository ?? string.Empty;
+
+        public string RelativeSourceName { get; } = relativeSourceName ?? Path.GetFileName(filePath);
     }
 
     private sealed class ImportRouteInfo
@@ -289,6 +333,10 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
         public string MapName { get; init; } = string.Empty;
 
         public string MapMatchMethod { get; init; } = string.Empty;
+
+        public string Name { get; init; } = string.Empty;
+
+        public string Author { get; init; } = string.Empty;
     }
 
     private sealed class ImportWaypoint
@@ -319,7 +367,10 @@ public sealed record RouteNavigationSourceSegment(
     int SourceCount,
     string SourceKind,
     string SourceFileName,
-    string SourceId);
+    string SourceId,
+    string SourceRepository,
+    string SourceRouteName,
+    string SourceAuthor);
 
 public sealed record PathingTaskRouteImportResult(
     IReadOnlyList<RouteNavigationSourceSegment> Segments,

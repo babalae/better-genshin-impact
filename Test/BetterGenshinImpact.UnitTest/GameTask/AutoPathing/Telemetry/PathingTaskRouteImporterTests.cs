@@ -323,6 +323,29 @@ public sealed class PathingTaskRouteImporterTests : IDisposable
             result.Segments.Select(segment => segment.ActionParams).Order().ToArray());
     }
 
+    [Fact]
+    public void Import_TreatsHistoricalTargetAsOrdinaryPathPointForDeduplication()
+    {
+        var sourceDirectory = Directory.CreateDirectory(Path.Combine(_tempRoot, "target-normalization")).FullName;
+        WriteRoute(sourceDirectory, "target.json", TwoPointRouteJson(0, 0, 10, 0));
+        WriteRoute(sourceDirectory, "path.json", """
+            {
+              "info": { "map_name": "Teyvat", "map_match_method": "TemplateMatch" },
+              "positions": [
+                { "x": 0, "y": 0, "type": "path", "move_mode": "walk" },
+                { "x": 10, "y": 0, "type": "path", "move_mode": "walk" }
+              ]
+            }
+            """);
+        var importer = new PathingTaskRouteImporter(new OffsetCoordinateConverter());
+
+        var result = importer.Import([sourceDirectory]);
+
+        Assert.Single(result.Segments);
+        Assert.Equal(1, result.Report.DuplicateRouteFiles);
+        Assert.Equal(2, result.Segments[0].SourceCount);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))

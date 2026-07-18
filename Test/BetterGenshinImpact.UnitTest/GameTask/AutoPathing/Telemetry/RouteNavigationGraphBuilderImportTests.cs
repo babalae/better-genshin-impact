@@ -34,7 +34,7 @@ public sealed class RouteNavigationGraphBuilderImportTests : IDisposable
         Assert.True(result.Success, result.ErrorMessage);
         Assert.Equal(3, result.Graph.Nodes.Count);
         Assert.Equal(4, result.Graph.Edges.Count);
-        Assert.Equal(2, result.Graph.SchemaVersion);
+        Assert.Equal(3, result.Graph.SchemaVersion);
         Assert.All(result.Graph.Edges, edge => Assert.Equal("pathing_task", edge.SourceKind));
         Assert.Equal(
             ["first.json", "second.json"],

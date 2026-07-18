@@ -25,6 +25,12 @@ public sealed class RouteNavigationCostOptions
 
     public double TeleportDurationSeconds { get; init; } = 18.0;
 
+    public double UnreviewedEdgeCostMultiplier { get; init; } = 1.35;
+
+    public double RiskyEdgeCostMultiplier { get; init; } = 2.0;
+
+    public double SyntheticReverseCostMultiplier { get; init; } = 2.0;
+
     public double MinimumTeleportSavingsSeconds { get; init; } = 8.0;
 
     public double LocalDirectMaxGameDistance { get; init; } = 80.0;

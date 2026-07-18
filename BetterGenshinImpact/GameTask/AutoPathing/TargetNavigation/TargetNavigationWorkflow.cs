@@ -85,8 +85,8 @@ public sealed class TargetNavigationWorkflow(
             }
 
             PathingTask? task = plan.Task;
-            if (plan.CompletionMode != RoutePlanCompletionMode.LocalOnly &&
-                task is not { Positions.Count: >= 2 })
+            if ((task != null && task.Positions.Count < 2) ||
+                (plan.CompletionMode != RoutePlanCompletionMode.LocalOnly && task == null))
             {
                 return Fail(
                     TargetNavigationState.PlanFailed,
@@ -181,8 +181,8 @@ public sealed class TargetNavigationWorkflow(
                 }
 
                 var replannedTask = replanned.result.Task;
-                if (replanned.result.CompletionMode != RoutePlanCompletionMode.LocalOnly &&
-                    replannedTask is not { Positions.Count: >= 2 })
+                if ((replannedTask != null && replannedTask.Positions.Count < 2) ||
+                    (replanned.result.CompletionMode != RoutePlanCompletionMode.LocalOnly && replannedTask == null))
                 {
                     return Fail(
                         TargetNavigationState.PlanFailed,
@@ -199,7 +199,7 @@ public sealed class TargetNavigationWorkflow(
             }
 
             Publish(TargetNavigationState.Executing, "正在执行", onStatusChanged);
-            if (plan.CompletionMode != RoutePlanCompletionMode.LocalOnly)
+            if (task is { Positions.Count: >= 2 })
             {
                 var execution = await runtime.ExecuteAsync(task!, cancellationToken);
                 if (execution.Cancelled)

@@ -665,6 +665,10 @@ public partial class MapViewerViewModel : ObservableObject
 
     public string RouteGraphFilePath => Path.Combine(_routeSaveDir, RouteNavigationGraphBuilder.GraphFileName);
 
+    private string ReadableRouteGraphFilePath => File.Exists(RouteGraphFilePath)
+        ? RouteGraphFilePath
+        : Path.Combine(_routeSaveDir, RouteNavigationGraphBuilder.LegacyGraphFileName);
+
     public string RouteHealthFilePath => Path.Combine(_routeSaveDir, "route_health.json");
 
     // private readonly Mat _all256Map = new(Global.Absolute(@"Assets/Map/mainMap256Block.png"));
@@ -2311,6 +2315,19 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenRouteGraphStudio()
+    {
+        var currentTarget = _selectedTargetPoint is { } target
+            ? new RouteGraphPoint(target.X, target.Y)
+            : (RouteGraphPoint?)null;
+        var window = new RouteGraphStudioWindow(_routeSaveDir, MapName, currentTarget)
+        {
+            Owner = DialogOwner
+        };
+        window.Show();
+    }
+
+    [RelayCommand]
     private async Task ImportPathingTasksToRouteGraphAsync()
     {
         if (IsRefreshingRouteDiagnostics)
@@ -2415,8 +2432,9 @@ public partial class MapViewerViewModel : ObservableObject
 
     private RouteLiteDiagnosticsResult BuildRouteLiteDiagnostics(string mapName)
     {
-        var graphExists = File.Exists(RouteGraphFilePath);
-        var graphSizeMb = graphExists ? new FileInfo(RouteGraphFilePath).Length / 1024.0 / 1024.0 : 0;
+        var readableGraphPath = ReadableRouteGraphFilePath;
+        var graphExists = File.Exists(readableGraphPath);
+        var graphSizeMb = graphExists ? new FileInfo(readableGraphPath).Length / 1024.0 / 1024.0 : 0;
         var healthExists = File.Exists(RouteHealthFilePath);
         var telemetryCount = Directory.Exists(_routeSaveDir)
             ? Directory.EnumerateFiles(_routeSaveDir, "*_Telemetry.json", SearchOption.TopDirectoryOnly).Count()
@@ -2473,7 +2491,7 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 if (!_graphProvider.TryGetSnapshot(out var graph, forceReload: true) || graph.IsEmpty)
                 {
-                    return RouteGraphDiagnosticsResult.Empty(File.Exists(RouteGraphFilePath) ? "路网为空或读取失败" : "路网文件不存在");
+                    return RouteGraphDiagnosticsResult.Empty(File.Exists(ReadableRouteGraphFilePath) ? "路网为空或读取失败" : "路网文件不存在");
                 }
 
                 var normalizedMapName = RouteGraphGeometry.NormalizeMapName(MapName);

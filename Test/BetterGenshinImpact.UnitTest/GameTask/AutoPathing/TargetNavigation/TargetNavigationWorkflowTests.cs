@@ -338,6 +338,40 @@ public class TargetNavigationWorkflowTests
         Assert.Equal(1, localNavigator.CallCount);
     }
 
+    [Fact]
+    public async Task RunAsync_TeleportLocalPlanExecutesTeleportTaskBeforeLocalNavigator()
+    {
+        var task = CreateTask();
+        var plan = new RouteNavigationPlan
+        {
+            Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.LocalOnly,
+            Task = task,
+            UsesTeleport = true,
+            FrontierNode = new RouteNavigationNode { NodeId = "spawn", MapName = "Teyvat", X = 50, Y = 0 },
+            TargetImagePoint = new RouteGraphPoint(100, 0)
+        };
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            Execution = TargetNavigationExecutionResult.Completed()
+        };
+        var localNavigator = new FakeLocalNavigator();
+
+        var result = await new TargetNavigationWorkflow(
+                new FakePlanner(plan),
+                runtime,
+                localNavigator,
+                new IdentityCoordinateConverter())
+            .RunAsync(CreateRequest(new RouteGraphPoint(100, 0)));
+
+        Assert.True(result.Succeeded);
+        Assert.Same(task, runtime.ExecutedTask);
+        Assert.Equal(1, localNavigator.CallCount);
+        Assert.Equal(50, localNavigator.Request!.RemainingGameDistance, precision: 2);
+    }
+
     private static TargetNavigationRequest CreateRequest(
         RouteGraphPoint? target = null,
         bool allowTeleport = true,

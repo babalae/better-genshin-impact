@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
 public sealed class RouteNavigationGraphBuilder
 {
-    public const string GraphFileName = "route_navigation_graph.json";
+    public const string GraphFileName = "route_navigation_graph.generated.json";
+    public const string LegacyGraphFileName = "route_navigation_graph.json";
     private static readonly Regex PointRegex = new(@"-?\d+(?:\.\d+)?", RegexOptions.Compiled);
 
     private readonly object _syncRoot = new();
@@ -234,6 +236,7 @@ public sealed class RouteNavigationGraphBuilder
                     .ThenBy(e => e.EdgeId, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
+            graph.GraphId = RouteNavigationGraphIdentity.Compute(graph);
 
             WriteGraph(graph);
             return RouteNavigationBuildResult.Succeeded(
@@ -267,10 +270,18 @@ public sealed class RouteNavigationGraphBuilder
             .Select(group =>
             {
                 var representative = group
-                    .OrderBy(edge => edge.Cost)
+                    .OrderBy(edge => GetReviewPreference(edge.ReviewStatus))
+                    .ThenByDescending(edge => string.Equals(edge.SourceKind, "telemetry", StringComparison.OrdinalIgnoreCase))
+                    .ThenBy(edge => edge.Cost)
                     .ThenBy(edge => edge.EdgeId, StringComparer.OrdinalIgnoreCase)
                     .First();
                 representative.SourceCount = group.Sum(edge => Math.Max(1, edge.SourceCount));
+                representative.Sources = group
+                    .SelectMany(edge => edge.Sources)
+                    .GroupBy(source => string.Join('|', source.Repository, source.FileName, source.RouteName, source.Author,
+                        source.Kind, source.IsTelemetry, source.IsSyntheticReverse), StringComparer.OrdinalIgnoreCase)
+                    .Select(sourceGroup => sourceGroup.First())
+                    .ToList();
                 if (group.Select(edge => edge.SourceKind).Distinct(StringComparer.OrdinalIgnoreCase).Skip(1).Any())
                 {
                     representative.SourceKind = "mixed";
@@ -279,6 +290,19 @@ public sealed class RouteNavigationGraphBuilder
                 return representative;
             })
             .ToList();
+    }
+
+    private static int GetReviewPreference(GraphReviewStatus reviewStatus)
+    {
+        return reviewStatus switch
+        {
+            GraphReviewStatus.Verified => 0,
+            GraphReviewStatus.Unreviewed => 1,
+            GraphReviewStatus.Risky => 2,
+            GraphReviewStatus.Disabled => 3,
+            GraphReviewStatus.Rejected => 4,
+            _ => 5
+        };
     }
 
     private static string CreateImportedSegmentId(RouteNavigationSourceSegment segment)
@@ -588,7 +612,9 @@ internal sealed class RouteGraphNodeSnapIndex
 
 public sealed class RouteNavigationGraph
 {
-    public int SchemaVersion { get; set; } = 2;
+    public int SchemaVersion { get; set; } = 3;
+
+    public string GraphId { get; set; } = string.Empty;
 
     public DateTime GeneratedAtUtc { get; set; }
 
@@ -606,6 +632,21 @@ public sealed class RouteNavigationNode
     public double X { get; set; }
 
     public double Y { get; set; }
+
+    /// <summary>通用路网默认为 path；历史任务的 target 不会写入此字段。</summary>
+    public string NodeType { get; set; } = "path";
+
+    public string LayerId { get; set; } = "surface";
+
+    public int? Floor { get; set; }
+
+    public bool Underground { get; set; }
+
+    public double? HeightMin { get; set; }
+
+    public double? HeightMax { get; set; }
+
+    public string AreaTag { get; set; } = string.Empty;
 
     public HashSet<string> AnchorIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -648,6 +689,8 @@ public sealed class RouteNavigationEdge
 
     public bool IsSyntheticReverse { get; set; }
 
+    public GraphReviewStatus ReviewStatus { get; set; } = GraphReviewStatus.Unreviewed;
+
     public string HealthStatus { get; set; } = RouteHealthStatus.Unknown;
 
     public double SuccessRate { get; set; }
@@ -669,6 +712,16 @@ public sealed class RouteNavigationEdge
     public string SourceFileName { get; set; } = string.Empty;
 
     public string SourceKind { get; set; } = "telemetry";
+
+    public string SourceRepository { get; set; } = string.Empty;
+
+    public string SourceRouteName { get; set; } = string.Empty;
+
+    public string SourceAuthor { get; set; } = string.Empty;
+
+    public DateTime? LastVerifiedAtUtc { get; set; }
+
+    public List<RouteNavigationEdgeSource> Sources { get; set; } = [];
 
     public int SourceCount { get; set; } = 1;
 
@@ -717,6 +770,15 @@ public sealed class RouteNavigationEdge
             ActionParams = actionParams,
             IsBidirectionalCandidate = record.IsBidirectionalForAction(health?.Action),
             IsSyntheticReverse = isSyntheticReverse,
+            ReviewStatus = isSyntheticReverse
+                ? GraphReviewStatus.Risky
+                : healthStatus switch
+                {
+                    RouteHealthStatus.Verified => GraphReviewStatus.Verified,
+                    RouteHealthStatus.Risky => GraphReviewStatus.Risky,
+                    RouteHealthStatus.Disabled => GraphReviewStatus.Disabled,
+                    _ => GraphReviewStatus.Unreviewed
+                },
             HealthStatus = healthStatus,
             SuccessRate = health?.SuccessRate ?? 0,
             SuccessCount = health?.SuccessCount ?? 0,
@@ -728,6 +790,17 @@ public sealed class RouteNavigationEdge
             SourceRecordId = record.RecordId,
             SourceFileName = record.SourceFileName,
             SourceKind = "telemetry",
+            LastVerifiedAtUtc = healthStatus == RouteHealthStatus.Verified ? health?.LastSuccessUtc : null,
+            Sources =
+            [
+                new RouteNavigationEdgeSource
+                {
+                    FileName = record.SourceFileName,
+                    Kind = "telemetry",
+                    IsTelemetry = true,
+                    IsSyntheticReverse = isSyntheticReverse
+                }
+            ],
             SourceCount = 1,
             TargetResourceId = isSyntheticReverse ? string.Empty : record.TargetResourceId,
             TargetResourceLabelId = isSyntheticReverse ? string.Empty : record.TargetResourceLabelId,
@@ -777,12 +850,28 @@ public sealed class RouteNavigationEdge
             ActionParams = segment.ActionParams,
             IsBidirectionalCandidate = segment.IsBidirectionalCandidate,
             IsSyntheticReverse = isSyntheticReverse,
+            ReviewStatus = isSyntheticReverse ? GraphReviewStatus.Risky : GraphReviewStatus.Unreviewed,
             HealthStatus = RouteHealthStatus.Unknown,
             Cost = Math.Round(cost, 2),
             AverageDistance = Math.Round(distance, 2),
             SourceRecordId = segment.SourceId,
             SourceFileName = segment.SourceFileName,
             SourceKind = segment.SourceKind,
+            SourceRepository = segment.SourceRepository,
+            SourceRouteName = segment.SourceRouteName,
+            SourceAuthor = segment.SourceAuthor,
+            Sources =
+            [
+                new RouteNavigationEdgeSource
+                {
+                    FileName = segment.SourceFileName,
+                    Repository = segment.SourceRepository,
+                    RouteName = segment.SourceRouteName,
+                    Author = segment.SourceAuthor,
+                    Kind = segment.SourceKind,
+                    IsSyntheticReverse = isSyntheticReverse
+                }
+            ],
             SourceCount = Math.Max(1, segment.SourceCount),
             Points = points
         };
@@ -907,6 +996,33 @@ public sealed class RouteNavigationEdge
 
         return Math.Min(1.5, 1.0 + ((ageDays - 14) / 180.0));
     }
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum GraphReviewStatus
+{
+    Unreviewed,
+    Verified,
+    Risky,
+    Disabled,
+    Rejected
+}
+
+public sealed class RouteNavigationEdgeSource
+{
+    public string Repository { get; set; } = string.Empty;
+
+    public string FileName { get; set; } = string.Empty;
+
+    public string RouteName { get; set; } = string.Empty;
+
+    public string Author { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = string.Empty;
+
+    public bool IsTelemetry { get; set; }
+
+    public bool IsSyntheticReverse { get; set; }
 }
 
 internal static class RoutePolylineSimplifier
