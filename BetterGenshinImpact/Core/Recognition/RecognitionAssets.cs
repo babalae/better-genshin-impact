@@ -29,7 +29,7 @@ public static class RecognitionAssets
     {
         var key = new RecognitionAssetCacheKey(taskName, objectName, captureWidth, captureHeight);
         var recognitionObject = Cache.GetOrAdd(key, static cacheKey => Load(cacheKey));
-        return recognitionObject.Clone();
+        return recognitionObject;
     }
 
     public static void Clear(string taskName, string objectName)
