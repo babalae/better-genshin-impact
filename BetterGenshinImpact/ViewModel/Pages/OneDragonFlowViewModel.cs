@@ -223,7 +223,11 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Get().DomainNameList];
 
-    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭软件", "关闭游戏和软件", "关机"];
+    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭软件", "关闭游戏和软件", "关机", "启动一条龙"];
+
+    [ObservableProperty] private List<string> _autoResumeModeList = ["禁用断点续跑", "每日刷新", "每次启动刷新", "永不刷新"];
+
+    [ObservableProperty] private List<string> _restartOneDragonNameList = [];
 
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
     
@@ -333,9 +337,31 @@ public partial class OneDragonFlowViewModel : ViewModel
             ConfigList.Add(config);
         }
 
+        // 启动软件时清除"每次启动刷新"模式的断点标记
+        foreach (var config in configs)
+        {
+            if (config.AutoResumeMode == "每次启动刷新" && !string.IsNullOrEmpty(config.NextTaskId))
+            {
+                config.NextTaskId = string.Empty;
+                config.AutoResumeTimestamp = null;
+                WriteConfig(config);
+                _logger.LogInformation("断点续跑：启动时清除标记（配置：{Name}）", config.Name);
+            }
+        }
+
         SelectedConfig = selected;
         LoadDisplayTaskListFromConfig(); // 加载 DisplayTaskList 从配置文件
         SetSomeSelectedConfig(SelectedConfig);
+        RefreshRestartOneDragonNameList();
+    }
+
+    private void RefreshRestartOneDragonNameList()
+    {
+        var names = ConfigList.Select(c => c.Name).ToList();
+        if (RestartOneDragonNameList.Count != names.Count || !RestartOneDragonNameList.SequenceEqual(names))
+        {
+            RestartOneDragonNameList = names;
+        }
     }
 
     // 新增方法：从配置文件加载 DisplayTaskList
@@ -424,6 +450,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         WriteConfig(SelectedConfig);
+        RefreshRestartOneDragonNameList();
     }
     
     [RelayCommand]
@@ -540,6 +567,50 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    // 断点续跑：处理清除逻辑，在读取 NextTaskId 之前调用
+    private void HandleAutoResumeClear()
+    {
+        if (SelectedConfig == null || string.IsNullOrEmpty(SelectedConfig.NextTaskId))
+        {
+            return;
+        }
+
+        bool shouldClear = SelectedConfig.AutoResumeMode switch
+        {
+            "禁用断点续跑" => true,
+            "每日刷新" => HasCrossedDailyReset(SelectedConfig.AutoResumeTimestamp),
+            "永不刷新" => false,
+            _ => true
+        };
+
+        if (shouldClear)
+        {
+            _logger.LogInformation("断点续跑：清除标记（模式：{Mode}）", SelectedConfig.AutoResumeMode);
+            SelectedConfig.NextTaskId = string.Empty;
+            SelectedConfig.AutoResumeTimestamp = null;
+            SaveConfig();
+        }
+    }
+
+    /// <summary>
+    /// OnDailyReset 模式：判断上次标记时间是否已跨越凌晨4点
+    /// </summary>
+    private static bool HasCrossedDailyReset(DateTime? lastTimestamp)
+    {
+        if (lastTimestamp == null) return false;
+
+        var serverNow = ServerTimeHelper.GetServerTimeNow();
+        var last = lastTimestamp.Value.ToUniversalTime();
+        var lastOffset = ServerTimeHelper.GetServerTimeOffset();
+        var lastServer = new DateTimeOffset(last).ToOffset(lastOffset);
+
+        // 以凌晨4点为日界，判断所处"日"是否不同
+        var lastDay = lastServer.Hour >= 4 ? lastServer.Date : lastServer.Date.AddDays(-1);
+        var nowDay = serverNow.Hour >= 4 ? serverNow.Date : serverNow.Date.AddDays(-1);
+
+        return nowDay > lastDay;
+    }
+
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
@@ -549,6 +620,9 @@ public partial class OneDragonFlowViewModel : ViewModel
         CancellationContext.Instance.Set();
 
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
+
+        // 断点续跑：检查是否需要清除标记
+        HandleAutoResumeClear();
 
         // 如果设置了 NextTaskId，从指定任务开始执行
         if (!string.IsNullOrEmpty(SelectedConfig.NextTaskId))
@@ -615,6 +689,14 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             if (task is { IsEnabled: true, Action: not null })
             {
+                // 断点续跑：自动保存当前任务标记
+                if (SelectedConfig.AutoResumeMode != "禁用断点续跑")
+                {
+                    SelectedConfig.NextTaskId = task.Id;
+                    SelectedConfig.AutoResumeTimestamp = DateTime.UtcNow;
+                    SaveConfig();
+                }
+
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
@@ -666,6 +748,15 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
         }
 
+        // 全部任务成功完成，清除断点续跑标记
+        if (SelectedConfig.AutoResumeMode != "禁用断点续跑")
+        {
+            _logger.LogInformation("断点续跑：全部任务完成，清除标记");
+            SelectedConfig.NextTaskId = string.Empty;
+            SelectedConfig.AutoResumeTimestamp = null;
+            SaveConfig();
+        }
+
         // 检查和最终结束的任务
         await new TaskRunner().RunThreadAsync(async () =>
         {
@@ -677,8 +768,8 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
             _logger.LogInformation("一条龙和配置组任务结束");
 
-            // 执行完成后操作
-            if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
+            // 执行完成后操作（重新执行一条龙除外）
+            if (!string.IsNullOrEmpty(SelectedConfig?.CompletionAction))
             {
                 switch (SelectedConfig.CompletionAction)
                 {
@@ -699,6 +790,28 @@ public partial class OneDragonFlowViewModel : ViewModel
                 }
             }
         });
+
+        // 启动一条龙（在外层执行，避免嵌套线程上下文的冲突）
+        if (SelectedConfig?.CompletionAction == "启动一条龙")
+        {
+            var targetName = string.IsNullOrWhiteSpace(SelectedConfig.RestartOneDragonName)
+                ? SelectedConfig.Name
+                : SelectedConfig.RestartOneDragonName;
+            _logger.LogInformation("完成后操作：启动一条龙「{Target}」", targetName);
+
+            var targetConfig = ConfigList.FirstOrDefault(c => c.Name == targetName);
+            if (targetConfig != null)
+            {
+                SelectedConfig = targetConfig;
+                LoadDisplayTaskListFromConfig();
+                SetSomeSelectedConfig(SelectedConfig);
+                await OnOneKeyExecute();
+            }
+            else
+            {
+                _logger.LogWarning("完成后操作：未找到一条龙配置「{Target}」", targetName);
+            }
+        }
     }
 
     /// <summary>
@@ -848,6 +961,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SaveConfig();
+        RefreshRestartOneDragonNameList();
     }
 
     [RelayCommand]
