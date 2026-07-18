@@ -25,6 +25,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
     private readonly RouteGraphOverrideStore _overrideStore;
     private readonly RouteGraphQualityAnalyzer _qualityAnalyzer = new();
     private readonly List<RouteGraphOverrideOperation> _pendingOperations = [];
+    private readonly HashSet<string> _draftCreatedNodeIds = new(StringComparer.OrdinalIgnoreCase);
     private RouteNavigationGraphSnapshot _snapshot = RouteNavigationGraphSnapshot.Empty;
 
     [ObservableProperty] private bool _isBusy;
@@ -57,6 +58,11 @@ public partial class RouteGraphStudioViewModel : ViewModel
     [ObservableProperty] private string _selectionSummary = "未选择对象";
     [ObservableProperty] private RouteGraphPoint? _currentTargetPoint;
     [ObservableProperty] private string _selectedNodeAnchorsText = "无";
+    [ObservableProperty] private bool _isPathDrawing;
+    [ObservableProperty] private List<RouteGraphPoint> _draftPathPoints = [];
+    [ObservableProperty] private double _drawSnapDistance = 6;
+
+    public int DraftPathPointCount => DraftPathPoints.Count;
 
     public RouteGraphStudioViewModel(
         string? graphDirectory = null,
@@ -96,6 +102,13 @@ public partial class RouteGraphStudioViewModel : ViewModel
 
     partial void OnFilterMapChanged(string value)
     {
+        if (IsPathDrawing || DraftPathPoints.Count > 0)
+        {
+            IsPathDrawing = false;
+            DraftPathPoints = [];
+            _draftCreatedNodeIds.Clear();
+            OnPropertyChanged(nameof(DraftPathPointCount));
+        }
         OnPropertyChanged(nameof(CanvasMapName));
         if (!_snapshot.IsEmpty)
         {
@@ -360,6 +373,111 @@ public partial class RouteGraphStudioViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void StartPathDrawing()
+    {
+        DraftPathPoints = [];
+        _draftCreatedNodeIds.Clear();
+        OnPropertyChanged(nameof(DraftPathPointCount));
+        IsPathDrawing = true;
+        StatusText = "手绘模式：按住左键沿道路描线，或逐点单击；右键/中键拖动画布，滚轮缩放";
+    }
+
+    [RelayCommand]
+    private void AddDrawPathPoint(RouteGraphPoint point)
+    {
+        if (!IsPathDrawing ||
+            !double.IsFinite(point.X) ||
+            !double.IsFinite(point.Y))
+        {
+            return;
+        }
+
+        if (RouteMapGeometryCatalog.TryGet(FilterMap, out var geometry) &&
+            (point.X < 0 || point.Y < 0 || point.X > geometry.ImageWidth || point.Y > geometry.ImageHeight))
+        {
+            return;
+        }
+
+        if (DraftPathPoints.Count > 0 &&
+            RouteGraphGeometry.Distance(DraftPathPoints[^1], point) < 0.5)
+        {
+            return;
+        }
+
+        DraftPathPoints = [.. DraftPathPoints, point];
+        OnPropertyChanged(nameof(DraftPathPointCount));
+        StatusText = $"手绘中：{DraftPathPointCount} 个采样点；完成后会吸附 {Math.Max(0, DrawSnapDistance):F1} 像素内的已有节点";
+    }
+
+    [RelayCommand]
+    private void UndoDrawPathPoint()
+    {
+        if (DraftPathPoints.Count == 0)
+        {
+            return;
+        }
+
+        DraftPathPoints = DraftPathPoints.Take(DraftPathPoints.Count - 1).ToList();
+        OnPropertyChanged(nameof(DraftPathPointCount));
+        StatusText = $"已撤销最后一个手绘点，剩余 {DraftPathPointCount} 个";
+    }
+
+    [RelayCommand]
+    private void CancelPathDrawing()
+    {
+        IsPathDrawing = false;
+        DraftPathPoints = [];
+        _draftCreatedNodeIds.Clear();
+        OnPropertyChanged(nameof(DraftPathPointCount));
+        StatusText = "已取消手绘，未产生路网补丁";
+    }
+
+    [RelayCommand]
+    private void FinishPathDrawing()
+    {
+        if (DraftPathPoints.Count < 2)
+        {
+            StatusText = "手绘路径至少需要两个点";
+            return;
+        }
+
+        var nodes = new List<RouteNavigationNode>();
+        foreach (var point in DraftPathPoints)
+        {
+            var node = ResolveOrCreateDrawNode(point);
+            if (nodes.Count == 0 || !Same(nodes[^1].NodeId, node.NodeId))
+            {
+                nodes.Add(node);
+            }
+        }
+
+        var edgeCount = 0;
+        for (var index = 1; index < nodes.Count; index++)
+        {
+            if (AddManualEdge(nodes[index - 1], nodes[index]))
+            {
+                edgeCount++;
+            }
+            if (AddBidirectionalEdge)
+            {
+                if (AddManualEdge(nodes[index], nodes[index - 1]))
+                {
+                    edgeCount++;
+                }
+            }
+        }
+
+        IsPathDrawing = false;
+        DraftPathPoints = [];
+        _draftCreatedNodeIds.Clear();
+        OnPropertyChanged(nameof(DraftPathPointCount));
+        ApplyFilters();
+        StatusText = edgeCount > 0
+            ? $"手绘完成：生成 {nodes.Count} 个路径节点 / {edgeCount} 条连接，点击“保存补丁并重新加载”持久化"
+            : "手绘点全部吸附到同一节点，没有生成连接";
+    }
+
+    [RelayCommand]
     private void DeleteNode()
     {
         if (SelectedNode == null)
@@ -571,8 +689,18 @@ public partial class RouteGraphStudioViewModel : ViewModel
         Process.Start(new ProcessStartInfo("explorer.exe", OverrideDirectoryPath) { UseShellExecute = true });
     }
 
-    private void AddManualEdge(RouteNavigationNode from, RouteNavigationNode to)
+    private bool AddManualEdge(RouteNavigationNode from, RouteNavigationNode to)
     {
+        var moveMode = string.IsNullOrWhiteSpace(EdgeMoveMode) ? MoveModeEnum.Walk.Code : EdgeMoveMode;
+        if (_snapshot.Graph.Edges.Any(edge =>
+                Same(edge.FromNodeId, from.NodeId) &&
+                Same(edge.ToNodeId, to.NodeId) &&
+                Same(edge.MoveMode, moveMode) &&
+                edge.ReviewStatus is not (GraphReviewStatus.Disabled or GraphReviewStatus.Rejected)))
+        {
+            return false;
+        }
+
         var edge = new RouteNavigationEdge
         {
             EdgeId = "manual_edge_" + Guid.NewGuid().ToString("N")[..16],
@@ -580,7 +708,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
             FromNodeId = from.NodeId,
             ToNodeId = to.NodeId,
             MapName = from.MapName,
-            MoveMode = string.IsNullOrWhiteSpace(EdgeMoveMode) ? MoveModeEnum.Walk.Code : EdgeMoveMode,
+            MoveMode = moveMode,
             ReviewStatus = GraphReviewStatus.Unreviewed,
             SourceKind = "manual-override",
             SourceAuthor = PatchAuthor,
@@ -600,6 +728,51 @@ public partial class RouteGraphStudioViewModel : ViewModel
         };
         Stage(new RouteGraphOverrideOperation { Type = RouteGraphOverrideOperationType.AddEdge, Edge = edge });
         _snapshot.Graph.Edges.Add(edge);
+        return true;
+    }
+
+    private RouteNavigationNode ResolveOrCreateDrawNode(RouteGraphPoint point)
+    {
+        var layer = string.IsNullOrWhiteSpace(NodeLayer) || NodeLayer == All ? "surface" : NodeLayer;
+        var snapDistance = Math.Max(0, DrawSnapDistance);
+        var indexedNodes = _snapshot.FindNearestNodes(FilterMap, point, 16, snapDistance)
+            .Select(candidate => candidate.Node);
+        var pendingManualNodes = _snapshot.Graph.Nodes.Where(node =>
+            node.NodeId.StartsWith("manual_", StringComparison.OrdinalIgnoreCase) &&
+            !_draftCreatedNodeIds.Contains(node.NodeId));
+        var existing = indexedNodes
+            .Concat(pendingManualNodes)
+            .DistinctBy(node => node.NodeId, StringComparer.OrdinalIgnoreCase)
+            .Where(node => Same(node.MapName, FilterMap) && Same(node.LayerId, layer))
+            .Select(node => new
+            {
+                Node = node,
+                Distance = RouteGraphGeometry.Distance(point, new RouteGraphPoint(node.X, node.Y))
+            })
+            .Where(item => item.Distance <= snapDistance)
+            .OrderBy(item => item.Distance)
+            .FirstOrDefault()?.Node;
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var node = new RouteNavigationNode
+        {
+            NodeId = "manual_" + Guid.NewGuid().ToString("N")[..16],
+            MapName = FilterMap,
+            X = point.X,
+            Y = point.Y,
+            LayerId = layer,
+            NodeType = "path",
+            AreaTag = NodeAreaTag,
+            Floor = NodeFloor,
+            Underground = NodeUnderground
+        };
+        Stage(new RouteGraphOverrideOperation { Type = RouteGraphOverrideOperationType.AddNode, Node = node });
+        _snapshot.Graph.Nodes.Add(node);
+        _draftCreatedNodeIds.Add(node.NodeId);
+        return node;
     }
 
     private void SetEdgeReview(GraphReviewStatus status)

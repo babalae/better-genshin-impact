@@ -46,6 +46,14 @@ public sealed class RouteGraphCanvas : FrameworkElement
         nameof(TargetPoint), typeof(RouteGraphPoint?), typeof(RouteGraphCanvas),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty DraftPathPointsProperty = DependencyProperty.Register(
+        nameof(DraftPathPoints), typeof(IReadOnlyList<RouteGraphPoint>), typeof(RouteGraphCanvas),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty IsPathDrawingProperty = DependencyProperty.Register(
+        nameof(IsPathDrawing), typeof(bool), typeof(RouteGraphCanvas),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender, OnPathDrawingChanged));
+
     public static readonly DependencyProperty SelectNodeCommandProperty = DependencyProperty.Register(
         nameof(SelectNodeCommand), typeof(ICommand), typeof(RouteGraphCanvas));
 
@@ -54,6 +62,9 @@ public sealed class RouteGraphCanvas : FrameworkElement
 
     public static readonly DependencyProperty SelectTeleportCommandProperty = DependencyProperty.Register(
         nameof(SelectTeleportCommand), typeof(ICommand), typeof(RouteGraphCanvas));
+
+    public static readonly DependencyProperty AddDrawPathPointCommandProperty = DependencyProperty.Register(
+        nameof(AddDrawPathPointCommand), typeof(ICommand), typeof(RouteGraphCanvas));
 
     private static readonly Pen NormalEdgePen = FrozenPen(Color.FromArgb(90, 80, 150, 230), 1);
     private static readonly Pen VerifiedEdgePen = FrozenPen(Color.FromArgb(180, 60, 190, 110), 1.4);
@@ -64,12 +75,15 @@ public sealed class RouteGraphCanvas : FrameworkElement
     private static readonly Brush TeleportEntryBrush = FrozenBrush(Color.FromArgb(240, 255, 170, 35));
     private static readonly Brush TeleportBrush = FrozenBrush(Color.FromArgb(240, 255, 220, 50));
     private static readonly Brush SelectedBrush = FrozenBrush(Colors.Cyan);
+    private static readonly Pen DraftPathPen = FrozenPen(Color.FromArgb(245, 80, 225, 255), 2.5);
 
     private double _scale = 1;
     private Vector _offset;
     private bool _viewInitialized;
     private bool _isPanning;
+    private bool _isDrawingStroke;
     private Point _lastMousePoint;
+    private Point _lastDrawScreenPoint;
     private RouteMapBackground? _mapBackground;
     private string _loadedBackgroundMapName = string.Empty;
     private string _loadingBackgroundMapName = string.Empty;
@@ -141,6 +155,18 @@ public sealed class RouteGraphCanvas : FrameworkElement
         set => SetValue(TargetPointProperty, value);
     }
 
+    public IReadOnlyList<RouteGraphPoint>? DraftPathPoints
+    {
+        get => (IReadOnlyList<RouteGraphPoint>?)GetValue(DraftPathPointsProperty);
+        set => SetValue(DraftPathPointsProperty, value);
+    }
+
+    public bool IsPathDrawing
+    {
+        get => (bool)GetValue(IsPathDrawingProperty);
+        set => SetValue(IsPathDrawingProperty, value);
+    }
+
     public ICommand? SelectNodeCommand
     {
         get => (ICommand?)GetValue(SelectNodeCommandProperty);
@@ -157,6 +183,12 @@ public sealed class RouteGraphCanvas : FrameworkElement
     {
         get => (ICommand?)GetValue(SelectTeleportCommandProperty);
         set => SetValue(SelectTeleportCommandProperty, value);
+    }
+
+    public ICommand? AddDrawPathPointCommand
+    {
+        get => (ICommand?)GetValue(AddDrawPathPointCommandProperty);
+        set => SetValue(AddDrawPathPointCommandProperty, value);
     }
 
     protected override void OnRender(DrawingContext drawingContext)
@@ -191,6 +223,8 @@ public sealed class RouteGraphCanvas : FrameworkElement
                 drawingContext.DrawLine(pen, ToScreen(points[index - 1]), ToScreen(points[index]));
             }
         }
+
+        DrawDraftPath(drawingContext);
 
         var visibleNodes = QueryBuckets(
             _cachedNodeBuckets,
@@ -241,6 +275,20 @@ public sealed class RouteGraphCanvas : FrameworkElement
             }
             geometry.Freeze();
             drawingContext.DrawGeometry(FrozenBrush(Color.FromRgb(235, 70, 210)), null, geometry);
+        }
+    }
+
+    private void DrawDraftPath(DrawingContext drawingContext)
+    {
+        var points = DraftPathPoints ?? [];
+        for (var index = 1; index < points.Count; index++)
+        {
+            drawingContext.DrawLine(DraftPathPen, ToScreen(points[index - 1]), ToScreen(points[index]));
+        }
+
+        foreach (var point in points)
+        {
+            drawingContext.DrawEllipse(SelectedBrush, null, ToScreen(point), 3.5, 3.5);
         }
     }
 
@@ -512,6 +560,15 @@ public sealed class RouteGraphCanvas : FrameworkElement
         }
 
         var world = ToWorld(_lastMousePoint);
+        if (IsPathDrawing)
+        {
+            Execute(AddDrawPathPointCommand, world);
+            _isDrawingStroke = true;
+            _lastDrawScreenPoint = _lastMousePoint;
+            CaptureMouse();
+            return;
+        }
+
         var tolerance = 9 / Math.Max(0.001, _scale);
         EnsureRenderCache();
         var hitBounds = new Rect(
@@ -568,6 +625,17 @@ public sealed class RouteGraphCanvas : FrameworkElement
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (_isDrawingStroke && e.LeftButton == MouseButtonState.Pressed)
+        {
+            var drawPosition = e.GetPosition(this);
+            if ((drawPosition - _lastDrawScreenPoint).Length >= 6)
+            {
+                Execute(AddDrawPathPointCommand, ToWorld(drawPosition));
+                _lastDrawScreenPoint = drawPosition;
+            }
+            return;
+        }
+
         if (!_isPanning)
         {
             return;
@@ -581,6 +649,13 @@ public sealed class RouteGraphCanvas : FrameworkElement
 
     private void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (_isDrawingStroke && e.ChangedButton == MouseButton.Left)
+        {
+            _isDrawingStroke = false;
+            ReleaseMouseCapture();
+            return;
+        }
+
         if (!_isPanning)
         {
             return;
@@ -657,6 +732,18 @@ public sealed class RouteGraphCanvas : FrameworkElement
         canvas._loadingBackgroundMapName = string.Empty;
         canvas._mapBackground = null;
         canvas._viewInitialized = false;
+        canvas.InvalidateVisual();
+    }
+
+    private static void OnPathDrawingChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
+    {
+        var canvas = (RouteGraphCanvas)dependencyObject;
+        canvas._isDrawingStroke = false;
+        canvas.Cursor = (bool)args.NewValue ? Cursors.Cross : Cursors.Arrow;
+        if (canvas.IsMouseCaptured)
+        {
+            canvas.ReleaseMouseCapture();
+        }
         canvas.InvalidateVisual();
     }
 

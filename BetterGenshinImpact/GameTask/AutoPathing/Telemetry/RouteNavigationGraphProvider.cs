@@ -296,7 +296,9 @@ public sealed class RouteNavigationGraphSnapshot
         var candidates = teleports
             .Select(teleport => new RouteGraphTeleportCandidate(
                 teleport,
-                RouteGraphGeometry.Distance(point, teleport.SpawnImagePoint)))
+                // 与 TpTask.GetNearestNTpPoints 保持一致：最近传送点按地图图标坐标判断，
+                // 传送后的步行成本仍然从实际出生坐标计算。
+                RouteGraphGeometry.Distance(point, teleport.ImagePoint)))
             .Where(candidate => maxDistance <= 0 || candidate.Distance <= maxDistance)
             .OrderBy(candidate => candidate.Distance);
         return (limit == 0 ? candidates : candidates.Take(limit)).ToList();

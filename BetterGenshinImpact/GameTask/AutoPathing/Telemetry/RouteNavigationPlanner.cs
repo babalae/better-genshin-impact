@@ -217,7 +217,7 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             return false;
         }
 
-        plan = new RouteNavigationPlan
+        var graphPlan = new RouteNavigationPlan
         {
             Succeeded = true,
             CompletionMode = completionMode,
@@ -238,6 +238,17 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             Request = request,
             Options = options
         };
+        if (TryCreateTargetTeleportLocalPlan(graph, request, options, out var nearestTeleportPlan) &&
+            ShouldPreferTeleportPlan(
+                graphPlan,
+                nearestTeleportPlan,
+                options.CostOptions.MinimumTeleportSavingsSeconds))
+        {
+            plan = nearestTeleportPlan;
+            return true;
+        }
+
+        plan = graphPlan;
         return true;
     }
 
@@ -256,9 +267,34 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             return current;
         }
 
-        return teleport.TotalCost + Math.Max(0, minimumTeleportSavingsSeconds) <= current.TotalCost
-            ? teleport
+        return SelectCheaperSearchResult(current, teleport, minimumTeleportSavingsSeconds);
+    }
+
+    private static RoutePlanSearchResult SelectCheaperSearchResult(
+        RoutePlanSearchResult current,
+        RoutePlanSearchResult candidate,
+        double minimumTeleportSavingsSeconds)
+    {
+        var threshold = current.Start.Teleport == null && candidate.Start.Teleport != null
+            ? Math.Max(0, minimumTeleportSavingsSeconds)
+            : 0;
+        return candidate.TotalCost + threshold < current.TotalCost
+            ? candidate
             : current;
+    }
+
+    private static bool ShouldPreferTeleportPlan(
+        RouteNavigationPlan current,
+        RouteNavigationPlan teleport,
+        double minimumTeleportSavingsSeconds)
+    {
+        if (!teleport.UsesTeleport || !double.IsFinite(teleport.Cost))
+        {
+            return false;
+        }
+
+        var threshold = current.UsesTeleport ? 0 : Math.Max(0, minimumTeleportSavingsSeconds);
+        return teleport.Cost + threshold < current.Cost;
     }
 
     private bool IsCurrentGraphOutsideSafeLocalRange(
@@ -336,7 +372,11 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             return false;
         }
 
-        var candidate = graph.FindNearestTeleports(request.MapName, request.TargetImagePoint, 0)
+        var candidate = graph.FindNearestTeleports(
+                request.MapName,
+                request.TargetImagePoint,
+                1,
+                options.TeleportSearchMaxDistance)
             .Select(item => new
             {
                 item.Teleport,
@@ -349,9 +389,9 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     options.CostOptions,
                     "local-navigation")
             })
-            .Where(item => item.LocalCost.IsValid)
-            .OrderBy(item => item.LocalCost.GameDistance)
-            .ThenBy(item => item.Teleport.AnchorId, StringComparer.OrdinalIgnoreCase)
+            .Where(item =>
+                item.LocalCost.IsValid &&
+                item.LocalCost.GameDistance <= options.CostOptions.LocalDirectMaxGameDistance)
             .FirstOrDefault();
         if (candidate == null)
         {
@@ -746,6 +786,19 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     : "target-connector");
             result.Add(connector with { Seconds = searchResult.Target.AttachCost });
         }
+        else if (completionMode == RoutePlanCompletionMode.PartialToFrontier &&
+                 searchResult.Target.AttachCost > 0)
+        {
+            var connector = _costModel.EvaluateConnector(
+                request.MapName,
+                request.MapMatchMethod,
+                targetPoint,
+                request.TargetImagePoint,
+                MoveModeEnum.Run.Code,
+                options.CostOptions,
+                "frontier-local-navigation");
+            result.Add(connector with { Seconds = searchResult.Target.AttachCost });
+        }
 
         return result;
     }
@@ -1122,6 +1175,7 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         RouteNavigationNode? bestNode = null;
         var bestScore = double.PositiveInfinity;
         var bestTargetDistance = double.PositiveInfinity;
+        var bestRemainingSeconds = double.PositiveInfinity;
 
         foreach (var start in starts.Where(candidate => double.IsFinite(candidate.InitialCost)))
         {
@@ -1163,6 +1217,7 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     bestNode = node;
                     bestScore = score;
                     bestTargetDistance = targetDistance;
+                    bestRemainingSeconds = remaining.Seconds;
                 }
             }
 
@@ -1204,9 +1259,9 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         PrependEntryEdge(edges, selectedStart);
         result = new RoutePlanSearchResult(
             selectedStart,
-            new RoutePlanTargetCandidate(bestNode, bestTargetDistance, 0, false, false),
+            new RoutePlanTargetCandidate(bestNode, bestTargetDistance, bestRemainingSeconds, false, false),
             edges,
-            totalCost);
+            totalCost + bestRemainingSeconds);
         return true;
     }
 

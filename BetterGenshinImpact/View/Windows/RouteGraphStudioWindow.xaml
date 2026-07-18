@@ -221,6 +221,20 @@
                                 <TextBlock Margin="0,4,0,0" Foreground="#DC4646" Text="━ 禁用 / 拒绝边" />
                             </StackPanel>
                         </Border>
+
+                        <Border Margin="0,10,0,0" Style="{StaticResource InsetCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="自动路网采集" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="在“自动寻路设置”开启“自动收集路网遥测数据”，再正常运行任意 Pathing 路线。成功路段会写入 *_Telemetry.json 并自动重建路网；它不是自动遍历整张路网。"
+                                           TextWrapping="Wrap" />
+                                <ui:Button Margin="0,9,0,0"
+                                           HorizontalAlignment="Stretch"
+                                           Command="{Binding OpenGraphDirectoryCommand}"
+                                           Content="打开遥测与路网目录" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -240,13 +254,16 @@
                                                    Nodes="{Binding VisibleNodes}"
                                                    Edges="{Binding VisibleEdges}"
                                                    Teleports="{Binding VisibleTeleports}"
+                                                   DraftPathPoints="{Binding DraftPathPoints}"
+                                                   IsPathDrawing="{Binding IsPathDrawing}"
                                                    SelectedNode="{Binding SelectedNode}"
                                                    SelectedEdge="{Binding SelectedEdge}"
                                                    SelectedTeleport="{Binding SelectedTeleport}"
                                                    TargetPoint="{Binding CurrentTargetPoint}"
                                                    SelectNodeCommand="{Binding SelectNodeCommand}"
                                                    SelectEdgeCommand="{Binding SelectEdgeCommand}"
-                                                   SelectTeleportCommand="{Binding SelectTeleportCommand}" />
+                                                   SelectTeleportCommand="{Binding SelectTeleportCommand}"
+                                                   AddDrawPathPointCommand="{Binding AddDrawPathPointCommand}" />
 
                         <Border Margin="12"
                                 HorizontalAlignment="Left"
@@ -256,13 +273,51 @@
                                 <TextBlock FontWeight="SemiBold" Text="{Binding CanvasMapName}" />
                                 <TextBlock Margin="0,3,0,0"
                                            Style="{StaticResource CaptionTextStyle}"
-                                           Text="滚轮缩放 · 中键/右键拖动 · 左键选择" />
+                                           Text="滚轮缩放 · 中键/右键拖动 · 左键选择/描线" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="12"
+                                Width="300"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Style="{StaticResource OverlayCardStyle}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="手绘主干道" />
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Foreground="{StaticResource MapEditorAccentBrush}"
+                                               Text="{Binding DraftPathPointCount, StringFormat={}{0} 点}" />
+                                </DockPanel>
+                                <TextBlock Margin="0,3,0,0"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="开始后按住左键沿道路描线；完成后保存为 GraphOverrides 补丁。"
+                                           TextWrapping="Wrap" />
+                                <Grid Margin="0,7,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="64" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               Text="吸附像素" />
+                                    <ui:TextBox Grid.Column="1"
+                                                Margin="7,0,0,0"
+                                                Text="{Binding DrawSnapDistance}" />
+                                </Grid>
+                                <WrapPanel Margin="0,7,0,0">
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding StartPathDrawingCommand}" Content="开始描线" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding UndoDrawPathPointCommand}" Content="撤销一点" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding FinishPathDrawingCommand}" Content="完成路径" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding CancelPathDrawingCommand}" Content="取消" />
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
 
                         <Border Margin="12"
                                 HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
+                                VerticalAlignment="Top"
                                 Style="{StaticResource OverlayCardStyle}">
                             <TextBlock Foreground="{StaticResource MapEditorTextSecondaryBrush}"
                                        Text="视口局部绘制 · 低缩放自动抽稀" />
