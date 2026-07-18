@@ -936,8 +936,9 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             options.TeleportCandidateLimit,
             options.TeleportSearchMaxDistance);
 
-        foreach (var teleportCandidate in teleportCandidates)
+        for (var teleportIndex = 0; teleportIndex < teleportCandidates.Count; teleportIndex++)
         {
+            var teleportCandidate = teleportCandidates[teleportIndex];
             var entryNodes = graph.GetTeleportEntryNodes(teleportCandidate.Teleport.AnchorId);
             foreach (var entryNode in entryNodes)
             {
@@ -957,6 +958,18 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     _costModel.EvaluateTeleport(options.CostOptions).Seconds + spawnConnector.Seconds,
                     false));
             }
+
+            // 历史路线不一定为每个传送点留下 AnchorId。目标最近的传送点仍应像
+            // TpTask/AutoWalk 一样从真实出生位置尝试接入附近路网，不能只因未绑定而被远处传送点取代。
+            if (teleportIndex == 0 && entryNodes.Count == 0)
+            {
+                AddNearestTeleportSpatialStartCandidates(
+                    result,
+                    graph,
+                    request,
+                    options,
+                    teleportCandidate.Teleport);
+            }
         }
 
         var orderedCandidates = result
@@ -972,6 +985,97 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         return (options.MaxStartCandidates <= 0
             ? orderedCandidates
             : orderedCandidates.Take(options.MaxStartCandidates)).ToList();
+    }
+
+    private void AddNearestTeleportSpatialStartCandidates(
+        List<RoutePlanStartCandidate> result,
+        RouteNavigationGraphSnapshot graph,
+        RouteNavigationPlanRequest request,
+        RouteNavigationPlanOptions options,
+        RouteGraphTeleportEntry teleport)
+    {
+        var searchImageDistance = Math.Max(
+            options.UnknownConnectorMaxDistance,
+            options.CurrentAttachMaxDistance);
+        var teleportSeconds = _costModel.EvaluateTeleport(options.CostOptions).Seconds;
+        var spawnPoint = teleport.SpawnImagePoint;
+
+        foreach (var candidate in graph.FindNearestNodes(
+                     request.MapName,
+                     spawnPoint,
+                     options.CurrentNodeCandidateLimit,
+                     searchImageDistance))
+        {
+            var nodePoint = new RouteGraphPoint(candidate.Node.X, candidate.Node.Y);
+            var connector = EvaluateConnectorCost(
+                request,
+                spawnPoint,
+                nodePoint,
+                MoveModeEnum.Walk.Code,
+                options,
+                1,
+                "teleport-spatial-node-connector");
+            if (!connector.IsValid || connector.GameDistance > options.CostOptions.LocalDirectMaxGameDistance)
+            {
+                continue;
+            }
+
+            result.Add(new RoutePlanStartCandidate(
+                candidate.Node,
+                teleport,
+                connector.GameDistance,
+                teleportSeconds + connector.Seconds,
+                false));
+        }
+
+        foreach (var projection in graph.FindNearestEdges(
+                     request.MapName,
+                     spawnPoint,
+                     options.CurrentNodeCandidateLimit,
+                     searchImageDistance))
+        {
+            var connector = EvaluateConnectorCost(
+                request,
+                spawnPoint,
+                projection.ProjectedPoint,
+                MoveModeEnum.Walk.Code,
+                options,
+                1,
+                "teleport-spatial-edge-connector");
+            if (!connector.IsValid || connector.GameDistance > options.CostOptions.LocalDirectMaxGameDistance)
+            {
+                continue;
+            }
+
+            var toNode = graph.GetNode(projection.Edge.ToNodeId);
+            var edgePoints = ResolveEdgePoints(graph, projection.Edge);
+            if (toNode == null || edgePoints.Count < 2)
+            {
+                continue;
+            }
+
+            var trailingPoints = new List<RouteGraphPoint> { projection.ProjectedPoint };
+            trailingPoints.AddRange(edgePoints.Skip(projection.SegmentIndex + 1));
+            if (trailingPoints.Count < 2)
+            {
+                continue;
+            }
+
+            var trailingEdge = CreateTrailingEdge(projection.Edge, trailingPoints);
+            var trailingCost = ResolveEdgeCost(request, trailingEdge, options);
+            if (!double.IsFinite(trailingCost))
+            {
+                continue;
+            }
+
+            result.Add(new RoutePlanStartCandidate(
+                toNode,
+                teleport,
+                connector.GameDistance,
+                teleportSeconds + connector.Seconds + trailingCost,
+                false,
+                trailingEdge));
+        }
     }
 
     private List<RoutePlanTargetCandidate> BuildTargetCandidates(
