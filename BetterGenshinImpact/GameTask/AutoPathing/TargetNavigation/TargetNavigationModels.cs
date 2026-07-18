@@ -115,11 +115,18 @@ public sealed class TargetNavigationRequest
 
     public RouteNavigationPlanRequest BuildPlanRequest(RouteGraphPoint currentImagePoint)
     {
+        return BuildPlanRequest((RouteGraphPoint?)currentImagePoint);
+    }
+
+    public RouteNavigationPlanRequest BuildPlanRequest(RouteGraphPoint? currentImagePoint)
+    {
         return new RouteNavigationPlanRequest
         {
             MapName = MapName,
             MapMatchMethod = MapMatchMethod,
-            CurrentImagePoint = currentImagePoint,
+            // 无实时坐标时保留一个有限占位值，真正的起点由 HasCurrentPosition 明确控制。
+            CurrentImagePoint = currentImagePoint ?? TargetImagePoint,
+            HasCurrentPosition = currentImagePoint.HasValue,
             TargetImagePoint = TargetImagePoint,
             TaskName = TaskName,
             TargetMoveMode = TargetMoveMode,

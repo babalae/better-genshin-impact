@@ -71,11 +71,6 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         if (!_coordinateConverter.TryImageToGame(
                 request.MapName,
                 request.MapMatchMethod,
-                request.CurrentImagePoint,
-                out var currentGamePoint) ||
-            !_coordinateConverter.TryImageToGame(
-                request.MapName,
-                request.MapMatchMethod,
                 request.TargetImagePoint,
                 out var targetGamePoint))
         {
@@ -87,7 +82,23 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             return false;
         }
 
-        if (IsCurrentGraphOutsideSafeLocalRange(graph, request, options))
+        var currentGamePoint = targetGamePoint;
+        if (request.HasCurrentPosition &&
+            !_coordinateConverter.TryImageToGame(
+                request.MapName,
+                request.MapMatchMethod,
+                request.CurrentImagePoint,
+                out currentGamePoint))
+        {
+            plan = RouteNavigationPlan.Failed(
+                RouteNavigationFailureCode.CoordinateConversionFailed,
+                GetFailureReason(RouteNavigationFailureCode.CoordinateConversionFailed),
+                request,
+                options);
+            return false;
+        }
+
+        if (request.HasCurrentPosition && IsCurrentGraphOutsideSafeLocalRange(graph, request, options))
         {
             var targetDistance = Distance(currentGamePoint, targetGamePoint);
             if (targetDistance <= options.CostOptions.LocalDirectMaxGameDistance)
@@ -111,7 +122,12 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         var starts = BuildStartCandidates(graph, request, options);
         if (starts.Count == 0)
         {
-            var failureCode = HasUnavailableTeleportCandidate(graph, request, options)
+            if (!request.HasCurrentPosition && TryCreateTargetTeleportLocalPlan(graph, request, options, out plan))
+            {
+                return true;
+            }
+
+            var failureCode = !request.HasCurrentPosition || HasUnavailableTeleportCandidate(graph, request, options)
                 ? RouteNavigationFailureCode.TeleportUnavailable
                 : RouteNavigationFailureCode.CurrentPointNotConnected;
             plan = RouteNavigationPlan.Failed(failureCode, GetFailureReason(failureCode), request, options);
@@ -138,6 +154,11 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 
         if (!hasCurrentRoute && !hasTeleportRoute)
         {
+            if (!request.HasCurrentPosition && TryCreateTargetTeleportLocalPlan(graph, request, options, out plan))
+            {
+                return true;
+            }
+
             plan = RouteNavigationPlan.Failed(
                 RouteNavigationFailureCode.NoRoute,
                 GetFailureReason(RouteNavigationFailureCode.NoRoute),
@@ -374,11 +395,15 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                 new RouteNavigationPlanSegment
                 {
                     Kind = RouteNavigationPlanSegmentKind.Teleport,
-                    From = request.CurrentImagePoint,
+                    From = request.HasCurrentPosition
+                        ? request.CurrentImagePoint
+                        : candidate.Teleport.SpawnImagePoint,
                     To = candidate.Teleport.SpawnImagePoint,
                     Teleport = candidate.Teleport,
                     Cost = teleportCost.Seconds,
-                    Polyline = [request.CurrentImagePoint, candidate.Teleport.SpawnImagePoint]
+                    Polyline = request.HasCurrentPosition
+                        ? [request.CurrentImagePoint, candidate.Teleport.SpawnImagePoint]
+                        : [candidate.Teleport.SpawnImagePoint]
                 }
             ],
             UsesTeleport = true,
@@ -576,11 +601,15 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             segments.Add(new RouteNavigationPlanSegment
             {
                 Kind = RouteNavigationPlanSegmentKind.Teleport,
-                From = request.CurrentImagePoint,
+                From = request.HasCurrentPosition
+                    ? request.CurrentImagePoint
+                    : searchResult.Start.Teleport.SpawnImagePoint,
                 To = searchResult.Start.Teleport.SpawnImagePoint,
                 Teleport = searchResult.Start.Teleport,
                 Cost = teleportCost.Seconds,
-                Polyline = [request.CurrentImagePoint, searchResult.Start.Teleport.SpawnImagePoint]
+                Polyline = request.HasCurrentPosition
+                    ? [request.CurrentImagePoint, searchResult.Start.Teleport.SpawnImagePoint]
+                    : [searchResult.Start.Teleport.SpawnImagePoint]
             });
             currentPoint = searchResult.Start.Teleport.SpawnImagePoint;
         }
@@ -747,6 +776,8 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         RouteNavigationPlanOptions options)
     {
         var result = new List<RoutePlanStartCandidate>();
+        if (request.HasCurrentPosition)
+        {
         var nearbyNodes = graph.FindNearestNodes(
             request.MapName,
             request.CurrentImagePoint,
@@ -836,8 +867,9 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                         options,
                         options.UnknownConnectorCostWeight,
                         "unknown-start-connector").Seconds,
-                    true));
+                true));
             }
+        }
         }
 
         if (!options.AllowTeleport)
@@ -1482,6 +1514,9 @@ public sealed class RouteNavigationPlanRequest
     public string? MapMatchMethod { get; init; }
 
     public RouteGraphPoint CurrentImagePoint { get; init; }
+
+    /// <summary>False 表示仅预览从最佳传送点出发的方案；执行前必须用实时坐标重新规划。</summary>
+    public bool HasCurrentPosition { get; init; } = true;
 
     public RouteGraphPoint TargetImagePoint { get; init; }
 

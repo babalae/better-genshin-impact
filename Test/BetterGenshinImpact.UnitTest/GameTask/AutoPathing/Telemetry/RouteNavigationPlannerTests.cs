@@ -195,6 +195,65 @@ public class RouteNavigationPlannerTests
     }
 
     [Fact]
+    public void TryPlan_WithoutCurrentPositionStartsFromTeleportAndDoesNotConvertPlaceholder()
+    {
+        var converter = new FakeCoordinateConverter(failAtImageX: -999);
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(CreateTeleportSnapshot()),
+            converter);
+        var request = CreateRequest(new RouteGraphPoint(-999, 0), new RouteGraphPoint(200, 0));
+        request = new RouteNavigationPlanRequest
+        {
+            MapName = request.MapName,
+            MapMatchMethod = request.MapMatchMethod,
+            CurrentImagePoint = request.CurrentImagePoint,
+            HasCurrentPosition = false,
+            TargetImagePoint = request.TargetImagePoint,
+            TaskName = request.TaskName
+        };
+
+        var succeeded = planner.TryPlan(request, out var plan, TeleportOptions());
+
+        Assert.True(succeeded, plan.FailureReason);
+        Assert.True(plan.UsesTeleport);
+        Assert.Equal(WaypointType.Teleport.Code, plan.Task!.Positions[0].Type);
+        Assert.DoesNotContain(plan.Segments, segment =>
+            segment.Polyline.Contains(new RouteGraphPoint(-999, 0)));
+    }
+
+    [Fact]
+    public void TryPlan_WithoutCurrentPositionFallsBackToNearestTargetTeleportWithoutGraphEntry()
+    {
+        var from = new RouteNavigationNode { NodeId = "far-a", MapName = "Teyvat", X = 5000, Y = 0 };
+        var to = new RouteNavigationNode { NodeId = "far-b", MapName = "Teyvat", X = 5010, Y = 0 };
+        var snapshot = new RouteNavigationGraphSnapshot(
+            new RouteNavigationGraph
+            {
+                Nodes = [from, to],
+                Edges = [CreateHistoricalEdge("far", from, to)]
+            },
+            64,
+            [CreateTeleport("no-entry", "near-target", 950)]);
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(snapshot),
+            new IdentityCoordinateConverter());
+        var request = new RouteNavigationPlanRequest
+        {
+            MapName = "Teyvat",
+            CurrentImagePoint = new RouteGraphPoint(1000, 0),
+            HasCurrentPosition = false,
+            TargetImagePoint = new RouteGraphPoint(1000, 0)
+        };
+
+        var succeeded = planner.TryPlan(request, out var plan, TeleportOptions());
+
+        Assert.True(succeeded, plan.FailureReason);
+        Assert.Equal(RoutePlanCompletionMode.LocalOnly, plan.CompletionMode);
+        Assert.Equal("near-target", plan.Teleport?.Name);
+        Assert.Equal(WaypointType.Teleport.Code, plan.Task!.Positions[0].Type);
+    }
+
+    [Fact]
     public void TryPlan_PrefersLastRouteAdjacentTeleportEvenWhenCurrentRouteIsShort()
     {
         var current = new RouteNavigationNode { NodeId = "current", MapName = "Teyvat", X = 0, Y = 0 };

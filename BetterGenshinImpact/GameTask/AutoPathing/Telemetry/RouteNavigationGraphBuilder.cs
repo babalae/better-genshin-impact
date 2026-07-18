@@ -171,7 +171,8 @@ public sealed class RouteNavigationGraphBuilder
             {
                 importResult = new PathingTaskRouteImporter(_coordinateConverter).Import(
                     request.PathingTaskDirectories,
-                    request.CancellationToken);
+                    request.CancellationToken,
+                    request.MaximumImportedStraightEdgeGameDistance);
                 foreach (var segment in importResult.Segments)
                 {
                     request.CancellationToken.ThrowIfCancellationRequested();
@@ -437,6 +438,8 @@ public sealed class RouteNavigationBuildRequest
     public bool IncludeTelemetry { get; init; } = true;
 
     public double NodeSnapDistance { get; init; } = 6;
+
+    public double MaximumImportedStraightEdgeGameDistance { get; init; } = 300;
 
     public CancellationToken CancellationToken { get; init; }
 }

@@ -695,6 +695,8 @@ public partial class MapViewerViewModel : ObservableObject
 
     private Point2f? _lastPosition;
 
+    private DateTime _lastPositionUpdatedUtc = DateTime.MinValue;
+
     private string? _lastPositionMapName;
 
     private Point2f? _selectedTargetPoint;
@@ -811,6 +813,8 @@ public partial class MapViewerViewModel : ObservableObject
                     {
                         SynchronizeTrackingMap(positionMapName);
                         _lastPositionMapName = ResolvePositionMapName(positionMapName);
+                        _lastPosition = point;
+                        _lastPositionUpdatedUtc = DateTime.UtcNow;
                         if (FollowRoutePlanningCurrentPosition)
                         {
                             UpdateRoutePlanningCurrentPosition(point);
@@ -825,6 +829,7 @@ public partial class MapViewerViewModel : ObservableObject
                     SynchronizeTrackingMap(positionMapName);
                     _lastPositionMapName = ResolvePositionMapName(positionMapName);
                     _lastPosition = point;
+                    _lastPositionUpdatedUtc = DateTime.UtcNow;
                     CurrentPositionText = FormatCurrentPosition(point, _lastPositionMapName);
                     LastRefreshText = $"刷新：{DateTime.Now:HH:mm:ss}";
                     UpdateRoutePlanningCurrentPosition(point);
@@ -2998,9 +3003,7 @@ public partial class MapViewerViewModel : ObservableObject
             MapName = MapName,
             MapMatchMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
             TargetImagePoint = new RouteGraphPoint(selectedTarget.X, selectedTarget.Y),
-            LastKnownCurrentImagePoint = _lastPosition is { } lastPosition
-                ? new RouteGraphPoint(lastPosition.X, lastPosition.Y)
-                : null,
+            LastKnownCurrentImagePoint = TryGetFreshPlanningPosition(),
             TaskName = "地图目标导航",
             TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
             TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim(),
@@ -3080,7 +3083,9 @@ public partial class MapViewerViewModel : ObservableObject
             TargetNavigationState.WaitingToStart =>
                 $"目标 {TargetImageX:F1}, {TargetImageY:F1}，正在检查运行条件",
             TargetNavigationState.Planning =>
-                $"从实时坐标规划到 {TargetImageX:F1}, {TargetImageY:F1}",
+                TryGetFreshPlanningPosition().HasValue
+                    ? $"从最近坐标规划到 {TargetImageX:F1}, {TargetImageY:F1}"
+                    : $"当前坐标不可用，按传送点规划到 {TargetImageX:F1}, {TargetImageY:F1}",
             TargetNavigationState.PlanSucceeded when _currentExecutableTask != null =>
                 $"{_currentExecutableTask.Positions.Count} 个可执行点",
             TargetNavigationState.Executing when _executingTask != null =>
@@ -3113,6 +3118,21 @@ public partial class MapViewerViewModel : ObservableObject
         }
     }
 
+    private RouteGraphPoint? TryGetFreshPlanningPosition()
+    {
+        if (_lastPosition is not { } point ||
+            DateTime.UtcNow - _lastPositionUpdatedUtc > TimeSpan.FromSeconds(5) ||
+            !string.Equals(
+                RouteGraphGeometry.NormalizeMapName(_lastPositionMapName),
+                RouteGraphGeometry.NormalizeMapName(MapName),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return new RouteGraphPoint(point.X, point.Y);
+    }
+
     private void ApplyNavigationPlan(RouteNavigationPlan plan)
     {
         _currentPlan = plan;
@@ -3132,7 +3152,7 @@ public partial class MapViewerViewModel : ObservableObject
 
         _currentExecutableTask = plan.Task;
         HasPlan = true;
-        if (plan.Request != null)
+        if (plan.Request is { HasCurrentPosition: true })
         {
             CurrentImageX = Math.Round(plan.Request.CurrentImagePoint.X, 1);
             CurrentImageY = Math.Round(plan.Request.CurrentImagePoint.Y, 1);

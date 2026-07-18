@@ -13,6 +13,55 @@ public readonly record struct RouteGamePoint(double X, double Y);
 
 public sealed record RouteCurrentPosition(string MapName, RouteGraphPoint ImagePoint);
 
+/// <summary>
+/// 不依赖地图识别模型的静态地图几何。坐标换算和编辑器背景必须共享这一份定义，
+/// 避免为了做线性换算而初始化 SIFT / TemplateMatch 资源。
+/// </summary>
+public readonly record struct RouteMapGeometry(
+    int Rows,
+    int Columns,
+    int UpRows,
+    int LeftColumns,
+    int ImageBlockWidth)
+{
+    public double ImageWidth => Columns * (double)ImageBlockWidth;
+
+    public double ImageHeight => Rows * (double)ImageBlockWidth;
+
+    public double OriginX => (LeftColumns + 1d) * ImageBlockWidth;
+
+    public double OriginY => (UpRows + 1d) * ImageBlockWidth;
+
+    public double ImageUnitsPerGameUnit => ImageBlockWidth / 1024d;
+
+    public RouteGamePoint ImageToGame(RouteGraphPoint point) => new(
+        (OriginX - point.X) / ImageUnitsPerGameUnit,
+        (OriginY - point.Y) / ImageUnitsPerGameUnit);
+
+    public RouteGraphPoint GameToImage(RouteGamePoint point) => new(
+        OriginX - (point.X * ImageUnitsPerGameUnit),
+        OriginY - (point.Y * ImageUnitsPerGameUnit));
+}
+
+public static class RouteMapGeometryCatalog
+{
+    public static bool TryGet(string? mapName, out RouteMapGeometry geometry)
+    {
+        var normalized = RouteGraphGeometry.NormalizeMapName(mapName);
+        geometry = normalized switch
+        {
+            nameof(MapTypes.Teyvat) => new RouteMapGeometry(15, 22, 7, 15, 2048),
+            nameof(MapTypes.TheChasm) => new RouteMapGeometry(2, 2, 1, 1, 1024),
+            nameof(MapTypes.Enkanomiya) => new RouteMapGeometry(3, 3, 1, 1, 1024),
+            nameof(MapTypes.SeaOfBygoneEras) => new RouteMapGeometry(3, 4, 2, 5, 1024),
+            nameof(MapTypes.AncientSacredMountain) => new RouteMapGeometry(4, 4, 1, 1, 1024),
+            nameof(MapTypes.TempleOfSpace) => new RouteMapGeometry(4, 3, 1, 1, 1024),
+            _ => default
+        };
+        return geometry.ImageBlockWidth > 0;
+    }
+}
+
 public interface IRouteCurrentPositionResolver
 {
     bool TryResolve(
@@ -62,6 +111,12 @@ public sealed class RouteNavigationCoordinateService : IRouteCoordinateConverter
 
         try
         {
+            if (RouteMapGeometryCatalog.TryGet(mapName, out var geometry))
+            {
+                gamePoint = geometry.ImageToGame(imagePoint);
+                return IsFinite(gamePoint.X) && IsFinite(gamePoint.Y);
+            }
+
             var map = MapManager.GetMap(RouteGraphGeometry.NormalizeMapName(mapName), mapMatchMethod ?? string.Empty);
             var converted = map?.ConvertImageCoordinatesToGenshinMapCoordinates(
                 new Point2f((float)imagePoint.X, (float)imagePoint.Y));
@@ -93,6 +148,12 @@ public sealed class RouteNavigationCoordinateService : IRouteCoordinateConverter
 
         try
         {
+            if (RouteMapGeometryCatalog.TryGet(mapName, out var geometry))
+            {
+                imagePoint = geometry.GameToImage(gamePoint);
+                return IsFinite(imagePoint.X) && IsFinite(imagePoint.Y);
+            }
+
             var map = MapManager.GetMap(RouteGraphGeometry.NormalizeMapName(mapName), mapMatchMethod ?? string.Empty);
             if (map == null)
             {

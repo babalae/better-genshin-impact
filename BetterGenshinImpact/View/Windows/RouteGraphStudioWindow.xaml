@@ -4,17 +4,118 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+                 xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+                 Title="路网工作室"
                  Width="1500"
                  Height="900"
-                 MinWidth="1100"
-                 MinHeight="700"
-                 Title="路网工作室"
+                 MinWidth="1180"
+                 MinHeight="720"
+                 d:DataContext="{d:DesignInstance Type=windows:RouteGraphStudioViewModel}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
+                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 ResizeMode="CanResize"
                  WindowBackdropType="Mica"
                  WindowStartupLocation="CenterOwner"
+                 WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">
-    <Grid>
+    <ui:FluentWindow.Resources>
+        <SolidColorBrush x:Key="MapEditorPanelBrush" Color="#E812171B" />
+        <SolidColorBrush x:Key="MapEditorCardBrush" Color="#D8172026" />
+        <SolidColorBrush x:Key="MapEditorInsetBrush" Color="#99111822" />
+        <SolidColorBrush x:Key="MapEditorStrokeBrush" Color="#33485761" />
+        <SolidColorBrush x:Key="MapEditorGridLineBrush" Color="#18252D" />
+        <SolidColorBrush x:Key="MapEditorAccentBrush" Color="#23C8D2" />
+        <SolidColorBrush x:Key="MapEditorWarningBrush" Color="#F1B44C" />
+        <SolidColorBrush x:Key="MapEditorDangerBrush" Color="#EB5545" />
+        <SolidColorBrush x:Key="MapEditorTextPrimaryBrush" Color="#F3F7FA" />
+        <SolidColorBrush x:Key="MapEditorTextSecondaryBrush" Color="#C7D2DA" />
+
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Background" Value="{StaticResource MapEditorCardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style x:Key="InsetCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="Background" Value="{StaticResource MapEditorInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+
+        <Style x:Key="OverlayCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Background" Value="#D9111820" />
+            <Setter Property="BorderBrush" Value="#4039DCEB" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+        </Style>
+
+        <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextSecondaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="FieldLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+            <Setter Property="Margin" Value="0,8,0,4" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style x:Key="FormTextBoxStyle" TargetType="ui:TextBox">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="{StaticResource MapEditorInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Background" Value="{StaticResource MapEditorInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="RowBackground" Value="#00172026" />
+            <Setter Property="AlternatingRowBackground" Value="#141F2A31" />
+            <Setter Property="GridLinesVisibility" Value="None" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource MapEditorGridLineBrush}" />
+            <Setter Property="VerticalGridLinesBrush" Value="{StaticResource MapEditorGridLineBrush}" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="RowHeaderWidth" Value="0" />
+        </Style>
+
+        <Style TargetType="GridSplitter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="ShowsPreview" Value="True" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid Background="{StaticResource MapEditorPanelBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -22,14 +123,14 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="路网工作室">
+        <ui:TitleBar Grid.Row="0" Title="路网工作室 · 地图审核与人工修正">
             <ui:TitleBar.Icon>
-                <ui:SymbolIcon Symbol="Map24" />
+                <ui:SymbolIcon Foreground="{StaticResource MapEditorAccentBrush}" Symbol="Map24" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <Border Grid.Row="1" Padding="10,8" BorderBrush="#33404D" BorderThickness="0,0,0,1">
-            <DockPanel>
+        <Border Grid.Row="1" Margin="10,6,10,0" Style="{StaticResource PanelCardStyle}">
+            <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <ui:Button Margin="6,0,0,0" Command="{Binding ReloadCommand}" Content="重新加载" />
                     <ui:Button Margin="6,0,0,0" Command="{Binding RunQualityCheckCommand}" Content="质量检查" />
@@ -37,207 +138,360 @@
                     <ui:Button Margin="6,0,0,0" Command="{Binding OpenGraphDirectoryCommand}" Content="图目录" />
                     <ui:Button Margin="6,0,0,0" Command="{Binding OpenOverrideDirectoryCommand}" Content="补丁目录" />
                 </StackPanel>
-                <TextBlock VerticalAlignment="Center" Text="{Binding SelectionSummary}" TextTrimming="CharacterEllipsis" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="当前选择" />
+                    <TextBlock Margin="0,3,12,0"
+                               Foreground="{StaticResource MapEditorTextSecondaryBrush}"
+                               Text="{Binding SelectionSummary}"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" Margin="10,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260" />
-                <ColumnDefinition Width="5" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="5" />
-                <ColumnDefinition Width="370" />
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" MinWidth="460" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="390" MinWidth="350" />
             </Grid.ColumnDefinitions>
 
-            <ScrollViewer Grid.Column="0" Padding="12" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <TextBlock Margin="0,0,0,10" FontSize="16" FontWeight="SemiBold" Text="筛选与图例" />
-                    <TextBlock Text="地图" />
-                    <ComboBox Margin="0,4,0,10" ItemsSource="{Binding MapOptions}" SelectedItem="{Binding FilterMap}" />
-                    <TextBlock Text="层级" />
-                    <ComboBox Margin="0,4,0,10" ItemsSource="{Binding LayerOptions}" SelectedItem="{Binding FilterLayer}" />
-                    <TextBlock Text="审核状态" />
-                    <ComboBox Margin="0,4,0,10" ItemsSource="{Binding ReviewOptions}" SelectedItem="{Binding FilterReview}" />
-                    <TextBlock Text="来源筛选" />
-                    <TextBox Margin="0,4,0,10" Text="{Binding FilterSource, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Text="节点 / 边 / 传送点搜索" />
-                    <TextBox Margin="0,4,0,8" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-                    <ui:Button Command="{Binding ApplyFiltersCommand}" Content="应用筛选" />
+            <Border Grid.Column="0" Style="{StaticResource PanelCardStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="筛选与图例" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Style="{StaticResource CaptionTextStyle}"
+                                   Text="一次只加载一张地图，切换后自动刷新。"
+                                   TextWrapping="Wrap" />
 
-                    <Separator Margin="0,14" />
-                    <TextBlock FontWeight="SemiBold" Text="图例" />
-                    <TextBlock Margin="0,8,0,0" Foreground="#BDD2EB" Text="● 普通路径节点" />
-                    <TextBlock Margin="0,4,0,0" Foreground="#FFAA23" Text="● 已关联传送入口" />
-                    <TextBlock Margin="0,4,0,0" Foreground="#FFDC32" Text="▲ 传送点出生位置" />
-                    <TextBlock Margin="0,4,0,0" Foreground="#EB46D2" Text="◆ 当前地图目标" />
-                    <TextBlock Margin="0,4,0,0" Foreground="#3CBE6E" Text="━ 已验证边" />
-                    <TextBlock Margin="0,4,0,0" Foreground="#F5A02D" Text="━ 风险 / 合成反向边" />
-                    <TextBlock Margin="0,4,0,0" Foreground="#DC4646" Text="━ 禁用 / 拒绝边" />
-                    <TextBlock Margin="0,10,0,0" Foreground="#AAB5C0" Text="滚轮缩放；中键或右键拖动画布；左键选择对象。" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="地图" />
+                        <ComboBox ItemsSource="{Binding MapOptions}" SelectedItem="{Binding FilterMap}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="层级" />
+                        <ComboBox ItemsSource="{Binding LayerOptions}" SelectedItem="{Binding FilterLayer}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="审核状态" />
+                        <ComboBox ItemsSource="{Binding ReviewOptions}" SelectedItem="{Binding FilterReview}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="来源筛选" />
+                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}"
+                                    Text="{Binding FilterSource, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="节点 / 边 / 传送点搜索" />
+                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}"
+                                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Margin="0,10,0,0"
+                                   HorizontalAlignment="Stretch"
+                                   Command="{Binding ApplyFiltersCommand}"
+                                   Content="应用筛选" />
 
-                    <Separator Margin="0,14" />
-                    <TextBlock FontWeight="SemiBold" Text="当前视图" />
-                    <TextBlock Margin="0,6,0,0" Text="{Binding VisibleNodes.Count, StringFormat=节点：{0:N0}}" />
-                    <TextBlock Text="{Binding VisibleEdges.Count, StringFormat=边：{0:N0}}" />
-                    <TextBlock Text="{Binding VisibleTeleports.Count, StringFormat=传送点：{0:N0}}" />
-                    <TextBlock Text="{Binding QualityIssues.Count, StringFormat=质量问题：{0:N0}}" />
-                </StackPanel>
-            </ScrollViewer>
+                        <Border Margin="0,14,0,0" Style="{StaticResource InsetCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="当前视图" />
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Text="节点" />
+                                    <TextBlock Grid.Column="1" Text="{Binding VisibleNodes.Count, StringFormat={}{0:N0}}" />
+                                    <TextBlock Grid.Row="1" Style="{StaticResource CaptionTextStyle}" Text="边" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VisibleEdges.Count, StringFormat={}{0:N0}}" />
+                                    <TextBlock Grid.Row="2" Style="{StaticResource CaptionTextStyle}" Text="传送点" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding VisibleTeleports.Count, StringFormat={}{0:N0}}" />
+                                    <TextBlock Grid.Row="3" Style="{StaticResource CaptionTextStyle}" Text="质量问题" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding QualityIssues.Count, StringFormat={}{0:N0}}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0,10,0,0" Style="{StaticResource InsetCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="图例" />
+                                <TextBlock Margin="0,8,0,0" Foreground="#BDD2EB" Text="● 普通路径节点" />
+                                <TextBlock Margin="0,4,0,0" Foreground="#FFAA23" Text="● 传送入口节点" />
+                                <TextBlock Margin="0,4,0,0" Foreground="#FFDC32" Text="▲ 传送出生位置" />
+                                <TextBlock Margin="0,4,0,0" Foreground="#EB46D2" Text="◆ 当前目标" />
+                                <TextBlock Margin="0,4,0,0" Foreground="#3CBE6E" Text="━ 已验证边" />
+                                <TextBlock Margin="0,4,0,0" Foreground="#F5A02D" Text="━ 风险 / 合成反向边" />
+                                <TextBlock Margin="0,4,0,0" Foreground="#DC4646" Text="━ 禁用 / 拒绝边" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
 
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
 
-            <Grid Grid.Column="2" Margin="8">
+            <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="2*" />
-                    <RowDefinition Height="5" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="6" />
+                    <RowDefinition Height="*" MinHeight="190" />
                 </Grid.RowDefinitions>
-                <Border BorderBrush="#465461" BorderThickness="1" CornerRadius="4">
-                    <controls:RouteGraphCanvas Nodes="{Binding VisibleNodes}"
-                                                       Edges="{Binding VisibleEdges}"
-                                                       Teleports="{Binding VisibleTeleports}"
-                                                       SelectedNode="{Binding SelectedNode}"
-                                                       SelectedEdge="{Binding SelectedEdge}"
-                                                       SelectedTeleport="{Binding SelectedTeleport}"
-                                                       TargetPoint="{Binding CurrentTargetPoint}"
-                                                       SelectNodeCommand="{Binding SelectNodeCommand}"
-                                                       SelectEdgeCommand="{Binding SelectEdgeCommand}"
-                                                       SelectTeleportCommand="{Binding SelectTeleportCommand}" />
+
+                <Border Padding="0" Style="{StaticResource PanelCardStyle}">
+                    <Grid ClipToBounds="True">
+                        <controls:RouteGraphCanvas MapName="{Binding CanvasMapName}"
+                                                   Nodes="{Binding VisibleNodes}"
+                                                   Edges="{Binding VisibleEdges}"
+                                                   Teleports="{Binding VisibleTeleports}"
+                                                   SelectedNode="{Binding SelectedNode}"
+                                                   SelectedEdge="{Binding SelectedEdge}"
+                                                   SelectedTeleport="{Binding SelectedTeleport}"
+                                                   TargetPoint="{Binding CurrentTargetPoint}"
+                                                   SelectNodeCommand="{Binding SelectNodeCommand}"
+                                                   SelectEdgeCommand="{Binding SelectEdgeCommand}"
+                                                   SelectTeleportCommand="{Binding SelectTeleportCommand}" />
+
+                        <Border Margin="12"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Style="{StaticResource OverlayCardStyle}">
+                            <StackPanel>
+                                <TextBlock FontWeight="SemiBold" Text="{Binding CanvasMapName}" />
+                                <TextBlock Margin="0,3,0,0"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="滚轮缩放 · 中键/右键拖动 · 左键选择" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="12"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Style="{StaticResource OverlayCardStyle}">
+                            <TextBlock Foreground="{StaticResource MapEditorTextSecondaryBrush}"
+                                       Text="视口局部绘制 · 低缩放自动抽稀" />
+                        </Border>
+                    </Grid>
                 </Border>
+
                 <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" />
-                <TabControl Grid.Row="2">
-                    <TabItem Header="节点">
-                        <DataGrid ItemsSource="{Binding VisibleNodes}" SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
-                                  AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Width="2*" Header="节点 ID" Binding="{Binding NodeId}" />
-                                <DataGridTextColumn Width="*" Header="地图" Binding="{Binding MapName}" />
-                                <DataGridTextColumn Width="*" Header="类型" Binding="{Binding NodeType}" />
-                                <DataGridTextColumn Width="*" Header="层级" Binding="{Binding LayerId}" />
-                                <DataGridTextColumn Width="*" Header="X" Binding="{Binding X, StringFormat=F2}" />
-                                <DataGridTextColumn Width="*" Header="Y" Binding="{Binding Y, StringFormat=F2}" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </TabItem>
-                    <TabItem Header="边">
-                        <DataGrid ItemsSource="{Binding VisibleEdges}" SelectedItem="{Binding SelectedEdge, Mode=TwoWay}"
-                                  AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Width="2*" Header="边 ID" Binding="{Binding EdgeId}" />
-                                <DataGridTextColumn Width="*" Header="移动" Binding="{Binding MoveMode}" />
-                                <DataGridTextColumn Width="*" Header="审核" Binding="{Binding ReviewStatus}" />
-                                <DataGridTextColumn Width="*" Header="来源" Binding="{Binding SourceKind}" />
-                                <DataGridCheckBoxColumn Width="90" Header="合成反向" Binding="{Binding IsSyntheticReverse}" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </TabItem>
-                    <TabItem Header="传送点">
-                        <DataGrid ItemsSource="{Binding VisibleTeleports}" SelectedItem="{Binding SelectedTeleport, Mode=TwoWay}"
-                                  AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Width="2*" Header="名称" Binding="{Binding Name}" />
-                                <DataGridTextColumn Width="2*" Header="Anchor" Binding="{Binding AnchorId}" />
-                                <DataGridTextColumn Width="*" Header="地图" Binding="{Binding MapName}" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </TabItem>
-                </TabControl>
+
+                <Border Grid.Row="2" Padding="4" Style="{StaticResource PanelCardStyle}">
+                    <TabControl>
+                        <TabItem Header="节点">
+                            <DataGrid ItemsSource="{Binding VisibleNodes}"
+                                      SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
+                                      AutoGenerateColumns="False"
+                                      EnableColumnVirtualization="True"
+                                      EnableRowVirtualization="True"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Width="2*" Header="节点 ID" Binding="{Binding NodeId}" />
+                                    <DataGridTextColumn Width="*" Header="类型" Binding="{Binding NodeType}" />
+                                    <DataGridTextColumn Width="*" Header="层级" Binding="{Binding LayerId}" />
+                                    <DataGridTextColumn Width="*" Header="X" Binding="{Binding X, StringFormat=F2}" />
+                                    <DataGridTextColumn Width="*" Header="Y" Binding="{Binding Y, StringFormat=F2}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="边">
+                            <DataGrid ItemsSource="{Binding VisibleEdges}"
+                                      SelectedItem="{Binding SelectedEdge, Mode=TwoWay}"
+                                      AutoGenerateColumns="False"
+                                      EnableColumnVirtualization="True"
+                                      EnableRowVirtualization="True"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Width="2*" Header="边 ID" Binding="{Binding EdgeId}" />
+                                    <DataGridTextColumn Width="*" Header="移动" Binding="{Binding MoveMode}" />
+                                    <DataGridTextColumn Width="*" Header="审核" Binding="{Binding ReviewStatus}" />
+                                    <DataGridTextColumn Width="*" Header="来源" Binding="{Binding SourceKind}" />
+                                    <DataGridCheckBoxColumn Width="88" Header="合成反向" Binding="{Binding IsSyntheticReverse}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="传送点">
+                            <DataGrid ItemsSource="{Binding VisibleTeleports}"
+                                      SelectedItem="{Binding SelectedTeleport, Mode=TwoWay}"
+                                      AutoGenerateColumns="False"
+                                      EnableRowVirtualization="True"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Width="2*" Header="名称" Binding="{Binding Name}" />
+                                    <DataGridTextColumn Width="2*" Header="Anchor" Binding="{Binding AnchorId}" />
+                                    <DataGridTextColumn Width="*" Header="地图" Binding="{Binding MapName}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
+                </Border>
             </Grid>
 
             <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" />
 
-            <TabControl Grid.Column="4" Margin="0,8,8,8">
-                <TabItem Header="节点编辑">
-                    <ScrollViewer Padding="12" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="选择节点后可修改坐标、层级和类型；历史 target 应改为 path。" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,10,0,4" Text="{Binding SelectedNodeAnchorsText, StringFormat=传送关联：{0}}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,8,0,3" Text="X" />
-                            <TextBox Text="{Binding NodeX, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="0,8,0,3" Text="Y" />
-                            <TextBox Text="{Binding NodeY, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="0,8,0,3" Text="节点类型" />
-                            <TextBox Text="{Binding NodeType, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="0,8,0,3" Text="层级" />
-                            <TextBox Text="{Binding NodeLayer, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="0,8,0,3" Text="区域标签" />
-                            <TextBox Text="{Binding NodeAreaTag, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="0,8,0,3" Text="楼层" />
-                            <TextBox Text="{Binding NodeFloor, TargetNullValue=''}" />
-                            <CheckBox Margin="0,8" IsChecked="{Binding NodeUnderground}" Content="地下 / 室内层" />
-                            <WrapPanel Margin="0,6,0,0">
-                                <ui:Button Margin="0,0,6,6" Command="{Binding ApplyNodeEditCommand}" Content="应用修改" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding AddNodeCommand}" Content="新增节点" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding DeleteNodeCommand}" Content="删除节点" />
-                            </WrapPanel>
-                            <Separator Margin="0,10" />
-                            <TextBlock FontWeight="SemiBold" Text="连接编辑" />
-                            <TextBlock Margin="0,5" Text="{Binding ConnectionStartNode.NodeId, TargetNullValue=未设置连接起点}" TextWrapping="Wrap" />
-                            <TextBlock Text="移动模式" />
-                            <TextBox Margin="0,3,0,6" Text="{Binding EdgeMoveMode}" />
-                            <CheckBox IsChecked="{Binding AddBidirectionalEdge}" Content="同时新增反向连接" />
-                            <WrapPanel Margin="0,8,0,0">
-                                <ui:Button Margin="0,0,6,6" Command="{Binding SetConnectionStartCommand}" Content="设为连接起点" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding AddConnectionCommand}" Content="新增连接" />
-                            </WrapPanel>
-                            <Separator Margin="0,10" />
-                            <TextBlock FontWeight="SemiBold" Text="传送点关联" />
-                            <ComboBox Margin="0,6" ItemsSource="{Binding VisibleTeleports}" SelectedItem="{Binding SelectedTeleport}" DisplayMemberPath="Name" />
-                            <WrapPanel>
-                                <ui:Button Margin="0,0,6,6" Command="{Binding AssociateTeleportCommand}" Content="关联到节点" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding RemoveTeleportAssociationCommand}" Content="取消关联" />
-                            </WrapPanel>
+            <Border Grid.Column="4" Padding="4" Style="{StaticResource PanelCardStyle}">
+                <TabControl>
+                    <TabItem Header="节点编辑">
+                        <ScrollViewer Padding="8" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="节点属性" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           Text="选择节点后修改；历史 target 应统一改为 path。"
+                                           TextWrapping="Wrap" />
+
+                                <Border Margin="0,10,0,0" Style="{StaticResource InsetCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}"
+                                                   Text="{Binding SelectedNodeAnchorsText, StringFormat=传送关联：{0}}"
+                                                   TextWrapping="Wrap" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="10" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Style="{StaticResource FieldLabelStyle}" Text="X" />
+                                                <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding NodeX}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Style="{StaticResource FieldLabelStyle}" Text="Y" />
+                                                <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding NodeY}" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="节点类型" />
+                                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding NodeType}" />
+                                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="层级" />
+                                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding NodeLayer}" />
+                                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="区域标签" />
+                                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding NodeAreaTag}" />
+                                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="楼层" />
+                                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding NodeFloor, TargetNullValue=''}" />
+                                        <CheckBox Margin="0,10,0,0" IsChecked="{Binding NodeUnderground}" Content="地下 / 室内层" />
+                                    </StackPanel>
+                                </Border>
+
+                                <WrapPanel Margin="0,10,0,0">
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding ApplyNodeEditCommand}" Content="应用修改" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding AddNodeCommand}" Content="新增节点" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding DeleteNodeCommand}" Content="删除节点" />
+                                </WrapPanel>
+
+                                <Border Margin="0,8,0,0" Style="{StaticResource InsetCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="连接编辑" />
+                                        <TextBlock Margin="0,5,0,0"
+                                                   Style="{StaticResource CaptionTextStyle}"
+                                                   Text="{Binding ConnectionStartNode.NodeId, TargetNullValue=未设置连接起点}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Style="{StaticResource FieldLabelStyle}" Text="移动模式" />
+                                        <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding EdgeMoveMode}" />
+                                        <CheckBox Margin="0,9,0,0" IsChecked="{Binding AddBidirectionalEdge}" Content="同时新增反向连接" />
+                                        <WrapPanel Margin="0,9,0,0">
+                                            <ui:Button Margin="0,0,6,6" Command="{Binding SetConnectionStartCommand}" Content="设为连接起点" />
+                                            <ui:Button Margin="0,0,6,6" Command="{Binding AddConnectionCommand}" Content="新增连接" />
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,10,0,0" Style="{StaticResource InsetCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="传送点关联" />
+                                        <ComboBox Margin="0,8,0,0"
+                                                  DisplayMemberPath="Name"
+                                                  ItemsSource="{Binding VisibleTeleports}"
+                                                  SelectedItem="{Binding SelectedTeleport}" />
+                                        <WrapPanel Margin="0,9,0,0">
+                                            <ui:Button Margin="0,0,6,6" Command="{Binding AssociateTeleportCommand}" Content="关联到节点" />
+                                            <ui:Button Margin="0,0,6,6" Command="{Binding RemoveTeleportAssociationCommand}" Content="取消关联" />
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <TabItem Header="边审核">
+                        <ScrollViewer Padding="10" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitleStyle}"
+                                           Text="{Binding SelectedEdge.EdgeId, TargetNullValue=未选择边}"
+                                           TextWrapping="Wrap" />
+                                <Border Margin="0,10,0,0" Style="{StaticResource InsetCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SelectedEdge.FromNodeId, StringFormat=起点：{0}}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding SelectedEdge.ToNodeId, StringFormat=终点：{0}}" TextWrapping="Wrap" />
+                                        <TextBlock Margin="0,8,0,0" Style="{StaticResource CaptionTextStyle}"
+                                                   Text="{Binding SelectedEdge.SourceFileName, StringFormat=文件：{0}}" TextWrapping="Wrap" />
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{Binding SelectedEdge.SourceAuthor, StringFormat=作者：{0}}" />
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{Binding SelectedEdge.SuccessCount, StringFormat=成功：{0}}" />
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{Binding SelectedEdge.FailureCount, StringFormat=失败：{0}}" />
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}"
+                                                   Text="{Binding SelectedEdge.LastFailureReason, StringFormat=最近失败：{0}}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <WrapPanel Margin="0,12,0,0">
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding MarkEdgeVerifiedCommand}" Content="标记已验证" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding MarkEdgeRiskyCommand}" Content="标记风险" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding DisableEdgeCommand}" Content="禁用" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding RestoreEdgeCommand}" Content="恢复未审核" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding DeleteEdgeCommand}" Content="删除连接" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <TabItem Header="质量问题">
+                        <DataGrid ItemsSource="{Binding QualityIssues}"
+                                  SelectedItem="{Binding SelectedQualityIssue, Mode=TwoWay}"
+                                  AutoGenerateColumns="False"
+                                  EnableRowVirtualization="True"
+                                  IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="80" Header="级别" Binding="{Binding Severity}" />
+                                <DataGridTextColumn Width="125" Header="类型" Binding="{Binding Code}" />
+                                <DataGridTextColumn Width="*" Header="说明" Binding="{Binding Message}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+
+                    <TabItem Header="保存补丁">
+                        <StackPanel Margin="12">
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="保存人工修正" />
+                            <TextBlock Margin="0,4,0,0"
+                                       Style="{StaticResource CaptionTextStyle}"
+                                       Text="操作保存为独立 GraphOverrides 补丁，不改写生成图。"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="作者" />
+                            <ui:TextBox Style="{StaticResource FormTextBoxStyle}" Text="{Binding PatchAuthor}" />
+                            <TextBlock Style="{StaticResource FieldLabelStyle}" Text="修改原因" />
+                            <ui:TextBox Height="100"
+                                        AcceptsReturn="True"
+                                        Background="{StaticResource MapEditorInsetBrush}"
+                                        BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                                        Text="{Binding PatchReason}"
+                                        TextWrapping="Wrap" />
+                            <Border Margin="0,12,0,0" Style="{StaticResource InsetCardStyle}">
+                                <TextBlock Text="{Binding PendingOperationCount, StringFormat=待保存操作：{0}}" />
+                            </Border>
+                            <ui:Button Margin="0,10,0,0"
+                                       HorizontalAlignment="Stretch"
+                                       Command="{Binding SavePatchCommand}"
+                                       Content="保存补丁并重新加载" />
                         </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
-                <TabItem Header="边审核">
-                    <ScrollViewer Padding="12" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold" Text="{Binding SelectedEdge.EdgeId, TargetNullValue=未选择边}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,8,0,0" Text="{Binding SelectedEdge.FromNodeId, StringFormat=起点：{0}}" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding SelectedEdge.ToNodeId, StringFormat=终点：{0}}" TextWrapping="Wrap" />
-                            <TextBlock Margin="0,8,0,0" Text="{Binding SelectedEdge.SourceFileName, StringFormat=文件：{0}}" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding SelectedEdge.SourceAuthor, StringFormat=作者：{0}}" />
-                            <TextBlock Text="{Binding SelectedEdge.SuccessCount, StringFormat=成功：{0}}" />
-                            <TextBlock Text="{Binding SelectedEdge.FailureCount, StringFormat=失败：{0}}" />
-                            <TextBlock Text="{Binding SelectedEdge.LastFailureReason, StringFormat=最近失败：{0}}" TextWrapping="Wrap" />
-                            <WrapPanel Margin="0,12,0,0">
-                                <ui:Button Margin="0,0,6,6" Command="{Binding MarkEdgeVerifiedCommand}" Content="标记已验证" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding MarkEdgeRiskyCommand}" Content="标记风险" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding DisableEdgeCommand}" Content="禁用" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding RestoreEdgeCommand}" Content="恢复未审核" />
-                                <ui:Button Margin="0,0,6,6" Command="{Binding DeleteEdgeCommand}" Content="删除连接" />
-                            </WrapPanel>
-                        </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
-                <TabItem Header="质量问题">
-                    <DataGrid ItemsSource="{Binding QualityIssues}" SelectedItem="{Binding SelectedQualityIssue, Mode=TwoWay}"
-                              AutoGenerateColumns="False" IsReadOnly="True" EnableRowVirtualization="True">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Width="90" Header="级别" Binding="{Binding Severity}" />
-                            <DataGridTextColumn Width="130" Header="类型" Binding="{Binding Code}" />
-                            <DataGridTextColumn Width="*" Header="说明" Binding="{Binding Message}" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </TabItem>
-                <TabItem Header="保存补丁">
-                    <StackPanel Margin="12">
-                        <TextBlock Text="人工操作只保存为小型 GraphOverrides 补丁，不改写生成图。" TextWrapping="Wrap" />
-                        <TextBlock Margin="0,12,0,3" Text="作者" />
-                        <TextBox Text="{Binding PatchAuthor}" />
-                        <TextBlock Margin="0,8,0,3" Text="修改原因" />
-                        <TextBox Height="90" AcceptsReturn="True" Text="{Binding PatchReason}" TextWrapping="Wrap" />
-                        <TextBlock Margin="0,10" Text="{Binding PendingOperationCount, StringFormat=待保存操作：{0}}" />
-                        <ui:Button Command="{Binding SavePatchCommand}" Content="保存补丁并重新加载" />
-                    </StackPanel>
-                </TabItem>
-            </TabControl>
+                    </TabItem>
+                </TabControl>
+            </Border>
         </Grid>
 
-        <Border Grid.Row="3" Padding="10,7" BorderBrush="#33404D" BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+        <Border Grid.Row="3"
+                Margin="10,0,10,10"
+                Padding="12,8"
+                Background="{StaticResource MapEditorCardBrush}"
+                BorderBrush="{StaticResource MapEditorStrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="6">
+            <TextBlock Foreground="{StaticResource MapEditorTextSecondaryBrush}"
+                       Text="{Binding StatusText}"
+                       TextWrapping="Wrap" />
         </Border>
     </Grid>
 </ui:FluentWindow>

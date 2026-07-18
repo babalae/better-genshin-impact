@@ -29,7 +29,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusText = "等待加载路网";
-    [ObservableProperty] private string _filterMap = All;
+    [ObservableProperty] private string _filterMap = "Teyvat";
     [ObservableProperty] private string _filterLayer = All;
     [ObservableProperty] private string _filterReview = All;
     [ObservableProperty] private string _filterSource = string.Empty;
@@ -70,9 +70,8 @@ public partial class RouteGraphStudioViewModel : ViewModel
         _overrideStore = new RouteGraphOverrideStore(_graphDirectory);
         CurrentTargetPoint = currentTargetPoint;
         FilterMap = string.IsNullOrWhiteSpace(initialMapName)
-            ? All
+            ? "Teyvat"
             : RouteGraphGeometry.NormalizeMapName(initialMapName);
-        MapOptions.Add(All);
         LayerOptions.Add(All);
         ReviewOptions.Add(All);
         foreach (var review in Enum.GetNames<GraphReviewStatus>())
@@ -92,6 +91,17 @@ public partial class RouteGraphStudioViewModel : ViewModel
     public string GraphFilePath => _provider.GraphFilePath;
 
     public string OverrideDirectoryPath => _overrideStore.DirectoryPath;
+
+    public string CanvasMapName => FilterMap;
+
+    partial void OnFilterMapChanged(string value)
+    {
+        OnPropertyChanged(nameof(CanvasMapName));
+        if (!_snapshot.IsEmpty)
+        {
+            ApplyFilters();
+        }
+    }
 
     partial void OnSelectedNodeChanged(RouteNavigationNode? value)
     {
@@ -189,6 +199,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
             RunQualityCheck();
             var apply = _provider.LastOverrideApplyResult;
             StatusText = $"已加载 {_snapshot.Nodes.Count:N0} 节点 / {_snapshot.Edges.Count:N0} 边 / {_snapshot.Teleports.Count:N0} 传送点；" +
+                         $"剔除 {_provider.LastSanitizedEdgeCount:N0} 条异常超长边；" +
                          $"应用 {apply.AppliedPatchIds.Count} 个补丁，隔离 {apply.IsolatedPatchIds.Count} 个，错误 {apply.Errors.Count} 个";
         }
         catch (Exception ex)
@@ -210,7 +221,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
         var search = SearchText.Trim();
         var source = FilterSource.Trim();
         var visibleNodes = _snapshot.Nodes.Where(node =>
-                (map == All || Same(node.MapName, map)) &&
+                Same(node.MapName, map) &&
                 (layer == All || Same(node.LayerId, layer)) &&
                 (search.Length == 0 || Contains(node.NodeId, search) || Contains(node.AreaTag, search) || Contains(node.NodeType, search)))
             .ToList();
@@ -225,7 +236,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
         VisibleNodes = visibleNodes;
         VisibleEdges = visibleEdges;
         VisibleTeleports = _snapshot.Teleports.Where(teleport =>
-            (map == All || Same(teleport.MapName, map)) &&
+            Same(teleport.MapName, map) &&
             (search.Length == 0 || Contains(teleport.Name, search) || Contains(teleport.AnchorId, search))).ToList();
     }
 
@@ -329,7 +340,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
     [RelayCommand]
     private void AddNode()
     {
-        var map = FilterMap == All ? "Teyvat" : FilterMap;
+        var map = FilterMap;
         var node = new RouteNavigationNode
         {
             NodeId = "manual_" + Guid.NewGuid().ToString("N")[..16],
@@ -629,10 +640,22 @@ public partial class RouteGraphStudioViewModel : ViewModel
 
     private void RefreshFilterOptions()
     {
-        ReplaceOptions(MapOptions, _snapshot.Nodes.Select(node => RouteGraphGeometry.NormalizeMapName(node.MapName)));
+        ReplaceMapOptions(MapOptions, _snapshot.Nodes.Select(node => RouteGraphGeometry.NormalizeMapName(node.MapName)));
         ReplaceOptions(LayerOptions, _snapshot.Nodes.Select(node => string.IsNullOrWhiteSpace(node.LayerId) ? "surface" : node.LayerId));
-        if (!MapOptions.Contains(FilterMap)) FilterMap = All;
+        if (!MapOptions.Contains(FilterMap)) FilterMap = MapOptions.FirstOrDefault() ?? "Teyvat";
         if (!LayerOptions.Contains(FilterLayer)) FilterLayer = All;
+    }
+
+    private static void ReplaceMapOptions(ObservableCollection<string> target, IEnumerable<string> values)
+    {
+        target.Clear();
+        foreach (var value in values
+                     .Where(value => !string.IsNullOrWhiteSpace(value))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .Order())
+        {
+            target.Add(value);
+        }
     }
 
     private static void ReplaceOptions(ObservableCollection<string> target, IEnumerable<string> values)

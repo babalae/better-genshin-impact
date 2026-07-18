@@ -31,7 +31,9 @@ public sealed class TargetNavigationWorkflow(
                     request.MapName,
                     request.MapMatchMethod,
                     cancellationToken);
-            if (!preparation.Succeeded)
+            var hasPlanningPosition = preparation.Succeeded;
+            if (!hasPlanningPosition &&
+                preparation.Failure?.Code != TargetNavigationFailureCode.CurrentPositionUnrecognized)
             {
                 var failure = preparation.Failure ??
                               TargetNavigationFailure.Create(TargetNavigationFailureCode.Unexpected);
@@ -41,7 +43,7 @@ public sealed class TargetNavigationWorkflow(
                     onStatusChanged);
             }
 
-            if (!SameMap(request.MapName, preparation.ActualMapName))
+            if (hasPlanningPosition && !SameMap(request.MapName, preparation.ActualMapName))
             {
                 return Fail(
                     TargetNavigationState.PlanFailed,
@@ -52,7 +54,8 @@ public sealed class TargetNavigationWorkflow(
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            var reused = !request.ForceReplan &&
+            var reused = hasPlanningPosition &&
+                         !request.ForceReplan &&
                          RouteNavigationPlanReusePolicy.CanReuse(
                              existingPlan,
                              request,
@@ -64,8 +67,12 @@ public sealed class TargetNavigationWorkflow(
             }
             else
             {
-                Publish(TargetNavigationState.Planning, "正在规划", onStatusChanged);
-                var planRequest = request.BuildPlanRequest(preparation.CurrentImagePoint);
+                Publish(
+                    TargetNavigationState.Planning,
+                    hasPlanningPosition ? "正在规划" : "当前坐标不可用，按传送点预览规划",
+                    onStatusChanged);
+                var planRequest = request.BuildPlanRequest(
+                    hasPlanningPosition ? preparation.CurrentImagePoint : null);
                 var planned = await Task.Run(
                     () =>
                     {
@@ -142,27 +149,36 @@ public sealed class TargetNavigationWorkflow(
                     reused);
             }
 
-            var converterForDrift = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
-            if (!TryMeasureGameDistance(
-                    converterForDrift,
-                    request.MapName,
-                    request.MapMatchMethod,
-                    preparation.CurrentImagePoint,
-                    readiness.CurrentImagePoint,
-                    out var driftDistance))
+            var driftDistance = double.PositiveInfinity;
+            if (hasPlanningPosition)
             {
-                return Fail(
-                    TargetNavigationState.ExecutionFailed,
-                    TargetNavigationFailure.Create(TargetNavigationFailureCode.CoordinateConversionFailed),
-                    onStatusChanged,
-                    plan,
-                    task,
-                    reused);
+                var converterForDrift = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
+                if (!TryMeasureGameDistance(
+                        converterForDrift,
+                        request.MapName,
+                        request.MapMatchMethod,
+                        preparation.CurrentImagePoint,
+                        readiness.CurrentImagePoint,
+                        out driftDistance))
+                {
+                    return Fail(
+                        TargetNavigationState.ExecutionFailed,
+                        TargetNavigationFailure.Create(TargetNavigationFailureCode.CoordinateConversionFailed),
+                        onStatusChanged,
+                        plan,
+                        task,
+                        reused);
+                }
             }
 
-            if (driftDistance > request.Options.CostOptions.ReplanDriftGameDistance)
+            if (!hasPlanningPosition || driftDistance > request.Options.CostOptions.ReplanDriftGameDistance)
             {
-                Publish(TargetNavigationState.Planning, $"位置漂移 {driftDistance:F1}，重新规划", onStatusChanged);
+                Publish(
+                    TargetNavigationState.Planning,
+                    hasPlanningPosition
+                        ? $"位置漂移 {driftDistance:F1}，重新规划"
+                        : "已取得执行坐标，重新规划",
+                    onStatusChanged);
                 var replannedRequest = request.BuildPlanRequest(readiness.CurrentImagePoint);
                 var replanned = await Task.Run(
                     () =>
@@ -444,7 +460,8 @@ internal static class RouteNavigationPlanReusePolicy
         }
 
         var plannedRequest = plan.Request;
-        if (!string.Equals(
+        if (!plannedRequest.HasCurrentPosition ||
+            !string.Equals(
                 RouteGraphGeometry.NormalizeMapName(plannedRequest.MapName),
                 RouteGraphGeometry.NormalizeMapName(request.MapName),
                 StringComparison.OrdinalIgnoreCase) ||

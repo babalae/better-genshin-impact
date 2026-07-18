@@ -28,7 +28,8 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
 
     public PathingTaskRouteImportResult Import(
         IEnumerable<string> sourceDirectories,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        double maximumStraightSegmentGameDistance = 300)
     {
         ArgumentNullException.ThrowIfNull(sourceDirectories);
 
@@ -162,6 +163,13 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
                     continue;
                 }
 
+                if (maximumStraightSegmentGameDistance > 0 &&
+                    Distance(route.Positions[index - 1], route.Positions[index]) > maximumStraightSegmentGameDistance)
+                {
+                    report.SkippedExcessiveSegments++;
+                    continue;
+                }
+
                 var (action, actionParams) = safeActions[index];
                 var moveMode = string.IsNullOrWhiteSpace(route.Positions[index].MoveMode)
                     ? MoveModeEnum.Walk.Code
@@ -186,6 +194,13 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
         }
 
         return new PathingTaskRouteImportResult(segments, report);
+    }
+
+    private static double Distance(ImportWaypoint from, ImportWaypoint to)
+    {
+        var dx = from.X - to.X;
+        var dy = from.Y - to.Y;
+        return Math.Sqrt((dx * dx) + (dy * dy));
     }
 
     private static string CreateRouteSignature(string mapName, IReadOnlyList<ImportWaypoint> positions)
@@ -391,6 +406,8 @@ public sealed class PathingTaskImportReport
     public int InvalidJsonFiles { get; internal set; }
 
     public int CoordinateConversionFailures { get; internal set; }
+
+    public int SkippedExcessiveSegments { get; internal set; }
 
     public int DuplicateRouteFiles { get; internal set; }
 

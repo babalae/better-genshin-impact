@@ -35,10 +35,13 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
     private readonly string _generatedGraphFilePath;
     private readonly string _legacyGraphFilePath;
     private readonly RouteGraphOverrideStore _overrideStore;
+    private readonly RouteGraphSanitizationOptions _sanitizationOptions;
     private string _loadedSignature = string.Empty;
     private RouteNavigationGraphSnapshot? _snapshot;
 
-    public RouteNavigationGraphProvider(string? saveDir = null)
+    public RouteNavigationGraphProvider(
+        string? saveDir = null,
+        RouteGraphSanitizationOptions? sanitizationOptions = null)
     {
         var resolvedSaveDir = string.IsNullOrWhiteSpace(saveDir)
             ? Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"))
@@ -46,6 +49,7 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
         _generatedGraphFilePath = Path.Combine(resolvedSaveDir, RouteNavigationGraphBuilder.GraphFileName);
         _legacyGraphFilePath = Path.Combine(resolvedSaveDir, RouteNavigationGraphBuilder.LegacyGraphFileName);
         _overrideStore = new RouteGraphOverrideStore(resolvedSaveDir);
+        _sanitizationOptions = sanitizationOptions ?? new RouteGraphSanitizationOptions();
     }
 
     public string GraphFilePath => _generatedGraphFilePath;
@@ -53,6 +57,8 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
     public string OverrideDirectoryPath => _overrideStore.DirectoryPath;
 
     public RouteGraphOverrideApplyResult LastOverrideApplyResult { get; private set; } = new();
+
+    public int LastSanitizedEdgeCount { get; private set; }
 
     public bool TryGetSnapshot(out RouteNavigationGraphSnapshot snapshot, bool forceReload = false)
     {
@@ -99,6 +105,9 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
                 var applyResult = new RouteGraphOverrideApplier().Apply(graph, loadResult.Patches);
                 applyResult.Errors.AddRange(loadResult.Errors);
                 LastOverrideApplyResult = applyResult;
+                LastSanitizedEdgeCount = RouteGraphSanitizer.RemoveImpossibleImportedEdges(
+                    graph,
+                    _sanitizationOptions);
                 snapshot = new RouteNavigationGraphSnapshot(graph, NodeBucketSize);
                 _snapshot = snapshot;
                 _loadedSignature = signature;

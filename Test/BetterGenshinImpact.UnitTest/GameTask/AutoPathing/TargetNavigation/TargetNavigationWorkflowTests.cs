@@ -145,7 +145,6 @@ public class TargetNavigationWorkflowTests
     [Theory]
     [InlineData(TargetNavigationFailureCode.GraphFileMissing, TargetNavigationState.PlanFailed)]
     [InlineData(TargetNavigationFailureCode.GraphEmpty, TargetNavigationState.PlanFailed)]
-    [InlineData(TargetNavigationFailureCode.CurrentPositionUnrecognized, TargetNavigationState.PlanFailed)]
     [InlineData(TargetNavigationFailureCode.CaptureNotInitialized, TargetNavigationState.ExecutionFailed)]
     [InlineData(TargetNavigationFailureCode.TaskRunnerBusy, TargetNavigationState.ExecutionFailed)]
     public async Task RunAsync_PreparationFailureUsesTheCorrectState(
@@ -310,6 +309,50 @@ public class TargetNavigationWorkflowTests
     }
 
     [Fact]
+    public async Task RunAsync_PreviewsFromTeleportWhenCurrentPositionIsUnavailable()
+    {
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Failed(
+                TargetNavigationFailureCode.CurrentPositionUnrecognized)
+        };
+        var planner = new FakePlanner(new RouteNavigationPlan { Succeeded = true, Task = CreateTask() });
+
+        var result = await new TargetNavigationWorkflow(planner, runtime)
+            .RunAsync(CreateRequest(execute: false));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, planner.CallCount);
+        Assert.False(Assert.Single(planner.Requests).HasCurrentPosition);
+        Assert.Null(runtime.ExecutedTask);
+    }
+
+    [Fact]
+    public async Task RunAsync_ReplansFromActualPositionBeforeExecutingOfflinePreview()
+    {
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Failed(
+                TargetNavigationFailureCode.CurrentPositionUnrecognized),
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready(
+                "Teyvat",
+                new RouteGraphPoint(25, 35)),
+            Execution = TargetNavigationExecutionResult.Completed()
+        };
+        var planner = new FakePlanner(new RouteNavigationPlan { Succeeded = true, Task = CreateTask() });
+
+        var result = await new TargetNavigationWorkflow(planner, runtime)
+            .RunAsync(CreateRequest());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, planner.CallCount);
+        Assert.False(planner.Requests[0].HasCurrentPosition);
+        Assert.True(planner.Requests[1].HasCurrentPosition);
+        Assert.Equal(new RouteGraphPoint(25, 35), planner.Requests[1].CurrentImagePoint);
+        Assert.NotNull(runtime.ExecutedTask);
+    }
+
+    [Fact]
     public async Task RunAsync_LocalOnlyPlanSkipsPathExecutorAndInvokesLocalNavigator()
     {
         var plan = new RouteNavigationPlan
@@ -375,7 +418,8 @@ public class TargetNavigationWorkflowTests
     private static TargetNavigationRequest CreateRequest(
         RouteGraphPoint? target = null,
         bool allowTeleport = true,
-        RouteGraphPoint? lastKnownCurrent = null)
+        RouteGraphPoint? lastKnownCurrent = null,
+        bool execute = true)
     {
         return new TargetNavigationRequest
         {
@@ -384,6 +428,7 @@ public class TargetNavigationWorkflowTests
             TargetImagePoint = target ?? new RouteGraphPoint(100, 200),
             TaskName = "地图目标导航",
             LastKnownCurrentImagePoint = lastKnownCurrent,
+            Execute = execute,
             Options = new RouteNavigationPlanOptions
             {
                 AllowTeleport = allowTeleport,
@@ -422,9 +467,12 @@ public class TargetNavigationWorkflowTests
     {
         public int CallCount { get; private set; }
 
+        public List<RouteNavigationPlanRequest> Requests { get; } = [];
+
         public bool TryPlan(RouteNavigationPlanRequest request, out RouteNavigationPlan result, RouteNavigationPlanOptions? options = null)
         {
             CallCount++;
+            Requests.Add(request);
             events?.Add("plan");
             result = plan;
             return plan.Succeeded;
