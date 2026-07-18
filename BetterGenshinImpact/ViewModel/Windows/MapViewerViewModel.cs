@@ -285,6 +285,30 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _allowDisabledEdges;
 
     [ObservableProperty]
+    private double _routeWalkSpeed = 4.5;
+
+    [ObservableProperty]
+    private double _routeRunSpeed = 6.0;
+
+    [ObservableProperty]
+    private double _routeDashSpeed = 7.5;
+
+    [ObservableProperty]
+    private double _routeTeleportSeconds = 18.0;
+
+    [ObservableProperty]
+    private double _localDirectMaxDistance = 80.0;
+
+    [ObservableProperty]
+    private double _navigationReplanDriftDistance = 20.0;
+
+    [ObservableProperty]
+    private double _selectedNavigationTeleportGameX = double.NaN;
+
+    [ObservableProperty]
+    private double _selectedNavigationTeleportGameY = double.NaN;
+
+    [ObservableProperty]
     private string _targetMoveMode = string.Empty;
 
     [ObservableProperty]
@@ -732,9 +756,11 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _graphProvider = new RouteNavigationGraphProvider(_routeSaveDir);
         _routeNavigationPlanner = new RouteNavigationPlanner(_graphProvider);
+        var targetNavigationRuntime = new BetterGiTargetNavigationRuntime(_graphProvider);
         _targetNavigationWorkflow = new TargetNavigationWorkflow(
             _routeNavigationPlanner,
-            new BetterGiTargetNavigationRuntime(_graphProvider));
+            targetNavigationRuntime,
+            new BetterGiLocalTargetNavigator());
         _ = App.GetService<MapMiniFollowWindowController>();
 
         if (string.IsNullOrEmpty(mapName))
@@ -2954,6 +2980,9 @@ public partial class MapViewerViewModel : ObservableObject
             MapName = MapName,
             MapMatchMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
             TargetImagePoint = new RouteGraphPoint(selectedTarget.X, selectedTarget.Y),
+            LastKnownCurrentImagePoint = _lastPosition is { } lastPosition
+                ? new RouteGraphPoint(lastPosition.X, lastPosition.Y)
+                : null,
             TaskName = "地图目标导航",
             TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
             TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim(),
@@ -2962,7 +2991,16 @@ public partial class MapViewerViewModel : ObservableObject
                 AllowTeleport = AllowTeleport,
                 AllowUnknownStartConnector = AllowUnknownStartConnector,
                 AllowUnknownTargetConnector = AllowUnknownTargetConnector,
-                AllowDisabledEdges = AllowDisabledEdges
+                AllowDisabledEdges = AllowDisabledEdges,
+                CostOptions = new RouteNavigationCostOptions
+                {
+                    WalkSpeed = Math.Max(0.1, RouteWalkSpeed),
+                    RunSpeed = Math.Max(0.1, RouteRunSpeed),
+                    DashSpeed = Math.Max(0.1, RouteDashSpeed),
+                    TeleportDurationSeconds = Math.Max(0, RouteTeleportSeconds),
+                    LocalDirectMaxGameDistance = Math.Max(0, LocalDirectMaxDistance),
+                    ReplanDriftGameDistance = Math.Max(0, NavigationReplanDriftDistance)
+                }
             },
             ForceReplan = forceReplan,
             Execute = execute
@@ -3059,12 +3097,21 @@ public partial class MapViewerViewModel : ObservableObject
 
     private void ApplyNavigationPlan(RouteNavigationPlan plan)
     {
+        _currentPlan = plan;
         if (plan.Task == null)
         {
+            _currentExecutableTask = null;
+            HasPlan = plan.Succeeded;
+            SelectedNavigationTeleportGameX = double.NaN;
+            SelectedNavigationTeleportGameY = double.NaN;
+            PlannedEdges.Clear();
+            PlanSummary = plan.CompletionMode == RoutePlanCompletionMode.LocalOnly
+                ? "局部导航：路网无法继续推进，将优先跟随任务图标"
+                : "规划未生成 PathingTask";
+            GraphStatus = $"Completion {plan.CompletionMode} / Frontier {plan.FrontierNode?.NodeId ?? "-"}";
             return;
         }
 
-        _currentPlan = plan;
         _currentExecutableTask = plan.Task;
         HasPlan = true;
         if (plan.Request != null)
@@ -3074,8 +3121,14 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         var generatedTargetMoveMode = plan.Task.Positions.LastOrDefault()?.MoveMode ?? "-";
+        SelectedNavigationTeleportGameX = plan.Teleport?.GameX ?? double.NaN;
+        SelectedNavigationTeleportGameY = plan.Teleport?.GameY ?? double.NaN;
+        var telemetryCostCount = plan.CostBreakdown.Count(item =>
+            item.Source == RouteNavigationCostSource.Telemetry);
+        var estimatedCostCount = plan.CostBreakdown.Count - telemetryCostCount;
         PlanSummary =
-            $"成功：Cost {plan.Cost:F2}，Edges {plan.Edges.Count}，" +
+            $"{(plan.CompletionMode == RoutePlanCompletionMode.Complete ? "完整规划" : "部分规划到前沿")}：" +
+            $"预计 {plan.Cost:F2} 秒（遥测值 {telemetryCostCount} / 估算值 {estimatedCostCount}），Edges {plan.Edges.Count}，" +
             $"传送 {(plan.UsesTeleport ? "是" : "否")}，" +
             $"起点吸附 {plan.StartAttachDistance:F1}，终点吸附 {plan.TargetAttachDistance:F1}，" +
             $"终点模式 {generatedTargetMoveMode}";
@@ -3085,15 +3138,20 @@ public partial class MapViewerViewModel : ObservableObject
             $"Frontier {plan.FrontierNode?.NodeId ?? "-"}";
 
         PlannedEdges.Clear();
+        var edgeCosts = plan.CostBreakdown
+            .Where(item => string.Equals(item.Component, "edge", StringComparison.Ordinal))
+            .ToList();
         for (var i = 0; i < plan.Edges.Count; i++)
         {
             var edge = plan.Edges[i];
+            var edgeCost = i < edgeCosts.Count ? edgeCosts[i] : null;
             PlannedEdges.Add(new RoutePlanEdgeRow
             {
                 Index = i + 1,
                 FromNodeId = ShortRouteId(edge.FromNodeId),
                 ToNodeId = ShortRouteId(edge.ToNodeId),
-                Cost = edge.Cost,
+                Cost = edgeCost?.Seconds ?? 0,
+                CostSource = edgeCost?.SourceLabel ?? "估算值",
                 MoveMode = edge.MoveMode,
                 Action = edge.Action,
                 HealthStatus = edge.HealthStatus,
@@ -5246,6 +5304,8 @@ public partial class MapViewerViewModel : ObservableObject
         _currentPlan = null;
         _currentExecutableTask = null;
         HasPlan = false;
+        SelectedNavigationTeleportGameX = double.NaN;
+        SelectedNavigationTeleportGameY = double.NaN;
         PlannedEdges.Clear();
 
         if (previousExecutableTask != null && ReferenceEquals(_currentDisplayedTask, previousExecutableTask))

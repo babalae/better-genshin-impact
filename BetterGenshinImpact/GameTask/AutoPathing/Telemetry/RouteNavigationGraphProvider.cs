@@ -227,7 +227,7 @@ public sealed class RouteNavigationGraphSnapshot
         int limit,
         double maxDistance = 0)
     {
-        if (limit <= 0)
+        if (limit < 0)
         {
             return [];
         }
@@ -238,14 +238,13 @@ public sealed class RouteNavigationGraphSnapshot
             return [];
         }
 
-        return teleports
+        var candidates = teleports
             .Select(teleport => new RouteGraphTeleportCandidate(
                 teleport,
                 RouteGraphGeometry.Distance(point, teleport.SpawnImagePoint)))
             .Where(candidate => maxDistance <= 0 || candidate.Distance <= maxDistance)
-            .OrderBy(candidate => candidate.Distance)
-            .Take(limit)
-            .ToList();
+            .OrderBy(candidate => candidate.Distance);
+        return (limit == 0 ? candidates : candidates.Take(limit)).ToList();
     }
 
     public IReadOnlyList<RouteGraphNodeCandidate> FindNearestNodes(

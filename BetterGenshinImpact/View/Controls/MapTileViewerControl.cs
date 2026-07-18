@@ -50,6 +50,18 @@ public sealed class MapTileViewerControl : FrameworkElement
         typeof(MapTileViewerControl),
         new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty SelectedTeleportGameXProperty = DependencyProperty.Register(
+        nameof(SelectedTeleportGameX),
+        typeof(double),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty SelectedTeleportGameYProperty = DependencyProperty.Register(
+        nameof(SelectedTeleportGameY),
+        typeof(double),
+        typeof(MapTileViewerControl),
+        new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public static readonly DependencyProperty IsReadOnlyDisplayProperty = DependencyProperty.Register(
         nameof(IsReadOnlyDisplay),
         typeof(bool),
@@ -85,6 +97,7 @@ public sealed class MapTileViewerControl : FrameworkElement
     private readonly Pen _recordRoutePreviewPen = new(new SolidColorBrush(Color.FromArgb(210, 120, 210, 226)), 2.4);
     private readonly Pen _targetPen = new(new SolidColorBrush(Color.FromRgb(255, 99, 99)), 2);
     private readonly Pen _teleportOutlinePen = new(new SolidColorBrush(Color.FromRgb(230, 245, 255)), 1.4);
+    private readonly Pen _selectedTeleportPen = new(new SolidColorBrush(Color.FromRgb(255, 220, 80)), 3.5);
     private readonly Pen _orientationArrowPen = new(new SolidColorBrush(Color.FromRgb(255, 238, 150)), 2.4);
     private readonly Pen _selectedRecorderOuterPen = new(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 2);
     private readonly Pen _selectedRecorderInnerPen = new(new SolidColorBrush(Color.FromRgb(35, 200, 210)), 3);
@@ -510,6 +523,18 @@ public sealed class MapTileViewerControl : FrameworkElement
     {
         get => (bool)GetValue(ShowTeleportPointsProperty);
         set => SetValue(ShowTeleportPointsProperty, value);
+    }
+
+    public double SelectedTeleportGameX
+    {
+        get => (double)GetValue(SelectedTeleportGameXProperty);
+        set => SetValue(SelectedTeleportGameXProperty, value);
+    }
+
+    public double SelectedTeleportGameY
+    {
+        get => (double)GetValue(SelectedTeleportGameYProperty);
+        set => SetValue(SelectedTeleportGameYProperty, value);
     }
 
     public bool IsReadOnlyDisplay
@@ -1136,6 +1161,11 @@ public sealed class MapTileViewerControl : FrameworkElement
                 continue;
             }
 
+            if (IsSelectedNavigationTeleport(teleport))
+            {
+                dc.DrawEllipse(null, _selectedTeleportPen, point, 12, 12);
+            }
+
             DrawTeleportPoint(dc, teleport, point);
         }
 
@@ -1153,6 +1183,14 @@ public sealed class MapTileViewerControl : FrameworkElement
                 dc.DrawText(text, new WpfPoint(rect.X + 7, rect.Y + 5));
             }
         }
+    }
+
+    private bool IsSelectedNavigationTeleport(MapTeleportPoint teleport)
+    {
+        return double.IsFinite(SelectedTeleportGameX) &&
+               double.IsFinite(SelectedTeleportGameY) &&
+               Math.Abs(teleport.GameX - SelectedTeleportGameX) <= 1 &&
+               Math.Abs(teleport.GameY - SelectedTeleportGameY) <= 1;
     }
 
     private void DrawTeleportPoint(DrawingContext dc, MapTeleportPoint teleport, WpfPoint point)

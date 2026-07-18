@@ -914,6 +914,8 @@
                                                    IsPathRecorderRecording="{Binding IsPathRecorderRecording}"
                                                    IsRecorderMode="{Binding IsRecorderMode}"
                                                    MapName="{Binding MapName}"
+                                                   SelectedTeleportGameX="{Binding SelectedNavigationTeleportGameX}"
+                                                   SelectedTeleportGameY="{Binding SelectedNavigationTeleportGameY}"
                                                    ShowTeleportPoints="{Binding ShowTeleportPoints}">
                         <controls:MapTileViewerControl.ContextMenu>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
@@ -3534,6 +3536,7 @@
                                         <RowDefinition Height="38" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="88" />
@@ -3579,7 +3582,24 @@
                                                   IsChecked="{Binding AllowDisabledEdges, Mode=TwoWay}" />
                                     </WrapPanel>
 
-                                    <StackPanel Grid.Row="2"
+                                    <WrapPanel Grid.Row="2"
+                                               Grid.ColumnSpan="5"
+                                               Margin="0,8,0,0">
+                                        <TextBlock Margin="0,5,4,0" Style="{StaticResource CaptionTextStyle}" Text="Walk" />
+                                        <ui:TextBox Width="58" Margin="0,0,12,0" Text="{Binding RouteWalkSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Margin="0,5,4,0" Style="{StaticResource CaptionTextStyle}" Text="Run" />
+                                        <ui:TextBox Width="58" Margin="0,0,12,0" Text="{Binding RouteRunSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Margin="0,5,4,0" Style="{StaticResource CaptionTextStyle}" Text="Dash" />
+                                        <ui:TextBox Width="58" Margin="0,0,12,0" Text="{Binding RouteDashSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Margin="0,5,4,0" Style="{StaticResource CaptionTextStyle}" Text="传送秒" />
+                                        <ui:TextBox Width="58" Margin="0,0,12,0" Text="{Binding RouteTeleportSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Margin="0,5,4,0" Style="{StaticResource CaptionTextStyle}" Text="局部直达" />
+                                        <ui:TextBox Width="58" Margin="0,0,12,0" Text="{Binding LocalDirectMaxDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Margin="0,5,4,0" Style="{StaticResource CaptionTextStyle}" Text="漂移重规划" />
+                                        <ui:TextBox Width="58" Text="{Binding NavigationReplanDriftDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </WrapPanel>
+
+                                    <StackPanel Grid.Row="3"
                                                 Grid.ColumnSpan="5"
                                                 Margin="0,8,0,0">
                                         <TextBlock FontWeight="SemiBold"
@@ -3617,7 +3637,8 @@
                                                 <DataGridTextColumn Width="42" Binding="{Binding Index}" Header="#" />
                                                 <DataGridTextColumn Width="104" Binding="{Binding FromNodeId}" Header="From" />
                                                 <DataGridTextColumn Width="104" Binding="{Binding ToNodeId}" Header="To" />
-                                                <DataGridTextColumn Width="70" Binding="{Binding Cost, StringFormat=F2}" Header="Cost" />
+                                                <DataGridTextColumn Width="70" Binding="{Binding Cost, StringFormat=F2}" Header="预计秒" />
+                                                <DataGridTextColumn Width="72" Binding="{Binding CostSource}" Header="来源" />
                                                 <DataGridTextColumn Width="82" Binding="{Binding MoveMode}" Header="Move" />
                                                 <DataGridTextColumn Width="112" Binding="{Binding Action}" Header="Action" />
                                                 <DataGridTextColumn Width="88" Binding="{Binding HealthStatus}" Header="Health" />

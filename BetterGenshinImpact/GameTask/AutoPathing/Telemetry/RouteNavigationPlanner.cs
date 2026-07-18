@@ -36,13 +36,16 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 {
     private readonly IRouteNavigationGraphProvider _graphProvider;
     private readonly IRouteCoordinateConverter _coordinateConverter;
+    private readonly IRouteNavigationCostModel _costModel;
 
     public RouteNavigationPlanner(
         IRouteNavigationGraphProvider? graphProvider = null,
-        IRouteCoordinateConverter? coordinateConverter = null)
+        IRouteCoordinateConverter? coordinateConverter = null,
+        IRouteNavigationCostModel? costModel = null)
     {
         _graphProvider = graphProvider ?? new RouteNavigationGraphProvider();
         _coordinateConverter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
+        _costModel = costModel ?? new RouteNavigationCostModel(_coordinateConverter);
     }
 
     public bool TryPlan(
@@ -65,6 +68,25 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             return false;
         }
 
+        if (!_coordinateConverter.TryImageToGame(
+                request.MapName,
+                request.MapMatchMethod,
+                request.CurrentImagePoint,
+                out _) ||
+            !_coordinateConverter.TryImageToGame(
+                request.MapName,
+                request.MapMatchMethod,
+                request.TargetImagePoint,
+                out _))
+        {
+            plan = RouteNavigationPlan.Failed(
+                RouteNavigationFailureCode.CoordinateConversionFailed,
+                GetFailureReason(RouteNavigationFailureCode.CoordinateConversionFailed),
+                request,
+                options);
+            return false;
+        }
+
         var starts = BuildStartCandidates(graph, request, options);
         if (starts.Count == 0)
         {
@@ -76,17 +98,24 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         }
 
         var targets = BuildTargetCandidates(graph, request, options);
-        if (targets.Count == 0)
+
+        var currentStarts = starts.Where(candidate => candidate.Teleport == null).ToList();
+        var teleportStarts = starts.Where(candidate => candidate.Teleport != null).ToList();
+        var currentResult = RoutePlanSearchResult.Empty;
+        var teleportResult = RoutePlanSearchResult.Empty;
+        var hasCurrentRoute = targets.Count > 0 &&
+                              TrySearch(graph, request, currentStarts, targets, options, out currentResult);
+        var hasTeleportRoute = targets.Count > 0 &&
+                               TrySearch(graph, request, teleportStarts, targets, options, out teleportResult);
+        var completionMode = RoutePlanCompletionMode.Complete;
+        if (!hasCurrentRoute && !hasTeleportRoute)
         {
-            plan = RouteNavigationPlan.Failed(
-                RouteNavigationFailureCode.TargetPointNotConnected,
-                GetFailureReason(RouteNavigationFailureCode.TargetPointNotConnected),
-                request,
-                options);
-            return false;
+            completionMode = RoutePlanCompletionMode.PartialToFrontier;
+            hasCurrentRoute = TrySearchFrontier(graph, request, currentStarts, options, out currentResult);
+            hasTeleportRoute = TrySearchFrontier(graph, request, teleportStarts, options, out teleportResult);
         }
 
-        if (!TrySearch(graph, starts, targets, options, out var searchResult))
+        if (!hasCurrentRoute && !hasTeleportRoute)
         {
             plan = RouteNavigationPlan.Failed(
                 RouteNavigationFailureCode.NoRoute,
@@ -96,7 +125,34 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             return false;
         }
 
-        if (!TryBuildTask(request, graph, searchResult, options, out var task, out var taskFailureCode))
+        var searchResult = SelectBestSearchResult(
+            hasCurrentRoute ? currentResult : null,
+            hasTeleportRoute ? teleportResult : null,
+            options.CostOptions.MinimumTeleportSavingsSeconds);
+
+        if (completionMode == RoutePlanCompletionMode.PartialToFrontier &&
+            searchResult.Start.Teleport == null &&
+            searchResult.Edges.Count == 0 &&
+            string.Equals(
+                searchResult.Start.Node.NodeId,
+                searchResult.Target.Node.NodeId,
+                StringComparison.OrdinalIgnoreCase) &&
+            searchResult.Start.AttachDistance <= 0.001)
+        {
+            plan = new RouteNavigationPlan
+            {
+                Succeeded = true,
+                CompletionMode = RoutePlanCompletionMode.LocalOnly,
+                Cost = 0,
+                FrontierNode = searchResult.Target.Node,
+                TargetImagePoint = request.TargetImagePoint,
+                Request = request,
+                Options = options
+            };
+            return true;
+        }
+
+        if (!TryBuildTask(request, graph, searchResult, options, completionMode, out var task, out var taskFailureCode))
         {
             plan = RouteNavigationPlan.Failed(
                 taskFailureCode,
@@ -109,11 +165,13 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         plan = new RouteNavigationPlan
         {
             Succeeded = true,
+            CompletionMode = completionMode,
             FailureReason = string.Empty,
             Task = task,
             Cost = Math.Round(searchResult.TotalCost, 2),
+            CostBreakdown = BuildCostBreakdown(request, searchResult, options, completionMode),
             Edges = searchResult.Edges,
-            Segments = BuildPlanSegments(request, graph, searchResult),
+            Segments = BuildPlanSegments(request, graph, searchResult, options, completionMode),
             UsesTeleport = searchResult.Start.Teleport != null,
             Teleport = searchResult.Start.Teleport,
             RequiresUnknownStartConnector = searchResult.Start.RequiresUnknownConnector,
@@ -126,6 +184,26 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             Options = options
         };
         return true;
+    }
+
+    private static RoutePlanSearchResult SelectBestSearchResult(
+        RoutePlanSearchResult? current,
+        RoutePlanSearchResult? teleport,
+        double minimumTeleportSavingsSeconds)
+    {
+        if (current == null)
+        {
+            return teleport!;
+        }
+
+        if (teleport == null)
+        {
+            return current;
+        }
+
+        return teleport.TotalCost + Math.Max(0, minimumTeleportSavingsSeconds) <= current.TotalCost
+            ? teleport
+            : current;
     }
 
     private static bool HasUnavailableTeleportCandidate(
@@ -164,23 +242,26 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         };
     }
 
-    private static List<RouteNavigationPlanSegment> BuildPlanSegments(
+    private List<RouteNavigationPlanSegment> BuildPlanSegments(
         RouteNavigationPlanRequest request,
         RouteNavigationGraphSnapshot graph,
-        RoutePlanSearchResult searchResult)
+        RoutePlanSearchResult searchResult,
+        RouteNavigationPlanOptions options,
+        RoutePlanCompletionMode completionMode)
     {
         var segments = new List<RouteNavigationPlanSegment>();
         var currentPoint = request.CurrentImagePoint;
 
         if (searchResult.Start.Teleport != null)
         {
+            var teleportCost = _costModel.EvaluateTeleport(options.CostOptions);
             segments.Add(new RouteNavigationPlanSegment
             {
                 Kind = RouteNavigationPlanSegmentKind.Teleport,
                 From = request.CurrentImagePoint,
                 To = searchResult.Start.Teleport.SpawnImagePoint,
                 Teleport = searchResult.Start.Teleport,
-                Cost = searchResult.Start.InitialCost,
+                Cost = teleportCost.Seconds,
                 Polyline = [request.CurrentImagePoint, searchResult.Start.Teleport.SpawnImagePoint]
             });
             currentPoint = searchResult.Start.Teleport.SpawnImagePoint;
@@ -196,7 +277,14 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     : RouteNavigationPlanSegmentKind.StartConnector,
                 From = currentPoint,
                 To = startPoint,
-                Cost = searchResult.Start.InitialCost,
+                Cost = EvaluateConnectorCost(
+                    request,
+                    currentPoint,
+                    startPoint,
+                    MoveModeEnum.Walk.Code,
+                    options,
+                    searchResult.Start.RequiresUnknownConnector ? options.UnknownConnectorCostWeight : options.CurrentAttachCostWeight,
+                    "start-connector").Seconds,
                 Polyline = [currentPoint, startPoint]
             });
         }
@@ -220,13 +308,14 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                 Action = edge.Action,
                 ActionParams = edge.ActionParams,
                 HealthStatus = edge.HealthStatus,
-                Cost = ResolveEdgeCost(edge),
+                Cost = ResolveEdgeCost(request, edge, options),
                 Polyline = points
             });
         }
 
         var targetAttachPoint = new RouteGraphPoint(searchResult.Target.Node.X, searchResult.Target.Node.Y);
-        if (searchResult.Target.RequiresUnknownConnector || RouteGraphGeometry.Distance(targetAttachPoint, request.TargetImagePoint) > 0)
+        if (completionMode == RoutePlanCompletionMode.Complete &&
+            (searchResult.Target.RequiresUnknownConnector || RouteGraphGeometry.Distance(targetAttachPoint, request.TargetImagePoint) > 0))
         {
             segments.Add(new RouteNavigationPlanSegment
             {
@@ -243,7 +332,83 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         return segments;
     }
 
-    private static List<RoutePlanStartCandidate> BuildStartCandidates(
+    private List<RouteNavigationCostBreakdown> BuildCostBreakdown(
+        RouteNavigationPlanRequest request,
+        RoutePlanSearchResult searchResult,
+        RouteNavigationPlanOptions options,
+        RoutePlanCompletionMode completionMode)
+    {
+        var result = new List<RouteNavigationCostBreakdown>();
+        var currentPoint = request.CurrentImagePoint;
+        if (searchResult.Start.Teleport != null)
+        {
+            result.Add(_costModel.EvaluateTeleport(options.CostOptions));
+            currentPoint = searchResult.Start.Teleport.SpawnImagePoint;
+        }
+
+        var startPoint = new RouteGraphPoint(searchResult.Start.Node.X, searchResult.Start.Node.Y);
+        if (RouteGraphGeometry.Distance(currentPoint, startPoint) > 0)
+        {
+            result.Add(EvaluateConnectorCost(
+                request,
+                currentPoint,
+                startPoint,
+                MoveModeEnum.Walk.Code,
+                options,
+                searchResult.Start.Teleport != null
+                    ? 1
+                    : searchResult.Start.RequiresUnknownConnector
+                        ? options.UnknownConnectorCostWeight
+                        : options.CurrentAttachCostWeight,
+                searchResult.Start.RequiresUnknownConnector
+                    ? "unknown-start-connector"
+                    : "start-connector"));
+        }
+
+        result.AddRange(searchResult.Edges.Select(edge =>
+            _costModel.EvaluateEdge(request.MapName, request.MapMatchMethod, edge, options.CostOptions)));
+
+        var targetPoint = new RouteGraphPoint(searchResult.Target.Node.X, searchResult.Target.Node.Y);
+        if (completionMode == RoutePlanCompletionMode.Complete &&
+            RouteGraphGeometry.Distance(targetPoint, request.TargetImagePoint) > 0)
+        {
+            var connector = _costModel.EvaluateConnector(
+                request.MapName,
+                request.MapMatchMethod,
+                targetPoint,
+                request.TargetImagePoint,
+                ResolveTargetMoveMode(request, searchResult),
+                options.CostOptions,
+                searchResult.Target.RequiresUnknownConnector
+                    ? "unknown-target-connector"
+                    : "target-connector");
+            result.Add(connector with { Seconds = searchResult.Target.AttachCost });
+        }
+
+        return result;
+    }
+
+    private RouteNavigationCostBreakdown EvaluateConnectorCost(
+        RouteNavigationPlanRequest request,
+        RouteGraphPoint from,
+        RouteGraphPoint to,
+        string moveMode,
+        RouteNavigationPlanOptions options,
+        double multiplier,
+        string component)
+    {
+        var cost = _costModel.EvaluateConnector(
+            request.MapName,
+            request.MapMatchMethod,
+            from,
+            to,
+            moveMode,
+            options.CostOptions,
+            component);
+        return cost with { Seconds = cost.Seconds * Math.Max(0, multiplier) };
+    }
+
+    private List<RoutePlanStartCandidate> BuildStartCandidates(
         RouteNavigationGraphSnapshot graph,
         RouteNavigationPlanRequest request,
         RouteNavigationPlanOptions options)
@@ -257,11 +422,19 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 
         foreach (var candidate in nearbyNodes)
         {
+            var nodePoint = new RouteGraphPoint(candidate.Node.X, candidate.Node.Y);
             result.Add(new RoutePlanStartCandidate(
                 candidate.Node,
                 null,
                 candidate.Distance,
-                candidate.Distance * options.CurrentAttachCostWeight,
+                EvaluateConnectorCost(
+                    request,
+                    request.CurrentImagePoint,
+                    nodePoint,
+                    MoveModeEnum.Walk.Code,
+                    options,
+                    options.CurrentAttachCostWeight,
+                    "start-connector").Seconds,
                 false));
         }
 
@@ -275,11 +448,19 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 
             foreach (var candidate in frontierNodes)
             {
+                var nodePoint = new RouteGraphPoint(candidate.Node.X, candidate.Node.Y);
                 result.Add(new RoutePlanStartCandidate(
                     candidate.Node,
                     null,
                     candidate.Distance,
-                    candidate.Distance * options.UnknownConnectorCostWeight,
+                    EvaluateConnectorCost(
+                        request,
+                        request.CurrentImagePoint,
+                        nodePoint,
+                        MoveModeEnum.Walk.Code,
+                        options,
+                        options.UnknownConnectorCostWeight,
+                        "unknown-start-connector").Seconds,
                     true));
             }
         }
@@ -300,16 +481,26 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             var entryNodes = graph.GetTeleportEntryNodes(teleportCandidate.Teleport.AnchorId);
             foreach (var entryNode in entryNodes)
             {
+                var entryPoint = new RouteGraphPoint(entryNode.X, entryNode.Y);
+                var spawnConnector = EvaluateConnectorCost(
+                    request,
+                    teleportCandidate.Teleport.SpawnImagePoint,
+                    entryPoint,
+                    MoveModeEnum.Walk.Code,
+                    options,
+                    1,
+                    "teleport-entry-connector");
                 result.Add(new RoutePlanStartCandidate(
                     entryNode,
                     teleportCandidate.Teleport,
-                    0,
-                    options.TeleportBaseCost + (teleportCandidate.Distance * options.TeleportTargetDistanceCostWeight),
+                    RouteGraphGeometry.Distance(teleportCandidate.Teleport.SpawnImagePoint, entryPoint),
+                    _costModel.EvaluateTeleport(options.CostOptions).Seconds + spawnConnector.Seconds,
                     false));
             }
         }
 
-        return result
+        var orderedCandidates = result
+            .Where(candidate => double.IsFinite(candidate.InitialCost))
             .GroupBy(candidate => new
             {
                 candidate.Node.NodeId,
@@ -317,12 +508,13 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                 candidate.RequiresUnknownConnector
             })
             .Select(g => g.OrderBy(candidate => candidate.InitialCost).First())
-            .OrderBy(candidate => candidate.InitialCost)
-            .Take(options.MaxStartCandidates)
-            .ToList();
+            .OrderBy(candidate => candidate.InitialCost);
+        return (options.MaxStartCandidates <= 0
+            ? orderedCandidates
+            : orderedCandidates.Take(options.MaxStartCandidates)).ToList();
     }
 
-    private static List<RoutePlanTargetCandidate> BuildTargetCandidates(
+    private List<RoutePlanTargetCandidate> BuildTargetCandidates(
         RouteNavigationGraphSnapshot graph,
         RouteNavigationPlanRequest request,
         RouteNavigationPlanOptions options)
@@ -337,10 +529,18 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             .Select(node =>
             {
                 var distance = RouteGraphGeometry.Distance(request.TargetImagePoint, new RouteGraphPoint(node.X, node.Y));
+                var nodePoint = new RouteGraphPoint(node.X, node.Y);
                 return new RoutePlanTargetCandidate(
                     node,
                     distance,
-                    distance * options.TargetAttachCostWeight * options.ResourceSemanticAttachCostMultiplier,
+                    EvaluateConnectorCost(
+                        request,
+                        nodePoint,
+                        request.TargetImagePoint,
+                        ResolveTargetMoveMode(request, null),
+                        options,
+                        options.TargetAttachCostWeight * options.ResourceSemanticAttachCostMultiplier,
+                        "target-connector").Seconds,
                     false,
                     true);
             })
@@ -356,12 +556,23 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                 request.TargetImagePoint,
                 options.TargetNodeCandidateLimit,
                 options.TargetAttachMaxDistance)
-            .Select(candidate => new RoutePlanTargetCandidate(
-                candidate.Node,
-                candidate.Distance,
-                candidate.Distance * options.TargetAttachCostWeight,
-                false,
-                false))
+            .Select(candidate =>
+            {
+                var nodePoint = new RouteGraphPoint(candidate.Node.X, candidate.Node.Y);
+                return new RoutePlanTargetCandidate(
+                    candidate.Node,
+                    candidate.Distance,
+                    EvaluateConnectorCost(
+                        request,
+                        nodePoint,
+                        request.TargetImagePoint,
+                        ResolveTargetMoveMode(request, null),
+                        options,
+                        options.TargetAttachCostWeight,
+                        "target-connector").Seconds,
+                    false,
+                    false);
+            })
             .ToList();
 
         if (result.Count > 0 || !options.AllowUnknownTargetConnector)
@@ -374,17 +585,29 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                 request.TargetImagePoint,
                 options.TargetNodeCandidateLimit,
                 options.UnknownConnectorMaxDistance)
-            .Select(candidate => new RoutePlanTargetCandidate(
-                candidate.Node,
-                candidate.Distance,
-                candidate.Distance * options.UnknownConnectorCostWeight,
-                true,
-                false))
+            .Select(candidate =>
+            {
+                var nodePoint = new RouteGraphPoint(candidate.Node.X, candidate.Node.Y);
+                return new RoutePlanTargetCandidate(
+                    candidate.Node,
+                    candidate.Distance,
+                    EvaluateConnectorCost(
+                        request,
+                        nodePoint,
+                        request.TargetImagePoint,
+                        ResolveTargetMoveMode(request, null),
+                        options,
+                        options.UnknownConnectorCostWeight,
+                        "unknown-target-connector").Seconds,
+                    true,
+                    false);
+            })
             .ToList();
     }
 
-    private static bool TrySearch(
+    private bool TrySearch(
         RouteNavigationGraphSnapshot graph,
+        RouteNavigationPlanRequest request,
         IReadOnlyList<RoutePlanStartCandidate> starts,
         IReadOnlyList<RoutePlanTargetCandidate> targets,
         RouteNavigationPlanOptions options,
@@ -393,6 +616,8 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         var targetByNodeId = targets
             .GroupBy(t => t.Node.NodeId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.OrderBy(t => t.AttachCost).First(), StringComparer.OrdinalIgnoreCase);
+        RoutePlanSearchResult? bestResult = null;
+        var bestTotalCost = double.PositiveInfinity;
 
         var distances = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         var previous = new Dictionary<string, RoutePlanPreviousStep>(StringComparer.OrdinalIgnoreCase);
@@ -411,22 +636,32 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 
         while (queue.Count > 0)
         {
-            var nodeId = queue.Dequeue();
-            if (!distances.TryGetValue(nodeId, out var currentCost))
+            queue.TryDequeue(out var nodeId, out var dequeuedCost);
+            if (!distances.TryGetValue(nodeId, out var currentCost) ||
+                dequeuedCost > currentCost + 0.0001)
             {
                 continue;
             }
 
+            if (currentCost >= bestTotalCost)
+            {
+                break;
+            }
+
             if (targetByNodeId.TryGetValue(nodeId, out var target))
             {
-                var edges = ReconstructEdges(previous, nodeId);
-                var startNodeId = ResolveStartNodeId(previous, nodeId);
-                result = new RoutePlanSearchResult(
-                    startByNodeId[startNodeId],
-                    target,
-                    edges,
-                    currentCost + target.AttachCost);
-                return true;
+                var totalCost = currentCost + target.AttachCost;
+                if (totalCost < bestTotalCost)
+                {
+                    var edges = ReconstructEdges(previous, nodeId);
+                    var startNodeId = ResolveStartNodeId(previous, nodeId);
+                    bestResult = new RoutePlanSearchResult(
+                        startByNodeId[startNodeId],
+                        target,
+                        edges,
+                        totalCost);
+                    bestTotalCost = totalCost;
+                }
             }
 
             foreach (var edge in graph.GetOutgoingEdges(nodeId))
@@ -436,7 +671,11 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     continue;
                 }
 
-                var edgeCost = ResolveEdgeCost(edge);
+                var edgeCost = ResolveEdgeCost(request, edge, options);
+                if (!double.IsFinite(edgeCost))
+                {
+                    continue;
+                }
                 var nextCost = currentCost + edgeCost;
                 if (distances.TryGetValue(edge.ToNodeId, out var knownCost) && knownCost <= nextCost)
                 {
@@ -450,8 +689,114 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             }
         }
 
-        result = RoutePlanSearchResult.Empty;
-        return false;
+        result = bestResult ?? RoutePlanSearchResult.Empty;
+        return bestResult != null;
+    }
+
+    private bool TrySearchFrontier(
+        RouteNavigationGraphSnapshot graph,
+        RouteNavigationPlanRequest request,
+        IReadOnlyList<RoutePlanStartCandidate> starts,
+        RouteNavigationPlanOptions options,
+        out RoutePlanSearchResult result)
+    {
+        if (starts.Count == 0)
+        {
+            result = RoutePlanSearchResult.Empty;
+            return false;
+        }
+
+        var distances = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        var previous = new Dictionary<string, RoutePlanPreviousStep>(StringComparer.OrdinalIgnoreCase);
+        var startByNodeId = new Dictionary<string, RoutePlanStartCandidate>(StringComparer.OrdinalIgnoreCase);
+        var queue = new PriorityQueue<string, double>();
+        RouteNavigationNode? bestNode = null;
+        var bestScore = double.PositiveInfinity;
+        var bestTargetDistance = double.PositiveInfinity;
+
+        foreach (var start in starts.Where(candidate => double.IsFinite(candidate.InitialCost)))
+        {
+            if (!distances.TryGetValue(start.Node.NodeId, out var known) || start.InitialCost < known)
+            {
+                distances[start.Node.NodeId] = start.InitialCost;
+                startByNodeId[start.Node.NodeId] = start;
+                queue.Enqueue(start.Node.NodeId, start.InitialCost);
+            }
+        }
+
+        while (queue.Count > 0)
+        {
+            queue.TryDequeue(out var nodeId, out var dequeuedCost);
+            if (!distances.TryGetValue(nodeId, out var currentCost) ||
+                dequeuedCost > currentCost + 0.0001)
+            {
+                continue;
+            }
+
+            var node = graph.GetNode(nodeId);
+            if (node != null)
+            {
+                var nodePoint = new RouteGraphPoint(node.X, node.Y);
+                var remaining = _costModel.EvaluateConnector(
+                    request.MapName,
+                    request.MapMatchMethod,
+                    nodePoint,
+                    request.TargetImagePoint,
+                    MoveModeEnum.Run.Code,
+                    options.CostOptions,
+                    "frontier-remaining");
+                var targetDistance = RouteGraphGeometry.Distance(nodePoint, request.TargetImagePoint);
+                var score = currentCost + remaining.Seconds * options.FrontierRemainingTimeWeight;
+                if (double.IsFinite(score) &&
+                    (score < bestScore - 0.001 ||
+                     Math.Abs(score - bestScore) <= 0.001 && targetDistance < bestTargetDistance))
+                {
+                    bestNode = node;
+                    bestScore = score;
+                    bestTargetDistance = targetDistance;
+                }
+            }
+
+            foreach (var edge in graph.GetOutgoingEdges(nodeId))
+            {
+                if (!CanUseEdge(edge, options))
+                {
+                    continue;
+                }
+
+                var edgeCost = ResolveEdgeCost(request, edge, options);
+                if (!double.IsFinite(edgeCost))
+                {
+                    continue;
+                }
+
+                var nextCost = currentCost + edgeCost;
+                if (distances.TryGetValue(edge.ToNodeId, out var knownCost) && knownCost <= nextCost)
+                {
+                    continue;
+                }
+
+                distances[edge.ToNodeId] = nextCost;
+                previous[edge.ToNodeId] = new RoutePlanPreviousStep(nodeId, edge);
+                startByNodeId[edge.ToNodeId] = startByNodeId[nodeId];
+                queue.Enqueue(edge.ToNodeId, nextCost);
+            }
+        }
+
+        if (bestNode == null || !distances.TryGetValue(bestNode.NodeId, out var totalCost))
+        {
+            result = RoutePlanSearchResult.Empty;
+            return false;
+        }
+
+        var edges = ReconstructEdges(previous, bestNode.NodeId);
+        var startNodeId = ResolveStartNodeId(previous, bestNode.NodeId);
+        result = new RoutePlanSearchResult(
+            startByNodeId[startNodeId],
+            new RoutePlanTargetCandidate(bestNode, bestTargetDistance, 0, false, false),
+            edges,
+            totalCost);
+        return true;
     }
 
     private static bool CanUseEdge(RouteNavigationEdge edge, RouteNavigationPlanOptions options)
@@ -464,24 +809,16 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         return true;
     }
 
-    private static double ResolveEdgeCost(RouteNavigationEdge edge)
+    private double ResolveEdgeCost(
+        RouteNavigationPlanRequest request,
+        RouteNavigationEdge edge,
+        RouteNavigationPlanOptions options)
     {
-        if (edge.Cost > 0)
-        {
-            return edge.Cost;
-        }
-
-        if (edge.AverageDurationMs > 0)
-        {
-            return edge.AverageDurationMs / 1000.0;
-        }
-
-        if (edge.AverageDistance > 0)
-        {
-            return edge.AverageDistance;
-        }
-
-        return RouteGraphGeometry.PolylineDistance(ToRoutePoints(edge.Points));
+        return _costModel.EvaluateEdge(
+            request.MapName,
+            request.MapMatchMethod,
+            edge,
+            options.CostOptions).Seconds;
     }
 
     private static List<RouteNavigationEdge> ReconstructEdges(
@@ -518,6 +855,7 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         RouteNavigationGraphSnapshot graph,
         RoutePlanSearchResult searchResult,
         RouteNavigationPlanOptions options,
+        RoutePlanCompletionMode completionMode,
         out PathingTask task,
         out RouteNavigationFailureCode failureCode)
     {
@@ -574,16 +912,21 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
             }
         }
 
+        var executableTarget = completionMode == RoutePlanCompletionMode.Complete
+            ? request.TargetImagePoint
+            : new RouteGraphPoint(searchResult.Target.Node.X, searchResult.Target.Node.Y);
+        var targetAction = completionMode == RoutePlanCompletionMode.Complete ? request.TargetAction : null;
+        var targetActionParams = completionMode == RoutePlanCompletionMode.Complete ? request.TargetActionParams : null;
         if (!TryAddImageWaypoint(
-            task.Positions,
-            task.Info,
-            request.TargetImagePoint,
-            WaypointType.Target.Code,
-            ResolveTargetMoveMode(request, searchResult),
-            request.TargetAction,
-            request.TargetActionParams,
-            emittedImagePoints,
-            options.TargetOutputMinDistance))
+                task.Positions,
+                task.Info,
+                executableTarget,
+                WaypointType.Target.Code,
+                ResolveTargetMoveMode(request, searchResult),
+                targetAction,
+                targetActionParams,
+                emittedImagePoints,
+                completionMode == RoutePlanCompletionMode.Complete ? options.TargetOutputMinDistance : 0))
         {
             failureCode = RouteNavigationFailureCode.CoordinateConversionFailed;
             return false;
@@ -599,14 +942,14 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         return true;
     }
 
-    private static string ResolveTargetMoveMode(RouteNavigationPlanRequest request, RoutePlanSearchResult searchResult)
+    private static string ResolveTargetMoveMode(RouteNavigationPlanRequest request, RoutePlanSearchResult? searchResult)
     {
         if (!string.IsNullOrWhiteSpace(request.TargetMoveMode))
         {
             return request.TargetMoveMode;
         }
 
-        var lastEdgeMoveMode = searchResult.Edges.LastOrDefault()?.MoveMode;
+        var lastEdgeMoveMode = searchResult?.Edges.LastOrDefault()?.MoveMode;
         return string.IsNullOrWhiteSpace(lastEdgeMoveMode) ? MoveModeEnum.Walk.Code : lastEdgeMoveMode;
     }
 
@@ -853,6 +1196,8 @@ public sealed class RouteResourceCollectStrategy
 
 public sealed class RouteNavigationPlanOptions
 {
+    public RouteNavigationCostOptions CostOptions { get; init; } = new();
+
     public bool AllowTeleport { get; init; } = true;
 
     public bool AllowDisabledEdges { get; init; }
@@ -865,9 +1210,11 @@ public sealed class RouteNavigationPlanOptions
 
     public int TargetNodeCandidateLimit { get; init; } = 8;
 
-    public int TeleportCandidateLimit { get; init; } = 8;
+    /// <summary>0 表示评估地图内全部传送点，正数用于调试时限制候选数量。</summary>
+    public int TeleportCandidateLimit { get; init; }
 
-    public int MaxStartCandidates { get; init; } = 24;
+    /// <summary>0 表示不截断已经过筛选的起点候选。</summary>
+    public int MaxStartCandidates { get; init; }
 
     public double CurrentAttachMaxDistance { get; init; } = 18;
 
@@ -883,10 +1230,6 @@ public sealed class RouteNavigationPlanOptions
 
     public double UnknownConnectorCostWeight { get; init; } = 8.0;
 
-    public double TeleportBaseCost { get; init; } = 15.0;
-
-    public double TeleportTargetDistanceCostWeight { get; init; } = 0.1;
-
     public double OutputPointMinDistance { get; init; } = 3.0;
 
     public double TargetOutputMinDistance { get; init; } = 2.0;
@@ -894,11 +1237,23 @@ public sealed class RouteNavigationPlanOptions
     public double ResourceSemanticMaxDistance { get; init; } = 80.0;
 
     public double ResourceSemanticAttachCostMultiplier { get; init; } = 0.5;
+
+    public double FrontierRemainingTimeWeight { get; init; } = 2.0;
+}
+
+public enum RoutePlanCompletionMode
+{
+    Complete,
+    PartialToFrontier,
+    LocalOnly,
+    HardFailure
 }
 
 public sealed class RouteNavigationPlan
 {
     public bool Succeeded { get; init; }
+
+    public RoutePlanCompletionMode CompletionMode { get; init; }
 
     public RouteNavigationFailureCode FailureCode { get; init; }
 
@@ -907,6 +1262,8 @@ public sealed class RouteNavigationPlan
     public PathingTask? Task { get; init; }
 
     public double Cost { get; init; }
+
+    public List<RouteNavigationCostBreakdown> CostBreakdown { get; init; } = [];
 
     public List<RouteNavigationEdge> Edges { get; init; } = [];
 
@@ -941,6 +1298,7 @@ public sealed class RouteNavigationPlan
         return new RouteNavigationPlan
         {
             Succeeded = false,
+            CompletionMode = RoutePlanCompletionMode.HardFailure,
             FailureCode = code,
             FailureReason = reason,
             Request = request,

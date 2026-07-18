@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,10 +22,55 @@ public sealed class BetterGiTargetNavigationRuntime(
         positionResolver ?? RouteCurrentPositionResolver.Instance;
     private readonly ILogger<BetterGiTargetNavigationRuntime> _logger =
         App.GetLogger<BetterGiTargetNavigationRuntime>();
+    private RouteCurrentPosition? _lastKnownPosition;
 
-    public async Task<TargetNavigationPreparationResult> PrepareAsync(
+    public async Task<TargetNavigationPreparationResult> ResolvePlanningPositionAsync(
         string expectedMapName,
         string? mapMatchMethod,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_lastKnownPosition != null)
+        {
+            return TargetNavigationPreparationResult.Ready(
+                _lastKnownPosition.MapName,
+                _lastKnownPosition.ImagePoint);
+        }
+
+        try
+        {
+            if (!TaskContext.Instance().IsInitialized)
+            {
+                await ScriptService.StartGameTask(false);
+            }
+
+            using var screen = TaskControl.CaptureToRectArea(true);
+            if (_positionResolver.TryResolve(
+                    screen,
+                    expectedMapName,
+                    mapMatchMethod,
+                    out var currentPosition))
+            {
+                _lastKnownPosition = currentPosition;
+                return TargetNavigationPreparationResult.Ready(
+                    currentPosition.MapName,
+                    currentPosition.ImagePoint);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "目标导航规划阶段无法刷新坐标，将使用最后有效坐标");
+        }
+
+        return TargetNavigationPreparationResult.Failed(
+            TargetNavigationFailureCode.CurrentPositionUnrecognized,
+            "当前界面无法定位，且没有最后一次有效坐标");
+    }
+
+    public async Task<TargetNavigationPreparationResult> WaitUntilReadyAsync(
+        string expectedMapName,
+        string? mapMatchMethod,
+        RouteNavigationCostOptions costOptions,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -82,14 +128,35 @@ public sealed class BetterGiTargetNavigationRuntime(
 
         try
         {
-            using var screen = TaskControl.CaptureToRectArea(true);
-            if (!Bv.IsInMainUi(screen))
+            var uiState = CaptureUiState();
+            if (uiState.InTalk)
+            {
+                var talkReady = await WaitForTalkToFinishAsync(
+                    costOptions.TalkWaitTimeoutSeconds,
+                    cancellationToken);
+                if (!talkReady)
+                {
+                    return TargetNavigationPreparationResult.Failed(
+                        TargetNavigationFailureCode.NotInMainUi,
+                        $"剧情等待超过 {costOptions.TalkWaitTimeoutSeconds:F0} 秒");
+                }
+
+                uiState = CaptureUiState();
+            }
+
+            if (!uiState.InMainUi)
+            {
+                await new ReturnMainUiTask().Start(cancellationToken);
+            }
+
+            using var readyScreen = TaskControl.CaptureToRectArea(true);
+            if (!Bv.IsInMainUi(readyScreen))
             {
                 return TargetNavigationPreparationResult.Failed(TargetNavigationFailureCode.NotInMainUi);
             }
 
             if (!_positionResolver.TryResolve(
-                    screen,
+                    readyScreen,
                     expectedMapName,
                     mapMatchMethod,
                     out var currentPosition))
@@ -97,6 +164,8 @@ public sealed class BetterGiTargetNavigationRuntime(
                 return TargetNavigationPreparationResult.Failed(
                     TargetNavigationFailureCode.CurrentPositionUnrecognized);
             }
+
+            _lastKnownPosition = currentPosition;
 
             return TargetNavigationPreparationResult.Ready(
                 currentPosition.MapName,
@@ -109,6 +178,32 @@ public sealed class BetterGiTargetNavigationRuntime(
                 TargetNavigationFailureCode.CurrentPositionUnrecognized,
                 ex.Message);
         }
+    }
+
+    private static (bool InMainUi, bool InTalk) CaptureUiState()
+    {
+        using var screen = TaskControl.CaptureToRectArea(true);
+        return (Bv.IsInMainUi(screen), Bv.IsInTalkUi(screen));
+    }
+
+    private static async Task<bool> WaitForTalkToFinishAsync(
+        double timeoutSeconds,
+        CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(Math.Max(1, timeoutSeconds));
+        while (DateTime.UtcNow < deadline)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var state = CaptureUiState();
+            if (state.InMainUi || !state.InTalk)
+            {
+                return true;
+            }
+
+            await Task.Delay(500, cancellationToken);
+        }
+
+        return false;
     }
 
     public async Task<TargetNavigationExecutionResult> ExecuteAsync(

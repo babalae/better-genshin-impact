@@ -28,6 +28,8 @@ public sealed class RoutePlanEdgeRow
 
     public double Cost { get; init; }
 
+    public string CostSource { get; init; } = string.Empty;
+
     public string MoveMode { get; init; } = string.Empty;
 
     public string Action { get; init; } = string.Empty;

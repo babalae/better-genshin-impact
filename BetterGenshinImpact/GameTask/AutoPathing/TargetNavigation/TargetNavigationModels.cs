@@ -91,6 +91,8 @@ public sealed class TargetNavigationRequest
 
     public RouteGraphPoint TargetImagePoint { get; init; }
 
+    public RouteGraphPoint? LastKnownCurrentImagePoint { get; init; }
+
     public string TaskName { get; init; } = "地图目标导航";
 
     public string? TargetMoveMode { get; init; }
@@ -222,11 +224,20 @@ public sealed class TargetNavigationRunResult
     public PathingTask? ExecutedTask { get; init; }
 }
 
-public interface ITargetNavigationRuntime
+public interface ITargetNavigationPlanningRuntime
 {
-    Task<TargetNavigationPreparationResult> PrepareAsync(
+    Task<TargetNavigationPreparationResult> ResolvePlanningPositionAsync(
         string expectedMapName,
         string? mapMatchMethod,
+        CancellationToken cancellationToken);
+}
+
+public interface ITargetNavigationExecutionRuntime
+{
+    Task<TargetNavigationPreparationResult> WaitUntilReadyAsync(
+        string expectedMapName,
+        string? mapMatchMethod,
+        RouteNavigationCostOptions costOptions,
         CancellationToken cancellationToken);
 
     Task<TargetNavigationExecutionResult> ExecuteAsync(
@@ -234,4 +245,10 @@ public interface ITargetNavigationRuntime
         CancellationToken cancellationToken);
 
     void ReleaseAllInputs();
+}
+
+public interface ITargetNavigationRuntime :
+    ITargetNavigationPlanningRuntime,
+    ITargetNavigationExecutionRuntime
+{
 }
