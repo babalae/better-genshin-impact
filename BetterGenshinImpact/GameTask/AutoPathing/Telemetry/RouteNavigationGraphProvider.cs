@@ -60,6 +60,8 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
 
     public int LastSanitizedEdgeCount { get; private set; }
 
+    public string LastLoadError { get; private set; } = string.Empty;
+
     public bool TryGetSnapshot(out RouteNavigationGraphSnapshot snapshot, bool forceReload = false)
     {
         return TryGetSnapshot(out snapshot, out _, forceReload);
@@ -77,6 +79,7 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
                 : _legacyGraphFilePath;
             if (!File.Exists(graphFilePath))
             {
+                LastLoadError = $"路网文件不存在：{graphFilePath}";
                 snapshot = _snapshot ?? RouteNavigationGraphSnapshot.Empty;
                 status = RouteNavigationGraphLoadStatus.FileMissing;
                 return false;
@@ -111,13 +114,17 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
                 snapshot = new RouteNavigationGraphSnapshot(graph, NodeBucketSize);
                 _snapshot = snapshot;
                 _loadedSignature = signature;
+                LastLoadError = string.Empty;
                 status = snapshot.IsEmpty
                     ? RouteNavigationGraphLoadStatus.Empty
                     : RouteNavigationGraphLoadStatus.Loaded;
                 return status == RouteNavigationGraphLoadStatus.Loaded;
             }
-            catch
+            catch (Exception ex)
             {
+                LastLoadError = ex is JsonException
+                    ? $"{Path.GetFileName(graphFilePath)} JSON 解析失败：{ex.Message}"
+                    : $"{Path.GetFileName(graphFilePath)} 加载失败：{ex.Message}";
                 snapshot = _snapshot ?? RouteNavigationGraphSnapshot.Empty;
                 status = RouteNavigationGraphLoadStatus.Invalid;
                 return false;

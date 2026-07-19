@@ -235,6 +235,58 @@
                                            Content="打开遥测与路网目录" />
                             </StackPanel>
                         </Border>
+
+                        <ui:CardExpander Margin="0,10,0,0"
+                                         ContentPadding="10"
+                                         IsExpanded="False">
+                            <ui:CardExpander.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock FontWeight="SemiBold" Text="手绘主干道" />
+                                    <TextBlock Grid.Column="1"
+                                               Margin="8,0,20,0"
+                                               Foreground="{StaticResource MapEditorAccentBrush}"
+                                               Text="{Binding DraftPathPointCount, StringFormat={}{0} 点}" />
+                                </Grid>
+                            </ui:CardExpander.Header>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource CaptionTextStyle}"
+                                           Text="按住左键沿道路描线；完成时使用 AutoTranscribePathing 同款 RDP 算法优化，再保存为 GraphOverrides 补丁。"
+                                           TextWrapping="Wrap" />
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="64" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock VerticalAlignment="Center"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               Text="节点吸附像素" />
+                                    <ui:TextBox Grid.Column="1" Text="{Binding DrawSnapDistance}" />
+                                    <TextBlock Grid.Row="1"
+                                               Margin="0,7,0,0"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               Text="RDP 容差" />
+                                    <ui:TextBox Grid.Row="1"
+                                                Grid.Column="1"
+                                                Margin="0,7,0,0"
+                                                Text="{Binding DrawSimplificationTolerance}" />
+                                </Grid>
+                                <WrapPanel Margin="0,8,0,0">
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding StartPathDrawingCommand}" Content="开始描线" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding UndoDrawPathPointCommand}" Content="撤销一点" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding FinishPathDrawingCommand}" Content="完成路径" />
+                                    <ui:Button Margin="0,0,6,6" Command="{Binding CancelPathDrawingCommand}" Content="取消" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </ui:CardExpander>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -274,44 +326,6 @@
                                 <TextBlock Margin="0,3,0,0"
                                            Style="{StaticResource CaptionTextStyle}"
                                            Text="滚轮缩放 · 中键/右键拖动 · 左键选择/描线" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="12"
-                                Width="300"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Bottom"
-                                Style="{StaticResource OverlayCardStyle}">
-                            <StackPanel>
-                                <DockPanel>
-                                    <TextBlock FontWeight="SemiBold" Text="手绘主干道" />
-                                    <TextBlock DockPanel.Dock="Right"
-                                               Foreground="{StaticResource MapEditorAccentBrush}"
-                                               Text="{Binding DraftPathPointCount, StringFormat={}{0} 点}" />
-                                </DockPanel>
-                                <TextBlock Margin="0,3,0,0"
-                                           Style="{StaticResource CaptionTextStyle}"
-                                           Text="开始后按住左键沿道路描线；完成后保存为 GraphOverrides 补丁。"
-                                           TextWrapping="Wrap" />
-                                <Grid Margin="0,7,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="64" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock VerticalAlignment="Center"
-                                               Style="{StaticResource CaptionTextStyle}"
-                                               Text="吸附像素" />
-                                    <ui:TextBox Grid.Column="1"
-                                                Margin="7,0,0,0"
-                                                Text="{Binding DrawSnapDistance}" />
-                                </Grid>
-                                <WrapPanel Margin="0,7,0,0">
-                                    <ui:Button Margin="0,0,6,6" Command="{Binding StartPathDrawingCommand}" Content="开始描线" />
-                                    <ui:Button Margin="0,0,6,6" Command="{Binding UndoDrawPathPointCommand}" Content="撤销一点" />
-                                    <ui:Button Margin="0,0,6,6" Command="{Binding FinishPathDrawingCommand}" Content="完成路径" />
-                                    <ui:Button Margin="0,0,6,6" Command="{Binding CancelPathDrawingCommand}" Content="取消" />
-                                </WrapPanel>
                             </StackPanel>
                         </Border>
 

@@ -497,15 +497,20 @@ internal static class RouteNavigationPlanReusePolicy
                left.TargetAttachMaxDistance.Equals(right.TargetAttachMaxDistance) &&
                left.UnknownConnectorMaxDistance.Equals(right.UnknownConnectorMaxDistance) &&
                left.TeleportSearchMaxDistance.Equals(right.TeleportSearchMaxDistance) &&
+               left.RouteTeleportAttachMaxDistance.Equals(right.RouteTeleportAttachMaxDistance) &&
                left.CurrentAttachCostWeight.Equals(right.CurrentAttachCostWeight) &&
                left.TargetAttachCostWeight.Equals(right.TargetAttachCostWeight) &&
                left.UnknownConnectorCostWeight.Equals(right.UnknownConnectorCostWeight) &&
                SameCostOptions(left.CostOptions, right.CostOptions) &&
                left.OutputPointMinDistance.Equals(right.OutputPointMinDistance) &&
                left.TargetOutputMinDistance.Equals(right.TargetOutputMinDistance) &&
+               left.OutputSimplificationTolerance.Equals(right.OutputSimplificationTolerance) &&
                left.ResourceSemanticMaxDistance.Equals(right.ResourceSemanticMaxDistance) &&
                left.ResourceSemanticAttachCostMultiplier.Equals(right.ResourceSemanticAttachCostMultiplier) &&
-               left.FrontierRemainingTimeWeight.Equals(right.FrontierRemainingTimeWeight);
+               left.FrontierRemainingTimeWeight.Equals(right.FrontierRemainingTimeWeight) &&
+               left.MaxGraphDetourRatio.Equals(right.MaxGraphDetourRatio) &&
+               left.GraphRouteRevisitDistance.Equals(right.GraphRouteRevisitDistance) &&
+               left.GraphTurnbackCosineThreshold.Equals(right.GraphTurnbackCosineThreshold);
     }
 
     private static bool SameCostOptions(RouteNavigationCostOptions left, RouteNavigationCostOptions right)
@@ -520,6 +525,7 @@ internal static class RouteNavigationPlanReusePolicy
                left.TeleportDurationSeconds.Equals(right.TeleportDurationSeconds) &&
                left.MinimumTeleportSavingsSeconds.Equals(right.MinimumTeleportSavingsSeconds) &&
                left.LocalDirectMaxGameDistance.Equals(right.LocalDirectMaxGameDistance) &&
+               left.OffGraphDirectCostMultiplier.Equals(right.OffGraphDirectCostMultiplier) &&
                left.ReplanDriftGameDistance.Equals(right.ReplanDriftGameDistance) &&
                left.TalkWaitTimeoutSeconds.Equals(right.TalkWaitTimeoutSeconds) &&
                left.LocalIconMissRetryCount == right.LocalIconMissRetryCount &&

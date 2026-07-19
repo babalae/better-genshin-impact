@@ -1062,6 +1062,84 @@ internal static class RoutePolylineSimplifier
         return result;
     }
 
+    /// <summary>
+    /// 与 AutoTranscribePathing/optimization.js 相同的 RDP 抽稀：保留首尾点，
+    /// 并保留偏离首尾连线至少 tolerance 的关键点。
+    /// </summary>
+    public static List<RouteGraphPoint> Simplify(IReadOnlyList<RouteGraphPoint> points, double tolerance)
+    {
+        if (points.Count <= 2 || tolerance <= 0)
+        {
+            return points.ToList();
+        }
+
+        var keep = new bool[points.Count];
+        keep[0] = true;
+        keep[^1] = true;
+        SimplifyRouteSection(points, 0, points.Count - 1, tolerance, keep);
+        var result = new List<RouteGraphPoint>();
+        for (var index = 0; index < points.Count; index++)
+        {
+            if (keep[index])
+            {
+                result.Add(points[index]);
+            }
+        }
+
+        return result;
+    }
+
+    private static void SimplifyRouteSection(
+        IReadOnlyList<RouteGraphPoint> points,
+        int start,
+        int end,
+        double tolerance,
+        bool[] keep)
+    {
+        if (end <= start + 1)
+        {
+            return;
+        }
+
+        var maxDistance = 0.0;
+        var farthestIndex = -1;
+        for (var index = start + 1; index < end; index++)
+        {
+            var distance = PerpendicularLineDistance(points[index], points[start], points[end]);
+            if (distance > maxDistance)
+            {
+                maxDistance = distance;
+                farthestIndex = index;
+            }
+        }
+
+        if (farthestIndex < 0 || maxDistance < tolerance)
+        {
+            return;
+        }
+
+        keep[farthestIndex] = true;
+        SimplifyRouteSection(points, start, farthestIndex, tolerance, keep);
+        SimplifyRouteSection(points, farthestIndex, end, tolerance, keep);
+    }
+
+    private static double PerpendicularLineDistance(
+        RouteGraphPoint point,
+        RouteGraphPoint lineStart,
+        RouteGraphPoint lineEnd)
+    {
+        var dx = lineEnd.X - lineStart.X;
+        var dy = lineEnd.Y - lineStart.Y;
+        var length = Math.Sqrt((dx * dx) + (dy * dy));
+        if (length <= 0.000001)
+        {
+            return RouteGraphGeometry.Distance(point, lineStart);
+        }
+
+        return Math.Abs((dx * (lineStart.Y - point.Y)) -
+                        ((lineStart.X - point.X) * dy)) / length;
+    }
+
     private static void SimplifySection(IReadOnlyList<TelemetryPoint2D> points, int start, int end, double toleranceSquared, bool[] keep)
     {
         if (end <= start + 1)

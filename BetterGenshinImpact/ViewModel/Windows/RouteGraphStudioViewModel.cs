@@ -26,7 +26,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
     private readonly RouteGraphQualityAnalyzer _qualityAnalyzer = new();
     private readonly List<RouteGraphOverrideOperation> _pendingOperations = [];
     private readonly HashSet<string> _draftCreatedNodeIds = new(StringComparer.OrdinalIgnoreCase);
-    private RouteNavigationGraphSnapshot _snapshot = RouteNavigationGraphSnapshot.Empty;
+    private RouteNavigationGraphSnapshot _snapshot = new(new RouteNavigationGraph(), 64, []);
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusText = "等待加载路网";
@@ -61,6 +61,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
     [ObservableProperty] private bool _isPathDrawing;
     [ObservableProperty] private List<RouteGraphPoint> _draftPathPoints = [];
     [ObservableProperty] private double _drawSnapDistance = 6;
+    [ObservableProperty] private double _drawSimplificationTolerance = 1;
 
     public int DraftPathPointCount => DraftPathPoints.Count;
 
@@ -191,14 +192,16 @@ public partial class RouteGraphStudioViewModel : ViewModel
             });
             if (!loaded.succeeded)
             {
-                _snapshot = RouteNavigationGraphSnapshot.Empty;
+                _snapshot = new RouteNavigationGraphSnapshot(new RouteNavigationGraph(), 64, []);
                 VisibleNodes = [];
                 VisibleEdges = [];
                 VisibleTeleports = [];
                 StatusText = loaded.status switch
                 {
                     RouteNavigationGraphLoadStatus.FileMissing => $"路网文件不存在：{GraphFilePath}",
-                    RouteNavigationGraphLoadStatus.Invalid => "路网或补丁 JSON 无效",
+                    RouteNavigationGraphLoadStatus.Invalid => string.IsNullOrWhiteSpace(_provider.LastLoadError)
+                        ? "路网或补丁 JSON 无效"
+                        : _provider.LastLoadError,
                     _ => "路网为空"
                 };
                 return;
@@ -214,6 +217,10 @@ public partial class RouteGraphStudioViewModel : ViewModel
             StatusText = $"已加载 {_snapshot.Nodes.Count:N0} 节点 / {_snapshot.Edges.Count:N0} 边 / {_snapshot.Teleports.Count:N0} 传送点；" +
                          $"剔除 {_provider.LastSanitizedEdgeCount:N0} 条异常超长边；" +
                          $"应用 {apply.AppliedPatchIds.Count} 个补丁，隔离 {apply.IsolatedPatchIds.Count} 个，错误 {apply.Errors.Count} 个";
+            if (apply.Errors.Count > 0)
+            {
+                StatusText += $"；{string.Join("；", apply.Errors.Take(3))}";
+            }
         }
         catch (Exception ex)
         {
@@ -441,8 +448,12 @@ public partial class RouteGraphStudioViewModel : ViewModel
             return;
         }
 
+        var sampledPointCount = DraftPathPoints.Count;
+        var optimizedPoints = RoutePolylineSimplifier.Simplify(
+            DraftPathPoints,
+            Math.Max(0, DrawSimplificationTolerance));
         var nodes = new List<RouteNavigationNode>();
-        foreach (var point in DraftPathPoints)
+        foreach (var point in optimizedPoints)
         {
             var node = ResolveOrCreateDrawNode(point);
             if (nodes.Count == 0 || !Same(nodes[^1].NodeId, node.NodeId))
@@ -473,7 +484,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
         OnPropertyChanged(nameof(DraftPathPointCount));
         ApplyFilters();
         StatusText = edgeCount > 0
-            ? $"手绘完成：生成 {nodes.Count} 个路径节点 / {edgeCount} 条连接，点击“保存补丁并重新加载”持久化"
+            ? $"手绘完成：RDP 将 {sampledPointCount} 个采样点优化为 {nodes.Count} 个路径节点 / {edgeCount} 条连接，点击“保存补丁并重新加载”持久化"
             : "手绘点全部吸附到同一节点，没有生成连接";
     }
 
@@ -604,10 +615,10 @@ public partial class RouteGraphStudioViewModel : ViewModel
         {
             var patch = new RouteGraphOverridePatch
             {
-                Id = $"graph-fix-{DateTime.UtcNow:yyyyMMdd-HHmmss}",
+                Id = $"graph-fix-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}",
                 BaseGraphId = _snapshot.Graph.GraphId,
-                Author = PatchAuthor.Trim(),
-                Reason = PatchReason.Trim(),
+                Author = PatchAuthor?.Trim() ?? string.Empty,
+                Reason = PatchReason?.Trim() ?? string.Empty,
                 CreatedAtUtc = DateTime.UtcNow,
                 Operations = _pendingOperations.ToList()
             };

@@ -162,6 +162,57 @@ public class RouteGraphOverrideTests
     }
 
     [Fact]
+    public void Save_RejectsStructurallyInvalidPatchBeforeWritingJson()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            var store = new RouteGraphOverrideStore(directory);
+            var patch = new RouteGraphOverridePatch
+            {
+                Id = "invalid-add-edge",
+                Operations =
+                [
+                    new RouteGraphOverrideOperation
+                    {
+                        Type = RouteGraphOverrideOperationType.AddEdge,
+                        Edge = null
+                    }
+                ]
+            };
+
+            var exception = Assert.Throws<InvalidOperationException>(() => store.Save(patch));
+
+            Assert.Contains("addEdge", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.False(Directory.Exists(store.DirectoryPath) && Directory.EnumerateFiles(store.DirectoryPath, "*.json").Any());
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void Provider_ExposesActualJsonErrorAndFilePath()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, RouteNavigationGraphBuilder.GraphFileName), "{");
+            var provider = new RouteNavigationGraphProvider(directory);
+
+            Assert.False(provider.TryGetSnapshot(out _, out var status));
+            Assert.Equal(RouteNavigationGraphLoadStatus.Invalid, status);
+            Assert.Contains(RouteNavigationGraphBuilder.GraphFileName, provider.LastLoadError);
+            Assert.Contains("JSON", provider.LastLoadError, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public void Apply_CanEditNodeTypeTeleportAssociationAndDeleteConnectedNode()
     {
         var graph = CreateGraph();

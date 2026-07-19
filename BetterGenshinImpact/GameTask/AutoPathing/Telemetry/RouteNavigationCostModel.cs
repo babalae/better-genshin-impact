@@ -35,6 +35,9 @@ public sealed class RouteNavigationCostOptions
 
     public double LocalDirectMaxGameDistance { get; init; } = 80.0;
 
+    /// <summary>无路网直达需要承担地形不确定性，预计耗时按该倍率计入方案比较。</summary>
+    public double OffGraphDirectCostMultiplier { get; init; } = 1.5;
+
     public double ReplanDriftGameDistance { get; init; } = 20.0;
 
     public double TalkWaitTimeoutSeconds { get; init; } = 600.0;

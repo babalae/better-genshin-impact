@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -340,7 +341,7 @@ public sealed class RouteGraphOverrideStore
                 patch.SourceFileName = Path.GetFileName(path);
                 result.Patches.Add(patch);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
             {
                 result.Errors.Add($"{Path.GetFileName(path)}: {ex.Message}");
             }
@@ -357,16 +358,32 @@ public sealed class RouteGraphOverrideStore
             throw new InvalidOperationException("override patch has no operations");
         }
 
+        ValidateForSave(patch);
+
         Directory.CreateDirectory(DirectoryPath);
         var baseName = string.IsNullOrWhiteSpace(preferredFileName) ? patch.Id : preferredFileName;
         baseName = SanitizeFileName(string.IsNullOrWhiteSpace(baseName)
             ? $"graph-fix-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
             : baseName);
         var filePath = Path.Combine(DirectoryPath, Path.ChangeExtension(baseName, ".json"));
-        var tempPath = filePath + ".tmp";
+        if (string.IsNullOrWhiteSpace(preferredFileName) && File.Exists(filePath))
+        {
+            filePath = Path.Combine(
+                DirectoryPath,
+                Path.ChangeExtension($"{baseName}-{Guid.NewGuid().ToString("N")[..8]}", ".json"));
+        }
+
+        var tempPath = filePath + $".{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllText(tempPath, JsonSerializer.Serialize(patch, JsonOptions));
+            var json = JsonSerializer.Serialize(patch, JsonOptions);
+            var roundTrip = JsonSerializer.Deserialize<RouteGraphOverridePatch>(json, JsonOptions);
+            if (roundTrip == null || roundTrip.Operations.Count != patch.Operations.Count)
+            {
+                throw new InvalidOperationException("override patch failed JSON round-trip validation");
+            }
+
+            File.WriteAllText(tempPath, json, new UTF8Encoding(false));
             File.Move(tempPath, filePath, true);
             return filePath;
         }
@@ -376,6 +393,81 @@ public sealed class RouteGraphOverrideStore
             {
                 File.Delete(tempPath);
             }
+        }
+    }
+
+    private static void ValidateForSave(RouteGraphOverridePatch patch)
+    {
+        if (string.IsNullOrWhiteSpace(patch.Id))
+        {
+            throw new InvalidOperationException("override patch id is required");
+        }
+
+        for (var index = 0; index < patch.Operations.Count; index++)
+        {
+            var operation = patch.Operations[index];
+            var prefix = $"operation {index + 1} ({operation.Type})";
+            switch (operation.Type)
+            {
+                case RouteGraphOverrideOperationType.AddNode:
+                    if (operation.Node == null || string.IsNullOrWhiteSpace(operation.Node.NodeId))
+                    {
+                        throw new InvalidOperationException($"{prefix}: addNode requires a node with id");
+                    }
+                    EnsureFinite(operation.Node.X, operation.Node.Y, prefix);
+                    break;
+                case RouteGraphOverrideOperationType.AddEdge:
+                    if (operation.Edge == null ||
+                        string.IsNullOrWhiteSpace(operation.Edge.EdgeId) ||
+                        string.IsNullOrWhiteSpace(operation.Edge.FromNodeId) ||
+                        string.IsNullOrWhiteSpace(operation.Edge.ToNodeId))
+                    {
+                        throw new InvalidOperationException($"{prefix}: addEdge requires an edge id and both endpoints");
+                    }
+                    foreach (var point in operation.Edge.Points)
+                    {
+                        EnsureFinite(point.X, point.Y, prefix);
+                    }
+                    break;
+                case RouteGraphOverrideOperationType.MoveNode:
+                    if (string.IsNullOrWhiteSpace(operation.NodeId))
+                    {
+                        throw new InvalidOperationException($"{prefix}: node id is required");
+                    }
+                    if ((operation.X.HasValue && !double.IsFinite(operation.X.Value)) ||
+                        (operation.Y.HasValue && !double.IsFinite(operation.Y.Value)))
+                    {
+                        throw new InvalidOperationException($"{prefix}: node coordinates must be finite");
+                    }
+                    break;
+                case RouteGraphOverrideOperationType.DisableEdge:
+                case RouteGraphOverrideOperationType.RestoreEdge:
+                case RouteGraphOverrideOperationType.DeleteEdge:
+                case RouteGraphOverrideOperationType.SetEdgeReview:
+                    if (string.IsNullOrWhiteSpace(operation.EdgeId))
+                    {
+                        throw new InvalidOperationException($"{prefix}: edge id is required");
+                    }
+                    break;
+                case RouteGraphOverrideOperationType.DeleteNode:
+                case RouteGraphOverrideOperationType.SetNodeLayer:
+                case RouteGraphOverrideOperationType.SetNodeType:
+                case RouteGraphOverrideOperationType.AssociateTeleport:
+                case RouteGraphOverrideOperationType.RemoveTeleportAssociation:
+                    if (string.IsNullOrWhiteSpace(operation.NodeId))
+                    {
+                        throw new InvalidOperationException($"{prefix}: node id is required");
+                    }
+                    break;
+            }
+        }
+    }
+
+    private static void EnsureFinite(double x, double y, string prefix)
+    {
+        if (!double.IsFinite(x) || !double.IsFinite(y))
+        {
+            throw new InvalidOperationException($"{prefix}: coordinates must be finite");
         }
     }
 
