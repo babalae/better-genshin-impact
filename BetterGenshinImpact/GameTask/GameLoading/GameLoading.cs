@@ -1,6 +1,5 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,9 +35,6 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public bool IsBackgroundRunning => true;
 
-    private readonly GameLoadingAssets _assets;
-    private readonly ElementAssets _elementAssets;
-
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
     private static ILogger<GameLoadingTrigger> _logger = App.GetLogger<GameLoadingTrigger>();
 
@@ -65,9 +61,6 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public GameLoadingTrigger()
     {
-        GameLoadingAssets.DestroyInstance();
-        _assets = GameLoadingAssets.Instance;
-        _elementAssets = ElementAssets.Instance;
     }
 
     public void InnerSetEnabled(bool enabled)
@@ -271,7 +264,7 @@ public class GameLoadingTrigger : ITaskTrigger
                     region.Text.Contains("适龄") || region.Text.Contains("监护")))
             {
                 // 适龄提示窗口自动关闭
-                var agePopup = content.CaptureRectArea.Find(_elementAssets.BtnWhiteConfirm);
+                var agePopup = content.CaptureRectArea.Find(ElementRecognition.Get("BtnWhiteConfirm", content.CaptureRectArea));
                 if (!agePopup.IsEmpty())
                 {
                     agePopup.Click();
@@ -316,7 +309,7 @@ public class GameLoadingTrigger : ITaskTrigger
         // 官服流程：先识别并点击顶号或切号的后一次“进入游戏”弹窗按钮
         if (!IsBili)
         {
-            var extraEnterGameBtn = content.CaptureRectArea.Find(_assets.ChooseEnterGameRo);
+            var extraEnterGameBtn = content.CaptureRectArea.Find(RecognitionAssets.Get("GameLoading", "ChooseEnterGame", content.CaptureRectArea));
             if (!extraEnterGameBtn.IsEmpty())
             {
                 extraEnterGameBtn.Click();
@@ -325,7 +318,7 @@ public class GameLoadingTrigger : ITaskTrigger
         }
 
         // 点击进入游戏按钮
-        var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
+        var ra = content.CaptureRectArea.Find(RecognitionAssets.Get("GameLoading", "EnterGame", content.CaptureRectArea));
 
         if (!ra.IsEmpty())
         {
@@ -380,7 +373,7 @@ public class GameLoadingTrigger : ITaskTrigger
         }
 
         // 原石
-        var ysRa = content.CaptureRectArea.Find(ElementAssets.Instance.PrimogemRo);
+        var ysRa = content.CaptureRectArea.Find(ElementRecognition.Get("Primogem", content.CaptureRectArea));
         if (!ysRa.IsEmpty())
         {
             GameCaptureRegion.GameRegion1080PPosMove(100, 100);

@@ -5,7 +5,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.GameTask.AutoBoss.Assets;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -57,6 +56,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private string PathingAssetFolder => Global.Absolute(@"GameTask\AutoBoss\Assets\Pathing");
 
     private double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+
+    private static RecognitionObject LoadRecognitionObject(string objectName)
+    {
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        return RecognitionAssets.Get("AutoBoss", objectName, captureRect.Width, captureRect.Height);
+    }
 
     private sealed record OriginalResinInfo(int Count, int Limit);
 
@@ -301,7 +306,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         using var capture = CaptureToRectArea();
         using var resinIconSearchRegion = capture.DeriveCrop(ScaleRect(1200, 25, 250, 50));
-        var resinIconRegion = resinIconSearchRegion.Find(AutoBossAssets.Instance.OriginalResinTopIconRo);
+        var resinIconRegion = resinIconSearchRegion.Find(LoadRecognitionObject("OriginalResinTopIcon"));
         if (resinIconRegion.IsEmpty())
         {
             throw new InvalidOperationException("未找到原粹树脂图标");
@@ -512,12 +517,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var options = new List<SupplementalResinOption>();
         if (_taskParam.UseTransientResin)
         {
-            options.Add(new SupplementalResinOption("须臾树脂", AutoBossAssets.Instance.TransientResinInSupplementPaneRo));
+            options.Add(new SupplementalResinOption("须臾树脂", LoadRecognitionObject("TransientResinInSupplementPane")));
         }
 
         if (_taskParam.UseFragileResin)
         {
-            options.Add(new SupplementalResinOption("脆弱树脂", AutoBossAssets.Instance.FragileResinInSupplementPaneRo));
+            options.Add(new SupplementalResinOption("脆弱树脂", LoadRecognitionObject("FragileResinInSupplementPane")));
         }
 
         return options;
@@ -537,7 +542,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             return true;
         }
 
-        var openButtonLocator = page.Locator(AutoBossAssets.Instance.OpenResinSupplementPaneButtonRo)
+        var openButtonLocator = page.Locator(LoadRecognitionObject("OpenResinSupplementPaneButton"))
             .WithRoi(ScaleRect(1200, 25, 250, 50))
             .WithRetryInterval(300);
 
@@ -693,7 +698,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <returns>最终识别到的快捷使用数量。</returns>
     private async Task<int> AdjustQuickUseQuantity(BvPage page, int targetQuantity)
     {
-        var increaseLocator = page.Locator(AutoBossAssets.Instance.IncreaseResinUsageQuantityButtonRo)
+        var increaseLocator = page.Locator(LoadRecognitionObject("IncreaseResinUsageQuantityButton"))
             .WithRoi(ScaleRect(1265, 620, 59, 55))
             .WithRetryInterval(500);
 
@@ -1275,7 +1280,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         while (!ct.IsCancellationRequested)
         {
             ct.ThrowIfCancellationRequested();
-            var boxRegions = page.Locator(AutoBossAssets.Instance.RewardBoxRo).FindAll();
+            var boxRegions = page.Locator(LoadRecognitionObject("RewardBox")).FindAll();
             if (boxRegions.Count < 1)
             {
                 _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", Name);

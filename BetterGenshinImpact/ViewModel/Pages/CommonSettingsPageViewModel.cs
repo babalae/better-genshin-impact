@@ -238,7 +238,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private void InitializeCountries()
     {
-        var countries = MapLazyAssets.Instance.GoddessPositions.Values
+        var countries = MapLazyAssets.Get().GoddessPositions.Values
             .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
             .GroupBy(g => g.Country)
             .Select(grp => grp.Key);
@@ -263,7 +263,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         SelectedArea = string.Empty;
         if (string.IsNullOrEmpty(country)) return;
 
-        var areas = MapLazyAssets.Instance.GoddessPositions.Values
+        var areas = MapLazyAssets.Get().GoddessPositions.Values
             .Where(g => g.Country == country)
             .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
             .GroupBy(g => g.Level1Area)
@@ -282,7 +282,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         if (string.IsNullOrEmpty(country) || string.IsNullOrEmpty(area)) return;
 
-        var goddess = MapLazyAssets.Instance.GoddessPositions.Values
+        var goddess = MapLazyAssets.Get().GoddessPositions.Values
             .FirstOrDefault(g => g.Country == country && g.Level1Area == area);
         if (goddess == null) return;
         _tpConfig.ReviveStatueOfTheSevenCountry = country;

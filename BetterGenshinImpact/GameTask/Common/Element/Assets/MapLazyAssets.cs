@@ -5,18 +5,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
-using BetterGenshinImpact.Model;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
-public class MapLazyAssets : Singleton<MapLazyAssets>
+public sealed class MapLazyAssets
 {
+    private static readonly Lazy<MapLazyAssets> Cache = new(() => new MapLazyAssets(), true);
+    private readonly Dictionary<string, GiTpPosition> _domainPositionMap = new();
+    private readonly Dictionary<string, GiTpPosition> _goddessPositions = new();
+    private readonly List<string> _domainNameList = [];
+    private readonly Dictionary<string, List<GiTpPosition>> _countryToDomains = new();
+
     // 不同场景的传送点信息
-    public readonly Dictionary<string, GiWorldScene> ScenesDic;
+    public IReadOnlyDictionary<string, GiWorldScene> ScenesDic { get; }
 
     // 每个地区点击后处于的中心位置
-    public readonly Dictionary<string, double[]> CountryPositions = new()
+    public IReadOnlyDictionary<string, double[]> CountryPositions { get; } = new Dictionary<string, double[]>
     {
         { "蒙德", [-876, 2278] },
         { "璃月", [270, -666] },
@@ -27,13 +32,13 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
         { "挪德卡莱", [9542.25, 1661.84] },
     };
 
-    public readonly Dictionary<string, GiTpPosition> DomainPositionMap = new();
-    public readonly Dictionary<string, GiTpPosition> GoddessPositions = new();
+    public IReadOnlyDictionary<string, GiTpPosition> DomainPositionMap => _domainPositionMap;
+    public IReadOnlyDictionary<string, GiTpPosition> GoddessPositions => _goddessPositions;
 
-    public readonly List<String> DomainNameList = [];
-    public readonly Dictionary<string, List<GiTpPosition>> CountryToDomains = new();
+    public IReadOnlyList<string> DomainNameList => _domainNameList;
+    public IReadOnlyDictionary<string, List<GiTpPosition>> CountryToDomains => _countryToDomains;
 
-    public MapLazyAssets()
+    private MapLazyAssets()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
         var worldScenes = Newtonsoft.Json.Linq.JObject.Parse(json)["data"]?.ToObject<List<GiWorldScene>>() ?? throw new Exception("tp.json deserialization failed");
@@ -44,24 +49,29 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
         var teyvatTpPositions = ScenesDic[nameof(MapTypes.Teyvat)].Points;
         foreach (var tp in teyvatTpPositions.Where(tp => tp.Type == "BlessDomain" || tp.Type == "ForgeryDomain" || tp.Type == "MasteryDomain"))
         {
-            DomainPositionMap[tp.Name!] = tp;
-            DomainNameList.Add(tp.Name!);
+            _domainPositionMap[tp.Name!] = tp;
+            _domainNameList.Add(tp.Name!);
 
             if (!string.IsNullOrEmpty(tp.Country))
             {
-                if (!CountryToDomains.ContainsKey(tp.Country))
+                if (!_countryToDomains.ContainsKey(tp.Country))
                 {
-                    CountryToDomains[tp.Country] = [];
+                    _countryToDomains[tp.Country] = [];
                 }
 
-                CountryToDomains[tp.Country].Add(tp);
+                _countryToDomains[tp.Country].Add(tp);
             }
         }
 
         foreach (var tp in teyvatTpPositions.Where(tp => (tp.Type == "Goddess")))
         {
-            GoddessPositions[tp.Id] = tp;
+            _goddessPositions[tp.Id] = tp;
         }
+    }
+
+    public static MapLazyAssets Get()
+    {
+        return Cache.Value;
     }
 
     public string? GetCountryByDomain(string domain)

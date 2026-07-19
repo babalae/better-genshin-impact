@@ -32,7 +32,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     public int Priority => 30;
     public bool IsExclusive => false;
 
-    private readonly AutoPickAssets _autoPickAssets;
+    private AutoPickAssets _autoPickAssets = null!;
 
     /// <summary>
     /// 拾取黑名单
@@ -49,15 +49,13 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private HashSet<string> _whiteList = [];
 
-    private RecognitionObject _pickRo;
+    private RecognitionObject _pickRo = null!;
 
     // 外部配置
     private AutoPickExternalConfig? _externalConfig;
 
     public AutoPickTrigger()
     {
-        _autoPickAssets = AutoPickAssets.Instance;
-        _pickRo = _autoPickAssets.PickRo;
     }
 
     public AutoPickTrigger(AutoPickExternalConfig? config) : this()
@@ -176,6 +174,8 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        _autoPickAssets = AutoPickAssets.Get(content.CaptureRectArea, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+        _pickRo = _autoPickAssets.PickRo;
         while (RunnerContext.Instance.AutoPickTriggerStopCount > 0)
         {
             Thread.Sleep(1000);
@@ -209,7 +209,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (forceInteraction)
         {
             LogPick(content, "直接拾取");
-            AutoPickAssets.Instance.PressPickKey();
+            _autoPickAssets.PressPickKey();
             return;
         }
 
@@ -222,7 +222,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         // 存在 L 键位是千星奇遇，无需拾取
-        using var lKeyRa = content.CaptureRectArea.Find(_autoPickAssets.LRo);
+        using var lKeyRa = content.CaptureRectArea.Find(RecognitionAssets.Get("AutoPick", "L", content.CaptureRectArea));
         if (lKeyRa.IsExist())
         {
             return;
@@ -247,8 +247,10 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         else
         {
-            _autoPickAssets.ChatIconRo.RegionOfInterest = CreatePromptIconSearchRect(foundRectArea, content.CaptureRectArea, config, scale);
-            using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+            var iconRoi = CreatePromptIconSearchRect(foundRectArea, content.CaptureRectArea, config, scale);
+            var chatIconRo = RecognitionAssets.Get("AutoSkip", "ChatIcon", content.CaptureRectArea).Clone();
+            chatIconRo.RegionOfInterest = iconRoi;
+            using var chatIconRa = content.CaptureRectArea.Find(chatIconRo);
             speedTimer.Record("识别聊天图标");
             if (!chatIconRa.IsEmpty())
             {
@@ -257,8 +259,9 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
             else
             {
-                _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
-                using var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+                var settingsIconRo = RecognitionAssets.Get("AutoPick", "SettingsIcon", content.CaptureRectArea).Clone();
+                settingsIconRo.RegionOfInterest = iconRoi;
+                using var settingsIconRa = content.CaptureRectArea.Find(settingsIconRo);
                 speedTimer.Record("识别设置图标");
                 if (!settingsIconRa.IsEmpty())
                 {
@@ -278,7 +281,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (!config.WhiteListEnabled && !config.BlackListEnabled && !isExcludeIcon)
         {
             // 没有黑白名单直接拾取
-            AutoPickAssets.Instance.PressPickKey();
+            _autoPickAssets.PressPickKey();
             LogPick(content, "黑名单未启用，直接拾取");
             return;
         }
@@ -330,7 +333,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             speedTimer.Record("白名单判断");
             speedTimer.Record("黑名单判断");
             LogPick(content, pickText);
-            AutoPickAssets.Instance.PressPickKey();
+            _autoPickAssets.PressPickKey();
         }
 
         speedTimer.DebugPrint();

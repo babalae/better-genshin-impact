@@ -36,15 +36,22 @@
         </Grid.ColumnDefinitions>
 
         <!--  左侧任务列表  -->
-       <DockPanel Grid.Column="0">
+       <DockPanel Grid.Column="0"
+                  ContextMenuOpening="DockPanel_ContextMenuOpening">
            <DockPanel.ContextMenu>
                <ContextMenu>
                    <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                              CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                             Header="删除配置" />
-           </ContextMenu>
-       </DockPanel.ContextMenu>
+                             Header="删除" />
+                   <Separator />
+                   <MenuItem Command="{Binding NextTaskGroupCommand}"
+                             CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                             Header="从此执行" />
+                   <MenuItem Command="{Binding ClearNextTaskGroupCommand}"
+                             Header="清除标记" />
+               </ContextMenu>
+           </DockPanel.ContextMenu>
        <Grid DockPanel.Dock="Top"
         Margin="0,0,0,10">
         <Grid.ColumnDefinitions>
@@ -165,7 +172,18 @@
                                             <TextBlock Grid.Column="2"
                                                        VerticalAlignment="Center"
                                                        IsHitTestVisible="False"
-                                                       Text="{Binding Name}" Width="100"/>
+                                                       Text="{Binding Name}" Width="100">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsNextTask}" Value="True">
+                                                                <Setter Property="Foreground" Value="DodgerBlue" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                             
                                             
                                             <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />

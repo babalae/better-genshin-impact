@@ -1,5 +1,6 @@
 using BetterGenshinImpact.View.Windows;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -102,12 +103,24 @@ public class SystemControl
 
     public static nint FindHandleByProcessName(params string[] names)
     {
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
         foreach (var name in names)
         {
-            var pros = Process.GetProcessesByName(name);
-            if (pros.Length is not 0)
+            foreach (var p in Process.GetProcessesByName(name))
             {
-                return pros[0].MainWindowHandle;
+                try
+                {
+                    if (p.SessionId == currentSessionId)
+                        return p.MainWindowHandle;
+                }
+                catch (InvalidOperationException)
+                {
+                    // 进程已退出，跳过
+                }
+                finally
+                {
+                    p.Dispose();
+                }
             }
         }
 
@@ -324,16 +337,31 @@ public class SystemControl
     {
         try
         {
+            var currentSessionId = Process.GetCurrentProcess().SessionId;
             var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
-            var processes = processNames
-                .SelectMany(Process.GetProcessesByName)
-                .GroupBy(p => p.Id)
-                .Select(g => g.First())
-                .ToArray();
-
-            if (processes.Length > 0)
+            var processes = new List<Process>();
+            foreach (var name in processNames)
             {
-                foreach (var process in processes)
+                foreach (var p in Process.GetProcessesByName(name))
+                {
+                    try
+                    {
+                        if (p.SessionId == currentSessionId)
+                            processes.Add(p);
+                        else
+                            p.Dispose();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        p.Dispose();
+                    }
+                }
+            }
+            var targets = processes.GroupBy(p => p.Id).Select(g => g.First()).ToArray();
+
+            if (targets.Length > 0)
+            {
+                foreach (var process in targets)
                 {
                     try
                     {

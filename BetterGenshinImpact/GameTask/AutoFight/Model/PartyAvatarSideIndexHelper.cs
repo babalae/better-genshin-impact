@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Common;
@@ -33,7 +34,7 @@ public class PartyAvatarSideIndexHelper
     {
         if (autoFightAssets == null)
         {
-            autoFightAssets = AutoFightAssets.Instance;
+            autoFightAssets = AutoFightAssets.Get(imageRegion);
         }
 
         if (logger == null)
@@ -43,7 +44,7 @@ public class PartyAvatarSideIndexHelper
 
         var status = new MultiGameStatus();
         // 判断当前联机人数
-        var pRaList = imageRegion.FindMulti(autoFightAssets.PRa);
+        var pRaList = imageRegion.FindMulti(RecognitionAssets.Get("AutoFight", "P", imageRegion));
         if (pRaList.Count > 0)
         {
             status.IsInMultiGame = true;
@@ -56,7 +57,7 @@ public class PartyAvatarSideIndexHelper
             status.PlayerCount = num;
 
             // 联机状态下判断
-            var onePRa = imageRegion.Find(autoFightAssets.OnePRa);
+            var onePRa = imageRegion.Find(RecognitionAssets.Get("AutoFight", "OneP", imageRegion));
             if (onePRa.IsExist())
             {
                 logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
@@ -70,7 +71,7 @@ public class PartyAvatarSideIndexHelper
         else
         {
             // 没有其他联机玩家的情况下，也有可能是单人房主
-            var onePRa = imageRegion.Find(autoFightAssets.OnePRa);
+            var onePRa = imageRegion.Find(RecognitionAssets.Get("AutoFight", "OneP", imageRegion));
             if (onePRa.IsExist())
             {
                 logger.LogInformation("当前处于联机状态，但是没有其他玩家连入");
@@ -106,12 +107,12 @@ public class PartyAvatarSideIndexHelper
         return new Rect(currRect.X + (int)(126 * s), currRect.Y - (int)(194 * s), (int)(16 * s), (int)(17 * s));
     }
 
-    public static (List<Rect>, List<Rect>) GetAllIndexRects(ImageRegion imageRegion, MultiGameStatus multiGameStatus, ILogger logger, ElementAssets elementAssets, ISystemInfo systemInfo)
+    public static (List<Rect>, List<Rect>) GetAllIndexRects(ImageRegion imageRegion, MultiGameStatus multiGameStatus, ILogger logger, ISystemInfo systemInfo)
     {
         try
         {
             // 新的动态获取角色编号位置逻辑
-            return GetAllIndexRectsNew(imageRegion, multiGameStatus, logger, elementAssets, systemInfo);
+            return GetAllIndexRectsNew(imageRegion, multiGameStatus, logger, systemInfo);
         }
         catch (Exception ex)
         {
@@ -125,18 +126,19 @@ public class PartyAvatarSideIndexHelper
 
     private static (List<Rect>, List<Rect>) GetAllIndexRectsOld(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
     {
+        var autoFightAssets = AutoFightAssets.Get(imageRegion);
         List<Rect> avatarSideIconRectList;
         List<Rect> avatarIndexRectList;
         if (multiGameStatus.IsInMultiGame)
         {
             var p = multiGameStatus.IsHost ? "1p" : "p";
-            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
-            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
+            avatarSideIconRectList = new List<Rect>(autoFightAssets.AvatarSideIconRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
+            avatarIndexRectList = new List<Rect>(autoFightAssets.AvatarIndexRectListMap[$"{p}_{multiGameStatus.PlayerCount}"]);
         }
         else
         {
-            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectList);
-            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectList);
+            avatarSideIconRectList = new List<Rect>(autoFightAssets.AvatarSideIconRectList);
+            avatarIndexRectList = new List<Rect>(autoFightAssets.AvatarIndexRectList);
         }
 
         // 6.0 版本 队伍下的 草露 进度条 导致位置偏移
@@ -146,26 +148,26 @@ public class PartyAvatarSideIndexHelper
 
     public static bool HasAnyIndexRect(ImageRegion imageRegion)
     {
-        return ElementAssets.Instance.IndexList.Select(indexRo => imageRegion.Find(indexRo)).Any(indexRes => indexRes.IsExist());
+        return ElementRecognition.GetIndexList(imageRegion).Select(indexRo => imageRegion.Find(indexRo)).Any(indexRes => indexRes.IsExist());
     }
 
     public static int CountIndexRect(ImageRegion imageRegion)
     {
-        return ElementAssets.Instance.IndexList.Select(indexRo => imageRegion.Find(indexRo)).Count(indexRes => indexRes.IsExist());
+        return ElementRecognition.GetIndexList(imageRegion).Select(indexRo => imageRegion.Find(indexRo)).Count(indexRes => indexRes.IsExist());
     }
 
     public static bool HasActiveAvatarArrow(ImageRegion imageRegion)
     {
-        return imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold).IsExist();
+        return imageRegion.Find(ElementRecognition.Get("CurrentAvatarThreshold", imageRegion)).IsExist();
     }
 
-    public static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus, ILogger logger, ElementAssets elementAssets, ISystemInfo systemInfo)
+    public static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus, ILogger logger, ISystemInfo systemInfo)
     {
         // 找到编号块
-        var i1 = imageRegion.Find(elementAssets.Index1);
-        var i2 = imageRegion.Find(elementAssets.Index2);
-        var i3 = imageRegion.Find(elementAssets.Index3);
-        var i4 = imageRegion.Find(elementAssets.Index4);
+        var i1 = imageRegion.Find(ElementRecognition.Get("Index1", imageRegion));
+        var i2 = imageRegion.Find(ElementRecognition.Get("Index2", imageRegion));
+        var i3 = imageRegion.Find(ElementRecognition.Get("Index3", imageRegion));
+        var i4 = imageRegion.Find(ElementRecognition.Get("Index4", imageRegion));
         List<Rect> indexRectList = [i1.ToRect(), i2.ToRect(), i3.ToRect(), i4.ToRect()];
         int existNum = indexRectList.Count(indexRect => indexRect != default);
         if (existNum == multiGameStatus.MaxControlAvatarCount)
@@ -178,7 +180,7 @@ public class PartyAvatarSideIndexHelper
         {
             // 为什么这里要用箭头确认一遍？因为出战角色编号框的识别率不是100%，需要用箭头来辅助确认。这也是为了保证非满队情况下的队伍识别率
             // 非出战角色编号框识别率100%
-            var curr = imageRegion.Find(elementAssets.CurrentAvatarThreshold); // 当前出战角色标识
+            var curr = imageRegion.Find(ElementRecognition.Get("CurrentAvatarThreshold", imageRegion)); // 当前出战角色标识
             if (curr.IsExist())
             {
                 var (knownIndex, knownRect) = GetKnownIndexAndRect(indexRectList);
@@ -452,7 +454,7 @@ public class PartyAvatarSideIndexHelper
             return 1;
         }
 
-        var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold); // 当前出战角色标识
+        var curr = imageRegion.Find(ElementRecognition.Get("CurrentAvatarThreshold", imageRegion)); // 当前出战角色标识
         if (curr.IsEmpty())
         {
             return -1;

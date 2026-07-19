@@ -1,0 +1,493 @@
+{
+  "version": 1,
+  "regions": {
+    "dialogBottomLeftHalf": "rect(0, ch / 2, cw / 2, ch - ch / 2)",
+    "topLeftQuarter": "rect(0, 0, cw / 4, ch / 4)",
+    "inventoryTopRight": "rect(cw * 3 / 4, 0, cw / 4, 100 * s)",
+    "blueTrack": "rect(300 * s, 0, cw - 600 * s, ch)",
+    "uiLeftTopCook": "rect(0, 0, 150 * s, 120 * s)",
+    "keyTip": "rect(cw - 350 * s, ch - 70 * s, 200 * s, 70 * s)",
+    "friendChat": "rect(0, ch - 70 * s, 83 * s, 70 * s)",
+    "partyChooseView": "rect(0, ch - 120 * s, cw / 7, 120 * s)",
+    "partyDelete": "rect(cw / 4, ch - 120 * s, cw / 2, 120 * s)",
+    "rightBottomHalf": "rect(cw / 2, ch / 2, cw / 2, ch / 2)",
+    "bagTop": "cutTop(0.1)",
+    "artifactSalvageBottom": "cutBottom(0.1)",
+    "artifactSalvageConfirm": "cutRightBottom(0.3, 0.1)",
+    "encounterReward": "cutRightBottom(0.3, 0.5)",
+    "primogem": "rect(0, ch / 3, cw, ch / 3)",
+    "mailReward": "cutLeftBottom(0.1, 0.5)",
+    "collect": "rect(0, ch - ch / 3, cw / 4, ch / 3)",
+    "pageCloseWhite": "rect(cw - cw / 8, 0, cw / 8, ch / 8)",
+    "full": "rect(0, 0, cw, ch)",
+    "teleportHome": "rect(cw / 2, ch / 2, cw / 2, ch / 2)",
+    "potLove": "rect(cw - cw / 8, ch / 2, cw / 8, ch / 4)",
+    "potMoney": "rect(cw / 2, ch - ch / 4, cw / 4, ch / 4)",
+    "leftWide": "rect(0, 0, cw * 7 / 10, ch)",
+    "potPageClose": "rect(cw / 2, ch / 5, cw / 4, ch / 8)",
+    "finger": "rect(cw - 600 * s, 0, 80 * s, 80 * s)",
+    "leyline": "rect(0, 0, 200 * s, 200 * s)",
+    "partyRect": "rect(cw - 65 * s, 155 * s, 35 * s, 600 * s)",
+    "currentAvatarThreshold": "rect(cw - 240 * s, 155 * s, 210 * s, 600 * s)",
+    "btnWhiteRecover": "rect(580 * s, 950 * s, 90 * s, 95 * s)",
+    "craftCondensedResin": "rect(cw / 2, 0, cw / 2, ch / 3 * 2)",
+    "fragileResinCount": "rect(cw / 2, ch * 3 / 4, cw / 3, ch / 6)",
+    "condensedResinCount": "rect(cw / 2, 0, cw / 4, ch / 15)"
+  },
+  "objects": {
+    "PromptDialogLeftBottomStar": {
+      "type": "TemplateMatch",
+      "template": "prompt_dialog_left_bottom_star.png",
+      "roi": "@dialogBottomLeftHalf",
+      "threshold": 0.8
+    },
+    "BtnWhiteConfirm": {
+      "type": "TemplateMatch",
+      "template": "btn_white_confirm.png",
+      "use3Channels": true
+    },
+    "BtnWhiteCancel": {
+      "type": "TemplateMatch",
+      "template": "btn_white_cancel.png",
+      "use3Channels": true
+    },
+    "BtnWhiteRecover": {
+      "type": "TemplateMatch",
+      "template": "btn_white_recover.png",
+      "use3Channels": true,
+      "roi": "@btnWhiteRecover"
+    },
+    "BtnBlackConfirm": {
+      "type": "TemplateMatch",
+      "template": "btn_black_confirm.png",
+      "use3Channels": true
+    },
+    "BtnBlackCancel": {
+      "type": "TemplateMatch",
+      "template": "btn_black_cancel.png",
+      "use3Channels": true
+    },
+    "BtnBackTeyvat": {
+      "type": "TemplateMatch",
+      "template": "btn_back_teyvat.png"
+    },
+    "BtnOnlineYes": {
+      "type": "TemplateMatch",
+      "template": "btn_online_yes.png",
+      "use3Channels": true
+    },
+    "BtnOnlineNo": {
+      "type": "TemplateMatch",
+      "template": "btn_online_no.png",
+      "use3Channels": true
+    },
+    "BtnExitDoor": {
+      "type": "TemplateMatch",
+      "template": "btn_exit_door.png",
+      "draw": false
+    },
+    "InDomain": {
+      "type": "TemplateMatch",
+      "template": "in_domain.png",
+      "roi": "@topLeftQuarter",
+      "draw": false
+    },
+    "PaimonMenu": {
+      "type": "TemplateMatch",
+      "template": "paimon_menu.png",
+      "roi": "@topLeftQuarter",
+      "draw": false
+    },
+    "Inventory": {
+      "type": "TemplateMatch",
+      "template": "inventory.png",
+      "roi": "@inventoryTopRight",
+      "draw": false
+    },
+    "BlueTrackPoint": {
+      "type": "TemplateMatch",
+      "template": "blue_track_point_28x.png",
+      "roi": "@blueTrack",
+      "threshold": 0.6,
+      "draw": true
+    },
+    "UiLeftTopCookIcon": {
+      "type": "TemplateMatch",
+      "template": "ui_left_top_cook_icon.png",
+      "roi": "@uiLeftTopCook",
+      "draw": false
+    },
+    "SpaceKey": {
+      "type": "TemplateMatch",
+      "template": "key_space.png",
+      "roi": "@keyTip",
+      "draw": false
+    },
+    "XKey": {
+      "type": "TemplateMatch",
+      "template": "key_x.png",
+      "roi": "@keyTip",
+      "draw": false
+    },
+    "FriendChat": {
+      "type": "TemplateMatch",
+      "template": "friend_chat.png",
+      "roi": "@friendChat",
+      "draw": false
+    },
+    "PartyBtnChooseView": {
+      "type": "TemplateMatch",
+      "template": "party_btn_choose_view.png",
+      "roi": "@partyChooseView",
+      "draw": false
+    },
+    "PartyBtnDelete": {
+      "type": "TemplateMatch",
+      "template": "party_btn_delete.png",
+      "roi": "@partyDelete",
+      "draw": false
+    },
+    "CraftCondensedResin": {
+      "type": "TemplateMatch",
+      "template": "craft_condensed_resin.png",
+      "roi": "@craftCondensedResin",
+      "draw": false
+    },
+    "fragileResinCount": {
+      "type": "TemplateMatch",
+      "template": "fragile_resin_count.png",
+      "roi": "@fragileResinCount",
+      "draw": true
+    },
+    "CondensedResinCount": {
+      "type": "TemplateMatch",
+      "template": "condensed_resin_count.png",
+      "roi": "@condensedResinCount",
+      "draw": true
+    },
+    "Keyreduce": {
+      "type": "TemplateMatch",
+      "template": "key_reduce.png",
+      "roi": "@rightBottomHalf",
+      "draw": false
+    },
+    "Keyincrease": {
+      "type": "TemplateMatch",
+      "template": "key_increase.png",
+      "roi": "@rightBottomHalf",
+      "draw": false
+    },
+    "BagWeaponUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_weapon_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagWeaponChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_weapon_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagArtifactUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_artifact_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagArtifactChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_artifact_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagCharacterDevelopmentItemUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_characterdevelopmentitem_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagCharacterDevelopmentItemChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_characterdevelopmentitem_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagFoodUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_food_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagFoodChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_food_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagMaterialUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_material_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagMaterialChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_material_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagGadgetUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_gadget_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagGadgetChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_gadget_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagQuestUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_quest_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagQuestChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_quest_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagPreciousItemUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_preciousitem_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagPreciousItemChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_preciousitem_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BagFurnishingUnchecked": {
+      "type": "TemplateMatch",
+      "template": "bag_furnishing_unchecked.png",
+      "roi": "@bagTop",
+      "threshold": 0.87,
+      "draw": false
+    },
+    "BagFurnishingChecked": {
+      "type": "TemplateMatch",
+      "template": "bag_furnishing_checked.png",
+      "roi": "@bagTop",
+      "threshold": 0.8,
+      "draw": false
+    },
+    "BtnArtifactSalvage": {
+      "type": "TemplateMatch",
+      "template": "btn_artifact_salvage.png",
+      "roi": "@artifactSalvageBottom",
+      "draw": false
+    },
+    "BtnArtifactSalvageConfirm": {
+      "type": "TemplateMatch",
+      "template": "btn_artifact_salvage_confirm.png",
+      "roi": "@artifactSalvageConfirm",
+      "draw": false
+    },
+    "BtnClaimEncounterPointsRewards": {
+      "type": "TemplateMatch",
+      "template": "btn_claim_encounter_points_rewards.png",
+      "roi": "@encounterReward",
+      "draw": false
+    },
+    "Primogem": {
+      "type": "TemplateMatch",
+      "template": "primogem.png",
+      "roi": "@primogem",
+      "draw": false
+    },
+    "EscMailReward": {
+      "type": "TemplateMatch",
+      "template": "esc_mail_reward.png",
+      "roi": "@mailReward"
+    },
+    "Collect": {
+      "type": "TemplateMatch",
+      "template": "collect.png",
+      "roi": "@collect",
+      "draw": false
+    },
+    "PageCloseWhite": {
+      "type": "TemplateMatch",
+      "template": "page_close_white.png",
+      "roi": "@pageCloseWhite",
+      "draw": true
+    },
+    "SereniteaPotHome": {
+      "type": "TemplateMatch",
+      "template": "sereniteapot_home.png",
+      "roi": "@full",
+      "draw": false
+    },
+    "TeleportSereniteaPotHome": {
+      "type": "TemplateMatch",
+      "template": "sereniteapot_home.png",
+      "roi": "@teleportHome",
+      "draw": false
+    },
+    "AYuanIcon": {
+      "type": "TemplateMatch",
+      "template": "ayuan.png",
+      "roi": "@full",
+      "draw": false
+    },
+    "SereniteaPotLove": {
+      "type": "TemplateMatch",
+      "template": "sereniteapot_love.png",
+      "roi": "@potLove",
+      "draw": false
+    },
+    "SereniteaPotMoney": {
+      "type": "TemplateMatch",
+      "template": "sereniteapot_money.png",
+      "roi": "@potMoney",
+      "draw": false
+    },
+    "AYuanExpBottleBig": {
+      "type": "TemplateMatch",
+      "template": "exp_bottle_big.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "AYuanExpBottleSmall": {
+      "type": "TemplateMatch",
+      "template": "exp_bottle_small.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "SereniteapotPageClose": {
+      "type": "TemplateMatch",
+      "template": "sereniteapot_page_close.png",
+      "roi": "@potPageClose",
+      "draw": false
+    },
+    "SereniteapotShopNumberBtn": {
+      "type": "TemplateMatch",
+      "template": "sereniteapot_shop_number_btn.png",
+      "roi": "@rightBottomHalf",
+      "draw": false
+    },
+    "SereniteapotExpBook": {
+      "type": "TemplateMatch",
+      "template": "exp_book.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "SereniteapotExpBookSmall": {
+      "type": "TemplateMatch",
+      "template": "exp_book_small.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "AYuanCloth": {
+      "type": "TemplateMatch",
+      "template": "ayuan_cloth.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "AYuanresin": {
+      "type": "TemplateMatch",
+      "template": "ayuan_resin.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "AYuanMagicmineralprecision": {
+      "type": "TemplateMatch",
+      "template": "ayuan_magicmineralprecision.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "AYuanMOla": {
+      "type": "TemplateMatch",
+      "template": "ayuan_mola.png",
+      "roi": "@leftWide",
+      "draw": false
+    },
+    "FingerIcon": {
+      "type": "TemplateMatch",
+      "template": "finger.png",
+      "roi": "@finger",
+      "draw": false
+    },
+    "LeylineDisorderIcon": {
+      "type": "TemplateMatch",
+      "template": "leyline_disorder_icon.png",
+      "roi": "@leyline",
+      "draw": false
+    },
+    "EscDown": {
+      "type": "TemplateMatch",
+      "template": "esc_down.png"
+    },
+    "EscWonderlandHome": {
+      "type": "TemplateMatch",
+      "template": "esc_wonderland_home.png"
+    },
+    "WonderlandEnter": {
+      "type": "TemplateMatch",
+      "template": "wonderland_enter.png"
+    },
+    "WonderlandClose": {
+      "type": "TemplateMatch",
+      "template": "wonderland_close.png"
+    },
+    "Index1": {
+      "type": "TemplateMatch",
+      "template": "index_1.png",
+      "roi": "@partyRect"
+    },
+    "Index2": {
+      "type": "TemplateMatch",
+      "template": "index_2.png",
+      "roi": "@partyRect"
+    },
+    "Index3": {
+      "type": "TemplateMatch",
+      "template": "index_3.png",
+      "roi": "@partyRect"
+    },
+    "Index4": {
+      "type": "TemplateMatch",
+      "template": "index_4.png",
+      "roi": "@partyRect"
+    },
+    "CurrentAvatarThreshold": {
+      "type": "TemplateMatch",
+      "template": "current_avatar_threshold.png",
+      "roi": "@currentAvatarThreshold",
+      "useBinaryMatch": true,
+      "binaryThreshold": 200
+    }
+  }
+}

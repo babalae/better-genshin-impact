@@ -23,12 +23,16 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     private static readonly HttpClient _http = new();
     private MemoryStream? _imageStream;
 
+    public event EventHandler<MaskMapPoint?>? ToggleHiddenRequested;
+
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isTextLoading;
     [ObservableProperty] private string _textError = string.Empty;
     [ObservableProperty] private Rect _placementRect = Rect.Empty;
     [ObservableProperty] private string _title = string.Empty;
+    [ObservableProperty] private MaskMapPoint? _currentPoint;
+    [ObservableProperty] private bool _isCurrentPointHidden;
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private IReadOnlyList<MaskMapLink> _urlList = Array.Empty<MaskMapLink>();
     [ObservableProperty] private bool _hasUrlList;
@@ -45,7 +49,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         HasUrlList = value is { Count: > 0 };
     }
 
-    public async Task ShowAsync(MaskMapPoint point, Point anchorPosition, string title, CancellationToken externalCt = default)
+    public async Task ShowAsync(MaskMapPoint point, Point anchorPosition, string title, bool isHidden, CancellationToken externalCt = default)
     {
         _cts?.Cancel();
         _cts?.Dispose();
@@ -59,6 +63,8 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             MaskMapPointStatic.Height);
 
         Title = title ?? string.Empty;
+        CurrentPoint = point;
+        SetHiddenState(isHidden);
         Text = string.Empty;
         UrlList = point.VideoUrls;
         TextError = string.Empty;
@@ -151,6 +157,11 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             IsImageLoading = false;
             IsLoading = false;
         }
+    }
+
+    public void SetHiddenState(bool isHidden)
+    {
+        IsCurrentPointHidden = isHidden;
     }
 
     private void DisposeImageStream()
@@ -262,6 +273,12 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleHidden()
+    {
+        ToggleHiddenRequested?.Invoke(this, CurrentPoint);
+    }
+
+    [RelayCommand]
     public void Close()
     {
         _cts?.Cancel();
@@ -269,6 +286,8 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         _cts = null;
         IsOpen = false;
         IsLoading = false;
+        CurrentPoint = null;
+        SetHiddenState(false);
         IsTextLoading = false;
         TextError = string.Empty;
         Text = string.Empty;

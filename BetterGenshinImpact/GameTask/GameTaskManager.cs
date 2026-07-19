@@ -1,20 +1,14 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
-using BetterGenshinImpact.GameTask.AutoBoss.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.GameTask.AutoWood.Assets;
-using BetterGenshinImpact.GameTask.AutoEat.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
-using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Placeholder;
-using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
@@ -22,10 +16,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
+using System;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -135,20 +129,7 @@ internal class GameTaskManager
 
     public static void ReloadAssets()
     {
-        AutoPickAssets.DestroyInstance();
-        AutoSkipAssets.DestroyInstance();
-        AutoFishingAssets.DestroyInstance();
-        QuickTeleportAssets.DestroyInstance();
-        AutoWoodAssets.DestroyInstance();
-        AutoGeniusInvokationAssets.DestroyInstance();
-        AutoFightAssets.DestroyInstance();
-        ElementAssets.DestroyInstance();
-        QuickSereniteaPotAssets.DestroyInstance();
-        GameLoadingAssets.DestroyInstance();
-        MapLazyAssets.DestroyInstance();
-        AutoEatAssets.DestroyInstance();
-        AutoDomainAssets.DestroyInstance();
-        AutoBossAssets.DestroyInstance();
+        // RecognitionAssets.ClearAll();
     }
 
     /// <summary>
@@ -193,6 +174,46 @@ internal class GameTaskManager
         if (systemInfo.GameScreenSize.Width != 1920)
         {
             mat = ResizeHelper.Resize(mat, systemInfo.AssetScale);
+        }
+
+        return mat;
+    }
+
+    /// <summary>
+    /// 根据捕获区域宽高加载素材图片并缩放
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="FileNotFoundException"></exception>
+    public static Mat LoadAssetImage(string featName, string assertName, int captureWidth, int captureHeight, ImreadModes flags = ImreadModes.Color)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(captureWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(captureHeight);
+
+        var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{captureWidth}x{captureHeight}");
+        if (!Directory.Exists(assetsFolder))
+        {
+            assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
+        }
+
+        if (!Directory.Exists(assetsFolder))
+        {
+            throw new FileNotFoundException($"未找到{featName}的素材文件夹");
+        }
+
+        var filePath = Path.Combine(assetsFolder, assertName);
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
+        }
+
+        using var stream = File.OpenRead(filePath);
+        var mat = Mat.FromStream(stream, flags);
+        if (captureWidth < 1920)
+        {
+            using (mat)
+            {
+                return ResizeHelper.Resize(mat, captureWidth / 1920d);
+            }
         }
 
         return mat;

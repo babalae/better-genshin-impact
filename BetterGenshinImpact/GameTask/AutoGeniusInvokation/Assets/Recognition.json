@@ -1,0 +1,62 @@
+{
+  "objects": {
+    "ConfirmButton": {
+      "type": "TemplateMatch",
+      "template": "other\\确定.png",
+      "draw": false
+    },
+    "RoundEndButton": {
+      "type": "TemplateMatch",
+      "template": "other\\回合结束.png",
+      "roi": "rect(0, 0, cw / 5, ch)",
+      "draw": true
+    },
+    "ElementalTuningConfirmButton": {
+      "type": "TemplateMatch",
+      "template": "other\\元素调和.png",
+      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "threshold": 0.9,
+      "draw": false
+    },
+    "ExitDuelButton": {
+      "type": "TemplateMatch",
+      "template": "other\\退出挑战.png",
+      "roi": "rect(0, ch / 2, cw / 2, ch - ch / 2)",
+      "draw": true
+    },
+    "InOpponentAction": {
+      "type": "TemplateMatch",
+      "template": "other\\对方行动中.png",
+      "roi": "rect(0, 0, cw / 5, ch)",
+      "draw": true
+    },
+    "EndPhase": {
+      "type": "TemplateMatch",
+      "template": "other\\回合结算阶段.png",
+      "roi": "rect(0, 0, cw / 5, ch)",
+      "draw": true
+    },
+    "ElementalDiceLackWarning": {
+      "type": "TemplateMatch",
+      "template": "other\\元素骰子不足.png",
+      "roi": "rect(cw - cw / 2, 0, cw / 2, ch)",
+      "draw": true
+    },
+    "CharacterTakenOut": {
+      "type": "TemplateMatch",
+      "template": "other\\角色死亡.png",
+      "draw": true
+    },
+    "InCharacterPick": {
+      "type": "TemplateMatch",
+      "template": "other\\出战角色.png",
+      "roi": "rect(cw / 2, ch / 2, cw - cw / 2, ch - ch / 2)",
+      "draw": true
+    },
+    "CharacterHpUpper": {
+      "type": "TemplateMatch",
+      "template": "other\\角色血量上方.png",
+      "draw": true
+    }
+  }
+}

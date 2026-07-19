@@ -1,8 +1,8 @@
 using BehaviourTree;
 using BehaviourTree.FluentBuilder;
 using BehaviourTree.Composites;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -53,7 +53,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
             IOcrService ocrService = OcrFactory.Paddle;
 
-            this.blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
+            this.blackboard = new Blackboard(_predictor, this.Sleep);
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
@@ -319,7 +319,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             var prevIsExclusive = IsExclusive;
-            IsExclusive = !imageRegion.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty();
+            IsExclusive = !imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion)).IsEmpty();
             if (IsExclusive)
             {
                 if (IsEnabled && !prevIsExclusive)

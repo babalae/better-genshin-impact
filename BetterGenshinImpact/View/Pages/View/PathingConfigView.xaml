@@ -265,7 +265,7 @@
                 </ui:CardControl>
                 
                 
-                <ui:CardControl Margin="0,0,0,12" >
+                <ui:CardControl Margin="0,0,0,6">
                     <ui:CardControl.Icon>
                         <ui:FontIcon Glyph="&#xe3b2;" Style="{StaticResource FaFontIconStyle}" />
                     </ui:CardControl.Icon>
@@ -278,19 +278,23 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="只在传送点时恢复"
+                                          Text="低血量回复时机"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="只有路径在传送点时，才会去七天神像恢复"
+                                          Text="选择低血量时的回复策略：任何路径点/只在传送点/不回复"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
 
-                    <ui:ToggleSwitch
+                    <ComboBox
+                        MinWidth="100"
                         Margin="0,0,36,0"
-                        IsChecked="{Binding Config.PathingConditionConfig.OnlyInTeleportRecover, Mode=TwoWay}" />
+                        SelectedValuePath="Key"
+                        DisplayMemberPath="Value"
+                        ItemsSource="{Binding RecoverTimingSource}"
+                        SelectedValue="{Binding Config.PathingConditionConfig.RecoverTiming}" />
                 </ui:CardControl>
             </StackPanel>
         </ScrollViewer>

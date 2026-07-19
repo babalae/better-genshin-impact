@@ -274,8 +274,7 @@ BetterGenshinImpact/
 │   │   └── TpTask.cs:这段代码是一个用于《原神》游戏的辅助脚本，其主要功能是通过分析游戏界面和地图信息，实现自动定位和传送至游戏中的特定地点，例如须弥七天神像。总结来说，这份代码的功能是“实现《原神》游戏中的自动传送功能”。
 │   ├── AutoWood/
 │   │   ├── Assets/
-│   │   │   ├── 1920x1080/
-│   │   │   └── AutoWoodAssets.cs:这段代码定义了一个C#类`AutoWoodAssets`，它是`BaseAssets`类的派生类，用于在游戏《原神》中自动采集木材的任务中管理识别对象和资源。具体来说，它初始化了多个识别对象，如“王树瑞佑”、“菜单背包”、“确认”和“进入游戏”等，并设置了它们的识别类型、模板图像和感兴趣区域。总结：该代码的功能是初始化用于自动采集《原神》游戏中木材的识别资源。
+│   │   │   └── 1920x1080/
 │   │   ├── AutoWoodConfig.cs:这段代码定义了一个名为`AutoWoodConfig`的C#类，它使用CommunityToolkit的MVVM（Model-View-ViewModel）库来创建一个可观察的对象。这个类用于配置一个自动伐木任务，其中包含几个属性来控制伐木过程中的不同设置，如使用小道具后的额外延迟和木材数量OCR（光学字符识别）是否启用。以下是代码的详细功能：-`AutoWoodConfig`类继承自`ObservableObject`，这意味着它的属性变化可以通知视图层。-`afterZSleepDelay`属性表示使用小道具后的额外延迟时间，单位为毫秒。-`woodCountOcrEnabled`属性是一个布尔值，用于启用或禁用木材数量的OCR识别。-类中还包含一个注释掉的`pressTwoEscEnabled`属性，它原本用于控制是否启用按下两次ESC键的功能，但已被注释掉。总结：这份代码的功能是定义一个用于配置自动伐木任务的配置类。
 │   │   ├── AutoWoodTask.cs:这段C#代码实现了一个名为“自动伐木”的任务，它通过OCR技术识别游戏中的木材统计数据，并在达到预设的伐木次数或木材数量上限时自动停止伐木操作。
 │   │   ├── Utils/
@@ -343,6 +342,8 @@ BetterGenshinImpact/
 │   │   ├── QuickEnhanceArtifactMacro.cs:这段C#代码的功能是创建一个宏命令，用于自动执行在《原神》游戏中一键强化圣遗物的操作。
 │   │   └── TurnAroundMacro.cs:这段代码的功能是创建一个宏任务，用于在游戏中模拟鼠标移动，实现绕圈移动的功能。
 │   ├── Model/
+│   │   ├── Assets/
+│   │   │   └── AssetsCache.cs:统一管理基于捕获区域宽高及其他复合键的线程安全素材缓存，并集中提供宽高校验、缩放比例和初始化失败重试能力。
 │   │   ├── Area/
 │   │   │   ├── Converter/
 │   │   │   │   ├── ConvertRes.cs:这段代码定义了一个泛型类`ConvertRes<T>`，用于将一个区域（Region）的坐标和尺寸转换为另一个特定类型T的区域。它包含一个方法`ToRect`用于将坐标和尺寸转换为OpenCvSharp库中的`Rect`对象，以及一个静态方法`ConvertPositionToTargetRegion`用于根据起始节点和转换器链找到目标区域，并返回一个新的`ConvertRes<T>`对象。总结：该代码的功能是提供一种将区域坐标和尺寸转换为特定类型区域的方法。

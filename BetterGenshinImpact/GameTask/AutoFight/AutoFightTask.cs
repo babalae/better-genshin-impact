@@ -324,7 +324,8 @@ public class AutoFightTask : ISoloTask
         ExperienceDetector? expDetector = null;
         if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
         {
-            var expRos = AutoFightAssets.Instance.ExperienceRecognitionObjects;
+            using var gameCaptureRegion = CaptureToRectArea();
+            var expRos = AutoFightAssets.Get(gameCaptureRegion).ExperienceRecognitionObjects;
             expDetector = new ExperienceDetector(expRos, cts2.Token);
             expDetector.Start();
         }
@@ -587,7 +588,7 @@ public class AutoFightTask : ISoloTask
                     // 经验值检测未通过，跳过拾取（但仍执行扫描拾取逻辑）
                     if (_taskParam is { PickDropsAfterFightEnabled: true })
                     {
-                        await new ScanPickTask().Start(ct);
+                        await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
                     }
                     return;
                 }
@@ -629,7 +630,7 @@ public class AutoFightTask : ISoloTask
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
-                        ElementAssets.Instance.PartyBtnChooseView,
+                        ElementRecognition.Get("PartyBtnChooseView"),
                         () => { },
                         ct,
                         15,
@@ -650,7 +651,7 @@ public class AutoFightTask : ISoloTask
                 while(timeWaitStart < 6000)
                 {
                     using var ra = CaptureToRectArea();
-                    var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+                    var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView", ra));
                     if (partyViewBtn.IsExist())
                     {
                         // OCR 当前队伍名称（无法单字，中间禁止空格）
@@ -795,7 +796,7 @@ public class AutoFightTask : ISoloTask
                                                 {
                                                     using (var imagePick = CaptureToRectArea())
                                                     {
-                                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
                                                         {
                                                             find = false;
                                                         }
@@ -861,7 +862,7 @@ public class AutoFightTask : ISoloTask
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
         {
             // 执行扫描掉落物光柱并靠近的功能
-            await new ScanPickTask().Start(ct);
+            await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
         }
     }
 
@@ -1019,7 +1020,7 @@ public class AutoFightTask : ISoloTask
     // private bool HasFightFlagByGadget(ImageRegion imageRegion)
     // {
     //     // 小道具位置 1920-133,800,60,50
-    //     var gadgetMat = imageRegion.DeriveCrop(AutoFightAssets.Instance.GadgetRect).SrcMat;
+    //     var gadgetMat = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).GadgetRect).SrcMat;
     //     var list = ContoursHelper.FindSpecifyColorRects(gadgetMat, new Scalar(225, 220, 225), new Scalar(255, 255, 255));
     //     // 要大于 gadgetMat 的 1/2
     //     return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);

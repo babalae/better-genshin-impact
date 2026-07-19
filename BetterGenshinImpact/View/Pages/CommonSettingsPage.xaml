@@ -862,19 +862,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="单次鼠标移动的最大距离"
+                                  Text="地图拖动使用相对鼠标移动"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【100-2000】 过大可能会导致鼠标移动出窗口"
+                                  Text="用于兼容性测试，关闭时使用绝对坐标移动，通常更稳定"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MaxMouseMove, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.TpConfig.MapDragUseRelativeMove, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -888,71 +887,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图缩小的距离"
+                                  Text="传送操作速度间隔（毫秒）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【&gt;600】大于这个距离会缩小地图以加快传送"
+                                  Text="【2-100】数字越小传送操作越快，会影响拖图、滚轮缩放和传送过程中的短等待；如果出现卡顿或识别不稳定，请提高这个数值"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="地图放大的距离"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【200-600】小于这个距离会放大地图以提高移动的精度"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomInDistance, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="鼠标移动的时间间隔（毫秒）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【2-100】数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.StepIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                Text="{Binding Config.TpConfig.TeleportOperationDelayMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

@@ -107,7 +107,7 @@ public class UseRedemptionCodeTask : ISoloTask
         // 粘贴兑换码
         await page.GetByText("粘贴").WithRoi(captureRect.CutRight(0.5)).Click();
         // 点击兑换
-        await page.Locator(ElementAssets.Instance.BtnWhiteConfirm).Click();
+        await page.Locator(ElementRecognition.Get("BtnWhiteConfirm")).Click();
 
         // 兑换成功
         var list = await page.GetByText("兑换成功").TryWaitFor(1000);
@@ -115,7 +115,7 @@ public class UseRedemptionCodeTask : ISoloTask
         {
             _logger.LogInformation("兑换码 {Code} 兑换成功", redeemCode.Code);
             // 点击确认
-            await page.Locator(ElementAssets.Instance.BtnBlackConfirm).Click();
+            await page.Locator(ElementRecognition.Get("BtnBlackConfirm")).Click();
             await page.Wait(5100);
         }
         else

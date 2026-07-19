@@ -21,6 +21,7 @@ public partial class SharedSurfaceCapture : IGameCapture
 
     // 截图区域
     private ResourceRegion? _region;
+    private RECT? _captureRect;
 
     // 暂存贴图
     private Texture2D? _stagingTexture;
@@ -45,7 +46,7 @@ public partial class SharedSurfaceCapture : IGameCapture
     {
         _hWnd = hWnd;
         User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
-        _region = GetGameScreenRegion(hWnd);
+        (_region, _captureRect) = GetGameScreenInfo(hWnd);
         _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
 
         IsCapturing = true;
@@ -56,12 +57,12 @@ public partial class SharedSurfaceCapture : IGameCapture
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    private static ResourceRegion? GetGameScreenRegion(nint hWnd)
+    private static (ResourceRegion? Region, RECT? CaptureRect) GetGameScreenInfo(nint hWnd)
     {
         var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
         if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
         {
-            return null;
+            return (null, null);
         }
 
         ResourceRegion region = new();
@@ -77,10 +78,15 @@ public partial class SharedSurfaceCapture : IGameCapture
         region.Front = 0;
         region.Back = 1;
 
-        return region;
+        var left = windowRect.Left;
+        var top = windowRect.Top + windowRect.Height - clientRect.Height;
+        var right = left + clientRect.Width;
+        var bottom = top + clientRect.Height;
+
+        return (region, new RECT(left, top, right, bottom));
     }
 
-    public Mat? Capture()
+    public GameCaptureFrame? Capture()
     {
         lock (LockObject)
         {
@@ -113,12 +119,17 @@ public partial class SharedSurfaceCapture : IGameCapture
                     _stagingTexture = null;
                     _surfaceWidth = surfaceTexture.Description.Width;
                     _surfaceHeight = surfaceTexture.Description.Height;
-                    _region = GetGameScreenRegion(_hWnd);
+                    (_region, _captureRect) = GetGameScreenInfo(_hWnd);
                 }
 
                 _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
                 var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
-                return mat;
+                if (mat == null)
+                {
+                    return null;
+                }
+
+                return new GameCaptureFrame(mat, _captureRect);
             }
             catch (SharpDXException e)
             {
@@ -137,6 +148,7 @@ public partial class SharedSurfaceCapture : IGameCapture
         {
             _stagingTexture?.Dispose();
             _stagingTexture = null;
+            _captureRect = null;
             _d3dDevice?.Dispose();
             _d3dDevice = null;
             _hWnd = 0;

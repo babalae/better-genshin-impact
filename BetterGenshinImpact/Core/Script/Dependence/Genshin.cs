@@ -77,7 +77,6 @@ public class Genshin
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, mapName, force);
     }
 
-
     public async Task Tp(double x, double y, bool force)
     {
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, MapTypes.Teyvat.ToString(), force);

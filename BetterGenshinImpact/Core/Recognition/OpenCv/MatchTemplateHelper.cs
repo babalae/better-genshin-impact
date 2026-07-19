@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -153,7 +153,7 @@ public class MatchTemplateHelper
     /// <param name="imgSubList"></param>
     /// <param name="threshold"></param>
     /// <returns></returns>
-    public static List<Rect> MatchMultiPicForOnePic(Mat srcMat, List<Mat> imgSubList, double threshold = 0.8)
+    public static List<Rect> MatchMultiPicForOnePic(Mat srcMat, IReadOnlyList<Mat> imgSubList, double threshold = 0.8)
     {
         List<Rect> list = [];
         foreach (var sub in imgSubList)

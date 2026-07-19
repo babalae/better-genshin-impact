@@ -49,7 +49,7 @@ public class NavigationInstance
 
     public Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod, MapLayerSelector? selector)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
+        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
         var state = GetState(selector);
         var sceneMap = MapManager.GetMap(mapName, mapMatchMethod, selector);
@@ -75,7 +75,7 @@ public class NavigationInstance
 
     public Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod, MapLayerSelector? selector)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
+        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
         var state = GetState(selector);
 
@@ -115,7 +115,6 @@ public class NavigationInstance
 
         return GetPositionStable(imageRegion, mapName, mapMatchingMethod, selector);
     }
-
     public Point2f? GetCachedPosition(MapLayerSelector? selector, int cacheTimeMs = 900)
     {
         if (!_states.TryGetValue(GetStateKey(selector), out var state))

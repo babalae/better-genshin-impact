@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
@@ -14,10 +14,24 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private string _name = string.Empty;
 
+    // 下次执行的任务 Id（为空表示从头开始）
+    [ObservableProperty]
+    private string _nextTaskId = string.Empty;
+
     /// <summary>
-    /// 所有任务的开关状态
+    /// 所有任务的开关状态（键为任务 Id）
     /// </summary>
     public Dictionary<string, bool> TaskEnabledList { get; set; } = new();
+
+    /// <summary>
+    /// 任务执行顺序（任务 Id 列表），用于显式恢复 TaskList 顺序
+    /// </summary>
+    public List<string> TaskOrder { get; set; } = new();
+
+    /// <summary>
+    /// 任务定义（Id → 任务名），用于支持同名任务重复添加
+    /// </summary>
+    public Dictionary<string, string> TaskDefinitions { get; set; } = new();
    
     // 合成树脂的国家
     [ObservableProperty]

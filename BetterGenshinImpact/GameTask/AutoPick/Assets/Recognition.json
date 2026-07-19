@@ -1,0 +1,20 @@
+{
+  "objects": {
+    "F": {
+      "type": "TemplateMatch",
+      "template": "F.png",
+      "roi": "rect(1090 * s, 330 * s, 60 * s, 420 * s)",
+      "draw": false
+    },
+    "SettingsIcon": {
+      "type": "TemplateMatch",
+      "template": "icon_settings.png",
+      "draw": false
+    },
+    "L": {
+      "type": "TemplateMatch",
+      "template": "L.png",
+      "roi": "rect(cw - 110 * s, 550 * s, 70 * s, 100 * s)"
+    }
+  }
+}
