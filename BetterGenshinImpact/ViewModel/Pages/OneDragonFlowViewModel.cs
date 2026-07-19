@@ -345,7 +345,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             _isInitialized = true;
             foreach (var config in configs)
             {
-                if (config.AutoResumeMode == "每次启动刷新" && !string.IsNullOrEmpty(config.NextTaskId))
+                if (config.AutoResumeMode == "每次启动刷新" && !string.IsNullOrEmpty(config.NextTaskId) && config.AutoResumeTimestamp != null)
                 {
                     config.NextTaskId = string.Empty;
                     config.AutoResumeTimestamp = null;
@@ -902,6 +902,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig.NextTaskId = taskItem.Id;
+        SelectedConfig.AutoResumeTimestamp = null;
         foreach (var task in TaskList)
         {
             task.IsNextTask = task.Id == taskItem.Id;
@@ -940,6 +941,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig.NextTaskId = currentTask.Id;
+        SelectedConfig.AutoResumeTimestamp = null;
         foreach (var task in TaskList)
         {
             task.IsNextTask = task.Id == currentTask.Id;
@@ -1021,6 +1023,9 @@ public partial class OneDragonFlowViewModel : ViewModel
                 File.Delete(configFile);
             }
 
+            // 记录被删除的配置名
+            var deletedName = SelectedConfig.Name;
+
             // 从列表中移除
             ConfigList.Remove(SelectedConfig);
 
@@ -1051,6 +1056,18 @@ public partial class OneDragonFlowViewModel : ViewModel
             
             // 保存配置
             SaveConfig();
+
+            // 修复其他配置对该被删除配置的引用
+            foreach (var config in ConfigList)
+            {
+                if (config.RestartOneDragonName == deletedName)
+                {
+                    config.CompletionAction = "无";
+                    config.RestartOneDragonName = string.Empty;
+                    WriteConfig(config);
+                    _logger.LogInformation("删除配置：将配置「{Config}」的完成后操作恢复为无", config.Name);
+                }
+            }
 
             Toast.Success("配置删除成功");
         }
@@ -1107,6 +1124,17 @@ public partial class OneDragonFlowViewModel : ViewModel
 
             // 更新全局配置名称
             TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = newName;
+
+            // 修复其他配置对该旧名称的引用
+            foreach (var config in ConfigList)
+            {
+                if (config != SelectedConfig && config.RestartOneDragonName == oldName)
+                {
+                    config.RestartOneDragonName = newName;
+                    WriteConfig(config);
+                    _logger.LogInformation("重命名配置：同步更新配置「{Config}」的引用", config.Name);
+                }
+            }
 
             Toast.Success("配置重命名成功");
         }
