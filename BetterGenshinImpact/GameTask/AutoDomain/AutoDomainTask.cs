@@ -909,7 +909,18 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             var backwardsAndForwardsCount = 0;
             while (!_ct.IsCancellationRequested)
             {
-                var treeRect = DetectTree(CaptureToRectArea());
+                Rect treeRect;
+                // 直接以 ImageRegion 静态类型 Dispose：Region.Dispose() 目前为空实现，using 无法释放截图资源
+                var capture = CaptureToRectArea();
+                try
+                {
+                    treeRect = DetectTree(capture);
+                }
+                finally
+                {
+                    capture.Dispose();
+                }
+
                 if (treeRect != default)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
