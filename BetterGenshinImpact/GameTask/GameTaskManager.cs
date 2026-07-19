@@ -45,6 +45,7 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
+        TriggerDictionary.TryAdd("TravelLog", new TravelLog.TravelLogTrigger());
 
         return ConvertToTriggerList();
     }
@@ -120,6 +121,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
+            TriggerDictionary.GetValueOrDefault("TravelLog")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }

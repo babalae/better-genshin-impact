@@ -102,6 +102,12 @@ namespace BetterGenshinImpact.ViewModel
 
         public double MiniMapOverlaySizeRatio => MapAssets.MimiMapRect1080P.Width / 1080d;
 
+        /// <summary>
+        /// 小地图画布是否可见（地图遮罩小地图开关 或 移动轨迹记录开关 任一开启）
+        /// </summary>
+        public bool IsMiniMapCanvasVisible =>
+            (Config?.MapMaskConfig.MiniMapMaskEnabled ?? false) || (Config?.TravelLogConfig.Enabled ?? false);
+
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
 
         public sealed record MapLanguageOption(string Code, string DisplayName);
@@ -261,6 +267,22 @@ namespace BetterGenshinImpact.ViewModel
                 if (configService != null)
                 {
                     Config = configService.Get();
+
+                    // 小地图画布可见性同时受「地图遮罩小地图」与「移动轨迹记录」开关控制
+                    Config.MapMaskConfig.PropertyChanged += (_, e) =>
+                    {
+                        if (e.PropertyName == nameof(MapMaskConfig.MiniMapMaskEnabled))
+                        {
+                            OnPropertyChanged(nameof(IsMiniMapCanvasVisible));
+                        }
+                    };
+                    Config.TravelLogConfig.PropertyChanged += (_, e) =>
+                    {
+                        if (e.PropertyName == nameof(GameTask.TravelLog.TravelLogConfig.Enabled))
+                        {
+                            OnPropertyChanged(nameof(IsMiniMapCanvasVisible));
+                        }
+                    };
                 }
             }
         }

@@ -38,6 +38,11 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
     private Rect _viewportRect = Rect.Empty;
 
+    /// <summary>
+    /// 移动轨迹分段（2048 级图像坐标），段间不连线
+    /// </summary>
+    private IReadOnlyList<IReadOnlyList<Point>>? _trajectorySegments;
+
     public ObservableCollection<MaskMapPoint>? PointsSource
     {
         get => (ObservableCollection<MaskMapPoint>?)GetValue(PointsSourceProperty);
@@ -155,7 +160,7 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     private void RenderPoints()
     {
         using var dc = _drawingVisual.RenderOpen();
-        if (_allPoints.Count == 0 || _viewportRect.IsEmpty || _viewportRect.Width == 0)
+        if (_viewportRect.IsEmpty || _viewportRect.Width == 0)
         {
             return;
         }
@@ -177,11 +182,19 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         var clip = new EllipseGeometry(clipRect);
         dc.PushClip(clip);
 
-        var expandedViewport = _viewportRect;
-        expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
-
         var scaleX = side / _viewportRect.Width;
         var scaleY = side / _viewportRect.Height;
+
+        DrawTrajectory(dc, clipRect, scaleX, scaleY);
+
+        if (_allPoints.Count == 0)
+        {
+            dc.Pop();
+            return;
+        }
+
+        var expandedViewport = _viewportRect;
+        expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
 
         var pointSide = Math.Max(8, Math.Min(16, side / 12.0));
 
@@ -198,6 +211,60 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         }
 
         dc.Pop();
+    }
+
+    /// <summary>
+    /// 更新移动轨迹并触发重绘
+    /// </summary>
+    /// <param name="segments">轨迹分段（2048 级图像坐标），null 表示清除</param>
+    public void UpdateTrajectory(IReadOnlyList<IReadOnlyList<Point>>? segments)
+    {
+        _trajectorySegments = segments;
+        Refresh();
+    }
+
+    /// <summary>
+    /// 在点位下层绘制移动轨迹折线
+    /// </summary>
+    private void DrawTrajectory(DrawingContext dc, Rect clipRect, double scaleX, double scaleY)
+    {
+        if (_trajectorySegments == null || _trajectorySegments.Count == 0)
+        {
+            return;
+        }
+
+        var brush = new SolidColorBrush(Color.FromArgb(220, 0, 229, 255));
+        brush.Freeze();
+        var pen = new Pen(brush, 2.0);
+        pen.Freeze();
+
+        foreach (var segment in _trajectorySegments)
+        {
+            if (segment.Count < 2)
+            {
+                continue;
+            }
+
+            var geometry = new StreamGeometry();
+            using (var ctx = geometry.Open())
+            {
+                var first = ToLocalPoint(segment[0], clipRect, scaleX, scaleY);
+                ctx.BeginFigure(first, false, false);
+                for (var i = 1; i < segment.Count; i++)
+                {
+                    ctx.LineTo(ToLocalPoint(segment[i], clipRect, scaleX, scaleY), true, false);
+                }
+            }
+            geometry.Freeze();
+            dc.DrawGeometry(null, pen, geometry);
+        }
+    }
+
+    private Point ToLocalPoint(Point imagePoint, Rect clipRect, double scaleX, double scaleY)
+    {
+        return new Point(
+            clipRect.X + (imagePoint.X - _viewportRect.X) * scaleX,
+            clipRect.Y + (imagePoint.Y - _viewportRect.Y) * scaleY);
     }
 
     private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
