@@ -313,6 +313,12 @@ public class Region : IDisposable
     /// 请使用 using var newRegion
     /// </summary>
     /// <returns></returns>
+    /// <remarks>
+    /// 该方法所有权语义不明确：本身已经是 <see cref="ImageRegion"/> 时返回 this，否则返回新对象，
+    /// 因此调用者无法判断是否应该 Dispose 返回值，无条件 Dispose 会误释放调用方的区域。
+    /// 请改用 <see cref="ToImageRegionView"/>（零拷贝视图）或 <see cref="ToOwnedImageRegion"/>（深拷贝）。
+    /// </remarks>
+    [Obsolete("所有权语义不明确，可能返回 this。请使用 ToImageRegionView() 或 ToOwnedImageRegion()。")]
     public ImageRegion ToImageRegion()
     {
         if (this is ImageRegion imageRegion)
@@ -324,6 +330,58 @@ public class Region : IDisposable
         var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(0, 0, Width, Height, this);
         var newRegion = new ImageRegion(new Mat(res.TargetRegion.SrcMat, res.ToRect()), X, Y, Prev, PrevConverter);
         return newRegion;
+    }
+
+    /// <summary>
+    /// 生成一个覆盖本区域的 <see cref="ImageRegion"/> 零拷贝视图。
+    /// 始终返回新对象（即使本身已经是 <see cref="ImageRegion"/> 也不会返回 this）。
+    /// </summary>
+    /// <remarks>
+    /// 所有权：调用者拥有返回值的 Mat header，但像素是向上级 <see cref="ImageRegion"/> 借用的。
+    /// 因此视图的使用和释放必须严格嵌套在上级区域生命周期内：先 Dispose 视图，再 Dispose 上级区域。
+    /// 结果需要逃出上级区域作用域时，必须改用 <see cref="ToOwnedImageRegion"/>。
+    /// </remarks>
+    public ImageRegion ToImageRegionView()
+    {
+        var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(0, 0, Width, Height, this);
+        var roi = new Mat(res.TargetRegion.SrcMat, res.ToRect());
+        try
+        {
+            return new ImageRegion(roi, X, Y, Prev, PrevConverter);
+        }
+        catch
+        {
+            roi.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// 生成一个覆盖本区域、拥有独立像素的 <see cref="ImageRegion"/>（深拷贝）。
+    /// </summary>
+    /// <remarks>
+    /// 所有权：返回值完全独立于源区域，可以安全地逃出源区域作用域，由调用者负责 Dispose。
+    /// 代价是一次完整的 <see cref="Mat.Clone()"/>，只在结果确实需要比源区域活得更久时使用；
+    /// 同步读取请使用 <see cref="ToImageRegionView"/>。
+    /// </remarks>
+    public ImageRegion ToOwnedImageRegion()
+    {
+        var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(0, 0, Width, Height, this);
+        Mat owned;
+        using (var roi = new Mat(res.TargetRegion.SrcMat, res.ToRect()))
+        {
+            owned = roi.Clone();
+        }
+
+        try
+        {
+            return new ImageRegion(owned, X, Y, Prev, PrevConverter);
+        }
+        catch
+        {
+            owned.Dispose();
+            throw;
+        }
     }
 
     public bool IsEmpty()

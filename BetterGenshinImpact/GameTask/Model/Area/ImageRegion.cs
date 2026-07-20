@@ -62,6 +62,12 @@ public class ImageRegion : Region
     /// <summary>
     /// 剪裁派生
     /// </summary>
+    /// <remarks>
+    /// 所有权：调用者拥有返回值的 Mat header，但像素是向本区域借用的（<c>new Mat(SrcMat, rect)</c>，零拷贝）。
+    /// 子区域的使用和释放必须严格嵌套在父区域生命周期内：先 Dispose 子区域，再 Dispose 父区域。
+    /// BitBlt 后端的像素是外部 HGlobal，没有 OpenCV 引用计数，父区域释放后子 ROI 会变成悬空视图。
+    /// 结果需要逃出父区域作用域时，必须使用 <see cref="Region.ToOwnedImageRegion"/> 深拷贝。
+    /// </remarks>
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <param name="w"></param>
@@ -114,6 +120,11 @@ public class ImageRegion : Region
     /// <param name="successAction">成功找到后做什么</param>
     /// <param name="failAction">失败后做什么</param>
     /// <returns>返回最优的一个识别结果RectArea</returns>
+    /// <remarks>
+    /// 所有权：本方法只借用输入区域，不会 Dispose 它。
+    /// 返回值始终是不拥有像素的普通 <see cref="Region"/>，绝不会是本对象本身，
+    /// 因此 Dispose 返回值不会影响输入区域。
+    /// </remarks>
     /// <exception cref="Exception"></exception>
     public Region Find(RecognitionObject ro, Action<Region>? successAction = null, Action? failAction = null)
     {
@@ -370,9 +381,12 @@ public class ImageRegion : Region
                 }
                 else
                 {
-                    this.Text = text;
-                    successAction?.Invoke(this);
-                    return this;
+                    // 不能返回 this：Find() 的返回值契约是「不拥有像素的普通 Region」，
+                    // 返回 this 会让 using var result = region.Find(...) 误释放调用方的 ImageRegion。
+                    var newRa = Derive(0, 0, Width, Height);
+                    newRa.Text = text;
+                    successAction?.Invoke(newRa);
+                    return newRa;
                 }
             }
             else

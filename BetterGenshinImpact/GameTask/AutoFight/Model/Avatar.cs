@@ -219,17 +219,32 @@ public class Avatar
     /// </summary>
     private static bool SwimmingConfirm(Region region)
     {
-        using var imageRegion = region.ToImageRegion();
-        using var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
-        using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
-        using var labels = new Mat();
-        using var stats = new Mat();
-        using var centroids = new Mat();
+        // 零拷贝视图，像素向 region 借用；PR2 修好 Dispose 派发前不能用 using var，必须显式先子后父释放
+        var imageRegion = region.ToImageRegionView();
+        try
+        {
+            var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
+            try
+            {
+                using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
+                using var labels = new Mat();
+                using var stats = new Mat();
+                using var centroids = new Mat();
 
-        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-        
-        return numLabels > 1;
+                var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                    connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+                return numLabels > 1;
+            }
+            finally
+            {
+                cropped.Dispose();
+            }
+        }
+        finally
+        {
+            imageRegion.Dispose();
+        }
     }
 
     /// <summary>
@@ -420,7 +435,7 @@ public class Avatar
     {
         // 剪裁出IndexRect区域
         using var indexRa = region.DeriveCrop(rect);
-        using var mat = indexRa.CacheGreyMat;
+        var mat = indexRa.CacheGreyMat; // 借用 indexRa 的缓存，所有权属于 indexRa，不能在这里 Dispose
         var count = OpenCvCommonHelper.CountGrayMatColor(mat, 251, 255);
         if (count * 1.0 / (mat.Width * mat.Height) > 0.5)
         {
@@ -577,8 +592,20 @@ public class Avatar
             return GetSkillCdSeconds();
         }
 
-        using var region = givenRegion ?? CaptureToRectArea();
-        return GetSkillCurrentCd(region);
+        // 只释放自己创建的截图，传入的 givenRegion 属于调用者
+        var ownsRegion = givenRegion is null;
+        var region = givenRegion ?? CaptureToRectArea();
+        try
+        {
+            return GetSkillCurrentCd(region);
+        }
+        finally
+        {
+            if (ownsRegion)
+            {
+                region.Dispose();
+            }
+        }
     }
 
     /// <summary>
@@ -1330,37 +1357,49 @@ public class Avatar
     {
         var results = new List<(int x, int y, int width, int height)>();
 
-        using var image = existingCapture ?? CaptureToRectArea();
-        var bloodLower = new OpenCvSharp.Scalar(255, 90, 90); // BGR 红色
-
-        using var cropped = image.DeriveCrop(0, 0, 1500, 900);
-        using Mat mask = Core.Recognition.OpenCv.OpenCvCommonHelper.Threshold(
-            cropped.SrcMat, bloodLower);
-
-        using Mat labels = new Mat();
-        using Mat stats = new Mat();
-        using Mat centroids = new Mat();
-
-        int numLabels = Cv2.ConnectedComponentsWithStats(
-            mask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-
-        for (int i = 1; i < numLabels; i++)
+        // 只释放自己创建的截图，传入的 existingCapture 属于调用者
+        var ownsImage = existingCapture is null;
+        var image = existingCapture ?? CaptureToRectArea();
+        try
         {
-            using Mat row = stats.Row(i);
-            if (row.GetArray(out int[] arr))
+            var bloodLower = new OpenCvSharp.Scalar(255, 90, 90); // BGR 红色
+
+            using var cropped = image.DeriveCrop(0, 0, 1500, 900);
+            using Mat mask = Core.Recognition.OpenCv.OpenCvCommonHelper.Threshold(
+                cropped.SrcMat, bloodLower);
+
+            using Mat labels = new Mat();
+            using Mat stats = new Mat();
+            using Mat centroids = new Mat();
+
+            int numLabels = Cv2.ConnectedComponentsWithStats(
+                mask, labels, stats, centroids,
+                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+            for (int i = 1; i < numLabels; i++)
             {
-                int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
-                if (y < 50)
-                    continue;
-                results.Add((x, y, width, height));
+                using Mat row = stats.Row(i);
+                if (row.GetArray(out int[] arr))
+                {
+                    int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
+                    if (y < 50)
+                        continue;
+                    results.Add((x, y, width, height));
+                }
+            }
+
+            // 自动更新传奇血条动态追踪
+            UpdateLegendaryBarTracker(results.Select(r => r.y));
+
+            return results;
+        }
+        finally
+        {
+            if (ownsImage)
+            {
+                image.Dispose();
             }
         }
-
-        // 自动更新传奇血条动态追踪
-        UpdateLegendaryBarTracker(results.Select(r => r.y));
-
-        return results;
     }
 
     /// <summary>
@@ -1372,8 +1411,21 @@ public class Avatar
     /// </summary>
     public static (int centerX, int centerY, string text)? FindDamageNumber(ImageRegion? existingCapture = null)
     {
-        using var ra = existingCapture ?? CaptureToRectArea();
-        var ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
+        // 只释放自己创建的截图，传入的 existingCapture 属于调用者
+        var ownsRa = existingCapture is null;
+        var ra = existingCapture ?? CaptureToRectArea();
+        List<Region> ocrResults;
+        try
+        {
+            ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
+        }
+        finally
+        {
+            if (ownsRa)
+            {
+                ra.Dispose();
+            }
+        }
 
         string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
         var validItems = new List<(int cx, int cy, int area, string text)>();
