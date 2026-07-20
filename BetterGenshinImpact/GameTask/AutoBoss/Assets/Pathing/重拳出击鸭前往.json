@@ -1,13 +1,18 @@
 {
   "info": {
-    "authors": [],
+    "authors": [
+      {
+        "links": "https://github.com/1004452714",
+        "name": "DarkFlameMaster"
+      }
+    ],
     "bgi_version": "0.52.0",
-    "map_match_method": "SIFT",
     "description": "",
     "enable_monster_loot_split": false,
-    "last_modified_time": 1763000407374,
+    "last_modified_time": 1784364603709,
+    "map_match_method": "SIFT",
     "map_name": "Teyvat",
-    "name": "重拳出击鸭",
+    "name": "重拳出击鸭前往",
     "tags": [],
     "type": "collect",
     "version": "1.0"
@@ -19,8 +24,8 @@
       "id": 1,
       "move_mode": "walk",
       "type": "teleport",
-      "x": 10018.619140625,
-      "y": 1538.62646484375
+      "x": 10018.6191,
+      "y": 1538.6265
     },
     {
       "action": "",
@@ -28,17 +33,17 @@
       "id": 2,
       "move_mode": "walk",
       "type": "path",
-      "x": 10041.8623046875,
-      "y": 1483.87255859375
+      "x": 10041.8623,
+      "y": 1483.8726
     },
     {
       "action": "combat_script",
-      "action_params": "keypress(f),wait(3),keypress(f),wait(1),keypress(f),wait(1),keypress(f)",
+      "action_params": "keypress(f),wait(3),keypress(f),wait(1.5),keypress(f),wait(1.5),keypress(f),wait(2)",
       "id": 3,
       "move_mode": "walk",
       "type": "target",
-      "x": 10044.5068359375,
-      "y": 1473.15869140625
+      "x": 10044.5068,
+      "y": 1473.1587
     }
   ]
 }
