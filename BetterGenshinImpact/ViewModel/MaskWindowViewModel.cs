@@ -240,6 +240,10 @@ namespace BetterGenshinImpact.ViewModel
             {
                 Config.MaskWindowConfig.EnsureOverlayMetricItems();
                 Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
+                // 实时获取游戏窗口分辨率，计算相对于 1080P 的缩放比例
+                // 不使用 TaskContext.Instance().SystemInfo.ScaleTo1080PRatio（可能已过期）
+                var gameScreenRect = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+                Config.MaskWindowConfig.ScaleTo1080PRatio = gameScreenRect.Width / 1920d;
                 OnPropertyChanged(nameof(Config));
                 OnPropertyChanged(nameof(IsOverlayMetricsVisible));
             }
@@ -248,6 +252,14 @@ namespace BetterGenshinImpact.ViewModel
             SyncSelectedHoYoLabLanguageFromConfig();
             LoadHiddenMapPointKeysFromStorage();
             InitMetrics();
+        }
+
+        /// <summary>
+        /// 当显示器 DPI 发生变化时调用，触发遮罩 UI 字号重新计算。
+        /// </summary>
+        public void OnDpiChanged()
+        {
+            Config?.MaskWindowConfig?.NotifyDpiDependentProperties();
         }
 
         /// <summary>
@@ -468,6 +480,14 @@ namespace BetterGenshinImpact.ViewModel
         {
             MaskWindowWidth = args.NewSize.Width;
             MaskWindowHeight = args.NewSize.Height;
+
+            // 游戏分辨率变化时，重新计算 ScaleTo1080PRatio
+            // 使日志字号实时适配新的游戏分辨率
+            if (Config?.MaskWindowConfig != null)
+            {
+                var gameScreenRect = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+                Config.MaskWindowConfig.ScaleTo1080PRatio = gameScreenRect.Width / 1920d;
+            }
         }
 
         [RelayCommand]

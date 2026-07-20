@@ -187,7 +187,7 @@
                                         </Style>
                                     </StackPanel.Resources>
                                     <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
-                                               FontSize="12"
+                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.EffectiveFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}">
                                         <TextBlock.Style>
                                             <Style TargetType="{x:Type TextBlock}">
@@ -267,7 +267,7 @@
                                  Background="Transparent"
                                  BorderThickness="0"
                                  FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                 FontSize="12"
+FontSize="{Binding Config.MaskWindowConfig.EffectiveFontSize}"
                                  IsHitTestVisible="False"
                                  VerticalScrollBarVisibility="Hidden"
                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}">
@@ -347,28 +347,30 @@
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <!-- 列宽和设置页的三列顺序保持一致，拖窄后也按完整指标项折行。 -->
-                                <WrapPanel ItemWidth="116" ItemHeight="16" />
+                                <WrapPanel ItemWidth="{Binding DataContext.Config.MaskWindowConfig.OverlayMetricsItemWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           ItemHeight="{Binding DataContext.Config.MaskWindowConfig.OverlayMetricsItemHeight, RelativeSource={RelativeSource AncestorType=Window}}" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Width="116" Height="16">
+                                <Grid Width="{Binding DataContext.Config.MaskWindowConfig.OverlayMetricsItemWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      Height="{Binding DataContext.Config.MaskWindowConfig.OverlayMetricsGridHeight, RelativeSource={RelativeSource AncestorType=Window}}">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="68" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="68*" />
+                                        <ColumnDefinition Width="48*" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
                                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                               FontSize="12"
+                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.MetricsEffectiveFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Foreground="LightGray"
-                                               LineHeight="15"
+                                               LineHeight="{Binding DataContext.Config.MaskWindowConfig.OverlayMetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}"
                                                TextWrapping="NoWrap" />
                                     <TextBlock Grid.Column="1"
                                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                               FontSize="12"
+                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.MetricsEffectiveFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Foreground="LightGray"
-                                               LineHeight="15"
+                                               LineHeight="{Binding DataContext.Config.MaskWindowConfig.OverlayMetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Value}"
                                                TextTrimming="CharacterEllipsis"
                                                TextWrapping="NoWrap" />
@@ -516,7 +518,7 @@
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource DigitalThemeFontFamily}"
-                           FontSize="16"
+                           FontSize="{Binding Config.MaskWindowConfig.EffectiveFontSize}"
                            Text="{Binding Fps}">
                     <TextBlock.Foreground>
                         <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />

@@ -130,6 +130,7 @@ public partial class MaskWindow : Window
 
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
         InitializeComponent();
+        this.DpiChanged += OnWindowDpiChanged;
         this.InitializeDpiAwareness();
 
         LogTextBox.TextChanged += LogTextBoxTextChanged;
@@ -172,6 +173,14 @@ public partial class MaskWindow : Window
         }
     }
 
+    private void OnWindowDpiChanged(object? sender, DpiChangedEventArgs e)
+    {
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.OnDpiChanged();
+        }
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _richTextBox = App.GetService<IRichTextBox>();
@@ -209,6 +218,7 @@ public partial class MaskWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        this.DpiChanged -= OnWindowDpiChanged;
         PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
         IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
         StateChanged -= MaskWindowOnStateChanged;
