@@ -1176,8 +1176,8 @@ public class TpTask
     /// 点击大地图上的指定坐标。
     /// </summary>
     /// <remarks>
-    /// 方法会先复用 <see cref="MoveMapTo(double, double, string, double)"/> 将目标移动到可点击安全区域，
-    /// 再按当前大地图视图把原神地图坐标转换为游戏截图区域坐标并点击。
+    /// 先将目标移动到可点击安全区域，
+    /// 再将原神地图坐标转换为游戏截图区域坐标并点击。
     /// </remarks>
     /// <param name="x">目标 x 坐标。</param>
     /// <param name="y">目标 y 坐标。</param>

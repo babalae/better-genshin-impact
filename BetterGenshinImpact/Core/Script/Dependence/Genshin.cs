@@ -128,8 +128,6 @@ public class Genshin
     /// </summary>
     /// <remarks>
     /// 该方法会先把目标移动到大地图的可点击安全区域，再执行一次点击。
-    /// 它适合需要“定位后点选”的脚本场景，不是传送接口。
-    /// 为避免初次中心点识别失败，建议先使用 SetBigMapZoomLevel 设置合适的大地图缩放等级。
     /// </remarks>
     /// <param name="x">目标X坐标。</param>
     /// <param name="y">目标Y坐标。</param>
