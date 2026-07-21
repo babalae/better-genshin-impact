@@ -80,7 +80,17 @@ public class ImageRegion : Region
         {
             throw new ArgumentOutOfRangeException(nameof(rect), $"DeriveCrop 裁剪区域无效: ({x},{y},{w},{h})，图像大小: {SrcMat.Cols}x{SrcMat.Rows}");
         }
-        return new ImageRegion(new Mat(SrcMat, rect), rect.X, rect.Y, this, new TranslationConverter(rect.X, rect.Y));
+        var roi = new Mat(SrcMat, rect);
+        try
+        {
+            return new ImageRegion(roi, rect.X, rect.Y, this, new TranslationConverter(rect.X, rect.Y));
+        }
+        catch
+        {
+            // 包装对象构造失败时 ROI header 的所有权还没转移出去
+            roi.Dispose();
+            throw;
+        }
     }
 
     public ImageRegion DeriveCrop(double dx, double dy, double dw, double dh)
@@ -94,7 +104,17 @@ public class ImageRegion : Region
         {
             throw new ArgumentOutOfRangeException(nameof(rect), $"DeriveCrop 裁剪区域无效: ({x},{y},{w},{h})，图像大小: {SrcMat.Cols}x{SrcMat.Rows}");
         }
-        return new ImageRegion(new Mat(SrcMat, rect), rect.X, rect.Y, this, new TranslationConverter(rect.X, rect.Y));
+        var roi = new Mat(SrcMat, rect);
+        try
+        {
+            return new ImageRegion(roi, rect.X, rect.Y, this, new TranslationConverter(rect.X, rect.Y));
+        }
+        catch
+        {
+            // 包装对象构造失败时 ROI header 的所有权还没转移出去
+            roi.Dispose();
+            throw;
+        }
     }
 
     public ImageRegion DeriveCrop(Rect rect)
