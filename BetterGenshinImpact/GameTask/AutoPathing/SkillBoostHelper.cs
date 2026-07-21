@@ -1069,7 +1069,10 @@ public partial class PathExecutor
         await Delay(150, ct);
 
         using var screen = CaptureToRectArea();
-        if (Bv.GetMotionStatus(screen) == MotionStatus.Fly)
+        var stamina = DetectStamina(screen);
+        if (Bv.GetMotionStatus(screen) == MotionStatus.Fly
+            || stamina == 0
+            || stamina == 240)
         {
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
             await Delay(300, ct);
