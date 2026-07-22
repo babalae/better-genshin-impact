@@ -1,0 +1,284 @@
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using Vanara.PInvoke;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
+
+namespace BetterGenshinImpact.GameTask.AutoFight.Model;
+
+/// <summary>
+/// 角色特化动作分派（按动作名+角色名决定是否使用特化逻辑）
+/// </summary>
+public partial class Avatar
+{
+    /// <summary>
+    /// 特化规则：(动作, 角色) → 参数条件（null=无条件，仅检查动作+角色即生效）
+    /// 不在此字典中的组合直接跳过，走通用逻辑。
+    /// </summary>
+    private static readonly Dictionary<(string Action, string Character), Func<object, bool>?> SpecializedRules = new()
+    {
+        [("UseSkill", "纳西妲")]   = args => args is ActionArgs { Hold: true },
+        [("UseSkill", "坎蒂丝")]   = args => args is ActionArgs { Hold: true },
+        [("Charge",   "那维莱特")] = null,
+        [("Charge",   "恰斯卡")]   = null,
+        [("Charge",   "桑多涅")]   = null,
+    };
+
+    /// <summary>
+    /// 根据动作和角色名分派特化逻辑。
+    /// 如果当前角色有对应的特化实现，则执行该特化逻辑并返回 true（调用方应跳过通用逻辑）；
+    /// 否则返回 false，由调用方执行通用逻辑。
+    /// </summary>
+    /// <param name="action">动作名（如 "UseSkill"、"Charge"）</param>
+    /// <param name="character">角色名（如 "纳西妲"）</param>
+    /// <param name="args">动作参数对象（如 UseSkillArgs、ChargeArgs）</param>
+    /// <returns>true 表示已由特化逻辑处理，false 表示无特化逻辑</returns>
+    public bool ExecuteSpecializedAction(string action, string character, object args)
+    {
+        // 不在特化规则中 → 提前退出
+        if (!SpecializedRules.TryGetValue((action, character), out var condition)) return false;
+
+        // 参数条件存在且不满足 → 提前退出
+        if (condition != null && !condition(args)) return false;
+
+        switch (action)
+        {
+            case "UseSkill":
+                return ExecuteUseSkillSpecialized(character);
+            case "Charge":
+                return ExecuteChargeSpecialized(character, ((ActionArgs)args).Ms);
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// UseSkill 特化分派
+    /// </summary>
+    private bool ExecuteUseSkillSpecialized(string character)
+    {
+        switch (character)
+        {
+            // 纳西妲长按 E：按下后向右移动鼠标
+            case "纳西妲":
+            {
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                Sleep(300, Ct);
+                for (int j = 0; j < 10; j++)
+                {
+                    Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+                    Sleep(50);
+                }
+
+                Sleep(300);
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                return true;
+            }
+            // 坎蒂丝长按 E：固定等待 3 秒
+            case "坎蒂丝":
+            {
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                Thread.Sleep(3000);
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                return true;
+            }
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Charge 重击特化分派
+    /// </summary>
+    private bool ExecuteChargeSpecialized(string character, int ms)
+    {
+        switch (character)
+        {
+            // 那维莱特：按住普攻循环向右旋转
+            case "那维莱特":
+            {
+                var dpi = TaskContext.Instance().DpiScale;
+                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                while (ms >= 0)
+                {
+                    if (Ct is { IsCancellationRequested: true })
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                        return true;
+                    }
+
+                    Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                    ms -= 50;
+                    Sleep(50);
+                }
+
+                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                return true;
+            }
+            // 恰斯卡：按住普攻分段变速旋转
+            case "恰斯卡":
+            {
+                var dpi = TaskContext.Instance().DpiScale;
+                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                int tick = -4;
+                while (ms >= 0)
+                {
+                    if (Ct is { IsCancellationRequested: true })
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                        return true;
+                    }
+
+                    const double lowspeed = 0.7, highspeed = 50;
+                    double rateX, rateY;
+                    if (tick < 3)
+                    {
+                        rateX = highspeed;
+                        rateY = highspeed * 0.23;
+                    }
+                    else if (tick < 40)
+                    {
+                        rateX = lowspeed * 0.7;
+                        rateY = 0;
+                    }
+                    else if (tick < 43)
+                    {
+                        rateX = highspeed;
+                        rateY = highspeed * 0.4;
+                    }
+                    else if (tick < 70)
+                    {
+                        rateX = lowspeed * 0.9;
+                        rateY = 0;
+                    }
+                    else if (tick < 73)
+                    {
+                        rateX = highspeed;
+                        rateY = highspeed;
+                    }
+                    else
+                    {
+                        rateX = lowspeed;
+                        rateY = 0;
+                    }
+
+                    Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
+                    tick = (tick + 1) % 100;
+                    Sleep(25);
+                    ms -= 25;
+                }
+
+                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                return true;
+            }
+            // 桑多涅：按住普攻 + 截图寻的血条/伤害数字追踪
+            case "桑多涅":
+            {
+                var dpi = TaskContext.Instance().DpiScale;
+                const int preAimX = 960;
+                const int preAimY = 480;
+                const int frameIntervalMs = 50;
+
+                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+
+                var lastSeenTargetTime = DateTime.UtcNow;
+                var startTime = DateTime.UtcNow;
+                var maxDurationMs = ms;
+
+                try
+                {
+                    while (!Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
+                    {
+                        using (var capture = CaptureToRectArea())
+                        {
+                            var bars = FindBloodBars(capture);
+                            UpdateLegendaryBarTracker(bars.Select(b => b.y));
+                            var valid = bars.Where(b => b.x > 200).ToList();
+
+                            var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>
+                            {
+                                capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
+                            };
+
+                            bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
+
+                            if (valid.Count > 0 && !hasLegendaryBar)
+                            {
+                                lastSeenTargetTime = DateTime.UtcNow;
+                                var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                                Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
+                                var offsetX = (nearest.x + nearest.width / 2) - preAimX;
+                                var offsetY = (nearest.y + nearest.height / 2) - preAimY;
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+
+                                foreach (var b in valid)
+                                {
+                                    var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                                    if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
+                                        drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                    else
+                                        drawList.Add(capture.ToRectDrawable(rect, "blood"));
+                                }
+                            }
+                            else
+                            {
+                                var damageResult = FindDamageNumber(capture);
+                                if (damageResult.HasValue)
+                                {
+                                    var (dcx, dcy, _) = damageResult.Value;
+                                    lastSeenTargetTime = DateTime.UtcNow;
+                                    var offsetX = dcx - preAimX;
+                                    var offsetY = dcy - preAimY;
+                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                                }
+
+                                if (!damageResult.HasValue)
+                                {
+                                    if (!hasLegendaryBar && (DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1.5)
+                                    {
+                                        Logger.LogInformation("桑多涅重击特化：超过1.5秒未找到目标，提前退出");
+                                        View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                                        break;
+                                    }
+
+                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                }
+                            }
+
+                            View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                        }
+
+                        Sleep(frameIntervalMs);
+                    }
+                }
+                finally
+                {
+                    View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                }
+
+                return true;
+            }
+            default:
+                return false;
+        }
+    }
+}
+
+/// <summary>
+/// 特化动作参数（由动作类型决定哪些字段生效）
+/// </summary>
+/// <param name="Hold">UseSkill 是否长按</param>
+/// <param name="Ms">Charge 持续时间（毫秒）</param>
+public sealed record ActionArgs(bool Hold = false, int Ms = 0);
