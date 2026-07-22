@@ -124,6 +124,23 @@ public class Genshin
     }
 
     /// <summary>
+    /// 点击大地图上的指定坐标。
+    /// </summary>
+    /// <remarks>
+    /// 该方法会先把目标移动到大地图的可点击安全区域，再执行一次点击。
+    /// </remarks>
+    /// <param name="x">目标X坐标。</param>
+    /// <param name="y">目标Y坐标。</param>
+    /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null。</param>
+    public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
+    {
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        await tpTask.CheckInBigMapUi();
+        await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+        await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
+    }
+
+    /// <summary>
     /// 移动大地图到指定坐标
     /// </summary>
     /// <remarks>
