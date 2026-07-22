@@ -134,9 +134,9 @@ public partial class Avatar
     ///   - Ocr：使用 OCR 识别
     ///   - Color：使用颜色分析识别
     /// </summary>
-    public static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumber(ImageRegion? existingCapture = null)
+    public static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumber(ImageRegion? existingCapture = null, DamageNumberRecognitionMode? modeOverride = null)
     {
-        var mode = TaskContext.Instance().Config.AutoFightConfig.DamageNumberRecognitionMode;
+        var mode = modeOverride ?? TaskContext.Instance().Config.AutoFightConfig.DamageNumberRecognitionMode;
         switch (mode)
         {
             case DamageNumberRecognitionMode.Disabled:
@@ -287,16 +287,20 @@ public partial class Avatar
     /// 当 SkipSeek 为 true 时（如部分角色重击索敌期间）跳过本帧。
     /// </summary>
     /// <param name="ct">取消令牌</param>
-    public static async Task ContinuousTargetingLoopAsync(CancellationToken ct)
+    /// <param name="frameIntervalMs">索敌识别间隔（毫秒）</param>
+    /// <param name="drawResults">是否绘制识别结果</param>
+    /// <param name="lockLostWaitTime">脱锁等待时间（秒）</param>
+    /// <param name="damageMode">伤害数字识别模式</param>
+    public static async Task ContinuousTargetingLoopAsync(
+        CancellationToken ct,
+        int frameIntervalMs,
+        bool drawResults,
+        double lockLostWaitTime,
+        DamageNumberRecognitionMode damageMode)
     {
-        // 总开关检查：未勾选时直接退出
-        var config = TaskContext.Instance().Config.AutoFightConfig;
-        if (!config.EnableCombatTargeting) return;
-
         var dpi = TaskContext.Instance().DpiScale;
         const int preAimX = 960;  // 预瞄准点 X（屏幕中心）
         const int preAimY = 480;   // 预瞄准点 Y
-        var frameIntervalMs = config.TargetingDetectionInterval;  // 每帧间隔
         DateTime? lastSeenTargetTime = null;  // 最后找到目标的时间（null = 从未找到）
 
         try
@@ -322,8 +326,6 @@ public partial class Avatar
                     // 1. 血条识别：检测红色血条并过滤左侧 UI 区域 (x > 200)
                     var bars = FindBloodBars(capture);
                     var valid = bars.Where(b => b.x > 200).ToList();
-
-                    bool drawResults = config.DrawRecognitionResults;
 
                     // 叠加层：绘制预瞄准框
                     var drawList = new List<RectDrawable>();
@@ -367,7 +369,7 @@ public partial class Avatar
                     else
                     {
                         // 3. 伤害数字追踪：血条无效时尝试通过伤害数字/反应文字定位
-                        var damageResult = FindDamageNumber(capture);
+                        var damageResult = FindDamageNumber(capture, damageMode);
                         if (damageResult.HasValue)
                         {
                             var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
@@ -390,8 +392,6 @@ public partial class Avatar
                         // 4. 脱锁旋转：血条和伤害数字都找不到时，脱锁等待后旋转视角
                         if (!damageResult.HasValue)
                         {
-                            var lockLostWaitTime = config.LockLostWaitTime;
-
                             // 从未找到过目标，或距离上次找到已超过脱锁等待时间 → 开始旋转
                             if (!lastSeenTargetTime.HasValue ||
                                 (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)

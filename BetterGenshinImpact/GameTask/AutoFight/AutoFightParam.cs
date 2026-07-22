@@ -56,6 +56,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         IsFirstCheck = autoFightConfig.FinishDetectConfig.IsFirstCheck;
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
         SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        EnableCombatTargeting = autoFightConfig.EnableCombatTargeting;
+        TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
+        DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
+        LockLostWaitTime = autoFightConfig.LockLostWaitTime;
+        DamageNumberRecognitionMode = autoFightConfig.DamageNumberRecognitionMode;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
@@ -87,6 +92,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     
     public bool QinDoublePickUp { get; set; } = false;
     public static bool SwimmingEnabled  { get; set; } = false;
+    public bool EnableCombatTargeting { get; set; } = false;
+    public int TargetingDetectionInterval { get; set; } = 50;
+    public bool DrawRecognitionResults { get; set; } = false;
+    public double LockLostWaitTime { get; set; } = 0.5;
+    public DamageNumberRecognitionMode DamageNumberRecognitionMode { get; set; } = DamageNumberRecognitionMode.Color;
 
     /// <summary>
     /// 基于经验值判断是否执行战后拾取
@@ -177,6 +187,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
+        EnableCombatTargeting = autoFightConfig.EnableCombatTargeting;
+        TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
+        DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
+        LockLostWaitTime = autoFightConfig.LockLostWaitTime;
+        DamageNumberRecognitionMode = autoFightConfig.DamageNumberRecognitionMode;
         ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
     }
 }

@@ -453,13 +453,18 @@ public class AutoFightJsonTask : ISoloTask
         }, cts2.Token);
 
         // 启动持续索敌循环（异步后台运行，与战斗任务并发）
-        if (TaskContext.Instance().Config.AutoFightConfig.EnableCombatTargeting)
+        if (_taskParam.EnableCombatTargeting)
         {
+            var interval = _taskParam.TargetingDetectionInterval;
+            var drawResults = _taskParam.DrawRecognitionResults;
+            var lockLostWait = _taskParam.LockLostWaitTime;
+            var damageMode = _taskParam.DamageNumberRecognitionMode;
+
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await Avatar.ContinuousTargetingLoopAsync(cts2.Token);
+                    await Avatar.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
