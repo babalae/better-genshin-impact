@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.ComponentModel;
 using System.Threading;
@@ -22,6 +23,7 @@ using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Model.MaskMap;
@@ -50,6 +52,7 @@ public partial class MaskWindow : Window
     private readonly ILogger<MaskWindow> _logger = App.GetLogger<MaskWindow>();
 
     private MaskWindowConfig? _maskWindowConfig;
+    private BitmapSource? _crosshairImage;
     private MapLabelSearchWindow? _mapLabelSearchWindow;
     private CancellationTokenSource? _mapLabelCategorySelectCts;
     static MaskWindow()
@@ -179,6 +182,7 @@ public partial class MaskWindow : Window
 
         _maskWindowConfig = TaskContext.Instance().Config.MaskWindowConfig;
         _maskWindowConfig.PropertyChanged += MaskWindowConfigOnPropertyChanged;
+        LoadCrosshairImage();
 
         _viewModel = DataContext as MaskWindowViewModel;
         if (_viewModel != null)
@@ -234,6 +238,11 @@ public partial class MaskWindow : Window
         {
             Dispatcher.Invoke(UpdateClickThroughState);
         }
+        if (e.PropertyName == nameof(MaskWindowConfig.CrosshairImagePath))
+        {
+            LoadCrosshairImage();
+        }
+        Dispatcher.Invoke(InvalidateVisual);
     }
 
     private void ViewModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -470,6 +479,9 @@ public partial class MaskWindow : Window
     {
         try
         {
+            // 准星渲染（先绘制，低于其他所有遮罩内容）
+            DrawCrosshair(drawingContext);
+
             var cnt = VisionContext.Instance().DrawContent.RectList.Count + VisionContext.Instance().DrawContent.LineList.Count + VisionContext.Instance().DrawContent.TextList.Count;
             if (cnt == 0)
             {
@@ -620,6 +632,112 @@ public partial class MaskWindow : Window
         }
 
         return null;
+    }
+
+    private void DrawCrosshair(DrawingContext dc)
+    {
+        var config = _maskWindowConfig;
+        if (config == null || !config.CrosshairEnabled) return;
+
+        var centerX = ActualWidth / 2;
+        var centerY = ActualHeight / 2;
+        var color = ParseColor(config.CrosshairColor) ?? Colors.White;
+        var brush = new SolidColorBrush(color);
+
+        switch (config.CrosshairType)
+        {
+            case CrosshairType.Crosshair:
+            {
+                var half = config.CrosshairSize / 2.0;
+                var pen = new Pen(brush, config.CrosshairLineWidth);
+                dc.DrawLine(pen, new Point(centerX - half, centerY), new Point(centerX + half, centerY));
+                dc.DrawLine(pen, new Point(centerX, centerY - half), new Point(centerX, centerY + half));
+                break;
+            }
+            case CrosshairType.Diagonal:
+            {
+                var half = config.CrosshairSize / 2.0;
+                var pen = new Pen(brush, config.CrosshairLineWidth);
+                var d = half * 0.7071; // cos(45°) = sin(45°) ≈ 0.7071
+                // Southeast direction (down-right)
+                dc.DrawLine(pen, new Point(centerX, centerY), new Point(centerX + d, centerY + d));
+                // Southwest direction (down-left)
+                dc.DrawLine(pen, new Point(centerX, centerY), new Point(centerX - d, centerY + d));
+                // Fill center gap from diagonal line cap intersection
+                var dotRadius = Math.Max(config.CrosshairLineWidth / 2.0, 2.0);
+                dc.DrawEllipse(brush, null, new Point(centerX, centerY), dotRadius, dotRadius);
+                break;
+            }
+            case CrosshairType.Dot:
+            {
+                var pen = new Pen(brush, config.CrosshairLineWidth);
+                var radius = config.CrosshairSize / 2.0;
+                dc.DrawEllipse(null, pen, new Point(centerX, centerY), radius, radius);
+                var dotRadius = Math.Max(config.CrosshairLineWidth / 2.0, 2.0);
+                dc.DrawEllipse(brush, null, new Point(centerX, centerY), dotRadius, dotRadius);
+                break;
+            }
+            case CrosshairType.DotCrosshair:
+            {
+                var halfLine = config.CrosshairSize / 2.0;
+                var gap = config.CrosshairGap;
+                var outer = gap + halfLine;
+                var pen = new Pen(brush, config.CrosshairLineWidth);
+                // Center dot
+                var dotRadius = Math.Max(config.CrosshairLineWidth / 2.0, 2.0);
+                dc.DrawEllipse(brush, null, new Point(centerX, centerY), dotRadius, dotRadius);
+                // Crosshair lines with gap
+                dc.DrawLine(pen, new Point(centerX - outer, centerY), new Point(centerX - gap, centerY));
+                dc.DrawLine(pen, new Point(centerX + gap, centerY), new Point(centerX + outer, centerY));
+                dc.DrawLine(pen, new Point(centerX, centerY - outer), new Point(centerX, centerY - gap));
+                dc.DrawLine(pen, new Point(centerX, centerY + gap), new Point(centerX, centerY + outer));
+                break;
+            }
+            case CrosshairType.Custom:
+            {
+                var image = _crosshairImage;
+                if (image == null) return;
+                if (config.CrosshairScaleMode == CrosshairScaleMode.Fit)
+                {
+                    var scale = Math.Min(ActualWidth / image.Width, ActualHeight / image.Height);
+                    var width = image.Width * scale;
+                    var height = image.Height * scale;
+                    var left = (ActualWidth - width) / 2;
+                    var top = (ActualHeight - height) / 2;
+                    dc.DrawImage(image, new Rect(left, top, width, height));
+                }
+                else
+                {
+                    var left = centerX - image.Width / 2;
+                    var top = centerY - image.Height / 2;
+                    dc.DrawImage(image, new Rect(left, top, image.Width, image.Height));
+                }
+                break;
+            }
+        }
+    }
+
+    private void LoadCrosshairImage()
+    {
+        try
+        {
+            if (_maskWindowConfig != null && !string.IsNullOrEmpty(_maskWindowConfig.CrosshairImagePath)
+                && System.IO.File.Exists(_maskWindowConfig.CrosshairImagePath))
+            {
+                using var stream = File.OpenRead(_maskWindowConfig.CrosshairImagePath);
+                var image = BitmapFrame.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                image.Freeze();
+                _crosshairImage = image;
+            }
+            else
+            {
+                _crosshairImage = null;
+            }
+        }
+        catch
+        {
+            _crosshairImage = null;
+        }
     }
 }
 
