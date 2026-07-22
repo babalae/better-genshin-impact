@@ -1,4 +1,3 @@
-﻿using static TorchSharp.torch;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing;
 
