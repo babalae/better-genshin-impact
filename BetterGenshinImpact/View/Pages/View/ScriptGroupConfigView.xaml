@@ -1155,10 +1155,10 @@
                                     Text="{Binding PathingConfig.AutoFightConfig.ActionSchedulerByCd, Mode=TwoWay}"
                                     TextWrapping="Wrap" />
                     </Grid>
-                    <Grid Margin="16">
+                    <Grid Margin="16,10,52,0">
 
                         <!-- 自动检测战斗结束 -->
-                        <ui:CardExpander Margin="0,0,36,12"
+                        <ui:CardExpander Margin="0,0,0,12"
                                          ContentPadding="0"
                                          IsExpanded="False">
 
@@ -1414,8 +1414,130 @@
                         </ui:CardExpander>
                     </Grid>
                     
+                    <Grid Margin="16,10,52,0">
+                    <!-- 战斗中视觉识别配置 -->
+                    <ui:CardExpander Margin="0,0,0,12"
+                                     ContentPadding="0"
+                                     IsExpanded="False">
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="战斗中视觉识别配置"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16,12,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="战斗中持续索敌"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="战斗过程中情况允许时持续尝试面朝敌人"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.EnableCombatTargeting, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid Margin="16,4,16,16"
+                                  Visibility="{Binding PathingConfig.AutoFightConfig.EnableCombatTargeting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="脱锁等待时间（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="敌人不可见时等待一定时间后开始旋转索敌"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.LockLostWaitTime}" />
+                            </Grid>
+                            <Grid Margin="16,8,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="伤害数字识别模式"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="当血条不可见或传奇等固定位置血条时使用伤害数字辅助定位敌人"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          Width="120"
+                                          Margin="0,0,36,0"
+                                          SelectedValue="{Binding PathingConfig.AutoFightConfig.DamageNumberRecognitionMode, Mode=TwoWay}"
+                                          SelectedValuePath="Tag">
+                                    <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Disabled}">禁用</ComboBoxItem>
+                                    <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Ocr}">OCR识别</ComboBoxItem>
+                                    <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Color}">颜色识别</ComboBoxItem>
+                                </ComboBox>
+                            </Grid>
+                            <Grid Margin="16,8,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="索敌识别间隔（毫秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="每次索敌识别之间的间隔时间"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.TargetingDetectionInterval}" />
+                            </Grid>
+                            <Grid Margin="16,8,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="绘制识别结果位置"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="在遮罩窗口上显示血条、伤害数字等识别结果的边框"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.DrawRecognitionResults, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+                    </Grid>
+                    
+                    <Grid Margin="16,10,52,0">
                     <!-- 盾奶位角色优先释放技能 -->
-                    <ui:CardExpander Margin="16,0,52,12"
+                    <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
                                  IsExpanded="False">
                     <ui:CardExpander.Header>
@@ -1596,6 +1718,7 @@
                         
                     </Grid>
                 </ui:CardExpander>
+                    </Grid>
                     
                     <Grid Margin="16,10,52,0">
 
@@ -1835,124 +1958,7 @@
                 </Grid>
                 </StackPanel>
             </ui:CardExpander>
-            <!-- 战斗中视觉识别配置 -->
-            <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             IsExpanded="False">
-                <ui:CardExpander.Header>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="战斗中视觉识别配置"
-                                      TextWrapping="Wrap" />
-                    </Grid>
-                </ui:CardExpander.Header>
-                <StackPanel>
-                    <Grid Margin="16,12,16,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="战斗中持续索敌"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="战斗过程中情况允许时持续尝试面朝敌人"
-                                          TextWrapping="Wrap" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.EnableCombatTargeting, Mode=TwoWay}" />
-                    </Grid>
-                    <Grid Margin="16,4,16,16"
-                          Visibility="{Binding PathingConfig.AutoFightConfig.EnableCombatTargeting, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="脱锁等待时间（秒）"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="敌人不可见时等待一定时间后开始旋转索敌"
-                                          TextWrapping="Wrap" />
-                        </StackPanel>
-                        <ui:TextBox Grid.Column="1"
-                                    Width="120"
-                                    Margin="0,0,36,0"
-                                    Text="{Binding PathingConfig.AutoFightConfig.LockLostWaitTime}" />
-                    </Grid>
-                    <Grid Margin="16,8,16,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="伤害数字识别模式"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="当血条不可见或传奇等固定位置血条时使用伤害数字辅助定位敌人"
-                                          TextWrapping="Wrap" />
-                        </StackPanel>
-                        <ComboBox Grid.Column="1"
-                                  Width="120"
-                                  Margin="0,0,36,0"
-                                  SelectedValue="{Binding PathingConfig.AutoFightConfig.DamageNumberRecognitionMode, Mode=TwoWay}"
-                                  SelectedValuePath="Tag">
-                            <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Disabled}">禁用</ComboBoxItem>
-                            <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Ocr}">OCR识别</ComboBoxItem>
-                            <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Color}">颜色识别</ComboBoxItem>
-                        </ComboBox>
-                    </Grid>
-                    <Grid Margin="16,8,16,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="索敌识别间隔（毫秒）"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="每次索敌识别之间的间隔时间"
-                                          TextWrapping="Wrap" />
-                        </StackPanel>
-                        <ui:TextBox Grid.Column="1"
-                                    Width="120"
-                                    Margin="0,0,36,0"
-                                    Text="{Binding PathingConfig.AutoFightConfig.TargetingDetectionInterval}" />
-                    </Grid>
-                    <Grid Margin="16,8,16,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="绘制识别结果位置"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="在遮罩窗口上显示血条、伤害数字等识别结果的边框"
-                                          TextWrapping="Wrap" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.DrawRecognitionResults, Mode=TwoWay}" />
-                    </Grid>
-                </StackPanel>
-            </ui:CardExpander>
+
             <!-- 自动吃食物 -->
             <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                 <ui:CardExpander.Icon>
