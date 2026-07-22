@@ -188,11 +188,11 @@ public partial class Avatar
                 var dpi = TaskContext.Instance().DpiScale;
                 const int preAimX = 960;
                 const int preAimY = 480;
-                const int frameIntervalMs = 50;
+                var frameIntervalMs = TaskContext.Instance().Config.AutoFightConfig.TargetingDetectionInterval;
 
                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
 
-                var lastSeenTargetTime = DateTime.UtcNow;
+                DateTime? lastSeenTargetTime = null;
                 var startTime = DateTime.UtcNow;
                 var maxDurationMs = ms;
 
@@ -206,10 +206,13 @@ public partial class Avatar
                             UpdateLegendaryBarTracker(bars.Select(b => b.y));
                             var valid = bars.Where(b => b.x > 200).ToList();
 
-                            var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>
+                            bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
+
+                            var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
+                            if (drawResults)
                             {
-                                capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2))
-                            };
+                                drawList.Add(capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2)));
+                            }
 
                             bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
 
@@ -217,18 +220,21 @@ public partial class Avatar
                             {
                                 lastSeenTargetTime = DateTime.UtcNow;
                                 var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
-                                Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
+                                //Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
                                 var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                                 var offsetY = (nearest.y + nearest.height / 2) - preAimY;
                                 Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
 
-                                foreach (var b in valid)
+                                if (drawResults)
                                 {
-                                    var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
-                                    if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
-                                        drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
-                                    else
-                                        drawList.Add(capture.ToRectDrawable(rect, "blood"));
+                                    foreach (var b in valid)
+                                    {
+                                        var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                                        if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
+                                            drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                        else
+                                            drawList.Add(capture.ToRectDrawable(rect, "blood"));
+                                    }
                                 }
                             }
                             else
@@ -236,23 +242,35 @@ public partial class Avatar
                                 var damageResult = FindDamageNumber(capture);
                                 if (damageResult.HasValue)
                                 {
-                                    var (dcx, dcy, _) = damageResult.Value;
+                                    var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
                                     lastSeenTargetTime = DateTime.UtcNow;
                                     var offsetX = dcx - preAimX;
                                     var offsetY = dcy - preAimY;
                                     Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                                    if (drawResults)
+                                    {
+                                        drawList.Add(capture.ToRectDrawable(
+                                            new OpenCvSharp.Rect(dx, dy, dw, dh),
+                                            "damage_target",
+                                            new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                    }
                                 }
 
                                 if (!damageResult.HasValue)
                                 {
-                                    if (!hasLegendaryBar && (DateTime.UtcNow - lastSeenTargetTime).TotalSeconds >= 1.5)
+                                    var lockLostWaitTime = TaskContext.Instance().Config.AutoFightConfig.LockLostWaitTime;
+
+                                    if (!hasLegendaryBar && (DateTime.UtcNow - (lastSeenTargetTime ?? startTime)).TotalSeconds >= 1.5)
                                     {
                                         Logger.LogInformation("桑多涅重击特化：超过1.5秒未找到目标，提前退出");
                                         View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
                                         break;
                                     }
 
-                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                    if (!lastSeenTargetTime.HasValue || (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
+                                    {
+                                        Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                    }
                                 }
                             }
 

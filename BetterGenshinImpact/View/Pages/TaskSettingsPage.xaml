@@ -1207,9 +1207,26 @@
                                         Width="120"
                                         Margin="0,0,36,0"
                                         Text="{Binding Config.AutoFightConfig.TargetingDetectionInterval}" />
-                        </Grid>
-                    </StackPanel>
-                </ui:CardExpander>
+                    </Grid>
+                    <Grid Margin="16,8,16,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <ui:TextBlock FontTypography="Body"
+                                          Text="绘制识别结果位置"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="在遮罩窗口上显示血条、伤害数字等识别结果的边框"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="1"
+                                         Margin="0,0,36,0"
+                                         IsChecked="{Binding Config.AutoFightConfig.DrawRecognitionResults, Mode=TwoWay}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
 
                 <Grid Margin="16,16,16,16">
                     <Grid.RowDefinitions>

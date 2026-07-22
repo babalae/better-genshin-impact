@@ -193,6 +193,11 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private DamageNumberRecognitionMode _damageNumberRecognitionMode = DamageNumberRecognitionMode.Disabled;
 
+    /// <summary>
+    /// 绘制识别结果位置：在遮罩窗口上显示血条、伤害数字等识别结果的边框
+    /// </summary>
+    [ObservableProperty]
+    private bool _drawRecognitionResults = true;
 
 }
 
