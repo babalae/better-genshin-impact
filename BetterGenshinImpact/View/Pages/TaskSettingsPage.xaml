@@ -1327,6 +1327,7 @@
                               Grid.Column="1"
                               Width="180"
                               Margin="0,0,36,0"
+                              behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}"
                               behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                               ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                               SelectedCascadingItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -1768,6 +1769,7 @@
                                            Grid.Column="1"
                                            Width="200"
                                            Margin="0,0,36,0"
+                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoBossConfig.BossName, Mode=TwoWay}"
                                            behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                            ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
                                            SelectedCascadingItem="{Binding Config.AutoBossConfig.BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}" />
