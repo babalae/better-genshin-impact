@@ -291,12 +291,14 @@ public partial class Avatar
     /// <param name="drawResults">是否绘制识别结果</param>
     /// <param name="lockLostWaitTime">脱锁等待时间（秒）</param>
     /// <param name="damageMode">伤害数字识别模式</param>
+    /// <param name="isFightEnd">战斗是否已结束（外部标志，为 true 时退出循环）</param>
     public static async Task ContinuousTargetingLoopAsync(
         CancellationToken ct,
         int frameIntervalMs,
         bool drawResults,
         double lockLostWaitTime,
-        DamageNumberRecognitionMode damageMode)
+        DamageNumberRecognitionMode damageMode,
+        Func<bool>? isFightEnd = null)
     {
         var dpi = TaskContext.Instance().DpiScale;
         const int preAimX = 960;  // 预瞄准点 X（屏幕中心）
@@ -305,7 +307,7 @@ public partial class Avatar
 
         try
         {
-            while (!ct.IsCancellationRequested)
+            while (!ct.IsCancellationRequested && !(isFightEnd?.Invoke() ?? false))
             {
                 // SkipSeek 为 true 时跳过本轮索敌，避免与角色专属索敌冲突
                 if (SkipSeek)

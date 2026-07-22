@@ -523,7 +523,7 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    await Avatar.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode);
+                    await Avatar.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => fightEndFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
