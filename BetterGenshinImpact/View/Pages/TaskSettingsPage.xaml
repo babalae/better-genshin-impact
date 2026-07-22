@@ -600,18 +600,14 @@
                                 </Grid>
                             </Grid>
 
+                            <!-- 旋转寻找敌人位置：主开关 + 速度滑块 -->
                             <Grid Margin="16,0,16,16">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto"  />
-                                    </Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
@@ -629,7 +625,8 @@
                                                   Margin="5,8,0,10"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Center"
-                                                  TextWrapping="Wrap" />
+                                                  TextWrapping="Wrap"
+                                                  Visibility="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <Slider Grid.Row="0"
                                             Grid.Column="2"
                                             Minimum="1"
@@ -639,57 +636,56 @@
                                             TickFrequency="1"
                                             IsSnapToTickEnabled="True"
                                             HorizontalAlignment="Left"
-                                            VerticalAlignment="Center" />
-                                    <ui:TextBlock Grid.Row="1"
-                                                  Grid.Column="0"
-                                                  Grid.ColumnSpan="3"
-                                                  Grid.RowSpan="2"
-                                                  HorizontalAlignment="Stretch"
-                                                  VerticalAlignment="Stretch"
-                                                  Margin="0,0,5,0"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)"
-                                                  TextWrapping="Wrap" />
-                                    
-                                    <ui:ToggleSwitch Grid.Row="0"
-                                                     Grid.Column="3"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ui:ToggleSwitch Grid.Column="3"
                                                      Margin="10,0,36,10"
                                                      IsChecked="{Binding  Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}" />
-                                    
-                                    <ui:TextBlock Grid.Row="1"
-                                                  Grid.Column="3"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  FontSize="8"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Margin="0,20,25,-10"
-                                                  FontTypography="Body"
+                            </Grid>
+                            <ui:TextBlock Margin="16,0,16,0"
+                                          HorizontalAlignment="Stretch"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="(建议配合1秒左右&#x201C;更快检测结束战斗&#x201D;) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)"
+                                          TextWrapping="Wrap"
+                                          Visibility="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <Grid Margin="16,0,16,16"
+                                  Visibility="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
                                                   Text="Q前检测"
                                                   TextWrapping="Wrap" />
-                                    <ui:ToggleSwitch Grid.Row="1"
-                                                     Grid.Column="3"
-                                                     Margin="10,-15,36,0"
-                                                     IsEnabled="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
-                                                     IsChecked="{Binding  Config.AutoFightConfig.FinishDetectConfig.CheckBeforeBurst, Mode=TwoWay}" />
-                                    
-                                    <ui:ToggleSwitch Grid.Row="2"
-                                                     Grid.Column="3"
-                                                     Grid.RowSpan="1"
-                                                     Margin="10,0,36,0"
-                                                     IsEnabled="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
-                                                     IsChecked="{Binding  Config.AutoFightConfig.FinishDetectConfig.IsFirstCheck, Mode=TwoWay}" />
-                                    <ui:TextBlock Grid.Row="2"
-                                                  Grid.Column="3"
-                                                  Grid.RowSpan="1"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  FontSize="8"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Margin="0,0,25,-45"
-                                                  FontTypography="Body"
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="释放Q技能前检测是否结束战斗"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsEnabled="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
+                                                 IsChecked="{Binding Config.AutoFightConfig.FinishDetectConfig.CheckBeforeBurst, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid Margin="16,0,16,16"
+                                  Visibility="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
                                                   Text="尝试面敌"
                                                   TextWrapping="Wrap" />
-                                </Grid>
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="开战寻敌，战斗尝试面向敌人"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsEnabled="{Binding Config.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
+                                                 IsChecked="{Binding Config.AutoFightConfig.FinishDetectConfig.IsFirstCheck, Mode=TwoWay}" />
+                            </Grid>
 
                             <Grid Margin="16">
                                 <Grid.RowDefinitions>
