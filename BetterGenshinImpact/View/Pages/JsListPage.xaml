@@ -26,7 +26,7 @@
     </UserControl.Resources>
 
     <Grid>
-        <Grid Margin="42,16,42,12">
+        <Grid Margin="{StaticResource PagePadding}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
