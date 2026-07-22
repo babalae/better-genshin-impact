@@ -389,7 +389,7 @@ public partial class Avatar
                             if (!lastSeenTargetTime.HasValue ||
                                 (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
                             {
-                                Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(250 * dpi), 0);
                             }
                         }
                     }
