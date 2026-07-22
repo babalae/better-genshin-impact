@@ -1268,6 +1268,25 @@
                                     </Grid>
                                 </Grid>
                                 
+                            <!-- 敌人可见时跳过战斗结束检查 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="敌人可见时跳过战斗结束检查"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="检测到敌人血条或伤害数字时跳过战斗结束检查，避免频繁打开队伍界面。连续跳过5次后强制检查一次，防误判。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
+                            </Grid>
+
                             <Grid Margin="16,0,16,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />

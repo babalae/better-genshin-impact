@@ -43,6 +43,7 @@ public class AutoFightJsonTask : ISoloTask
     /// </summary>
     private readonly BgiYoloPredictor? _predictor;
     private DateTime _lastFightFlagTime = DateTime.Now;
+    private int _skipCheckCounter;
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -84,6 +85,7 @@ public class AutoFightJsonTask : ISoloTask
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
         public bool RotateFindEnemyEnabled = false;
+        public bool SkipFightEndCheckWhenEnemyVisible = false;
 
         public (int, int, int) BattleEndProgressBarColor { get; }
         public (int, int, int) BattleEndProgressBarColorTolerance { get; }
@@ -100,6 +102,7 @@ public class AutoFightJsonTask : ISoloTask
             DetectDelayTime =
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
+            SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
         }
 
         public static void ParseCheckTimeString(
@@ -567,6 +570,28 @@ public class AutoFightJsonTask : ISoloTask
         Avatar.SkipSeek = true;
         try
         {
+            // 敌人可见时跳过战斗结束检查
+            if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
+            {
+                if (_skipCheckCounter < 5)
+                {
+                    using var quickCapture = CaptureToRectArea();
+                    var bars = Avatar.FindBloodBars(quickCapture);
+                    // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
+                    if (bars.Count > 0)
+                    {
+                        _skipCheckCounter++;
+                        Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
+                        return false;
+                    }
+                }
+                _skipCheckCounter = 0;
+            }
+            else
+            {
+                _skipCheckCounter = 0;
+            }
+
             if (_finishDetectConfig.RotateFindEnemyEnabled)
             {
                 bool? result = null;

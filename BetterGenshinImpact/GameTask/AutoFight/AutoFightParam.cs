@@ -20,6 +20,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
         public bool RotateFindEnemyEnabled = false;
+        public bool SkipFightEndCheckWhenEnemyVisible = false;
     }
 
     public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
@@ -54,6 +55,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         CheckBeforeBurst = autoFightConfig.FinishDetectConfig.CheckBeforeBurst;
         IsFirstCheck = autoFightConfig.FinishDetectConfig.IsFirstCheck;
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
+        SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
@@ -80,6 +82,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public bool CheckBeforeBurst { get; set; } = false;
     public bool IsFirstCheck { get; set; } = true;    
     public int RotaryFactor { get; set; } = 10;
+    public bool SkipFightEndCheckWhenEnemyVisible { get; set; } = false;
     public bool BurstEnabled { get; set; } = false;
     
     public bool QinDoublePickUp { get; set; } = false;

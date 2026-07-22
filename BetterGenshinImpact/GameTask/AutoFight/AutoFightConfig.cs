@@ -101,6 +101,12 @@ public partial class AutoFightConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private bool _checkBeforeBurst = false;
+
+        /// <summary>
+        /// 敌人可见时跳过战斗结束检查
+        /// </summary>
+        [ObservableProperty]
+        private bool _skipFightEndCheckWhenEnemyVisible = false;
     }
     /// <summary>
     /// 战斗结束相关配置
