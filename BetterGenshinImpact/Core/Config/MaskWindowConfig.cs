@@ -77,6 +77,54 @@ public partial class MaskWindowConfig : ObservableObject
     public static readonly Rect UidCoverRightBottomRect = new(1920 - 1685, 1080 - 1053, 178, 22);
 
     /// <summary>
+    ///     准星是否启用
+    /// </summary>
+    [ObservableProperty]
+    private bool _crosshairEnabled;
+
+    /// <summary>
+    ///     准星类型
+    /// </summary>
+    [ObservableProperty]
+    private CrosshairType _crosshairType = CrosshairType.Crosshair;
+
+    /// <summary>
+    ///     准星颜色（十六进制）
+    /// </summary>
+    [ObservableProperty]
+    private string _crosshairColor = "#FFFFFF";
+
+    /// <summary>
+    ///     准星线宽
+    /// </summary>
+    [ObservableProperty]
+    private int _crosshairLineWidth = 4;
+
+    /// <summary>
+    ///     准星大小
+    /// </summary>
+    [ObservableProperty]
+    private int _crosshairSize = 30;
+
+    /// <summary>
+    ///     中心点与十字线的间隔（仅 DotCrosshair 类型）
+    /// </summary>
+    [ObservableProperty]
+    private int _crosshairGap = 10;
+
+    /// <summary>
+    ///     自定义准星图片路径
+    /// </summary>
+    [ObservableProperty]
+    private string? _crosshairImagePath;
+
+    /// <summary>
+    ///     自定义图片缩放方式
+    /// </summary>
+    [ObservableProperty]
+    private CrosshairScaleMode _crosshairScaleMode = CrosshairScaleMode.Original;
+
+    /// <summary>
     /// 显示FPS
     /// </summary>
     [ObservableProperty]
@@ -204,4 +252,25 @@ public partial class MaskWindowConfig : ObservableObject
         OverlayMetricItems[item.ToString()] = enabled;
         OnPropertyChanged(nameof(OverlayMetricItems));
     }
+}
+
+/// <summary>
+///     准星类型
+/// </summary>
+public enum CrosshairType
+{
+    Crosshair,
+    Diagonal,
+    Dot,
+    DotCrosshair,
+    Custom
+}
+
+/// <summary>
+///     自定义准星图片缩放方式
+/// </summary>
+public enum CrosshairScaleMode
+{
+    Original,
+    Fit
 }
