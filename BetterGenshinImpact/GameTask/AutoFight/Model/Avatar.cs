@@ -155,6 +155,7 @@ public partial class Avatar
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
                 
+                Avatar.SkipSeek = true;
                 // 保存原始 MoveMode，用于 finally 还原
                 var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
                 // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
@@ -196,6 +197,7 @@ public partial class Avatar
                     AutoFightTask.FightWaypoint = null;
                     Simulation.SendInput.Mouse.RightButtonUp();
                     Simulation.ReleaseAllKey();
+                    Avatar.SkipSeek = false;
                 }
                 
                 using var bitmap2 = CaptureToRectArea();
@@ -587,44 +589,52 @@ public partial class Avatar
     /// </summary>
     public void UseBurst()
     {
-        // CD 中立即返回，其余场景尝试释放
-        using var region1 = CaptureToRectArea();
-        if (IsBurstReadyByClassify(region1) != BurstReadyState.Ready)
+        Avatar.SkipSeek = true;
+        try
         {
-            // Logger.LogInformation("Q在CD，跳过");
-            return;
-        }
-        
-        for (var i = 0; i < 10; i++)
-        {
-            if (Ct is { IsCancellationRequested: true })
+            // CD 中立即返回，其余场景尝试释放
+            using var region1 = CaptureToRectArea();
+            if (IsBurstReadyByClassify(region1) != BurstReadyState.Ready)
             {
+                // Logger.LogInformation("Q在CD，跳过");
                 return;
             }
 
-            // Logger.LogInformation("释放Q");
-            Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
-            Sleep(200, Ct);
-
-            using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
-
-            if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
+            for (var i = 0; i < 10; i++)
             {
-                // 找不到角色编号块意味者技能释放成功
-                Sleep(1500, Ct);
-                return;
-            }
-            else
-            {
-                // 找到编号块判断是否进入了CD，四星角色没有大招动画
-                if (IsBurstReadyByClassify(region) != BurstReadyState.Ready)
+                if (Ct is { IsCancellationRequested: true })
                 {
-                    // Logger.LogInformation("释放Q后检查到CD");
+                    return;
+                }
+
+                // Logger.LogInformation("释放Q");
+                Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
+                Sleep(200, Ct);
+
+                using var region = CaptureToRectArea();
+                ThrowWhenDefeated(region, Ct);
+
+                if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
+                {
+                    // 找不到角色编号块意味者技能释放成功
                     Sleep(1500, Ct);
                     return;
                 }
+                else
+                {
+                    // 找到编号块判断是否进入了CD，四星角色没有大招动画
+                    if (IsBurstReadyByClassify(region) != BurstReadyState.Ready)
+                    {
+                        // Logger.LogInformation("释放Q后检查到CD");
+                        Sleep(1500, Ct);
+                        return;
+                    }
+                }
             }
+        }
+        finally
+        {
+            Avatar.SkipSeek = false;
         }
     }
 
@@ -924,7 +934,15 @@ public partial class Avatar
 
     public void MoveBy(int x, int y)
     {
-        GlobalMethod.MoveMouseBy(x, y);
+        Avatar.SkipSeek = true;
+        try
+        {
+            GlobalMethod.MoveMouseBy(x, y);
+        }
+        finally
+        {
+            Avatar.SkipSeek = false;
+        }
     }
 
     public void Scroll(int scrollAmountInClicks)

@@ -1,11 +1,16 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -15,6 +20,20 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// </summary>
 public partial class Avatar
 {
+    /// <summary>
+    /// 持续索敌跳过标记：当某角色进行独占视角操作（如重击索敌）时设为 true，
+    /// 持续索敌循环将跳过本帧，避免两者争夺鼠标控制权。
+    /// </summary>
+    private static volatile bool _skipSeek;
+
+    /// <summary>
+    /// 设置或获取持续索敌跳过状态。
+    /// </summary>
+    public static bool SkipSeek
+    {
+        get => _skipSeek;
+        set => _skipSeek = value;
+    }
     /// <summary>
     /// 传奇血条动态追踪字典：2px粒度的 y → 连续出现计数。
     /// y 96-200 范围的血条在连续5帧中出现时被标记为传奇。
@@ -248,5 +267,142 @@ public partial class Avatar
         var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
 
         return (closest.cx, closest.cy, "", closest.x, closest.y, closest.w, closest.h);
+    }
+
+    /// <summary>
+    /// 战斗中持续索敌循环：在战斗过程中持续尝试面朝敌人。
+    /// 受 EnableCombatTargeting 配置项控制总开关。
+    /// 当 SkipSeek 为 true 时（如部分角色重击索敌期间）跳过本帧。
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
+    public static async Task ContinuousTargetingLoopAsync(CancellationToken ct)
+    {
+        // 总开关检查：未勾选时直接退出
+        var config = TaskContext.Instance().Config.AutoFightConfig;
+        if (!config.EnableCombatTargeting) return;
+
+        var dpi = TaskContext.Instance().DpiScale;
+        const int preAimX = 960;  // 预瞄准点 X（屏幕中心）
+        const int preAimY = 480;   // 预瞄准点 Y
+        var frameIntervalMs = config.TargetingDetectionInterval;  // 每帧间隔
+        DateTime? lastSeenTargetTime = null;  // 最后找到目标的时间（null = 从未找到）
+
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                // SkipSeek 为 true 时跳过本轮索敌，避免与角色专属索敌冲突
+                if (SkipSeek)
+                {
+                    await Task.Delay(frameIntervalMs, ct);
+                    continue;
+                }
+
+                using (var capture = CaptureToRectArea())
+                {
+                    // 不在主界面时跳过本轮（避免菜单/地图/对话等界面下误操作）
+                    if (!Bv.IsInMainUi(capture))
+                    {
+                        await Task.Delay(frameIntervalMs, ct);
+                        continue;
+                    }
+
+                    // 1. 血条识别：检测红色血条并过滤左侧 UI 区域 (x > 200)
+                    var bars = FindBloodBars(capture);
+                    UpdateLegendaryBarTracker(bars.Select(b => b.y));
+                    var valid = bars.Where(b => b.x > 200).ToList();
+
+                    bool drawResults = config.DrawRecognitionResults;
+
+                    // 叠加层：绘制预瞄准框
+                    var drawList = new List<RectDrawable>();
+                    if (drawResults)
+                    {
+                        drawList.Add(capture.ToRectDrawable(
+                            new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50),
+                            "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2)));
+                    }
+
+                    bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
+
+                    // 2. 血条追踪：存在有效普通血条且无传奇时，朝最近血条方向移动鼠标
+                    if (valid.Count > 0 && !hasLegendaryBar)
+                    {
+                        lastSeenTargetTime = DateTime.UtcNow;
+                        var nearest = valid.OrderBy(b =>
+                            Math.Abs((b.x + b.width / 2) - preAimX) +
+                            Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                        var offsetX = (nearest.x + nearest.width / 2) - preAimX;
+                        var offsetY = (nearest.y + nearest.height / 2) - preAimY;
+                        Simulation.SendInput.Mouse.MoveMouseBy(
+                            (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+
+                        // 叠加层：最近血条绿色粗框，其余红色细框
+                        if (drawResults)
+                        {
+                            foreach (var b in valid)
+                            {
+                                var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                                bool isTarget = b.x == nearest.x && b.y == nearest.y &&
+                                                b.width == nearest.width && b.height == nearest.height;
+                                drawList.Add(capture.ToRectDrawable(rect,
+                                    isTarget ? "target" : "blood",
+                                    isTarget
+                                        ? new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)
+                                        : null));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 3. 伤害数字追踪：血条无效时尝试通过伤害数字/反应文字定位
+                        var damageResult = FindDamageNumber(capture);
+                        if (damageResult.HasValue)
+                        {
+                            var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
+                            lastSeenTargetTime = DateTime.UtcNow;
+                            var offsetX = dcx - preAimX;
+                            var offsetY = dcy - preAimY;
+                            Simulation.SendInput.Mouse.MoveMouseBy(
+                                (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+
+                            // 叠加层：伤害数字区域绿色框
+                            if (drawResults)
+                            {
+                                drawList.Add(capture.ToRectDrawable(
+                                    new OpenCvSharp.Rect(dx, dy, dw, dh),
+                                    "damage_target",
+                                    new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                            }
+                        }
+
+                        // 4. 脱锁旋转：血条和伤害数字都找不到时，脱锁等待后旋转视角
+                        if (!damageResult.HasValue)
+                        {
+                            var lockLostWaitTime = config.LockLostWaitTime;
+
+                            // 从未找到过目标，或距离上次找到已超过脱锁等待时间 → 开始旋转
+                            if (!lastSeenTargetTime.HasValue ||
+                                (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
+                            {
+                                Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                            }
+                        }
+                    }
+
+                    // 提交叠加层
+                    VisionContext.Instance().DrawContent.PutOrRemoveRectList("ContinuousTargeting", drawList);
+                }
+
+                // 按配置的索敌识别间隔等待
+                await Task.Delay(frameIntervalMs, ct);
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            // 退出时清除叠加层
+            VisionContext.Instance().DrawContent.RemoveRect("ContinuousTargeting");
+        }
     }
 }

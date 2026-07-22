@@ -73,17 +73,25 @@ public partial class Avatar
             // 纳西妲长按 E：按下后向右移动鼠标
             case "纳西妲":
             {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-                Sleep(300, Ct);
-                for (int j = 0; j < 10; j++)
+                Avatar.SkipSeek = true;
+                try
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
-                    Sleep(50);
-                }
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                    Sleep(300, Ct);
+                    for (int j = 0; j < 10; j++)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+                        Sleep(50);
+                    }
 
-                Sleep(300);
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-                return true;
+                    Sleep(300);
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                    return true;
+                }
+                finally
+                {
+                    Avatar.SkipSeek = false;
+                }
             }
             // 坎蒂丝长按 E：固定等待 3 秒
             case "坎蒂丝":
@@ -108,83 +116,97 @@ public partial class Avatar
             // 那维莱特：按住普攻循环向右旋转
             case "那维莱特":
             {
+                Avatar.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-                while (ms >= 0)
+                try
                 {
-                    if (Ct is { IsCancellationRequested: true })
+                    while (ms >= 0)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                        return true;
+                        if (Ct is { IsCancellationRequested: true })
+                        {
+                            return true;
+                        }
+
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                        ms -= 50;
+                        Sleep(50);
                     }
-
-                    Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
-                    ms -= 50;
-                    Sleep(50);
                 }
-
-                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                finally
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                    Avatar.SkipSeek = false;
+                }
                 return true;
             }
             // 恰斯卡：按住普攻分段变速旋转
             case "恰斯卡":
             {
+                Avatar.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-                int tick = -4;
-                while (ms >= 0)
+                try
                 {
-                    if (Ct is { IsCancellationRequested: true })
+                    int tick = -4;
+                    while (ms >= 0)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                        return true;
+                        if (Ct is { IsCancellationRequested: true })
+                        {
+                            return true;
+                        }
+
+                        const double lowspeed = 0.7, highspeed = 50;
+                        double rateX, rateY;
+                        if (tick < 3)
+                        {
+                            rateX = highspeed;
+                            rateY = highspeed * 0.23;
+                        }
+                        else if (tick < 40)
+                        {
+                            rateX = lowspeed * 0.7;
+                            rateY = 0;
+                        }
+                        else if (tick < 43)
+                        {
+                            rateX = highspeed;
+                            rateY = highspeed * 0.4;
+                        }
+                        else if (tick < 70)
+                        {
+                            rateX = lowspeed * 0.9;
+                            rateY = 0;
+                        }
+                        else if (tick < 73)
+                        {
+                            rateX = highspeed;
+                            rateY = highspeed;
+                        }
+                        else
+                        {
+                            rateX = lowspeed;
+                            rateY = 0;
+                        }
+
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
+                        tick = (tick + 1) % 100;
+                        Sleep(25);
+                        ms -= 25;
                     }
 
-                    const double lowspeed = 0.7, highspeed = 50;
-                    double rateX, rateY;
-                    if (tick < 3)
-                    {
-                        rateX = highspeed;
-                        rateY = highspeed * 0.23;
-                    }
-                    else if (tick < 40)
-                    {
-                        rateX = lowspeed * 0.7;
-                        rateY = 0;
-                    }
-                    else if (tick < 43)
-                    {
-                        rateX = highspeed;
-                        rateY = highspeed * 0.4;
-                    }
-                    else if (tick < 70)
-                    {
-                        rateX = lowspeed * 0.9;
-                        rateY = 0;
-                    }
-                    else if (tick < 73)
-                    {
-                        rateX = highspeed;
-                        rateY = highspeed;
-                    }
-                    else
-                    {
-                        rateX = lowspeed;
-                        rateY = 0;
-                    }
-
-                    Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
-                    tick = (tick + 1) % 100;
-                    Sleep(25);
-                    ms -= 25;
+                    return true;
                 }
-
-                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                return true;
+                finally
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                    Avatar.SkipSeek = false;
+                }
             }
             // 桑多涅：按住普攻 + 截图寻的血条/伤害数字追踪
             case "桑多涅":
             {
+                Avatar.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
                 const int preAimX = 960;
                 const int preAimY = 480;
@@ -284,6 +306,7 @@ public partial class Avatar
                 {
                     View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                    Avatar.SkipSeek = false;
                 }
 
                 return true;
