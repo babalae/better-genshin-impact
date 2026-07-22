@@ -294,14 +294,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public const int MAX_NO_BAIT_FISH_TIMES = 2;
         private DateTimeOffset? findTargetEndTime;
         private bool foundTarget;
-        private bool useTorch;
 
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
-        public ThrowRod(string name, Blackboard blackboard, bool useTorch, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
+        public ThrowRod(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
-            this.useTorch = useTorch;
             this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
@@ -495,7 +493,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     fish_y2 = NormalizeYTo576(fish.Bottom),
                     fish_label = BigFishType.GetIndex(currentFish.FishType)
                 };
-                int state = this.useTorch ? new RodNet().GetRodState_Torch(rodInput) : RodNet.GetRodState(rodInput);
+                int state = new RodNet().GetRodState(rodInput);
 
                 // 如果hutao钓鱼暂时没有更新导致报错，可以先用这段凑合
                 //int state;
