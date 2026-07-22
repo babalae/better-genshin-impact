@@ -12,6 +12,13 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class MaskWindowConfig : ObservableObject
 {
+    public const int MinCrosshairLineWidth = 1;
+    public const int MaxCrosshairLineWidth = 100;
+    public const int MinCrosshairSize = 1;
+    public const int MaxCrosshairSize = 1000;
+    public const int MinCrosshairGap = 0;
+    public const int MaxCrosshairGap = 1000;
+
     // 指标栏布局和遮罩里其它元素一样按 1920x1080 折算比例保存，默认放在状态栏/日志上方以避开游戏底部 UI。
     public const double DefaultMetricsLeftRatio = 20.0 / 1920;
     public const double DefaultMetricsTopRatio = 744.0 / 1080;
@@ -111,6 +118,33 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _crosshairGap = 10;
+
+    partial void OnCrosshairLineWidthChanged(int value)
+    {
+        var clampedValue = Math.Clamp(value, MinCrosshairLineWidth, MaxCrosshairLineWidth);
+        if (value != clampedValue)
+        {
+            CrosshairLineWidth = clampedValue;
+        }
+    }
+
+    partial void OnCrosshairSizeChanged(int value)
+    {
+        var clampedValue = Math.Clamp(value, MinCrosshairSize, MaxCrosshairSize);
+        if (value != clampedValue)
+        {
+            CrosshairSize = clampedValue;
+        }
+    }
+
+    partial void OnCrosshairGapChanged(int value)
+    {
+        var clampedValue = Math.Clamp(value, MinCrosshairGap, MaxCrosshairGap);
+        if (value != clampedValue)
+        {
+            CrosshairGap = clampedValue;
+        }
+    }
 
     /// <summary>
     ///     自定义准星图片路径

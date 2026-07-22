@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.ComponentModel;
 using System.Threading;
@@ -698,7 +699,12 @@ public partial class MaskWindow : Window
                 if (image == null) return;
                 if (config.CrosshairScaleMode == CrosshairScaleMode.Fit)
                 {
-                    dc.DrawImage(image, new Rect(0, 0, ActualWidth, ActualHeight));
+                    var scale = Math.Min(ActualWidth / image.Width, ActualHeight / image.Height);
+                    var width = image.Width * scale;
+                    var height = image.Height * scale;
+                    var left = (ActualWidth - width) / 2;
+                    var top = (ActualHeight - height) / 2;
+                    dc.DrawImage(image, new Rect(left, top, width, height));
                 }
                 else
                 {
@@ -718,7 +724,10 @@ public partial class MaskWindow : Window
             if (_maskWindowConfig != null && !string.IsNullOrEmpty(_maskWindowConfig.CrosshairImagePath)
                 && System.IO.File.Exists(_maskWindowConfig.CrosshairImagePath))
             {
-                _crosshairImage = BitmapFrame.Create(new Uri(_maskWindowConfig.CrosshairImagePath));
+                using var stream = File.OpenRead(_maskWindowConfig.CrosshairImagePath);
+                var image = BitmapFrame.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                image.Freeze();
+                _crosshairImage = image;
             }
             else
             {

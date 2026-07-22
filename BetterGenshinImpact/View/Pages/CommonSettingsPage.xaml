@@ -489,10 +489,17 @@
                                                       Text="线宽"
                                                       TextWrapping="Wrap" />
                                         <Rectangle Grid.Column="1" />
-                                        <TextBox Grid.Column="2"
-                                                 Width="100"
-                                                 VerticalAlignment="Center"
-                                                 Text="{Binding Config.MaskWindowConfig.CrosshairLineWidth, Mode=TwoWay}" />
+                                        <ui:NumberBox Grid.Column="2"
+                                                      Width="100"
+                                                      VerticalAlignment="Center"
+                                                      AcceptsExpression="False"
+                                                      Maximum="100"
+                                                      MaxDecimalPlaces="0"
+                                                      Minimum="1"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.MaskWindowConfig.CrosshairLineWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
                                     <Grid Margin="0,4">
                                         <Grid.ColumnDefinitions>
@@ -506,10 +513,17 @@
                                                       Text="大小"
                                                       TextWrapping="Wrap" />
                                         <Rectangle Grid.Column="1" />
-                                        <TextBox Grid.Column="2"
-                                                 Width="100"
-                                                 VerticalAlignment="Center"
-                                                 Text="{Binding Config.MaskWindowConfig.CrosshairSize, Mode=TwoWay}" />
+                                        <ui:NumberBox Grid.Column="2"
+                                                      Width="100"
+                                                      VerticalAlignment="Center"
+                                                      AcceptsExpression="False"
+                                                      Maximum="1000"
+                                                      MaxDecimalPlaces="0"
+                                                      Minimum="1"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.MaskWindowConfig.CrosshairSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
                                     <Grid Margin="0,4">
                                         <Grid.Style>
@@ -533,10 +547,17 @@
                                                       Text="中心点间隔"
                                                       TextWrapping="Wrap" />
                                         <Rectangle Grid.Column="1" />
-                                        <TextBox Grid.Column="2"
-                                                 Width="100"
-                                                 VerticalAlignment="Center"
-                                                 Text="{Binding Config.MaskWindowConfig.CrosshairGap, Mode=TwoWay}" />
+                                        <ui:NumberBox Grid.Column="2"
+                                                      Width="100"
+                                                      VerticalAlignment="Center"
+                                                      AcceptsExpression="False"
+                                                      Maximum="1000"
+                                                      MaxDecimalPlaces="0"
+                                                      Minimum="0"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.MaskWindowConfig.CrosshairGap, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
                                 </StackPanel>
                             </Border>
