@@ -230,10 +230,6 @@ public partial class Avatar
                             bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
 
                             var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
-                            if (drawResults)
-                            {
-                                drawList.Add(capture.ToRectDrawable(new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50), "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2)));
-                            }
 
                             bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
 
