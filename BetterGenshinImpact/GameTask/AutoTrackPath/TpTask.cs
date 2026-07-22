@@ -1172,6 +1172,28 @@ public class TpTask
         await MoveMapToCore(x, y, mapName, finalZoomLevel, true, 0);
     }
 
+    /// <summary>
+    /// 点击大地图上的指定坐标。
+    /// </summary>
+    /// <remarks>
+    /// 先将目标移动到可点击安全区域，
+    /// 再将原神地图坐标转换为游戏截图区域坐标并点击。
+    /// </remarks>
+    /// <param name="x">目标 x 坐标。</param>
+    /// <param name="y">目标 y 坐标。</param>
+    /// <param name="mapName">大地图名称。</param>
+    public async Task ClickMapPoint(double x, double y, string mapName)
+    {
+        await MoveMapTo(x, y, mapName);
+        if (!TryGetClickableTargetPosition(mapName, x, y, 0, out _, out var clickX, out var clickY))
+        {
+            throw new Exception($"目标点未移动到可点击区域：map={mapName}, target=({x:0.##},{y:0.##})");
+        }
+
+        using var clickCapture = CaptureToRectArea();
+        clickCapture.ClickTo(clickX, clickY);
+    }
+
     private async Task MoveMapToTeleportClickArea(double x, double y, string mapName, double requiredVisibleRadius)
     {
         await MoveMapToCore(x, y, mapName, MinTeleportZoomLevel, false, requiredVisibleRadius);

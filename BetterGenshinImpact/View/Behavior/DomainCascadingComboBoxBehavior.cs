@@ -22,6 +22,13 @@ public static class DomainCascadingComboBoxBehavior
             typeof(DomainCascadingComboBoxBehavior),
             new PropertyMetadata(string.Empty));
 
+    public static readonly DependencyProperty ClearValueProperty =
+        DependencyProperty.RegisterAttached(
+            "ClearValue",
+            typeof(string),
+            typeof(DomainCascadingComboBoxBehavior),
+            new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
     public static readonly DependencyProperty UseFullLabelsWhenOpenProperty =
         DependencyProperty.RegisterAttached(
             "UseFullLabelsWhenOpen",
@@ -39,6 +46,16 @@ public static class DomainCascadingComboBoxBehavior
         obj.SetValue(UseFullLabelsWhenOpenProperty, value);
     }
 
+    public static string GetClearValue(DependencyObject obj)
+    {
+        return (string)obj.GetValue(ClearValueProperty);
+    }
+
+    public static void SetClearValue(DependencyObject obj, string value)
+    {
+        obj.SetValue(ClearValueProperty, value);
+    }
+
     private static void OnUseFullLabelsWhenOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not CascadingComboBox comboBox)
@@ -48,6 +65,7 @@ public static class DomainCascadingComboBoxBehavior
         comboBox.DropDownOpened -= OnDropDownOpened;
         comboBox.SelectionChanged -= OnSelectionChanged;
         comboBox.Loaded -= OnLoaded;
+        comboBox.RemoveHandler(Button.ClickEvent, new RoutedEventHandler(OnButtonClick));
 
         if (e.NewValue is true)
         {
@@ -55,8 +73,26 @@ public static class DomainCascadingComboBoxBehavior
             comboBox.DropDownOpened += OnDropDownOpened;
             comboBox.SelectionChanged += OnSelectionChanged;
             comboBox.Loaded += OnLoaded;
+            comboBox.AddHandler(Button.ClickEvent, new RoutedEventHandler(OnButtonClick), true);
             comboBox.Dispatcher.BeginInvoke(() => UpdateCommittedSelection(comboBox, restoreInvalidSelection: false));
         }
+    }
+
+    private static void OnButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CascadingComboBox comboBox ||
+            e.OriginalSource is not DependencyObject source ||
+            FindVisualAncestor<Button>(source) is not { Name: CascadingComboBox.PART_ClearButton, TemplatedParent: CascadingComboBox owner } ||
+            !ReferenceEquals(owner, comboBox))
+        {
+            return;
+        }
+
+        comboBox.SetValue(LastCommittedItemProperty, null);
+        comboBox.SetValue(LastCommittedTextProperty, comboBox.PlaceholderText);
+        comboBox.SetCurrentValue(ClearValueProperty, string.Empty);
+        comboBox.GetBindingExpression(ClearValueProperty)?.UpdateSource();
+        ApplySelectedPreviewBinding(comboBox);
     }
 
     private static void OnLoaded(object sender, RoutedEventArgs e)
@@ -149,6 +185,17 @@ public static class DomainCascadingComboBoxBehavior
             var result = FindVisualChild<T>(child, name);
             if (result != null)
                 return result;
+        }
+
+        return null;
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
+    {
+        for (var current = child; current != null; current = VisualTreeHelper.GetParent(current))
+        {
+            if (current is T ancestor)
+                return ancestor;
         }
 
         return null;
