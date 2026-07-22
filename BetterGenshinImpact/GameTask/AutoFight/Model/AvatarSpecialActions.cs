@@ -225,7 +225,6 @@ public partial class Avatar
                         using (var capture = CaptureToRectArea())
                         {
                             var bars = FindBloodBars(capture);
-                            UpdateLegendaryBarTracker(bars.Select(b => b.y));
                             var valid = bars.Where(b => b.x > 200).ToList();
 
                             bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;

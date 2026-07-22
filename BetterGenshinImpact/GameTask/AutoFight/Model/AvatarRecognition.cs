@@ -91,37 +91,41 @@ public partial class Avatar
     {
         var results = new List<(int x, int y, int width, int height)>();
 
-        using var image = existingCapture ?? CaptureToRectArea();
-        var bloodLower = new Scalar(255, 90, 90); // BGR 红色
-
-        using var cropped = image.DeriveCrop(0, 0, 1500, 900);
-        using Mat mask = OpenCvCommonHelper.Threshold(
-            cropped.SrcMat, bloodLower);
-
-        using Mat labels = new Mat();
-        using Mat stats = new Mat();
-        using Mat centroids = new Mat();
-
-        int numLabels = Cv2.ConnectedComponentsWithStats(
-            mask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-
-        for (int i = 1; i < numLabels; i++)
+        var selfCapture = existingCapture == null ? CaptureToRectArea() : null;
+        using (selfCapture)
         {
-            using Mat row = stats.Row(i);
-            if (row.GetArray(out int[] arr))
+            var image = existingCapture ?? selfCapture!;
+            var bloodLower = new Scalar(255, 90, 90); // BGR 红色
+
+            using var cropped = image.DeriveCrop(0, 0, 1500, 900);
+            using Mat mask = OpenCvCommonHelper.Threshold(
+                cropped.SrcMat, bloodLower);
+
+            using Mat labels = new Mat();
+            using Mat stats = new Mat();
+            using Mat centroids = new Mat();
+
+            int numLabels = Cv2.ConnectedComponentsWithStats(
+                mask, labels, stats, centroids,
+                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+            for (int i = 1; i < numLabels; i++)
             {
-                int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
-                if (y < 50)
-                    continue;
-                results.Add((x, y, width, height));
+                using Mat row = stats.Row(i);
+                if (row.GetArray(out int[] arr))
+                {
+                    int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
+                    if (y < 50)
+                        continue;
+                    results.Add((x, y, width, height));
+                }
             }
+
+            // 自动更新传奇血条动态追踪
+            UpdateLegendaryBarTracker(results.Select(r => r.y));
+
+            return results;
         }
-
-        // 自动更新传奇血条动态追踪
-        UpdateLegendaryBarTracker(results.Select(r => r.y));
-
-        return results;
     }
 
     /// <summary>
@@ -154,46 +158,50 @@ public partial class Avatar
     /// </summary>
     private static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumberByOcr(ImageRegion? existingCapture = null)
     {
-        using var ra = existingCapture ?? CaptureToRectArea();
-        var ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
-
-        string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
-        var validItems = new List<(int cx, int cy, int area, string text, int x, int y, int w, int h)>();
-
-        foreach (var r in ocrResults)
+        var selfCapture = existingCapture == null ? CaptureToRectArea() : null;
+        using (selfCapture)
         {
-            var text = r.Text?.Trim();
-            if (string.IsNullOrEmpty(text)) continue;
+            var ra = existingCapture ?? selfCapture!;
+            var ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
 
-            // 有效项2：反应关键词（跳过所有过滤）
-            if (reactionKeywords.Any(k => text.Contains(k)))
+            string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
+            var validItems = new List<(int cx, int cy, int area, string text, int x, int y, int w, int h)>();
+
+            foreach (var r in ocrResults)
             {
-                validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Height * r.Height * text.Length, text, r.X, r.Y, r.Width, r.Height));
-                continue;
+                var text = r.Text?.Trim();
+                if (string.IsNullOrEmpty(text)) continue;
+
+                // 有效项2：反应关键词（跳过所有过滤）
+                if (reactionKeywords.Any(k => text.Contains(k)))
+                {
+                    validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Height * r.Height * text.Length, text, r.X, r.Y, r.Width, r.Height));
+                    continue;
+                }
+
+                // 有效项1：排除 '+' 开头
+                if (text[0] == '+') continue;
+
+                // 去除非数字，纯数字 ≥4 位
+                var digits = new string(text.Where(char.IsDigit).ToArray());
+                if (digits.Length >= 4)
+                {
+                    validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Height * r.Height * text.Length, text, r.X, r.Y, r.Width, r.Height));
+                }
             }
 
-            // 有效项1：排除 '+' 开头
-            if (text[0] == '+') continue;
+            if (validItems.Count == 0) return null;
 
-            // 去除非数字，纯数字 ≥4 位
-            var digits = new string(text.Where(char.IsDigit).ToArray());
-            if (digits.Length >= 4)
-            {
-                validItems.Add((r.X + r.Width / 2, r.Y + r.Height / 2, r.Height * r.Height * text.Length, text, r.X, r.Y, r.Width, r.Height));
-            }
+            int totalArea = validItems.Sum(i => i.area);
+            if (totalArea == 0) return null;
+
+            double avgX = (double)validItems.Sum(i => i.cx * i.area) / totalArea;
+            double avgY = (double)validItems.Sum(i => i.cy * i.area) / totalArea;
+
+            var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
+
+            return (closest.cx, closest.cy, closest.text, closest.x, closest.y, closest.w, closest.h);
         }
-
-        if (validItems.Count == 0) return null;
-
-        int totalArea = validItems.Sum(i => i.area);
-        if (totalArea == 0) return null;
-
-        double avgX = (double)validItems.Sum(i => i.cx * i.area) / totalArea;
-        double avgY = (double)validItems.Sum(i => i.cy * i.area) / totalArea;
-
-        var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
-
-        return (closest.cx, closest.cy, closest.text, closest.x, closest.y, closest.w, closest.h);
     }
 
     /// <summary>
@@ -202,71 +210,75 @@ public partial class Avatar
     /// </summary>
     private static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumberByColor(ImageRegion? existingCapture = null)
     {
-        using var ra = existingCapture ?? CaptureToRectArea();
-
-        // 目标颜色 (RGB)
-        Scalar[] targetColors =
-        [
-            new(225, 155, 255), // 雷 #E19BFF
-            new(153, 255, 255), // 冰 #99FFFF
-            new(51, 204, 255),  // 水 #33CCFF
-            new(102, 255, 204), // 风 #66FFCC
-            new(255, 155, 0),   // 火 #FF9B00
-            new(0, 234, 82),    // 草 #00EA52
-            new(255, 204, 102), // 岩 #FFCC66
-        ];
-
-        const int roiX = 450;
-        const int roiY = 240;
-        const int roiW = 1150;
-        const int roiH = 660;
-
-        using var cropped = ra.DeriveCrop(roiX, roiY, roiW, roiH);
-        using var rgbMat = new Mat();
-        Cv2.CvtColor(cropped.SrcMat, rgbMat, ColorConversionCodes.BGR2RGB);
-
-        using var combinedMask = new Mat(cropped.SrcMat.Size(), MatType.CV_8UC1, Scalar.All(0));
-
-        foreach (var color in targetColors)
+        var selfCapture = existingCapture == null ? CaptureToRectArea() : null;
+        using (selfCapture)
         {
-            using var mask = new Mat();
-            Cv2.InRange(rgbMat, color, color, mask);
-            Cv2.BitwiseOr(combinedMask, mask, combinedMask);
+            var ra = existingCapture ?? selfCapture!;
+
+            // 目标颜色 (RGB)
+            Scalar[] targetColors =
+            [
+                new(225, 155, 255), // 雷 #E19BFF
+                new(153, 255, 255), // 冰 #99FFFF
+                new(51, 204, 255),  // 水 #33CCFF
+                new(102, 255, 204), // 风 #66FFCC
+                new(255, 155, 0),   // 火 #FF9B00
+                new(0, 234, 82),    // 草 #00EA52
+                new(255, 204, 102), // 岩 #FFCC66
+            ];
+
+            const int roiX = 450;
+            const int roiY = 240;
+            const int roiW = 1150;
+            const int roiH = 660;
+
+            using var cropped = ra.DeriveCrop(roiX, roiY, roiW, roiH);
+            using var rgbMat = new Mat();
+            Cv2.CvtColor(cropped.SrcMat, rgbMat, ColorConversionCodes.BGR2RGB);
+
+            using var combinedMask = new Mat(cropped.SrcMat.Size(), MatType.CV_8UC1, Scalar.All(0));
+
+            foreach (var color in targetColors)
+            {
+                using var mask = new Mat();
+                Cv2.InRange(rgbMat, color, color, mask);
+                Cv2.BitwiseOr(combinedMask, mask, combinedMask);
+            }
+
+            using var labels = new Mat();
+            using var stats = new Mat();
+            using var centroids = new Mat();
+            var numLabels = Cv2.ConnectedComponentsWithStats(combinedMask, labels, stats, centroids,
+                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+            if (numLabels <= 1) return null;
+
+            var validItems = new List<(int cx, int cy, int area, int x, int y, int w, int h)>();
+            for (int i = 1; i < numLabels; i++)
+            {
+                int x = stats.At<int>(i, (int)ConnectedComponentsTypes.Left);
+                int y = stats.At<int>(i, (int)ConnectedComponentsTypes.Top);
+                int width = stats.At<int>(i, (int)ConnectedComponentsTypes.Width);
+                int height = stats.At<int>(i, (int)ConnectedComponentsTypes.Height);
+
+                if (height < 20) continue;
+
+                int area = stats.At<int>(i, (int)ConnectedComponentsTypes.Area);
+                validItems.Add((x + width / 2 + roiX, y + height / 2 + roiY, area, x + roiX, y + roiY, width, height));
+            }
+
+            if (validItems.Count == 0) return null;
+
+            int totalArea = validItems.Sum(i => i.area);
+            if (totalArea == 0) return null;
+
+            double avgX = (double)validItems.Sum(i => i.cx * i.area) / totalArea;
+            double avgY = (double)validItems.Sum(i => i.cy * i.area) / totalArea;
+
+            var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
+
+            return (closest.cx, closest.cy, "", closest.x, closest.y, closest.w, closest.h);
         }
-
-        using var labels = new Mat();
-        using var stats = new Mat();
-        using var centroids = new Mat();
-        var numLabels = Cv2.ConnectedComponentsWithStats(combinedMask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-
-        if (numLabels <= 1) return null;
-
-        var validItems = new List<(int cx, int cy, int area, int x, int y, int w, int h)>();
-        for (int i = 1; i < numLabels; i++)
-        {
-            int x = stats.At<int>(i, (int)ConnectedComponentsTypes.Left);
-            int y = stats.At<int>(i, (int)ConnectedComponentsTypes.Top);
-            int width = stats.At<int>(i, (int)ConnectedComponentsTypes.Width);
-            int height = stats.At<int>(i, (int)ConnectedComponentsTypes.Height);
-
-            if (height < 20) continue;
-
-            int area = stats.At<int>(i, (int)ConnectedComponentsTypes.Area);
-            validItems.Add((x + width / 2 + roiX, y + height / 2 + roiY, area, x + roiX, y + roiY, width, height));
-        }
-
-        if (validItems.Count == 0) return null;
-
-        int totalArea = validItems.Sum(i => i.area);
-        if (totalArea == 0) return null;
-
-        double avgX = (double)validItems.Sum(i => i.cx * i.area) / totalArea;
-        double avgY = (double)validItems.Sum(i => i.cy * i.area) / totalArea;
-
-        var closest = validItems.OrderBy(i => Math.Abs(i.cx - avgX) + Math.Abs(i.cy - avgY)).First();
-
-        return (closest.cx, closest.cy, "", closest.x, closest.y, closest.w, closest.h);
     }
 
     /// <summary>
@@ -309,7 +321,6 @@ public partial class Avatar
 
                     // 1. 血条识别：检测红色血条并过滤左侧 UI 区域 (x > 200)
                     var bars = FindBloodBars(capture);
-                    UpdateLegendaryBarTracker(bars.Select(b => b.y));
                     var valid = bars.Where(b => b.x > 200).ToList();
 
                     bool drawResults = config.DrawRecognitionResults;

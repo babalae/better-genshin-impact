@@ -839,8 +839,7 @@
                                                  Margin="0,0,36,0"
                                                  IsChecked="{Binding Config.AutoFightConfig.EnableCombatTargeting, Mode=TwoWay}" />
                             </Grid>
-                            <Grid Margin="16,4,16,16"
-                                  Visibility="{Binding Config.AutoFightConfig.EnableCombatTargeting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid Margin="16,4,16,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
