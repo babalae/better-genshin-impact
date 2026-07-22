@@ -94,7 +94,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public static bool SwimmingEnabled  { get; set; } = false;
     public bool EnableCombatTargeting { get; set; } = false;
     public int TargetingDetectionInterval { get; set; } = 50;
-    public bool DrawRecognitionResults { get; set; } = false;
+    public bool DrawRecognitionResults { get; set; } = true;
     public double LockLostWaitTime { get; set; } = 0.5;
     public DamageNumberRecognitionMode DamageNumberRecognitionMode { get; set; } = DamageNumberRecognitionMode.Color;
 
