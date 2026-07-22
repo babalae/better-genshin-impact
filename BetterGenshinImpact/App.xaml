@@ -13,6 +13,7 @@
                 <vio:ControlsDictionary />
                 <ResourceDictionary Source="/View/Controls/WpfUi/FaFontIconStyle.xaml" />
                 <ResourceDictionary Source="/View/Controls/Drawer/DrawerStyles.xaml" />
+                <ResourceDictionary Source="/View/Controls/Markdown/Resources/MarkdownStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>

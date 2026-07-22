@@ -11,6 +11,7 @@ using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Controls.Markdown;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
@@ -468,23 +469,15 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenGameCommandLineDocument()
     {
-        string md = File.ReadAllText(Global.Absolute(@"Assets\Strings\gicli.md"), Encoding.UTF8);
-
-        var flowDoc = MarkdownToFlowDocumentConverter.ConvertToFlowDocument(md);
-
-        // 创建 RichTextBox 来显示内容
-        var richTextBox = new System.Windows.Controls.RichTextBox
+        // 创建 MarkdownView 来显示内容
+        var markdownView = new MarkdownView
         {
-            IsReadOnly = true,
-            IsDocumentEnabled = true,
-            BorderThickness = new Thickness(0),
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Document = flowDoc,
+            FilePath = Global.Absolute(@"Assets\Strings\gicli.md"),
             Background = Brushes.Transparent,
             VerticalAlignment = VerticalAlignment.Stretch,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Margin = new Thickness(12, 0, 12, 12)
+            Margin = new Thickness(12, 0, 12, 12),
+            LinkNavigationMode = MarkdownLinkNavigationMode.SystemDefault
         };
 
         // 创建两行的 Grid 容器
@@ -504,9 +497,9 @@ public partial class HomePageViewModel : ViewModel
         System.Windows.Controls.Grid.SetRow(titleBar, 0);
         grid.Children.Add(titleBar);
 
-        // 将 RichTextBox 添加到第二行
-        System.Windows.Controls.Grid.SetRow(richTextBox, 1);
-        grid.Children.Add(richTextBox);
+        // 将 MarkdownView 添加到第二行
+        System.Windows.Controls.Grid.SetRow(markdownView, 1);
+        grid.Children.Add(markdownView);
 
         // 创建 FluentWindow 来显示内容
         var dialogWindow = new FluentWindow
