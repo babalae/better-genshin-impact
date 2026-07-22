@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -169,5 +169,39 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private int _timeout = 120;
 
+    /// <summary>
+    /// 战斗中持续索敌：战斗过程中情况允许时持续尝试面朝敌人
+    /// </summary>
+    [ObservableProperty]
+    private bool _enableCombatTargeting = false;
 
+    /// <summary>
+    /// 脱锁等待时间（秒）：敌人不可见时等待一定时间后开始旋转索敌
+    /// </summary>
+    [ObservableProperty]
+    private double _lockLostWaitTime = 0.5;
+
+    /// <summary>
+    /// 索敌识别间隔（毫秒）
+    /// </summary>
+    [ObservableProperty]
+    private int _targetingDetectionInterval = 50;
+
+    /// <summary>
+    /// 伤害数字识别模式
+    /// </summary>
+    [ObservableProperty]
+    private DamageNumberRecognitionMode _damageNumberRecognitionMode = DamageNumberRecognitionMode.Disabled;
+
+
+}
+
+/// <summary>
+/// 伤害数字识别模式
+/// </summary>
+public enum DamageNumberRecognitionMode
+{
+    Disabled,
+    Ocr,
+    Color
 }
