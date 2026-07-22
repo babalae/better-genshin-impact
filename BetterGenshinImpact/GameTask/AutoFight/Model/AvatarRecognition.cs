@@ -327,14 +327,7 @@ public partial class Avatar
                     var bars = FindBloodBars(capture);
                     var valid = bars.Where(b => b.x > 200).ToList();
 
-                    // 叠加层：绘制预瞄准框
                     var drawList = new List<RectDrawable>();
-                    if (drawResults)
-                    {
-                        drawList.Add(capture.ToRectDrawable(
-                            new OpenCvSharp.Rect(preAimX - 25, 540 - 25, 50, 50),
-                            "preAim", new System.Drawing.Pen(System.Drawing.Color.Red, 2)));
-                    }
 
                     bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
 
