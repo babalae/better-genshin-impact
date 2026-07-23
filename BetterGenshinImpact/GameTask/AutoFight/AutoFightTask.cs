@@ -518,7 +518,7 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => fightEndFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => !AutoFightTask.FightStatusFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)

@@ -464,7 +464,7 @@ public class AutoFightJsonTask : ISoloTask
             {
                 try
                 {
-                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => _fightEndFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => !AutoFightTask.FightStatusFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
