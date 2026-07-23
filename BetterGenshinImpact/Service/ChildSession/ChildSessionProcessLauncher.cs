@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.ChildSession;
 
@@ -70,13 +71,13 @@ internal static class ChildSessionProcessLauncher
 
             return new ProcessLaunchInfo(
                 fullProcessPath,
-                QuoteArgument(Path.GetFullPath(entryAssemblyPath)),
+                $"{QuoteArgument(Path.GetFullPath(entryAssemblyPath))} {CommandLineOptions.ChildSessionArgument}",
                 AppContext.BaseDirectory);
         }
 
         return new ProcessLaunchInfo(
             ValidateExecutablePath(fullProcessPath),
-            string.Empty,
+            CommandLineOptions.ChildSessionArgument,
             AppContext.BaseDirectory);
     }
 

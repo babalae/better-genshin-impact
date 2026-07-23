@@ -70,7 +70,8 @@
         </Border>
 
         <ui:Card Margin="0,12,0,0"
-                 Padding="16">
+                 Padding="16"
+                 Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />

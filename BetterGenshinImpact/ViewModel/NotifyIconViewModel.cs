@@ -22,6 +22,8 @@ public partial class NotifyIconViewModel : ObservableObject
 {
     private readonly ChildSessionService _childSessionService;
 
+    public bool IsChildSessionEntryVisible => !CommandLineOptions.Instance.IsChildSession;
+
     public NotifyIconViewModel(ChildSessionService childSessionService)
     {
         _childSessionService = childSessionService;
