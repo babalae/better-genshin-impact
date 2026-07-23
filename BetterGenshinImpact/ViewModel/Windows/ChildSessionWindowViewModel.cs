@@ -31,7 +31,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isOneToOne;
 
     [ObservableProperty]
-    private bool _keepAspectRatio;
+    private bool _keepAspectRatio = true;
 
     public bool IsDefaultResolutionSelected => true;
 
@@ -137,7 +137,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         var fileDialog = new OpenFileDialog
         {
-            Title = "选择要在 BetterGI 虚拟桌面中以管理员权限启动的程序",
+            Title = "选择要在 BetterGI 桌面分身中以管理员权限启动的程序",
             Filter = "Windows 程序 (*.exe)|*.exe",
             CheckFileExists = true,
             CheckPathExists = true,
@@ -232,6 +232,6 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
         ThemedMessageBox.Error(
             $"{actualException.Message}{suggestion}",
-            "BetterGI 虚拟桌面");
+            "BetterGI 桌面分身");
     }
 }

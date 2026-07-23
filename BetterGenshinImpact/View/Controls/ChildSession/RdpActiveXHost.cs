@@ -54,8 +54,8 @@ internal sealed class RdpActiveXHost : AxHost
         SetComProperty(client, "DesktopWidth", width);
         SetComProperty(client, "DesktopHeight", height);
         SetComProperty(client, "ColorDepth", 32);
-        SetComProperty(client, "ConnectingText", "正在创建 BetterGI 虚拟桌面...");
-        SetComProperty(client, "DisconnectedText", "BetterGI 虚拟桌面已断开");
+        SetComProperty(client, "ConnectingText", "正在创建 BetterGI 桌面分身...");
+        SetComProperty(client, "DisconnectedText", "BetterGI 桌面分身已断开");
 
         var advancedSettings = GetComProperty(client, "AdvancedSettings7")
             ?? throw new COMException("RDP ActiveX 未返回 AdvancedSettings7。");

@@ -29,7 +29,7 @@ public sealed class ChildSessionService : IDisposable
 
     public event EventHandler? StateChanged;
 
-    public string StatusText { get; private set; } = "虚拟桌面尚未启动";
+    public string StatusText { get; private set; } = "桌面分身尚未启动";
 
     public bool IsDesktopVisible => _desktopWindow?.IsVisible == true;
 
@@ -53,7 +53,7 @@ public sealed class ChildSessionService : IDisposable
     {
         ThrowIfDisposed();
         EnsureChildSessionsEnabled();
-        ConnectCore("正在启动 BetterGI 虚拟桌面");
+        ConnectCore("正在启动 BetterGI 桌面分身");
         return Task.CompletedTask;
     }
 
@@ -68,7 +68,7 @@ public sealed class ChildSessionService : IDisposable
     {
         ThrowIfDisposed();
         _desktopWindow?.Hide();
-        RefreshState("已隐藏 BetterGI 虚拟桌面，RDP 连接保持不变");
+        RefreshState("已隐藏 BetterGI 桌面分身，RDP 连接保持不变");
     }
 
     public void ShowChildSessionDesktop()
@@ -77,7 +77,7 @@ public sealed class ChildSessionService : IDisposable
         var window = EnsureDesktopWindow();
         ShowDesktopWindow(window);
         window.RdpHost.SendShowDesktopShortcut();
-        RefreshState("已向 BetterGI 虚拟桌面发送 Win+D");
+        RefreshState("已向 BetterGI 桌面分身发送 Win+D");
     }
 
     public void ShowChildSessionTaskView()
@@ -86,7 +86,7 @@ public sealed class ChildSessionService : IDisposable
         var window = EnsureDesktopWindow();
         ShowDesktopWindow(window);
         window.RdpHost.SendTaskViewShortcut();
-        RefreshState("已向 BetterGI 虚拟桌面发送 Win+Tab");
+        RefreshState("已向 BetterGI 桌面分身发送 Win+Tab");
     }
 
     public void SetSmartSizing(bool enabled)
@@ -130,13 +130,13 @@ public sealed class ChildSessionService : IDisposable
         try
         {
             TryDisconnectRdpHost();
-            RefreshState("正在断开 RDP 并注销 BetterGI 虚拟桌面");
+            RefreshState("正在断开 RDP 并注销 BetterGI 桌面分身");
 
             var terminatedSessionId = await Task.Run(ChildSessionNativeMethods.TerminateChildSession);
             _desktopWindow?.Hide();
             RefreshState(terminatedSessionId is null
-                ? "当前没有 Child Session，虚拟桌面窗口已隐藏"
-                : $"Child Session {terminatedSessionId.Value} 已注销，虚拟桌面窗口已隐藏");
+                ? "当前没有 Child Session，桌面分身窗口已隐藏"
+                : $"Child Session {terminatedSessionId.Value} 已注销，桌面分身窗口已隐藏");
         }
         finally
         {
@@ -302,7 +302,7 @@ public sealed class ChildSessionService : IDisposable
         try
         {
             RefreshState(isAutomatic
-                ? "虚拟桌面已加载，正在自动以管理员权限启动 BetterGI"
+                ? "桌面分身已加载，正在自动以管理员权限启动 BetterGI"
                 : "正在以管理员权限启动 BetterGI");
             await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId);
             RefreshState(
@@ -319,7 +319,7 @@ public sealed class ChildSessionService : IDisposable
         var childSessionId = ChildSessionNativeMethods.TryGetChildSessionId();
         if (childSessionId is null)
         {
-            throw new InvalidOperationException("当前没有可用的 Child Session，请先启动虚拟桌面。");
+            throw new InvalidOperationException("当前没有可用的 Child Session，请先启动桌面分身。");
         }
 
         return childSessionId.Value;

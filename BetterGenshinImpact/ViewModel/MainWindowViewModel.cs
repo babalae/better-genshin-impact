@@ -7,7 +7,6 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
-using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
@@ -47,7 +46,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
-    private readonly ChildSessionService _childSessionService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty] private bool _isVisible = true;
@@ -87,12 +85,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     public MainWindowViewModel(
         INavigationService navigationService,
-        IConfigService configService,
-        ChildSessionService childSessionService)
+        IConfigService configService)
     {
         _navigationService = navigationService;
         _configService = configService;
-        _childSessionService = childSessionService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
     }
@@ -137,12 +133,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private void OnHide()
     {
         IsVisible = false;
-    }
-
-    [RelayCommand]
-    private void OnOpenChildSessionWindow()
-    {
-        _childSessionService.ShowWindow();
     }
 
     [RelayCommand]
