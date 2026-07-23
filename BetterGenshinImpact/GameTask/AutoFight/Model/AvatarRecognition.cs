@@ -145,14 +145,25 @@ public static class AvatarRecognition
     }
 
     /// <summary>
+    /// 获取视觉识别相关配置项。
+    /// 调用方通过此方法获取配置，而非直接读取全局 config，确保配置访问集中管理。
+    /// </summary>
+    public static (int TargetingDetectionInterval, bool DrawRecognitionResults, double LockLostWaitTime, DamageNumberRecognitionMode DamageNumberRecognitionMode) GetVisualRecognitionConfig()
+    {
+        var config = TaskContext.Instance().Config.AutoFightConfig;
+        return (config.TargetingDetectionInterval, config.DrawRecognitionResults, config.LockLostWaitTime, config.DamageNumberRecognitionMode);
+    }
+
+    /// <summary>
     /// 根据配置的伤害数字识别模式寻找伤害数字/反应文字。
     ///   - Disabled：直接返回 null
     ///   - Ocr：使用 OCR 识别
     ///   - Color：使用颜色分析识别
+    /// 配置来源：<see cref="GetVisualRecognitionConfig"/>
     /// </summary>
-    public static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumber(ImageRegion? existingCapture = null, DamageNumberRecognitionMode? modeOverride = null)
+    public static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumber(ImageRegion? existingCapture = null)
     {
-        var mode = modeOverride ?? TaskContext.Instance().Config.AutoFightConfig.DamageNumberRecognitionMode;
+        var mode = GetVisualRecognitionConfig().DamageNumberRecognitionMode;
         switch (mode)
         {
             case DamageNumberRecognitionMode.Disabled:
@@ -303,20 +314,13 @@ public static class AvatarRecognition
     /// 当 SkipSeek 为 true 时（如部分角色重击索敌期间）跳过本帧。
     /// </summary>
     /// <param name="ct">取消令牌</param>
-    /// <param name="frameIntervalMs">索敌识别间隔（毫秒）</param>
-    /// <param name="drawResults">是否绘制识别结果</param>
-    /// <param name="lockLostWaitTime">脱锁等待时间（秒）</param>
-    /// <param name="damageMode">伤害数字识别模式</param>
     /// <param name="isFightEnd">战斗是否已结束（外部标志，为 true 时退出循环）</param>
     public static async Task ContinuousTargetingLoopAsync(
         CancellationToken ct,
-        int frameIntervalMs,
-        bool drawResults,
-        double lockLostWaitTime,
-        DamageNumberRecognitionMode damageMode,
         Func<bool>? isFightEnd = null)
     {
         var dpi = TaskContext.Instance().DpiScale;
+        var (frameIntervalMs, drawResults, lockLostWaitTime, _) = GetVisualRecognitionConfig();
         DateTime? lastSeenTargetTime = null;  // 最后找到目标的时间（null = 从未找到）
 
         try
@@ -382,7 +386,7 @@ public static class AvatarRecognition
                     else
                     {
                         // 3. 伤害数字追踪：血条无效时尝试通过伤害数字/反应文字定位
-                        var damageResult = FindDamageNumber(capture, damageMode);
+                        var damageResult = FindDamageNumber(capture);
                         if (damageResult.HasValue)
                         {
                             var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;

@@ -211,7 +211,7 @@ public static class AvatarSpecialAction
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
                     var dpi = TaskContext.Instance().DpiScale;
-                    var frameIntervalMs = TaskContext.Instance().Config.AutoFightConfig.TargetingDetectionInterval;
+                    var (frameIntervalMs, drawResults, lockLostWaitTime, damageMode) = AvatarRecognition.GetVisualRecognitionConfig();
 
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
 
@@ -230,8 +230,6 @@ public static class AvatarSpecialAction
 
                                 var bars = AvatarRecognition.FindBloodBars(capture);
                                 var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
-
-                                bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
 
                                 var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
 
@@ -279,7 +277,6 @@ public static class AvatarSpecialAction
 
                                     if (!damageResult.HasValue)
                                     {
-                                        var lockLostWaitTime = TaskContext.Instance().Config.AutoFightConfig.LockLostWaitTime;
 
                                         if (!hasLegendaryBar && (DateTime.UtcNow - (lastSeenTargetTime ?? startTime)).TotalSeconds >= 1.5)
                                         {

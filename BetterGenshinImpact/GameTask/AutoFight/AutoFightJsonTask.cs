@@ -455,16 +455,11 @@ public class AutoFightJsonTask : ISoloTask
         // 启动持续索敌循环（异步后台运行，与战斗任务并发）
         if (_taskParam.EnableCombatTargeting)
         {
-            var interval = _taskParam.TargetingDetectionInterval;
-            var drawResults = _taskParam.DrawRecognitionResults;
-            var lockLostWait = _taskParam.LockLostWaitTime;
-            var damageMode = _taskParam.DamageNumberRecognitionMode;
-
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => !AutoFightTask.FightStatusFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, () => !AutoFightTask.FightStatusFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
