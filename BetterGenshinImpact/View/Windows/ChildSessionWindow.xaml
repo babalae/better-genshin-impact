@@ -11,7 +11,7 @@
                  Title="BetterGI 桌面分身"
                  Width="1280"
                  Height="768"
-                 MinWidth="160"
+                 MinWidth="415"
                  MinHeight="90"
                  d:DataContext="{d:DesignInstance Type=viewModel:ChildSessionWindowViewModel}"
                  ExtendsContentIntoTitleBar="True"
@@ -47,10 +47,14 @@
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top"
                             Orientation="Horizontal">
+                    <b:Interaction.Behaviors>
+                        <behavior:ResponsiveTitleBarBehavior />
+                    </b:Interaction.Behaviors>
                     <ui:Button Width="80"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="1"
                                Command="{Binding StartCommand}"
                                Content="启动"
                                CornerRadius="0"
@@ -60,6 +64,7 @@
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="2"
                                Command="{Binding HideCommand}"
                                Content="隐藏"
                                CornerRadius="0"
@@ -69,6 +74,7 @@
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="3"
                                Command="{Binding SwitchWindowCommand}"
                                Content="切换窗口"
                                CornerRadius="0"
@@ -121,24 +127,24 @@
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
-                    <ui:Button Width="40"
-                               Height="32"
-                               Background="Transparent"
-                               BorderBrush="Transparent"
-                               Command="{Binding ToggleTopmostCommand}"
-                               CornerRadius="0"
-                               Icon="{ui:SymbolIcon Pin24}"
-                               ToolTip="{Binding TopmostButtonToolTip}"
-                               Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
-                    <ui:Button Width="40"
-                               Height="32"
-                               Background="Transparent"
-                               BorderBrush="Transparent"
-                               Command="{Binding ToggleTopmostCommand}"
-                               CornerRadius="0"
-                               Icon="{ui:SymbolIcon PinOff24}"
-                               ToolTip="{Binding TopmostButtonToolTip}"
-                               Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:Button Width="40"
+                                   Height="32"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding ToggleTopmostCommand}"
+                                   CornerRadius="0"
+                                   Icon="{ui:SymbolIcon Pin24}"
+                                   ToolTip="{Binding TopmostButtonToolTip}"
+                                   Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                        <ui:Button Width="40"
+                                   Height="32"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding ToggleTopmostCommand}"
+                                   CornerRadius="0"
+                                   Icon="{ui:SymbolIcon PinOff24}"
+                                   ToolTip="{Binding TopmostButtonToolTip}"
+                                   Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
