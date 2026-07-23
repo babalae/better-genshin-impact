@@ -9,8 +9,8 @@
                  Title="BetterGI 虚拟桌面"
                  Width="1280"
                  Height="768"
-                 MinWidth="900"
-                 MinHeight="360"
+                 MinWidth="160"
+                 MinHeight="90"
                  d:DataContext="{d:DesignInstance Type=viewModel:ChildSessionWindowViewModel}"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
@@ -45,7 +45,7 @@
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top"
                             Orientation="Horizontal">
-                    <ui:Button Width="72"
+                    <ui:Button Width="80"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -54,7 +54,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Play24}"
                                ToolTip="启动并连接 BetterGI 虚拟桌面" />
-                    <ui:Button Width="72"
+                    <ui:Button Width="80"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -63,7 +63,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon EyeOff24}"
                                ToolTip="隐藏窗口并保持 RDP 连接" />
-                    <ui:Button Width="104"
+                    <ui:Button Width="100"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -72,7 +72,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
                                ToolTip="向 Child Session 发送 Win+Tab" />
-                    <ui:DropDownButton Width="108"
+                    <ui:DropDownButton Width="130"
                                        Height="32"
                                        Background="Transparent"
                                        BorderBrush="Transparent"
@@ -81,9 +81,8 @@
                                        Icon="{ui:SymbolIcon AppsList24}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu>
-                                <ui:MenuItem Header="启动 BetterGI"
-                                             Command="{Binding LaunchBetterGiCommand}"
-                                             Icon="{ui:SymbolIcon Play24}" />
+                                <ui:MenuItem Header="运行 BetterGI"
+                                             Command="{Binding LaunchBetterGiCommand}" />
                                 <Separator />
                                 <ui:MenuItem Header="桌面分辨率">
                                     <ui:MenuItem Header="1920 × 1080"
@@ -151,7 +150,7 @@
                 <Style TargetType="{x:Type wfi:WindowsFormsHost}">
                     <!-- 为父窗口保留命中测试区域，避免 RDP 的子 HWND 截获窗口边缘鼠标消息 -->
                     <Setter Property="Margin"
-                            Value="2,0,2,2" />
+                            Value="3,0,3,3" />
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
                                      Value="Maximized">
