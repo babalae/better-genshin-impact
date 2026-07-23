@@ -70,6 +70,7 @@ internal sealed class RdpActiveXHost : AxHost
         RunComStep("设置 ConnectToChildSession", () =>
         {
             var extendedSettings = (IMsRdpExtendedSettings)client;
+            TrySetExtendedProperty(extendedSettings, "EnableZoom", true);
             extendedSettings.set_Property("ConnectToChildSession", ref connectToChildSession);
         });
 
@@ -185,6 +186,21 @@ internal sealed class RdpActiveXHost : AxHost
             target,
             [value],
             CultureInfo.InvariantCulture);
+    }
+
+    private static void TrySetExtendedProperty(
+        IMsRdpExtendedSettings extendedSettings,
+        string propertyName,
+        object value)
+    {
+        try
+        {
+            extendedSettings.set_Property(propertyName, ref value);
+        }
+        catch (COMException)
+        {
+            // 旧版 MsTscAx 可能不支持该扩展属性，继续使用原有显示行为。
+        }
     }
 
     private static object? InvokeComMethod(object target, string methodName, params object[]? args)

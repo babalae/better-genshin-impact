@@ -10,7 +10,7 @@
                  xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
                  Title="BetterGI 桌面分身"
                  Width="1280"
-                 Height="768"
+                 Height="752"
                  MinWidth="415"
                  MinHeight="90"
                  d:DataContext="{d:DesignInstance Type=viewModel:ChildSessionWindowViewModel}"
@@ -28,13 +28,18 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0"
-                     Background="{DynamicResource ApplicationBackgroundBrush}">
+                     Background="{DynamicResource ApplicationBackgroundBrush}"
+                     Height="32"
+                     VerticalContentAlignment="Top">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel VerticalAlignment="Center"
                             Orientation="Horizontal">
+                    <b:Interaction.Behaviors>
+                        <behavior:WindowDragBehavior />
+                    </b:Interaction.Behaviors>
                     <Ellipse Width="9"
                              Height="9"
                              Margin="0,0,8,0"
@@ -80,7 +85,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
                                ToolTip="向 Child Session 发送 Win+Tab" />
-                    <ui:DropDownButton Width="130"
+                    <ui:DropDownButton Width="120"
                                        Height="32"
                                        Background="Transparent"
                                        BorderBrush="Transparent"
