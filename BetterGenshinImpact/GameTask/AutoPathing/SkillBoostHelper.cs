@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -902,8 +902,8 @@ public partial class PathExecutor
     {
         if (prev == null || next == null) return 0;
 
-        double baX = prev.GameX - curr.GameX;
-        double baY = prev.GameY - curr.GameY;
+        double baX = curr.GameX - prev.GameX;
+        double baY = curr.GameY - prev.GameY;
         double bcX = next.X - curr.GameX;
         double bcY = next.Y - curr.GameY;
 
