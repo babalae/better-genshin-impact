@@ -84,7 +84,7 @@
                                Content="切换窗口"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
-                               ToolTip="向 Child Session 发送 Win+Tab" />
+                               ToolTip="向桌面分身发送 Win+Tab" />
                     <ui:DropDownButton Width="120"
                                        Height="32"
                                        Background="Transparent"

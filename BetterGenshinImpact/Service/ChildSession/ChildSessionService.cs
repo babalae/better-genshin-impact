@@ -113,7 +113,7 @@ public sealed class ChildSessionService : IDisposable
             RefreshState($"正在以管理员权限启动 {System.IO.Path.GetFileName(executablePath)}");
             await ChildSessionProcessLauncher.LaunchElevatedAsync(childSessionId, executablePath);
             RefreshState(
-                $"已在 Child Session {childSessionId} 中以管理员权限启动 {System.IO.Path.GetFileName(executablePath)}");
+                $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 {System.IO.Path.GetFileName(executablePath)}");
         }
         finally
         {
@@ -135,8 +135,8 @@ public sealed class ChildSessionService : IDisposable
             var terminatedSessionId = await Task.Run(ChildSessionNativeMethods.TerminateChildSession);
             _desktopWindow?.Hide();
             RefreshState(terminatedSessionId is null
-                ? "当前没有 Child Session，桌面分身窗口已隐藏"
-                : $"Child Session {terminatedSessionId.Value} 已注销，桌面分身窗口已隐藏");
+                ? "当前没有桌面分身会话，桌面分身窗口已隐藏"
+                : $"桌面分身会话 {terminatedSessionId.Value} 已注销，桌面分身窗口已隐藏");
         }
         finally
         {
@@ -173,7 +173,7 @@ public sealed class ChildSessionService : IDisposable
             var mainText = _lastOperationMessage ?? connectionText;
 
             StatusText =
-                $"{mainText} | RDP：{connectionText} | Child Session：{sessionText} | 功能已启用：{enabled}";
+                $"{mainText} | RDP：{connectionText} | 桌面分身会话：{sessionText} | 功能已启用：{enabled}";
         }
         catch (Exception exception) when (IsExpectedChildSessionException(exception))
         {
@@ -306,7 +306,7 @@ public sealed class ChildSessionService : IDisposable
                 : "正在以管理员权限启动 BetterGI");
             await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId);
             RefreshState(
-                $"已在 Child Session {childSessionId} 中以管理员权限启动 BetterGI");
+                $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 BetterGI");
         }
         finally
         {
@@ -319,7 +319,7 @@ public sealed class ChildSessionService : IDisposable
         var childSessionId = ChildSessionNativeMethods.TryGetChildSessionId();
         if (childSessionId is null)
         {
-            throw new InvalidOperationException("当前没有可用的 Child Session，请先启动桌面分身。");
+            throw new InvalidOperationException("当前没有可用的桌面分身，请先启动桌面分身。");
         }
 
         return childSessionId.Value;

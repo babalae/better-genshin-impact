@@ -19,7 +19,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private Brush _connectionStatusBrush = Brushes.Red;
 
     [ObservableProperty]
-    private string _connectionStatusToolTip = "Child Session 未启动";
+    private string _connectionStatusToolTip = "桌面分身未启动";
 
     [ObservableProperty]
     private bool _isTopmost;

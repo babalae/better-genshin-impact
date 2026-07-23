@@ -130,12 +130,12 @@ internal sealed class RdpActiveXHost : AxHost
         if (ConnectedState != 1)
         {
             throw new InvalidOperationException(
-                $"Child Session 尚未完全连接，无法发送 {displayName}。");
+                $"桌面分身尚未完全连接，无法发送 {displayName}。");
         }
 
         if (!ChildSessionNativeMethods.TryFocusRdpInputWindow(Handle))
         {
-            throw new InvalidOperationException("无法将键盘焦点切换到 Child Session。");
+            throw new InvalidOperationException("无法将键盘焦点切换到桌面分身。");
         }
 
         RunComStep($"向 Child Session 发送 {displayName}", () => SendKeyStrokes(strokes));
