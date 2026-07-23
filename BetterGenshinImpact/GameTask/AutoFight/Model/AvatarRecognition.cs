@@ -27,12 +27,22 @@ public static class AvatarRecognition
     private static volatile bool _skipSeek;
 
     /// <summary>
-    /// 设置或获取持续索敌跳过状态。
+    /// 开始独占视角操作。
+    /// 返回的 <see cref="SkipSeekScope"/> 在 Dispose 时自动重置跳过标记。
+    /// 使用方应通过 using 语句确保异常安全。
     /// </summary>
-    public static bool SkipSeek
+    internal static SkipSeekScope BeginExclusiveOperation()
     {
-        get => _skipSeek;
-        set => _skipSeek = value;
+        _skipSeek = true;
+        return new SkipSeekScope();
+    }
+
+    /// <summary>
+    /// 独占操作作用域。Dispose 时自动重置 SkipSeek，避免遗漏恢复。
+    /// </summary>
+    internal readonly struct SkipSeekScope : IDisposable
+    {
+        public void Dispose() => _skipSeek = false;
     }
 
     /// <summary>
@@ -313,8 +323,8 @@ public static class AvatarRecognition
         {
             while (!ct.IsCancellationRequested && !(isFightEnd?.Invoke() ?? false))
             {
-                // SkipSeek 为 true 时跳过本轮索敌，避免与角色专属索敌冲突
-                if (SkipSeek)
+                // SkipSeek 为 true 时跳过本轮索敌，避免视角控制冲突
+                if (_skipSeek)
                 {
                     await Task.Delay(frameIntervalMs, ct);
                     continue;
@@ -349,6 +359,7 @@ public static class AvatarRecognition
                             Math.Abs((b.y + b.height / 2) - preAimY)).First();
                         var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                         var offsetY = (nearest.y + nearest.height / 2) - preAimY;
+                        if (_skipSeek) continue;
                         Simulation.SendInput.Mouse.MoveMouseBy(
                             (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
 
@@ -378,6 +389,7 @@ public static class AvatarRecognition
                             lastSeenTargetTime = DateTime.UtcNow;
                             var offsetX = dcx - preAimX;
                             var offsetY = dcy - preAimY;
+                            if (_skipSeek) continue;
                             Simulation.SendInput.Mouse.MoveMouseBy(
                                 (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
 
@@ -398,6 +410,7 @@ public static class AvatarRecognition
                             if (!lastSeenTargetTime.HasValue ||
                                 (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
                             {
+                                if (_skipSeek) continue;
                                 Simulation.SendInput.Mouse.MoveMouseBy((int)(250 * dpi), 0);
                             }
                         }

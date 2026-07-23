@@ -575,8 +575,7 @@ public class AutoFightJsonTask : ISoloTask
     /// <summary>战斗结束检测</summary>
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        AvatarRecognition.SkipSeek = true;
-        try
+        using (AvatarRecognition.BeginExclusiveOperation())
         {
             // 敌人可见时跳过战斗结束检查
             if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
@@ -667,10 +666,6 @@ public class AutoFightJsonTask : ISoloTask
 
             _lastFightFlagTime = DateTime.Now;
             return false;
-        }
-        finally
-        {
-            AvatarRecognition.SkipSeek = false;
         }
     }
 

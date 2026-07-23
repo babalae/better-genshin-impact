@@ -155,7 +155,8 @@ public class Avatar
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
                 
-                AvatarRecognition.SkipSeek = true;
+                using (AvatarRecognition.BeginExclusiveOperation())
+                {
                 // 保存原始 MoveMode，用于 finally 还原
                 var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
                 // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
@@ -197,7 +198,7 @@ public class Avatar
                     AutoFightTask.FightWaypoint = null;
                     Simulation.SendInput.Mouse.RightButtonUp();
                     Simulation.ReleaseAllKey();
-                    AvatarRecognition.SkipSeek = false;
+                }
                 }
                 
                 using var bitmap2 = CaptureToRectArea();
@@ -589,8 +590,7 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
-        AvatarRecognition.SkipSeek = true;
-        try
+        using (AvatarRecognition.BeginExclusiveOperation())
         {
             // CD 中立即返回，其余场景尝试释放
             using var region1 = CaptureToRectArea();
@@ -631,10 +631,6 @@ public class Avatar
                     }
                 }
             }
-        }
-        finally
-        {
-            AvatarRecognition.SkipSeek = false;
         }
     }
 
@@ -934,14 +930,9 @@ public class Avatar
 
     public void MoveBy(int x, int y)
     {
-        AvatarRecognition.SkipSeek = true;
-        try
+        using (AvatarRecognition.BeginExclusiveOperation())
         {
             GlobalMethod.MoveMouseBy(x, y);
-        }
-        finally
-        {
-            AvatarRecognition.SkipSeek = false;
         }
     }
 

@@ -78,8 +78,7 @@ public static class AvatarSpecialAction
             // 纳西妲长按 E：按下后向右移动鼠标
             case "纳西妲":
             {
-                AvatarRecognition.SkipSeek = true;
-                try
+                using (AvatarRecognition.BeginExclusiveOperation())
                 {
                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Sleep(300, avatar.Ct);
@@ -92,10 +91,6 @@ public static class AvatarSpecialAction
                     Sleep(300);
                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                     return true;
-                }
-                finally
-                {
-                    AvatarRecognition.SkipSeek = false;
                 }
             }
             // 坎蒂丝长按 E：固定等待 3 秒
@@ -121,193 +116,196 @@ public static class AvatarSpecialAction
             // 那维莱特：按住普攻循环向右旋转
             case "那维莱特":
             {
-                AvatarRecognition.SkipSeek = true;
-                var dpi = TaskContext.Instance().DpiScale;
-                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-                try
+                using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    while (ms >= 0)
+                    var dpi = TaskContext.Instance().DpiScale;
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                    try
                     {
-                        if (avatar.Ct is { IsCancellationRequested: true })
+                        while (ms >= 0)
                         {
-                            return true;
-                        }
+                            if (avatar.Ct is { IsCancellationRequested: true })
+                            {
+                                return true;
+                            }
 
-                        Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
-                        ms -= 50;
-                        Sleep(50);
+                            Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                            ms -= 50;
+                            Sleep(50);
+                        }
                     }
-                }
-                finally
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    AvatarRecognition.SkipSeek = false;
+                    finally
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                    }
                 }
                 return true;
             }
             // 恰斯卡：按住普攻分段变速旋转
             case "恰斯卡":
             {
-                AvatarRecognition.SkipSeek = true;
-                var dpi = TaskContext.Instance().DpiScale;
-                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-                try
+                using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    int tick = -4;
-                    while (ms >= 0)
+                    var dpi = TaskContext.Instance().DpiScale;
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                    try
                     {
-                        if (avatar.Ct is { IsCancellationRequested: true })
+                        int tick = -4;
+                        while (ms >= 0)
                         {
-                            return true;
+                            if (avatar.Ct is { IsCancellationRequested: true })
+                            {
+                                return true;
+                            }
+
+                            const double lowspeed = 0.7, highspeed = 50;
+                            double rateX, rateY;
+                            if (tick < 3)
+                            {
+                                rateX = highspeed;
+                                rateY = highspeed * 0.23;
+                            }
+                            else if (tick < 40)
+                            {
+                                rateX = lowspeed * 0.7;
+                                rateY = 0;
+                            }
+                            else if (tick < 43)
+                            {
+                                rateX = highspeed;
+                                rateY = highspeed * 0.4;
+                            }
+                            else if (tick < 70)
+                            {
+                                rateX = lowspeed * 0.9;
+                                rateY = 0;
+                            }
+                            else if (tick < 73)
+                            {
+                                rateX = highspeed;
+                                rateY = highspeed;
+                            }
+                            else
+                            {
+                                rateX = lowspeed;
+                                rateY = 0;
+                            }
+
+                            Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
+                            tick = (tick + 1) % 100;
+                            Sleep(25);
+                            ms -= 25;
                         }
 
-                        const double lowspeed = 0.7, highspeed = 50;
-                        double rateX, rateY;
-                        if (tick < 3)
-                        {
-                            rateX = highspeed;
-                            rateY = highspeed * 0.23;
-                        }
-                        else if (tick < 40)
-                        {
-                            rateX = lowspeed * 0.7;
-                            rateY = 0;
-                        }
-                        else if (tick < 43)
-                        {
-                            rateX = highspeed;
-                            rateY = highspeed * 0.4;
-                        }
-                        else if (tick < 70)
-                        {
-                            rateX = lowspeed * 0.9;
-                            rateY = 0;
-                        }
-                        else if (tick < 73)
-                        {
-                            rateX = highspeed;
-                            rateY = highspeed;
-                        }
-                        else
-                        {
-                            rateX = lowspeed;
-                            rateY = 0;
-                        }
-
-                        Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
-                        tick = (tick + 1) % 100;
-                        Sleep(25);
-                        ms -= 25;
+                        return true;
                     }
-
-                    return true;
-                }
-                finally
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    AvatarRecognition.SkipSeek = false;
+                    finally
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                    }
                 }
             }
             // 桑多涅：按住普攻 + 截图寻的血条/伤害数字追踪
             case "桑多涅":
             {
-                AvatarRecognition.SkipSeek = true;
-                var dpi = TaskContext.Instance().DpiScale;
-                var frameIntervalMs = TaskContext.Instance().Config.AutoFightConfig.TargetingDetectionInterval;
-
-                Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-
-                DateTime? lastSeenTargetTime = null;
-                var startTime = DateTime.UtcNow;
-                var maxDurationMs = ms;
-
-                try
+                using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    while (!avatar.Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
+                    var dpi = TaskContext.Instance().DpiScale;
+                    var frameIntervalMs = TaskContext.Instance().Config.AutoFightConfig.TargetingDetectionInterval;
+
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+
+                    DateTime? lastSeenTargetTime = null;
+                    var startTime = DateTime.UtcNow;
+                    var maxDurationMs = ms;
+
+                    try
                     {
-                        using (var capture = CaptureToRectArea())
+                        while (!avatar.Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
                         {
-                            int preAimX = (int)(capture.Width * 0.5);
-                            int preAimY = (int)(capture.Height * (480.0 / 1080.0));
-
-                            var bars = AvatarRecognition.FindBloodBars(capture);
-                            var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
-
-                            bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
-
-                            var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
-
-                            bool hasLegendaryBar = bars.Any(b => AvatarRecognition.IsLegendaryBar(b.y));
-
-                            if (valid.Count > 0 && !hasLegendaryBar)
+                            using (var capture = CaptureToRectArea())
                             {
-                                lastSeenTargetTime = DateTime.UtcNow;
-                                var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
-                                //Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
-                                var offsetX = (nearest.x + nearest.width / 2) - preAimX;
-                                var offsetY = (nearest.y + nearest.height / 2) - preAimY;
-                                Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                                int preAimX = (int)(capture.Width * 0.5);
+                                int preAimY = (int)(capture.Height * (480.0 / 1080.0));
 
-                                if (drawResults)
+                                var bars = AvatarRecognition.FindBloodBars(capture);
+                                var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
+
+                                bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
+
+                                var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
+
+                                bool hasLegendaryBar = bars.Any(b => AvatarRecognition.IsLegendaryBar(b.y));
+
+                                if (valid.Count > 0 && !hasLegendaryBar)
                                 {
-                                    foreach (var b in valid)
-                                    {
-                                        var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
-                                        if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
-                                            drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
-                                        else
-                                            drawList.Add(capture.ToRectDrawable(rect, "blood"));
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                var damageResult = AvatarRecognition.FindDamageNumber(capture);
-                                if (damageResult.HasValue)
-                                {
-                                    var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
                                     lastSeenTargetTime = DateTime.UtcNow;
-                                    var offsetX = dcx - preAimX;
-                                    var offsetY = dcy - preAimY;
+                                    var nearest = valid.OrderBy(b => Math.Abs((b.x + b.width / 2) - preAimX) + Math.Abs((b.y + b.height / 2) - preAimY)).First();
+                                    //Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
+                                    var offsetX = (nearest.x + nearest.width / 2) - preAimX;
+                                    var offsetY = (nearest.y + nearest.height / 2) - preAimY;
                                     Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+
                                     if (drawResults)
                                     {
-                                        drawList.Add(capture.ToRectDrawable(
-                                            new OpenCvSharp.Rect(dx, dy, dw, dh),
-                                            "damage_target",
-                                            new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                        foreach (var b in valid)
+                                        {
+                                            var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
+                                            if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
+                                                drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                            else
+                                                drawList.Add(capture.ToRectDrawable(rect, "blood"));
+                                        }
                                     }
                                 }
-
-                                if (!damageResult.HasValue)
+                                else
                                 {
-                                    var lockLostWaitTime = TaskContext.Instance().Config.AutoFightConfig.LockLostWaitTime;
-
-                                    if (!hasLegendaryBar && (DateTime.UtcNow - (lastSeenTargetTime ?? startTime)).TotalSeconds >= 1.5)
+                                    var damageResult = AvatarRecognition.FindDamageNumber(capture);
+                                    if (damageResult.HasValue)
                                     {
-                                        Logger.LogInformation("桑多涅重击特化：超过1.5秒未找到目标，提前退出");
-                                        View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
-                                        break;
+                                        var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
+                                        lastSeenTargetTime = DateTime.UtcNow;
+                                        var offsetX = dcx - preAimX;
+                                        var offsetY = dcy - preAimY;
+                                        Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                                        if (drawResults)
+                                        {
+                                            drawList.Add(capture.ToRectDrawable(
+                                                new OpenCvSharp.Rect(dx, dy, dw, dh),
+                                                "damage_target",
+                                                new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                        }
                                     }
 
-                                    if (!lastSeenTargetTime.HasValue || (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
+                                    if (!damageResult.HasValue)
                                     {
-                                        Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                        var lockLostWaitTime = TaskContext.Instance().Config.AutoFightConfig.LockLostWaitTime;
+
+                                        if (!hasLegendaryBar && (DateTime.UtcNow - (lastSeenTargetTime ?? startTime)).TotalSeconds >= 1.5)
+                                        {
+                                            Logger.LogInformation("桑多涅重击特化：超过1.5秒未找到目标，提前退出");
+                                            View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                                            break;
+                                        }
+
+                                        if (!lastSeenTargetTime.HasValue || (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
+                                        {
+                                            Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                        }
                                     }
                                 }
+
+                                View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
                             }
 
-                            View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveRectList("SandroneBloodBars", drawList);
+                            Sleep(frameIntervalMs);
                         }
-
-                        Sleep(frameIntervalMs);
                     }
-                }
-                finally
-                {
-                    View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    AvatarRecognition.SkipSeek = false;
+                    finally
+                    {
+                        View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                    }
                 }
 
                 return true;

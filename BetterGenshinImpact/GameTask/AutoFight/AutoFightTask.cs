@@ -363,14 +363,9 @@ public class AutoFightTask : ISoloTask
                         
                         if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
                         {
-                            AvatarRecognition.SkipSeek = true;
-                            try
+                            using (AvatarRecognition.BeginExclusiveOperation())
                             {
                                 await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
-                            }
-                            finally
-                            {
-                                AvatarRecognition.SkipSeek = false;
                             }
                         }
                         
@@ -858,8 +853,7 @@ public class AutoFightTask : ISoloTask
 
     public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        AvatarRecognition.SkipSeek = true;
-        try
+        using (AvatarRecognition.BeginExclusiveOperation())
         {
             // 敌人可见时跳过战斗结束检查
             if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
@@ -946,10 +940,6 @@ public class AutoFightTask : ISoloTask
             
             _lastFightFlagTime = DateTime.Now;
             return false;
-        }
-        finally
-        {
-            AvatarRecognition.SkipSeek = false;
         }
     }
 
