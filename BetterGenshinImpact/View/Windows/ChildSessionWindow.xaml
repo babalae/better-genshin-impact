@@ -146,6 +146,21 @@
         <wfi:WindowsFormsHost x:Name="RdpFormsHost"
                               Grid.Row="1"
                               HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch" />
+                              VerticalAlignment="Stretch">
+            <wfi:WindowsFormsHost.Style>
+                <Style TargetType="{x:Type wfi:WindowsFormsHost}">
+                    <!-- 为父窗口保留命中测试区域，避免 RDP 的子 HWND 截获窗口边缘鼠标消息 -->
+                    <Setter Property="Margin"
+                            Value="2,0,2,2" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
+                                     Value="Maximized">
+                            <Setter Property="Margin"
+                                    Value="0" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </wfi:WindowsFormsHost.Style>
+        </wfi:WindowsFormsHost>
     </Grid>
 </ui:FluentWindow>
