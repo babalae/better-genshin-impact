@@ -679,6 +679,8 @@ public class AutoFightTask : ISoloTask
                     {
                         Logger.LogInformation("使用 枫原万叶-长E 拾取掉落物");
                         await Delay(200, ct);
+                        // Ct 可能已被 cts2 取消，临时替换为外部 ct 以确保切换能正常执行
+                        picker.Ct = ct;
                         if (picker.TrySwitch(10))
                         {
                             // 等待元素战技 CD 就绪
@@ -714,6 +716,7 @@ public class AutoFightTask : ISoloTask
 
                     var find = _taskParam.QinDoublePickUp;
                     await Delay(150, ct);
+                    picker.Ct = ct;
                     if (picker.TrySwitch(10))
                     {
                         foreach (var miningActionStr in actionsToUse)
