@@ -208,8 +208,6 @@ public partial class Avatar
             {
                 Avatar.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
-                const int preAimX = 960;
-                const int preAimY = 480;
                 var frameIntervalMs = TaskContext.Instance().Config.AutoFightConfig.TargetingDetectionInterval;
 
                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
@@ -224,8 +222,11 @@ public partial class Avatar
                     {
                         using (var capture = CaptureToRectArea())
                         {
+                            int preAimX = (int)(capture.Width * 0.5);
+                            int preAimY = (int)(capture.Height * (480.0 / 1080.0));
+
                             var bars = FindBloodBars(capture);
-                            var valid = bars.Where(b => b.x > 200).ToList();
+                            var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
 
                             bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
 

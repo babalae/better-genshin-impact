@@ -34,6 +34,9 @@ public partial class Avatar
         get => _skipSeek;
         set => _skipSeek = value;
     }
+
+    private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+
     /// <summary>
     /// 传奇血条动态追踪字典：2px粒度的 y → 连续出现计数。
     /// y 96-200 范围的血条在连续5帧中出现时被标记为传奇。
@@ -48,7 +51,7 @@ public partial class Avatar
     /// </summary>
     private static void UpdateLegendaryBarTracker(IEnumerable<int> barYs)
     {
-        var currentBins = barYs.Where(y => y >= 96 && y < 200)
+        var currentBins = barYs.Where(y => y >= (int)(96 * AssetScale) && y < (int)(200 * AssetScale))
                                .Select(y => y / 2 * 2)
                                .ToHashSet();
 
@@ -97,7 +100,7 @@ public partial class Avatar
             var image = existingCapture ?? selfCapture!;
             var bloodLower = new Scalar(255, 90, 90); // BGR 红色
 
-            using var cropped = image.DeriveCrop(0, 0, 1500, 900);
+            using var cropped = image.DeriveCrop(0, 0, (int)(1500 * AssetScale), (int)(900 * AssetScale));
             using Mat mask = OpenCvCommonHelper.Threshold(
                 cropped.SrcMat, bloodLower);
 
@@ -115,7 +118,7 @@ public partial class Avatar
                 if (row.GetArray(out int[] arr))
                 {
                     int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
-                    if (y < 50)
+                    if (y < (int)(50 * AssetScale))
                         continue;
                     results.Add((x, y, width, height));
                 }
@@ -162,7 +165,7 @@ public partial class Avatar
         using (selfCapture)
         {
             var ra = existingCapture ?? selfCapture!;
-            var ocrResults = ra.FindMulti(RecognitionObject.Ocr(450, 240, 1150, 660));
+            var ocrResults = ra.FindMulti(RecognitionObject.Ocr((int)(450 * AssetScale), (int)(240 * AssetScale), (int)(1150 * AssetScale), (int)(660 * AssetScale)));
 
             string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
             var validItems = new List<(int cx, int cy, int area, string text, int x, int y, int w, int h)>();
@@ -227,10 +230,10 @@ public partial class Avatar
                 new(255, 204, 102), // 岩 #FFCC66
             ];
 
-            const int roiX = 450;
-            const int roiY = 240;
-            const int roiW = 1150;
-            const int roiH = 660;
+            int roiX = (int)(450 * AssetScale);
+            int roiY = (int)(240 * AssetScale);
+            int roiW = (int)(1150 * AssetScale);
+            int roiH = (int)(660 * AssetScale);
 
             using var cropped = ra.DeriveCrop(roiX, roiY, roiW, roiH);
             using var rgbMat = new Mat();
@@ -261,7 +264,7 @@ public partial class Avatar
                 int width = stats.At<int>(i, (int)ConnectedComponentsTypes.Width);
                 int height = stats.At<int>(i, (int)ConnectedComponentsTypes.Height);
 
-                if (height < 20) continue;
+                if (height < (int)(20 * AssetScale)) continue;
 
                 int area = stats.At<int>(i, (int)ConnectedComponentsTypes.Area);
                 validItems.Add((x + width / 2 + roiX, y + height / 2 + roiY, area, x + roiX, y + roiY, width, height));
@@ -301,8 +304,6 @@ public partial class Avatar
         Func<bool>? isFightEnd = null)
     {
         var dpi = TaskContext.Instance().DpiScale;
-        const int preAimX = 960;  // 预瞄准点 X（屏幕中心）
-        const int preAimY = 480;   // 预瞄准点 Y
         DateTime? lastSeenTargetTime = null;  // 最后找到目标的时间（null = 从未找到）
 
         try
@@ -318,6 +319,9 @@ public partial class Avatar
 
                 using (var capture = CaptureToRectArea())
                 {
+                    int preAimX = (int)(capture.Width * 0.5);
+                    int preAimY = (int)(capture.Height * (480.0 / 1080.0));
+
                     // 不在主界面时跳过本轮（避免菜单/地图/对话等界面下误操作）
                     if (!Bv.IsInMainUi(capture))
                     {
@@ -327,7 +331,7 @@ public partial class Avatar
 
                     // 1. 血条识别：检测红色血条并过滤左侧 UI 区域 (x > 200)
                     var bars = FindBloodBars(capture);
-                    var valid = bars.Where(b => b.x > 200).ToList();
+                    var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
 
                     var drawList = new List<RectDrawable>();
 
