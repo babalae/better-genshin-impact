@@ -49,6 +49,12 @@ public partial class ChildSessionWindow : FluentWindow
             return;
         }
 
+        if (!_viewModel.HasChildSession)
+        {
+            Hide();
+            return;
+        }
+
         var result = ThemedMessageBox.Show(
             "关闭会断开 RDP 并注销整个 Child Session，其中所有正在运行的软件都会被关闭，未保存的数据会丢失。是否继续？",
             "关闭 BetterGI 虚拟桌面",

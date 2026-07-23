@@ -37,6 +37,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     public string TopmostButtonToolTip => IsTopmost ? "取消置顶" : "置顶";
 
+    public bool HasChildSession => _childSessionService.ChildSessionId is not null;
+
     public ChildSessionWindowViewModel(ChildSessionService childSessionService)
     {
         _childSessionService = childSessionService;

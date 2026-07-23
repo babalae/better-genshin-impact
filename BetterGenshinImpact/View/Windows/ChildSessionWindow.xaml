@@ -63,7 +63,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon EyeOff24}"
                                ToolTip="隐藏窗口并保持 RDP 连接" />
-                    <ui:Button Width="100"
+                    <ui:Button Width="110"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
