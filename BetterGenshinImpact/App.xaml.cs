@@ -13,14 +13,17 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,6 +124,9 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
+                services.AddSingleton<ChildSessionService>();
+                services.AddTransient<ChildSessionWindowViewModel>();
+                services.AddTransient<ChildSessionWindow>();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();

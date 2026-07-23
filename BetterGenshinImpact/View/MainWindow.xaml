@@ -167,6 +167,16 @@
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="虚拟桌面">
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="Click">
+                            <b:InvokeCommandAction Command="{Binding OpenChildSessionWindowCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="DeveloperBoard24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
