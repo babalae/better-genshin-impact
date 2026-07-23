@@ -12,6 +12,13 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class MaskWindowConfig : ObservableObject
 {
+    public const int MinCrosshairLineWidth = 1;
+    public const int MaxCrosshairLineWidth = 100;
+    public const int MinCrosshairSize = 1;
+    public const int MaxCrosshairSize = 1000;
+    public const int MinCrosshairGap = 0;
+    public const int MaxCrosshairGap = 1000;
+
     // 指标栏布局和遮罩里其它元素一样按 1920x1080 折算比例保存，默认放在状态栏/日志上方以避开游戏底部 UI。
     public const double DefaultMetricsLeftRatio = 20.0 / 1920;
     public const double DefaultMetricsTopRatio = 744.0 / 1080;
@@ -75,6 +82,81 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     [NonSerialized]
     public static readonly Rect UidCoverRightBottomRect = new(1920 - 1685, 1080 - 1053, 178, 22);
+
+    /// <summary>
+    ///     准星是否启用
+    /// </summary>
+    [ObservableProperty]
+    private bool _crosshairEnabled;
+
+    /// <summary>
+    ///     准星类型
+    /// </summary>
+    [ObservableProperty]
+    private CrosshairType _crosshairType = CrosshairType.Crosshair;
+
+    /// <summary>
+    ///     准星颜色（十六进制）
+    /// </summary>
+    [ObservableProperty]
+    private string _crosshairColor = "#FFFFFF";
+
+    /// <summary>
+    ///     准星线宽
+    /// </summary>
+    [ObservableProperty]
+    private int _crosshairLineWidth = 4;
+
+    /// <summary>
+    ///     准星大小
+    /// </summary>
+    [ObservableProperty]
+    private int _crosshairSize = 30;
+
+    /// <summary>
+    ///     中心点与十字线的间隔（仅 DotCrosshair 类型）
+    /// </summary>
+    [ObservableProperty]
+    private int _crosshairGap = 10;
+
+    partial void OnCrosshairLineWidthChanged(int value)
+    {
+        var clampedValue = Math.Clamp(value, MinCrosshairLineWidth, MaxCrosshairLineWidth);
+        if (value != clampedValue)
+        {
+            CrosshairLineWidth = clampedValue;
+        }
+    }
+
+    partial void OnCrosshairSizeChanged(int value)
+    {
+        var clampedValue = Math.Clamp(value, MinCrosshairSize, MaxCrosshairSize);
+        if (value != clampedValue)
+        {
+            CrosshairSize = clampedValue;
+        }
+    }
+
+    partial void OnCrosshairGapChanged(int value)
+    {
+        var clampedValue = Math.Clamp(value, MinCrosshairGap, MaxCrosshairGap);
+        if (value != clampedValue)
+        {
+            CrosshairGap = clampedValue;
+        }
+    }
+
+    /// <summary>
+    ///     自定义准星图片路径
+    /// </summary>
+    [ObservableProperty]
+    private string? _crosshairImagePath;
+
+    /// <summary>
+    ///     自定义图片缩放方式
+    /// </summary>
+    [ObservableProperty]
+    private CrosshairScaleMode _crosshairScaleMode = CrosshairScaleMode.Original;
 
     /// <summary>
     /// 显示FPS
@@ -204,4 +286,25 @@ public partial class MaskWindowConfig : ObservableObject
         OverlayMetricItems[item.ToString()] = enabled;
         OnPropertyChanged(nameof(OverlayMetricItems));
     }
+}
+
+/// <summary>
+///     准星类型
+/// </summary>
+public enum CrosshairType
+{
+    Crosshair,
+    Diagonal,
+    Dot,
+    DotCrosshair,
+    Custom
+}
+
+/// <summary>
+///     自定义准星图片缩放方式
+/// </summary>
+public enum CrosshairScaleMode
+{
+    Original,
+    Fit
 }
