@@ -39,7 +39,7 @@ namespace BetterGenshinImpact.GameTask
             GameHandle = hWnd;
             PostMessageSimulator = Simulation.PostMessage(GameHandle);
             SystemInfo = new SystemInfo(hWnd);
-            DpiScale = DpiHelper.ScaleY;
+            DpiScale = DpiHelper.GetScale(hWnd).Y;
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
             IsInitialized = true;
         }

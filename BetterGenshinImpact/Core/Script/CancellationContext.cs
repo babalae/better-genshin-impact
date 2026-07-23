@@ -23,6 +23,21 @@ public class CancellationContext : Singleton<CancellationContext>
 
     private bool disposed;
 
+    public CancellationToken GetActiveToken()
+    {
+        lock (_sync)
+        {
+            if (disposed)
+            {
+                Cts = new CancellationTokenSource();
+                IsManualStop = false;
+                disposed = false;
+            }
+
+            return Cts.Token;
+        }
+    }
+
     public void Set()
     {
         lock (_sync)
