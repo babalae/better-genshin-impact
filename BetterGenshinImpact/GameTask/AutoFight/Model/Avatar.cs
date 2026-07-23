@@ -38,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// <summary>
 /// 队伍内的角色
 /// </summary>
-public partial class Avatar
+public class Avatar
 {
     /// <summary>
     /// 配置文件中的角色信息
@@ -155,7 +155,7 @@ public partial class Avatar
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
                 
-                Avatar.SkipSeek = true;
+                AvatarRecognition.SkipSeek = true;
                 // 保存原始 MoveMode，用于 finally 还原
                 var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
                 // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
@@ -197,7 +197,7 @@ public partial class Avatar
                     AutoFightTask.FightWaypoint = null;
                     Simulation.SendInput.Mouse.RightButtonUp();
                     Simulation.ReleaseAllKey();
-                    Avatar.SkipSeek = false;
+                    AvatarRecognition.SkipSeek = false;
                 }
                 
                 using var bitmap2 = CaptureToRectArea();
@@ -509,7 +509,7 @@ public partial class Avatar
     /// </summary>
     public void UseSkill(bool hold = false)
     {
-        if (ExecuteSpecializedAction("UseSkill", Name, new ActionArgs(Hold: hold))) return;
+        if (AvatarSpecialAction.ExecuteSpecializedAction(this, "UseSkill", Name, new ActionArgs(Hold: hold))) return;
 
         for (var i = 0; i < 1; i++)
         {
@@ -589,7 +589,7 @@ public partial class Avatar
     /// </summary>
     public void UseBurst()
     {
-        Avatar.SkipSeek = true;
+        AvatarRecognition.SkipSeek = true;
         try
         {
             // CD 中立即返回，其余场景尝试释放
@@ -634,7 +634,7 @@ public partial class Avatar
         }
         finally
         {
-            Avatar.SkipSeek = false;
+            AvatarRecognition.SkipSeek = false;
         }
     }
 
@@ -869,7 +869,7 @@ public partial class Avatar
     /// </summary>
     public void Charge(int ms = 0)
     {
-        if (ExecuteSpecializedAction("Charge", Name, new ActionArgs(Ms: ms))) return;
+        if (AvatarSpecialAction.ExecuteSpecializedAction(this, "Charge", Name, new ActionArgs(Ms: ms))) return;
 
         if (ms == 0)
         {
@@ -934,14 +934,14 @@ public partial class Avatar
 
     public void MoveBy(int x, int y)
     {
-        Avatar.SkipSeek = true;
+        AvatarRecognition.SkipSeek = true;
         try
         {
             GlobalMethod.MoveMouseBy(x, y);
         }
         finally
         {
-            Avatar.SkipSeek = false;
+            AvatarRecognition.SkipSeek = false;
         }
     }
 

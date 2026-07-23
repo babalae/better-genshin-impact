@@ -20,8 +20,13 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// <summary>
 /// 角色特化动作分派（按动作名+角色名决定是否使用特化逻辑）
 /// </summary>
-public partial class Avatar
+public static class AvatarSpecialAction
 {
+    /// <summary>
+    /// 资源缩放比例
+    /// </summary>
+    private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+
     /// <summary>
     /// 特化规则：(动作, 角色) → 参数条件（null=无条件，仅检查动作+角色即生效）
     /// 不在此字典中的组合直接跳过，走通用逻辑。
@@ -44,7 +49,7 @@ public partial class Avatar
     /// <param name="character">角色名（如 "纳西妲"）</param>
     /// <param name="args">动作参数对象（如 UseSkillArgs、ChargeArgs）</param>
     /// <returns>true 表示已由特化逻辑处理，false 表示无特化逻辑</returns>
-    public bool ExecuteSpecializedAction(string action, string character, object args)
+    public static bool ExecuteSpecializedAction(Avatar avatar, string action, string character, object args)
     {
         // 不在特化规则中 → 提前退出
         if (!SpecializedRules.TryGetValue((action, character), out var condition)) return false;
@@ -55,9 +60,9 @@ public partial class Avatar
         switch (action)
         {
             case "UseSkill":
-                return ExecuteUseSkillSpecialized(character);
+                return ExecuteUseSkillSpecialized(avatar, character);
             case "Charge":
-                return ExecuteChargeSpecialized(character, ((ActionArgs)args).Ms);
+                return ExecuteChargeSpecialized(avatar, character, ((ActionArgs)args).Ms);
             default:
                 return false;
         }
@@ -66,18 +71,18 @@ public partial class Avatar
     /// <summary>
     /// UseSkill 特化分派
     /// </summary>
-    private bool ExecuteUseSkillSpecialized(string character)
+    private static bool ExecuteUseSkillSpecialized(Avatar avatar, string character)
     {
         switch (character)
         {
             // 纳西妲长按 E：按下后向右移动鼠标
             case "纳西妲":
             {
-                Avatar.SkipSeek = true;
+                AvatarRecognition.SkipSeek = true;
                 try
                 {
                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-                    Sleep(300, Ct);
+                    Sleep(300, avatar.Ct);
                     for (int j = 0; j < 10; j++)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
@@ -90,7 +95,7 @@ public partial class Avatar
                 }
                 finally
                 {
-                    Avatar.SkipSeek = false;
+                    AvatarRecognition.SkipSeek = false;
                 }
             }
             // 坎蒂丝长按 E：固定等待 3 秒
@@ -109,21 +114,21 @@ public partial class Avatar
     /// <summary>
     /// Charge 重击特化分派
     /// </summary>
-    private bool ExecuteChargeSpecialized(string character, int ms)
+    private static bool ExecuteChargeSpecialized(Avatar avatar, string character, int ms)
     {
         switch (character)
         {
             // 那维莱特：按住普攻循环向右旋转
             case "那维莱特":
             {
-                Avatar.SkipSeek = true;
+                AvatarRecognition.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
                 try
                 {
                     while (ms >= 0)
                     {
-                        if (Ct is { IsCancellationRequested: true })
+                        if (avatar.Ct is { IsCancellationRequested: true })
                         {
                             return true;
                         }
@@ -136,14 +141,14 @@ public partial class Avatar
                 finally
                 {
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    Avatar.SkipSeek = false;
+                    AvatarRecognition.SkipSeek = false;
                 }
                 return true;
             }
             // 恰斯卡：按住普攻分段变速旋转
             case "恰斯卡":
             {
-                Avatar.SkipSeek = true;
+                AvatarRecognition.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
                 try
@@ -151,7 +156,7 @@ public partial class Avatar
                     int tick = -4;
                     while (ms >= 0)
                     {
-                        if (Ct is { IsCancellationRequested: true })
+                        if (avatar.Ct is { IsCancellationRequested: true })
                         {
                             return true;
                         }
@@ -200,13 +205,13 @@ public partial class Avatar
                 finally
                 {
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    Avatar.SkipSeek = false;
+                    AvatarRecognition.SkipSeek = false;
                 }
             }
             // 桑多涅：按住普攻 + 截图寻的血条/伤害数字追踪
             case "桑多涅":
             {
-                Avatar.SkipSeek = true;
+                AvatarRecognition.SkipSeek = true;
                 var dpi = TaskContext.Instance().DpiScale;
                 var frameIntervalMs = TaskContext.Instance().Config.AutoFightConfig.TargetingDetectionInterval;
 
@@ -218,21 +223,21 @@ public partial class Avatar
 
                 try
                 {
-                    while (!Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
+                    while (!avatar.Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
                     {
                         using (var capture = CaptureToRectArea())
                         {
                             int preAimX = (int)(capture.Width * 0.5);
                             int preAimY = (int)(capture.Height * (480.0 / 1080.0));
 
-                            var bars = FindBloodBars(capture);
+                            var bars = AvatarRecognition.FindBloodBars(capture);
                             var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
 
                             bool drawResults = TaskContext.Instance().Config.AutoFightConfig.DrawRecognitionResults;
 
                             var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
 
-                            bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
+                            bool hasLegendaryBar = bars.Any(b => AvatarRecognition.IsLegendaryBar(b.y));
 
                             if (valid.Count > 0 && !hasLegendaryBar)
                             {
@@ -257,7 +262,7 @@ public partial class Avatar
                             }
                             else
                             {
-                                var damageResult = FindDamageNumber(capture);
+                                var damageResult = AvatarRecognition.FindDamageNumber(capture);
                                 if (damageResult.HasValue)
                                 {
                                     var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
@@ -302,7 +307,7 @@ public partial class Avatar
                 {
                     View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    Avatar.SkipSeek = false;
+                    AvatarRecognition.SkipSeek = false;
                 }
 
                 return true;

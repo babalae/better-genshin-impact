@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// <summary>
 /// 战斗识别相关的通用工具函数
 /// </summary>
-public partial class Avatar
+public static class AvatarRecognition
 {
     /// <summary>
     /// 持续索敌跳过标记：当某角色进行独占视角操作（如重击索敌）时设为 true，
@@ -35,6 +35,9 @@ public partial class Avatar
         set => _skipSeek = value;
     }
 
+    /// <summary>
+    /// 资源缩放比例
+    /// </summary>
     private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
 
     /// <summary>
@@ -80,7 +83,7 @@ public partial class Avatar
     /// 判断指定 y 坐标的血条是否为传奇血条。
     /// y < 96 直接判定为传奇；y 96-200 使用动态追踪结果；y >= 200 视为普通。
     /// </summary>
-    private static bool IsLegendaryBar(int y)
+    public static bool IsLegendaryBar(int y)
     {
         if (y < 96) return true;
         if (y >= 200) return false;

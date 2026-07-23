@@ -464,7 +464,7 @@ public class AutoFightJsonTask : ISoloTask
             {
                 try
                 {
-                    await Avatar.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => _fightEndFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => _fightEndFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
@@ -575,7 +575,7 @@ public class AutoFightJsonTask : ISoloTask
     /// <summary>战斗结束检测</summary>
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        Avatar.SkipSeek = true;
+        AvatarRecognition.SkipSeek = true;
         try
         {
             // 敌人可见时跳过战斗结束检查
@@ -584,7 +584,7 @@ public class AutoFightJsonTask : ISoloTask
                 if (_skipCheckCounter < 5)
                 {
                     using var quickCapture = CaptureToRectArea();
-                    var bars = Avatar.FindBloodBars(quickCapture);
+                    var bars = AvatarRecognition.FindBloodBars(quickCapture);
                     // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
                     if (bars.Count > 0)
                     {
@@ -670,7 +670,7 @@ public class AutoFightJsonTask : ISoloTask
         }
         finally
         {
-            Avatar.SkipSeek = false;
+            AvatarRecognition.SkipSeek = false;
         }
     }
 

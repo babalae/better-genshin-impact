@@ -363,14 +363,14 @@ public class AutoFightTask : ISoloTask
                         
                         if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
                         {
-                            Avatar.SkipSeek = true;
+                            AvatarRecognition.SkipSeek = true;
                             try
                             {
                                 await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
                             }
                             finally
                             {
-                                Avatar.SkipSeek = false;
+                                AvatarRecognition.SkipSeek = false;
                             }
                         }
                         
@@ -523,7 +523,7 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    await Avatar.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => fightEndFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, interval, drawResults, lockLostWait, damageMode, () => fightEndFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
@@ -858,7 +858,7 @@ public class AutoFightTask : ISoloTask
 
     public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        Avatar.SkipSeek = true;
+        AvatarRecognition.SkipSeek = true;
         try
         {
             // 敌人可见时跳过战斗结束检查
@@ -867,7 +867,7 @@ public class AutoFightTask : ISoloTask
                 if (_skipCheckCounter < 5)
                 {
                     using var quickCapture = CaptureToRectArea();
-                    var bars = Avatar.FindBloodBars(quickCapture);
+                    var bars = AvatarRecognition.FindBloodBars(quickCapture);
                     // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
                     if (bars.Count > 0)
                     {
@@ -949,7 +949,7 @@ public class AutoFightTask : ISoloTask
         }
         finally
         {
-            Avatar.SkipSeek = false;
+            AvatarRecognition.SkipSeek = false;
         }
     }
 
