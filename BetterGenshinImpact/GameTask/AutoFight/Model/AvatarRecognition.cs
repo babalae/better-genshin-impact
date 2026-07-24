@@ -77,6 +77,7 @@ public static class AvatarRecognition
     ///   y ≥ 200 → 连续 10 帧判传奇
     /// </summary>
     private static readonly Dictionary<int, int> _legendaryBarTracker = new();
+    private static readonly object _legendaryBarLock = new();
     private const int LegendaryBarMaxCount = 10;
 
     /// <summary>
@@ -86,26 +87,29 @@ public static class AvatarRecognition
     /// </summary>
     private static void UpdateLegendaryBarTracker(IEnumerable<int> barYs)
     {
-        var currentBins = barYs.Select(y => y / 2 * 2)
-                               .ToHashSet();
-
-        // 存在的 y：递增（上限为最大阈值）
-        foreach (var bin in currentBins)
+        lock (_legendaryBarLock)
         {
-            if (_legendaryBarTracker.TryGetValue(bin, out var cnt))
-                _legendaryBarTracker[bin] = Math.Min(cnt + 1, LegendaryBarMaxCount);
-            else
-                _legendaryBarTracker[bin] = 1;
-        }
+            var currentBins = barYs.Select(y => y / 2 * 2)
+                                   .ToHashSet();
 
-        // 不存在的 y：递减（1帧容错），归零则移除
-        foreach (var bin in _legendaryBarTracker.Keys.ToArray())
-        {
-            if (!currentBins.Contains(bin))
+            // 存在的 y：递增（上限为最大阈值）
+            foreach (var bin in currentBins)
             {
-                _legendaryBarTracker[bin]--;
-                if (_legendaryBarTracker[bin] <= 0)
-                    _legendaryBarTracker.Remove(bin);
+                if (_legendaryBarTracker.TryGetValue(bin, out var cnt))
+                    _legendaryBarTracker[bin] = Math.Min(cnt + 1, LegendaryBarMaxCount);
+                else
+                    _legendaryBarTracker[bin] = 1;
+            }
+
+            // 不存在的 y：递减（1帧容错），归零则移除
+            foreach (var bin in _legendaryBarTracker.Keys.ToArray())
+            {
+                if (!currentBins.Contains(bin))
+                {
+                    _legendaryBarTracker[bin]--;
+                    if (_legendaryBarTracker[bin] <= 0)
+                        _legendaryBarTracker.Remove(bin);
+                }
             }
         }
     }
@@ -116,13 +120,16 @@ public static class AvatarRecognition
     /// </summary>
     public static bool IsLegendaryBar(int y)
     {
-        if (!_legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt))
-            return false;
+        lock (_legendaryBarLock)
+        {
+            if (!_legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt))
+                return false;
 
-        int threshold = y < (int)(100 * AssetScale) ? 2
-                      : y < (int)(200 * AssetScale) ? 4
-                      : 10;
-        return cnt >= threshold;
+            int threshold = y < (int)(100 * AssetScale) ? 2
+                          : y < (int)(200 * AssetScale) ? 4
+                          : 10;
+            return cnt >= threshold;
+        }
     }
 
     /// <summary>
