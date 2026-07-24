@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -179,10 +179,11 @@ public partial class PathExecutor
 
                 if (state.PendingApproach)
                 {
-                    var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                    if (needsApproach)
+                    if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         state.PendingApproach = false;
                         var colorDiff = GetMavikaColorDifference(screen2);
                         if (colorDiff < 15 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
@@ -370,6 +371,7 @@ public partial class PathExecutor
             //
             //         if (shouldApproach)
             //         {
+            //             Simulation.ReleaseAllKey();
             //             state.PendingApproach = false;
             //             if (PartyConfig.SwitchToWalkEnabled)
             //             {
@@ -502,6 +504,7 @@ public partial class PathExecutor
 
                     if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         // Logger.LogInformation("[赶路调试] 希诺宁 触发接近: dist={d}, spaceExist={s}",
                         //     Math.Round(distance, 1), SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -601,9 +604,10 @@ public partial class PathExecutor
                     // Step 2: 小于停止距离 → 主动下车
                     if (state.FlyingState && distance < PartyConfig.ApproachStopDistance)
                     {
-                        var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-                        if (needsApproach)
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                        if (shouldApproach)
                         {
+                            Simulation.ReleaseAllKey();
                             state.FlyingState = false;
                             if (DashAtSecondPlaceExist())
                             {
@@ -686,10 +690,11 @@ public partial class PathExecutor
                 {
                     if (state.PendingApproach)
                     {
-                        var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                        if (shouldApproachX)
+                        if (shouldApproach)
                         {
+                            Simulation.ReleaseAllKey();
                             // Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
                             //     avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                             state.PendingApproach = false;
@@ -781,10 +786,11 @@ public partial class PathExecutor
             case "流浪者":
                 if (state.PendingApproach)
                 {
-                    var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                    if (shouldApproachX)
+                    if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         // Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
                         //     Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
