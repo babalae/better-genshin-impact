@@ -52,27 +52,29 @@ public static class AvatarRecognition
 
     /// <summary>
     /// 传奇血条动态追踪字典：2px粒度的 y → 连续出现计数。
-    /// y 96-200 范围的血条在连续5帧中出现时被标记为传奇。
+    /// 按 y 分层使用不同阈值判定传奇：
+    ///   y &lt; 100 → 连续 2 帧判传奇
+    ///   y 100-200 → 连续 4 帧判传奇
+    ///   y ≥ 200 → 连续 10 帧判传奇
     /// </summary>
     private static readonly Dictionary<int, int> _legendaryBarTracker = new();
-    private const int LegendaryBarTrackThreshold = 5;
+    private const int LegendaryBarMaxCount = 10;
 
     /// <summary>
     /// 更新传奇血条动态追踪状态。
-    /// 对 y 96-200 的血条进行帧间连续性追踪，连续出现达到阈值后标记为传奇。
+    /// 对全部 y 的血条进行帧间连续性追踪，连续出现达到对应阈值后标记为传奇。
     /// 允许1帧容错：某帧未出现时计数递减而非直接清零。
     /// </summary>
     private static void UpdateLegendaryBarTracker(IEnumerable<int> barYs)
     {
-        var currentBins = barYs.Where(y => y >= (int)(96 * AssetScale) && y < (int)(200 * AssetScale))
-                               .Select(y => y / 2 * 2)
+        var currentBins = barYs.Select(y => y / 2 * 2)
                                .ToHashSet();
 
-        // 存在的 y：递增（上限为阈值）
+        // 存在的 y：递增（上限为最大阈值）
         foreach (var bin in currentBins)
         {
             if (_legendaryBarTracker.TryGetValue(bin, out var cnt))
-                _legendaryBarTracker[bin] = Math.Min(cnt + 1, LegendaryBarTrackThreshold);
+                _legendaryBarTracker[bin] = Math.Min(cnt + 1, LegendaryBarMaxCount);
             else
                 _legendaryBarTracker[bin] = 1;
         }
@@ -91,13 +93,17 @@ public static class AvatarRecognition
 
     /// <summary>
     /// 判断指定 y 坐标的血条是否为传奇血条。
-    /// y < 96 直接判定为传奇；y 96-200 使用动态追踪结果；y >= 200 视为普通。
+    /// y &lt; 100 连续 2 帧判传奇；y 100-200 连续 4 帧判传奇；y ≥ 200 连续 10 帧判传奇。
     /// </summary>
     public static bool IsLegendaryBar(int y)
     {
-        if (y < 96) return true;
-        if (y >= 200) return false;
-        return _legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt) && cnt >= LegendaryBarTrackThreshold;
+        if (!_legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt))
+            return false;
+
+        int threshold = y < (int)(100 * AssetScale) ? 2
+                      : y < (int)(200 * AssetScale) ? 4
+                      : 10;
+        return cnt >= threshold;
     }
 
     /// <summary>
