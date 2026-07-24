@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.IO.Hashing;
 using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
@@ -10,14 +12,18 @@ public class BgiOnnxModel
     /// <summary>
     /// 模型使用的缓存文件的相对目录
     /// </summary>
-    public static readonly string ModelCacheRelativePath = Path.Combine("Cache", Global.Version, "Model");
+    public static readonly string ModelCacheRelativePath = Path.Combine("Cache", Global.Version);
 
     private static readonly List<BgiOnnxModel> RegisteredModels = [];
+    private readonly Lazy<string> _modelHash;
+
     public string Name { get; private init; }
     public string ModelRelativePath { get; private init; }
     public string ModalPath => Global.Absolute(ModelRelativePath);
     public string CacheRelativePath { get; private init; }
     public string CachePath => Global.Absolute(CacheRelativePath);
+    public string ModelHash => _modelHash.Value;
+    public string CacheIdentifier => $"{Name}_{ModelHash}";
 
     #region 模型注册
 
@@ -140,6 +146,15 @@ public class BgiOnnxModel
         Name = name;
         ModelRelativePath = modelRelativePath;
         CacheRelativePath = cacheRelativePath;
+        _modelHash = new Lazy<string>(ComputeModelHash);
+    }
+
+    private string ComputeModelHash()
+    {
+        using var modelStream = File.OpenRead(ModalPath);
+        var hash = new XxHash3();
+        hash.Append(modelStream);
+        return hash.GetCurrentHashAsUInt64().ToString("x16");
     }
 
     public static bool IsModelExist(BgiOnnxModel model)
@@ -159,7 +174,7 @@ public class BgiOnnxModel
 
     private static BgiOnnxModel Register(string name, string modelRelativePath)
     {
-        return Register(name, modelRelativePath, Path.Combine(ModelCacheRelativePath, name));
+        return Register(name, modelRelativePath, ModelCacheRelativePath);
     }
 
     private static BgiOnnxModel Register(string name, string modelRelativePath, string cacheRelativePath)

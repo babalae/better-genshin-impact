@@ -41,7 +41,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
 
     #endregion
 
-    #region cuda设置
+    #region TensorRTCUDA设置
 
     /// <summary>
     /// 强制指定cuda设备,默认为0(使用默认设备)
@@ -54,16 +54,6 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _autoAppendCudaPath = false;
-
-    #endregion
-
-    #region TensorRT缓存设置
-
-    /// <summary>
-    /// 启用TensorRT缓存。默认开启。不开的话使用TensorRT每次加载模型会卡爆。
-    /// </summary>
-    [ObservableProperty]
-    private bool _enableTensorRtCache = true;
 
     /// <summary>
     /// 嵌入式引擎缓存。将引擎缓存嵌入到模型中。默认开启。关闭它可能会提高性能(如果不爆炸的话)。
