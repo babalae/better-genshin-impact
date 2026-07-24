@@ -667,6 +667,8 @@ public class AutoFightTask : ISoloTask
             
             if (picker != null)
             {
+                Simulation.ReleaseAllKey();
+
                 if (picker.Name == "枫原万叶")
                 {
                     var time = TimeSpan.FromSeconds(picker.GetSkillCdSeconds());
