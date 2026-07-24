@@ -82,7 +82,7 @@ internal sealed class RelativeMouseMessageHandler
             samples.Count);
         if (_context.InstanceType != BetterGiInstanceType.ChildSession
             || !_isParentConnection(connection)
-            || !SystemControl.IsGenshinImpactActive())
+            || !SystemControl.IsGenshinImpactActiveByProcess())
         {
             return false;
         }
