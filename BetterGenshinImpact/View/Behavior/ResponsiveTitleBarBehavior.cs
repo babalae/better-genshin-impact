@@ -174,6 +174,8 @@ public sealed class ResponsiveTitleBarBehavior : Behavior<Panel>
         var availableWidth = CalculateAvailableWidth();
         var requiredWidth = AssociatedObject.Children
             .OfType<FrameworkElement>()
+            .Where(element =>
+                GetCollapseOrder(element) > 0 || element.Visibility != Visibility.Collapsed)
             .Sum(GetCachedWidth);
         var collapsedElements = new HashSet<FrameworkElement>();
 

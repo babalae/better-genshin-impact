@@ -8,6 +8,7 @@ namespace BetterGenshinImpact.Service.ChildSession;
 internal static class ChildSessionNativeMethods
 {
     private const int ErrorNotFound = 1168;
+    private const uint NoChildSessionId = uint.MaxValue;
     private static readonly IntPtr CurrentServerHandle = IntPtr.Zero;
 
     [DllImport("wtsapi32.dll", SetLastError = true)]
@@ -70,10 +71,17 @@ internal static class ChildSessionNativeMethods
 
     internal static uint? TryGetChildSessionId()
     {
-        return WTSGetChildSessionId(out var sessionId) ? sessionId : null;
+        return WTSGetChildSessionId(out var sessionId) && sessionId != NoChildSessionId
+            ? sessionId
+            : null;
     }
 
     internal static uint? TerminateChildSession()
+    {
+        return TerminateChildSession(wait: true);
+    }
+
+    internal static uint? TerminateChildSession(bool wait)
     {
         if (!WTSGetChildSessionId(out var childSessionId))
         {
@@ -88,7 +96,12 @@ internal static class ChildSessionNativeMethods
                 $"无法取得 RDP Child Session ID（Win32 错误 {error}）");
         }
 
-        if (!WTSLogoffSession(CurrentServerHandle, childSessionId, wait: true))
+        if (childSessionId == NoChildSessionId)
+        {
+            return null;
+        }
+
+        if (!WTSLogoffSession(CurrentServerHandle, childSessionId, wait))
         {
             throw CreateLastWin32Exception($"无法注销 Child Session {childSessionId}");
         }

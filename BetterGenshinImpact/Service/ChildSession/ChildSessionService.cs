@@ -201,7 +201,7 @@ public sealed class ChildSessionService : IDisposable
 
             try
             {
-                _ = ChildSessionNativeMethods.TerminateChildSession();
+                _ = ChildSessionNativeMethods.TerminateChildSession(wait: false);
             }
             catch (Exception exception) when (IsExpectedChildSessionException(exception))
             {

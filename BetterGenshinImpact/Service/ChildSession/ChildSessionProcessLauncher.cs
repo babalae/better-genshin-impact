@@ -99,7 +99,11 @@ internal static class ChildSessionProcessLauncher
         var schedulerType = Type.GetTypeFromProgID("Schedule.Service")
             ?? throw new InvalidOperationException("当前 Windows 未提供任务计划程序 COM 服务。");
         var taskName = $"BetterGI-ChildSession-ElevatedLaunch-{Guid.NewGuid():N}";
-        var accountName = WindowsIdentity.GetCurrent().Name;
+        string accountName;
+        using (var currentIdentity = WindowsIdentity.GetCurrent())
+        {
+            accountName = currentIdentity.Name;
+        }
 
         object? schedulerObject = null;
         object? rootFolderObject = null;
