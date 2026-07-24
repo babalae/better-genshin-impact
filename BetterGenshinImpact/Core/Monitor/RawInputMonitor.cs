@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,64 +11,18 @@ using Vanara.PInvoke;
 namespace BetterGenshinImpact.Core.Monitor;
 
 public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
-    : RelativeMouseInputMonitorBase(logger), IRawKeyboardInputMonitor
+    : RelativeMouseInputMonitorBase(logger)
 {
     private const ushort GenericDesktopUsagePage = 0x01;
     private const ushort MouseUsage = 0x02;
-    private const ushort KeyboardUsage = 0x06;
     private const ushort KeyBreakFlag = 0x01;
     private const ushort InvalidVirtualKey = 0x00FF;
     private static readonly nint HwndMessage = new(-3);
 
+    // 键盘输入不再复用相对鼠标监听器的采集生命周期，避免覆盖 RDP ActiveX 的进程级注册。
     private readonly object _sourceLock = new();
-    private readonly object _keyboardSubscriptionLock = new();
-    private readonly Dictionary<long, EventHandler<RawKeyboardInputEventArgs>> _keyboardHandlers = [];
     private RawInputThreadContext? _context;
-    private IDisposable? _keyboardCaptureSubscription;
     private long _lifecycleVersion;
-    private long _nextKeyboardSubscriptionId;
-
-    public IDisposable SubscribeKeyboard(EventHandler<RawKeyboardInputEventArgs> handler)
-    {
-        ArgumentNullException.ThrowIfNull(handler);
-
-        long subscriptionId;
-        lock (_keyboardSubscriptionLock)
-        {
-            subscriptionId = ++_nextKeyboardSubscriptionId;
-            _keyboardHandlers.Add(subscriptionId, handler);
-
-            if (_keyboardHandlers.Count == 1)
-            {
-                try
-                {
-                    // 复用相对鼠标监听器的采集生命周期，但不把键盘订阅暴露为鼠标事件。
-                    _keyboardCaptureSubscription = Subscribe(KeepRawInputCaptureAlive);
-                }
-                catch
-                {
-                    _keyboardHandlers.Remove(subscriptionId);
-                    throw;
-                }
-            }
-        }
-
-        return new KeyboardSubscription(this, subscriptionId);
-    }
-
-    public override void Dispose()
-    {
-        IDisposable? captureSubscription;
-        lock (_keyboardSubscriptionLock)
-        {
-            _keyboardHandlers.Clear();
-            captureSubscription = _keyboardCaptureSubscription;
-            _keyboardCaptureSubscription = null;
-        }
-
-        captureSubscription?.Dispose();
-        base.Dispose();
-    }
 
     protected override void StartCore()
     {
@@ -324,13 +276,6 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                 usUsage = MouseUsage,
                 dwFlags = User32.RIDEV.RIDEV_INPUTSINK,
                 hwndTarget = context.HwndSource!.Handle
-            },
-            new User32.RAWINPUTDEVICE
-            {
-                usUsagePage = GenericDesktopUsagePage,
-                usUsage = KeyboardUsage,
-                dwFlags = User32.RIDEV.RIDEV_INPUTSINK,
-                hwndTarget = context.HwndSource!.Handle
             }
         };
 
@@ -339,7 +284,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                 (uint)devices.Length,
                 (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 鼠标和键盘设备失败");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 鼠标设备失败");
         }
     }
 
@@ -355,13 +300,6 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                     usUsage = MouseUsage,
                     dwFlags = User32.RIDEV.RIDEV_REMOVE,
                     hwndTarget = HWND.NULL
-                },
-                new User32.RAWINPUTDEVICE
-                {
-                    usUsagePage = GenericDesktopUsagePage,
-                    usUsage = KeyboardUsage,
-                    dwFlags = User32.RIDEV.RIDEV_REMOVE,
-                    hwndTarget = HWND.NULL
                 }
             };
 
@@ -371,7 +309,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                     (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
             {
                 Logger.LogWarning(
-                    "注销 Raw Input 鼠标和键盘设备失败，Win32Error: {Win32Error}",
+                    "注销 Raw Input 鼠标设备失败，Win32Error: {Win32Error}",
                     Marshal.GetLastWin32Error());
             }
 
@@ -404,7 +342,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "读取 Raw Input 鼠标或键盘数据失败");
+            Logger.LogError(ex, "读取 Raw Input 鼠标数据失败");
         }
 
         // 保持 handled = false，让默认窗口过程完成 WM_INPUT 的必要清理。
@@ -454,79 +392,11 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                 Publish(new RelativeMouseMoveEventArgs(deltaX, deltaY, timestamp));
                 return;
             }
-
-            if (TryGetKeyboardInputFromBuffer(
-                    buffer,
-                    readSize,
-                    out ushort virtualKey,
-                    out ushort scanCode,
-                    out ushort flags,
-                    out bool isKeyDown))
-            {
-                PublishKeyboard(new RawKeyboardInputEventArgs(
-                    virtualKey,
-                    scanCode,
-                    flags,
-                    isKeyDown,
-                    timestamp));
-            }
         }
         finally
         {
             Marshal.FreeHGlobal(buffer);
         }
-    }
-
-    private static void KeepRawInputCaptureAlive(
-        object? sender,
-        RelativeMouseMoveEventArgs eventArgs)
-    {
-    }
-
-    private void PublishKeyboard(RawKeyboardInputEventArgs eventArgs)
-    {
-        EventHandler<RawKeyboardInputEventArgs>[] handlers;
-        lock (_keyboardSubscriptionLock)
-        {
-            if (_keyboardHandlers.Count == 0)
-            {
-                return;
-            }
-
-            handlers = _keyboardHandlers.Values.ToArray();
-        }
-
-        foreach (var handler in handlers)
-        {
-            try
-            {
-                handler(this, eventArgs);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Raw Input 键盘事件订阅方执行失败");
-            }
-        }
-    }
-
-    private void UnsubscribeKeyboard(long subscriptionId)
-    {
-        IDisposable? captureSubscription = null;
-        lock (_keyboardSubscriptionLock)
-        {
-            if (!_keyboardHandlers.Remove(subscriptionId))
-            {
-                return;
-            }
-
-            if (_keyboardHandlers.Count == 0)
-            {
-                captureSubscription = _keyboardCaptureSubscription;
-                _keyboardCaptureSubscription = null;
-            }
-        }
-
-        captureSubscription?.Dispose();
     }
 
     private sealed class RawInputThreadContext
@@ -544,18 +414,6 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
         public bool InitializationSucceeded { get; set; }
 
         public bool Registered { get; set; }
-    }
-
-    private sealed class KeyboardSubscription(
-        RawInputMonitor owner,
-        long subscriptionId) : IDisposable
-    {
-        private RawInputMonitor? _owner = owner;
-
-        public void Dispose()
-        {
-            Interlocked.Exchange(ref _owner, null)?.UnsubscribeKeyboard(subscriptionId);
-        }
     }
 
     [StructLayout(LayoutKind.Sequential)]

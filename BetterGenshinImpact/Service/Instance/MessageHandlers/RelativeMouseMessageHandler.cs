@@ -12,6 +12,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.ChildSession;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 
@@ -24,12 +25,7 @@ internal sealed class RelativeMouseMessageHandler
 {
     private static readonly TimeSpan RelativeMouseFlushInterval = TimeSpan.FromMilliseconds(10);
     private static readonly TimeSpan RelativeMouseStateInterval = TimeSpan.FromMilliseconds(5);
-    private const ushort VirtualKeyMenu = 0x12;
-    private const ushort VirtualKeyLeftMenu = 0xA4;
-    private const ushort VirtualKeyRightMenu = 0xA5;
-    private const ushort RawKeyboardExtendedKeyFlag = 0x02;
-    private const int LeftAltMask = 0x01;
-    private const int RightAltMask = 0x02;
+    private const int AltPressedState = 1;
 
     private readonly InstanceContext _context;
     private readonly IServiceProvider _serviceProvider;
@@ -42,7 +38,6 @@ internal sealed class RelativeMouseMessageHandler
     private readonly object _accumulatorLock = new();
 
     private IDisposable? _rawMouseInputSubscription;
-    private IDisposable? _rawKeyboardInputSubscription;
     private DispatcherTimer? _stateTimer;
     private long _accumulatedX;
     private long _accumulatedY;
@@ -50,6 +45,7 @@ internal sealed class RelativeMouseMessageHandler
     private DateTime _lastTimestamp;
     private int _pressedAltMask;
     private int _handlingConfirmed;
+    private int _captureEnabled;
     private int _forwardingEnabled;
 
     internal RelativeMouseMessageHandler(
@@ -279,29 +275,24 @@ internal sealed class RelativeMouseMessageHandler
 
     private void StopRawInputCapture()
     {
+        Interlocked.Exchange(ref _captureEnabled, 0);
         lock (_subscriptionLock)
         {
             _rawMouseInputSubscription?.Dispose();
             _rawMouseInputSubscription = null;
-            _rawKeyboardInputSubscription?.Dispose();
-            _rawKeyboardInputSubscription = null;
         }
 
         Interlocked.Exchange(ref _pressedAltMask, 0);
         Interlocked.Exchange(ref _handlingConfirmed, 0);
     }
 
-    private void StopRawMouseInputCapture()
-    {
-        lock (_subscriptionLock)
-        {
-            _rawMouseInputSubscription?.Dispose();
-            _rawMouseInputSubscription = null;
-        }
-    }
-
     private void OnRelativeMouseMoved(object? sender, RelativeMouseMoveEventArgs eventArgs)
     {
+        if (Volatile.Read(ref _captureEnabled) == 0)
+        {
+            return;
+        }
+
         RelativeMouseSample? sampleToSend = null;
         lock (_accumulatorLock)
         {
@@ -359,29 +350,20 @@ internal sealed class RelativeMouseMessageHandler
             return;
         }
 
-        try
+        var altPressed = IsAltPressed();
+        var previousAltState = Interlocked.Exchange(
+            ref _pressedAltMask,
+            altPressed ? AltPressedState : 0);
+        if (altPressed && previousAltState == 0)
         {
-            lock (_subscriptionLock)
-            {
-                _rawKeyboardInputSubscription ??=
-                    _rawInputMonitor.SubscribeKeyboard(OnRawKeyboardInput);
-            }
-        }
-        catch (Exception exception)
-        {
-            _logger.LogWarning(exception, "启动桌面分身 Raw Input 键盘捕获失败");
             Interlocked.Exchange(ref _handlingConfirmed, 0);
-            StopRawMouseInputCapture();
-            _localCursorCapture.Release();
-            ClearAccumulator();
-            return;
         }
 
         var childSessionService = _serviceProvider.GetService<ChildSessionService>();
         if (childSessionService?.TryGetRelativeMouseCaptureBounds(out var captureBounds) != true)
         {
+            Interlocked.Exchange(ref _captureEnabled, 0);
             Interlocked.Exchange(ref _handlingConfirmed, 0);
-            StopRawMouseInputCapture();
             _localCursorCapture.Release();
             ClearAccumulator();
             return;
@@ -389,8 +371,8 @@ internal sealed class RelativeMouseMessageHandler
 
         if (Volatile.Read(ref _pressedAltMask) != 0)
         {
+            Interlocked.Exchange(ref _captureEnabled, 0);
             Interlocked.Exchange(ref _handlingConfirmed, 0);
-            StopRawMouseInputCapture();
             ClearAccumulator();
             try
             {
@@ -403,6 +385,8 @@ internal sealed class RelativeMouseMessageHandler
             return;
         }
 
+        // 订阅在整个转发生命周期内保持存活。焦点或 Alt 状态只暂停事件处理，
+        // 避免短暂的焦点判断抖动反复销毁、重建 Raw Input 消息线程。
         try
         {
             lock (_subscriptionLock)
@@ -413,13 +397,15 @@ internal sealed class RelativeMouseMessageHandler
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "启动桌面分身 Raw Input 相对鼠标捕获失败");
+            Interlocked.Exchange(ref _captureEnabled, 0);
             Interlocked.Exchange(ref _handlingConfirmed, 0);
-            StopRawMouseInputCapture();
+            StopRawInputCapture();
             _localCursorCapture.Release();
             ClearAccumulator();
             return;
         }
 
+        Interlocked.Exchange(ref _captureEnabled, 1);
         if (Volatile.Read(ref _handlingConfirmed) != 0)
         {
             try
@@ -489,57 +475,16 @@ internal sealed class RelativeMouseMessageHandler
         }
     }
 
-    private void OnRawKeyboardInput(object? sender, RawKeyboardInputEventArgs eventArgs)
+    private static bool IsAltPressed()
     {
-        var altMask = GetAltMask(eventArgs);
-        if (altMask == 0)
-        {
-            return;
-        }
-
-        int currentMask;
-        int nextMask;
-        do
-        {
-            currentMask = Volatile.Read(ref _pressedAltMask);
-            nextMask = eventArgs.IsKeyDown
-                ? currentMask | altMask
-                : currentMask & ~altMask;
-            if (nextMask == currentMask)
-            {
-                return;
-            }
-        }
-        while (Interlocked.CompareExchange(
-                   ref _pressedAltMask,
-                   nextMask,
-                   currentMask) != currentMask);
-
-        if (eventArgs.IsKeyDown)
-        {
-            Interlocked.Exchange(ref _handlingConfirmed, 0);
-        }
-
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is not null)
-        {
-            _ = dispatcher.BeginInvoke(
-                DispatcherPriority.Send,
-                new Action(RefreshCaptureState));
-        }
+        // 轮询异步键态，避免注册进程级键盘 Raw Input 后覆盖 RDP ActiveX 的输入目标。
+        return IsKeyPressed(User32.VK.VK_LMENU)
+               || IsKeyPressed(User32.VK.VK_RMENU);
     }
 
-    private static int GetAltMask(RawKeyboardInputEventArgs eventArgs)
+    private static bool IsKeyPressed(User32.VK key)
     {
-        return eventArgs.VirtualKey switch
-        {
-            VirtualKeyLeftMenu => LeftAltMask,
-            VirtualKeyRightMenu => RightAltMask,
-            VirtualKeyMenu when
-                (eventArgs.Flags & RawKeyboardExtendedKeyFlag) != 0 => RightAltMask,
-            VirtualKeyMenu => LeftAltMask,
-            _ => 0
-        };
+        return (User32.GetAsyncKeyState((int)key) & 0x8000) != 0;
     }
 
     private RelativeMouseSample? TakeAccumulatedSample()

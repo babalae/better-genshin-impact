@@ -54,6 +54,7 @@ public interface IRawKeyboardInputMonitor
     /// <summary>
     /// 订阅 Raw Input 键盘事件。首个鼠标或键盘订阅会启动采集，
     /// 最后一个订阅释放后停止采集。回调在采集线程执行。
+    /// 包含 RDP ActiveX 的进程不应直接实现此接口，否则会覆盖 RDP 的键盘 Raw Input 注册。
     /// </summary>
     IDisposable SubscribeKeyboard(EventHandler<RawKeyboardInputEventArgs> handler);
 }
