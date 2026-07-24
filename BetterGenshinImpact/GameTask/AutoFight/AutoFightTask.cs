@@ -512,6 +512,8 @@ public class AutoFightTask : ISoloTask
         FightStatusFlag = true;
 
         // 启动持续索敌循环（异步后台运行，与战斗任务并发）
+        // 使用独立的 CancellationTokenSource，以便在战后独立取消索敌循环，不影响 cts2 关联的其他组件（如 expDetector）
+        using var targetingCts = CancellationTokenSource.CreateLinkedTokenSource(cts2.Token);
         Task? targetingTask = null;
         if (_taskParam.EnableCombatTargeting)
         {
@@ -519,14 +521,14 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    await AvatarRecognition.ContinuousTargetingLoopAsync(cts2.Token, () => !AutoFightTask.FightStatusFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
                 {
                     Logger.LogError(e, "持续索敌循环异常");
                 }
-            }, cts2.Token);
+            }, targetingCts.Token);
         }
 
         await fightTask;
@@ -535,7 +537,7 @@ public class AutoFightTask : ISoloTask
         // 避免其 finally 在拾取/切人过程中释放按键，干扰万叶E吸怪等操作
         if (targetingTask != null)
         {
-            await cts2.CancelAsync();
+            await targetingCts.CancelAsync();
             try { await targetingTask; } catch (OperationCanceledException) { }
         }
 
