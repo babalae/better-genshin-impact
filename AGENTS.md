@@ -84,3 +84,30 @@
 ```
 dotnet build BetterGenshinImpact.sln -c Debug
 ```
+
+## Code Review Rules
+
+### Output language
+
+- 必须使用简体中文输出代码审查结果。
+- 问题标题、问题描述、影响分析和修复建议必须使用中文。
+- 类名、方法名、变量名、文件路径、代码片段和错误消息保持原文。
+- 专业术语第一次出现时可以采用“中文（English）”格式。
+
+### Review priorities
+
+- 优先检查可能造成崩溃、死锁、资源泄漏和数据竞争的问题。
+- 重点检查异步任务、CancellationToken、线程切换和 STA UI 线程使用。
+- 重点检查 Mat、Bitmap、Stream、CancellationTokenSource 等 IDisposable 对象是否正确释放。
+- 检查游戏输入、截图和多实例场景是否存在共享状态冲突。
+- 不要只提出风格问题，除非它会影响正确性、可维护性或性能。
+
+### Finding format
+
+每个问题按以下结构输出：
+
+1. 严重程度
+2. 问题位置
+3. 问题原因
+4. 可能造成的影响
+5. 推荐修复方案
