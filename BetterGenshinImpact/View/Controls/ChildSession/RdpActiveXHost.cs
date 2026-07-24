@@ -125,6 +125,12 @@ internal sealed class RdpActiveXHost : AxHost
         }
     }
 
+    internal bool IsInputWindowFocused()
+    {
+        return ConnectedState == 1
+               && ChildSessionNativeMethods.IsRdpInputWindowFocused(Handle);
+    }
+
     private void SendShortcut(KeyStroke[] strokes, string displayName)
     {
         if (ConnectedState != 1)

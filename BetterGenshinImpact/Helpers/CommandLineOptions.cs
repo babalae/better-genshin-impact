@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Service.Instance;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -8,7 +10,10 @@ namespace BetterGenshinImpact.Helpers;
 /// </summary>
 public class CommandLineOptions
 {
-    public const string ChildSessionArgument = "--childSession";
+    public const string InstanceArgument = "--instance";
+    public const string InstanceIdArgument = "--instance-id";
+    public const string ParentInstanceArgument = "--parent-instance";
+    public const string ParentPipeArgument = "--parent-pipe";
 
     private static CommandLineOptions? _instance;
 
@@ -17,9 +22,24 @@ public class CommandLineOptions
     public CommandLineAction Action { get; }
 
     /// <summary>
-    /// 当前 BetterGI 是否运行在 Child Session 内。
+    /// 当前 BetterGI 的实例类型。
     /// </summary>
-    public bool IsChildSession { get; }
+    public BetterGiInstanceType InstanceType { get; }
+
+    /// <summary>
+    /// 启动方为当前进程预分配的实例 ID。
+    /// </summary>
+    public Guid? RequestedInstanceId { get; }
+
+    /// <summary>
+    /// 父实例 ID。
+    /// </summary>
+    public Guid? ParentInstanceId { get; }
+
+    /// <summary>
+    /// 父实例公开的命名管道名称。
+    /// </summary>
+    public string? ParentPipeName { get; }
 
     /// <summary>
     /// startOneDragon 时可选的配置名称（第 3 个参数）
@@ -48,57 +68,129 @@ public class CommandLineOptions
         CommandLineAction action,
         string? oneDragonConfigName = null,
         string[]? groupNames = null,
-        bool isChildSession = false)
+        BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
+        Guid? requestedInstanceId = null,
+        Guid? parentInstanceId = null,
+        string? parentPipeName = null)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
         GroupNames = groupNames ?? [];
-        IsChildSession = isChildSession;
+        InstanceType = instanceType;
+        RequestedInstanceId = requestedInstanceId;
+        ParentInstanceId = parentInstanceId;
+        ParentPipeName = parentPipeName;
     }
 
     internal static CommandLineOptions Parse(string[] args)
     {
         var launchArgs = args.Skip(1).Select(x => x.Trim()).ToArray();
-        var isChildSession = launchArgs.Any(x =>
-            x.Equals(ChildSessionArgument, StringComparison.OrdinalIgnoreCase));
-        var commandArgs = launchArgs.Where(x =>
-            !x.Equals(ChildSessionArgument, StringComparison.OrdinalIgnoreCase)).ToArray();
+        var instanceType = BetterGiInstanceType.Primary;
+        Guid? requestedInstanceId = null;
+        Guid? parentInstanceId = null;
+        string? parentPipeName = null;
+        var commandArgs = new List<string>();
 
-        if (commandArgs.Length == 0)
-            return new CommandLineOptions(CommandLineAction.None, isChildSession: isChildSession);
+        for (var index = 0; index < launchArgs.Length; index++)
+        {
+            var argument = launchArgs[index];
+            if (argument.Equals(InstanceArgument, StringComparison.OrdinalIgnoreCase)
+                && TryReadNext(launchArgs, ref index, out var instanceTypeValue))
+            {
+                instanceType = instanceTypeValue.ToLowerInvariant() switch
+                {
+                    "childsession" => BetterGiInstanceType.ChildSession,
+                    "webview" => BetterGiInstanceType.WebView,
+                    _ => throw new ArgumentException($"不支持的实例类型：{instanceTypeValue}")
+                };
+                continue;
+            }
+
+            if (argument.Equals(InstanceIdArgument, StringComparison.OrdinalIgnoreCase)
+                && TryReadNext(launchArgs, ref index, out var instanceIdValue))
+            {
+                requestedInstanceId = Guid.Parse(instanceIdValue);
+                continue;
+            }
+
+            if (argument.Equals(ParentInstanceArgument, StringComparison.OrdinalIgnoreCase)
+                && TryReadNext(launchArgs, ref index, out var parentInstanceValue))
+            {
+                parentInstanceId = Guid.Parse(parentInstanceValue);
+                continue;
+            }
+
+            if (argument.Equals(ParentPipeArgument, StringComparison.OrdinalIgnoreCase)
+                && TryReadNext(launchArgs, ref index, out var parentPipeValue))
+            {
+                parentPipeName = parentPipeValue;
+                continue;
+            }
+
+            commandArgs.Add(argument);
+        }
+
+        if (commandArgs.Count == 0)
+        {
+            return Create(CommandLineAction.None);
+        }
 
         var arg1 = commandArgs[0];
         var extra = commandArgs.Skip(1).ToArray();
 
         if (arg1.Contains("startOneDragon", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(CommandLineAction.StartOneDragon,
-                oneDragonConfigName: extra.Length > 0 ? extra[0] : null,
-                isChildSession: isChildSession);
+            return Create(
+                CommandLineAction.StartOneDragon,
+                oneDragonConfigName: extra.Length > 0 ? extra[0] : null);
         }
 
         if (arg1.Equals("--startGroups", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(
+            return Create(
                 CommandLineAction.StartGroups,
-                groupNames: extra,
-                isChildSession: isChildSession);
+                groupNames: extra);
         }
 
         if (arg1.Equals("--TaskProgress", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(
+            return Create(
                 CommandLineAction.TaskProgress,
-                groupNames: extra,
-                isChildSession: isChildSession);
+                groupNames: extra);
         }
 
         if (arg1.Contains("start", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(CommandLineAction.Start, isChildSession: isChildSession);
+            return Create(CommandLineAction.Start);
         }
 
-        return new CommandLineOptions(CommandLineAction.None, isChildSession: isChildSession);
+        return Create(CommandLineAction.None);
+
+        CommandLineOptions Create(
+            CommandLineAction action,
+            string? oneDragonConfigName = null,
+            string[]? groupNames = null)
+        {
+            return new CommandLineOptions(
+                action,
+                oneDragonConfigName,
+                groupNames,
+                instanceType,
+                requestedInstanceId,
+                parentInstanceId,
+                parentPipeName);
+        }
+    }
+
+    private static bool TryReadNext(string[] args, ref int index, out string value)
+    {
+        if (index + 1 >= args.Length)
+        {
+            throw new ArgumentException($"命令行参数 {args[index]} 缺少值。");
+        }
+
+        value = args[++index];
+        return true;
     }
 }
 

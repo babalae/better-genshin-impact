@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Instance;
 
 namespace BetterGenshinImpact.Service.ChildSession;
 
@@ -17,9 +18,11 @@ internal static class ChildSessionProcessLauncher
     private const int TaskRunLevelHighest = 1;
     private const int TaskRunUseSessionId = 0x4;
 
-    internal static Task LaunchBetterGiAsync(uint childSessionId)
+    internal static Task LaunchBetterGiAsync(
+        uint childSessionId,
+        InstanceLaunchInfo launchInfo)
     {
-        var startInfo = CreateBetterGiStartInfo();
+        var startInfo = CreateBetterGiStartInfo(launchInfo);
         return LaunchElevatedAsync(
             childSessionId,
             startInfo.ExecutablePath,
@@ -51,7 +54,7 @@ internal static class ChildSessionProcessLauncher
                 workingDirectory));
     }
 
-    private static ProcessLaunchInfo CreateBetterGiStartInfo()
+    private static ProcessLaunchInfo CreateBetterGiStartInfo(InstanceLaunchInfo launchInfo)
     {
         var currentProcessPath = Environment.ProcessPath
             ?? throw new InvalidOperationException("无法取得 BetterGI 程序路径。");
@@ -71,13 +74,13 @@ internal static class ChildSessionProcessLauncher
 
             return new ProcessLaunchInfo(
                 fullProcessPath,
-                $"{QuoteArgument(Path.GetFullPath(entryAssemblyPath))} {CommandLineOptions.ChildSessionArgument}",
+                $"{QuoteArgument(Path.GetFullPath(entryAssemblyPath))} {launchInfo.ToCommandLineArguments()}",
                 AppContext.BaseDirectory);
         }
 
         return new ProcessLaunchInfo(
             ValidateExecutablePath(fullProcessPath),
-            CommandLineOptions.ChildSessionArgument,
+            launchInfo.ToCommandLineArguments(),
             AppContext.BaseDirectory);
     }
 

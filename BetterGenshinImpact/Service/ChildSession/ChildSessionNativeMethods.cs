@@ -111,7 +111,25 @@ internal static class ChildSessionNativeMethods
 
     internal static bool TryFocusRdpInputWindow(IntPtr rdpHostWindow)
     {
-        IntPtr inputWindow = IntPtr.Zero;
+        var inputWindow = FindRdpInputWindow(rdpHostWindow);
+        if (inputWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        _ = SetFocus(inputWindow);
+        return GetFocus() == inputWindow;
+    }
+
+    internal static bool IsRdpInputWindowFocused(IntPtr rdpHostWindow)
+    {
+        var inputWindow = FindRdpInputWindow(rdpHostWindow);
+        return inputWindow != IntPtr.Zero && GetFocus() == inputWindow;
+    }
+
+    private static IntPtr FindRdpInputWindow(IntPtr rdpHostWindow)
+    {
+        var inputWindow = IntPtr.Zero;
         EnumChildWindowCallback callback = (window, _) =>
         {
             const int windowTextCapacity = 256;
@@ -130,13 +148,7 @@ internal static class ChildSessionNativeMethods
         };
 
         _ = EnumChildWindows(rdpHostWindow, callback, IntPtr.Zero);
-        if (inputWindow == IntPtr.Zero)
-        {
-            return false;
-        }
-
-        _ = SetFocus(inputWindow);
-        return GetFocus() == inputWindow;
+        return inputWindow;
     }
 
     private static Win32Exception CreateLastWin32Exception(string operation)

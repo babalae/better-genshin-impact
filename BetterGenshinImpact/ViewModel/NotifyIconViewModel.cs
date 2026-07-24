@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -22,7 +23,8 @@ public partial class NotifyIconViewModel : ObservableObject
 {
     private readonly ChildSessionService _childSessionService;
 
-    public bool IsChildSessionEntryVisible => !CommandLineOptions.Instance.IsChildSession;
+    public bool IsChildSessionEntryVisible =>
+        CommandLineOptions.Instance.InstanceType == BetterGiInstanceType.Primary;
 
     public NotifyIconViewModel(ChildSessionService childSessionService)
     {
