@@ -9,7 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.ChildSession;
@@ -25,6 +27,8 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PendingLaunchLifetime = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan RelativeMouseFlushInterval = TimeSpan.FromMilliseconds(10);
+    private static readonly TimeSpan RelativeMouseStateInterval = TimeSpan.FromMilliseconds(5);
 
     private readonly InstanceBootstrap _bootstrap;
     private readonly IServiceProvider _serviceProvider;
@@ -39,16 +43,19 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private readonly ConcurrentDictionary<Guid, InstanceConnection> _relativeMouseTargets = new();
     private readonly object _parentConnectionLock = new();
     private readonly object _relativeMouseSubscriptionLock = new();
+    private readonly object _relativeMouseAccumulatorLock = new();
 
     private Task? _acceptLoopTask;
     private Task? _parentConnectionLoopTask;
     private InstanceConnection? _parentConnection;
     private IDisposable? _rawInputSubscription;
+    private DispatcherTimer? _relativeMouseStateTimer;
     private bool _applicationReady;
-    private bool _parentRelativeMouseRequested;
-    private bool _relativeMouseFocusAllowed;
-    private long _lastFocusCheckTimestamp;
-    private int _focusCheckPending;
+    private long _accumulatedRelativeMouseX;
+    private long _accumulatedRelativeMouseY;
+    private long _relativeMouseAccumulationStartedAt;
+    private DateTime _lastRelativeMouseTimestamp;
+    private int _relativeMouseForwardingEnabled;
     private int _stopStarted;
 
     public InstanceService(
@@ -64,8 +71,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     }
 
     public InstanceContext Context => _bootstrap.Context;
-
-    internal event EventHandler<RelativeMouseMoveEventArgs>? RelativeMouseReceived;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -176,47 +181,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         }
     }
 
-    internal async Task SubscribeParentRelativeMouseAsync(CancellationToken cancellationToken)
-    {
-        if (Context.InstanceType != BetterGiInstanceType.ChildSession)
-        {
-            throw new InvalidOperationException("只有 ChildSession 实例可以订阅父实例的相对鼠标数据。");
-        }
-
-        _parentRelativeMouseRequested = true;
-        var connection = await WaitForParentConnectionAsync(cancellationToken).ConfigureAwait(false);
-        var response = await connection.SendRequestAsync(
-            InstanceOperations.RelativeMouseSubscribe,
-            Context.InstanceId,
-            null,
-            RequestTimeout,
-            cancellationToken).ConfigureAwait(false);
-        EnsureSuccessfulResponse(response);
-    }
-
-    internal async Task UnsubscribeParentRelativeMouseAsync(CancellationToken cancellationToken)
-    {
-        _parentRelativeMouseRequested = false;
-        InstanceConnection? connection;
-        lock (_parentConnectionLock)
-        {
-            connection = _parentConnection;
-        }
-
-        if (connection is null)
-        {
-            return;
-        }
-
-        var response = await connection.SendRequestAsync(
-            InstanceOperations.RelativeMouseUnsubscribe,
-            Context.InstanceId,
-            null,
-            RequestTimeout,
-            cancellationToken).ConfigureAwait(false);
-        EnsureSuccessfulResponse(response);
-    }
-
     internal async Task<InstanceIpcEnvelope?> HandleRequestAsync(
         InstanceConnection connection,
         InstanceIpcEnvelope request,
@@ -271,6 +235,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     }
 
     internal void ReceiveRelativeMouseBatch(
+        InstanceConnection connection,
         ulong firstSequence,
         IReadOnlyList<RelativeMouseSample> samples)
     {
@@ -278,14 +243,34 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             "收到相对鼠标批次：序号 {FirstSequence}，样本数 {SampleCount}",
             firstSequence,
             samples.Count);
-        foreach (var sample in samples)
+        if (Context.InstanceType != BetterGiInstanceType.ChildSession
+            || !IsParentConnection(connection)
+            || !SystemControl.IsGenshinImpactActive())
         {
-            RelativeMouseReceived?.Invoke(
-                this,
-                new RelativeMouseMoveEventArgs(
-                    sample.DeltaX,
-                    sample.DeltaY,
-                    sample.Timestamp));
+            return;
+        }
+
+        try
+        {
+            foreach (var sample in samples)
+            {
+                Simulation.SendInput.Mouse.MoveMouseBy(sample.DeltaX, sample.DeltaY);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "向前台原神发送管道相对鼠标移动失败：序号 {FirstSequence}",
+                firstSequence);
+        }
+    }
+
+    private bool IsParentConnection(InstanceConnection connection)
+    {
+        lock (_parentConnectionLock)
+        {
+            return ReferenceEquals(_parentConnection, connection);
         }
     }
 
@@ -407,7 +392,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                     Context.ParentInstanceId,
                     Context.ParentPipeName);
 
-                if (_parentRelativeMouseRequested)
+                if (Context.InstanceType == BetterGiInstanceType.ChildSession)
                 {
                     var subscribeResponse = await connection.SendRequestAsync(
                         InstanceOperations.RelativeMouseSubscribe,
@@ -572,6 +557,11 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         InstanceConnection connection,
         InstanceIpcEnvelope request)
     {
+        if (Context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有 Primary 实例可以转发桌面分身相对鼠标数据。");
+        }
+
         var descriptor = connection.RemoteDescriptor
                          ?? throw new InvalidOperationException("相对鼠标订阅方尚未注册为子实例。");
         if (descriptor.InstanceType != BetterGiInstanceType.ChildSession)
@@ -680,26 +670,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         }));
     }
 
-    private async Task<InstanceConnection> WaitForParentConnectionAsync(
-        CancellationToken cancellationToken)
-    {
-        var timeoutAt = DateTime.UtcNow + RequestTimeout;
-        while (DateTime.UtcNow < timeoutAt)
-        {
-            lock (_parentConnectionLock)
-            {
-                if (_parentConnection is not null)
-                {
-                    return _parentConnection;
-                }
-            }
-
-            await Task.Delay(50, cancellationToken).ConfigureAwait(false);
-        }
-
-        throw new TimeoutException("尚未连接父 BetterGI 实例。");
-    }
-
     private static void EnsureSuccessfulResponse(InstanceIpcEnvelope response)
     {
         if (response.Success == true)
@@ -712,11 +682,35 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     private void StartRelativeMouseForwarding()
     {
-        lock (_relativeMouseSubscriptionLock)
+        Interlocked.Exchange(ref _relativeMouseForwardingEnabled, 1);
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
         {
-            _rawInputSubscription ??= _rawInputMonitor.Subscribe(OnRelativeMouseMoved);
+            return;
         }
-        RequestRelativeMouseFocusRefresh(force: true);
+
+        _ = dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (Volatile.Read(ref _relativeMouseForwardingEnabled) == 0
+                || _relativeMouseTargets.IsEmpty)
+            {
+                return;
+            }
+
+            if (_relativeMouseStateTimer is null)
+            {
+                _relativeMouseStateTimer = new DispatcherTimer(
+                    DispatcherPriority.Input,
+                    dispatcher)
+                {
+                    Interval = RelativeMouseStateInterval
+                };
+                _relativeMouseStateTimer.Tick += OnRelativeMouseStateTimerTick;
+            }
+
+            _relativeMouseStateTimer.Start();
+            RefreshRelativeMouseCaptureState();
+        }));
     }
 
     private void StopRelativeMouseForwardingIfUnused()
@@ -730,64 +724,217 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     private void StopRelativeMouseForwarding()
     {
+        Interlocked.Exchange(ref _relativeMouseForwardingEnabled, 0);
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is not null)
+        {
+            if (dispatcher.CheckAccess())
+            {
+                _relativeMouseStateTimer?.Stop();
+            }
+            else
+            {
+                _ = dispatcher.BeginInvoke(new Action(() =>
+                    _relativeMouseStateTimer?.Stop()));
+            }
+        }
+
+        StopRawInputCapture();
+        ClearRelativeMouseAccumulator();
+    }
+
+    private void StopRawInputCapture()
+    {
         lock (_relativeMouseSubscriptionLock)
         {
             _rawInputSubscription?.Dispose();
             _rawInputSubscription = null;
         }
-        _relativeMouseFocusAllowed = false;
     }
 
     private void OnRelativeMouseMoved(object? sender, RelativeMouseMoveEventArgs eventArgs)
     {
-        RequestRelativeMouseFocusRefresh(force: false);
-        if (!_relativeMouseFocusAllowed)
+        RelativeMouseSample? sampleToSend = null;
+        lock (_relativeMouseAccumulatorLock)
+        {
+            var now = Stopwatch.GetTimestamp();
+            if (HasRelativeMouseDirectionReversed(
+                    _accumulatedRelativeMouseX,
+                    _accumulatedRelativeMouseY,
+                    eventArgs.DeltaX,
+                    eventArgs.DeltaY))
+            {
+                sampleToSend = TakeAccumulatedRelativeMouse();
+            }
+
+            if (_relativeMouseAccumulationStartedAt == 0)
+            {
+                _relativeMouseAccumulationStartedAt = now;
+            }
+
+            _accumulatedRelativeMouseX += eventArgs.DeltaX;
+            _accumulatedRelativeMouseY += eventArgs.DeltaY;
+            _lastRelativeMouseTimestamp = eventArgs.Timestamp;
+
+            if (sampleToSend is null
+                && Stopwatch.GetElapsedTime(
+                    _relativeMouseAccumulationStartedAt,
+                    now) >= RelativeMouseFlushInterval)
+            {
+                sampleToSend = TakeAccumulatedRelativeMouse();
+            }
+        }
+
+        if (sampleToSend is not null)
+        {
+            QueueRelativeMouseSample(sampleToSend.Value);
+        }
+    }
+
+    private void OnRelativeMouseStateTimerTick(object? sender, EventArgs eventArgs)
+    {
+        RefreshRelativeMouseCaptureState();
+    }
+
+    private void RefreshRelativeMouseCaptureState()
+    {
+        if (Volatile.Read(ref _relativeMouseForwardingEnabled) == 0
+            || _relativeMouseTargets.IsEmpty)
+        {
+            _relativeMouseStateTimer?.Stop();
+            StopRawInputCapture();
+            ClearRelativeMouseAccumulator();
+            return;
+        }
+
+        var isInputFocused =
+            _serviceProvider.GetService<ChildSessionService>()
+                ?.IsRelativeMouseForwardingAvailable() == true;
+        if (!isInputFocused)
+        {
+            StopRawInputCapture();
+            ClearRelativeMouseAccumulator();
+            return;
+        }
+
+        try
+        {
+            lock (_relativeMouseSubscriptionLock)
+            {
+                _rawInputSubscription ??= _rawInputMonitor.Subscribe(OnRelativeMouseMoved);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "启动桌面分身 Raw Input 相对鼠标捕获失败");
+            StopRawInputCapture();
+            ClearRelativeMouseAccumulator();
+            return;
+        }
+
+        RelativeMouseSample? sampleToSend = null;
+        lock (_relativeMouseAccumulatorLock)
+        {
+            if (_relativeMouseAccumulationStartedAt != 0
+                && Stopwatch.GetElapsedTime(
+                    _relativeMouseAccumulationStartedAt,
+                    Stopwatch.GetTimestamp()) >= RelativeMouseFlushInterval)
+            {
+                sampleToSend = TakeAccumulatedRelativeMouse();
+            }
+        }
+
+        if (sampleToSend is not null)
+        {
+            SendRelativeMouseSampleIfFocused(sampleToSend.Value);
+        }
+    }
+
+    private void QueueRelativeMouseSample(RelativeMouseSample sample)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
         {
             return;
         }
 
+        _ = dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() => SendRelativeMouseSampleIfFocused(sample)));
+    }
+
+    private void SendRelativeMouseSampleIfFocused(RelativeMouseSample sample)
+    {
+        if (Volatile.Read(ref _relativeMouseForwardingEnabled) == 0
+            || _relativeMouseTargets.IsEmpty
+            || _serviceProvider.GetService<ChildSessionService>()
+                ?.IsRelativeMouseForwardingAvailable() != true)
+        {
+            return;
+        }
+
+        var eventArgs = new RelativeMouseMoveEventArgs(
+            sample.DeltaX,
+            sample.DeltaY,
+            sample.Timestamp);
         foreach (var connection in _relativeMouseTargets.Values)
         {
             connection.EnqueueRelativeMouse(eventArgs);
         }
     }
 
-    private void RequestRelativeMouseFocusRefresh(bool force)
+    private RelativeMouseSample? TakeAccumulatedRelativeMouse()
     {
-        var now = Stopwatch.GetTimestamp();
-        if (!force
-            && Stopwatch.GetElapsedTime(
-                Interlocked.Read(ref _lastFocusCheckTimestamp),
-                now) < TimeSpan.FromMilliseconds(100))
+        if (_accumulatedRelativeMouseX == 0
+            && _accumulatedRelativeMouseY == 0)
         {
-            return;
-        }
-        Interlocked.Exchange(ref _lastFocusCheckTimestamp, now);
-        if (Interlocked.Exchange(ref _focusCheckPending, 1) != 0)
-        {
-            return;
+            ResetRelativeMouseAccumulator();
+            return null;
         }
 
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null)
+        var sample = new RelativeMouseSample(
+            ClampToInt32(_accumulatedRelativeMouseX),
+            ClampToInt32(_accumulatedRelativeMouseY),
+            _lastRelativeMouseTimestamp);
+        ResetRelativeMouseAccumulator();
+        return sample;
+    }
+
+    private void ClearRelativeMouseAccumulator()
+    {
+        lock (_relativeMouseAccumulatorLock)
         {
-            Interlocked.Exchange(ref _focusCheckPending, 0);
-            return;
+            ResetRelativeMouseAccumulator();
+        }
+    }
+
+    private void ResetRelativeMouseAccumulator()
+    {
+        _accumulatedRelativeMouseX = 0;
+        _accumulatedRelativeMouseY = 0;
+        _relativeMouseAccumulationStartedAt = 0;
+        _lastRelativeMouseTimestamp = default;
+    }
+
+    private static bool HasRelativeMouseDirectionReversed(
+        long accumulatedX,
+        long accumulatedY,
+        int deltaX,
+        int deltaY)
+    {
+        if ((accumulatedX == 0 && accumulatedY == 0)
+            || (deltaX == 0 && deltaY == 0))
+        {
+            return false;
         }
 
-        _ = dispatcher.BeginInvoke(new Action(() =>
-        {
-            try
-            {
-                _relativeMouseFocusAllowed =
-                    _serviceProvider.GetService<ChildSessionService>()
-                        ?.IsRelativeMouseForwardingAvailable() == true;
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _focusCheckPending, 0);
-            }
-        }));
+        return (double)accumulatedX * deltaX
+               + (double)accumulatedY * deltaY < 0;
+    }
+
+    private static int ClampToInt32(long value)
+    {
+        return (int)Math.Clamp(value, int.MinValue, int.MaxValue);
     }
 
     private void RemoveExpiredPendingLaunches()

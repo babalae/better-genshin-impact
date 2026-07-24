@@ -176,7 +176,10 @@ internal sealed class InstanceConnection : IAsyncDisposable
                 if (frame.Value.PayloadType == InstanceIpcPayloadType.RelativeMouseBatch)
                 {
                     var batch = InstanceIpcProtocol.ReadRelativeMouseBatch(frame.Value);
-                    _owner.ReceiveRelativeMouseBatch(batch.FirstSequence, batch.Samples);
+                    _owner.ReceiveRelativeMouseBatch(
+                        this,
+                        batch.FirstSequence,
+                        batch.Samples);
                     continue;
                 }
 
@@ -235,28 +238,10 @@ internal sealed class InstanceConnection : IAsyncDisposable
             while (await _relativeMouseSamples.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
             {
                 batch.Clear();
-                if (_relativeMouseSamples.Reader.TryRead(out var first))
+                while (batch.Count < 64
+                       && _relativeMouseSamples.Reader.TryRead(out var sample))
                 {
-                    batch.Add(first);
-                }
-
-                var batchDeadline = Task.Delay(TimeSpan.FromMilliseconds(5), cancellationToken);
-                while (batch.Count < 64)
-                {
-                    while (batch.Count < 64 && _relativeMouseSamples.Reader.TryRead(out var sample))
-                    {
-                        batch.Add(sample);
-                    }
-
-                    if (batch.Count >= 64 || batchDeadline.IsCompleted)
-                    {
-                        break;
-                    }
-
-                    await Task.WhenAny(
-                        batchDeadline,
-                        _relativeMouseSamples.Reader.WaitToReadAsync(cancellationToken).AsTask())
-                        .ConfigureAwait(false);
+                    batch.Add(sample);
                 }
 
                 AppendCoalescedSample(batch);
