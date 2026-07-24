@@ -43,6 +43,7 @@ public class AutoFightJsonTask : ISoloTask
     /// </summary>
     private readonly BgiYoloPredictor? _predictor;
     private DateTime _lastFightFlagTime = DateTime.Now;
+    private int _skipCheckCounter;
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -84,6 +85,7 @@ public class AutoFightJsonTask : ISoloTask
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
         public bool RotateFindEnemyEnabled = false;
+        public bool SkipFightEndCheckWhenEnemyVisible = false;
 
         public (int, int, int) BattleEndProgressBarColor { get; }
         public (int, int, int) BattleEndProgressBarColorTolerance { get; }
@@ -100,6 +102,7 @@ public class AutoFightJsonTask : ISoloTask
             DetectDelayTime =
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
+            SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
         }
 
         public static void ParseCheckTimeString(
@@ -249,8 +252,10 @@ public class AutoFightJsonTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-
-        LogScreenResolution();
+        AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
+        try
+        {
+            LogScreenResolution();
         var combatScenes = GetCombatScenesWithRetry();
 
         // 收集当前队伍角色名
@@ -449,7 +454,38 @@ public class AutoFightJsonTask : ISoloTask
             }
         }, cts2.Token);
 
+        // 在持续索敌循环启动前标记战斗进行中，避免索敌循环因 FightStatusFlag 仍为 false 而立即退出
+        AutoFightTask.FightStatusFlag = true;
+
+        // 启动持续索敌循环（异步后台运行，与战斗任务并发）
+        // 使用独立的 CancellationTokenSource，以便在战后独立取消索敌循环，不影响 cts2 关联的其他组件（如 expDetector）
+        using var targetingCts = CancellationTokenSource.CreateLinkedTokenSource(cts2.Token);
+        Task? targetingTask = null;
+        if (_taskParam.EnableCombatTargeting)
+        {
+            targetingTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception e)
+                {
+                    Logger.LogError(e, "持续索敌循环异常");
+                }
+            }, targetingCts.Token);
+        }
+
         await fightTask;
+
+        // 战斗结束后、战后动作前，停止并等待索敌循环完成清理（ReleaseAllKey / MiddleButtonClick），
+        // 避免其 finally 在拾取/切人过程中释放按键，干扰万叶E吸怪等操作
+        if (targetingTask != null)
+        {
+            await targetingCts.CancelAsync();
+            try { await targetingTask; } catch (OperationCanceledException) { }
+        }
 
         try
         {
@@ -491,6 +527,11 @@ public class AutoFightJsonTask : ISoloTask
 
         // 战后拾取（完全参照 AutoFightTask）
         await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
+    }
+        finally
+        {
+            AvatarRecognition.ClearCurrentAutoFightParam();
+        }
     }
 
     private bool _fightEndFlag;
@@ -547,73 +588,98 @@ public class AutoFightJsonTask : ISoloTask
     /// <summary>战斗结束检测</summary>
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
+        using (AvatarRecognition.BeginExclusiveOperation())
         {
-            bool? result = null;
-            try
+            // 敌人可见时跳过战斗结束检查
+            if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
+                if (_skipCheckCounter < 5)
+                {
+                    using var quickCapture = CaptureToRectArea();
+                    var bars = AvatarRecognition.FindBloodBars(quickCapture);
+                    // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
+                    if (bars.Count > 0)
+                    {
+                        _skipCheckCounter++;
+                        Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
+                        return false;
+                    }
+                }
+                _skipCheckCounter = 0;
             }
-            catch (Exception ex)
+            else
             {
-                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                result = false;
+                _skipCheckCounter = 0;
             }
 
-            AutoFightSeek.RotationCount = (result == null) ? AutoFightSeek.RotationCount + 1 : 0;
-
-            if (result != null)
+            if (_finishDetectConfig.RotateFindEnemyEnabled)
             {
-                return result.Value;
-            }
-        }
-
-        if (!_finishDetectConfig.RotateFindEnemyEnabled) await Delay(delayTime, _ct);
-
-        Logger.LogInformation("打开编队界面检查战斗是否结束");
-        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(detectDelayTime, _ct);
-
-        using var ra = CaptureToRectArea();
-        // 注意：像素坐标 (50, 790) 和 (50, 768) 是硬编码的，未做分辨率缩放
-        // 与 TXT 版本逻辑保持一致，不进行缩放
-        var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
-        var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
-
-        if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
-            IsYellow(b3.Item2, b3.Item1, b3.Item0))
-        {
-            Logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            return true;
-        }
-
-        Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
-        {
-            // 注意：此处使用 await 确保异常能被正确捕获
-            // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
-            Task.Run(async () =>
-            {
+                bool? result = null;
                 try
                 {
-                    var bloodLower = new Scalar(255, 90, 90);
-                    await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                }
-                catch (OperationCanceledException)
-                {
+                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
+                    Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+                    result = false;
                 }
-            }, _ct);
-        }
 
-        _lastFightFlagTime = DateTime.Now;
-        return false;
+                AutoFightSeek.RotationCount = (result == null) ? AutoFightSeek.RotationCount + 1 : 0;
+
+                if (result != null)
+                {
+                    return result.Value;
+                }
+            }
+
+            if (!_finishDetectConfig.RotateFindEnemyEnabled) await Delay(delayTime, _ct);
+
+            Logger.LogInformation("打开编队界面检查战斗是否结束");
+            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+            await Delay(detectDelayTime, _ct);
+
+            using var ra = CaptureToRectArea();
+            // 注意：像素坐标 (50, 790) 和 (50, 768) 是硬编码的，未做分辨率缩放
+            // 与 TXT 版本逻辑保持一致，不进行缩放
+            var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
+            var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
+
+            if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
+                IsYellow(b3.Item2, b3.Item1, b3.Item0))
+            {
+                Logger.LogInformation("识别到战斗结束");
+                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                return true;
+            }
+
+            Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
+
+            if (_finishDetectConfig.RotateFindEnemyEnabled)
+            {
+                // 注意：此处使用 await 确保异常能被正确捕获
+                // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        var bloodLower = new Scalar(255, 90, 90);
+                        await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
+                    }
+                }, _ct);
+            }
+
+            _lastFightFlagTime = DateTime.Now;
+            return false;
+        }
     }
 
     private bool IsYellow(int r, int g, int b)

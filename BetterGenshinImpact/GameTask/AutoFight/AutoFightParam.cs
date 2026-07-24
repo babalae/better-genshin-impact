@@ -20,6 +20,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
         public bool RotateFindEnemyEnabled = false;
+        public bool SkipFightEndCheckWhenEnemyVisible = false;
     }
 
     public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
@@ -54,6 +55,12 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         CheckBeforeBurst = autoFightConfig.FinishDetectConfig.CheckBeforeBurst;
         IsFirstCheck = autoFightConfig.FinishDetectConfig.IsFirstCheck;
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        EnableCombatTargeting = autoFightConfig.EnableCombatTargeting;
+        TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
+        DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
+        LockLostWaitTime = autoFightConfig.LockLostWaitTime;
+        DamageNumberRecognitionMode = autoFightConfig.DamageNumberRecognitionMode;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
@@ -80,10 +87,16 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public bool CheckBeforeBurst { get; set; } = false;
     public bool IsFirstCheck { get; set; } = true;    
     public int RotaryFactor { get; set; } = 10;
+    public bool SkipFightEndCheckWhenEnemyVisible { get; set; } = false;
     public bool BurstEnabled { get; set; } = false;
     
     public bool QinDoublePickUp { get; set; } = false;
     public static bool SwimmingEnabled  { get; set; } = false;
+    public bool EnableCombatTargeting { get; set; } = false;
+    public int TargetingDetectionInterval { get; set; } = 50;
+    public bool DrawRecognitionResults { get; set; } = true;
+    public double LockLostWaitTime { get; set; } = 0.5;
+    public DamageNumberRecognitionMode DamageNumberRecognitionMode { get; set; } = DamageNumberRecognitionMode.Color;
 
     /// <summary>
     /// 基于经验值判断是否执行战后拾取
@@ -160,7 +173,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
-
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
 
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
@@ -174,6 +187,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
+        EnableCombatTargeting = autoFightConfig.EnableCombatTargeting;
+        TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
+        DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
+        LockLostWaitTime = autoFightConfig.LockLostWaitTime;
+        DamageNumberRecognitionMode = autoFightConfig.DamageNumberRecognitionMode;
         ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
     }
 }

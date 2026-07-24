@@ -6,6 +6,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:autofight="clr-namespace:BetterGenshinImpact.GameTask.AutoFight"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:ScriptGroupConfigViewModel}"
              d:DesignHeight="1600"
@@ -1154,10 +1155,10 @@
                                     Text="{Binding PathingConfig.AutoFightConfig.ActionSchedulerByCd, Mode=TwoWay}"
                                     TextWrapping="Wrap" />
                     </Grid>
-                    <Grid Margin="16">
+                    <Grid Margin="16,10,52,0">
 
                         <!-- 自动检测战斗结束 -->
-                        <ui:CardExpander Margin="0,0,36,12"
+                        <ui:CardExpander Margin="0,0,0,12"
                                          ContentPadding="0"
                                          IsExpanded="False">
 
@@ -1267,18 +1268,32 @@
                                     </Grid>
                                 </Grid>
                                 
-                                  <Grid Margin="16,0,16,16">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto"  />
-                                    </Grid.ColumnDefinitions>
+                            <!-- 敌人可见时跳过战斗结束检查 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="敌人可见时跳过战斗结束检查"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="检测到敌人血条或伤害数字时跳过战斗结束检查，避免频繁打开队伍界面。连续跳过5次后强制检查一次，防误判。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
@@ -1296,7 +1311,8 @@
                                                   Margin="5,8,0,0"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Center"
-                                                  TextWrapping="Wrap" />
+                                                  TextWrapping="Wrap"
+                                                  Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <Slider Grid.Row="0"
                                             Grid.Column="2"
                                             Minimum="1"
@@ -1306,57 +1322,56 @@
                                             TickFrequency="1"
                                             IsSnapToTickEnabled="True"
                                             HorizontalAlignment="Left"
-                                            VerticalAlignment="Center" />
-                                    <ui:TextBlock Grid.Row="1"
-                                                  Grid.Column="0"
-                                                  Grid.ColumnSpan="3"
-                                                  Grid.RowSpan="2"
-                                                  HorizontalAlignment="Stretch"
-                                                  VerticalAlignment="Stretch"
-                                                  Margin="0,0,5,0"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)"
-                                                  TextWrapping="Wrap" />
-                                    
-                                    <ui:ToggleSwitch Grid.Row="0"
-                                                     Grid.Column="3"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ui:ToggleSwitch Grid.Column="3"
                                                      Margin="10,0,36,10"
                                                      IsChecked="{Binding  PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}" />
-                                    
-                                    <ui:TextBlock Grid.Row="1"
-                                                  Grid.Column="3"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  FontSize="8"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Margin="0,20,25,-10"
-                                                  FontTypography="Body"
+                            </Grid>
+                            <ui:TextBlock Margin="16,0,16,0"
+                                          HorizontalAlignment="Stretch"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="(建议配合1秒左右&#x201C;更快检测结束战斗&#x201D;) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)"
+                                          TextWrapping="Wrap"
+                                          Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <Grid Margin="16,0,16,16"
+                                  Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
                                                   Text="Q前检测"
                                                   TextWrapping="Wrap" />
-                                    <ui:ToggleSwitch Grid.Row="1"
-                                                     Grid.Column="3"
-                                                     Margin="10,-15,36,0"
-                                                     IsEnabled="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
-                                                     IsChecked="{Binding  PathingConfig.AutoFightConfig.FinishDetectConfig.CheckBeforeBurst, Mode=TwoWay}" />
-                                    
-                                    <ui:ToggleSwitch Grid.Row="2"
-                                                     Grid.Column="3"
-                                                     Grid.RowSpan="1"
-                                                     Margin="10,0,36,0"
-                                                     IsEnabled="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
-                                                     IsChecked="{Binding  PathingConfig.AutoFightConfig.FinishDetectConfig.IsFirstCheck, Mode=TwoWay}" />
-                                    <ui:TextBlock Grid.Row="2"
-                                                  Grid.Column="3"
-                                                  Grid.RowSpan="1"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  FontSize="8"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Margin="0,0,25,-45"
-                                                  FontTypography="Body"
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="释放Q技能前检测是否结束战斗"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsEnabled="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.CheckBeforeBurst, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid Margin="16,0,16,16"
+                                  Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
                                                   Text="尝试面敌"
                                                   TextWrapping="Wrap" />
-                                </Grid>
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="开战寻敌，战斗尝试面向敌人"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsEnabled="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.IsFirstCheck, Mode=TwoWay}" />
+                            </Grid>
                                 
                                 <Grid Margin="16">
                                     <Grid.RowDefinitions>
@@ -1413,8 +1428,129 @@
                         </ui:CardExpander>
                     </Grid>
                     
+                    <Grid Margin="16,10,52,0">
+                    <!-- 战斗中视觉识别配置 -->
+                    <ui:CardExpander Margin="0,0,0,12"
+                                     ContentPadding="0"
+                                     IsExpanded="False">
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="战斗中视觉识别配置"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16,12,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="战斗中持续索敌"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="战斗过程中情况允许时持续尝试面朝敌人"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.EnableCombatTargeting, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid Margin="16,4,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="脱锁等待时间（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="敌人不可见时等待一定时间后开始旋转索敌"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.LockLostWaitTime}" />
+                            </Grid>
+                            <Grid Margin="16,8,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="伤害数字识别模式"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="当血条不可见或传奇等固定位置血条时使用伤害数字辅助定位敌人"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          Width="120"
+                                          Margin="0,0,36,0"
+                                          SelectedValue="{Binding PathingConfig.AutoFightConfig.DamageNumberRecognitionMode, Mode=TwoWay}"
+                                          SelectedValuePath="Tag">
+                                    <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Disabled}">禁用</ComboBoxItem>
+                                    <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Ocr}">OCR识别</ComboBoxItem>
+                                    <ComboBoxItem Tag="{x:Static autofight:DamageNumberRecognitionMode.Color}">颜色识别</ComboBoxItem>
+                                </ComboBox>
+                            </Grid>
+                            <Grid Margin="16,8,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="索敌识别间隔（毫秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="每次索敌识别之间的间隔时间"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.TargetingDetectionInterval}" />
+                            </Grid>
+                            <Grid Margin="16,8,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="绘制识别结果位置"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="在遮罩窗口上显示血条、伤害数字等识别结果的边框"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.DrawRecognitionResults, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+                    </Grid>
+                    
+                    <Grid Margin="16,10,52,0">
                     <!-- 盾奶位角色优先释放技能 -->
-                    <ui:CardExpander Margin="16,0,52,12"
+                    <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
                                  IsExpanded="False">
                     <ui:CardExpander.Header>
@@ -1595,6 +1731,7 @@
                         
                     </Grid>
                 </ui:CardExpander>
+                    </Grid>
                     
                     <Grid Margin="16,10,52,0">
 
@@ -1604,7 +1741,6 @@
 
                             <ui:CardExpander.Header>
                                 <Grid>
-
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -1616,219 +1752,176 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="扫描掉落物光柱"
+                                                  Text="战斗后拾取动作"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="战斗结束后旋转视角寻找掉落物光柱并靠近（仅在无万叶时备用）"
+                                                  Text="战斗后执行的动作便于拾取掉落物"
                                                   TextWrapping="Wrap" />
-                                    <ui:ToggleSwitch Grid.Row="0"
-                                                     Grid.RowSpan="2"
-                                                     Grid.Column="1"
-                                                     Margin="0,0,36,0"
-                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled}" />
                                 </Grid>
                             </ui:CardExpander.Header>
                             <StackPanel>
-                                <Grid Margin="16">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
+                                <!-- 扫描掉落物光柱 -->
+                                <Grid Margin="16,12,16,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <ui:TextBlock Grid.Row="0"
-                                                  Grid.Column="0"
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="扫描掉落物光柱"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="战斗结束后旋转视角寻找掉落物光柱并靠近（仅在无万叶和琴时备用）"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled}" />
+                                </Grid>
+
+                                <!-- 扫描掉落物光柱最大时长 -->
+                                <Grid Margin="16,4,16,12"
+                                      Visibility="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Column="0"
+                                                  VerticalAlignment="Center"
                                                   FontTypography="Body"
-                                                  Text="扫描掉落物光柱时长"
+                                                  Text="扫描掉落物光柱最大时长"
                                                   TextWrapping="Wrap" />
-                                    <ui:TextBlock Grid.Row="1"
-                                                  Grid.Column="0"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="单位为秒。0表示不扫描掉落物光柱。"
-                                                  TextWrapping="Wrap" />
-                                    <ui:TextBox Grid.Row="0"
-                                                Grid.RowSpan="2"
-                                                Grid.Column="1"
-                                                MinWidth="120"
+                                    <ui:TextBox Grid.Column="1"
                                                 Margin="0,0,36,0"
+                                                MinWidth="120"
                                                 Text="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightSeconds}" />
+                                </Grid>
+
+                                <!-- 聚集材料动作 -->
+                                <Grid Margin="16,8,16,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="聚集材料动作"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="战斗结束后，如存在(万叶/琴)，则执行长E聚集材料动作"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
+                                </Grid>
+
+                                <!-- 二次拾取 -->
+                                <Grid Margin="16,4,16,12"
+                                      Visibility="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="二次拾取"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="琴首次拾取空,再次拾取。即使万叶刚使用过技能，也会强制再次拾取。"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsEnabled="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
+                                </Grid>
+
+                                <!-- 基于经验值判断拾取 -->
+                                <Grid Margin="16,8,16,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="基于经验值判断拾取(经验值57/58/60，不含传奇120等数字)"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="未能检测到经验值图标时跳过战斗后拾取动作"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.ExpBasedPickupEnabled, Mode=TwoWay}" />
+                                </Grid>
+
+                                <!-- 拾取战斗人次阈值 -->
+                                <Grid Margin="16,8,16,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="拾取战斗人次阈值"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="当战斗人次小于一定次数时，不触发拾取掉落物和万叶拾取配置，只有不小于2时才生效"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:TextBox Grid.Column="1"
+                                                Margin="0,0,36,0"
+                                                MinWidth="120"
+                                                Text="{Binding PathingConfig.AutoFightConfig.BattleThresholdForLoot}" />
+                                </Grid>
+
+                                <!-- 只拾取精英掉落模式 -->
+                                <Grid Margin="16,8,16,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="只拾取精英掉落模式"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="需要路径文件支持，需勾选区分怪物拾取才生效。只拾取标记为精英或传奇的点位"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="100"
+                                              Margin="0,0,36,0"
+                                              SelectedValuePath="Key"
+                                              DisplayMemberPath="Value"
+                                              ItemsSource="{Binding OnlyPickEliteDropsSource}"
+                                              SelectedValue="{Binding PathingConfig.AutoFightConfig.OnlyPickEliteDropsMode}" />
+                                </Grid>
+
+                                <!-- 万叶拾取队伍名 -->
+                                <Grid Margin="16,8,16,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="万叶拾取队伍名"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="战斗结束后，如果不存在万叶，则切换至存在万叶的队伍"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:TextBox Grid.Column="1"
+                                                Margin="0,0,36,0"
+                                                MinWidth="120"
+                                                Text="{Binding PathingConfig.AutoFightConfig.KazuhaPartyName}" />
                                 </Grid>
                             </StackPanel>
                         </ui:CardExpander>
-                    </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="聚集材料动作"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      Margin="90,0,5,0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      FontSize="10"
-                                      FontTypography="Body"
-                                      VerticalAlignment="Bottom"
-                                      Text="(二次拾取：琴首次拾取空,再次拾取。即使万叶刚使用过技能，也会强制再次拾取。)"
-                                      TextWrapping="Wrap" />
-                        
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="战斗结束后，如存在(万叶/琴)，则执行长E聚集材料动作"
-                                      TextWrapping="Wrap" />
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         Margin="0,0,10,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
-                        
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="2"
-                                         Margin="0,0,38,0"
-                                         IsEnabled="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.RowSpan="2"
-                                      Grid.Column="2"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      FontSize="8"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Margin="0,0,38,26"
-                                      FontTypography="Body"
-                                      Text="二次拾取"
-                                      TextWrapping="Wrap" />
-                    </Grid>
-                    <Grid Margin="16">
-                        <Grid.Style>
-                            <Style TargetType="Grid">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled}" Value="False">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Grid.Style>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="基于经验值判断拾取(经验值57/58/60，不含传奇120等数字)"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="战斗中检测精英怪死亡经验数字值图标，未检测到时跳过拾取，避免无价值战斗后浪费时间"
-                                      TextWrapping="Wrap" />
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.ExpBasedPickupEnabled, Mode=TwoWay}" />
-                    </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="拾取战斗人次阈值"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="拾取战斗人次阈值,当战斗人次小于一定次数，就结束战斗情况下，不触发拾取掉落物和万叶拾取配置，只有不小于2时才生效。"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBox Grid.Row="0"
-                                    Grid.RowSpan="2"
-                                    Grid.Column="1"
-                                    MinWidth="120"
-                                    Margin="0,0,36,0"
-                                    Text="{Binding PathingConfig.AutoFightConfig.BattleThresholdForLoot}" />
-                    </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="只拾取精英掉落模式"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="需要路径文件支持，需勾选区分怪物拾取才生效，可通过仓库标签查看，精英怪物可以在点位的更多》扩展配置》怪物标签中，可标记。只拾取标记为精英或传奇的点位。非精英允许自动拾取：战斗过程中掉落脚下的可以自动拾取，但不会执行万叶拾取和自动拾取配置逻辑。非精英关闭拾取：战斗过程中掉落到脚下的也不会自动拾取。"
-                                      TextWrapping="Wrap" />
-                        <ComboBox Grid.Row="0"
-                                  Grid.RowSpan="2"
-                                  Grid.Column="1"
-                                  MinWidth="100"
-                                  SelectedValuePath="Key"
-                                  DisplayMemberPath="Value"
-                                  ItemsSource="{Binding OnlyPickEliteDropsSource}"
-                                  SelectedValue="{Binding PathingConfig.AutoFightConfig.OnlyPickEliteDropsMode}" />
-                    </Grid>
-
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="万叶拾取队伍名"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下，并且填写队伍名才会切换），适用于需要多一个人刷经验时，替换调万叶的位置，战斗策略建议兼容两个队伍的，以防止队伍切换不成功也能继续战斗。"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBox Grid.Row="0"
-                                    Grid.RowSpan="2"
-                                    Grid.Column="1"
-                                    MinWidth="120"
-                                    Margin="0,0,36,0"
-                                    Text="{Binding PathingConfig.AutoFightConfig.KazuhaPartyName}" />
                     </Grid>
                    <Grid Margin="16,10,16,16">
                     <Grid.RowDefinitions>
@@ -1878,6 +1971,7 @@
                 </Grid>
                 </StackPanel>
             </ui:CardExpander>
+
             <!-- 自动吃食物 -->
             <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                 <ui:CardExpander.Icon>
