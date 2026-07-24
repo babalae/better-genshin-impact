@@ -163,6 +163,8 @@ public partial class App : Application
                 // My Services
                 services.AddSingleton<DirectInputMonitor>();
                 services.AddSingleton<RawInputMonitor>();
+                services.AddSingleton<IRawKeyboardInputMonitor>(
+                    sp => sp.GetRequiredService<RawInputMonitor>());
                 services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<TaskTriggerDispatcher>();

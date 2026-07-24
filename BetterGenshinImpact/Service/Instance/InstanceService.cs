@@ -29,11 +29,18 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private static readonly TimeSpan PendingLaunchLifetime = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan RelativeMouseFlushInterval = TimeSpan.FromMilliseconds(10);
     private static readonly TimeSpan RelativeMouseStateInterval = TimeSpan.FromMilliseconds(5);
+    private const ushort VirtualKeyMenu = 0x12;
+    private const ushort VirtualKeyLeftMenu = 0xA4;
+    private const ushort VirtualKeyRightMenu = 0xA5;
+    private const ushort RawKeyboardExtendedKeyFlag = 0x02;
+    private const int LeftAltMask = 0x01;
+    private const int RightAltMask = 0x02;
 
     private readonly InstanceBootstrap _bootstrap;
     private readonly IServiceProvider _serviceProvider;
     private readonly RawInputMonitor _rawInputMonitor;
     private readonly ILogger<InstanceService> _logger;
+    private readonly LocalCursorCapture _localCursorCapture;
     private readonly CancellationTokenSource _lifetimeCancellationTokenSource = new();
     private readonly ConcurrentDictionary<Guid, ChildInstanceConnection> _children = new();
     private readonly ConcurrentDictionary<Guid, PendingChildLaunch> _pendingChildLaunches = new();
@@ -48,13 +55,15 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private Task? _acceptLoopTask;
     private Task? _parentConnectionLoopTask;
     private InstanceConnection? _parentConnection;
-    private IDisposable? _rawInputSubscription;
+    private IDisposable? _rawMouseInputSubscription;
+    private IDisposable? _rawKeyboardInputSubscription;
     private DispatcherTimer? _relativeMouseStateTimer;
     private bool _applicationReady;
     private long _accumulatedRelativeMouseX;
     private long _accumulatedRelativeMouseY;
     private long _relativeMouseAccumulationStartedAt;
     private DateTime _lastRelativeMouseTimestamp;
+    private int _pressedAltMask;
     private int _relativeMouseForwardingEnabled;
     private int _stopStarted;
 
@@ -68,6 +77,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         _serviceProvider = serviceProvider;
         _rawInputMonitor = rawInputMonitor;
         _logger = logger;
+        _localCursorCapture = new LocalCursorCapture(logger);
     }
 
     public InstanceContext Context => _bootstrap.Context;
@@ -726,29 +736,53 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     {
         Interlocked.Exchange(ref _relativeMouseForwardingEnabled, 0);
         var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is not null)
+        if (dispatcher is null)
         {
-            if (dispatcher.CheckAccess())
-            {
-                _relativeMouseStateTimer?.Stop();
-            }
-            else
-            {
-                _ = dispatcher.BeginInvoke(new Action(() =>
-                    _relativeMouseStateTimer?.Stop()));
-            }
+            StopRawInputCapture();
+            _localCursorCapture.Release();
+            ClearRelativeMouseAccumulator();
+            return;
         }
 
-        StopRawInputCapture();
-        ClearRelativeMouseAccumulator();
+        void CleanupOnUiThread()
+        {
+            _relativeMouseStateTimer?.Stop();
+            StopRawInputCapture();
+            _localCursorCapture.Release();
+            ClearRelativeMouseAccumulator();
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            CleanupOnUiThread();
+        }
+        else
+        {
+            _ = dispatcher.BeginInvoke(
+                DispatcherPriority.Send,
+                new Action(CleanupOnUiThread));
+        }
     }
 
     private void StopRawInputCapture()
     {
         lock (_relativeMouseSubscriptionLock)
         {
-            _rawInputSubscription?.Dispose();
-            _rawInputSubscription = null;
+            _rawMouseInputSubscription?.Dispose();
+            _rawMouseInputSubscription = null;
+            _rawKeyboardInputSubscription?.Dispose();
+            _rawKeyboardInputSubscription = null;
+        }
+
+        Interlocked.Exchange(ref _pressedAltMask, 0);
+    }
+
+    private void StopRawMouseInputCapture()
+    {
+        lock (_relativeMouseSubscriptionLock)
+        {
+            _rawMouseInputSubscription?.Dispose();
+            _rawMouseInputSubscription = null;
         }
     }
 
@@ -803,16 +837,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         {
             _relativeMouseStateTimer?.Stop();
             StopRawInputCapture();
-            ClearRelativeMouseAccumulator();
-            return;
-        }
-
-        var isInputFocused =
-            _serviceProvider.GetService<ChildSessionService>()
-                ?.IsRelativeMouseForwardingAvailable() == true;
-        if (!isInputFocused)
-        {
-            StopRawInputCapture();
+            _localCursorCapture.Release();
             ClearRelativeMouseAccumulator();
             return;
         }
@@ -821,13 +846,57 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         {
             lock (_relativeMouseSubscriptionLock)
             {
-                _rawInputSubscription ??= _rawInputMonitor.Subscribe(OnRelativeMouseMoved);
+                _rawKeyboardInputSubscription ??=
+                    _rawInputMonitor.SubscribeKeyboard(OnRawKeyboardInput);
             }
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "启动桌面分身 Raw Input 相对鼠标捕获失败");
-            StopRawInputCapture();
+            _logger.LogWarning(exception, "启动桌面分身 Raw Input 键盘捕获失败");
+            StopRawMouseInputCapture();
+            _localCursorCapture.Release();
+            ClearRelativeMouseAccumulator();
+            return;
+        }
+
+        var childSessionService = _serviceProvider.GetService<ChildSessionService>();
+        if (childSessionService?.TryGetRelativeMouseCaptureBounds(out var captureBounds) != true)
+        {
+            StopRawMouseInputCapture();
+            _localCursorCapture.Release();
+            ClearRelativeMouseAccumulator();
+            return;
+        }
+
+        if (Volatile.Read(ref _pressedAltMask) != 0)
+        {
+            StopRawMouseInputCapture();
+            ClearRelativeMouseAccumulator();
+            try
+            {
+                _localCursorCapture.ReleaseTemporarily();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "按住 Alt 时解除本地鼠标限制失败");
+            }
+            return;
+        }
+
+        try
+        {
+            lock (_relativeMouseSubscriptionLock)
+            {
+                _rawMouseInputSubscription ??= _rawInputMonitor.Subscribe(OnRelativeMouseMoved);
+            }
+
+            _localCursorCapture.Capture(captureBounds);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "启动桌面分身本地鼠标捕获失败");
+            StopRawMouseInputCapture();
+            _localCursorCapture.Release();
             ClearRelativeMouseAccumulator();
             return;
         }
@@ -867,6 +936,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     {
         if (Volatile.Read(ref _relativeMouseForwardingEnabled) == 0
             || _relativeMouseTargets.IsEmpty
+            || Volatile.Read(ref _pressedAltMask) != 0
             || _serviceProvider.GetService<ChildSessionService>()
                 ?.IsRelativeMouseForwardingAvailable() != true)
         {
@@ -881,6 +951,54 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         {
             connection.EnqueueRelativeMouse(eventArgs);
         }
+    }
+
+    private void OnRawKeyboardInput(object? sender, RawKeyboardInputEventArgs eventArgs)
+    {
+        var altMask = GetAltMask(eventArgs);
+        if (altMask == 0)
+        {
+            return;
+        }
+
+        int currentMask;
+        int nextMask;
+        do
+        {
+            currentMask = Volatile.Read(ref _pressedAltMask);
+            nextMask = eventArgs.IsKeyDown
+                ? currentMask | altMask
+                : currentMask & ~altMask;
+            if (nextMask == currentMask)
+            {
+                return;
+            }
+        }
+        while (Interlocked.CompareExchange(
+                   ref _pressedAltMask,
+                   nextMask,
+                   currentMask) != currentMask);
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is not null)
+        {
+            _ = dispatcher.BeginInvoke(
+                DispatcherPriority.Send,
+                new Action(RefreshRelativeMouseCaptureState));
+        }
+    }
+
+    private static int GetAltMask(RawKeyboardInputEventArgs eventArgs)
+    {
+        return eventArgs.VirtualKey switch
+        {
+            VirtualKeyLeftMenu => LeftAltMask,
+            VirtualKeyRightMenu => RightAltMask,
+            VirtualKeyMenu when
+                (eventArgs.Flags & RawKeyboardExtendedKeyFlag) != 0 => RightAltMask,
+            VirtualKeyMenu => LeftAltMask,
+            _ => 0
+        };
     }
 
     private RelativeMouseSample? TakeAccumulatedRelativeMouse()

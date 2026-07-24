@@ -154,28 +154,125 @@
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
 
-        <wfi:WindowsFormsHost x:Name="RdpFormsHost"
-                              Grid.Row="1"
-                              HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch">
-            <b:Interaction.Behaviors>
-                <behavior:WindowAspectRatioBehavior AspectRatio="1.7777777777777777"
-                                                    IsEnabled="{Binding KeepAspectRatio}" />
-            </b:Interaction.Behaviors>
-            <wfi:WindowsFormsHost.Style>
-                <Style TargetType="{x:Type wfi:WindowsFormsHost}">
-                    <!-- 为父窗口保留命中测试区域，避免 RDP 的子 HWND 截获窗口边缘鼠标消息 -->
-                    <Setter Property="Margin"
-                            Value="3,0,3,3" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
-                                     Value="Maximized">
-                            <Setter Property="Margin"
-                                    Value="0" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </wfi:WindowsFormsHost.Style>
-        </wfi:WindowsFormsHost>
+        <Grid Grid.Row="1"
+              Background="Black">
+            <wfi:WindowsFormsHost x:Name="RdpFormsHost"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch"
+                                  Visibility="{Binding IsRdpConnected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <b:Interaction.Behaviors>
+                    <behavior:WindowAspectRatioBehavior AspectRatio="1.7777777777777777"
+                                                        IsEnabled="{Binding KeepAspectRatio}" />
+                </b:Interaction.Behaviors>
+                <wfi:WindowsFormsHost.Style>
+                    <Style TargetType="{x:Type wfi:WindowsFormsHost}">
+                        <!-- 为父窗口保留命中测试区域，避免 RDP 的子 HWND 截获窗口边缘鼠标消息 -->
+                        <Setter Property="Margin"
+                                Value="3,0,3,3" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
+                                         Value="Maximized">
+                                <Setter Property="Margin"
+                                        Value="0" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </wfi:WindowsFormsHost.Style>
+            </wfi:WindowsFormsHost>
+
+            <Grid Margin="24"
+                  Visibility="{Binding IsRdpDisconnected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border MaxWidth="620"
+                        Padding="36,32"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="#FF171717"
+                        BorderBrush="#33FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="12">
+                    <StackPanel>
+                        <Border Width="72"
+                                Height="72"
+                                HorizontalAlignment="Center"
+                                Background="#262FA4E7"
+                                CornerRadius="36">
+                            <ui:SymbolIcon FontSize="34"
+                                           Foreground="#FF60B9F4"
+                                           Symbol="DesktopCursor24" />
+                        </Border>
+
+                        <StackPanel Margin="0,20,0,0"
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal">
+                            <Ellipse Width="10"
+                                     Height="10"
+                                     Margin="0,0,9,0"
+                                     VerticalAlignment="Center"
+                                     Fill="{Binding ConnectionStatusBrush}" />
+                            <TextBlock FontSize="21"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       Text="{Binding ConnectionStatusTitle}" />
+                        </StackPanel>
+
+                        <TextBlock MaxWidth="510"
+                                   Margin="0,10,0,0"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#BFFFFFFF"
+                                   Text="{Binding ConnectionStatusDescription}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+
+                        <Border Margin="0,22,0,0"
+                                Padding="16,12"
+                                Background="#10000000"
+                                BorderBrush="#24FFFFFF"
+                                BorderThickness="1"
+                                CornerRadius="7">
+                            <StackPanel>
+                                <TextBlock Foreground="#E6FFFFFF"
+                                           Text="{Binding RdpStatusText}" />
+                                <TextBlock Margin="0,5,0,0"
+                                           Foreground="#99FFFFFF"
+                                           Text="{Binding ChildSessionStatusText}" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Foreground="#70FFFFFF"
+                                           FontSize="11"
+                                           Text="{Binding ConnectionStatusToolTip}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Margin="0,24,0,0"
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal">
+                            <ui:Button MinWidth="132"
+                                       Command="{Binding StartCommand}"
+                                       Content="启动并连接"
+                                       Icon="{ui:SymbolIcon Play24}" />
+                            <ui:HyperlinkButton Margin="16,0,0,0"
+                                                Padding="8,6"
+                                                Command="{Binding OpenDesktopHelpCommand}"
+                                                Content="查看帮助文档"
+                                                Cursor="Hand" />
+                        </StackPanel>
+
+                        <StackPanel Margin="0,18,0,0">
+                            <TextBlock HorizontalAlignment="Center"
+                                       Foreground="#80FFFFFF"
+                                       FontSize="11"
+                                       Text="连接成功后，此处会自动切换为桌面分身画面。"
+                                       TextAlignment="Center" />
+                            <TextBlock Margin="0,4,0,0"
+                                       HorizontalAlignment="Center"
+                                       Foreground="#80FFFFFF"
+                                       FontSize="11"
+                                       Text="操作时按住 Alt，可临时释放并显示本地鼠标。"
+                                       TextAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

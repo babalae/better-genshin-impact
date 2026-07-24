@@ -251,6 +251,42 @@ public class RelativeMouseInputMonitorTests
         }
     }
 
+    [Theory]
+    [InlineData(0xA4, 0x38, 0x00, true)]
+    [InlineData(0xA5, 0x38, 0x03, false)]
+    public void RawInputKeyboardParser_ShouldReturnKeyState(
+        ushort virtualKey,
+        ushort scanCode,
+        ushort flags,
+        bool expectedIsKeyDown)
+    {
+        var buffer = CreateKeyboardRawInputBuffer(
+            virtualKey,
+            scanCode,
+            flags);
+
+        try
+        {
+            var result = RawInputMonitor.TryGetKeyboardInputFromBuffer(
+                buffer.Pointer,
+                buffer.Size,
+                out ushort actualVirtualKey,
+                out ushort actualScanCode,
+                out ushort actualFlags,
+                out bool isKeyDown);
+
+            Assert.True(result);
+            Assert.Equal(virtualKey, actualVirtualKey);
+            Assert.Equal(scanCode, actualScanCode);
+            Assert.Equal(flags, actualFlags);
+            Assert.Equal(expectedIsKeyDown, isKeyDown);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer.Pointer);
+        }
+    }
+
     private static User32.RAWINPUT CreateMouseRawInput(
         User32.MouseState mouseState,
         int deltaX,
@@ -301,6 +337,37 @@ public class RelativeMouseInputMonitorTests
                 Flags = (ushort)mouseState,
                 LastX = deltaX,
                 LastY = deltaY
+            },
+            IntPtr.Add(buffer, headerSize),
+            false);
+
+        return new RawInputBuffer(buffer, totalSize);
+    }
+
+    private static RawInputBuffer CreateKeyboardRawInputBuffer(
+        ushort virtualKey,
+        ushort scanCode,
+        ushort flags)
+    {
+        var headerSize = Marshal.SizeOf<User32.RAWINPUTHEADER>();
+        var keyboardSize = Marshal.SizeOf<TestRawKeyboardData>();
+        var totalSize = checked((uint)(headerSize + keyboardSize));
+        var buffer = Marshal.AllocHGlobal((int)totalSize);
+
+        Marshal.StructureToPtr(
+            new User32.RAWINPUTHEADER
+            {
+                dwType = User32.RIM_TYPE.RIM_TYPEKEYBOARD
+            },
+            buffer,
+            false);
+
+        Marshal.StructureToPtr(
+            new TestRawKeyboardData
+            {
+                MakeCode = scanCode,
+                Flags = flags,
+                VirtualKey = virtualKey
             },
             IntPtr.Add(buffer, headerSize),
             false);
@@ -369,6 +436,22 @@ public class RelativeMouseInputMonitorTests
         public int LastX { get; init; }
 
         public int LastY { get; init; }
+
+        public uint ExtraInformation { get; init; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly struct TestRawKeyboardData
+    {
+        public ushort MakeCode { get; init; }
+
+        public ushort Flags { get; init; }
+
+        public ushort Reserved { get; init; }
+
+        public ushort VirtualKey { get; init; }
+
+        public uint Message { get; init; }
 
         public uint ExtraInformation { get; init; }
     }

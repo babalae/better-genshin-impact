@@ -30,3 +30,30 @@ public interface IRelativeMouseInputMonitorFactory
 {
     IRelativeMouseInputMonitor Get(RelativeMouseInputType type);
 }
+
+public sealed class RawKeyboardInputEventArgs(
+    ushort virtualKey,
+    ushort scanCode,
+    ushort flags,
+    bool isKeyDown,
+    DateTime timestamp) : EventArgs
+{
+    public ushort VirtualKey { get; } = virtualKey;
+
+    public ushort ScanCode { get; } = scanCode;
+
+    public ushort Flags { get; } = flags;
+
+    public bool IsKeyDown { get; } = isKeyDown;
+
+    public DateTime Timestamp { get; } = timestamp;
+}
+
+public interface IRawKeyboardInputMonitor
+{
+    /// <summary>
+    /// 订阅 Raw Input 键盘事件。首个鼠标或键盘订阅会启动采集，
+    /// 最后一个订阅释放后停止采集。回调在采集线程执行。
+    /// </summary>
+    IDisposable SubscribeKeyboard(EventHandler<RawKeyboardInputEventArgs> handler);
+}

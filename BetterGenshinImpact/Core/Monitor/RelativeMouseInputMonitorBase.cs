@@ -82,7 +82,7 @@ public abstract class RelativeMouseInputMonitorBase(ILogger logger) : IRelativeM
 
     protected abstract void StopCore();
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         bool shouldStop;
         lock (_subscriptionLock)

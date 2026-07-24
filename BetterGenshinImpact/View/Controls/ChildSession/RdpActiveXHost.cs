@@ -35,7 +35,9 @@ internal sealed class RdpActiveXHost : AxHost
                 return 0;
             }
 
-            return Convert.ToInt32(GetComProperty(GetOcx(), "Connected"), CultureInfo.InvariantCulture);
+            return Convert.ToInt32(
+                GetComProperty(GetRequiredOcx(), "Connected"),
+                CultureInfo.InvariantCulture);
         }
     }
 
@@ -46,7 +48,7 @@ internal sealed class RdpActiveXHost : AxHost
             return;
         }
 
-        var client = GetOcx();
+        var client = GetRequiredOcx();
         var width = Math.Clamp(desktopSize.Width, 200, 8192);
         var height = Math.Clamp(desktopSize.Height, 200, 8192);
 
@@ -116,7 +118,7 @@ internal sealed class RdpActiveXHost : AxHost
             return;
         }
 
-        var advancedSettings = GetComProperty(GetOcx(), "AdvancedSettings7")
+        var advancedSettings = GetComProperty(GetRequiredOcx(), "AdvancedSettings7")
             ?? throw new COMException("RDP ActiveX 未返回 AdvancedSettings7。");
         RunComStep("设置显示缩放", () =>
             SetComProperty(advancedSettings, "SmartSizing", enabled));
@@ -126,7 +128,7 @@ internal sealed class RdpActiveXHost : AxHost
     {
         if (ConnectedState != 0)
         {
-            InvokeComMethod(GetOcx(), "Disconnect");
+            InvokeComMethod(GetRequiredOcx(), "Disconnect");
         }
     }
 
@@ -164,7 +166,7 @@ internal sealed class RdpActiveXHost : AxHost
             keyData[index] = CreateRdpScanCode(stroke.Key);
         }
 
-        var nonScriptableClient = (IMsRdpClientNonScriptable)GetOcx();
+        var nonScriptableClient = (IMsRdpClientNonScriptable)GetRequiredOcx();
         nonScriptableClient.SendKeys(
             strokes.Length,
             ref keyUpStates[0],
@@ -175,6 +177,20 @@ internal sealed class RdpActiveXHost : AxHost
     {
         const int extendedScanCodeFlag = 0x0100;
         return key.ScanCode | (key.IsExtended ? extendedScanCodeFlag : 0);
+    }
+
+    private object GetRequiredOcx()
+    {
+        if (!IsHandleCreated)
+        {
+            // WindowsFormsHost 在未连接空白态会被折叠，普通 CreateControl() 会因不可见而跳过创建。
+            // 读取 Handle 会忽略可见性并强制 AxHost 创建底层窗口及 ActiveX 实例。
+            _ = Handle;
+        }
+
+        return GetOcx()
+               ?? throw new InvalidOperationException(
+                   "RDP ActiveX 控件尚未完成初始化，无法访问 COM 实例。");
     }
 
     private static object? GetComProperty(object target, string propertyName)

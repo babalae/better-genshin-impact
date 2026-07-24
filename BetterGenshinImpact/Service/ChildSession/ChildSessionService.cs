@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.DependencyInjection;
+using DrawingRectangle = System.Drawing.Rectangle;
 using DrawingSize = System.Drawing.Size;
 
 namespace BetterGenshinImpact.Service.ChildSession;
@@ -111,6 +112,19 @@ public sealed class ChildSessionService : IDisposable
     {
         return _desktopWindow?.IsVisible == true
                && _desktopWindow.RdpHost.IsInputWindowFocused();
+    }
+
+    public bool TryGetRelativeMouseCaptureBounds(out DrawingRectangle bounds)
+    {
+        bounds = DrawingRectangle.Empty;
+        if (!IsRelativeMouseForwardingAvailable() || _desktopWindow is null)
+        {
+            return false;
+        }
+
+        var rdpHost = _desktopWindow.RdpHost;
+        bounds = rdpHost.RectangleToScreen(rdpHost.ClientRectangle);
+        return bounds.Width > 0 && bounds.Height > 0;
     }
 
     public async Task LaunchExecutableAsync(string executablePath)
