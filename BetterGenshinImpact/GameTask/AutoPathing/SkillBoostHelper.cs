@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -128,7 +128,7 @@ public partial class PathExecutor
     /// <returns>true = 跳过本次通用移动逻辑（continue）；false = 继续执行通用移动逻辑</returns>
     private async Task<bool> ExecuteHurryOnAsync(
         WaypointForTrack waypoint,
-        Waypoint? nextWaypoint,
+        WaypointForTrack? nextWaypoint,
         double distance,
         double? nextDistance,
         bool isPoint,
@@ -902,14 +902,14 @@ public partial class PathExecutor
     /// 计算上一节点→当前节点→下一节点形成的转向夹角（度）。
     /// 使用 GameX/GameY（原神世界坐标）以保证坐标系一致。
     /// </summary>
-    private static double CalculateTurnAngle(WaypointForTrack? prev, WaypointForTrack curr, Waypoint? next)
+    private static double CalculateTurnAngle(WaypointForTrack? prev, WaypointForTrack curr, WaypointForTrack? next)
     {
         if (prev == null || next == null) return 0;
 
         double baX = curr.GameX - prev.GameX;
         double baY = curr.GameY - prev.GameY;
-        double bcX = next.X - curr.GameX;
-        double bcY = next.Y - curr.GameY;
+        double bcX = next.GameX - curr.GameX;
+        double bcY = next.GameY - curr.GameY;
 
         double dot = baX * bcX + baY * bcY;
         double magBA = Math.Sqrt(baX * baX + baY * baY);
@@ -926,7 +926,7 @@ public partial class PathExecutor
     /// <summary>
     /// 检查当前路径转向角是否超过角色的阈值，是则应提前下车。
     /// </summary>
-    private bool IsTurnTooSharp(WaypointForTrack waypoint, Waypoint? nextWaypoint, string avatarName)
+    private bool IsTurnTooSharp(WaypointForTrack waypoint, WaypointForTrack? nextWaypoint, string avatarName)
     {
         if (CurWaypoint.Item1 <= 0) return false;
         var prev = CurWaypoints.Item2[CurWaypoint.Item1 - 1];
@@ -935,7 +935,7 @@ public partial class PathExecutor
         return angle >= threshold;
     }
 
-    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, Waypoint? nextWaypoint, string avatarName)
+    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, WaypointForTrack? nextWaypoint, string avatarName)
     {
         var effectiveStopDist = Math.Min(PartyConfig.ApproachStopDistance, PartyConfig.Distance);
 
