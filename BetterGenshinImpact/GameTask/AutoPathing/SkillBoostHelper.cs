@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -520,15 +520,12 @@ public partial class PathExecutor
                         else if (SpaceAtSecondPlaceExist(state))
                         {
                             Logger.LogInformation("自动赶路：希诺宁接近节点，关闭E技能赶路状态");
-                            for (var retries = 0; retries < 10; retries++)
+                            var retries = 0;
+                            while (SpaceAtSecondPlaceExist(state) && retries < 10)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                 await Delay(100, ct);
-                                var cd = await ReadEskillCdAsync("希诺宁");
-                                if (cd > 0)
-                                {
-                                    break;
-                                }
+                                retries++;
                             }
                         }
                         return false;
