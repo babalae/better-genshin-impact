@@ -699,8 +699,20 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     // 橙色选项
                     foreach (var item in rs)
                     {
-                        var textMat = item.ToImageRegion().SrcMat;
-                        if (IsOrangeOption(textMat))
+                        // 零拷贝视图，像素向 item 所属截图借用；
+                        // 原写法内联取 SrcMat 会直接丢失临时 ImageRegion 的所有权
+                        bool isOrangeOption;
+                        var textRegionView = item.ToImageRegionView();
+                        try
+                        {
+                            isOrangeOption = IsOrangeOption(textRegionView.SrcMat);
+                        }
+                        finally
+                        {
+                            textRegionView.Dispose();
+                        }
+
+                        if (isOrangeOption)
                         {
                             if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
                             {

@@ -472,18 +472,29 @@ public class CombatScenes : IDisposable
             return Avatars[LastActiveAvatarIndex - 1].Name;
         }
 
-        using var imageRegion = region ?? TaskControl.CaptureToRectArea();
-
-        var rectArray = Avatars.Select(t => t.IndexRect).ToArray();
-        int index = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(imageRegion, rectArray, new AvatarActiveCheckContext());
-
-        if (index > 0)
+        // 只释放自己创建的截图，传入的 region 属于调用者
+        var ownsRegion = region is null;
+        var imageRegion = region ?? TaskControl.CaptureToRectArea();
+        try
         {
-            LastActiveAvatarIndex = index;
-            return Avatars[LastActiveAvatarIndex - 1].Name;
-        }
+            var rectArray = Avatars.Select(t => t.IndexRect).ToArray();
+            int index = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(imageRegion, rectArray, new AvatarActiveCheckContext());
 
-        return null;
+            if (index > 0)
+            {
+                LastActiveAvatarIndex = index;
+                return Avatars[LastActiveAvatarIndex - 1].Name;
+            }
+
+            return null;
+        }
+        finally
+        {
+            if (ownsRegion)
+            {
+                imageRegion.Dispose();
+            }
+        }
     }
 
     /// <summary>

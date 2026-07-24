@@ -1126,25 +1126,33 @@ public partial class PathExecutor
 
     private static bool SwimmingConfirm(Region region)
     {
-        var fullRegion = region.ToImageRegion();
-        bool ownRegion = fullRegion != region;
+        // 零拷贝视图，像素向 region 借用，始终由本方法拥有并释放；
+        // PR2 修好 Dispose 派发前不能用 using var，必须显式先子后父释放
+        var fullRegion = region.ToImageRegionView();
         try
         {
-            using var regionMat = fullRegion.DeriveCrop(1819, 1028, 9, 7);
-            using var mask = OpenCvCommonHelper.Threshold(regionMat.SrcMat,
-                new Scalar(242, 223, 39), new Scalar(255, 233, 44));
-            using var labels = new Mat();
-            using var stats = new Mat();
-            using var centroids = new Mat();
+            var regionMat = fullRegion.DeriveCrop(1819, 1028, 9, 7);
+            try
+            {
+                using var mask = OpenCvCommonHelper.Threshold(regionMat.SrcMat,
+                    new Scalar(242, 223, 39), new Scalar(255, 233, 44));
+                using var labels = new Mat();
+                using var stats = new Mat();
+                using var centroids = new Mat();
 
-            var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+                var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                    connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
-            return numLabels > 1;
+                return numLabels > 1;
+            }
+            finally
+            {
+                regionMat.Dispose();
+            }
         }
         finally
         {
-            if (ownRegion) fullRegion.Dispose();
+            fullRegion.Dispose();
         }
     }
 

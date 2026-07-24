@@ -606,35 +606,43 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 while (attempt < retryCount)
                 {
-                    using var image2 = model ? CaptureToRectArea() : image ?? CaptureToRectArea();
+                    // model 为 true 时本方法自己截图并负责释放；否则借用调用者传入的 image，不得释放
+                    var ownsImage2 = model;
+                    var image2 = model ? CaptureToRectArea() : image!;
+                    int numLabels2;
+                    try
+                    {
+                        var skillAra = !skills
+                            ? new Rect(image2.Width * 1688 / 1920, image2.Height * 988 / 1080,
+                                image2.Width * 22 / 1920, image2.Height * 12 / 1080) //E技能区域
 
-                    // var image2 = CaptureToRectArea();
+                            : new Rect(image2.Width * 1809 / 1920, image2.Height * 968 / 1080,
+                                image2.Width * 30 / 1920, image2.Height * 15 / 1080); //Q技能区域
 
-                    var skillAra = !skills
-                        ? new Rect(image2.Width * 1688 / 1920, image2.Height * 988 / 1080,
-                            image2.Width * 22 / 1920, image2.Height * 12 / 1080) //E技能区域
-                        
-                        : new Rect(image2.Width * 1809 / 1920, image2.Height * 968 / 1080,
-                            image2.Width * 30 / 1920, image2.Height * 15 / 1080); //Q技能区域
-                    
-                    using var mask2 = OpenCvCommonHelper.Threshold(
-                        image2.DeriveCrop(skillAra).SrcMat,
-                        bloodLower,
-                        bloodLower
-                    );
+                        using var mask2 = OpenCvCommonHelper.Threshold(
+                            image2.DeriveCrop(skillAra).SrcMat,
+                            bloodLower,
+                            bloodLower
+                        );
 
-                    using var labels2 = new Mat();
-                    using var stats2 = new Mat();
-                    using var centroids2 = new Mat();
+                        using var labels2 = new Mat();
+                        using var stats2 = new Mat();
+                        using var centroids2 = new Mat();
 
-                    int numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2,
-                        connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+                        numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2,
+                            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+                    }
+                    finally
+                    {
+                        if (ownsImage2)
+                        {
+                            image2.Dispose();
+                        }
+                    }
 
-                    if (model) image2.Dispose();
-                    
-                    if (needLog) Logger.LogInformation("技能状态：{guardianAvatar.Name} - {skills} 状态 {text}", 
+                    if (needLog) Logger.LogInformation("技能状态：{guardianAvatar.Name} - {skills} 状态 {text}",
                         guardianAvatar.Name, skills?"Q技能":"E技能", numLabels2 > 1?"冷却中":"就绪");
-                    
+
                     // Logger.LogInformation("技能状态：{numLabels2} 数量", numLabels2);
                     if (numLabels2 > 2)
                     {
@@ -650,10 +658,10 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         {
                             guardianAvatar.ManualSkillCd = 0;
                         }
-                        
+
                         return true;
                     }
-                    
+
                     attempt++;
                    if (retryCount > 1) await Task.Delay(100, ct);
                 }

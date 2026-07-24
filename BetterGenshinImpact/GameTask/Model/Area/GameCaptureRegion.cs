@@ -61,6 +61,13 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
     /// 游戏窗口初始截图大于1080P的统一转换到1080P
     /// </summary>
     /// <returns></returns>
+    /// <remarks>
+    /// 所有权：本方法可能消费 this。<br/>
+    /// Width &lt;= 1920 时直接返回 this；更大时会 Dispose 掉 this 的原始帧并返回一个新区域，
+    /// 此时 this 只作为坐标换算用的 Prev 节点保留（坐标字段是普通 int，不依赖像素）。
+    /// 调用后只允许使用返回值，不得再访问 this 的像素。<br/>
+    /// 异常路径：Resize 失败时 this 仍归调用者所有（不会被释放），中间 Mat 由本方法释放。
+    /// </remarks>
     public ImageRegion DeriveTo1080P()
     {
         if (Width <= 1920)
@@ -71,9 +78,28 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
         var scale = Width / 1920d;
 
         var newMat = new Mat();
-        Cv2.Resize(SrcMat, newMat, new Size(1920, Height / scale));
+        try
+        {
+            Cv2.Resize(SrcMat, newMat, new Size(1920, Height / scale));
+        }
+        catch
+        {
+            // Resize 失败时尚未消费 this，原始帧的所有权仍在调用者手里，只需要清掉本方法自己创建的 Mat
+            newMat.Dispose();
+            throw;
+        }
+
         Dispose();
-        return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
+        try
+        {
+            return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
+        }
+        catch
+        {
+            // 包装对象构造失败时 newMat 的所有权还没转移出去
+            newMat.Dispose();
+            throw;
+        }
         // return new ImageRegion(newMat, 0, 0, this, new TranslationConverter(0, 0));
     }
 

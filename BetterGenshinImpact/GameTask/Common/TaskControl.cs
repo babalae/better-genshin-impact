@@ -308,8 +308,18 @@ public class TaskControl
     /// 自动判断当前运行上下文中截图方式，并选择合适的截图方式返回
     /// </summary>
     /// <returns></returns>
+    /// <remarks>
+    /// 所有权：返回值由【调用者】拥有，调用者必须负责 Dispose，否则整帧彩色 Mat、
+    /// 灰度缓存和 ImageSharp 缓存都会滞留到 GC/终结阶段，BitBlt 后端的 HGlobal 缓冲也无法复用。<br/>
+    /// 把已有区域传给辅助方法时属于借用，被调用方不得 Dispose 传入的区域。<br/>
+    /// 注意：在 <see cref="Model.Area.ImageRegion"/> 的 Dispose 派发修复合入前，
+    /// <c>using var</c> 会命中空的 <see cref="Model.Area.Region.Dispose"/>，
+    /// 必须以 <see cref="Model.Area.ImageRegion"/> 静态类型在 finally 中直接调用 Dispose()。
+    /// </remarks>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
+        // 这里的 CaptureContent 只作为构造帮手，截图所有权直接随返回值转移给调用者，
+        // 因此不能 Dispose 这个临时 content。
         var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
         var content = new CaptureContent(image, 0, 0);
         return content.CaptureRectArea;
