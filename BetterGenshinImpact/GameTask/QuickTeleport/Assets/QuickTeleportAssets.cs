@@ -32,6 +32,7 @@ public sealed class QuickTeleportAssets
             BuildMapChooseIconRo("SubSpaceWaypoint.png", captureSize),
             BuildMapChooseIconRo("NodKraiMeetingPoint.png", captureSize),
             BuildMapChooseIconRo("TabletOfTona.png", captureSize),
+            BuildMapChooseIconRo("MarkTransPointMoonTower.png", captureSize),
         ];
         MapChooseIconRoList = mapChooseIconRoList.AsReadOnly();
         MapChooseIconGreyMatList = mapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat()).AsReadOnly();
