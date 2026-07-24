@@ -22,6 +22,9 @@ public enum MapTypes
 
     [Description("空之神殿")]
     TempleOfSpace,
+
+    [Description("霜月")]
+    MoonCanon,
 }
 public static class MapTypesExtensions
 {
