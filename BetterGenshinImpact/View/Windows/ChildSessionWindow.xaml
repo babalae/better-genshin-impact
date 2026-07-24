@@ -159,7 +159,7 @@
             <wfi:WindowsFormsHost x:Name="RdpFormsHost"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch"
-                                  Visibility="{Binding IsRdpConnected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                  Visibility="{Binding IsConnectionPromptVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                 <b:Interaction.Behaviors>
                     <behavior:WindowAspectRatioBehavior AspectRatio="1.7777777777777777"
                                                         IsEnabled="{Binding KeepAspectRatio}" />
@@ -181,7 +181,7 @@
             </wfi:WindowsFormsHost>
 
             <Grid Margin="24"
-                  Visibility="{Binding IsRdpDisconnected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                  Visibility="{Binding IsConnectionPromptVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Border MaxWidth="620"
                         Padding="36,32"
                         HorizontalAlignment="Center"

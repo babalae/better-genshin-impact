@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,6 +18,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private const string DesktopHelpUrl = "https://www.bettergi.com/doc.html";
 
     private readonly ChildSessionService _childSessionService;
+    private bool _startRequested;
 
     [ObservableProperty]
     private Brush _connectionStatusBrush = Brushes.Red;
@@ -40,6 +42,9 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isRdpConnected;
 
     [ObservableProperty]
+    private bool _isConnectionPromptVisible = true;
+
+    [ObservableProperty]
     private bool _isTopmost;
 
     [ObservableProperty]
@@ -56,8 +61,6 @@ public partial class ChildSessionWindowViewModel : ViewModel
     public string TopmostButtonToolTip => IsTopmost ? "取消置顶" : "置顶";
 
     public bool HasChildSession => _childSessionService.ChildSessionId is not null;
-
-    public bool IsRdpDisconnected => !IsRdpConnected;
 
     public ChildSessionWindowViewModel(ChildSessionService childSessionService)
     {
@@ -76,15 +79,22 @@ public partial class ChildSessionWindowViewModel : ViewModel
         OnPropertyChanged(nameof(TopmostButtonToolTip));
     }
 
-    partial void OnIsRdpConnectedChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsRdpDisconnected));
-    }
-
     [RelayCommand]
-    private Task StartAsync()
+    private async Task StartAsync()
     {
-        return ExecuteAsync(_childSessionService.StartAsync);
+        _startRequested = true;
+        IsConnectionPromptVisible = false;
+
+        try
+        {
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            await ExecuteAsync(_childSessionService.StartAsync);
+        }
+        finally
+        {
+            _startRequested = false;
+            UpdateConnectionStatus();
+        }
     }
 
     [RelayCommand]
@@ -244,6 +254,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         var connectedState = _childSessionService.ConnectedState;
         var childSessionId = _childSessionService.ChildSessionId;
         IsRdpConnected = connectedState == 1;
+        IsConnectionPromptVisible = connectedState == 0 && !_startRequested;
 
         if (IsRdpConnected)
         {
