@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using AutoFightParam = BetterGenshinImpact.GameTask.AutoFight.AutoFightParam;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -20,6 +21,24 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// </summary>
 public static class AvatarRecognition
 {
+    /// <summary>
+    /// 当前战斗的 AutoFightParam（由 AutoFightTask/AutoFightJsonTask 在 Start 开头设置），
+    /// 用于让 <see cref="GetVisualRecognitionConfig"/> 优先读取逐队伍配置而非全局配置。
+    /// AsyncLocal 会沿 async 调用链自动传递，包括 <see cref="Task.Run"/> 创建的后台任务。
+    /// </summary>
+    private static readonly AsyncLocal<AutoFightParam?> _currentAutoFightParam = new();
+
+    /// <summary>
+    /// 设置当前战斗参数，后续的视觉配置读取将优先使用此参数中的值而非全局配置。
+    /// 应在 Start 开头调用，并在 Start 的 finally 中调用 <see cref="ClearCurrentAutoFightParam"/> 清理。
+    /// </summary>
+    public static void SetCurrentAutoFightParam(AutoFightParam? param) => _currentAutoFightParam.Value = param;
+
+    /// <summary>
+    /// 清除当前战斗参数，后续视觉配置回退到全局配置。
+    /// </summary>
+    public static void ClearCurrentAutoFightParam() => _currentAutoFightParam.Value = null;
+
     /// <summary>
     /// 持续索敌跳过标记：当某角色进行独占视角操作（如重击索敌）时设为 true，
     /// 持续索敌循环将跳过本帧，避免两者争夺鼠标控制权。
@@ -156,6 +175,12 @@ public static class AvatarRecognition
     /// </summary>
     public static (int TargetingDetectionInterval, bool DrawRecognitionResults, double LockLostWaitTime, DamageNumberRecognitionMode DamageNumberRecognitionMode) GetVisualRecognitionConfig()
     {
+        var param = _currentAutoFightParam.Value;
+        if (param != null)
+        {
+            return (param.TargetingDetectionInterval, param.DrawRecognitionResults, param.LockLostWaitTime, param.DamageNumberRecognitionMode);
+        }
+
         var config = TaskContext.Instance().Config.AutoFightConfig;
         return (config.TargetingDetectionInterval, config.DrawRecognitionResults, config.LockLostWaitTime, config.DamageNumberRecognitionMode);
     }

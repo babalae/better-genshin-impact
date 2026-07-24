@@ -252,8 +252,10 @@ public class AutoFightJsonTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-
-        LogScreenResolution();
+        AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
+        try
+        {
+            LogScreenResolution();
         var combatScenes = GetCombatScenesWithRetry();
 
         // 收集当前队伍角色名
@@ -511,6 +513,11 @@ public class AutoFightJsonTask : ISoloTask
 
         // 战后拾取（完全参照 AutoFightTask）
         await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
+    }
+        finally
+        {
+            AvatarRecognition.ClearCurrentAutoFightParam();
+        }
     }
 
     private bool _fightEndFlag;

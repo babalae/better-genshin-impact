@@ -240,8 +240,10 @@ public class AutoFightTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-
-        LogScreenResolution();
+        AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
+        try
+        {
+            LogScreenResolution();
         var combatScenes = GetCombatScenesWithRetry();
         /*var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
@@ -827,6 +829,11 @@ public class AutoFightTask : ISoloTask
         {
             // 执行扫描掉落物光柱并靠近的功能
             await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
+        }
+    }
+        finally
+        {
+            AvatarRecognition.ClearCurrentAutoFightParam();
         }
     }
 
