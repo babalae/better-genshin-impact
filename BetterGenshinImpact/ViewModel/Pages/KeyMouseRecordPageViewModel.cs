@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -89,7 +89,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         if (!IsRecording)
         {
             IsRecording = true;
-            await GlobalKeyMouseRecord.Instance.StartRecord();
+            IsRecording = await GlobalKeyMouseRecord.Instance.StartRecord();
         }
     }
 

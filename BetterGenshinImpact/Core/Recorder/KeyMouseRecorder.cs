@@ -1,9 +1,9 @@
-﻿using BetterGenshinImpact.Core.Recorder.Model;
+using BetterGenshinImpact.Core.Recorder.Model;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Map;
 using Gma.System.MouseKeyHook;
-using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -179,7 +179,7 @@ public class KeyMouseRecorder
         });
     }
 
-    public void MouseMoveBy(MouseState state, uint time)
+    public void MouseMoveBy(RelativeMouseMoveEventArgs e)
     {
         
         int? cao = null;
@@ -196,9 +196,9 @@ public class KeyMouseRecorder
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
-            MouseX = state.X,
-            MouseY = state.Y,
-            Time = time - 5 - StartTime,
+            MouseX = e.DeltaX,
+            MouseY = e.DeltaY,
+            Time = e.Timestamp - StartTime,
             CameraOrientation = cao,
         });
     }

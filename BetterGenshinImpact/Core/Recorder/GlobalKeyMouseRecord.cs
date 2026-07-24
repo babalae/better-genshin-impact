@@ -1,11 +1,11 @@
-﻿using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.View.Windows;
 using Gma.System.MouseKeyHook;
 using Microsoft.Extensions.Logging;
-using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,7 +23,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private readonly Dictionary<Keys, bool> _keyDownState = [];
 
-    private DirectInputMonitor? _directInputMonitor;
+    private IDisposable? _relativeMouseSubscription;
 
     private readonly System.Timers.Timer _timer = new();
 
@@ -37,44 +37,78 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _timer.Interval = 50; // ms
     }
 
-    public async Task StartRecord()
+    public async Task<bool> StartRecord(
+        RelativeMouseInputType inputType = RelativeMouseInputType.DirectInput)
     {
         if (!TaskContext.Instance().IsInitialized)
         {
             Toast.Warning("请先在启动页，启动截图器再使用本功能");
-            return;
+            return false;
         }
 
         if (Status != KeyMouseRecorderStatus.Stop)
         {
             Toast.Warning("已经在录制状态，请不要重复启动录制功能");
-            return;
+            return false;
         }
 
         Status = KeyMouseRecorderStatus.Start;
-
-        SystemControl.ActivateWindow();
-
-        _logger.LogInformation("录制：{Text}", "实时任务已暂停");
-        _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
-
-        for (var i = 3; i >= 1; i--)
+        var taskTriggerStopped = false;
+        try
         {
-            _logger.LogInformation("{Sec}秒后启动录制...", i);
-            await Task.Delay(1000);
+            SystemControl.ActivateWindow();
+
+            _logger.LogInformation("录制：{Text}", "实时任务已暂停");
+            _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
+
+            for (var i = 3; i >= 1; i--)
+            {
+                _logger.LogInformation("{Sec}秒后启动录制...", i);
+                await Task.Delay(1000);
+            }
+
+            TaskTriggerDispatcher.Instance().StopTimer();
+            taskTriggerStopped = true;
+
+            _recorder = new KeyMouseRecorder();
+            var monitorFactory = App.GetService<IRelativeMouseInputMonitorFactory>()
+                                 ?? throw new InvalidOperationException("相对鼠标捕获工厂未注册");
+            _relativeMouseSubscription = monitorFactory
+                .Get(inputType)
+                .Subscribe(RelativeMouseMoved);
+
+            _timer.Start();
+            Status = KeyMouseRecorderStatus.Recording;
+
+            _logger.LogInformation("录制：已启动，相对鼠标捕获方式：{InputType}", inputType);
+            return true;
         }
+        catch (Exception ex)
+        {
+            _timer.Stop();
+            try
+            {
+                _relativeMouseSubscription?.Dispose();
+            }
+            catch (Exception disposeException)
+            {
+                _logger.LogWarning(disposeException, "清理相对鼠标捕获订阅失败");
+            }
+            _relativeMouseSubscription = null;
+            _recorder = null;
 
-        TaskTriggerDispatcher.Instance().StopTimer();
+            if (taskTriggerStopped)
+            {
+                TaskTriggerDispatcher.Instance().StartTimer();
+            }
 
-        _timer.Start();
-
-        _recorder = new KeyMouseRecorder();
-        _directInputMonitor = new DirectInputMonitor();
-        _directInputMonitor.Start();
-
-        Status = KeyMouseRecorderStatus.Recording;
-
-        _logger.LogInformation("录制：{Text}", "已启动");
+            Status = KeyMouseRecorderStatus.Stop;
+            _logger.LogError(ex, "启动键鼠录制失败，相对鼠标捕获方式：{InputType}", inputType);
+            await ThemedMessageBox.ErrorAsync(
+                $"启动键鼠录制失败：{ex.Message}",
+                "键鼠录制启动失败");
+            return false;
+        }
     }
 
     public string StopRecord()
@@ -84,21 +118,24 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             throw new InvalidOperationException("未处于录制中状态，无法停止");
         }
 
-        var macro = _recorder?.ToJsonMacro() ?? string.Empty;
-        _recorder = null;
-        _directInputMonitor?.Stop();
-        _directInputMonitor?.Dispose();
-        _directInputMonitor = null;
-
         _timer.Stop();
 
-        _logger.LogInformation("录制：{Text}", "结束录制");
+        var recorder = _recorder;
+        _recorder = null;
+        var relativeMouseSubscription = _relativeMouseSubscription;
+        _relativeMouseSubscription = null;
 
-        TaskTriggerDispatcher.Instance().StartTimer();
-
-        Status = KeyMouseRecorderStatus.Stop;
-
-        return macro;
+        try
+        {
+            relativeMouseSubscription?.Dispose();
+            return recorder?.ToJsonMacro() ?? string.Empty;
+        }
+        finally
+        {
+            _logger.LogInformation("录制：{Text}", "结束录制");
+            TaskTriggerDispatcher.Instance().StartTimer();
+            Status = KeyMouseRecorderStatus.Stop;
+        }
     }
 
     public void Tick(object? sender, EventArgs e)
@@ -185,14 +222,14 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _recorder?.MouseWheel(e);
     }
 
-    public void GlobalHookMouseMoveBy(MouseState state, uint time)
+    private void RelativeMouseMoved(object? sender, RelativeMouseMoveEventArgs e)
     {
-        if (state is { X: 0, Y: 0 } || !_isInMainUi)
+        if (e is { DeltaX: 0, DeltaY: 0 } || !_isInMainUi)
         {
             return;
         }
-        // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
-        _recorder?.MouseMoveBy(state, time);
+        // Debug.WriteLine($"MouseMoveBy: {e.DeltaX}, {e.DeltaY}");
+        _recorder?.MouseMoveBy(e);
     }
 }
 

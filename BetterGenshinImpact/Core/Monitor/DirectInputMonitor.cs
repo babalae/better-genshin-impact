@@ -1,55 +1,125 @@
-﻿using BetterGenshinImpact.Core.Recorder;
+using Microsoft.Extensions.Logging;
 using SharpDX.DirectInput;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Monitor;
 
-public class DirectInputMonitor : IDisposable
+public sealed class DirectInputMonitor(ILogger<DirectInputMonitor> logger) : RelativeMouseInputMonitorBase(logger)
 {
-    private bool _isRunning = true;
+    private const int Interval = 5;
+    private readonly object _captureLock = new();
+    private CaptureContext? _captureContext;
 
-    private readonly Mouse _mouse;
-    
-    public static int Interval = 5;
-
-    public DirectInputMonitor()
+    protected override void StartCore()
     {
         var directInput = new DirectInput();
-        _mouse = new Mouse(directInput);
-        _mouse.SetCooperativeLevel(IntPtr.Zero, CooperativeLevel.Background | CooperativeLevel.NonExclusive);
-    }
-
-    public MouseState GetMouseState()
-    {
-        _mouse.Acquire();
-        return _mouse.GetCurrentState();
-    }
-
-    public void Start()
-    {
-        Task.Run(() =>
+        Mouse? mouse = null;
+        try
         {
-            while (_isRunning)
+            mouse = new Mouse(directInput);
+            mouse.SetCooperativeLevel(
+                IntPtr.Zero,
+                CooperativeLevel.Background | CooperativeLevel.NonExclusive);
+            mouse.Acquire();
+
+            var context = new CaptureContext(directInput, mouse);
+            lock (_captureLock)
             {
-                _mouse.Acquire();
-                MouseState state = _mouse.GetCurrentState();
-                // Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
-                GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveBy(state, Kernel32.GetTickCount());
-                Thread.Sleep(Interval); // 10ms, equivalent to CLOCKS_PER_SEC/100
+                _captureContext = context;
             }
-        });
+
+            context.CaptureTask = Task.Run(() => Capture(context));
+        }
+        catch
+        {
+            mouse?.Dispose();
+            directInput.Dispose();
+            throw;
+        }
     }
 
-    public void Stop()
+    protected override void StopCore()
     {
-        _isRunning = false;
+        CaptureContext? context;
+        lock (_captureLock)
+        {
+            context = _captureContext;
+            _captureContext = null;
+        }
+
+        if (context == null)
+        {
+            return;
+        }
+
+        context.CancellationTokenSource.Cancel();
+
+        var captureTask = context.CaptureTask;
+        if (captureTask != null &&
+            Environment.CurrentManagedThreadId != context.CaptureThreadId)
+        {
+            try
+            {
+                captureTask.Wait();
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.All(x => x is OperationCanceledException))
+            {
+                // 正常取消
+            }
+        }
     }
 
-    public void Dispose()
+    private void Capture(CaptureContext context)
     {
-        _mouse.Dispose();
+        context.CaptureThreadId = Environment.CurrentManagedThreadId;
+        try
+        {
+            while (!context.CancellationTokenSource.IsCancellationRequested)
+            {
+                context.Mouse.Acquire();
+                MouseState state = context.Mouse.GetCurrentState();
+                // Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
+                if (state is not { X: 0, Y: 0 })
+                {
+                    var timestamp = unchecked(Kernel32.GetTickCount() - (uint)Interval);
+                    Publish(new RelativeMouseMoveEventArgs(state.X, state.Y, timestamp));
+                }
+
+                if (context.CancellationTokenSource.Token.WaitHandle.WaitOne(Interval))
+                {
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!context.CancellationTokenSource.IsCancellationRequested)
+            {
+                Logger.LogError(ex, "DirectInput 相对鼠标捕获异常终止");
+            }
+        }
+        finally
+        {
+            context.Mouse.Dispose();
+            context.DirectInput.Dispose();
+            context.CancellationTokenSource.Dispose();
+        }
+    }
+
+    private sealed class CaptureContext(DirectInput directInput, Mouse mouse)
+    {
+        public DirectInput DirectInput { get; } = directInput;
+
+        public Mouse Mouse { get; } = mouse;
+
+        public CancellationTokenSource CancellationTokenSource { get; } = new();
+
+        public Task? CaptureTask { get; set; }
+
+        public int CaptureThreadId { get; set; }
     }
 }
