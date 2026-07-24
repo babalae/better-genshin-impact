@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -609,13 +609,14 @@ public partial class PathExecutor
                         {
                             Simulation.ReleaseAllKey();
                             state.FlyingState = false;
-                            if (DashAtSecondPlaceExist())
+                            var retries = 0;
+                            while (DashAtSecondPlaceExist() && retries < 10)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
                                 await Delay(50, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                await Delay(150, ct);
+                                retries++;
                             }
+                            await Delay(150, ct);
                             await SafeLanding(ct);
                             Logger.LogInformation("自动赶路：桑多涅接近节点");
                             return false;
