@@ -8,11 +8,18 @@ namespace BetterGenshinImpact.Helpers;
 /// </summary>
 public class CommandLineOptions
 {
+    public const string ChildSessionArgument = "--childSession";
+
     private static CommandLineOptions? _instance;
 
     public static CommandLineOptions Instance => _instance ??= Parse(Environment.GetCommandLineArgs());
 
     public CommandLineAction Action { get; }
+
+    /// <summary>
+    /// 当前 BetterGI 是否运行在 Child Session 内。
+    /// </summary>
+    public bool IsChildSession { get; }
 
     /// <summary>
     /// startOneDragon 时可选的配置名称（第 3 个参数）
@@ -37,43 +44,61 @@ public class CommandLineOptions
         or CommandLineAction.StartGroups
         or CommandLineAction.TaskProgress;
 
-    private CommandLineOptions(CommandLineAction action, string? oneDragonConfigName = null, string[]? groupNames = null)
+    private CommandLineOptions(
+        CommandLineAction action,
+        string? oneDragonConfigName = null,
+        string[]? groupNames = null,
+        bool isChildSession = false)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
         GroupNames = groupNames ?? [];
+        IsChildSession = isChildSession;
     }
 
     internal static CommandLineOptions Parse(string[] args)
     {
-        if (args.Length <= 1)
-            return new CommandLineOptions(CommandLineAction.None);
+        var launchArgs = args.Skip(1).Select(x => x.Trim()).ToArray();
+        var isChildSession = launchArgs.Any(x =>
+            x.Equals(ChildSessionArgument, StringComparison.OrdinalIgnoreCase));
+        var commandArgs = launchArgs.Where(x =>
+            !x.Equals(ChildSessionArgument, StringComparison.OrdinalIgnoreCase)).ToArray();
 
-        var arg1 = args[1].Trim();
-        var extra = args.Skip(2).Select(x => x.Trim()).ToArray();
+        if (commandArgs.Length == 0)
+            return new CommandLineOptions(CommandLineAction.None, isChildSession: isChildSession);
+
+        var arg1 = commandArgs[0];
+        var extra = commandArgs.Skip(1).ToArray();
 
         if (arg1.Contains("startOneDragon", StringComparison.OrdinalIgnoreCase))
         {
             return new CommandLineOptions(CommandLineAction.StartOneDragon,
-                oneDragonConfigName: extra.Length > 0 ? extra[0] : null);
+                oneDragonConfigName: extra.Length > 0 ? extra[0] : null,
+                isChildSession: isChildSession);
         }
 
         if (arg1.Equals("--startGroups", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(CommandLineAction.StartGroups, groupNames: extra);
+            return new CommandLineOptions(
+                CommandLineAction.StartGroups,
+                groupNames: extra,
+                isChildSession: isChildSession);
         }
 
         if (arg1.Equals("--TaskProgress", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(CommandLineAction.TaskProgress, groupNames: extra);
+            return new CommandLineOptions(
+                CommandLineAction.TaskProgress,
+                groupNames: extra,
+                isChildSession: isChildSession);
         }
 
         if (arg1.Contains("start", StringComparison.OrdinalIgnoreCase))
         {
-            return new CommandLineOptions(CommandLineAction.Start);
+            return new CommandLineOptions(CommandLineAction.Start, isChildSession: isChildSession);
         }
 
-        return new CommandLineOptions(CommandLineAction.None);
+        return new CommandLineOptions(CommandLineAction.None, isChildSession: isChildSession);
     }
 }
 

@@ -83,7 +83,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     public AllConfig Config { get; set; }
 
-    public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
+    public MainWindowViewModel(
+        INavigationService navigationService,
+        IConfigService configService)
     {
         _navigationService = navigationService;
         _configService = configService;

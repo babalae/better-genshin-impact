@@ -289,6 +289,11 @@
                     <ContextMenu.DataContext>
                         <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
                     </ContextMenu.DataContext>
+                    <ui:MenuItem Command="{Binding OpenChildSessionWindowCommand}"
+                                  Header="桌面分身"
+                                  Icon="{ui:SymbolIcon DesktopCursor24}"
+                                  Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Separator Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding CheckUpdateCommand}"
                                  Header="检查更新"
                                  Icon="{ui:SymbolIcon ArrowAutofitUp24}" />

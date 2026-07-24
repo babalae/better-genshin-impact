@@ -69,6 +69,36 @@
             </Grid>
         </Border>
 
+        <ui:Card Margin="0,12,0,0"
+                 Padding="16"
+                 Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon Grid.Column="0"
+                               Margin="0,0,14,0"
+                               FontSize="28"
+                               Symbol="DesktopCursor24" />
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center">
+                    <ui:TextBlock FontTypography="BodyStrong"
+                                  Text="BetterGI 桌面分身" />
+                    <ui:TextBlock Margin="0,3,16,0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在独立的 1920×1080 桌面分身中运行 BetterGI"
+                                  TextWrapping="Wrap" />
+                </StackPanel>
+                <ui:Button Grid.Column="2"
+                           VerticalAlignment="Center"
+                           Command="{Binding OpenChildSessionWindowCommand}"
+                           Content="打开桌面分身"
+                           Icon="{ui:SymbolIcon Open24}" />
+            </Grid>
+        </ui:Card>
+
         <!--  更好的原神，启动！  -->
         <ui:CardExpander Margin="0,12,0,12"
                          ContentPadding="0"

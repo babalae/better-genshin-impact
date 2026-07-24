@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Markdown;
@@ -61,6 +62,8 @@ public partial class HomePageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
 
+    public bool IsChildSessionEntryVisible => !CommandLineOptions.Instance.IsChildSession;
+
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
@@ -76,10 +79,15 @@ public partial class HomePageViewModel : ViewModel
 
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
+    private readonly ChildSessionService _childSessionService;
 
-    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public HomePageViewModel(
+        IConfigService configService,
+        TaskTriggerDispatcher taskTriggerDispatcher,
+        ChildSessionService childSessionService)
     {
         _taskDispatcher = taskTriggerDispatcher;
+        _childSessionService = childSessionService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
@@ -120,6 +128,12 @@ public partial class HomePageViewModel : ViewModel
     }
 
     private bool _autoRun = true;
+
+    [RelayCommand]
+    private void OpenChildSessionWindow()
+    {
+        _childSessionService.ShowWindow();
+    }
 
     [RelayCommand]
     private void OnLoaded()

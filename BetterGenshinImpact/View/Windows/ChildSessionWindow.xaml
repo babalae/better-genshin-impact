@@ -1,0 +1,181 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ChildSessionWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+                 xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+                 Title="BetterGI 桌面分身"
+                 Width="1280"
+                 Height="752"
+                 MinWidth="415"
+                 MinHeight="90"
+                 d:DataContext="{d:DesignInstance Type=viewModel:ChildSessionWindowViewModel}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 ResizeMode="CanResize"
+                 Topmost="{Binding IsTopmost, Mode=OneWay}"
+                 WindowBackdropType="Auto"
+                 WindowStartupLocation="CenterScreen"
+                 mc:Ignorable="d">
+    <Grid Background="Black">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Background="{DynamicResource ApplicationBackgroundBrush}"
+                     Height="32"
+                     VerticalContentAlignment="Top">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+            </ui:TitleBar.Icon>
+            <ui:TitleBar.Header>
+                <StackPanel VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <b:Interaction.Behaviors>
+                        <behavior:WindowDragBehavior />
+                    </b:Interaction.Behaviors>
+                    <Ellipse Width="9"
+                             Height="9"
+                             Margin="0,0,8,0"
+                             Fill="{Binding ConnectionStatusBrush}"
+                             ToolTip="{Binding ConnectionStatusToolTip}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Text="BetterGI 桌面分身" />
+                </StackPanel>
+            </ui:TitleBar.Header>
+            <ui:TitleBar.TrailingContent>
+                <StackPanel VerticalAlignment="Top"
+                            Orientation="Horizontal">
+                    <b:Interaction.Behaviors>
+                        <behavior:ResponsiveTitleBarBehavior />
+                    </b:Interaction.Behaviors>
+                    <ui:Button Width="80"
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="1"
+                               Command="{Binding StartCommand}"
+                               Content="启动"
+                               CornerRadius="0"
+                               Icon="{ui:SymbolIcon Play24}"
+                               ToolTip="启动并连接 BetterGI 桌面分身" />
+                    <ui:Button Width="80"
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="2"
+                               Command="{Binding HideCommand}"
+                               Content="隐藏"
+                               CornerRadius="0"
+                               Icon="{ui:SymbolIcon EyeOff24}"
+                               ToolTip="隐藏窗口并保持 RDP 连接" />
+                    <ui:Button Width="110"
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="3"
+                               Command="{Binding SwitchWindowCommand}"
+                               Content="切换窗口"
+                               CornerRadius="0"
+                               Icon="{ui:SymbolIcon ArrowSwap24}"
+                               ToolTip="向桌面分身发送 Win+Tab" />
+                    <ui:DropDownButton Width="120"
+                                       Height="32"
+                                       Background="Transparent"
+                                       BorderBrush="Transparent"
+                                       Content="控制中心"
+                                       CornerRadius="0"
+                                       Icon="{ui:SymbolIcon AppsList24}">
+                        <ui:DropDownButton.Flyout>
+                            <ContextMenu>
+                                <ui:MenuItem Header="运行 BetterGI"
+                                             Command="{Binding LaunchBetterGiCommand}" />
+                                <Separator />
+                                <ui:MenuItem Header="桌面分辨率">
+                                    <ui:MenuItem Header="1920 × 1080"
+                                                 Command="{Binding SelectDefaultResolutionCommand}"
+                                                 IsCheckable="True"
+                                                 IsChecked="{Binding IsDefaultResolutionSelected, Mode=OneWay}" />
+                                </ui:MenuItem>
+                                <ui:MenuItem Header="窗口">
+                                    <ui:MenuItem Header="自适应"
+                                                 Command="{Binding UseAdaptiveCommand}"
+                                                 IsCheckable="True"
+                                                 IsChecked="{Binding IsAdaptive, Mode=OneWay}" />
+                                    <ui:MenuItem Header="1 : 1"
+                                                 Command="{Binding UseOneToOneCommand}"
+                                                 IsCheckable="True"
+                                                 IsChecked="{Binding IsOneToOne, Mode=OneWay}" />
+                                    <Separator />
+                                    <ui:MenuItem Header="保持宽高比"
+                                                 Command="{Binding ToggleKeepAspectRatioCommand}"
+                                                 IsCheckable="True"
+                                                 IsChecked="{Binding KeepAspectRatio, Mode=OneWay}" />
+                                </ui:MenuItem>
+                                <ui:MenuItem Header="快捷键">
+                                    <ui:MenuItem Header="发送 Win+D 显示桌面"
+                                                 Command="{Binding ShowDesktopCommand}" />
+                                    <ui:MenuItem Header="发送 Win+Tab 切换窗口"
+                                                 Command="{Binding ShowTaskViewCommand}" />
+                                </ui:MenuItem>
+                                <ui:MenuItem Header="更多">
+                                    <ui:MenuItem Header="以管理员权限启动…"
+                                                 Command="{Binding LaunchExecutableCommand}"
+                                                 Icon="{ui:SymbolIcon Shield24}" />
+                                </ui:MenuItem>
+                            </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                    </ui:DropDownButton>
+                        <ui:Button Width="40"
+                                   Height="32"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding ToggleTopmostCommand}"
+                                   CornerRadius="0"
+                                   Icon="{ui:SymbolIcon Pin24}"
+                                   ToolTip="{Binding TopmostButtonToolTip}"
+                                   Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                        <ui:Button Width="40"
+                                   Height="32"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding ToggleTopmostCommand}"
+                                   CornerRadius="0"
+                                   Icon="{ui:SymbolIcon PinOff24}"
+                                   ToolTip="{Binding TopmostButtonToolTip}"
+                                   Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </StackPanel>
+            </ui:TitleBar.TrailingContent>
+        </ui:TitleBar>
+
+        <wfi:WindowsFormsHost x:Name="RdpFormsHost"
+                              Grid.Row="1"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch">
+            <b:Interaction.Behaviors>
+                <behavior:WindowAspectRatioBehavior AspectRatio="1.7777777777777777"
+                                                    IsEnabled="{Binding KeepAspectRatio}" />
+            </b:Interaction.Behaviors>
+            <wfi:WindowsFormsHost.Style>
+                <Style TargetType="{x:Type wfi:WindowsFormsHost}">
+                    <!-- 为父窗口保留命中测试区域，避免 RDP 的子 HWND 截获窗口边缘鼠标消息 -->
+                    <Setter Property="Margin"
+                            Value="3,0,3,3" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
+                                     Value="Maximized">
+                            <Setter Property="Margin"
+                                    Value="0" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </wfi:WindowsFormsHost.Style>
+        </wfi:WindowsFormsHost>
+    </Grid>
+</ui:FluentWindow>
