@@ -55,7 +55,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         CheckBeforeBurst = autoFightConfig.FinishDetectConfig.CheckBeforeBurst;
         IsFirstCheck = autoFightConfig.FinishDetectConfig.IsFirstCheck;
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
-        SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
         EnableCombatTargeting = autoFightConfig.EnableCombatTargeting;
         TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
         DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
@@ -173,7 +173,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
-
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
 
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
