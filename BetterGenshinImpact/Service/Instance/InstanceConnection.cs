@@ -176,10 +176,23 @@ internal sealed class InstanceConnection : IAsyncDisposable
                 if (frame.Value.PayloadType == InstanceIpcPayloadType.RelativeMouseBatch)
                 {
                     var batch = InstanceIpcProtocol.ReadRelativeMouseBatch(frame.Value);
-                    _owner.ReceiveRelativeMouseBatch(
+                    var handled = _owner.ReceiveRelativeMouseBatch(
                         this,
                         batch.FirstSequence,
                         batch.Samples);
+                    var lastSequence = checked(
+                        batch.FirstSequence + (ulong)batch.Samples.Length - 1);
+                    await WriteRelativeMouseResultAsync(
+                        new RelativeMouseResult(lastSequence, handled),
+                        linkedCancellationTokenSource.Token).ConfigureAwait(false);
+                    continue;
+                }
+
+                if (frame.Value.PayloadType == InstanceIpcPayloadType.RelativeMouseResult)
+                {
+                    _owner.ReceiveRelativeMouseResult(
+                        this,
+                        InstanceIpcProtocol.ReadRelativeMouseResult(frame.Value));
                     continue;
                 }
 
@@ -274,6 +287,24 @@ internal sealed class InstanceConnection : IAsyncDisposable
         catch (Exception exception) when (exception is IOException or ObjectDisposedException)
         {
             _logger.LogDebug(exception, "相对鼠标命名管道发送循环已结束");
+        }
+    }
+
+    private async Task WriteRelativeMouseResultAsync(
+        RelativeMouseResult result,
+        CancellationToken cancellationToken)
+    {
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await InstanceIpcProtocol.WriteRelativeMouseResultAsync(
+                _stream,
+                result,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeLock.Release();
         }
     }
 

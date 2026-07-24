@@ -92,7 +92,8 @@ public sealed class InstanceIpcEnvelope
 internal enum InstanceIpcPayloadType : byte
 {
     Utf8Json = 1,
-    RelativeMouseBatch = 2
+    RelativeMouseBatch = 2,
+    RelativeMouseResult = 3
 }
 
 internal readonly record struct InstanceIpcFrame(
@@ -104,6 +105,10 @@ internal readonly record struct RelativeMouseSample(
     int DeltaY,
     DateTime Timestamp);
 
+internal readonly record struct RelativeMouseResult(
+    ulong LastSequence,
+    bool Handled);
+
 internal static class InstanceIpcProtocol
 {
     internal const int Version = 1;
@@ -111,6 +116,7 @@ internal static class InstanceIpcProtocol
     private const int FrameHeaderLength = sizeof(uint) + sizeof(byte);
     private const int RelativeMouseBatchHeaderLength = sizeof(ushort) + sizeof(ulong) + sizeof(long);
     private const int RelativeMouseSampleLength = sizeof(int) * 3;
+    private const int RelativeMouseResultLength = sizeof(ulong) + sizeof(byte);
 
     internal static JsonSerializer Serializer { get; } = JsonSerializer.Create(new JsonSerializerSettings
     {
@@ -234,6 +240,40 @@ internal static class InstanceIpcProtocol
         }
 
         return (firstSequence, samples);
+    }
+
+    internal static async ValueTask WriteRelativeMouseResultAsync(
+        Stream stream,
+        RelativeMouseResult result,
+        CancellationToken cancellationToken)
+    {
+        var payload = new byte[RelativeMouseResultLength];
+        BinaryPrimitives.WriteUInt64LittleEndian(payload, result.LastSequence);
+        payload[sizeof(ulong)] = result.Handled ? (byte)1 : (byte)0;
+
+        await WriteFrameAsync(
+            stream,
+            InstanceIpcPayloadType.RelativeMouseResult,
+            payload,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static RelativeMouseResult ReadRelativeMouseResult(InstanceIpcFrame frame)
+    {
+        if (frame.PayloadType != InstanceIpcPayloadType.RelativeMouseResult)
+        {
+            throw new InvalidDataException($"预期相对鼠标处理结果帧，实际为 {frame.PayloadType}。");
+        }
+
+        var span = frame.Payload.AsSpan();
+        if (span.Length != RelativeMouseResultLength || span[sizeof(ulong)] > 1)
+        {
+            throw new InvalidDataException("相对鼠标处理结果帧无效。");
+        }
+
+        return new RelativeMouseResult(
+            BinaryPrimitives.ReadUInt64LittleEndian(span),
+            span[sizeof(ulong)] == 1);
     }
 
     internal static async ValueTask<InstanceIpcFrame?> ReadFrameAsync(

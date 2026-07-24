@@ -108,4 +108,23 @@ public class InstanceIpcProtocolTests
         Assert.Equal(42UL, result.FirstSequence);
         Assert.Equal(samples, result.Samples);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RelativeMouseResult_ShouldRoundTripHandledState(bool handled)
+    {
+        var expected = new RelativeMouseResult(57, handled);
+        await using var stream = new MemoryStream();
+
+        await InstanceIpcProtocol.WriteRelativeMouseResultAsync(
+            stream,
+            expected,
+            CancellationToken.None);
+        stream.Position = 0;
+        var frame = await InstanceIpcProtocol.ReadFrameAsync(stream, CancellationToken.None);
+        var result = InstanceIpcProtocol.ReadRelativeMouseResult(frame!.Value);
+
+        Assert.Equal(expected, result);
+    }
 }
