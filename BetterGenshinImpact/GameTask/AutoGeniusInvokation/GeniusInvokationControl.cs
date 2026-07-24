@@ -382,23 +382,11 @@ public class GeniusInvokationControl
         var dictionary = new Dictionary<string, List<Point>>();
         foreach (var kvp in imgSubDictionary)
         {
-            var list = new List<Point>();
-
-            while (true)
+            var matches = MatchTemplateHelper.MatchOnePicForOnePic(srcMat, kvp.Value, null, threshold);
+            var list = new List<Point>(matches.Count);
+            foreach (var match in matches)
             {
-                var point = MatchTemplateHelper.MatchTemplate(srcMat, kvp.Value, TemplateMatchModes.CCoeffNormed, null,
-                    threshold);
-                if (point != new Point())
-                {
-                    // 把结果给遮掩掉，避免重复识别
-                    Cv2.Rectangle(srcMat, point, new Point(point.X + kvp.Value.Width, point.Y + kvp.Value.Height),
-                        Scalar.Black, -1);
-                    list.Add(point);
-                }
-                else
-                {
-                    break;
-                }
+                list.Add(match.Location);
             }
 
             dictionary.Add(kvp.Key, list);
@@ -1109,7 +1097,7 @@ public class GeniusInvokationControl
 
         // 识别角色能量
         var energyPointList =
-            MatchTemplateHelper.MatchTemplateMulti(characterMat.Clone(), _assets.CharacterEnergyOnMat, 0.8);
+            MatchTemplateHelper.MatchTemplateMulti(characterMat, _assets.CharacterEnergyOnMat, 0.8);
         character.EnergyByRecognition = energyPointList.Count;
 
         character.Hp = hp;

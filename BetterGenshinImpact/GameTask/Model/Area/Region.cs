@@ -52,6 +52,11 @@ public class Region : IDisposable
     /// </summary>
     public string Text { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 模板匹配得分，值越大表示匹配程度越高；非模板匹配结果为 null。
+    /// </summary>
+    public double? MatchScore { get; set; }
+
     public Region()
     {
     }

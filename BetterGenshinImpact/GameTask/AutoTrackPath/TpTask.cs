@@ -2531,7 +2531,7 @@ public class TpTask
             ? new HashSet<string>(targetIconTypes, StringComparer.Ordinal)
             : null;
         var shouldFilterByTargetType = filterByTargetType && targetIconTypeSet != null;
-        using var searchGrey = new Mat(imageRegion.CacheGreyMat, searchRect).Clone();
+        using var searchGrey = new Mat(imageRegion.CacheGreyMat, searchRect);
         for (var i = 0; i < _assets.MapChooseIconGreyMatList.Count; i++)
         {
             var template = _assets.MapChooseIconGreyMatList[i];
@@ -2549,8 +2549,7 @@ public class TpTask
             }
 
             var threshold = Math.Min(_assets.MapChooseIconRoList[i].Threshold, NearbyMapIconTemplateThreshold);
-            using var templateSearchGrey = searchGrey.Clone();
-            var iconRects = MatchTemplateHelper.MatchOnePicForOnePic(templateSearchGrey, template, null, threshold);
+            var iconRects = MatchTemplateHelper.MatchOnePicForOnePic(searchGrey, template, null, threshold);
             foreach (var relativeIconRect in iconRects)
             {
                 var rect = new Rect(
@@ -3146,9 +3145,9 @@ public class TpTask
         var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
         const double threshold = 0.65;
 
+        using var mapChooseIconRoi = imageRegion.CacheGreyMat[_assets.MapChooseIconRoi];
         for (var i = 0; i < _assets.MapChooseIconGreyMatList.Count; i++)
         {
-            using var mapChooseIconRoi = imageRegion.CacheGreyMat[_assets.MapChooseIconRoi].Clone();
             var iconFileName = GetMapChooseIconFileName(_assets.MapChooseIconRoList[i]);
             var iconType = GetMapChooseIconType(iconFileName);
             var iconRects = MatchTemplateHelper.MatchOnePicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList[i], null, threshold);
