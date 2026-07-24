@@ -130,6 +130,39 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger) : RelativeM
         return deltaX != 0 || deltaY != 0;
     }
 
+    internal static bool TryGetRelativeMovementFromBuffer(
+        nint rawInputBuffer,
+        uint rawInputSize,
+        out int deltaX,
+        out int deltaY)
+    {
+        deltaX = 0;
+        deltaY = 0;
+
+        var headerSize = Marshal.SizeOf<User32.RAWINPUTHEADER>();
+        var mouseSize = Marshal.SizeOf<RawMouseData>();
+        if (rawInputSize < headerSize + mouseSize)
+        {
+            return false;
+        }
+
+        var header = Marshal.PtrToStructure<User32.RAWINPUTHEADER>(rawInputBuffer);
+        if (header.dwType != User32.RIM_TYPE.RIM_TYPEMOUSE)
+        {
+            return false;
+        }
+
+        var mouse = Marshal.PtrToStructure<RawMouseData>(IntPtr.Add(rawInputBuffer, headerSize));
+        if ((mouse.Flags & (ushort)User32.MouseState.MOUSE_MOVE_ABSOLUTE) != 0)
+        {
+            return false;
+        }
+
+        deltaX = mouse.LastX;
+        deltaY = mouse.LastY;
+        return deltaX != 0 || deltaY != 0;
+    }
+
     private void RunMessageLoop(RawInputThreadContext context)
     {
         try
@@ -309,8 +342,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger) : RelativeM
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
 
-            var rawInput = Marshal.PtrToStructure<User32.RAWINPUT>(buffer);
-            if (!TryGetRelativeMovement(rawInput, out int deltaX, out int deltaY))
+            if (!TryGetRelativeMovementFromBuffer(buffer, readSize, out int deltaX, out int deltaY))
             {
                 return;
             }
@@ -339,5 +371,25 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger) : RelativeM
         public bool InitializationSucceeded { get; set; }
 
         public bool Registered { get; set; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly struct RawMouseData
+    {
+        public ushort Flags { get; init; }
+
+        public ushort Reserved { get; init; }
+
+        public ushort ButtonFlags { get; init; }
+
+        public short ButtonData { get; init; }
+
+        public uint RawButtons { get; init; }
+
+        public int LastX { get; init; }
+
+        public int LastY { get; init; }
+
+        public uint ExtraInformation { get; init; }
     }
 }

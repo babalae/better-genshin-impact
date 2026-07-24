@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Monitor;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Runtime.InteropServices;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.MonitorTests;
@@ -200,6 +201,56 @@ public class RelativeMouseInputMonitorTests
             out _));
     }
 
+    [Fact]
+    public void RawInputBufferParser_ShouldReturnSignedRelativeMovement()
+    {
+        var buffer = CreateMouseRawInputBuffer(
+            User32.RIM_TYPE.RIM_TYPEMOUSE,
+            User32.MouseState.MOUSE_MOVE_RELATIVE,
+            -1,
+            2);
+
+        try
+        {
+            var result = RawInputMonitor.TryGetRelativeMovementFromBuffer(
+                buffer.Pointer,
+                buffer.Size,
+                out int deltaX,
+                out int deltaY);
+
+            Assert.True(result);
+            Assert.Equal(-1, deltaX);
+            Assert.Equal(2, deltaY);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer.Pointer);
+        }
+    }
+
+    [Fact]
+    public void RawInputBufferParser_ShouldIgnoreAbsoluteMovement()
+    {
+        var buffer = CreateMouseRawInputBuffer(
+            User32.RIM_TYPE.RIM_TYPEMOUSE,
+            User32.MouseState.MOUSE_MOVE_ABSOLUTE,
+            100,
+            200);
+
+        try
+        {
+            Assert.False(RawInputMonitor.TryGetRelativeMovementFromBuffer(
+                buffer.Pointer,
+                buffer.Size,
+                out _,
+                out _));
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer.Pointer);
+        }
+    }
+
     private static User32.RAWINPUT CreateMouseRawInput(
         User32.MouseState mouseState,
         int deltaX,
@@ -223,6 +274,38 @@ public class RelativeMouseInputMonitorTests
                 }
             }
         };
+    }
+
+    private static RawInputBuffer CreateMouseRawInputBuffer(
+        User32.RIM_TYPE type,
+        User32.MouseState mouseState,
+        int deltaX,
+        int deltaY)
+    {
+        var headerSize = Marshal.SizeOf<User32.RAWINPUTHEADER>();
+        var mouseSize = Marshal.SizeOf<TestRawMouseData>();
+        var totalSize = checked((uint)(headerSize + mouseSize));
+        var buffer = Marshal.AllocHGlobal((int)totalSize);
+
+        Marshal.StructureToPtr(
+            new User32.RAWINPUTHEADER
+            {
+                dwType = type
+            },
+            buffer,
+            false);
+
+        Marshal.StructureToPtr(
+            new TestRawMouseData
+            {
+                Flags = (ushort)mouseState,
+                LastX = deltaX,
+                LastY = deltaY
+            },
+            IntPtr.Add(buffer, headerSize),
+            false);
+
+        return new RawInputBuffer(buffer, totalSize);
     }
 
     private sealed class TestRelativeMouseInputMonitor()
@@ -266,5 +349,27 @@ public class RelativeMouseInputMonitorTests
                 AllowStop.Wait();
             }
         }
+    }
+
+    private readonly record struct RawInputBuffer(IntPtr Pointer, uint Size);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly struct TestRawMouseData
+    {
+        public ushort Flags { get; init; }
+
+        public ushort Reserved { get; init; }
+
+        public ushort ButtonFlags { get; init; }
+
+        public short ButtonData { get; init; }
+
+        public uint RawButtons { get; init; }
+
+        public int LastX { get; init; }
+
+        public int LastY { get; init; }
+
+        public uint ExtraInformation { get; init; }
     }
 }
