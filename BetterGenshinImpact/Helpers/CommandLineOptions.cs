@@ -44,7 +44,7 @@ public class CommandLineOptions
         GroupNames = groupNames ?? [];
     }
 
-    internal static CommandLineOptions Parse(string[] args)
+    public static CommandLineOptions Parse(string[] args)
     {
         if (args.Length <= 1)
             return new CommandLineOptions(CommandLineAction.None);
@@ -74,6 +74,14 @@ public class CommandLineOptions
         }
 
         return new CommandLineOptions(CommandLineAction.None);
+    }
+
+    public static CommandLineOptions ParseActivationArgs(string[] args)
+    {
+        var commandLineArgs = new string[args.Length + 1];
+        commandLineArgs[0] = "BetterGI.exe";
+        Array.Copy(args, 0, commandLineArgs, 1, args.Length);
+        return Parse(commandLineArgs);
     }
 }
 

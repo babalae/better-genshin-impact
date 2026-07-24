@@ -4,12 +4,15 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,6 +25,39 @@ internal static class RuntimeHelper
     public static bool IsElevated { get; } = GetElevated();
     public static bool IsDebuggerAttached => Debugger.IsAttached;
     public static bool IsDesignMode { get; } = GetDesignMode();
+    private static readonly object SingleInstanceActivationLock = new();
+    private static readonly Queue<string[]> PendingSingleInstanceActivationArgs = new();
+    private static EventHandler<SingleInstanceActivatedEventArgs>? _singleInstanceActivated;
+
+    public static event EventHandler<SingleInstanceActivatedEventArgs>? SingleInstanceActivated
+    {
+        add
+        {
+            List<string[]> pendingArgs = [];
+
+            lock (SingleInstanceActivationLock)
+            {
+                _singleInstanceActivated += value;
+
+                while (PendingSingleInstanceActivationArgs.Count > 0)
+                {
+                    pendingArgs.Add(PendingSingleInstanceActivationArgs.Dequeue());
+                }
+            }
+
+            foreach (string[] args in pendingArgs)
+            {
+                value?.Invoke(null, new SingleInstanceActivatedEventArgs(args));
+            }
+        }
+        remove
+        {
+            lock (SingleInstanceActivationLock)
+            {
+                _singleInstanceActivated -= value;
+            }
+        }
+    }
 
     public static bool IsDebug =>
 #if DEBUG
@@ -123,6 +159,12 @@ internal static class RuntimeHelper
         try
         {
             handle = EventWaitHandle.OpenExisting(instanceName);
+            string[] activationArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+            if (!TrySendSingleInstanceActivationArgsWithRetry(instanceName, activationArgs))
+            {
+                Debug.WriteLine("Failed to forward single instance activation args.");
+            }
+
             handle.Set();
             callback?.Invoke(false);
             Environment.Exit(0xFFFF);
@@ -131,6 +173,7 @@ internal static class RuntimeHelper
         {
             callback?.Invoke(true);
             handle = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName);
+            StartSingleInstanceActivationPipe(instanceName);
         }
 
         _ = Task.Factory.StartNew(() =>
@@ -147,6 +190,102 @@ internal static class RuntimeHelper
         }, TaskCreationOptions.LongRunning).ConfigureAwait(false);
     }
 
+    private static string GetSingleInstanceActivationPipeName(string instanceName)
+    {
+        return $"{instanceName}.Activation";
+    }
+
+    private static bool TrySendSingleInstanceActivationArgsWithRetry(string instanceName, string[] args)
+    {
+        const int maxAttempts = 10;
+        const int retryDelayMilliseconds = 100;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            if (TrySendSingleInstanceActivationArgs(instanceName, args))
+            {
+                return true;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                Thread.Sleep(retryDelayMilliseconds);
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TrySendSingleInstanceActivationArgs(string instanceName, string[] args)
+    {
+        try
+        {
+            using NamedPipeClientStream pipeClient = new(".", GetSingleInstanceActivationPipeName(instanceName), PipeDirection.Out);
+            pipeClient.Connect(300);
+
+            using StreamWriter writer = new(pipeClient, new UTF8Encoding(false))
+            {
+                AutoFlush = true
+            };
+            writer.Write(JsonSerializer.Serialize(args));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return false;
+        }
+    }
+
+    private static void StartSingleInstanceActivationPipe(string instanceName)
+    {
+        string pipeName = GetSingleInstanceActivationPipeName(instanceName);
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                try
+                {
+                    using NamedPipeServerStream pipeServer = new(
+                        pipeName,
+                        PipeDirection.In,
+                        1,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
+
+                    await pipeServer.WaitForConnectionAsync().ConfigureAwait(false);
+
+                    using StreamReader reader = new(pipeServer, Encoding.UTF8);
+                    string payload = await reader.ReadToEndAsync().ConfigureAwait(false);
+                    string[] args = JsonSerializer.Deserialize<string[]>(payload) ?? [];
+                    PublishSingleInstanceActivation(args);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            }
+        });
+    }
+
+    private static void PublishSingleInstanceActivation(string[] args)
+    {
+        EventHandler<SingleInstanceActivatedEventArgs>? handler;
+
+        lock (SingleInstanceActivationLock)
+        {
+            handler = _singleInstanceActivated;
+
+            if (handler == null)
+            {
+                PendingSingleInstanceActivationArgs.Enqueue(args);
+                return;
+            }
+        }
+
+        handler.Invoke(null, new SingleInstanceActivatedEventArgs(args));
+    }
+
     public static void CheckIntegration()
     {
         if (!Directory.Exists(Global.Absolute("Assets")) || !Directory.Exists(Global.Absolute("GameTask")))
@@ -160,6 +299,11 @@ internal static class RuntimeHelper
             Environment.Exit(0xFFFF);
         }
     }
+}
+
+internal sealed class SingleInstanceActivatedEventArgs(string[] args) : EventArgs
+{
+    public string[] Args { get; } = args;
 }
 
 internal static class RuntimeExtension

@@ -503,7 +503,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private bool _autoRun = true;
     
     [RelayCommand]
-    private void OnLoaded()
+    private async Task OnLoaded()
     {
         // 组件首次加载时运行一次。
         if (!_autoRun)
@@ -511,34 +511,44 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
         _autoRun = false;
-        //
-        var cmdOptions = CommandLineOptions.Instance;
-        if (cmdOptions.Action == CommandLineAction.StartOneDragon)
-        {
-            // 通过命令行参数启动一条龙。
-            if (cmdOptions.OneDragonConfigName != null)
-            {
-                // 从命令行参数中提取一条龙配置名称。
-                _logger.LogInformation($"参数指定的一条龙配置：{cmdOptions.OneDragonConfigName}");
-                var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
-                    string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
-                if (argsOneDragonConfig != null)
-                {
-                    // 设定配置，配置下拉框会选定。
-                    SelectedConfig = argsOneDragonConfig;
-                    // 调用选定更新函数。
-                    OnConfigDropDownChanged();
-                }
-                else
-                {
-                    _logger.LogWarning("未找到，请检查。");
-                }
-            }
-            // 异步执行一条龙
-            Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
-            OnOneKeyExecute();
-        }
+
+        await StartFromCommandLineOptionsAsync(CommandLineOptions.Instance);
     }
+    public async Task StartFromCommandLineOptionsAsync(CommandLineOptions cmdOptions)
+    {
+        if (cmdOptions.Action != CommandLineAction.StartOneDragon)
+        {
+            return;
+        }
+
+        if (cmdOptions.OneDragonConfigName != null)
+        {
+            _logger.LogInformation("Command line one dragon config: {Name}", cmdOptions.OneDragonConfigName);
+            var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
+                string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
+            if (argsOneDragonConfig != null)
+            {
+                SelectedConfig = argsOneDragonConfig;
+                OnConfigDropDownChanged();
+            }
+            else
+            {
+                _logger.LogWarning("Command line one dragon config not found: {Name}", cmdOptions.OneDragonConfigName);
+                Toast.Warning($"未找到一条龙配置：{cmdOptions.OneDragonConfigName}");
+                return;
+            }
+        }
+
+        if (SelectedConfig == null)
+        {
+            _logger.LogWarning("No one dragon config is loaded for command line activation");
+            return;
+        }
+
+        Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
+        await OnOneKeyExecute();
+    }
+
 
     [RelayCommand]
     public async Task OnOneKeyExecute()
