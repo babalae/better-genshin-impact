@@ -463,8 +463,10 @@ public static class AvatarRecognition
         finally
         {
             // 退出时释放所有按键、点按中键回正视角、清除叠加层
+            // 注意：清理阶段使用 CancellationToken.None，因为 ct 可能在到此之前已被取消，
+            // 若使用已取消的 token 会导致 Task.Delay 抛出异常，跳过中键复位和叠加层清理。
             Simulation.ReleaseAllKey();
-            await Task.Delay(50, ct);
+            await Task.Delay(50, CancellationToken.None);
             Simulation.SendInput.Mouse.MiddleButtonClick();
             VisionContext.Instance().DrawContent.RemoveRect("ContinuousTargeting");
         }
