@@ -190,11 +190,13 @@ public class ImageRegion : Region
                         return new Region();
                     }
 
-                    var p = MatchTemplateHelper.MatchTemplate(roi, effectiveTemplate, ro.TemplateMatchMode, effectiveMask, ro.Threshold);
-                    if (p != new Point())
+                    var match = MatchTemplateHelper.FindBestMatch(roi, effectiveTemplate, ro.TemplateMatchMode, effectiveMask, ro.Threshold);
+                    if (match is { } bestMatch)
                     {
-                        var newRa = Derive(p.X + effectiveRegionOfInterest.X, p.Y + effectiveRegionOfInterest.Y, effectiveTemplate.Width,
+                        var newRa = Derive(bestMatch.Location.X + effectiveRegionOfInterest.X,
+                            bestMatch.Location.Y + effectiveRegionOfInterest.Y, effectiveTemplate.Width,
                             effectiveTemplate.Height);
+                        newRa.MatchScore = bestMatch.Score;
                         if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                         {
                             newRa.DrawSelf(ro.Name, ro.DrawOnWindowPen);
@@ -472,11 +474,20 @@ public class ImageRegion : Region
                         return [];
                     }
 
-                    var rectList =
-                        MatchTemplateHelper.MatchOnePicForOnePic(roi, effectiveTemplate, ro.TemplateMatchMode, effectiveMask, ro.Threshold);
-                    if (rectList.Count > 0)
+                    var matches = MatchTemplateHelper.FindMatches(roi, effectiveTemplate, ro.TemplateMatchMode,
+                        effectiveMask, ro.Threshold, -1);
+                    if (matches.Count > 0)
                     {
-                        var resRaList = rectList.Select(r => this.Derive(r + effectiveRegionOfInterest.Location)).ToList();
+                        var resRaList = matches.Select(match =>
+                        {
+                            var region = Derive(new Rect(
+                                match.Location.X + effectiveRegionOfInterest.X,
+                                match.Location.Y + effectiveRegionOfInterest.Y,
+                                effectiveTemplate.Width,
+                                effectiveTemplate.Height));
+                            region.MatchScore = match.Score;
+                            return region;
+                        }).ToList();
 
                         if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                         {

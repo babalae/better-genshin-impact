@@ -23,41 +23,7 @@ public class MatchTemplateHelper
     /// <returns>左上角的标点,由于(0,0)点作为未匹配的结果，所以不能做完全相同的模板匹配</returns>
     public static Point MatchTemplate(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat = null, double threshold = 0.8)
     {
-        try
-        {
-            using var result = new Mat();
-            Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat!);
-
-            if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.CCoeff or TemplateMatchModes.CCorr)
-            {
-                Cv2.Normalize(result, result, 0, 1, NormTypes.MinMax);
-            }
-
-            Cv2.MinMaxLoc(result, out var minValue, out var maxValue, out var minLoc, out var maxLoc);
-
-            if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.SqDiffNormed)
-            {
-                if (minValue <= 1 - threshold)
-                {
-                    return minLoc;
-                }
-            }
-            else
-            {
-                if (maxValue >= threshold)
-                {
-                    return maxLoc;
-                }
-            }
-
-            return default;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex.Message);
-            _logger.LogDebug(ex, ex.Message);
-            return default;
-        }
+        return FindBestMatch(srcMat, dstMat, matchMode, maskMat, threshold)?.Location ?? default;
     }
 
     /// <summary>
@@ -170,7 +136,21 @@ public class MatchTemplateHelper
         return list;
     }
 
-    private readonly record struct TemplateMatchResult(Point Location, double Score);
+    internal readonly record struct TemplateMatchResult(Point Location, double Score);
+
+    /// <summary>
+    ///     返回源图中的最佳模板匹配，并保留匹配得分。
+    /// </summary>
+    internal static TemplateMatchResult? FindBestMatch(
+        Mat srcMat,
+        Mat template,
+        TemplateMatchModes matchMode,
+        Mat? mask,
+        double threshold)
+    {
+        var matches = FindMatches(srcMat, template, matchMode, mask, threshold, 1);
+        return matches.Count == 0 ? null : matches[0];
+    }
 
     /// <summary>
     ///     在源图中匹配指定模板，从响应矩阵中按分数顺序提取候选，并通过 NMS 去除重复结果。
@@ -182,7 +162,7 @@ public class MatchTemplateHelper
     /// <param name="threshold">匹配阈值，值越大筛选越严格。</param>
     /// <param name="maxCount">最大结果数；小于 0 时根据源图与模板面积自动估算。</param>
     /// <returns>按匹配质量从优到劣排列的模板左上角坐标及分数。</returns>
-    private static List<TemplateMatchResult> FindMatches(
+    internal static List<TemplateMatchResult> FindMatches(
         Mat srcMat,
         Mat template,
         TemplateMatchModes matchMode,
@@ -245,14 +225,16 @@ public class MatchTemplateHelper
                     break;
                 }
 
-                var score = isLowerBetter ? minScore : maxScore;
-                if (double.IsNaN(score))
+                var rawScore = isLowerBetter ? minScore : maxScore;
+                if (double.IsNaN(rawScore))
                 {
                     // 忽略异常分数并移除该候选，避免下一轮重复选中。
                     candidateMask.Set(location.Y, location.X, (byte)0);
                     continue;
                 }
 
+                // 对外统一为分数越高匹配越好，平方差模式需反转原始分数方向。
+                var score = isLowerBetter ? 1 - rawScore : rawScore;
                 matches.Add(new TemplateMatchResult(location, score));
 
                 // 抑制与当前结果 IoU 过高的邻近候选，避免同一目标被重复返回。
