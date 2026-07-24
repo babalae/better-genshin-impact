@@ -135,23 +135,7 @@ public class ImageRegion : Region
             Mat? ownedRoiView = null;
             try
             {
-                Mat roi;
-                if (ro.Use3Channels)
-                {
-                    ownedRoi = new Mat();
-                    Cv2.CvtColor(SrcMat, ownedRoi, ColorConversionCodes.BGRA2BGR);
-                    roi = ownedRoi;
-                }
-                else if (ro.UseBinaryMatch)
-                {
-                    ownedRoi = new Mat();
-                    Cv2.Threshold(CacheGreyMat, ownedRoi, ro.BinaryThreshold, 255, ThresholdTypes.Binary);
-                    roi = ownedRoi;
-                }
-                else
-                {
-                    roi = CacheGreyMat;
-                }
+                var roi = GetTemplateMatchSource(ro, out ownedRoi);
 
                 if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var referenceScale))
                 {
@@ -256,14 +240,7 @@ public class ImageRegion : Region
 
             var result = OcrFactory.Paddle.OcrResult(roi);
             var text = StringUtils.RemoveAllSpace(result.Text);
-            // 替换可能出错的文本
-            foreach (var entry in ro.ReplaceDictionary)
-            {
-                foreach (var replaceStr in entry.Value)
-                {
-                    text = text.Replace(replaceStr, entry.Key);
-                }
-            }
+            text = ApplyTextReplacements(text, ro.ReplaceDictionary);
 
             int successContainCount = 0, successRegexCount = 0;
             bool successOneContain = false;
@@ -360,6 +337,7 @@ public class ImageRegion : Region
 
             var result = OcrFactory.Paddle.OcrResult(roi);
             var text = StringUtils.RemoveAllSpace(result.Text);
+            text = ApplyTextReplacements(text, ro.ReplaceDictionary);
 
             if (!string.IsNullOrEmpty(text))
             {
@@ -436,17 +414,7 @@ public class ImageRegion : Region
             Mat? ownedRoiView = null;
             try
             {
-                Mat roi;
-                if (ro.Use3Channels)
-                {
-                    ownedRoi = new Mat();
-                    Cv2.CvtColor(SrcMat, ownedRoi, ColorConversionCodes.BGRA2BGR);
-                    roi = ownedRoi;
-                }
-                else
-                {
-                    roi = CacheGreyMat;
-                }
+                var roi = GetTemplateMatchSource(ro, out ownedRoi);
 
                 if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var referenceScale))
                 {
@@ -475,7 +443,7 @@ public class ImageRegion : Region
                     }
 
                     var matches = MatchTemplateHelper.FindMatches(roi, effectiveTemplate, ro.TemplateMatchMode,
-                        effectiveMask, ro.Threshold, -1);
+                        effectiveMask, ro.Threshold, ro.MaxMatchCount);
                     if (matches.Count > 0)
                     {
                         var resRaList = matches.Select(match =>
@@ -549,14 +517,7 @@ public class ImageRegion : Region
                 var resRaList = result.Regions.Select(r =>
                 {
                     var newRa = this.Derive(r.Rect.BoundingRect() + effectiveRegionOfInterest.Location);
-                    newRa.Text = r.Text;
-                    foreach (var entry in ro.ReplaceDictionary)
-                    {
-                        foreach (var replaceStr in entry.Value)
-                        {
-                            newRa.Text = newRa.Text.Replace(replaceStr, entry.Key);
-                        }
-                    }
+                    newRa.Text = ApplyTextReplacements(r.Text, ro.ReplaceDictionary);
                     return newRa;
                 }).ToList();
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
@@ -586,6 +547,39 @@ public class ImageRegion : Region
         {
             throw new Exception($"RectArea多目标识别不支持的识别类型{ro.RecognitionType}");
         }
+    }
+
+    private Mat GetTemplateMatchSource(RecognitionObject ro, out Mat? ownedSource)
+    {
+        ownedSource = null;
+        if (ro.Use3Channels)
+        {
+            ownedSource = new Mat();
+            Cv2.CvtColor(SrcMat, ownedSource, ColorConversionCodes.BGRA2BGR);
+            return ownedSource;
+        }
+
+        if (ro.UseBinaryMatch)
+        {
+            ownedSource = new Mat();
+            Cv2.Threshold(CacheGreyMat, ownedSource, ro.BinaryThreshold, 255, ThresholdTypes.Binary);
+            return ownedSource;
+        }
+
+        return CacheGreyMat;
+    }
+
+    internal static string ApplyTextReplacements(string text, IReadOnlyDictionary<string, string[]> replacements)
+    {
+        foreach (var entry in replacements)
+        {
+            foreach (var replaceText in entry.Value)
+            {
+                text = text.Replace(replaceText, entry.Key);
+            }
+        }
+
+        return text;
     }
 
     public new void Dispose()
