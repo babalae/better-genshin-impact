@@ -512,9 +512,10 @@ public class AutoFightTask : ISoloTask
         FightStatusFlag = true;
 
         // 启动持续索敌循环（异步后台运行，与战斗任务并发）
+        Task? targetingTask = null;
         if (_taskParam.EnableCombatTargeting)
         {
-            _ = Task.Run(async () =>
+            targetingTask = Task.Run(async () =>
             {
                 try
                 {
@@ -529,6 +530,14 @@ public class AutoFightTask : ISoloTask
         }
 
         await fightTask;
+
+        // 战斗结束后、战后动作前，停止并等待索敌循环完成清理（ReleaseAllKey / MiddleButtonClick），
+        // 避免其 finally 在拾取/切人过程中释放按键，干扰万叶E吸怪等操作
+        if (targetingTask != null)
+        {
+            await cts2.CancelAsync();
+            try { await targetingTask; } catch (OperationCanceledException) { }
+        }
 
         try
         {
