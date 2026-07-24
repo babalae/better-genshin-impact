@@ -865,12 +865,13 @@ public class Avatar
     /// </summary>
     public void Charge(int ms = 0)
     {
-        if (AvatarSpecialAction.ExecuteSpecializedAction(this, "Charge", Name, new ActionArgs(Ms: ms))) return;
-
+        // 默认重击持续 1 秒；必须在特化分派前归一化，否则特化 handler 收到 ms=0 会异常
         if (ms == 0)
         {
             ms = 1000;
         }
+
+        if (AvatarSpecialAction.ExecuteSpecializedAction(this, "Charge", Name, new ActionArgs(Ms: ms))) return;
 
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
         Sleep(ms);
