@@ -57,6 +57,11 @@ internal sealed class RdpActiveXHost : AxHost
         SetComProperty(client, "ConnectingText", "正在创建 BetterGI 桌面分身...");
         SetComProperty(client, "DisconnectedText", "BetterGI 桌面分身已断开");
 
+        var securedSettings = GetComProperty(client, "SecuredSettings2")
+            ?? throw new COMException("RDP ActiveX 未返回 SecuredSettings2。");
+        RunComStep("将系统组合键发送到桌面分身", () =>
+            SetComProperty(securedSettings, "KeyboardHookMode", 1));
+
         var advancedSettings = GetComProperty(client, "AdvancedSettings7")
             ?? throw new COMException("RDP ActiveX 未返回 AdvancedSettings7。");
         RunComStep("启用 CredSSP", () =>
