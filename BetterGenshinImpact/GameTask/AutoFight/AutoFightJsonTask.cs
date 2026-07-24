@@ -471,9 +471,6 @@ public class AutoFightJsonTask : ISoloTask
 
         await fightTask;
 
-        // 战斗结束，取消所有后台任务（持续索敌循环等）
-        await cts2.CancelAsync();
-
         try
         {
             // 基于经验值检测结果的拾取判断
