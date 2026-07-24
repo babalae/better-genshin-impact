@@ -437,7 +437,10 @@ public static class AvatarRecognition
         catch (OperationCanceledException) { }
         finally
         {
-            // 退出时清除叠加层
+            // 退出时释放所有按键、点按中键回正视角、清除叠加层
+            Simulation.ReleaseAllKey();
+            await Task.Delay(50, ct);
+            Simulation.SendInput.Mouse.MiddleButtonClick();
             VisionContext.Instance().DrawContent.RemoveRect("ContinuousTargeting");
         }
     }
