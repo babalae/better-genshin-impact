@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recorder.Model;
+using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
@@ -49,7 +49,7 @@ public class KeyMouseMacroPlayer
     public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)
     {
         WorkingArea = PrimaryScreen.WorkingArea;
-        var startTime = Kernel32.GetTickCount();
+        var startTime = DateTime.UtcNow;
         foreach (var e in macroEvents)
         {
             if (ct.IsCancellationRequested)
@@ -57,14 +57,14 @@ public class KeyMouseMacroPlayer
                 return;
             }
 
-            var timeToWait = e.Time - (Kernel32.GetTickCount() - startTime);
+            var timeToWait = e.Time - (DateTime.UtcNow - startTime).TotalMilliseconds;
             if (timeToWait < 0)
             {
                 TaskControl.Logger.LogDebug("无法原速重放事件{Event}，落后{TimeToWait}ms", e.Type.ToString(), (-timeToWait).ToString("F0"));
             }
             else
             {
-                await Task.Delay((int)timeToWait, ct);
+                await Task.Delay(TimeSpan.FromMilliseconds(timeToWait), ct);
             }
 
             switch (e.Type)

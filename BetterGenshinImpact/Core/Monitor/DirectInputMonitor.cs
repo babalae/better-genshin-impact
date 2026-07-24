@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Monitor;
 
@@ -85,7 +84,7 @@ public sealed class DirectInputMonitor(ILogger<DirectInputMonitor> logger) : Rel
                 // Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
                 if (state is not { X: 0, Y: 0 })
                 {
-                    var timestamp = unchecked(Kernel32.GetTickCount() - (uint)Interval);
+                    var timestamp = DateTime.UtcNow.AddMilliseconds(-Interval);
                     Publish(new RelativeMouseMoveEventArgs(state.X, state.Y, timestamp));
                 }
 

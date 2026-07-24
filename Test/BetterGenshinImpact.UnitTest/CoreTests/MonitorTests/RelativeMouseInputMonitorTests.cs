@@ -242,7 +242,7 @@ public class RelativeMouseInputMonitorTests
 
         public void Emit(int deltaX, int deltaY)
         {
-            Publish(new RelativeMouseMoveEventArgs(deltaX, deltaY, 1));
+            Publish(new RelativeMouseMoveEventArgs(deltaX, deltaY, DateTime.UtcNow));
         }
 
         protected override void StartCore()

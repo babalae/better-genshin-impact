@@ -315,7 +315,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger) : RelativeM
                 return;
             }
 
-            var timestamp = unchecked((uint)User32.GetMessageTime());
+            var timestamp = DateTime.UtcNow;
             Publish(new RelativeMouseMoveEventArgs(deltaX, deltaY, timestamp));
         }
         finally

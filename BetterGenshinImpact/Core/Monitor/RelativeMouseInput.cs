@@ -8,13 +8,13 @@ public enum RelativeMouseInputType
     RawInput
 }
 
-public sealed class RelativeMouseMoveEventArgs(int deltaX, int deltaY, uint timestamp) : EventArgs
+public sealed class RelativeMouseMoveEventArgs(int deltaX, int deltaY, DateTime timestamp) : EventArgs
 {
     public int DeltaX { get; } = deltaX;
 
     public int DeltaY { get; } = deltaY;
 
-    public uint Timestamp { get; } = timestamp;
+    public DateTime Timestamp { get; } = timestamp;
 }
 
 public interface IRelativeMouseInputMonitor

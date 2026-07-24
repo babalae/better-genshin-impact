@@ -152,7 +152,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         ra.Dispose();
     }
 
-    public void GlobalHookKeyDown(KeyEventArgs e, uint time)
+    public void GlobalHookKeyDown(KeyEventArgs e, DateTime time)
     {
         // 排除热键
         if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey)
@@ -179,7 +179,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _recorder?.KeyDown(e, time);
     }
 
-    public void GlobalHookKeyUp(KeyEventArgs e, uint time)
+    public void GlobalHookKeyUp(KeyEventArgs e, DateTime time)
     {
         if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.Test1Hotkey)
         {
@@ -194,32 +194,32 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
     }
 
-    public void GlobalHookMouseDown(MouseEventExtArgs e)
+    public void GlobalHookMouseDown(MouseEventExtArgs e, DateTime time)
     {
         // Debug.WriteLine($"MouseDown: {e.Button}");
-        _recorder?.MouseDown(e);
+        _recorder?.MouseDown(e, time);
     }
 
-    public void GlobalHookMouseUp(MouseEventExtArgs e)
+    public void GlobalHookMouseUp(MouseEventExtArgs e, DateTime time)
     {
         // Debug.WriteLine($"MouseUp: {e.Button}");
-        _recorder?.MouseUp(e);
+        _recorder?.MouseUp(e, time);
     }
 
-    public void GlobalHookMouseMoveTo(MouseEventExtArgs e)
+    public void GlobalHookMouseMoveTo(MouseEventExtArgs e, DateTime time)
     {
         if (_isInMainUi)
         {
             return;
         }
         // Debug.WriteLine($"MouseMove: {e.X}, {e.Y}");
-        _recorder?.MouseMoveTo(e);
+        _recorder?.MouseMoveTo(e, time);
     }
     
-    public void GlobalHookMouseWheel(MouseEventExtArgs e)
+    public void GlobalHookMouseWheel(MouseEventExtArgs e, DateTime time)
     {
         // Debug.WriteLine($"MouseWheel: {e.Delta}");
-        _recorder?.MouseWheel(e);
+        _recorder?.MouseWheel(e, time);
     }
 
     private void RelativeMouseMoved(object? sender, RelativeMouseMoveEventArgs e)
