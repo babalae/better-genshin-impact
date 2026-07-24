@@ -36,6 +36,8 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        // 退出前把未保存的移动轨迹数据落盘
+        GameTask.TravelLog.TravelLogService.Instance.Flush();
         await Task.CompletedTask;
     }
 

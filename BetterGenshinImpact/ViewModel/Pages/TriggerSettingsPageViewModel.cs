@@ -225,4 +225,21 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     {
         _navigationService.Navigate(typeof(HotKeyPage));
     }
+
+    private TravelLogWindow? _travelLogWindow;
+
+    [RelayCommand]
+    private void OpenTravelLogWindow()
+    {
+        if (_travelLogWindow == null || !_travelLogWindow.IsVisible)
+        {
+            _travelLogWindow = new TravelLogWindow();
+            _travelLogWindow.Closed += (s, e) => _travelLogWindow = null;
+            _travelLogWindow.Show();
+        }
+        else
+        {
+            _travelLogWindow.Activate();
+        }
+    }
 }
