@@ -508,6 +508,9 @@ public class AutoFightTask : ISoloTask
             }
         }, cts2.Token);
 
+        // 在持续索敌循环启动前标记战斗进行中，避免索敌循环因 FightStatusFlag 仍为 false 而立即退出
+        FightStatusFlag = true;
+
         // 启动持续索敌循环（异步后台运行，与战斗任务并发）
         if (_taskParam.EnableCombatTargeting)
         {
