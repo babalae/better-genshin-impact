@@ -311,6 +311,11 @@ public partial class App : Application
                 return true;
             }
 
+            if (ex is ObjectDisposedException ode && ode.ObjectName?.Contains("V8Script") == true)
+            {
+                return true;
+            }
+
             ex = ex.InnerException;
         }
 
