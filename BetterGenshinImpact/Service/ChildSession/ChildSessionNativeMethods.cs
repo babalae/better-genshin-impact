@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -10,6 +11,7 @@ internal static class ChildSessionNativeMethods
     private const int ErrorNotFound = 1168;
     private const uint NoChildSessionId = uint.MaxValue;
     private static readonly IntPtr CurrentServerHandle = IntPtr.Zero;
+    private static readonly ConcurrentDictionary<IntPtr, IntPtr> RdpInputWindows = new();
 
     [DllImport("wtsapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -50,6 +52,14 @@ internal static class ChildSessionNativeMethods
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetFocus();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(IntPtr window);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsChild(IntPtr parentWindow, IntPtr window);
 
     internal static void EnableChildSessions()
     {
@@ -111,7 +121,45 @@ internal static class ChildSessionNativeMethods
 
     internal static bool TryFocusRdpInputWindow(IntPtr rdpHostWindow)
     {
-        IntPtr inputWindow = IntPtr.Zero;
+        var inputWindow = FindRdpInputWindow(rdpHostWindow);
+        if (inputWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        _ = SetFocus(inputWindow);
+        return GetFocus() == inputWindow;
+    }
+
+    internal static bool IsRdpInputWindowFocused(IntPtr rdpHostWindow)
+    {
+        var inputWindow = FindRdpInputWindow(rdpHostWindow);
+        return inputWindow != IntPtr.Zero && GetFocus() == inputWindow;
+    }
+
+    internal static void ClearRdpInputWindowCache(IntPtr rdpHostWindow)
+    {
+        RdpInputWindows.TryRemove(rdpHostWindow, out _);
+    }
+
+    private static IntPtr FindRdpInputWindow(IntPtr rdpHostWindow)
+    {
+        if (rdpHostWindow == IntPtr.Zero)
+        {
+            return IntPtr.Zero;
+        }
+
+        if (RdpInputWindows.TryGetValue(rdpHostWindow, out var cachedInputWindow))
+        {
+            if (IsWindow(cachedInputWindow) && IsChild(rdpHostWindow, cachedInputWindow))
+            {
+                return cachedInputWindow;
+            }
+
+            RdpInputWindows.TryRemove(rdpHostWindow, out _);
+        }
+
+        var inputWindow = IntPtr.Zero;
         EnumChildWindowCallback callback = (window, _) =>
         {
             const int windowTextCapacity = 256;
@@ -130,13 +178,11 @@ internal static class ChildSessionNativeMethods
         };
 
         _ = EnumChildWindows(rdpHostWindow, callback, IntPtr.Zero);
-        if (inputWindow == IntPtr.Zero)
+        if (inputWindow != IntPtr.Zero)
         {
-            return false;
+            RdpInputWindows[rdpHostWindow] = inputWindow;
         }
-
-        _ = SetFocus(inputWindow);
-        return GetFocus() == inputWindow;
+        return inputWindow;
     }
 
     private static Win32Exception CreateLastWin32Exception(string operation)

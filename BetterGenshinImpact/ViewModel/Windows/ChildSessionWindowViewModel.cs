@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,13 +15,34 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 
 public partial class ChildSessionWindowViewModel : ViewModel
 {
+    private const string DesktopHelpUrl = "https://www.bettergi.com/doc.html";
+
     private readonly ChildSessionService _childSessionService;
+    private bool _startRequested;
 
     [ObservableProperty]
     private Brush _connectionStatusBrush = Brushes.Red;
 
     [ObservableProperty]
     private string _connectionStatusToolTip = "桌面分身未启动";
+
+    [ObservableProperty]
+    private string _connectionStatusTitle = "桌面分身尚未启动";
+
+    [ObservableProperty]
+    private string _connectionStatusDescription = "点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。";
+
+    [ObservableProperty]
+    private string _rdpStatusText = "RDP 未连接";
+
+    [ObservableProperty]
+    private string _childSessionStatusText = "桌面分身会话未创建";
+
+    [ObservableProperty]
+    private bool _isRdpConnected;
+
+    [ObservableProperty]
+    private bool _isConnectionPromptVisible = true;
 
     [ObservableProperty]
     private bool _isTopmost;
@@ -57,9 +80,21 @@ public partial class ChildSessionWindowViewModel : ViewModel
     }
 
     [RelayCommand]
-    private Task StartAsync()
+    private async Task StartAsync()
     {
-        return ExecuteAsync(_childSessionService.StartAsync);
+        _startRequested = true;
+        IsConnectionPromptVisible = false;
+
+        try
+        {
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            await ExecuteAsync(_childSessionService.StartAsync);
+        }
+        finally
+        {
+            _startRequested = false;
+            UpdateConnectionStatus();
+        }
     }
 
     [RelayCommand]
@@ -160,6 +195,15 @@ public partial class ChildSessionWindowViewModel : ViewModel
         IsTopmost = !IsTopmost;
     }
 
+    [RelayCommand]
+    private static void OpenDesktopHelp()
+    {
+        Process.Start(new ProcessStartInfo(DesktopHelpUrl)
+        {
+            UseShellExecute = true
+        });
+    }
+
     private async Task ExecuteAsync(Func<Task> action)
     {
         try
@@ -207,20 +251,48 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     private void UpdateConnectionStatus()
     {
-        if (_childSessionService.ConnectedState == 1)
+        var connectedState = _childSessionService.ConnectedState;
+        var childSessionId = _childSessionService.ChildSessionId;
+        IsRdpConnected = connectedState == 1;
+        IsConnectionPromptVisible = connectedState == 0 && !_startRequested;
+
+        if (IsRdpConnected)
         {
             ConnectionStatusBrush = Brushes.LimeGreen;
+            ConnectionStatusTitle = "桌面分身已连接";
+            ConnectionStatusDescription = "RDP 连接正常，可以直接在桌面分身中操作。";
         }
-        else if (_childSessionService.ChildSessionId is not null)
+        else if (connectedState == 2)
+        {
+            ConnectionStatusBrush = childSessionId is null ? Brushes.Red : Brushes.DodgerBlue;
+            ConnectionStatusTitle = "正在连接桌面分身";
+            ConnectionStatusDescription = "正在创建或恢复 RDP 连接，请稍候。";
+        }
+        else if (childSessionId is not null)
         {
             ConnectionStatusBrush = Brushes.DodgerBlue;
+            ConnectionStatusTitle = "桌面分身已启动，等待连接";
+            ConnectionStatusDescription = "桌面分身会话仍在运行，点击“启动并连接”可重新建立 RDP 连接。";
         }
         else
         {
             ConnectionStatusBrush = Brushes.Red;
+            ConnectionStatusTitle = "桌面分身尚未启动";
+            ConnectionStatusDescription = "点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。";
         }
 
+        RdpStatusText = connectedState switch
+        {
+            0 => "RDP 未连接",
+            1 => "RDP 已连接",
+            2 => "RDP 正在连接",
+            _ => $"RDP 状态未知（{connectedState}）"
+        };
+        ChildSessionStatusText = childSessionId is null
+            ? "桌面分身会话未创建"
+            : $"桌面分身会话 {childSessionId.Value}";
         ConnectionStatusToolTip = _childSessionService.StatusText;
+        OnPropertyChanged(nameof(HasChildSession));
     }
 
     private static void ShowError(Exception exception)

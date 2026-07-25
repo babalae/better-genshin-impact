@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
@@ -100,7 +100,7 @@ public partial class  MouseKeyMonitor
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, Kernel32.GetTickCount());
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, DateTime.UtcNow);
 
         if (SystemControl.IsGenshinImpactActive())
         {
@@ -143,7 +143,7 @@ public partial class  MouseKeyMonitor
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e, Kernel32.GetTickCount());
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e, DateTime.UtcNow);
 
         // 热键松开事件
         HotKeyUp(sender, e);
@@ -188,7 +188,7 @@ public partial class  MouseKeyMonitor
     private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(e, DateTime.UtcNow);
 
         if (e.Button != MouseButtons.Left)
             if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
@@ -198,7 +198,7 @@ public partial class  MouseKeyMonitor
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseUp(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseUp(e, DateTime.UtcNow);
 
         if (e.Button != MouseButtons.Left)
             if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
@@ -208,13 +208,13 @@ public partial class  MouseKeyMonitor
     private void GlobalHookMouseMoveExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e, DateTime.UtcNow);    
     }
     
     private void GlobalHookMouseWheelExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t Delta: {2};\t System Timestamp: {3}", e.Button, e.Location, e.Delta, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e, DateTime.UtcNow);
     }
 
     public void Unsubscribe()

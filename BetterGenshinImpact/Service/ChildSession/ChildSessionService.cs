@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.DependencyInjection;
+using DrawingRectangle = System.Drawing.Rectangle;
 using DrawingSize = System.Drawing.Size;
 
 namespace BetterGenshinImpact.Service.ChildSession;
@@ -18,6 +20,7 @@ public sealed class ChildSessionService : IDisposable
     private static readonly DrawingSize DefaultDesktopSize = new(1920, 1080);
 
     private readonly IServiceProvider _serviceProvider;
+    private readonly InstanceService _instanceService;
     private readonly DispatcherTimer _statusTimer;
     private readonly SemaphoreSlim _launchSemaphore = new(1, 1);
 
@@ -37,9 +40,12 @@ public sealed class ChildSessionService : IDisposable
 
     public uint? ChildSessionId { get; private set; }
 
-    public ChildSessionService(IServiceProvider serviceProvider)
+    public ChildSessionService(
+        IServiceProvider serviceProvider,
+        InstanceService instanceService)
     {
         _serviceProvider = serviceProvider;
+        _instanceService = instanceService;
         _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(500)
@@ -100,6 +106,25 @@ public sealed class ChildSessionService : IDisposable
     {
         ThrowIfDisposed();
         return LaunchBetterGiCoreAsync(isAutomatic: false);
+    }
+
+    public bool IsRelativeMouseForwardingAvailable()
+    {
+        return _desktopWindow?.IsVisible == true
+               && _desktopWindow.RdpHost.IsInputWindowFocused();
+    }
+
+    public bool TryGetRelativeMouseCaptureBounds(out DrawingRectangle bounds)
+    {
+        bounds = DrawingRectangle.Empty;
+        if (!IsRelativeMouseForwardingAvailable() || _desktopWindow is null)
+        {
+            return false;
+        }
+
+        var rdpHost = _desktopWindow.RdpHost;
+        bounds = rdpHost.RectangleToScreen(rdpHost.ClientRectangle);
+        return bounds.Width > 0 && bounds.Height > 0;
     }
 
     public async Task LaunchExecutableAsync(string executablePath)
@@ -296,17 +321,26 @@ public sealed class ChildSessionService : IDisposable
 
     private async Task LaunchBetterGiCoreAsync(bool isAutomatic)
     {
-        var childSessionId = GetRequiredChildSessionId();
-
         await _launchSemaphore.WaitAsync();
+        InstanceLaunchInfo? launchInfo = null;
         try
         {
+            var childSessionId = GetRequiredChildSessionId();
+            launchInfo = _instanceService.BeginChildLaunch(BetterGiInstanceType.ChildSession);
             RefreshState(isAutomatic
                 ? "桌面分身已加载，正在自动以管理员权限启动 BetterGI"
                 : "正在以管理员权限启动 BetterGI");
-            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId);
+            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId, launchInfo);
             RefreshState(
                 $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 BetterGI");
+        }
+        catch
+        {
+            if (launchInfo is not null)
+            {
+                _instanceService.CancelPendingChildLaunch(launchInfo.InstanceId);
+            }
+            throw;
         }
         finally
         {

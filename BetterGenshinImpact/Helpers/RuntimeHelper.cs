@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
@@ -170,12 +170,9 @@ internal static class RuntimeExtension
         return app;
     }
 
-    public static IHostBuilder UseSingleInstance(this IHostBuilder self, string instanceName, Action<bool> callback = null!)
+    public static IHostBuilder UseInstanceIpc(this IHostBuilder self)
     {
-        if (!Environment.GetCommandLineArgs().Contains("--no-single"))
-        {
-            RuntimeHelper.CheckSingleInstance(instanceName, callback);
-        }
+        BetterGenshinImpact.Service.Instance.InstanceBootstrap.Initialize();
         return self;
     }
 

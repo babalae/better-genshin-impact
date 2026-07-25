@@ -7,13 +7,14 @@ using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
-using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
@@ -53,7 +54,7 @@ public partial class App : Application
     private static readonly IHost _host = Host.CreateDefaultBuilder()
         .CheckIntegration()
         .UseElevated()
-        .UseSingleInstance("BetterGI")
+        .UseInstanceIpc()
         .ConfigureLogging(builder => { builder.ClearProviders(); })
         .ConfigureServices((context, services) =>
             {
@@ -111,6 +112,9 @@ public partial class App : Application
                 services.AddLocalization();
 
                 services.AddNavigationViewPageProvider();
+                services.AddSingleton(InstanceBootstrap.Current);
+                services.AddSingleton<InstanceService>();
+                services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
@@ -157,13 +161,15 @@ public partial class App : Application
                 // services.AddSingleton<TcgViewModel>();
 
                 // My Services
+                services.AddSingleton<DirectInputMonitor>();
+                services.AddSingleton<RawInputMonitor>();
+                services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
-                services.AddSingleton<HutaoNamedPipe>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
