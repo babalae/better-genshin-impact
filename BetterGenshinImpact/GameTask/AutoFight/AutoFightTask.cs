@@ -280,6 +280,7 @@ public class AutoFightTask : ISoloTask
         // }
         var fightEndFlag = false;
         var timeOutFlag = false;
+        var rewardEndDetected = 0;
         string lastFightName = "";
 
         //统计切换人打架次数
@@ -311,14 +312,22 @@ public class AutoFightTask : ISoloTask
             expDetector.Start();
         }
 
+        var rewardEndDetectionRunner = _taskParam.RewardEndDetection is { } rewardEndDetection
+            ? new RewardEndDetectionRunner(
+                rewardEndDetection,
+                cts2.Token,
+                () => Interlocked.Exchange(ref rewardEndDetected, 1))
+            : null;
+
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
             try
             {
                 FightStatusFlag = true;
+                rewardEndDetectionRunner?.Start();
                 
-                while (!cts2.Token.IsCancellationRequested)
+                while (!cts2.Token.IsCancellationRequested && Volatile.Read(ref rewardEndDetected) == 0)
                 {
                     // 所有战斗角色都可以被取消
 
@@ -344,6 +353,11 @@ public class AutoFightTask : ISoloTask
                     
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
+                        if (Volatile.Read(ref rewardEndDetected) != 0)
+                        {
+                            break;
+                        }
+
                         var command = combatCommands[i];
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
                         
@@ -481,7 +495,7 @@ public class AutoFightTask : ISoloTask
                     }
 
 
-                    if (fightEndFlag)
+                    if (fightEndFlag || Volatile.Read(ref rewardEndDetected) != 0)
                     {
                         break;
                     }
@@ -500,7 +514,25 @@ public class AutoFightTask : ISoloTask
             }
         }, cts2.Token);
 
-        await fightTask;
+        try
+        {
+            await fightTask;
+        }
+        finally
+        {
+            if (rewardEndDetectionRunner is not null)
+            {
+                await rewardEndDetectionRunner.DisposeAsync();
+            }
+        }
+        if (Volatile.Read(ref rewardEndDetected) != 0)
+        {
+            timeOutFlag = true;
+            var rewardType = _taskParam.RewardEndDetection!.Type == RewardEndDetectionType.Experience
+                ? "经验"
+                : "摩拉";
+            Logger.LogInformation("{RewardType}检测模式：识别到战斗结束", rewardType);
+        }
 
         try
         {

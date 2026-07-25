@@ -34,10 +34,12 @@ internal class AutoFightHandler : IActionHandler
             //替换配置为地图追踪
 
             taskParams = GetFightAutoFightParam(partyConfig.AutoFightConfig);
+            ApplyWaypointRewardEndDetection(taskParams, waypointForTrack);
         }
         else
         {
             taskParams = new AutoFightParam(GetFightStrategy(), TaskContext.Instance().Config.AutoFightConfig);
+            ApplyWaypointRewardEndDetection(taskParams, waypointForTrack);
         }
 
         //根据怪物标签，调整拾取配置
@@ -99,5 +101,30 @@ internal class AutoFightHandler : IActionHandler
     private string GetFightStrategy()
     {
         return GetFightStrategy(TaskContext.Instance().Config.AutoFightConfig);
+    }
+
+    private void ApplyWaypointRewardEndDetection(
+        AutoFightParam taskParams,
+        WaypointForTrack? waypointForTrack)
+    {
+        var autoFight = waypointForTrack?.AutoFight;
+        if (autoFight is null || string.IsNullOrWhiteSpace(autoFight.RewardType))
+        {
+            return;
+        }
+
+        if (RewardEndDetectionConfig.TryCreate(
+                autoFight.RewardType,
+                autoFight.MoraValues,
+                out var rewardEndDetection))
+        {
+            taskParams.RewardEndDetection = rewardEndDetection;
+        }
+        else
+        {
+            _logger.LogWarning(
+                "地图追踪点位的奖励结束检测参数无效：{RewardType}",
+                autoFight.RewardType);
+        }
     }
 }

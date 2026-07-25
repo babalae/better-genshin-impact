@@ -31,6 +31,9 @@ public class WaypointForTrack : Waypoint
     //区分怪物拾取，只有为true时怪物标签才生效
     public bool EnableMonsterLootSplit{ get; set; } = false;
 
+    // 从原始 Waypoint 保留到执行阶段，供 AutoFightHandler 构造当前点位的检测配置。
+    public FightExtParams? AutoFight { get; set; }
+
     /// <summary>
     /// 存在 combat_script 的 action 的话，这个值会存在
     /// </summary>

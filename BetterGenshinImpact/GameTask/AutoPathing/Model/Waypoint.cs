@@ -31,6 +31,17 @@ public class Waypoint
         //normal 小怪,elite 精英,legendary 传奇
         public string MonsterTag { get; set; }
         public bool EnableMonsterLootSplit { get; set; } = false;
+        // 当前战斗点的自动战斗扩展参数。
+        public FightExtParams? AutoFight { get; set; }
+    }
+
+    public class FightExtParams
+    {
+        /// <summary>奖励结束检测类型：experience/exp/经验值 或 mora/摩拉。</summary>
+        public string? RewardType { get; set; }
+
+        /// <summary>仅摩拉模式使用；null 表示匹配全部已加载的摩拉模板。</summary>
+        public List<int>? MoraValues { get; set; }
     }
 
 

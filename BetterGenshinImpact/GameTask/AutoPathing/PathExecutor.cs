@@ -546,6 +546,8 @@ public partial class PathExecutor
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
             wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
             wft.EnableMonsterLootSplit = waypoint.PointExtParams.EnableMonsterLootSplit;
+            // 奖励结束检测是点位级参数，转换后必须随对应战斗点传入处理器。
+            wft.AutoFight = waypoint.PointExtParams.AutoFight;
             return wft;
         }).ToList();
 

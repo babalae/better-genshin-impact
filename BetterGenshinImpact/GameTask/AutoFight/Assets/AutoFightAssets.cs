@@ -44,6 +44,9 @@ public sealed class AutoFightAssets
     /// </summary>
     public IReadOnlyList<RecognitionObject> ExperienceRecognitionObjects { get; private set; } = Array.Empty<RecognitionObject>();
 
+    public IReadOnlyList<RecognitionObject> ExperienceRewardRecognitionObjects { get; private set; } = Array.Empty<RecognitionObject>();
+    public IReadOnlyList<RecognitionObject> MoraRewardRecognitionObjects { get; private set; } = Array.Empty<RecognitionObject>();
+
     private Rect CaptureRect { get; }
     private double AssetScale { get; }
 
@@ -188,6 +191,25 @@ public sealed class AutoFightAssets
             // 经验值模板加载失败不应阻止 AutoFightAssets 初始化
             ExperienceRecognitionObjects = Array.Empty<RecognitionObject>();
         }
+
+        ExperienceRewardRecognitionObjects = LoadRewardRecognitionObjects(
+            "experience",
+            [180, 120, 60, 58, 57],
+            new Rect(
+                (int)(CaptureRect.Width * 0.145),
+                (int)(CaptureRect.Height * 0.5),
+                (int)(CaptureRect.Width * 0.03),
+                (int)(CaptureRect.Height * 0.08)),
+            0.9);
+        MoraRewardRecognitionObjects = LoadRewardRecognitionObjects(
+            "mora",
+            [200, 400, 600, 1200, 3000],
+            new Rect(
+                (int)(CaptureRect.Width * 0.1),
+                (int)(CaptureRect.Height * 0.48),
+                (int)(CaptureRect.Width * 0.12),
+                (int)(CaptureRect.Height * 0.18)),
+            0.86);
     }
 
     public static AutoFightAssets Get(Region region)
@@ -238,5 +260,37 @@ public sealed class AutoFightAssets
         }
 
         ExperienceRecognitionObjects = list.AsReadOnly();
+    }
+
+    private IReadOnlyList<RecognitionObject> LoadRewardRecognitionObjects(
+        string prefix,
+        IReadOnlyList<int> values,
+        Rect regionOfInterest,
+        double threshold)
+    {
+        var list = new List<RecognitionObject>();
+        foreach (var value in values)
+        {
+            try
+            {
+                list.Add(new RecognitionObject
+                {
+                    Name = $"{prefix}_{value}",
+                    RecognitionType = RecognitionTypes.TemplateMatch,
+                    TemplateImageMat = GameTaskManager.LoadAssetImage(
+                        "AutoFight", $"{prefix}_{value}.png", _captureWidth, _captureHeight),
+                    RegionOfInterest = regionOfInterest,
+                    UseMask = true,
+                    Threshold = threshold,
+                    DrawOnWindow = false,
+                }.InitTemplate());
+            }
+            catch (Exception)
+            {
+                // 缺失单个奖励模板时保留其他模板，不影响自动战斗初始化。
+            }
+        }
+
+        return list.AsReadOnly();
     }
 }

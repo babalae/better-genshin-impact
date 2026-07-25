@@ -69,6 +69,9 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public int BattleThresholdForLoot { get; set; } = -1;
     public int Timeout { get; set; } = 120;
 
+    // 由当前地图追踪战斗点临时注入；null 表示不启动经验/摩拉奖励结束检测。
+    internal RewardEndDetectionConfig? RewardEndDetection { get; set; }
+
     public bool KazuhaPickupEnabled = true;
     public string ActionSchedulerByCd = "";
     public string KazuhaPartyName;

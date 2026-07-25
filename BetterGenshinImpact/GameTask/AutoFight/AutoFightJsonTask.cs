@@ -317,6 +317,7 @@ public class AutoFightJsonTask : ISoloTask
 
         var fightEndFlag = false;
         var timeOutFlag = false;
+        var rewardEndDetected = 0;
         string lastFightName = "";
 
         // 初始化条件求值器
@@ -335,14 +336,22 @@ public class AutoFightJsonTask : ISoloTask
         // 战斗前动作
         await RunPreActions(combatScenes, evaluator);
 
+        var rewardEndDetectionRunner = _taskParam.RewardEndDetection is { } rewardEndDetection
+            ? new RewardEndDetectionRunner(
+                rewardEndDetection,
+                cts2.Token,
+                () => Interlocked.Exchange(ref rewardEndDetected, 1))
+            : null;
+
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
             try
             {
+                rewardEndDetectionRunner?.Start();
                 JsonAction? lastExecutedAction = null;
 
-                while (!cts2.Token.IsCancellationRequested)
+                while (!cts2.Token.IsCancellationRequested && Volatile.Read(ref rewardEndDetected) == 0)
                 {
                     if (timeoutStopwatch.Elapsed > fightTimeout)
                     {
@@ -358,9 +367,9 @@ public class AutoFightJsonTask : ISoloTask
 
                     var anyExecuted = false;
 
-                    foreach (var prioritizedAction in validActions)
+                        foreach (var prioritizedAction in validActions)
                         {
-                            if (cts2.Token.IsCancellationRequested) break;
+                            if (cts2.Token.IsCancellationRequested || Volatile.Read(ref rewardEndDetected) != 0) break;
 
                             var action = prioritizedAction.Action;
 
@@ -428,7 +437,7 @@ public class AutoFightJsonTask : ISoloTask
                             break;
                         }
 
-                    if (fightEndFlag || _fightEndFlag) break;
+                    if (fightEndFlag || _fightEndFlag || Volatile.Read(ref rewardEndDetected) != 0) break;
 
                     if (!anyExecuted)
                     {
@@ -449,7 +458,25 @@ public class AutoFightJsonTask : ISoloTask
             }
         }, cts2.Token);
 
-        await fightTask;
+        try
+        {
+            await fightTask;
+        }
+        finally
+        {
+            if (rewardEndDetectionRunner is not null)
+            {
+                await rewardEndDetectionRunner.DisposeAsync();
+            }
+        }
+        if (Volatile.Read(ref rewardEndDetected) != 0)
+        {
+            timeOutFlag = true;
+            var rewardType = _taskParam.RewardEndDetection!.Type == RewardEndDetectionType.Experience
+                ? "经验"
+                : "摩拉";
+            Logger.LogInformation("{RewardType}检测模式：识别到战斗结束", rewardType);
+        }
 
         try
         {
