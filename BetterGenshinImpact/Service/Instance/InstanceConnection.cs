@@ -61,7 +61,7 @@ internal sealed class InstanceConnection : IAsyncDisposable
 
     internal async Task<InstanceIpcEnvelope> SendRequestAsync(
         string operation,
-        Guid sourceInstanceId,
+        string sourceInstanceId,
         object? data,
         TimeSpan timeout,
         CancellationToken cancellationToken)
@@ -267,6 +267,11 @@ internal sealed class InstanceConnection : IAsyncDisposable
                 await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
+                    if (!_owner.IsGameMouseModeEnabled)
+                    {
+                        continue;
+                    }
+
                     var firstSequence = _nextMouseSequence;
                     _nextMouseSequence += checked((ulong)batch.Count);
                     await InstanceIpcProtocol.WriteRelativeMouseBatchAsync(

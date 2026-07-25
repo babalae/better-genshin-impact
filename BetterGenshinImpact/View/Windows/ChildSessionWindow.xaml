@@ -87,6 +87,33 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
                                ToolTip="向桌面分身发送 Win+Tab" />
+                    <ui:Button Width="110"
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               behavior:ResponsiveTitleBarBehavior.CollapseOrder="4"
+                               Command="{Binding ToggleGameMouseModeCommand}"
+                               Content="{Binding GameMouseModeButtonText}"
+                               CornerRadius="0"
+                               ToolTip="{Binding GameMouseModeButtonToolTip}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon>
+                                <ui:SymbolIcon.Style>
+                                    <Style TargetType="{x:Type ui:SymbolIcon}">
+                                        <Setter Property="Symbol"
+                                                Value="Cursor24" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsGameMouseModeEnabled}"
+                                                         Value="True">
+                                                <Setter Property="Symbol"
+                                                        Value="Target24" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button.Icon>
+                    </ui:Button>
                     <ui:DropDownButton Width="120"
                                        Height="32"
                                        Background="Transparent"
@@ -170,14 +197,18 @@
                PopupAnimation="Fade"
                StaysOpen="True">
             <Grid Background="Transparent">
-                <ui:InfoBar MaxWidth="720"
-                            Margin="8"
-                            HorizontalAlignment="Center"
-                            IsClosable="True"
-                            IsOpen="{Binding IsNotificationOpen, Mode=TwoWay}"
-                            Message="{Binding NotificationMessage}"
-                            Severity="{Binding NotificationSeverity}"
-                            Title="{Binding NotificationTitle}" />
+                <Border MaxWidth="720"
+                        Margin="8"
+                        HorizontalAlignment="Center"
+                        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                        CornerRadius="8">
+                    <ui:InfoBar Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                IsClosable="True"
+                                IsOpen="{Binding IsNotificationOpen, Mode=TwoWay}"
+                                Message="{Binding NotificationMessage}"
+                                Severity="{Binding NotificationSeverity}"
+                                Title="{Binding NotificationTitle}" />
+                </Border>
             </Grid>
         </Popup>
 
@@ -294,7 +325,7 @@
                                        HorizontalAlignment="Center"
                                        Foreground="#80FFFFFF"
                                        FontSize="11"
-                                       Text="操作时按住 Alt，可临时释放并显示本地鼠标。"
+                                       Text="游戏鼠标模式下，按住 Alt 可临时释放并显示本地鼠标。"
                                        TextAlignment="Center" />
                         </StackPanel>
                     </StackPanel>

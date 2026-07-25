@@ -10,25 +10,25 @@ public class InstanceIpcProtocolTests
     [Fact]
     public void CommandLineParser_ShouldSeparateInstanceMetadataAndActivation()
     {
-        var instanceId = Guid.NewGuid();
-        var parentInstanceId = Guid.NewGuid();
+        const string instanceId = "A1B2C3D4";
+        const string parentInstanceId = "89ABCDEF";
         var options = CommandLineOptions.Parse(
         [
             "BetterGI.exe",
             "--instance",
             "childSession",
             "--instance-id",
-            instanceId.ToString("D"),
+            instanceId,
             "--parent-instance",
-            parentInstanceId.ToString("D"),
+            parentInstanceId,
             "--parent-pipe",
             "BetterGI.v1.session-1",
             "bettergi://start"
         ]);
 
         Assert.Equal(BetterGiInstanceType.ChildSession, options.InstanceType);
-        Assert.Equal(instanceId, options.RequestedInstanceId);
-        Assert.Equal(parentInstanceId, options.ParentInstanceId);
+        Assert.Equal(instanceId.ToLowerInvariant(), options.RequestedInstanceId);
+        Assert.Equal(parentInstanceId.ToLowerInvariant(), options.ParentInstanceId);
         Assert.Equal("BetterGI.v1.session-1", options.ParentPipeName);
         Assert.Equal(CommandLineAction.Start, options.Action);
     }
@@ -86,8 +86,8 @@ public class InstanceIpcProtocolTests
     [Fact]
     public void LaunchInfo_ShouldEmitInstanceTypeAndParentMetadata()
     {
-        var instanceId = Guid.NewGuid();
-        var parentInstanceId = Guid.NewGuid();
+        const string instanceId = "0123abcd";
+        const string parentInstanceId = "89abcdef";
         var launchInfo = new InstanceLaunchInfo(
             instanceId,
             BetterGiInstanceType.WebView,
@@ -97,15 +97,24 @@ public class InstanceIpcProtocolTests
         var arguments = launchInfo.ToCommandLineArguments();
 
         Assert.Contains("--instance webview", arguments);
-        Assert.Contains($"--instance-id {instanceId:D}", arguments);
-        Assert.Contains($"--parent-instance {parentInstanceId:D}", arguments);
+        Assert.Contains($"--instance-id {instanceId}", arguments);
+        Assert.Contains($"--parent-instance {parentInstanceId}", arguments);
         Assert.Contains("--parent-pipe \"BetterGI.v1.session-9\"", arguments);
+    }
+
+    [Fact]
+    public void InstanceId_ShouldUseFirstEightLowercaseUuidCharacters()
+    {
+        var instanceId = InstanceIds.Create();
+
+        Assert.Matches("^[0-9a-f]{8}$", instanceId);
+        Assert.Equal($"BetterGI.v1.instance-{instanceId}", InstancePipeNames.ForInstance(instanceId));
     }
 
     [Fact]
     public async Task JsonFrame_ShouldRoundTrip()
     {
-        var sourceInstanceId = Guid.NewGuid();
+        const string sourceInstanceId = "0123abcd";
         var request = InstanceIpcEnvelope.Request(
             InstanceOperations.Ping,
             sourceInstanceId);

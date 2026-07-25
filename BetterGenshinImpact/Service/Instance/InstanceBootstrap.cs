@@ -33,7 +33,7 @@ public sealed class InstanceBootstrap : IDisposable
         }
 
         var options = CommandLineOptions.Instance;
-        var instanceId = options.RequestedInstanceId ?? Guid.NewGuid();
+        var instanceId = options.RequestedInstanceId ?? InstanceIds.Create();
         var sessionPipeName = InstancePipeNames.ForSession(Process.GetCurrentProcess().SessionId);
         NamedPipeServerStream firstServer;
         string pipeName;
@@ -109,7 +109,7 @@ public sealed class InstanceBootstrap : IDisposable
 
     private static async Task<bool> ForwardActivationAsync(
         string pipeName,
-        Guid sourceInstanceId,
+        string sourceInstanceId,
         string[] args,
         CancellationToken cancellationToken)
     {

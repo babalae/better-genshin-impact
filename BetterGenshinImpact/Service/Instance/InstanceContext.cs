@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Instance;
@@ -11,13 +12,46 @@ public enum BetterGiInstanceType
     WebView
 }
 
+internal static class InstanceIds
+{
+    internal const int Length = 8;
+
+    internal static string Create()
+    {
+        return Guid.NewGuid().ToString("N")[..Length];
+    }
+
+    internal static bool TryNormalize(string? value, out string normalized)
+    {
+        if (value?.Length == Length
+            && uint.TryParse(
+                value,
+                NumberStyles.AllowHexSpecifier,
+                CultureInfo.InvariantCulture,
+                out _))
+        {
+            normalized = value.ToLowerInvariant();
+            return true;
+        }
+
+        normalized = string.Empty;
+        return false;
+    }
+
+    internal static bool IsValid(string? value)
+    {
+        return TryNormalize(value, out var normalized)
+               && string.Equals(value, normalized, StringComparison.Ordinal);
+    }
+}
+
 public sealed class InstanceContext
 {
     internal InstanceContext(
-        Guid instanceId,
+        string instanceId,
         BetterGiInstanceType instanceType,
         string pipeName,
-        Guid? parentInstanceId,
+        string? parentInstanceId,
         string? parentPipeName)
     {
         InstanceId = instanceId;
@@ -30,13 +64,13 @@ public sealed class InstanceContext
         StartedAt = DateTimeOffset.UtcNow;
     }
 
-    public Guid InstanceId { get; }
+    public string InstanceId { get; }
 
     public BetterGiInstanceType InstanceType { get; }
 
     public string PipeName { get; }
 
-    public Guid? ParentInstanceId { get; }
+    public string? ParentInstanceId { get; }
 
     public string? ParentPipeName { get; }
 
@@ -68,11 +102,11 @@ public sealed class InstanceContext
 
 public sealed class InstanceDescriptor
 {
-    public Guid InstanceId { get; init; }
+    public string InstanceId { get; init; } = string.Empty;
 
     public BetterGiInstanceType InstanceType { get; init; }
 
-    public Guid? ParentInstanceId { get; init; }
+    public string? ParentInstanceId { get; init; }
 
     public string PipeName { get; init; } = string.Empty;
 
@@ -91,9 +125,9 @@ public sealed class InstanceTreeNode
 }
 
 public sealed record InstanceLaunchInfo(
-    Guid InstanceId,
+    string InstanceId,
     BetterGiInstanceType InstanceType,
-    Guid ParentInstanceId,
+    string ParentInstanceId,
     string ParentPipeName)
 {
     public string ToCommandLineArguments()
@@ -109,9 +143,9 @@ public sealed record InstanceLaunchInfo(
             CommandLineOptions.InstanceArgument,
             instanceType,
             CommandLineOptions.InstanceIdArgument,
-            InstanceId.ToString("D"),
+            InstanceId,
             CommandLineOptions.ParentInstanceArgument,
-            ParentInstanceId.ToString("D"),
+            ParentInstanceId,
             CommandLineOptions.ParentPipeArgument,
             Quote(ParentPipeName));
     }
@@ -131,8 +165,8 @@ internal static class InstancePipeNames
         return $"{Prefix}session-{windowsSessionId}";
     }
 
-    internal static string ForInstance(Guid instanceId)
+    internal static string ForInstance(string instanceId)
     {
-        return $"{Prefix}instance-{instanceId:N}";
+        return $"{Prefix}instance-{instanceId}";
     }
 }

@@ -33,7 +33,7 @@ public sealed class InstanceIpcEnvelope
 
     public string Operation { get; init; } = string.Empty;
 
-    public Guid SourceInstanceId { get; init; }
+    public string SourceInstanceId { get; init; } = string.Empty;
 
     public bool? Success { get; init; }
 
@@ -45,7 +45,7 @@ public sealed class InstanceIpcEnvelope
 
     internal static InstanceIpcEnvelope Request(
         string operation,
-        Guid sourceInstanceId,
+        string sourceInstanceId,
         object? data = null)
     {
         return new InstanceIpcEnvelope
@@ -58,7 +58,7 @@ public sealed class InstanceIpcEnvelope
 
     internal static InstanceIpcEnvelope Response(
         InstanceIpcEnvelope request,
-        Guid sourceInstanceId,
+        string sourceInstanceId,
         object? data = null)
     {
         return new InstanceIpcEnvelope
@@ -73,7 +73,7 @@ public sealed class InstanceIpcEnvelope
 
     internal static InstanceIpcEnvelope Failure(
         InstanceIpcEnvelope request,
-        Guid sourceInstanceId,
+        string sourceInstanceId,
         string errorCode,
         string errorMessage)
     {

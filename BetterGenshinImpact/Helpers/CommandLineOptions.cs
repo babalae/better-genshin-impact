@@ -31,12 +31,12 @@ public class CommandLineOptions
     /// <summary>
     /// 启动方为当前进程预分配的实例 ID。
     /// </summary>
-    public Guid? RequestedInstanceId { get; }
+    public string? RequestedInstanceId { get; }
 
     /// <summary>
     /// 父实例 ID。
     /// </summary>
-    public Guid? ParentInstanceId { get; }
+    public string? ParentInstanceId { get; }
 
     /// <summary>
     /// 父实例公开的命名管道名称。
@@ -71,8 +71,8 @@ public class CommandLineOptions
         string? oneDragonConfigName = null,
         string[]? groupNames = null,
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
-        Guid? requestedInstanceId = null,
-        Guid? parentInstanceId = null,
+        string? requestedInstanceId = null,
+        string? parentInstanceId = null,
         string? parentPipeName = null)
     {
         Action = action;
@@ -88,8 +88,8 @@ public class CommandLineOptions
     {
         var launchArgs = args.Skip(1).Select(x => x.Trim()).ToArray();
         var instanceType = BetterGiInstanceType.Primary;
-        Guid? requestedInstanceId = null;
-        Guid? parentInstanceId = null;
+        string? requestedInstanceId = null;
+        string? parentInstanceId = null;
         string? parentPipeName = null;
         var commandArgs = new List<string>();
 
@@ -114,7 +114,7 @@ public class CommandLineOptions
             if (argument.Equals(InstanceIdArgument, StringComparison.OrdinalIgnoreCase))
             {
                 if (TryReadNext(launchArgs, ref index, out var instanceIdValue)
-                    && Guid.TryParse(instanceIdValue, out var parsedInstanceId))
+                    && InstanceIds.TryNormalize(instanceIdValue, out var parsedInstanceId))
                 {
                     requestedInstanceId = parsedInstanceId;
                 }
@@ -124,7 +124,7 @@ public class CommandLineOptions
             if (argument.Equals(ParentInstanceArgument, StringComparison.OrdinalIgnoreCase))
             {
                 if (TryReadNext(launchArgs, ref index, out var parentInstanceValue)
-                    && Guid.TryParse(parentInstanceValue, out var parsedParentInstanceId))
+                    && InstanceIds.TryNormalize(parentInstanceValue, out var parsedParentInstanceId))
                 {
                     parentInstanceId = parsedParentInstanceId;
                 }

@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,6 +44,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         InstanceBootstrap bootstrap,
         IServiceProvider serviceProvider,
         RawInputMonitor rawInputMonitor,
+        IConfigService configService,
         ILogger<InstanceService> logger)
     {
         _bootstrap = bootstrap;
@@ -53,6 +55,11 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             rawInputMonitor,
             IsParentConnection,
             logger);
+        if (Context.InstanceType == BetterGiInstanceType.Primary)
+        {
+            _relativeMouseMessageHandler.SetGameMouseModeEnabled(
+                configService.Get().ChildSessionConfig.GameMouseModeEnabled);
+        }
         _requestHandler = new InstanceRequestHandler(
             Context,
             _messageState,
@@ -63,6 +70,14 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     }
 
     public InstanceContext Context => _bootstrap.Context;
+
+    public bool IsGameMouseModeEnabled =>
+        _relativeMouseMessageHandler.IsGameMouseModeEnabled;
+
+    public void SetGameMouseModeEnabled(bool enabled)
+    {
+        _relativeMouseMessageHandler.SetGameMouseModeEnabled(enabled);
+    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -153,7 +168,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         }
 
         var launchInfo = new InstanceLaunchInfo(
-            Guid.NewGuid(),
+            InstanceIds.Create(),
             instanceType,
             Context.InstanceId,
             Context.PipeName);
@@ -163,7 +178,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         return launchInfo;
     }
 
-    public void CancelPendingChildLaunch(Guid instanceId)
+    public void CancelPendingChildLaunch(string instanceId)
     {
         _messageState.PendingChildLaunches.TryRemove(instanceId, out _);
     }
@@ -323,7 +338,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                     Context.InstanceId,
                     new InstanceRegisterRequest
                     {
-                        ParentInstanceId = Context.ParentInstanceId!.Value,
+                        ParentInstanceId = Context.ParentInstanceId!,
                         Descriptor = Context.ToDescriptor()
                     },
                     RequestTimeout,

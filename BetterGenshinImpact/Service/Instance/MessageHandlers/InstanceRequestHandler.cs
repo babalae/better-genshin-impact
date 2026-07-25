@@ -136,7 +136,7 @@ internal sealed class InstanceRequestHandler
         {
             throw new InvalidOperationException("实例注册请求的来源 ID 不匹配。");
         }
-        if (registration.Descriptor.InstanceId == Guid.Empty
+        if (!InstanceIds.IsValid(registration.Descriptor.InstanceId)
             || registration.Descriptor.ParentInstanceId != _context.InstanceId
             || string.IsNullOrWhiteSpace(registration.Descriptor.PipeName))
         {

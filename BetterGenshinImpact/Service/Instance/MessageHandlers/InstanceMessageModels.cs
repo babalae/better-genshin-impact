@@ -1,5 +1,3 @@
-using System;
-
 namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 /// </summary>
 internal sealed class InstanceRegisterRequest
 {
-    public Guid ParentInstanceId { get; init; }
+    public string ParentInstanceId { get; init; } = string.Empty;
 
     public InstanceDescriptor Descriptor { get; init; } = new();
 }

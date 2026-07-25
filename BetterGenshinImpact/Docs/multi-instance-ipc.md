@@ -21,7 +21,7 @@
 
 ```text
 BetterGI.v1.session-<WindowsSessionId>
-BetterGI.v1.instance-<32位小写InstanceId>
+BetterGI.v1.instance-<8位小写InstanceId>
 ```
 
 - 普通 Primary 使用当前 Windows 会话的固定名称
@@ -41,8 +41,8 @@ Primary 与 ChildSession 中启动的 BetterGI 可以正常通信。协议不使
 
 ```text
 --instance <childSession|webview>
---instance-id <guid>
---parent-instance <guid>
+--instance-id <8位小写十六进制字符串>
+--parent-instance <8位小写十六进制字符串>
 --parent-pipe <pipe-name>
 ```
 
@@ -60,7 +60,8 @@ Primary A
 - Primary 可以创建一个 ChildSession 和多个 WebView。
 - ChildSession 可以创建多个 WebView。
 - WebView 不允许创建任何子实例。
-- 父进程为子进程预分配随机 InstanceId，并在持久双向连接上记录父子关系。
+- 父进程为子进程生成随机 UUID，并取其无连字符形式的前 8 位作为 InstanceId，
+  然后在持久双向连接上记录父子关系。
 - 子实例断开时，父实例移除对应关系；子实例会重连父管道并重新注册。
 
 ## 帧格式
@@ -87,7 +88,7 @@ JSON 信封的主要字段：
   "version": 1,
   "requestId": "00000000-0000-0000-0000-000000000000",
   "operation": "ping",
-  "sourceInstanceId": "00000000-0000-0000-0000-000000000000",
+  "sourceInstanceId": "00000000",
   "success": true,
   "errorCode": null,
   "errorMessage": null,

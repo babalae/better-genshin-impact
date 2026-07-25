@@ -9,11 +9,14 @@ namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 /// </summary>
 internal sealed class InstanceMessageState
 {
-    internal ConcurrentDictionary<Guid, ChildInstanceConnection> Children { get; } = new();
+    internal ConcurrentDictionary<string, ChildInstanceConnection> Children { get; } =
+        new(StringComparer.Ordinal);
 
-    internal ConcurrentDictionary<Guid, PendingChildLaunch> PendingChildLaunches { get; } = new();
+    internal ConcurrentDictionary<string, PendingChildLaunch> PendingChildLaunches { get; } =
+        new(StringComparer.Ordinal);
 
-    internal ConcurrentDictionary<Guid, BetterGiInstanceType> KnownChildTypes { get; } = new();
+    internal ConcurrentDictionary<string, BetterGiInstanceType> KnownChildTypes { get; } =
+        new(StringComparer.Ordinal);
 }
 
 /// <summary>
