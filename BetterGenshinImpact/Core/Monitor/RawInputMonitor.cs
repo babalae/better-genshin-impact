@@ -13,6 +13,7 @@ namespace BetterGenshinImpact.Core.Monitor;
 public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
     : RelativeMouseInputMonitorBase(logger)
 {
+    private static readonly TimeSpan InitializationTimeout = TimeSpan.FromSeconds(10);
     private const ushort GenericDesktopUsagePage = 0x01;
     private const ushort MouseUsage = 0x02;
     private const ushort KeyBreakFlag = 0x01;
@@ -45,8 +46,24 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
             _context = context;
         }
 
-        context.Thread.Start();
-        context.Initialized.Wait();
+        try
+        {
+            context.Thread.Start();
+        }
+        catch
+        {
+            ClearContext(context);
+            context.Initialized.Dispose();
+            throw;
+        }
+
+        if (!context.Initialized.Wait(InitializationTimeout))
+        {
+            ClearContext(context);
+            RequestStop(context);
+            throw new TimeoutException(
+                $"Raw Input 采集线程初始化超过 {InitializationTimeout.TotalSeconds:0} 秒。");
+        }
         context.Initialized.Dispose();
 
         if (context.InitializationException == null)
@@ -54,13 +71,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
             return;
         }
 
-        lock (_sourceLock)
-        {
-            if (ReferenceEquals(_context, context))
-            {
-                _context = null;
-            }
-        }
+        ClearContext(context);
 
         throw new InvalidOperationException("Raw Input 初始化失败", context.InitializationException);
     }
@@ -221,6 +232,11 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
 
             RegisterRawInput(context);
             context.Registered = true;
+            if (Volatile.Read(ref context.StopRequested) != 0)
+            {
+                throw new OperationCanceledException("Raw Input 初始化已取消。");
+            }
+
             context.InitializationSucceeded = true;
             context.Initialized.Set();
 
@@ -263,6 +279,31 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
             _context = null;
             context.Dispatcher?.BeginInvokeShutdown(DispatcherPriority.Send);
             return true;
+        }
+    }
+
+    private void ClearContext(RawInputThreadContext context)
+    {
+        lock (_sourceLock)
+        {
+            if (ReferenceEquals(_context, context))
+            {
+                _context = null;
+                _lifecycleVersion++;
+            }
+        }
+    }
+
+    private static void RequestStop(RawInputThreadContext context)
+    {
+        Interlocked.Exchange(ref context.StopRequested, 1);
+        try
+        {
+            context.Dispatcher?.BeginInvokeShutdown(DispatcherPriority.Send);
+        }
+        catch (InvalidOperationException)
+        {
+            // Dispatcher 已关闭，无需再次请求退出。
         }
     }
 
@@ -414,6 +455,8 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
         public bool InitializationSucceeded { get; set; }
 
         public bool Registered { get; set; }
+
+        public int StopRequested;
     }
 
     [StructLayout(LayoutKind.Sequential)]

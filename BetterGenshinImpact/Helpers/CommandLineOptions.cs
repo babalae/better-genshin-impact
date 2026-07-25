@@ -26,6 +26,8 @@ public class CommandLineOptions
     /// </summary>
     public BetterGiInstanceType InstanceType { get; }
 
+    public bool IsPrimaryInstance => InstanceType == BetterGiInstanceType.Primary;
+
     /// <summary>
     /// 启动方为当前进程预分配的实例 ID。
     /// </summary>
@@ -94,36 +96,47 @@ public class CommandLineOptions
         for (var index = 0; index < launchArgs.Length; index++)
         {
             var argument = launchArgs[index];
-            if (argument.Equals(InstanceArgument, StringComparison.OrdinalIgnoreCase)
-                && TryReadNext(launchArgs, ref index, out var instanceTypeValue))
+            if (argument.Equals(InstanceArgument, StringComparison.OrdinalIgnoreCase))
             {
-                instanceType = instanceTypeValue.ToLowerInvariant() switch
+                if (TryReadNext(launchArgs, ref index, out var instanceTypeValue))
                 {
-                    "childsession" => BetterGiInstanceType.ChildSession,
-                    "webview" => BetterGiInstanceType.WebView,
-                    _ => throw new ArgumentException($"不支持的实例类型：{instanceTypeValue}")
-                };
+                    instanceType = instanceTypeValue.ToLowerInvariant() switch
+                    {
+                        "primary" => BetterGiInstanceType.Primary,
+                        "childsession" => BetterGiInstanceType.ChildSession,
+                        "webview" => BetterGiInstanceType.WebView,
+                        _ => BetterGiInstanceType.Primary
+                    };
+                }
                 continue;
             }
 
-            if (argument.Equals(InstanceIdArgument, StringComparison.OrdinalIgnoreCase)
-                && TryReadNext(launchArgs, ref index, out var instanceIdValue))
+            if (argument.Equals(InstanceIdArgument, StringComparison.OrdinalIgnoreCase))
             {
-                requestedInstanceId = Guid.Parse(instanceIdValue);
+                if (TryReadNext(launchArgs, ref index, out var instanceIdValue)
+                    && Guid.TryParse(instanceIdValue, out var parsedInstanceId))
+                {
+                    requestedInstanceId = parsedInstanceId;
+                }
                 continue;
             }
 
-            if (argument.Equals(ParentInstanceArgument, StringComparison.OrdinalIgnoreCase)
-                && TryReadNext(launchArgs, ref index, out var parentInstanceValue))
+            if (argument.Equals(ParentInstanceArgument, StringComparison.OrdinalIgnoreCase))
             {
-                parentInstanceId = Guid.Parse(parentInstanceValue);
+                if (TryReadNext(launchArgs, ref index, out var parentInstanceValue)
+                    && Guid.TryParse(parentInstanceValue, out var parsedParentInstanceId))
+                {
+                    parentInstanceId = parsedParentInstanceId;
+                }
                 continue;
             }
 
-            if (argument.Equals(ParentPipeArgument, StringComparison.OrdinalIgnoreCase)
-                && TryReadNext(launchArgs, ref index, out var parentPipeValue))
+            if (argument.Equals(ParentPipeArgument, StringComparison.OrdinalIgnoreCase))
             {
-                parentPipeName = parentPipeValue;
+                if (TryReadNext(launchArgs, ref index, out var parentPipeValue))
+                {
+                    parentPipeName = parentPipeValue;
+                }
                 continue;
             }
 
@@ -186,7 +199,8 @@ public class CommandLineOptions
     {
         if (index + 1 >= args.Length)
         {
-            throw new ArgumentException($"命令行参数 {args[index]} 缺少值。");
+            value = string.Empty;
+            return false;
         }
 
         value = args[++index];

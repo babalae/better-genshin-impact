@@ -67,7 +67,7 @@ internal sealed class InstanceRequestHandler
                 InstanceOperations.InstanceGetTree => InstanceIpcEnvelope.Response(
                     request,
                     _context.InstanceId,
-                    await BuildInstanceTreeAsync(cancellationToken).ConfigureAwait(false)),
+                    await BuildInstanceTreeAsync(connection, cancellationToken).ConfigureAwait(false)),
                 InstanceOperations.RelativeMouseSubscribe =>
                     _relativeMouseMessageHandler.HandleSubscribe(connection, request),
                 InstanceOperations.RelativeMouseUnsubscribe =>
@@ -204,11 +204,19 @@ internal sealed class InstanceRequestHandler
     /// <summary>
     /// 递归读取子实例树；单个子实例不可用时保留其已知描述，不中断整棵树的响应。
     /// </summary>
-    private async Task<InstanceTreeNode> BuildInstanceTreeAsync(CancellationToken cancellationToken)
+    private async Task<InstanceTreeNode> BuildInstanceTreeAsync(
+        InstanceConnection requester,
+        CancellationToken cancellationToken)
     {
         var children = new List<InstanceTreeNode>();
         foreach (var child in _state.Children.Values.ToArray())
         {
+            if (ReferenceEquals(child.Connection, requester))
+            {
+                children.Add(new InstanceTreeNode { Instance = child.Descriptor });
+                continue;
+            }
+
             try
             {
                 var response = await child.Connection.SendRequestAsync(

@@ -459,8 +459,7 @@ internal sealed class RelativeMouseMessageHandler
         if (Volatile.Read(ref _forwardingEnabled) == 0
             || _targets.IsEmpty
             || Volatile.Read(ref _pressedAltMask) != 0
-            || _serviceProvider.GetService<ChildSessionService>()
-                ?.IsRelativeMouseForwardingAvailable() != true)
+            || Volatile.Read(ref _captureEnabled) == 0)
         {
             return;
         }

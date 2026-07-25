@@ -56,6 +56,12 @@ public sealed class InstanceBootstrap : IDisposable
                         CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
+                if (!forwarded)
+                {
+                    Trace.TraceError(
+                        "无法将启动请求转发给现有 BetterGI，命名管道：{0}",
+                        sessionPipeName);
+                }
                 Environment.Exit(forwarded ? 0 : 0xFFFF);
                 throw new InvalidOperationException("当前实例已将启动请求转发给现有 BetterGI。");
             }
@@ -133,7 +139,7 @@ public sealed class InstanceBootstrap : IDisposable
                     PipeDirection.InOut,
                     PipeOptions.Asynchronous | PipeOptions.WriteThrough);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(TimeSpan.FromSeconds(10));
+                timeout.CancelAfter(TimeSpan.FromSeconds(2));
                 await client.ConnectAsync(timeout.Token).ConfigureAwait(false);
                 await InstanceIpcProtocol.WriteJsonAsync(client, request, timeout.Token).ConfigureAwait(false);
                 var frame = await InstanceIpcProtocol.ReadFrameAsync(client, timeout.Token).ConfigureAwait(false);
@@ -153,6 +159,10 @@ public sealed class InstanceBootstrap : IDisposable
                                               or OperationCanceledException)
             {
                 Debug.WriteLine(exception);
+                Trace.TraceWarning(
+                    "转发 BetterGI 启动请求失败，命名管道：{0}，原因：{1}",
+                    pipeName,
+                    exception.GetBaseException().Message);
             }
         }
 
@@ -167,7 +177,6 @@ internal static class InstancePipeFactory
         using var identity = WindowsIdentity.GetCurrent();
         var ownerSid = identity.User
                        ?? throw new InvalidOperationException("无法取得当前 Windows 用户 SID。");
-        var worldSid = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
         var networkSid = new SecurityIdentifier(WellKnownSidType.NetworkSid, null);
         var security = new PipeSecurity();
         security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
@@ -180,11 +189,6 @@ internal static class InstancePipeFactory
             ownerSid,
             PipeAccessRights.FullControl,
             AccessControlType.Allow));
-        security.AddAccessRule(new PipeAccessRule(
-            worldSid,
-            PipeAccessRights.ReadWrite | PipeAccessRights.Synchronize,
-            AccessControlType.Allow));
-
         var options = PipeOptions.Asynchronous | PipeOptions.WriteThrough;
         if (firstPipeInstance)
         {

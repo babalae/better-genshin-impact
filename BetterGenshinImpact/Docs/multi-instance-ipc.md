@@ -32,8 +32,10 @@ BetterGI.v1.instance-<32位小写InstanceId>
 - 显式 `--instance webview` 使用自身 InstanceId 对应的名称。
 - `session` 与 `instance` 只表示端点的发现方式，不表示实例类型。
 
-管道 ACL 允许本机任意用户进程读写，并显式拒绝 `Network` SID。协议不使用密钥、
-令牌或可执行文件路径认证；服务端仍会检查操作类型、父子层级和实例状态。
+管道名称不使用 `Global\` 前缀，因此保持 Windows 会话级隔离。管道 ACL 仅允许
+创建管道的当前登录用户 SID 完全控制，并显式拒绝 `Network` SID；同一用户在
+Primary 与 ChildSession 中启动的 BetterGI 可以正常通信。协议不使用密钥、令牌或
+可执行文件路径认证；服务端仍会检查操作类型、父子层级和实例状态。
 
 子实例通过启动参数取得父端点：
 

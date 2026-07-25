@@ -23,8 +23,7 @@ public partial class NotifyIconViewModel : ObservableObject
 {
     private readonly ChildSessionService _childSessionService;
 
-    public bool IsChildSessionEntryVisible =>
-        CommandLineOptions.Instance.InstanceType == BetterGiInstanceType.Primary;
+    public bool IsChildSessionEntryVisible => CommandLineOptions.Instance.IsPrimaryInstance;
 
     public NotifyIconViewModel(ChildSessionService childSessionService)
     {

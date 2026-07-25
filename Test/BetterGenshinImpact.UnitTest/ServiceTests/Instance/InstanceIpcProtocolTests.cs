@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
@@ -43,6 +44,42 @@ public class InstanceIpcProtocolTests
         ]);
 
         Assert.Equal(BetterGiInstanceType.WebView, options.InstanceType);
+        Assert.Equal(CommandLineAction.None, options.Action);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldTolerateInvalidInstanceMetadata()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--instance",
+            "unsupported",
+            "--instance-id",
+            "invalid-instance-id",
+            "--parent-instance",
+            "invalid-parent-id",
+            "--parent-pipe"
+        ]);
+
+        Assert.True(options.IsPrimaryInstance);
+        Assert.Null(options.RequestedInstanceId);
+        Assert.Null(options.ParentInstanceId);
+        Assert.Null(options.ParentPipeName);
+        Assert.Equal(CommandLineAction.None, options.Action);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldRecognizeExplicitPrimaryInstance()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--instance",
+            "primary"
+        ]);
+
+        Assert.True(options.IsPrimaryInstance);
         Assert.Equal(CommandLineAction.None, options.Action);
     }
 
@@ -107,6 +144,26 @@ public class InstanceIpcProtocolTests
 
         Assert.Equal(42UL, result.FirstSequence);
         Assert.Equal(samples, result.Samples);
+    }
+
+    [Theory]
+    [InlineData(long.MaxValue, 1)]
+    [InlineData(3155378975999999999L, 1)]
+    [InlineData(0L, -1)]
+    public void RelativeMouseBatch_ShouldRejectInvalidTimestamp(
+        long baseTicks,
+        int offsetMicroseconds)
+    {
+        var payload = new byte[30];
+        BinaryPrimitives.WriteUInt16LittleEndian(payload, 1);
+        BinaryPrimitives.WriteInt64LittleEndian(payload.AsSpan(10), baseTicks);
+        BinaryPrimitives.WriteInt32LittleEndian(payload.AsSpan(26), offsetMicroseconds);
+        var frame = new InstanceIpcFrame(
+            InstanceIpcPayloadType.RelativeMouseBatch,
+            payload);
+
+        Assert.Throws<InvalidDataException>(
+            () => InstanceIpcProtocol.ReadRelativeMouseBatch(frame));
     }
 
     [Theory]

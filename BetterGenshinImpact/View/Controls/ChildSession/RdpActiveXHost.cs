@@ -48,6 +48,7 @@ internal sealed class RdpActiveXHost : AxHost
             return;
         }
 
+        ChildSessionNativeMethods.ClearRdpInputWindowCache(Handle);
         var client = GetRequiredOcx();
         var width = Math.Clamp(desktopSize.Width, 200, 8192);
         var height = Math.Clamp(desktopSize.Height, 200, 8192);
@@ -126,6 +127,10 @@ internal sealed class RdpActiveXHost : AxHost
 
     internal void DisconnectSession()
     {
+        if (IsHandleCreated)
+        {
+            ChildSessionNativeMethods.ClearRdpInputWindowCache(Handle);
+        }
         if (ConnectedState != 0)
         {
             InvokeComMethod(GetRequiredOcx(), "Disconnect");
@@ -136,6 +141,16 @@ internal sealed class RdpActiveXHost : AxHost
     {
         return ConnectedState == 1
                && ChildSessionNativeMethods.IsRdpInputWindowFocused(Handle);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        if (IsHandleCreated)
+        {
+            ChildSessionNativeMethods.ClearRdpInputWindowCache(Handle);
+        }
+
+        base.OnHandleDestroyed(e);
     }
 
     private void SendShortcut(KeyStroke[] strokes, string displayName)

@@ -321,12 +321,12 @@ public sealed class ChildSessionService : IDisposable
 
     private async Task LaunchBetterGiCoreAsync(bool isAutomatic)
     {
-        var childSessionId = GetRequiredChildSessionId();
-        var launchInfo = _instanceService.BeginChildLaunch(BetterGiInstanceType.ChildSession);
-
         await _launchSemaphore.WaitAsync();
+        InstanceLaunchInfo? launchInfo = null;
         try
         {
+            var childSessionId = GetRequiredChildSessionId();
+            launchInfo = _instanceService.BeginChildLaunch(BetterGiInstanceType.ChildSession);
             RefreshState(isAutomatic
                 ? "桌面分身已加载，正在自动以管理员权限启动 BetterGI"
                 : "正在以管理员权限启动 BetterGI");
@@ -336,7 +336,10 @@ public sealed class ChildSessionService : IDisposable
         }
         catch
         {
-            _instanceService.CancelPendingChildLaunch(launchInfo.InstanceId);
+            if (launchInfo is not null)
+            {
+                _instanceService.CancelPendingChildLaunch(launchInfo.InstanceId);
+            }
             throw;
         }
         finally

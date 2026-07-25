@@ -31,6 +31,7 @@ internal sealed class InstanceConnection : IAsyncDisposable
 
     private Task? _receiveTask;
     private Task? _mouseWriterTask;
+    private CancellationTokenSource? _linkedCancellationTokenSource;
     private long _coalescedDeltaX;
     private long _coalescedDeltaY;
     private DateTime _coalescedTimestamp;
@@ -51,11 +52,11 @@ internal sealed class InstanceConnection : IAsyncDisposable
 
     internal void Start(CancellationToken cancellationToken)
     {
-        var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+        _linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             _lifetimeCancellationTokenSource.Token);
-        _receiveTask = ReceiveLoopAsync(linkedCancellationTokenSource);
-        _mouseWriterTask = RelativeMouseWriterLoopAsync(linkedCancellationTokenSource.Token);
+        _receiveTask = ReceiveLoopAsync(_linkedCancellationTokenSource);
+        _mouseWriterTask = RelativeMouseWriterLoopAsync(_linkedCancellationTokenSource.Token);
     }
 
     internal async Task<InstanceIpcEnvelope> SendRequestAsync(
@@ -156,6 +157,7 @@ internal sealed class InstanceConnection : IAsyncDisposable
         }
 
         _writeLock.Dispose();
+        _linkedCancellationTokenSource?.Dispose();
         _lifetimeCancellationTokenSource.Dispose();
     }
 
@@ -236,7 +238,6 @@ internal sealed class InstanceConnection : IAsyncDisposable
         finally
         {
             linkedCancellationTokenSource.Cancel();
-            linkedCancellationTokenSource.Dispose();
             FailPendingRequests(new IOException("命名管道接收循环已结束。"));
             Interlocked.Exchange(ref _receiveLoopExited, 1);
             _owner.ConnectionClosed(this);

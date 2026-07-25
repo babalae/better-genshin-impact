@@ -30,6 +30,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
     private readonly CancellationTokenSource _lifetimeCancellationTokenSource = new();
     private readonly ConcurrentQueue<string[]> _pendingActivations = new();
+    private readonly object _activationLock = new();
     private readonly object _parentConnectionLock = new();
 
     private Task? _acceptLoopTask;
@@ -169,8 +170,17 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     public void MarkApplicationReady()
     {
-        _applicationReady = true;
-        while (_pendingActivations.TryDequeue(out var args))
+        var pendingActivations = new List<string[]>();
+        lock (_activationLock)
+        {
+            _applicationReady = true;
+            while (_pendingActivations.TryDequeue(out var args))
+            {
+                pendingActivations.Add(args);
+            }
+        }
+
+        foreach (var args in pendingActivations)
         {
             DispatchActivation(args);
         }
@@ -405,11 +415,15 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     private void EnqueueActivation(string[] args)
     {
-        if (!_applicationReady)
+        lock (_activationLock)
         {
-            _pendingActivations.Enqueue(args);
-            return;
+            if (!_applicationReady)
+            {
+                _pendingActivations.Enqueue(args);
+                return;
+            }
         }
+
         DispatchActivation(args);
     }
 

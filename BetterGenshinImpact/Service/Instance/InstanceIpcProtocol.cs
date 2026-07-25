@@ -118,17 +118,13 @@ internal static class InstanceIpcProtocol
     private const int RelativeMouseSampleLength = sizeof(int) * 3;
     private const int RelativeMouseResultLength = sizeof(ulong) + sizeof(byte);
 
-    internal static JsonSerializer Serializer { get; } = JsonSerializer.Create(new JsonSerializerSettings
-    {
-        ContractResolver = new CamelCasePropertyNamesContractResolver(),
-        NullValueHandling = NullValueHandling.Ignore
-    });
-
     private static JsonSerializerSettings SerializerSettings { get; } = new()
     {
         ContractResolver = new CamelCasePropertyNamesContractResolver(),
         NullValueHandling = NullValueHandling.Ignore
     };
+
+    internal static JsonSerializer Serializer { get; } = JsonSerializer.Create(SerializerSettings);
 
     internal static async ValueTask WriteJsonAsync(
         Stream stream,
@@ -232,10 +228,26 @@ internal static class InstanceIpcProtocol
             var deltaY = BinaryPrimitives.ReadInt32LittleEndian(span[(offset + sizeof(int))..]);
             var offsetMicroseconds =
                 BinaryPrimitives.ReadInt32LittleEndian(span[(offset + sizeof(int) * 2)..]);
+            long timestampTicks;
+            try
+            {
+                timestampTicks = checked(baseTicks + offsetMicroseconds * 10L);
+            }
+            catch (OverflowException exception)
+            {
+                throw new InvalidDataException("相对鼠标样本时间戳超出有效范围。", exception);
+            }
+
+            if (timestampTicks < DateTime.MinValue.Ticks
+                || timestampTicks > DateTime.MaxValue.Ticks)
+            {
+                throw new InvalidDataException("相对鼠标样本时间戳超出有效范围。");
+            }
+
             samples[index] = new RelativeMouseSample(
                 deltaX,
                 deltaY,
-                new DateTime(baseTicks + offsetMicroseconds * 10L, DateTimeKind.Utc));
+                new DateTime(timestampTicks, DateTimeKind.Utc));
             offset += RelativeMouseSampleLength;
         }
 

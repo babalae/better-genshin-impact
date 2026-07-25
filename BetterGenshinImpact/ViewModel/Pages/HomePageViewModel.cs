@@ -63,8 +63,7 @@ public partial class HomePageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
 
-    public bool IsChildSessionEntryVisible =>
-        CommandLineOptions.Instance.InstanceType == BetterGiInstanceType.Primary;
+    public bool IsChildSessionEntryVisible => CommandLineOptions.Instance.IsPrimaryInstance;
 
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();

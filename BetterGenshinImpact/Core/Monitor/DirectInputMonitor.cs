@@ -28,10 +28,9 @@ public sealed class DirectInputMonitor(ILogger<DirectInputMonitor> logger) : Rel
             var context = new CaptureContext(directInput, mouse);
             lock (_captureLock)
             {
+                context.CaptureTask = Task.Run(() => Capture(context));
                 _captureContext = context;
             }
-
-            context.CaptureTask = Task.Run(() => Capture(context));
         }
         catch
         {
@@ -48,14 +47,13 @@ public sealed class DirectInputMonitor(ILogger<DirectInputMonitor> logger) : Rel
         {
             context = _captureContext;
             _captureContext = null;
+            context?.CancellationTokenSource.Cancel();
         }
 
         if (context == null)
         {
             return;
         }
-
-        context.CancellationTokenSource.Cancel();
 
         var captureTask = context.CaptureTask;
         if (captureTask != null &&
@@ -103,6 +101,14 @@ public sealed class DirectInputMonitor(ILogger<DirectInputMonitor> logger) : Rel
         }
         finally
         {
+            lock (_captureLock)
+            {
+                if (ReferenceEquals(_captureContext, context))
+                {
+                    _captureContext = null;
+                }
+            }
+
             context.Mouse.Dispose();
             context.DirectInput.Dispose();
             context.CancellationTokenSource.Dispose();
