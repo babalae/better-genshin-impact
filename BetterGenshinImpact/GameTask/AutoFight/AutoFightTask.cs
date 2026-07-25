@@ -531,14 +531,19 @@ public class AutoFightTask : ISoloTask
             }, targetingCts.Token);
         }
 
-        await fightTask;
-
-        // 战斗结束后、战后动作前，停止并等待索敌循环完成清理（ReleaseAllKey / MiddleButtonClick），
-        // 避免其 finally 在拾取/切人过程中释放按键，干扰万叶E吸怪等操作
-        if (targetingTask != null)
+        try
         {
-            await targetingCts.CancelAsync();
-            try { await targetingTask; } catch (OperationCanceledException) { }
+            await fightTask;
+        }
+        finally
+        {
+            // 战斗结束后（无论正常/异常），停止并等待索敌循环完成清理（ReleaseAllKey / MiddleButtonClick），
+            // 避免其 finally 在拾取/切人过程中释放按键，干扰万叶E吸怪等操作
+            if (targetingTask != null)
+            {
+                await targetingCts.CancelAsync();
+                try { await targetingTask; } catch (OperationCanceledException) { }
+            }
         }
 
         try
