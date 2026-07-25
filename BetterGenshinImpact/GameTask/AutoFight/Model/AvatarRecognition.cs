@@ -194,11 +194,19 @@ public static class AvatarRecognition
         var param = _currentAutoFightParam.Value;
         if (param != null)
         {
-            return new VisualRecognitionConfig(param.TargetingDetectionInterval, param.DrawRecognitionResults, param.LockLostWaitTime, param.DamageNumberRecognitionMode);
+            return new VisualRecognitionConfig(
+                Math.Clamp(param.TargetingDetectionInterval, 1, 200),
+                param.DrawRecognitionResults,
+                param.LockLostWaitTime,
+                param.DamageNumberRecognitionMode);
         }
 
         var config = TaskContext.Instance().Config.AutoFightConfig;
-        return new VisualRecognitionConfig(config.TargetingDetectionInterval, config.DrawRecognitionResults, config.LockLostWaitTime, config.DamageNumberRecognitionMode);
+        return new VisualRecognitionConfig(
+            Math.Clamp(config.TargetingDetectionInterval, 1, 200),
+            config.DrawRecognitionResults,
+            config.LockLostWaitTime,
+            config.DamageNumberRecognitionMode);
     }
 
     /// <summary>
