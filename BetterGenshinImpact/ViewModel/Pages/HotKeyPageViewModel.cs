@@ -388,7 +388,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         systemDirectory.Children.Add(takeScreenshotHotKeySettingModel);
 
         systemDirectory.Children.Add(new HotKeySettingModel(
-            "日志，状态窗与指标栏展示开关",
+            "日志与状态窗口展示开关",
             nameof(Config.HotKeyConfig.LogBoxDisplayHotkey),
             Config.HotKeyConfig.LogBoxDisplayHotkey,
             Config.HotKeyConfig.LogBoxDisplayHotkeyType,
@@ -397,8 +397,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox = !TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
                 // 与状态窗口同步
                 TaskContext.Instance().Config.MaskWindowConfig.ShowStatus = TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
-                // 与指标栏同步
-                TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics = TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
+            }
+        ));
+
+        systemDirectory.Children.Add(new HotKeySettingModel(
+            "遮罩指标栏展示开关",
+            nameof(Config.HotKeyConfig.OverlayMetricsDisplayHotkey),
+            Config.HotKeyConfig.OverlayMetricsDisplayHotkey,
+            Config.HotKeyConfig.OverlayMetricsDisplayHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics = !TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics;
             }
         ));
 
