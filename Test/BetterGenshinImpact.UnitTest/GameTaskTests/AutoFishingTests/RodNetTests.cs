@@ -1,10 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoFishing;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TorchSharp;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using static TorchSharp.torch;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
@@ -15,7 +9,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public RodNetTests(TorchFixture torch)
         {
             if (!torch.UseTorch)
-                throw new NotSupportedException("torch加载失败，请检查BetterGenshinImpact项目编译环境的配置");
+                throw new NotSupportedException("torch加载失败，请检查TorchFixture硬编码的dll地址配置");
         }
 
         [Theory]
@@ -38,10 +32,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 fish_y2 = fish_y2,
                 fish_label = fish_label
             };
-            RodNet sut = new RodNet();
+            RodNetTorch sut = new RodNetTorch();
 
             //
-            Tensor outputTensor = sut.ComputeScores_Torch(rodInput);
+            Tensor outputTensor = sut.ComputeScores(rodInput);
             double[] pred = RodNet.ComputeScores(rodInput);
 
             //

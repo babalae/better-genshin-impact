@@ -1,6 +1,6 @@
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.GameTask.AutoOpenChest.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
@@ -18,13 +18,11 @@ public class AutoOpenChestTask : ISoloTask
 {
     public string Name => "识别并开启宝箱";
 
-    private AutoOpenChestAssets assets = AutoOpenChestAssets.Instance;
-
     public async Task Start(CancellationToken ct)
     {
         var ra = CaptureToRectArea();
 
-        if (ra.Find(assets.ChestFIconRo).IsExist())
+        if (ra.Find(RecognitionAssets.Get("AutoOpenChest", "ChestFIcon", ra)).IsExist())
         {
             CancellationTokenSource _ct = new();
             ct.Register(_ct.Cancel);
@@ -38,7 +36,7 @@ public class AutoOpenChestTask : ISoloTask
                 while (!_ct.IsCancellationRequested)
                 {
                     ra = CaptureToRectArea();
-                    Region chestIcon = ra.Find(assets.ChestIconRo);
+                    Region chestIcon = ra.Find(RecognitionAssets.Get("AutoOpenChest", "ChestIcon", ra));
                     int limit = chestIcon.Width;
                     if (!chestIcon.IsExist())
                     {
@@ -46,10 +44,11 @@ public class AutoOpenChestTask : ISoloTask
                         return;
                     }
 
-                    if (ra.Find(assets.ChestFIconRo).IsExist() || ra.Find(assets.FlowerFIconRo).IsExist())
+                    if (ra.Find(RecognitionAssets.Get("AutoOpenChest", "ChestFIcon", ra)).IsExist()
+                        || ra.Find(RecognitionAssets.Get("AutoOpenChest", "FlowerFIcon", ra)).IsExist())
                     {
                         // 找到宝箱/ 地脉花
-                        isFlower = ra.Find(assets.FlowerFIconRo).IsExist();
+                        isFlower = ra.Find(RecognitionAssets.Get("AutoOpenChest", "FlowerFIcon", ra)).IsExist();
                         Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract, KeyType.KeyPress);
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         break;

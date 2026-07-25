@@ -39,11 +39,11 @@ public static class DomainCascadingItems
 
     private static IReadOnlyList<ICascadingItem> BuildItems()
     {
-        return MapLazyAssets.Instance.CountryToDomains.Keys
+        return MapLazyAssets.Get().CountryToDomains.Keys
             .Reverse()
             .Select(country => (ICascadingItem)new CascadingItem(
                 country,
-                MapLazyAssets.Instance.CountryToDomains[country]
+                MapLazyAssets.Get().CountryToDomains[country]
                     .AsEnumerable()
                     .Reverse()
                     .Select(d => (ICascadingItem)new CascadingItem(

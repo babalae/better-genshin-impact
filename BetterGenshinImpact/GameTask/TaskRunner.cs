@@ -82,7 +82,7 @@ public class TaskRunner
                 throw;
             }
         }
-        catch (TaskCanceledException e)
+        catch (OperationCanceledException)
         {
             Notify.Event(NotificationEvent.TaskCancel).Success("任务被手动取消");
             _logger.LogInformation("任务中断:{Msg}", "任务被取消");

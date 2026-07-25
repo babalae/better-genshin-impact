@@ -1,0 +1,31 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "https://github.com/1004452714",
+        "name": "DarkFlameMaster"
+      }
+    ],
+    "bgi_version": "0.52.0",
+    "map_match_method": "TemplateMatch",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1775791925697,
+    "map_name": "Teyvat",
+    "name": "超重型陆巡舰·机动战垒",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "force_tp",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9483.109375,
+      "y": 3347.98681640625
+    }
+  ]
+}

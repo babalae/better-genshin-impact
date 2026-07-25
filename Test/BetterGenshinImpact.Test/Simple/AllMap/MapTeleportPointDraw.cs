@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Service;
 using OpenCvSharp;
@@ -15,9 +15,9 @@ public class MapTeleportPointDraw
     public static void Draw()
     {
         // var pList = LoadTeleportPoint(@"E:\HuiTask\更好的原神\地图匹配\地图点位\5.0");
-        // pList.AddRange(MapAssets.Instance.TpPositions);
+        // pList.AddRange(MapAssets.Get(region).TpPositions);
         var map = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\mainMap1024BlockColor.png");
-        DrawTeleportPoint(map, MapLazyAssets.Instance.ScenesDic[MapTypes.Teyvat.ToString()].Points);
+        DrawTeleportPoint(map, MapLazyAssets.Get().ScenesDic[MapTypes.Teyvat.ToString()].Points);
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\传送点_1024_0.34.3.png", map);
     }
 

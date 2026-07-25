@@ -38,14 +38,14 @@ using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask.AutoDomain.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainTask : ISoloTask
+public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 {
     public string Name => "自动秘境";
 
@@ -55,7 +55,9 @@ public class AutoDomainTask : ISoloTask
 
     private readonly AutoDomainConfig _config;
 
-    private readonly CombatScriptBag _combatScriptBag;
+    private readonly CombatScriptBag? _combatScriptBag;
+    private readonly string? _jsonCombatStrategyPath;
+    private readonly Dictionary<string, int> _rewardSummary = new();
 
     private CancellationToken _ct;
 
@@ -75,13 +77,20 @@ public class AutoDomainTask : ISoloTask
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
-        AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
-        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
+            Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        }
 
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
@@ -109,9 +118,12 @@ public class AutoDomainTask : ISoloTask
         return RecognitionObject.OcrMatch(x, y, width, height, targetText);
     }
 
-    public async Task Start(CancellationToken ct)
+    Task ISoloTask.Start(CancellationToken ct) => Start(ct);
+
+    public async Task<Dictionary<string, int>> Start(CancellationToken ct)
     {
         _ct = ct;
+        _rewardSummary.Clear();
 
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
@@ -153,6 +165,7 @@ public class AutoDomainTask : ISoloTask
 
         await ArtifactSalvage();
         Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
+        return new Dictionary<string, int>(_rewardSummary);
     }
 
     private async Task DoDomain()
@@ -172,25 +185,40 @@ public class AutoDomainTask : ISoloTask
             Logger.LogDebug("0. 关闭秘境提示");
             await CloseDomainTip();
 
-            //0.5. 初始化队伍，只执行一次
-            if (i == 0)
+            if (_jsonCombatStrategyPath != null)
             {
-                combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+                ESkillCdTracker.Clear();
+                // JSON策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
+                // 1. 走到钥匙处启动
+                Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+                await WalkToPressF();
+
+                // 2. 执行战斗（JSON战斗引擎）
+                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略(JSON)");
+                await StartJsonFight();
             }
+            else
+            {
+                //0.5. 初始化队伍，只执行一次
+                if (i == 0)
+                {
+                    combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+                }
 
-            RetryTeamInit(combatScenes); // 队伍没初始化成功则重试
+                RetryTeamInit(combatScenes);
 
-            // 0. 切换到第一个角色
-            var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
+                // 0. 切换到第一个角色
+                var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
-            // 1. 走到钥匙处启动
-            Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
-            await WalkToPressF();
+                // 1. 走到钥匙处启动
+                Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+                await WalkToPressF();
 
-            // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
-            Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
-            await StartFight(combatScenes, combatCommands);
-            combatScenes.AfterTask();
+                // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
+                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
+                await StartFight(combatScenes, combatCommands);
+                combatScenes.AfterTask();
+            }
             EndFightWait();
 
             // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
@@ -263,7 +291,7 @@ public class AutoDomainTask : ISoloTask
         // 传送到秘境
         if (!string.IsNullOrEmpty(_taskParam.DomainName))
         {
-            if (MapLazyAssets.Instance.DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
+            if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
             {
                 Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
                 await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
@@ -271,10 +299,15 @@ public class AutoDomainTask : ISoloTask
                 await Bv.WaitForMainUi(_ct);
 
                 var menuFound = false;
+                AutoPickAssets pickAssets;
+                using (var gameCaptureRegion = CaptureToRectArea())
+                {
+                    pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+                }
                 if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
                         _ct,
                         20,
@@ -289,7 +322,7 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
                         _ct,
                         20,
@@ -300,7 +333,7 @@ public class AutoDomainTask : ISoloTask
                 else if ("太山府".Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => { },
                         _ct,
                         20,
@@ -310,7 +343,7 @@ public class AutoDomainTask : ISoloTask
                 else
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.PickRo,
+                        pickAssets.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
                         _ct,
                         20,
@@ -324,17 +357,6 @@ public class AutoDomainTask : ISoloTask
                     throw new Exception("请检查是否在秘境门前");
                 }
 
-                var menu = await NewRetry.WaitForElementAppear(
-                    GetConfirmRa("单人挑战"),
-                    () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
-                    _ct,
-                    20,
-                    500
-                );
-                if (!menu)
-                {
-                    throw new Exception("请检查是否已进入秘境页面");
-                }
             }
             else
             {
@@ -363,14 +385,27 @@ public class AutoDomainTask : ISoloTask
 
     private async Task EnterDomain()
     {
-        var fightAssets = AutoFightAssets.Instance;
+        AutoFightAssets fightAssets;
+        AutoPickAssets pickAssets;
+        using (var gameCaptureRegion = CaptureToRectArea())
+        {
+            fightAssets = AutoFightAssets.Get(gameCaptureRegion);
+            pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+        }
 
+        await NewRetry.WaitForElementDisappear(
+            pickAssets.PickRo,
+            () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
+            _ct,
+            20,
+            500
+        );
         var menuFound = await NewRetry.WaitForElementAppear(
             GetConfirmRa("单人挑战"),
-            () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
+            null,//只等待,不执行操作
             _ct,
-            10,
-            1000
+            20,
+            500
         );
         if (!menuFound)
         {
@@ -392,7 +427,8 @@ public class AutoDomainTask : ISoloTask
         var serverTime = ServerTimeHelper.GetServerTimeNow();
         if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
-            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
+            using var ra0 = CaptureToRectArea();
+            using var artifactArea = ra0.Find(RecognitionAssets.Get("AutoFight", "ArtifactArea", ra0)); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
             {
                 if (int.TryParse(_taskParam.SundaySelectedValue, out int sundaySelectedValue))
@@ -454,11 +490,11 @@ public class AutoDomainTask : ISoloTask
 
         // 点击单人挑战确认并等待队伍界面--使用图像模版匹配的方法，也可以使用文字OCR的方法识别“单人挑战”直到消失
         await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PartyBtnChooseView,
+            ElementRecognition.Get("PartyBtnChooseView"),
             () =>
             {
                 using var ra = CaptureToRectArea();
-                var ra2 = ra.Find(fightAssets.ConfirmRa);
+                var ra2 = ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra));
                 if (!ra2.IsEmpty())
                 {
                     ra2.Click();
@@ -481,7 +517,7 @@ public class AutoDomainTask : ISoloTask
 
         // 等待队伍选择界面出现
         var teamUiFound = await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PartyBtnChooseView,
+            ElementRecognition.Get("PartyBtnChooseView"),
             () => { Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); },
             _ct,
             10,
@@ -501,7 +537,7 @@ public class AutoDomainTask : ISoloTask
             GetConfirmRa("开始挑战"),
             screen =>
             {
-                screen.Find(fightAssets.ConfirmRa, ra =>
+                screen.Find(RecognitionAssets.Get("AutoFight", "Confirm", screen), ra =>
                 {
                     ra.Click();
                     ra.Dispose();
@@ -529,7 +565,7 @@ public class AutoDomainTask : ISoloTask
             using var ra = CaptureToRectArea();
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var ocrListLeft = ra.Find(AutoFightAssets.Instance.AbnormalIconRa);
+            var ocrListLeft = ra.Find(RecognitionAssets.Get("AutoFight", "AbnormalIcon", ra));
             return (ocrList.Any(t => t.Text.Contains(leyLineDisorderLocalizedString) ||
                                      t.Text.Contains(clickanywheretocloseLocalizedString))) || ocrListLeft.IsExist();
         }, _ct, 40, 500);
@@ -556,7 +592,7 @@ public class AutoDomainTask : ISoloTask
 
             // 检查左下角区域是否还存在目标文字，消失则继续，存在则结束
             using var leftBottom = CaptureToRectArea();
-            var leftBottomOcr = leftBottom.Find(AutoFightAssets.Instance.AbnormalIconRa);
+            var leftBottomOcr = leftBottom.Find(RecognitionAssets.Get("AutoFight", "AbnormalIcon", leftBottom));
             return leftBottomOcr.IsExist();
         }, _ct, 20, 500);
         if (!leftBottomFound)
@@ -603,7 +639,9 @@ public class AutoDomainTask : ISoloTask
                 var startTime = DateTime.Now;
                 while (!_ct.IsCancellationRequested)
                 {
-                    using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
+                    using var gameCaptureRegion = Common.TaskControl.CaptureToRectArea();
+                    var pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+                    using var fRectArea = gameCaptureRegion.Find(pickAssets.PickRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _ct);
@@ -611,7 +649,7 @@ public class AutoDomainTask : ISoloTask
                     else
                     {
                         Logger.LogInformation("检测到交互键");
-                        Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                        Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk);
                         break;
                     }
 
@@ -682,6 +720,45 @@ public class AutoDomainTask : ISoloTask
         return Task.WhenAll(combatTask, domainEndTask);
     }
 
+    /// <summary>
+    /// JSON策略战斗入口：委托给AutoFightJsonTask，抑制其自带的结束检测和拾取逻辑，
+    /// 秘境的DomainEndDetectionTask通过CancellationToken控制战斗结束。
+    /// </summary>
+    private async Task StartJsonFight()
+    {
+        CancellationTokenSource cts = new();
+        _ct.Register(cts.Cancel);
+
+        var jsonParam = new AutoFightParam
+        {
+            CombatStrategyPath = _jsonCombatStrategyPath!,
+            FightFinishDetectEnabled = false,
+            ExpBasedPickupEnabled = false,
+            KazuhaPickupEnabled = false,
+            PickDropsAfterFightEnabled = false,
+            Timeout = 600,
+        };
+
+        var jsonTask = new AutoFightJsonTask(jsonParam);
+
+        var domainEndTask = DomainEndDetectionTask(cts);
+
+        var combatTask = Task.Run(async () =>
+        {
+            try
+            {
+                await jsonTask.Start(cts.Token);
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
+            }
+        }, cts.Token);
+
+        domainEndTask.Start();
+        await Task.WhenAll(combatTask, domainEndTask);
+    }
+
     private void EndFightWait()
     {
         if (_ct.IsCancellationRequested)
@@ -727,7 +804,8 @@ public class AutoDomainTask : ISoloTask
     {
         using var ra = CaptureToRectArea();
 
-        var endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsUpperRect);
+        var fightAssets = AutoFightAssets.Get(ra);
+        var endTipsRect = ra.DeriveCrop(fightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.challengeCompletedLocalizedString))
         {
@@ -735,7 +813,7 @@ public class AutoDomainTask : ISoloTask
             return true;
         }
 
-        endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsRect);
+        endTipsRect = ra.DeriveCrop(fightAssets.EndTipsRect);
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.autoLeavingLocalizedString))
         {
@@ -1206,18 +1284,19 @@ public class AutoDomainTask : ISoloTask
         Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
 
         Sleep(1000, _ct);
+        TryRecognizeRewardResult();
 
         for (var i = 0; i < 30; i++)
         {
             using var ra = CaptureToRectArea();
             // 优先点击继续
-            using var confirmRectArea = ra.Find(AutoFightAssets.Instance.ConfirmRa);
+            using var confirmRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra));
             if (!confirmRectArea.IsEmpty())
             {
                 if (isLastTurn)
                 {
                     // 最后一回合 退出
-                    var exitRectArea = ra.Find(AutoFightAssets.Instance.ExitRa);
+                    var exitRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra));
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.Click();
@@ -1260,6 +1339,37 @@ public class AutoDomainTask : ISoloTask
         }
 
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
+    }
+
+    private void TryRecognizeRewardResult()
+    {
+        if (!_taskParam.RewardRecognitionEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            // 使用多页识别（自动检测是否需要翻页）
+            Logger.LogInformation("自动秘境：开始奖励识别");
+            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage();
+
+            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
+
+            if (rewards.Count > 0)
+            {
+                Logger.LogInformation("自动秘境：本轮奖励识别结果 {Rewards}",
+                    string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
+            }
+            else
+            {
+                Logger.LogWarning("自动秘境：本轮奖励识别结果为空");
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Logger.LogWarning(e, "自动秘境：奖励识别失败，已跳过本轮奖励汇总");
+        }
     }
 
     private async Task ExitDomain()
@@ -1340,7 +1450,7 @@ public class AutoDomainTask : ISoloTask
             }
 
             //切换20/40原粹树脂的按钮是亮的
-            var clickable = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnRo);
+            var clickable = ra0.Find(RecognitionAssets.Get("AutoDomain", "ResinSwitchBtn", ra0.Width, ra0.Height));
             if (clickable.IsExist())
             {
                 Logger.LogDebug("自动秘境：切换原粹树脂使用数量");
@@ -1348,7 +1458,7 @@ public class AutoDomainTask : ISoloTask
             }
 
             //切换20/40原粹树脂的按钮是暗的
-            var disabled = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnNoActiveRo);
+            var disabled = ra0.Find(RecognitionAssets.Get("AutoDomain", "ResinSwitchBtnNoActive", ra0.Width, ra0.Height));
             if (disabled.IsExist())
             {
                 Logger.LogWarning("自动秘境：切换原粹树脂的使用数量失败，可能是体力不足，当前目标：{Num}", expectedNum);

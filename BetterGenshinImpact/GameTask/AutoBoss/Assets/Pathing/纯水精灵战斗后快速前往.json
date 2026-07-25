@@ -1,0 +1,71 @@
+{
+  "info": {
+    "name": "纯水精灵快速前往",
+    "type": "collect",
+    "authors": [],
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1755778295567,
+    "enable_monster_loot_split": false,
+    "map_match_method": ""
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path",
+      "x": 276.962890625,
+      "y": 1788.15185546875,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 281.9873046875,
+      "y": 1769.00146484375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 281.6826171875,
+      "y": 1767.6513671875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "wait(0.5),keypress(F)"
+    },
+    {
+      "id": 4,
+      "x": 297.2255859375,
+      "y": 1793.3134765625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "wait(0.5),keypress(F)"
+    },
+    {
+      "id": 5,
+      "x": 270.623046875,
+      "y": 1807.337890625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "wait(0.5),keypress(F)"
+    },
+    {
+      "id": 6,
+      "x": 256.720703125,
+      "y": 1783.6162109375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "wait(0.5),keypress(F)"
+    }
+  ]
+}

@@ -118,7 +118,7 @@ internal class GoToSereniteaPotTask
 
         for (int i = 0; i < 5; i++)
         {
-            var sereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
+            var sereniteaPotHomeIcon = ra.Find(ElementRecognition.Get("SereniteaPotHome", ra));
             if (!sereniteaPotHomeIcon.IsExist())
             {
                 Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
@@ -137,7 +137,7 @@ internal class GoToSereniteaPotTask
         for (int attempt = 0; attempt < 10; attempt++) // 尝试点击传送按钮
         {
             ra = CaptureToRectArea();
-            var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+            var teleportBtn = ra.Find(RecognitionAssets.Get("QuickTeleport", "TeleportButton", ra));
             if (teleportBtn.IsExist())
             {
                 await Delay(300, ct);
@@ -148,7 +148,7 @@ internal class GoToSereniteaPotTask
                 for(int i = 0; i < 10; i++)     
                 {
                     ra = CaptureToRectArea();
-                    teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+                    teleportBtn = ra.Find(RecognitionAssets.Get("QuickTeleport", "TeleportButton", ra));
                     if (!teleportBtn.IsExist())     //传送按钮消失
                     {
                         isReClickRequired = false;
@@ -165,7 +165,7 @@ internal class GoToSereniteaPotTask
             }
         
             //未找到传送按钮，点击传送住宅按钮
-            var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
+            var teleportSereniteaPotHome = ra.Find(ElementRecognition.Get("TeleportSereniteaPotHome", ra));
             if (teleportSereniteaPotHome.IsExist())
             {
                 teleportSereniteaPotHome.Click();
@@ -199,7 +199,8 @@ internal class GoToSereniteaPotTask
         await Delay(5000, ct); // 在点击壶之后的特殊加载页面会有 mainUI
         await Bv.WaitForMainUi(ct);
         // 判断是否在尘歌壶中
-        if (CaptureToRectArea().Find(ElementAssets.Instance.FingerIconRo).IsExist())
+        using var ra0 = CaptureToRectArea();
+        if (ra0.Find(ElementRecognition.Get("FingerIcon", ra0)).IsExist())
         {
             await Delay(1000, ct);
             // 尝试获取尘歌壶名称
@@ -403,7 +404,7 @@ internal class GoToSereniteaPotTask
         // }
 
         // await Delay(600, ct);
-        ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
+        ra.Find(ElementRecognition.Get("BtnWhiteConfirm", ra)).Click();
         await Delay(600, ct);
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenPaimonMenu); // ESC 
     }
@@ -440,7 +441,7 @@ internal class GoToSereniteaPotTask
             
             if (shouldClick)
             {
-                getAare.Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+                getAare.Find(ElementRecognition.Get("SereniteaPotLove", getAare), a => a.Click());
             }
             
             await Delay(500, ct);
@@ -457,16 +458,20 @@ internal class GoToSereniteaPotTask
                 await Delay(200, ct);
             }
 
-            if (CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click()).IsExist())
+            using var ra1 = CaptureToRectArea();
+            if (ra1.Find(ElementRecognition.Get("SereniteapotPageClose", ra1), a => a.Click()).IsExist())
             {
                 await Delay(500, ct);
             }
 
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotMoneyRo, a => a.Click());
+            using var ra2 = CaptureToRectArea();
+            ra2.Find(ElementRecognition.Get("SereniteaPotMoney", ra2), a => a.Click());
             await Delay(500, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click());
+            using var ra3 = CaptureToRectArea();
+            ra3.Find(ElementRecognition.Get("SereniteapotPageClose", ra3), a => a.Click());
             await Delay(500, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).Click();
+            using var ra4 = CaptureToRectArea();
+            ra4.Find(ElementRecognition.Get("PageCloseWhite", ra4)).Click();
         }
         
         await Delay(900, ct);
@@ -498,28 +503,28 @@ internal class GoToSereniteaPotTask
                         switch (potBuyItem)
                         {
                             case "布匹":
-                                buy.Add(ElementAssets.Instance.AYuanClothRo);
+                                buy.Add(ElementRecognition.Get("AYuanCloth"));
                                 break;
                             case "须臾树脂":
-                                buy.Add(ElementAssets.Instance.AYuanresinRo);
+                                buy.Add(ElementRecognition.Get("AYuanresin"));
                                 break;
                             case "大英雄的经验":
-                                buy.Add(ElementAssets.Instance.SereniteapotExpBookRo);
+                                buy.Add(ElementRecognition.Get("SereniteapotExpBook"));
                                 break;
                             case "流浪者的经验":
-                                buy.Add(ElementAssets.Instance.SereniteapotExpBookSmallRo);
+                                buy.Add(ElementRecognition.Get("SereniteapotExpBookSmall"));
                                 break;
                             case "精锻用魔矿":
-                                buy.Add(ElementAssets.Instance.AYuanMagicmineralprecisionRo);
+                                buy.Add(ElementRecognition.Get("AYuanMagicmineralprecision"));
                                 break;
                             case "摩拉":
-                                buy.Add(ElementAssets.Instance.AYuanMOlaRo);
+                                buy.Add(ElementRecognition.Get("AYuanMOla"));
                                 break;
                             case "祝圣精华":
-                                buy.Add(ElementAssets.Instance.AYuanExpBottleBigRo);
+                                buy.Add(ElementRecognition.Get("AYuanExpBottleBig"));
                                 break;
                             case "祝圣油膏":
-                                buy.Add(ElementAssets.Instance.AYuanExpBottleSmallRo);
+                                buy.Add(ElementRecognition.Get("AYuanExpBottleSmall"));
                                 break;
                             default:
                                 Logger.LogInformation("未知的商品");
@@ -564,7 +569,8 @@ internal class GoToSereniteaPotTask
                     await Delay(900, ct);
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品完成");
                     // 购买完成 关闭page
-                    CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo, a => a.Click());
+                    using var ra5 = CaptureToRectArea();
+                    ra5.Find(ElementRecognition.Get("PageCloseWhite", ra5), a => a.Click());
                 }
             }
             else
@@ -586,7 +592,8 @@ internal class GoToSereniteaPotTask
         var isMainUi = false;
         Logger.LogInformation("领取尘歌壶奖励:{text}", "退出到主页");
         // 识别page 关闭按钮。
-        if (CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo, a => a.Click()).IsExist())
+        using var ra6 = CaptureToRectArea();
+        if (ra6.Find(ElementRecognition.Get("PageCloseWhite", ra6), a => a.Click()).IsExist())
         {
             await Delay(1000, ct);
         }

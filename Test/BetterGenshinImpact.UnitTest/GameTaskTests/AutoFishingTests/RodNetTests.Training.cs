@@ -1,21 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static TorchSharp.torch.nn;
-using static TorchSharp.torch;
-using TorchSharp;
-using System.Diagnostics;
-using System.Collections;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using System.Diagnostics;
+using TorchSharp;
+using static BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests.RodNetTorch;
+using static TorchSharp.torch;
+using static TorchSharp.torch.nn;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
     public partial class RodNetTests
     {
         /// <summary>
-        /// RodNet验证，应在数据集上达到一定准确率
+        /// RodNetTorch验证，应在数据集上达到一定准确率
         /// </summary>
         [Theory]
         [InlineData(@"..\..\..\Assets\AutoFishing\data_selected.csv")]
@@ -29,7 +24,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 torch.mps_is_available() ? torch.MPS :
                 torch.CPU;
             var loss = CrossEntropyLoss();
-            var sut = new RodNet().to((Device)device);
+            var sut = new RodNetTorch().net.to((Device)device);
             sut.SetWeightsManually();
 
             using var test_reader = new CSVReader(Enumerable.Repeat(false, 8).Concat(Enumerable.Repeat(true, 2)), Path.GetFullPath(dataLocation), (Device)device);
@@ -42,7 +37,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         }
 
         /// <summary>
-        /// RodNet必须粗略地支持训练
+        /// RodNetTorch必须粗略地支持训练
         /// </summary>
         [Fact]
         public void Training_ShouldBeDifferentiable()
@@ -55,10 +50,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Tensor uv = tensor(new double[,] { { u, v } }, dtype: ScalarType.Float64);
             Tensor y0z0t = tensor(new double[,] { { y0, z0, t } }, dtype: ScalarType.Float64);
             Tensor h_ = tensor(new double[,] { { h } }, dtype: ScalarType.Float64);
-            RodNet sut = new RodNet();
+            RodNetTorch sut = new RodNetTorch();
 
             //
-            Tensor output = sut.forward(fishLabel, uv, y0z0t, h_);
+            Tensor output = sut.net.forward(fishLabel, uv, y0z0t, h_);
             output.backward([torch.ones_like(output)]);
             //
         }
@@ -68,7 +63,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         private const long batch_size = 32;
         private const long eval_batch_size = 32;
 
-        internal static RodNet Run(int epochs, int timeout, string dataLocation)
+        internal static TorchNet Run(int epochs, int timeout, string dataLocation)
         {
             torch.random.manual_seed(1);
 
@@ -88,7 +83,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 Console.WriteLine($"\tCreating the model...");
                 Console.WriteLine();
 
-                var model = new RodNet().to((Device)device);
+                var model = new RodNetTorch().net.to((Device)device);
 
                 var loss = CrossEntropyLoss();
                 var lr = 1e-2;
@@ -151,7 +146,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
         }
 
-        static void train(int epoch, IEnumerable<(Tensor, Tensor, Tensor, Tensor, Tensor)> train_data, RodNet model, Loss<Tensor, Tensor, Tensor> criterion, torch.optim.Optimizer optimizer)
+        static void train(int epoch, IEnumerable<(Tensor, Tensor, Tensor, Tensor, Tensor)> train_data, TorchNet model, Loss<Tensor, Tensor, Tensor> criterion, torch.optim.Optimizer optimizer)
         {
             model.train();
 
@@ -191,7 +186,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             }
         }
 
-        static double evaluate(IEnumerable<(Tensor, Tensor, Tensor, Tensor, Tensor)> test_data, RodNet model, Loss<Tensor, Tensor, Tensor> criterion)
+        static double evaluate(IEnumerable<(Tensor, Tensor, Tensor, Tensor, Tensor)> test_data, TorchNet model, Loss<Tensor, Tensor, Tensor> criterion)
         {
             model.eval();
 

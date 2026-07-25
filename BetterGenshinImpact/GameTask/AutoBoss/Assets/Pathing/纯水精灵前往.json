@@ -1,0 +1,125 @@
+{
+  "info": {
+    "name": "纯水精灵前往",
+    "type": "collect",
+    "authors": [],
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1755790741507,
+    "enable_monster_loot_split": false,
+    "map_match_method": ""
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 283.8291015625,
+      "y": 1668.5810546875,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": 288.32421875,
+      "y": 1672.90087890625,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": 290.20703125,
+      "y": 1678.84716796875,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": 289.1533203125,
+      "y": 1685.48388671875,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 5,
+      "x": 286.9931640625,
+      "y": 1694.46435546875,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 6,
+      "x": 283.7001953125,
+      "y": 1710.96728515625,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 7,
+      "x": 281.958984375,
+      "y": 1727.70361328125,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 8,
+      "x": 281.6826171875,
+      "y": 1767.6513671875,
+      "action": "combat_script",
+      "move_mode": "walk",
+      "action_params": "wait(0.3),keypress(F)",
+      "type": "target"
+    },
+    {
+      "id": 9,
+      "x": 256.720703125,
+      "y": 1783.6162109375,
+      "action": "combat_script",
+      "move_mode": "walk",
+      "action_params": "wait(0.3),keypress(F)",
+      "type": "target"
+    },
+    {
+      "id": 10,
+      "x": 270.623046875,
+      "y": 1807.337890625,
+      "action": "combat_script",
+      "move_mode": "walk",
+      "action_params": "wait(0.3),keypress(F)",
+      "type": "target"
+    },
+    {
+      "id": 11,
+      "x": 297.2255859375,
+      "y": 1793.3134765625,
+      "action": "combat_script",
+      "move_mode": "walk",
+      "action_params": "wait(0.3),keypress(F)",
+      "type": "target"
+    },
+    {
+      "id": 12,
+      "x": 276.962890625,
+      "y": 1788.15185546875,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    }
+  ]
+}

@@ -101,7 +101,7 @@ public class PaddleOcrService : IOcrService, IDisposable
                 recognitionModel,
                 recognitionVersion,
                 recLabel ?? (() => DefaultRecLabelFunc(recognitionModel)),
-                TestImagePath);
+                preHeatImagePath ?? TestImagePath);
         }
 
         public (Det, Rec) Build(BgiOnnxFactory onnxFactory)
@@ -129,6 +129,12 @@ public class PaddleOcrService : IOcrService, IDisposable
             OcrVersionConfig.PpOcrV5,
             BgiOnnxModel.PaddleOcrRecV5,
             OcrVersionConfig.PpOcrV5);
+
+        public static readonly PaddleOcrModelType V6 = Create(
+            BgiOnnxModel.PaddleOcrDetV6,
+            OcrVersionConfig.PpOcrV6,
+            BgiOnnxModel.PaddleOcrRecV6,
+            OcrVersionConfig.PpOcrV6);
 
         public static readonly PaddleOcrModelType V5Latin = Create(
             BgiOnnxModel.PaddleOcrDetV5,
@@ -285,7 +291,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         var startTime = Stopwatch.GetTimestamp();
         var str = _localRecModel.Run(mat).Text;
         var time = Stopwatch.GetElapsedTime(startTime);
-        Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
+        // Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
         return str;
     }
 
@@ -294,7 +300,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         var startTime = Stopwatch.GetTimestamp();
         var result = RunAll(mat);
         var time = Stopwatch.GetElapsedTime(startTime);
-        Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
+        // Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
         return result;
     }
 

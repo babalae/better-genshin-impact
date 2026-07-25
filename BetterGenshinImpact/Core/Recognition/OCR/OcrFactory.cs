@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -100,6 +100,9 @@ public class OcrFactory : IDisposable
             PaddleOcrModelConfig.V5 =>
                 new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
                     PaddleOcrService.PaddleOcrModelType.V5),
+            PaddleOcrModelConfig.V6 =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V6),
             PaddleOcrModelConfig.V4 =>
                 new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
                     PaddleOcrService.PaddleOcrModelType.V4),
@@ -119,7 +122,6 @@ public class OcrFactory : IDisposable
                 _config.PaddleOcrModelConfig, "不支持的 Paddle OCR 模型配置")
         };
     }
-
 
     public Task Unload()
     {

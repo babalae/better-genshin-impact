@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
@@ -21,7 +21,7 @@ public class CameraOrientation
     /// <returns>角度</returns>
     public static float Compute(Mat mat)
     {
-        var mimiMap = new Mat(mat, MapAssets.Instance.MimiMapRect);
+        var mimiMap = new Mat(mat, MapAssets.Get(mat.Width, mat.Height).MimiMapRect);
         return ComputeMiniMap(mimiMap);
     }
 

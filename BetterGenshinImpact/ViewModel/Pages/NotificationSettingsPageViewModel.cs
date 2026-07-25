@@ -64,6 +64,8 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _serverChanStatus = string.Empty;
 
+    [ObservableProperty] private string _meowStatus = string.Empty;
+
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
         Config = configService.Get();
@@ -456,6 +458,24 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         ServerChanStatus = res.Message;
 
         // 添加Toast提示
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnTestMeowNotification()
+    {
+        IsLoading = true;
+        MeowStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<MeowNotifier>();
+
+        MeowStatus = res.Message;
+
         if (res.IsSuccess)
             Toast.Success(res.Message);
         else

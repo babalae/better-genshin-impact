@@ -91,4 +91,12 @@ public partial class AutoDomainConfig : ObservableObject
     // 战斗死亡后重试次数
     [ObservableProperty]
     private int _reviveRetryCount = 3;
+
+    /// <summary>
+    /// 是否启用奖励名称识别。默认关闭。
+    /// 开启后每轮领取奖励时会用 ONNX 图标匹配 + OCR 材料名双路识别奖励名称与数量，秘境结束打印汇总。
+    /// </summary>
+    [ObservableProperty]
+    private bool _rewardRecognitionEnabled = false;
+
 }

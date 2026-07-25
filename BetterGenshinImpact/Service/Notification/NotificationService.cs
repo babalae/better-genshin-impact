@@ -108,6 +108,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeXxtuiNotifier();
         InitializeDiscordWebhookNotifier();
         InitializeServerChanNotifier();
+        InitializeMeowNotifier();
 
         // 添加新通知渠道时，在此处添加对应的初始化方法调用
     }
@@ -311,6 +312,20 @@ public class NotificationService : IHostedService, IDisposable
         _notifierManager.RegisterNotifier(new ServerChanNotifier(
             _notifyHttpClient,
             _notificationConfig.ServerChanSendKey
+        ));
+    }
+
+    /// <summary>
+    /// 初始化 MeoW 通知器
+    /// </summary>
+    private void InitializeMeowNotifier()
+    {
+        if (_notificationConfig?.MeowNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new MeowNotifier(
+            _notifyHttpClient,
+            _notificationConfig.MeowNickname,
+            _notificationConfig.MeowTitle
         ));
     }
 

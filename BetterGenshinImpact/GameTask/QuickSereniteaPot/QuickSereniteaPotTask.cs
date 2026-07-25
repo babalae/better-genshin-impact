@@ -1,10 +1,10 @@
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,7 +20,8 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
+            using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
+            using var ra2 = ra1.Find(RecognitionAssets.Get("QuickSereniteaPot", "BagCloseButton", ra1));
             if (ra2.IsEmpty())
             {
                 throw new RetryException("背包未打开");
@@ -33,7 +34,8 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
+            using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
+            using var ra2 = ra1.Find(RecognitionAssets.Get("QuickSereniteaPot", "SereniteaPotIcon", ra1));
             if (ra2.IsEmpty())
             {
                 throw new RetryException("未检测到壶");
@@ -57,8 +59,6 @@ public class QuickSereniteaPotTask
         {
             return;
         }
-
-        QuickSereniteaPotAssets.DestroyInstance();
 
         try
         {

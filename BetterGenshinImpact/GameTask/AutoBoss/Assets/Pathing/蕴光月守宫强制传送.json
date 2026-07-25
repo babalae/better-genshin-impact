@@ -1,0 +1,31 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "https://github.com/1004452714",
+        "name": "DarkFlameMaster"
+      }
+    ],
+    "bgi_version": "0.52.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1775787047367,
+    "map_match_method": "SIFT",
+    "map_name": "Teyvat",
+    "name": "蕴光月守宫",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "force_tp",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9664.5869140625,
+      "y": 5690.94580078125
+    }
+  ]
+}

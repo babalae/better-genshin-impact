@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -83,7 +83,7 @@ public class UseGadgetHandler : IActionHandler
     /// </summary>
     private double GetCurrentCd(ImageRegion imageRegion)
     {
-        var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ZCooldownRect);
+        var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ZCooldownRect);
         var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         return StringUtils.TryParseDouble(text);

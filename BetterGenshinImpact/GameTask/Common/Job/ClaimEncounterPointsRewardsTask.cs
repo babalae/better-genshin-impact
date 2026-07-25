@@ -114,7 +114,7 @@ public class ClaimEncounterPointsRewardsTask
 
     private static bool ClickClaimBtn(ImageRegion ra2)
     {
-        var claimBtn = ra2.Find(ElementAssets.Instance.BtnClaimEncounterPointsRewards);
+        var claimBtn = ra2.Find(ElementRecognition.Get("BtnClaimEncounterPointsRewards", ra2));
         if (claimBtn.IsExist())
         {
             claimBtn.Click();

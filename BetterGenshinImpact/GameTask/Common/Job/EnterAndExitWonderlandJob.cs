@@ -12,8 +12,6 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 public class EnterAndExitWonderlandJob
 {
-    private ElementAssets _assets = ElementAssets.Instance;
-
     public async Task Start(CancellationToken ct)
     {
         Logger.LogInformation("进入千星奇域");
@@ -21,7 +19,7 @@ public class EnterAndExitWonderlandJob
 
         // 等待千星奇域界面出现
         await NewRetry.WaitForElementAppear(
-            _assets.WonderlandClose,
+            ElementRecognition.Get("WonderlandClose"),
             () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F6),
             ct,
             10,
@@ -30,7 +28,7 @@ public class EnterAndExitWonderlandJob
 
         // 点击一个奇域并等待大厅按钮出现
         await NewRetry.WaitForElementAppear(
-            _assets.BtnBlackConfirm,
+            ElementRecognition.Get("BtnBlackConfirm"),
             () => GameCaptureRegion.GameRegion1080PPosClick(680, 310),
             ct,
             5,
@@ -65,11 +63,11 @@ public class EnterAndExitWonderlandJob
         
         // 点击前往大厅并等待弹窗消失
         await NewRetry.WaitForElementDisappear(
-            _assets.BtnBlackConfirm,
+            ElementRecognition.Get("BtnBlackConfirm"),
             screen =>
             {
                 // 接收当前截图作为参数
-                screen.Find(_assets.BtnBlackConfirm, ra =>
+                screen.Find(ElementRecognition.Get("BtnBlackConfirm", screen), ra =>
                 {
                     ra.Click();
                     ra.Dispose();
@@ -83,7 +81,7 @@ public class EnterAndExitWonderlandJob
 
         // 等待主界面出现
         var mainUiFound1 = await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PaimonMenuRo,
+            ElementRecognition.Get("PaimonMenu"),
             () => { },
             ct,
             120,
@@ -103,7 +101,7 @@ public class EnterAndExitWonderlandJob
         
         // 等待菜单界面出现
         await NewRetry.WaitForElementAppear(
-            _assets.BtnBackTeyvat,
+            ElementRecognition.Get("BtnBackTeyvat"),
             () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
             ct,
             20,
@@ -112,11 +110,11 @@ public class EnterAndExitWonderlandJob
         
         // 点击返回提瓦特按钮并等待确认弹窗出现
         await NewRetry.WaitForElementAppear(
-            _assets.BtnBlackConfirm,
+            ElementRecognition.Get("BtnBlackConfirm"),
             () => 
             {
                 using var ra = CaptureToRectArea();
-                Bv.FindAndClick(ra, _assets.BtnBackTeyvat);
+                Bv.FindAndClick(ra, ElementRecognition.Get("BtnBackTeyvat", ra));
             },
             ct,
             5,
@@ -125,11 +123,11 @@ public class EnterAndExitWonderlandJob
         
         // 点击确认并等待确认弹窗消失
         await NewRetry.WaitForElementDisappear(
-            _assets.BtnBlackConfirm,
+            ElementRecognition.Get("BtnBlackConfirm"),
             screen =>
             {
                 // 接收当前截图作为参数
-                screen.Find(_assets.BtnBlackConfirm, ra =>
+                screen.Find(ElementRecognition.Get("BtnBlackConfirm", screen), ra =>
                 {
                     ra.Click();
                     ra.Dispose();
@@ -143,7 +141,7 @@ public class EnterAndExitWonderlandJob
         
         // 等待主界面出现
         var mainUiFound2 = await NewRetry.WaitForElementAppear(
-            ElementAssets.Instance.PaimonMenuRo,
+            ElementRecognition.Get("PaimonMenu"),
             () => { },
             ct,
             120,

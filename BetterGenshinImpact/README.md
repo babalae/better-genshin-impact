@@ -1,7 +1,3 @@
-## 项目结构
-
-参考：[AI生成的项目结构说明](ProjectStructure.md)
-
 ## 如何编译并运行整个工程？
 
 ### Rider (推荐)
@@ -33,3 +29,8 @@
 ## 运行项目闪退？
 
 可能是 Windows SDK 版本不够。使用 Visual Studio Installer 安装 `10.0.22621.0` 及以上版本的 Windows SDK，或者编辑项目文件的 `TargetFramework` 降低版本。
+
+
+## 识别用的模板资源 Recognition.json 如何编写
+
+参考：[RecognitionJson编写说明](Docs/RecognitionJson.md)

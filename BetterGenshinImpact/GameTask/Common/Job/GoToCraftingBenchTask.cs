@@ -81,14 +81,14 @@ public class GoToCraftingBenchTask
 
         // 2. 等待合成界面
         await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct,
-            region => region.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist()
+            region => region.Find(ElementRecognition.Get("BtnWhiteConfirm", region)).IsExist()
         );
         await Delay(800, ct);
         
         // 判断浓缩树脂是否存在
         // TODO 满的情况是怎么样子的
         var ra = CaptureToRectArea();
-        var resin = ra.Find(ElementAssets.Instance.CraftCondensedResin);
+        var resin = ra.Find(ElementRecognition.Get("CraftCondensedResin", ra));
         
         if (resin.IsExist())
         {
@@ -97,7 +97,7 @@ public class GoToCraftingBenchTask
             if (SelectedConfig?.MinResinToKeep > 0){//开关判断，填写的数量大于0时启用 SelectedConfig.MinResinToKeep
                 var fragileResinCount = 0;
                 var condensedResinCount = 0;
-                var fragileResinCountRa = ra.Find(ElementAssets.Instance.fragileResinCount);
+                var fragileResinCountRa = ra.Find(ElementRecognition.Get("fragileResinCount", ra));
                 if (!fragileResinCountRa.IsEmpty())
                 {
                     // 图像下方就是脆弱树脂数量
@@ -117,7 +117,7 @@ public class GoToCraftingBenchTask
                 //浓缩纠缠重试
                 var condensed =await NewRetry.WaitForAction(() =>
                 {
-                    var condensedResinCountRa = ra.Find(ElementAssets.Instance.CondensedResinCount);
+                    var condensedResinCountRa = ra.Find(ElementRecognition.Get("CondensedResinCount", ra));
                     if (!condensedResinCountRa.IsEmpty())
                     {
                         // 图像右侧就是浓缩树脂数量

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Webview;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,12 +13,29 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
 
 public partial class NotifyIconViewModel : ObservableObject
 {
+    private readonly ChildSessionService _childSessionService;
+
+    public bool IsChildSessionEntryVisible => CommandLineOptions.Instance.IsPrimaryInstance;
+
+    public NotifyIconViewModel(ChildSessionService childSessionService)
+    {
+        _childSessionService = childSessionService;
+    }
+
+    [RelayCommand]
+    private void OpenChildSessionWindow()
+    {
+        _childSessionService.ShowWindow();
+    }
+
     [RelayCommand]
     public void ShowOrHide()
     {

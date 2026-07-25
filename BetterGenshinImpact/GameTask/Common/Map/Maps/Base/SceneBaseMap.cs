@@ -118,9 +118,44 @@ public abstract class SceneBaseMap : ISceneMap
         return SiftMatcher.Match(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
     }
 
+    public virtual Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter)
+    {
+        var layer = MainLayer;
+        if (!IsValidPoint(expectedCenter) || layer.SplitBlocks.Length == 0 || layer.SplitBlocks[0].Length == 0)
+        {
+            return GetBigMapPosition(greyBigMapMat);
+        }
+
+        var searchRect = BuildLocalSearchRect(expectedCenter, greyBigMapMat.Size(), MapSize);
+        var result = SiftMatcher.KnnMatchLocal(
+            layer.SplitBlocks,
+            layer.TrainDescriptors,
+            MapSize,
+            searchRect,
+            greyBigMapMat);
+        return result == default ? GetBigMapPosition(greyBigMapMat) : result;
+    }
+
     public virtual Rect GetBigMapRect(Mat greyBigMapMat)
     {
         return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
+    }
+
+    private static bool IsValidPoint(Point2f point)
+    {
+        return float.IsFinite(point.X) && float.IsFinite(point.Y) &&
+               (Math.Abs(point.X) > float.Epsilon || Math.Abs(point.Y) > float.Epsilon);
+    }
+
+    protected static Rect BuildLocalSearchRect(Point2f center, Size querySize, Size trainImageSize)
+    {
+        var width = Math.Min(trainImageSize.Width, Math.Max(querySize.Width * 2.0, trainImageSize.Width / 4.0));
+        var height = Math.Min(trainImageSize.Height, Math.Max(querySize.Height * 2.0, trainImageSize.Height / 4.0));
+        var rectWidth = (int)Math.Round(width);
+        var rectHeight = (int)Math.Round(height);
+        var x = Math.Clamp((int)Math.Round(center.X - rectWidth / 2.0), 0, Math.Max(0, trainImageSize.Width - rectWidth));
+        var y = Math.Clamp((int)Math.Round(center.Y - rectHeight / 2.0), 0, Math.Max(0, trainImageSize.Height - rectHeight));
+        return new Rect(x, y, rectWidth, rectHeight);
     }
 
     public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat)

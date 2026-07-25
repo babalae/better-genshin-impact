@@ -1,0 +1,39 @@
+{
+  "objects": {
+    "SpaceButton": {
+      "type": "TemplateMatch",
+      "template": "space.png",
+      "roi": "rect(cw / 2, ch / 2, cw / 2, ch / 2)",
+      "threshold": 0.7,
+      "draw": false
+    },
+    "BaitButton": {
+      "type": "TemplateMatch",
+      "template": "switch_bait.png",
+      "roi": "rect(cw - cw / 2, ch - ch / 4, cw / 2, ch / 4)",
+      "threshold": 0.7,
+      "draw": false
+    },
+    "WaitBiteButton": {
+      "type": "TemplateMatch",
+      "template": "wait_bite.png",
+      "roi": "rect(cw - cw / 4, ch - ch / 2, cw / 4, ch / 2)",
+      "threshold": 0.7,
+      "draw": false
+    },
+    "LiftRodButton": {
+      "type": "TemplateMatch",
+      "template": "lift_rod.png",
+      "roi": "rect(cw - cw / 4, ch - ch / 2, cw / 4, ch / 2)",
+      "threshold": 0.7,
+      "draw": false
+    },
+    "ExitFishingButton": {
+      "type": "TemplateMatch",
+      "template": "exit_fishing.png",
+      "roi": "rect(cw / 8, 0, cw / 4, ch / 4)",
+      "threshold": 0.7,
+      "draw": false
+    }
+  }
+}
