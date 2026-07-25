@@ -167,7 +167,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             }
             
             //5.开始战斗
-            await RunAutoFight();
+            await RunAutoFight(_taskParam.Timeout);
             
             //6.寻路到征讨之花
             await NavigateToReward();
@@ -893,7 +893,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 使用所选自动战斗策略执行首领战斗，并复用自动战斗的结束检测。
     /// </summary>
-    private async Task RunAutoFight()
+    /// <param name="taskParamTimeout"></param>
+    private async Task RunAutoFight(int taskParamTimeout)
     {
         _logger.LogInformation("{Name}：执行战斗策略", Name);
 
@@ -906,7 +907,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             var combatScenes = GetCombatScenesWithRetry();
             FindCombatScriptAndSwitchAvatar(combatScenes);
 
-            var taskParam = BuildAutoFightParamForBoss();
+            var taskParam = BuildAutoFightParamForBoss(taskParamTimeout);
             try
             {
                 await new AutoFightTask(taskParam).Start(_ct);
@@ -960,7 +961,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 构造 AutoBoss 专用自动战斗参数：复用战斗检测配置，但不执行任何战后拾取。
     /// </summary>
-    private AutoFightParam BuildAutoFightParamForBoss()
+    /// <param name="taskParamTimeout"></param>
+    private AutoFightParam BuildAutoFightParamForBoss(int taskParamTimeout)
     {
         var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, TaskContext.Instance().Config.AutoFightConfig)
         {
@@ -973,7 +975,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             BattleThresholdForLoot = -1,
             OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite"
         };
-
+        taskParam.Timeout = taskParamTimeout;
         return taskParam;
     }
 
