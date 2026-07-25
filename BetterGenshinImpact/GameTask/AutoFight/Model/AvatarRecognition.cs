@@ -173,8 +173,6 @@ public static class AvatarRecognition
                 if (row.GetArray(out int[] arr))
                 {
                     int x = arr[0], y = arr[1], width = arr[2], height = arr[3];
-                    if (y < (int)(50 * AssetScale))
-                        continue;
                     results.Add((x, y, width, height));
                 }
             }
