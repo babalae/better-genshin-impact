@@ -79,29 +79,30 @@ public static class AvatarRecognition
     private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
 
     /// <summary>
-    /// 传奇血条动态追踪字典：2px粒度的 y → 连续出现计数。
+    /// 传奇血条动态追踪字典：(xBin, yBin) → 连续出现计数。
+    /// x 以 5px 粒度分箱（传奇血条左侧坐标相对稳定），y 以 2px 粒度分箱。
     /// 按 y 分层使用不同阈值判定传奇：
     ///   y &lt; 100 → 连续 2 帧判传奇
     ///   y 100-200 → 连续 4 帧判传奇
     ///   y ≥ 200 → 连续 10 帧判传奇
     /// </summary>
-    private static readonly Dictionary<int, int> _legendaryBarTracker = new();
+    private static readonly Dictionary<(int xBin, int yBin), int> _legendaryBarTracker = new();
     private static readonly object _legendaryBarLock = new();
     private const int LegendaryBarMaxCount = 10;
 
     /// <summary>
     /// 更新传奇血条动态追踪状态。
-    /// 对全部 y 的血条进行帧间连续性追踪，连续出现达到对应阈值后标记为传奇。
+    /// 对全部血条的 (x, y) 进行帧间连续性追踪，连续出现达到对应阈值后标记为传奇。
     /// 允许1帧容错：某帧未出现时计数递减而非直接清零。
     /// </summary>
-    private static void UpdateLegendaryBarTracker(IEnumerable<int> barYs)
+    private static void UpdateLegendaryBarTracker(IEnumerable<(int x, int y)> bars)
     {
         lock (_legendaryBarLock)
         {
-            var currentBins = barYs.Select(y => y / 2 * 2)
-                                   .ToHashSet();
+            var currentBins = bars.Select(b => (xBin: b.x / 5 * 5, yBin: b.y / 2 * 2))
+                                  .ToHashSet();
 
-            // 存在的 y：递增（上限为最大阈值）
+            // 存在：递增（上限为最大阈值）
             foreach (var bin in currentBins)
             {
                 if (_legendaryBarTracker.TryGetValue(bin, out var cnt))
@@ -110,7 +111,7 @@ public static class AvatarRecognition
                     _legendaryBarTracker[bin] = 1;
             }
 
-            // 不存在的 y：递减（1帧容错），归零则移除
+            // 不存在：递减（1帧容错），归零则移除
             foreach (var bin in _legendaryBarTracker.Keys.ToArray())
             {
                 if (!currentBins.Contains(bin))
@@ -124,14 +125,14 @@ public static class AvatarRecognition
     }
 
     /// <summary>
-    /// 判断指定 y 坐标的血条是否为传奇血条。
+    /// 判断指定 (x, y) 坐标的血条是否为传奇血条。
     /// y &lt; 100 连续 2 帧判传奇；y 100-200 连续 4 帧判传奇；y ≥ 200 连续 10 帧判传奇。
     /// </summary>
-    public static bool IsLegendaryBar(int y)
+    public static bool IsLegendaryBar(int x, int y)
     {
         lock (_legendaryBarLock)
         {
-            if (!_legendaryBarTracker.TryGetValue(y / 2 * 2, out var cnt))
+            if (!_legendaryBarTracker.TryGetValue((x / 5 * 5, y / 2 * 2), out var cnt))
                 return false;
 
             int threshold = y < (int)(100 * AssetScale) ? 2
@@ -179,7 +180,7 @@ public static class AvatarRecognition
             }
 
             // 自动更新传奇血条动态追踪
-            UpdateLegendaryBarTracker(results.Select(r => r.y));
+            UpdateLegendaryBarTracker(results.Select(r => (r.x, r.y)));
 
             return results;
         }
@@ -410,7 +411,7 @@ public static class AvatarRecognition
 
                     var drawList = new List<RectDrawable>();
 
-                    bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.y));
+                    bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.x, b.y));
 
                     // 2. 血条追踪：存在有效普通血条且无传奇时，朝最近血条方向移动鼠标
                     if (valid.Count > 0 && !hasLegendaryBar)
