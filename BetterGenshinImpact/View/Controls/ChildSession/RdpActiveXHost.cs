@@ -18,7 +18,14 @@ internal sealed class RdpActiveXHost : AxHost
     private static readonly RemoteKey LeftWindowsKey = new(0x5B, IsExtended: true);
     private static readonly RemoteKey DKey = new(0x20, IsExtended: false);
     private static readonly RemoteKey TabKey = new(0x0F, IsExtended: false);
+    private ConnectionPointCookie? _eventCookie;
+    private RdpEventSink? _eventSink;
+    private bool _connectionAttemptInProgress;
+    private bool _connectionFailureReported;
+    private bool _disconnectRequested;
     private bool _smartSizingEnabled = true;
+
+    internal event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
 
     internal RdpActiveXHost()
         : base(RdpClientClsid)
@@ -67,6 +74,11 @@ internal sealed class RdpActiveXHost : AxHost
 
         var advancedSettings = GetComProperty(client, "AdvancedSettings7")
             ?? throw new COMException("RDP ActiveX 未返回 AdvancedSettings7。");
+        RunComStep("设置 RDP 连接端口", () =>
+            SetComProperty(
+                advancedSettings,
+                "RDPPort",
+                ChildSessionNativeMethods.GetConfiguredRdpPort()));
         RunComStep("启用 CredSSP", () =>
             SetComProperty(advancedSettings, "EnableCredSspSupport", true));
         RunComStep("启用远程 Windows 键", () =>
@@ -82,7 +94,18 @@ internal sealed class RdpActiveXHost : AxHost
             extendedSettings.set_Property("ConnectToChildSession", ref connectToChildSession);
         });
 
-        RunComStep("调用 RDP Connect()", () => InvokeComMethod(client, "Connect"));
+        _connectionAttemptInProgress = true;
+        _connectionFailureReported = false;
+        _disconnectRequested = false;
+        try
+        {
+            RunComStep("调用 RDP Connect()", () => InvokeComMethod(client, "Connect"));
+        }
+        catch
+        {
+            _connectionAttemptInProgress = false;
+            throw;
+        }
     }
 
     internal void SendShowDesktopShortcut()
@@ -133,7 +156,16 @@ internal sealed class RdpActiveXHost : AxHost
         }
         if (ConnectedState != 0)
         {
-            InvokeComMethod(GetRequiredOcx(), "Disconnect");
+            _disconnectRequested = true;
+            try
+            {
+                InvokeComMethod(GetRequiredOcx(), "Disconnect");
+            }
+            catch
+            {
+                _disconnectRequested = false;
+                throw;
+            }
         }
     }
 
@@ -151,6 +183,31 @@ internal sealed class RdpActiveXHost : AxHost
         }
 
         base.OnHandleDestroyed(e);
+    }
+
+    protected override void CreateSink()
+    {
+        base.CreateSink();
+
+        _eventSink = new RdpEventSink(this);
+        _eventCookie = new ConnectionPointCookie(
+            GetOcx(),
+            _eventSink,
+            typeof(IMsTscAxEvents));
+    }
+
+    protected override void DetachSink()
+    {
+        try
+        {
+            _eventCookie?.Disconnect();
+            _eventCookie = null;
+            _eventSink = null;
+        }
+        finally
+        {
+            base.DetachSink();
+        }
     }
 
     private void SendShortcut(KeyStroke[] strokes, string displayName)
@@ -192,6 +249,181 @@ internal sealed class RdpActiveXHost : AxHost
     {
         const int extendedScanCodeFlag = 0x0100;
         return key.ScanCode | (key.IsExtended ? extendedScanCodeFlag : 0);
+    }
+
+    private void OnLoginComplete()
+    {
+        _connectionAttemptInProgress = false;
+        _connectionFailureReported = false;
+    }
+
+    private void OnDisconnected(int disconnectReason)
+    {
+        var failedWhileConnecting = _connectionAttemptInProgress;
+        _connectionAttemptInProgress = false;
+
+        if (_disconnectRequested)
+        {
+            _disconnectRequested = false;
+            return;
+        }
+
+        var extendedDisconnectReason = TryGetExtendedDisconnectReason();
+        if (_connectionFailureReported
+            || (!failedWhileConnecting
+                && IsNormalDisconnect(disconnectReason, extendedDisconnectReason)))
+        {
+            return;
+        }
+
+        var errorDescription = TryGetErrorDescription(
+            disconnectReason,
+            extendedDisconnectReason);
+        var failureTitle = failedWhileConnecting
+            ? "RDP 连接失败"
+            : "RDP 连接意外断开";
+        var message = string.IsNullOrWhiteSpace(errorDescription)
+            ? $"{failureTitle}。\n\n断开原因：{FormatErrorCode(disconnectReason)}\n扩展原因：{FormatErrorCode(extendedDisconnectReason)}"
+            : $"{failureTitle}：{errorDescription}\n\n断开原因：{FormatErrorCode(disconnectReason)}\n扩展原因：{FormatErrorCode(extendedDisconnectReason)}";
+
+        ReportConnectionFailure(
+            message,
+            disconnectReason,
+            extendedDisconnectReason);
+    }
+
+    private void OnFatalError(int errorCode)
+    {
+        _connectionAttemptInProgress = false;
+        if (_disconnectRequested)
+        {
+            return;
+        }
+
+        ReportConnectionFailure(
+            $"RDP 客户端发生致命错误：{GetFatalErrorDescription(errorCode)}\n\n错误代码：{FormatErrorCode(errorCode)}",
+            errorCode);
+    }
+
+    private void OnLogonError(int errorCode)
+    {
+        if (_disconnectRequested
+            || !TryGetLogonErrorDescription(errorCode, out var errorDescription))
+        {
+            return;
+        }
+
+        _connectionAttemptInProgress = false;
+        ReportConnectionFailure(
+            $"RDP 登录失败：{errorDescription}\n\n错误代码：{FormatErrorCode(errorCode)}",
+            errorCode);
+    }
+
+    private int TryGetExtendedDisconnectReason()
+    {
+        try
+        {
+            return Convert.ToInt32(
+                GetComProperty(GetRequiredOcx(), "ExtendedDisconnectReason"),
+                CultureInfo.InvariantCulture);
+        }
+        catch (Exception exception) when (exception is COMException
+                                              or TargetInvocationException
+                                              or InvalidOperationException)
+        {
+            return 0;
+        }
+    }
+
+    private string? TryGetErrorDescription(
+        int disconnectReason,
+        int extendedDisconnectReason)
+    {
+        try
+        {
+            return Convert.ToString(
+                InvokeComMethod(
+                    GetRequiredOcx(),
+                    "GetErrorDescription",
+                    disconnectReason,
+                    extendedDisconnectReason),
+                CultureInfo.CurrentCulture);
+        }
+        catch (Exception exception) when (exception is COMException
+                                              or TargetInvocationException
+                                              or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private void ReportConnectionFailure(
+        string message,
+        int errorCode,
+        int? extendedErrorCode = null)
+    {
+        if (_connectionFailureReported)
+        {
+            return;
+        }
+
+        _connectionFailureReported = true;
+        ConnectionFailed?.Invoke(
+            this,
+            new ChildSessionConnectionFailedEventArgs(
+                message,
+                errorCode,
+                extendedErrorCode));
+    }
+
+    private static bool IsNormalDisconnect(
+        int disconnectReason,
+        int extendedDisconnectReason)
+    {
+        // 1～3 分别表示本地主动断开、远端用户断开和服务器主动断开，并非连接错误。
+        // 扩展原因 1、2 分别表示 API 主动断开和 API 主动注销。
+        return disconnectReason is 1 or 2 or 3
+               && extendedDisconnectReason is 0 or 1 or 2;
+    }
+
+    private static string FormatErrorCode(int errorCode)
+    {
+        return $"{errorCode} (0x{unchecked((uint)errorCode):X8})";
+    }
+
+    private static string GetFatalErrorDescription(int errorCode)
+    {
+        return errorCode switch
+        {
+            0 => "发生未知错误。",
+            1 => "发生内部错误（1）。",
+            2 => "内存不足。",
+            3 => "无法创建 RDP 窗口。",
+            4 => "发生内部错误（2）。",
+            5 => "RDP 客户端进入了无效状态。",
+            6 => "发生内部错误（4）。",
+            7 => "建立客户端连接时发生不可恢复的错误。",
+            100 => "Windows 套接字初始化失败。",
+            _ => "发生未识别的致命错误。"
+        };
+    }
+
+    private static bool TryGetLogonErrorDescription(
+        int errorCode,
+        out string errorDescription)
+    {
+        errorDescription = errorCode switch
+        {
+            -1 => "访问被拒绝。",
+            0 => "登录凭据无效。",
+            1 => "密码已过期，必须先修改密码。",
+            2 => "登录或登录后的处理发生错误。",
+            unchecked((int)0xC000006D) => "用户名或身份验证信息无效。",
+            unchecked((int)0xC000006E) => "身份验证受到用户账户限制。",
+            unchecked((int)0xC0000224) => "密码已过期，必须先修改密码。",
+            _ => string.Empty
+        };
+        return errorDescription.Length > 0;
     }
 
     private object GetRequiredOcx()
@@ -274,6 +506,337 @@ internal sealed class RdpActiveXHost : AxHost
 
             throw;
         }
+    }
+
+    [ComImport]
+    [Guid("336D5562-EFA8-482E-8CB3-C5C0FC7A7DB6")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    [TypeLibType(TypeLibTypeFlags.FDispatchable)]
+    private interface IMsTscAxEvents
+    {
+        [DispId(1)]
+        void OnConnecting();
+
+        [DispId(2)]
+        void OnConnected();
+
+        [DispId(3)]
+        void OnLoginComplete();
+
+        [DispId(4)]
+        void OnDisconnected([In] int disconnectReason);
+
+        [DispId(5)]
+        void OnEnterFullScreenMode();
+
+        [DispId(6)]
+        void OnLeaveFullScreenMode();
+
+        [DispId(7)]
+        void OnChannelReceivedData(
+            [In, MarshalAs(UnmanagedType.BStr)] string channelName,
+            [In, MarshalAs(UnmanagedType.BStr)] string data);
+
+        [DispId(8)]
+        void OnRequestGoFullScreen();
+
+        [DispId(9)]
+        void OnRequestLeaveFullScreen();
+
+        [DispId(10)]
+        void OnFatalError([In] int errorCode);
+
+        [DispId(11)]
+        void OnWarning([In] int warningCode);
+
+        [DispId(12)]
+        void OnRemoteDesktopSizeChange([In] int width, [In] int height);
+
+        [DispId(13)]
+        void OnIdleTimeoutNotification();
+
+        [DispId(14)]
+        void OnRequestContainerMinimize();
+
+        [DispId(15)]
+        void OnConfirmClose([Out] out bool allowClose);
+
+        [DispId(16)]
+        void OnReceivedTSPublicKey(
+            [In, MarshalAs(UnmanagedType.BStr)] string publicKey,
+            [Out] out bool continueLogon);
+
+        [DispId(17)]
+        void OnAutoReconnecting(
+            [In] int disconnectReason,
+            [In] int attemptCount,
+            [Out] out AutoReconnectContinueState continueStatus);
+
+        [DispId(18)]
+        void OnAuthenticationWarningDisplayed();
+
+        [DispId(19)]
+        void OnAuthenticationWarningDismissed();
+
+        [DispId(20)]
+        void OnRemoteProgramResult(
+            [In, MarshalAs(UnmanagedType.BStr)] string remoteProgram,
+            [In] RemoteProgramResult error,
+            [In] bool isExecutable);
+
+        [DispId(21)]
+        void OnRemoteProgramDisplayed(
+            [In] bool displayed,
+            [In] uint displayInformation);
+
+        [DispId(29)]
+        void OnRemoteWindowDisplayed(
+            [In] bool displayed,
+            [In] ref RemotableHandle windowHandle,
+            [In] RemoteWindowDisplayedAttribute windowAttribute);
+
+        [DispId(22)]
+        void OnLogonError([In] int errorCode);
+
+        [DispId(23)]
+        void OnFocusReleased([In] int direction);
+
+        [DispId(24)]
+        void OnUserNameAcquired(
+            [In, MarshalAs(UnmanagedType.BStr)] string userName);
+
+        [DispId(26)]
+        void OnMouseInputModeChanged([In] bool isRelativeMouseMode);
+
+        [DispId(28)]
+        void OnServiceMessageReceived(
+            [In, MarshalAs(UnmanagedType.BStr)] string serviceMessage);
+
+        [DispId(30)]
+        void OnConnectionBarPullDown();
+
+        [DispId(32)]
+        void OnNetworkStatusChanged(
+            [In] uint qualityLevel,
+            [In] int bandwidth,
+            [In] int roundTripTime);
+
+        [DispId(35)]
+        void OnDevicesButtonPressed();
+
+        [DispId(33)]
+        void OnAutoReconnected();
+
+        [DispId(34)]
+        void OnAutoReconnecting2(
+            [In] int disconnectReason,
+            [In] bool networkAvailable,
+            [In] int attemptCount,
+            [In] int maxAttemptCount);
+    }
+
+    [ComVisible(true)]
+    [ClassInterface(ClassInterfaceType.None)]
+    private sealed class RdpEventSink(RdpActiveXHost owner) : IMsTscAxEvents
+    {
+        public void OnConnecting()
+        {
+        }
+
+        public void OnConnected()
+        {
+        }
+
+        public void OnLoginComplete()
+        {
+            owner.OnLoginComplete();
+        }
+
+        public void OnDisconnected(int disconnectReason)
+        {
+            owner.OnDisconnected(disconnectReason);
+        }
+
+        public void OnEnterFullScreenMode()
+        {
+        }
+
+        public void OnLeaveFullScreenMode()
+        {
+        }
+
+        public void OnChannelReceivedData(string channelName, string data)
+        {
+        }
+
+        public void OnRequestGoFullScreen()
+        {
+        }
+
+        public void OnRequestLeaveFullScreen()
+        {
+        }
+
+        public void OnFatalError(int errorCode)
+        {
+            owner.OnFatalError(errorCode);
+        }
+
+        public void OnWarning(int warningCode)
+        {
+        }
+
+        public void OnRemoteDesktopSizeChange(int width, int height)
+        {
+        }
+
+        public void OnIdleTimeoutNotification()
+        {
+        }
+
+        public void OnRequestContainerMinimize()
+        {
+        }
+
+        public void OnConfirmClose(out bool allowClose)
+        {
+            allowClose = true;
+        }
+
+        public void OnReceivedTSPublicKey(
+            string publicKey,
+            out bool continueLogon)
+        {
+            continueLogon = true;
+        }
+
+        public void OnAutoReconnecting(
+            int disconnectReason,
+            int attemptCount,
+            out AutoReconnectContinueState continueStatus)
+        {
+            continueStatus = AutoReconnectContinueState.Automatic;
+        }
+
+        public void OnAuthenticationWarningDisplayed()
+        {
+        }
+
+        public void OnAuthenticationWarningDismissed()
+        {
+        }
+
+        public void OnRemoteProgramResult(
+            string remoteProgram,
+            RemoteProgramResult error,
+            bool isExecutable)
+        {
+        }
+
+        public void OnRemoteProgramDisplayed(
+            bool displayed,
+            uint displayInformation)
+        {
+        }
+
+        public void OnRemoteWindowDisplayed(
+            bool displayed,
+            ref RemotableHandle windowHandle,
+            RemoteWindowDisplayedAttribute windowAttribute)
+        {
+        }
+
+        public void OnLogonError(int errorCode)
+        {
+            owner.OnLogonError(errorCode);
+        }
+
+        public void OnFocusReleased(int direction)
+        {
+        }
+
+        public void OnUserNameAcquired(string userName)
+        {
+        }
+
+        public void OnMouseInputModeChanged(bool isRelativeMouseMode)
+        {
+        }
+
+        public void OnServiceMessageReceived(string serviceMessage)
+        {
+        }
+
+        public void OnConnectionBarPullDown()
+        {
+        }
+
+        public void OnNetworkStatusChanged(
+            uint qualityLevel,
+            int bandwidth,
+            int roundTripTime)
+        {
+        }
+
+        public void OnDevicesButtonPressed()
+        {
+        }
+
+        public void OnAutoReconnected()
+        {
+            owner.OnLoginComplete();
+        }
+
+        public void OnAutoReconnecting2(
+            int disconnectReason,
+            bool networkAvailable,
+            int attemptCount,
+            int maxAttemptCount)
+        {
+        }
+    }
+
+    private enum AutoReconnectContinueState
+    {
+        Automatic,
+        Stop,
+        Manual
+    }
+
+    private enum RemoteProgramResult
+    {
+        Ok,
+        Locked,
+        ProtocolError,
+        NotInWhitelist,
+        NetworkPathDenied,
+        FileNotFound,
+        Failure,
+        HookNotLoaded
+    }
+
+    private enum RemoteWindowDisplayedAttribute
+    {
+        None,
+        WindowDisplayed,
+        ShellIconDisplayed
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RemotableHandle
+    {
+        internal int Context;
+        internal RemotableHandleUnion Value;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct RemotableHandleUnion
+    {
+        [FieldOffset(0)]
+        internal int InProcessHandle;
+
+        [FieldOffset(0)]
+        internal int RemoteHandle;
     }
 
     [ComImport]

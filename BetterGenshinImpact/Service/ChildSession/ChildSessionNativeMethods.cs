@@ -1,14 +1,20 @@
 using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
+using Microsoft.Win32;
 
 namespace BetterGenshinImpact.Service.ChildSession;
 
 internal static class ChildSessionNativeMethods
 {
+    private const int DefaultRdpPort = 3389;
     private const int ErrorNotFound = 1168;
+    private const string RdpTcpRegistryPath =
+        @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp";
     private const uint NoChildSessionId = uint.MaxValue;
     private static readonly IntPtr CurrentServerHandle = IntPtr.Zero;
     private static readonly ConcurrentDictionary<IntPtr, IntPtr> RdpInputWindows = new();
@@ -66,6 +72,27 @@ internal static class ChildSessionNativeMethods
         if (!WTSEnableChildSessions(true))
         {
             throw CreateLastWin32Exception("无法启用 RDP Child Session");
+        }
+    }
+
+    internal static int GetConfiguredRdpPort()
+    {
+        try
+        {
+            using var localMachine = RegistryKey.OpenBaseKey(
+                RegistryHive.LocalMachine,
+                RegistryView.Registry64);
+            using var rdpTcpKey = localMachine.OpenSubKey(RdpTcpRegistryPath);
+            var configuredPort = rdpTcpKey?.GetValue("PortNumber");
+            return configuredPort is int port and > 0 and <= ushort.MaxValue
+                ? port
+                : DefaultRdpPort;
+        }
+        catch (Exception exception) when (exception is SecurityException
+                                              or UnauthorizedAccessException
+                                              or IOException)
+        {
+            return DefaultRdpPort;
         }
     }
 

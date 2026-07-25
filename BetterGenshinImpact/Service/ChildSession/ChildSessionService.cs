@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using DrawingRectangle = System.Drawing.Rectangle;
 using DrawingSize = System.Drawing.Size;
 
@@ -21,6 +22,7 @@ public sealed class ChildSessionService : IDisposable
 
     private readonly IServiceProvider _serviceProvider;
     private readonly InstanceService _instanceService;
+    private readonly ILogger<ChildSessionService> _logger;
     private readonly DispatcherTimer _statusTimer;
     private readonly SemaphoreSlim _launchSemaphore = new(1, 1);
 
@@ -32,6 +34,8 @@ public sealed class ChildSessionService : IDisposable
 
     public event EventHandler? StateChanged;
 
+    public event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
+
     public string StatusText { get; private set; } = "桌面分身尚未启动";
 
     public bool IsDesktopVisible => _desktopWindow?.IsVisible == true;
@@ -42,10 +46,12 @@ public sealed class ChildSessionService : IDisposable
 
     public ChildSessionService(
         IServiceProvider serviceProvider,
-        InstanceService instanceService)
+        InstanceService instanceService,
+        ILogger<ChildSessionService> logger)
     {
         _serviceProvider = serviceProvider;
         _instanceService = instanceService;
+        _logger = logger;
         _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(500)
@@ -222,6 +228,8 @@ public sealed class ChildSessionService : IDisposable
 
         if (_desktopWindow is not null)
         {
+            _desktopWindow.IsVisibleChanged -= OnDesktopWindowVisibilityChanged;
+            _desktopWindow.RdpHost.ConnectionFailed -= OnRdpConnectionFailed;
             TryDisconnectRdpHost();
 
             try
@@ -265,6 +273,7 @@ public sealed class ChildSessionService : IDisposable
 
         _desktopWindow = _serviceProvider.GetRequiredService<ChildSessionWindow>();
         _desktopWindow.IsVisibleChanged += OnDesktopWindowVisibilityChanged;
+        _desktopWindow.RdpHost.ConnectionFailed += OnRdpConnectionFailed;
         return _desktopWindow;
     }
 
@@ -370,6 +379,20 @@ public sealed class ChildSessionService : IDisposable
     private void OnDesktopWindowVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         RefreshState();
+    }
+
+    private void OnRdpConnectionFailed(
+        object? sender,
+        ChildSessionConnectionFailedEventArgs e)
+    {
+        _autoLaunchBetterGiPending = false;
+        _logger.LogError(
+            "桌面分身 RDP 连接失败：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
+            e.Message,
+            e.ErrorCode,
+            e.ExtendedErrorCode);
+        RefreshState(e.Message);
+        ConnectionFailed?.Invoke(this, e);
     }
 
     private void TryDisconnectRdpHost()

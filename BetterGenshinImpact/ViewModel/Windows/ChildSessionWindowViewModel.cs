@@ -66,6 +66,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         _childSessionService = childSessionService;
         _childSessionService.StateChanged += OnChildSessionStateChanged;
+        _childSessionService.ConnectionFailed += OnChildSessionConnectionFailed;
         UpdateConnectionStatus();
     }
 
@@ -247,6 +248,19 @@ public partial class ChildSessionWindowViewModel : ViewModel
         }
 
         _ = Application.Current.Dispatcher.BeginInvoke(UpdateConnectionStatus);
+    }
+
+    private void OnChildSessionConnectionFailed(
+        object? sender,
+        ChildSessionConnectionFailedEventArgs e)
+    {
+        _ = Application.Current.Dispatcher.BeginInvoke(
+            DispatcherPriority.Normal,
+            new Action(() =>
+            {
+                UpdateConnectionStatus();
+                ThemedMessageBox.Error(e.Message, "BetterGI 桌面分身");
+            }));
     }
 
     private void UpdateConnectionStatus()
