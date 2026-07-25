@@ -21,13 +21,15 @@
                  WindowBackdropType="Auto"
                  WindowStartupLocation="CenterScreen"
                  mc:Ignorable="d">
-    <Grid Background="Black">
+    <Grid x:Name="RootGrid"
+          Background="Black">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0"
+        <ui:TitleBar x:Name="WindowTitleBar"
+                     Grid.Row="0"
                      Background="{DynamicResource ApplicationBackgroundBrush}"
                      Height="32"
                      VerticalContentAlignment="Top">
@@ -119,6 +121,12 @@
                                                  IsChecked="{Binding KeepAspectRatio, Mode=OneWay}" />
                                 </ui:MenuItem>
                                 <ui:MenuItem Header="快捷键">
+                                    <ui:MenuItem Header="系统组合键发送到桌面分身"
+                                                 Command="{Binding ToggleSendSystemShortcutsToRemoteCommand}"
+                                                 IsCheckable="True"
+                                                 IsChecked="{Binding SendSystemShortcutsToRemote, Mode=OneWay}"
+                                                 ToolTip="勾选后，Alt+Tab、Windows 键等系统组合键发送到桌面分身；取消勾选后在本机生效。切换时会自动重新连接 RDP。" />
+                                    <Separator />
                                     <ui:MenuItem Header="发送 Win+D 显示桌面"
                                                  Command="{Binding ShowDesktopCommand}" />
                                     <ui:MenuItem Header="发送 Win+Tab 切换窗口"
@@ -153,6 +161,25 @@
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
+
+        <Popup Width="{Binding ActualWidth, ElementName=RootGrid}"
+               AllowsTransparency="True"
+               IsOpen="{Binding IsNotificationOpen, Mode=TwoWay}"
+               Placement="Bottom"
+               PlacementTarget="{Binding ElementName=WindowTitleBar}"
+               PopupAnimation="Fade"
+               StaysOpen="True">
+            <Grid Background="Transparent">
+                <ui:InfoBar MaxWidth="720"
+                            Margin="8"
+                            HorizontalAlignment="Center"
+                            IsClosable="True"
+                            IsOpen="{Binding IsNotificationOpen, Mode=TwoWay}"
+                            Message="{Binding NotificationMessage}"
+                            Severity="{Binding NotificationSeverity}"
+                            Title="{Binding NotificationTitle}" />
+            </Grid>
+        </Popup>
 
         <Grid Grid.Row="1"
               Background="Black">

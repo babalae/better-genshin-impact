@@ -19,15 +19,26 @@ namespace BetterGenshinImpact.Service.ChildSession;
 public sealed class ChildSessionService : IDisposable
 {
     private static readonly DrawingSize DefaultDesktopSize = new(1920, 1080);
+    private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromSeconds(60);
+    private const int InitialConnectionRetryCount = 3;
+    private const int SystemShortcutsReconnectRetryCount = 2;
+    private const int ErrorTimeout = 1460;
 
     private readonly IServiceProvider _serviceProvider;
     private readonly InstanceService _instanceService;
     private readonly ILogger<ChildSessionService> _logger;
     private readonly DispatcherTimer _statusTimer;
     private readonly SemaphoreSlim _launchSemaphore = new(1, 1);
+    private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
 
     private ChildSessionWindow? _desktopWindow;
     private bool _autoLaunchBetterGiPending;
+    private TaskCompletionSource<bool>? _connectionAttemptCompletionSource;
+    private int _initialConnectionRetriesRemaining;
+    private bool _connectionRetryInProgress;
+    private bool _systemShortcutsReconnectPending;
+    private int _systemShortcutsReconnectRetriesRemaining;
+    private bool _systemShortcutsReconnectRetryInProgress;
     private bool _statusTickInProgress;
     private bool _disposed;
     private string? _lastOperationMessage;
@@ -36,6 +47,8 @@ public sealed class ChildSessionService : IDisposable
 
     public event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
 
+    public event EventHandler? SystemShortcutsReconnectCompleted;
+
     public string StatusText { get; private set; } = "桌面分身尚未启动";
 
     public bool IsDesktopVisible => _desktopWindow?.IsVisible == true;
@@ -43,6 +56,8 @@ public sealed class ChildSessionService : IDisposable
     public int ConnectedState { get; private set; }
 
     public uint? ChildSessionId { get; private set; }
+
+    public bool SendSystemShortcutsToRemote { get; private set; } = true;
 
     public ChildSessionService(
         IServiceProvider serviceProvider,
@@ -61,12 +76,64 @@ public sealed class ChildSessionService : IDisposable
         RefreshState();
     }
 
-    public Task StartAsync()
+    public async Task StartAsync()
     {
         ThrowIfDisposed();
         EnsureChildSessionsEnabled();
-        ConnectCore("正在启动 BetterGI 桌面分身");
-        return Task.CompletedTask;
+        RefreshState();
+
+        if (ConnectedState == 1)
+        {
+            return;
+        }
+
+        var completionSource = _connectionAttemptCompletionSource;
+        if (completionSource is null || completionSource.Task.IsCompleted)
+        {
+            completionSource = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            _connectionAttemptCompletionSource = completionSource;
+
+            try
+            {
+                ConnectCore("正在启动 BetterGI 桌面分身");
+            }
+            catch
+            {
+                _autoLaunchBetterGiPending = false;
+                _initialConnectionRetriesRemaining = 0;
+                completionSource.TrySetResult(false);
+                _connectionAttemptCompletionSource = null;
+                throw;
+            }
+        }
+
+        try
+        {
+            await completionSource.Task.WaitAsync(
+                ConnectionTimeout,
+                _disposeCancellationTokenSource.Token);
+        }
+        catch (TimeoutException)
+        {
+            if (!completionSource.Task.IsCompleted)
+            {
+                _autoLaunchBetterGiPending = false;
+                _initialConnectionRetriesRemaining = 0;
+                CompleteConnectionFailure(
+                    new ChildSessionConnectionFailedEventArgs(
+                        $"桌面分身连接及登录初始化未能在 {ConnectionTimeout.TotalSeconds:0} 秒内完成。",
+                        ErrorTimeout));
+                TryDisconnectRdpHost();
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_connectionAttemptCompletionSource, completionSource))
+            {
+                _connectionAttemptCompletionSource = null;
+            }
+        }
     }
 
     public void ShowWindow()
@@ -106,6 +173,43 @@ public sealed class ChildSessionService : IDisposable
         ThrowIfDisposed();
         EnsureDesktopWindow().RdpHost.SetSmartSizing(enabled);
         RefreshState(enabled ? "窗口显示模式已切换为自适应" : "窗口显示模式已切换为 1:1");
+    }
+
+    public bool SetSendSystemShortcutsToRemote(bool enabled)
+    {
+        ThrowIfDisposed();
+        if (SendSystemShortcutsToRemote == enabled)
+        {
+            return false;
+        }
+
+        SendSystemShortcutsToRemote = enabled;
+        var window = EnsureDesktopWindow();
+        window.RdpHost.SetSendSystemShortcutsToRemote(enabled);
+        RefreshState();
+
+        var target = enabled ? "桌面分身" : "本机";
+        if (window.RdpHost.ConnectedState == 0 && ChildSessionId is null)
+        {
+            RefreshState($"系统组合键已改为在{target}生效，将在下次 RDP 连接后应用");
+            return false;
+        }
+
+        _systemShortcutsReconnectPending = true;
+        _systemShortcutsReconnectRetriesRemaining = SystemShortcutsReconnectRetryCount;
+        try
+        {
+            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+        }
+        catch
+        {
+            _systemShortcutsReconnectPending = false;
+            _systemShortcutsReconnectRetriesRemaining = 0;
+            throw;
+        }
+
+        RefreshState($"系统组合键已改为在{target}生效，正在自动重新连接 RDP");
+        return true;
     }
 
     public Task LaunchBetterGiAsync()
@@ -156,6 +260,10 @@ public sealed class ChildSessionService : IDisposable
     {
         ThrowIfDisposed();
         _autoLaunchBetterGiPending = false;
+        _initialConnectionRetriesRemaining = 0;
+        _systemShortcutsReconnectPending = false;
+        _systemShortcutsReconnectRetriesRemaining = 0;
+        _connectionAttemptCompletionSource?.TrySetResult(false);
 
         await _launchSemaphore.WaitAsync();
         try
@@ -224,12 +332,19 @@ public sealed class ChildSessionService : IDisposable
         _disposed = true;
         _statusTimer.Stop();
         _statusTimer.Tick -= OnStatusTimerTick;
+        _disposeCancellationTokenSource.Cancel();
         _autoLaunchBetterGiPending = false;
+        _connectionAttemptCompletionSource?.TrySetCanceled();
+        _connectionAttemptCompletionSource = null;
+        _initialConnectionRetriesRemaining = 0;
+        _systemShortcutsReconnectPending = false;
+        _systemShortcutsReconnectRetriesRemaining = 0;
 
         if (_desktopWindow is not null)
         {
             _desktopWindow.IsVisibleChanged -= OnDesktopWindowVisibilityChanged;
             _desktopWindow.RdpHost.ConnectionFailed -= OnRdpConnectionFailed;
+            _desktopWindow.RdpHost.LoginCompleted -= OnRdpLoginCompleted;
             TryDisconnectRdpHost();
 
             try
@@ -247,6 +362,7 @@ public sealed class ChildSessionService : IDisposable
         }
 
         _launchSemaphore.Dispose();
+        _disposeCancellationTokenSource.Dispose();
     }
 
     private void ConnectCore(string operationMessage)
@@ -258,6 +374,9 @@ public sealed class ChildSessionService : IDisposable
         if (window.RdpHost.ConnectedState == 0)
         {
             _autoLaunchBetterGiPending = existingSessionId is null;
+            _initialConnectionRetriesRemaining = _autoLaunchBetterGiPending
+                ? InitialConnectionRetryCount
+                : 0;
             window.RdpHost.ConnectToChildSession(DefaultDesktopSize);
         }
 
@@ -274,6 +393,8 @@ public sealed class ChildSessionService : IDisposable
         _desktopWindow = _serviceProvider.GetRequiredService<ChildSessionWindow>();
         _desktopWindow.IsVisibleChanged += OnDesktopWindowVisibilityChanged;
         _desktopWindow.RdpHost.ConnectionFailed += OnRdpConnectionFailed;
+        _desktopWindow.RdpHost.LoginCompleted += OnRdpLoginCompleted;
+        _desktopWindow.RdpHost.SetSendSystemShortcutsToRemote(SendSystemShortcutsToRemote);
         return _desktopWindow;
     }
 
@@ -292,7 +413,7 @@ public sealed class ChildSessionService : IDisposable
         window.Activate();
     }
 
-    private async void OnStatusTimerTick(object? sender, EventArgs e)
+    private void OnStatusTimerTick(object? sender, EventArgs e)
     {
         if (_statusTickInProgress || _disposed)
         {
@@ -303,24 +424,10 @@ public sealed class ChildSessionService : IDisposable
         try
         {
             RefreshState();
-            if (!_autoLaunchBetterGiPending || ConnectedState != 1 || ChildSessionId is null)
-            {
-                return;
-            }
-
-            _autoLaunchBetterGiPending = false;
-
-            // RDP 报告连接成功后稍作等待，让新 Child Session 的桌面初始化完成。
-            await Task.Delay(TimeSpan.FromSeconds(1.5));
-            RefreshState();
-            if (ConnectedState == 1 && ChildSessionId is not null)
-            {
-                await LaunchBetterGiCoreAsync(isAutomatic: true);
-            }
         }
         catch (Exception exception) when (IsExpectedChildSessionException(exception))
         {
-            RefreshState($"自动启动 BetterGI 失败：{exception.GetBaseException().Message}");
+            RefreshState(exception.GetBaseException().Message);
         }
         finally
         {
@@ -385,7 +492,210 @@ public sealed class ChildSessionService : IDisposable
         object? sender,
         ChildSessionConnectionFailedEventArgs e)
     {
+        if (_systemShortcutsReconnectPending)
+        {
+            if (_systemShortcutsReconnectRetryInProgress)
+            {
+                return;
+            }
+
+            if (_systemShortcutsReconnectRetriesRemaining > 0)
+            {
+                RetrySystemShortcutsReconnectAsync(e);
+                return;
+            }
+
+            _systemShortcutsReconnectPending = false;
+        }
+
+        if (_autoLaunchBetterGiPending
+            && _initialConnectionRetriesRemaining > 0
+            && !_connectionRetryInProgress)
+        {
+            RetryInitialConnectionAsync(e);
+            return;
+        }
+
+        CompleteConnectionFailure(e);
+    }
+
+    // RDP 报告连接成功后稍作等待，让新 Child Session 的桌面初始化完成。
+    // 使用 OnLoginComplete 等待实际登录完成，避免依赖固定时长的延时。
+    private async void OnRdpLoginCompleted(object? sender, EventArgs e)
+    {
+        _initialConnectionRetriesRemaining = 0;
+        _connectionRetryInProgress = false;
+        _connectionAttemptCompletionSource?.TrySetResult(true);
+
+        var systemShortcutsReconnectCompleted = _systemShortcutsReconnectPending;
+        if (systemShortcutsReconnectCompleted)
+        {
+            _systemShortcutsReconnectPending = false;
+            _systemShortcutsReconnectRetriesRemaining = 0;
+            _systemShortcutsReconnectRetryInProgress = false;
+            var target = SendSystemShortcutsToRemote ? "桌面分身" : "本机";
+            RefreshState($"自动重新连接完成，系统组合键设置已在{target}生效");
+            SystemShortcutsReconnectCompleted?.Invoke(this, EventArgs.Empty);
+        }
+        else
+        {
+            RefreshState("桌面分身登录初始化完成");
+        }
+
+        if (!_autoLaunchBetterGiPending)
+        {
+            return;
+        }
+
         _autoLaunchBetterGiPending = false;
+        await Task.Yield();
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            RefreshState();
+            if (ConnectedState == 1 && ChildSessionId is not null)
+            {
+                await LaunchBetterGiCoreAsync(isAutomatic: true);
+            }
+        }
+        catch (Exception exception) when (IsExpectedChildSessionException(exception))
+        {
+            RefreshState($"自动启动 BetterGI 失败：{exception.GetBaseException().Message}");
+        }
+    }
+
+    private async void RetrySystemShortcutsReconnectAsync(
+        ChildSessionConnectionFailedEventArgs firstFailure)
+    {
+        _systemShortcutsReconnectRetryInProgress = true;
+        ChildSessionConnectionFailedEventArgs? retryFailure = null;
+        var retryNumber = SystemShortcutsReconnectRetryCount
+                          - _systemShortcutsReconnectRetriesRemaining
+                          + 1;
+        _systemShortcutsReconnectRetriesRemaining--;
+        var retryDelay = TimeSpan.FromSeconds(1 << retryNumber);
+
+        _logger.LogWarning(
+            "系统组合键设置切换后的 RDP 自动重连失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
+            + "错误：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
+            retryDelay.TotalSeconds,
+            retryNumber,
+            firstFailure.Message,
+            firstFailure.ErrorCode,
+            firstFailure.ExtendedErrorCode);
+        RefreshState(
+            $"RDP 自动重连暂未成功，{retryDelay.TotalSeconds:0} 秒后重试"
+            + $"（{retryNumber}/{SystemShortcutsReconnectRetryCount}）");
+
+        try
+        {
+            await Task.Delay(retryDelay, _disposeCancellationTokenSource.Token);
+            if (_disposed || !_systemShortcutsReconnectPending)
+            {
+                return;
+            }
+
+            RefreshState(
+                $"正在重试 RDP 自动连接（{retryNumber}/{SystemShortcutsReconnectRetryCount}）");
+            _systemShortcutsReconnectRetryInProgress = false;
+            EnsureDesktopWindow().RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (Exception exception) when (IsExpectedChildSessionException(exception))
+        {
+            var actualException = exception.GetBaseException();
+            var errorCode = actualException is COMException comException
+                ? comException.ErrorCode
+                : 0;
+            retryFailure = new ChildSessionConnectionFailedEventArgs(
+                $"RDP 自动重新连接失败：{actualException.Message}",
+                errorCode);
+        }
+        finally
+        {
+            _systemShortcutsReconnectRetryInProgress = false;
+        }
+
+        if (retryFailure is not null)
+        {
+            OnRdpConnectionFailed(this, retryFailure);
+        }
+    }
+
+    private async void RetryInitialConnectionAsync(ChildSessionConnectionFailedEventArgs firstFailure)
+    {
+        _connectionRetryInProgress = true;
+        ChildSessionConnectionFailedEventArgs? retryFailure = null;
+        var retryNumber = InitialConnectionRetryCount - _initialConnectionRetriesRemaining + 1;
+        _initialConnectionRetriesRemaining--;
+        var retryDelay = TimeSpan.FromSeconds(1 << (retryNumber - 1));
+
+        _logger.LogWarning(
+            "桌面分身首次初始化连接失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
+            + "错误：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
+            retryDelay.TotalSeconds,
+            retryNumber,
+            firstFailure.Message,
+            firstFailure.ErrorCode,
+            firstFailure.ExtendedErrorCode);
+        RefreshState(
+            $"桌面分身首次初始化尚未完成，{retryDelay.TotalSeconds:0} 秒后自动重试"
+            + $"（{retryNumber}/{InitialConnectionRetryCount}）");
+
+        try
+        {
+            await Task.Delay(retryDelay, _disposeCancellationTokenSource.Token);
+            if (_disposed || !_autoLaunchBetterGiPending)
+            {
+                return;
+            }
+
+            RefreshState();
+            if (ConnectedState != 0 || _desktopWindow is null)
+            {
+                return;
+            }
+
+            RefreshState(
+                $"正在重试桌面分身连接（{retryNumber}/{InitialConnectionRetryCount}）");
+            _connectionRetryInProgress = false;
+            _desktopWindow.RdpHost.ConnectToChildSession(DefaultDesktopSize);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (Exception exception) when (IsExpectedChildSessionException(exception))
+        {
+            var actualException = exception.GetBaseException();
+            var errorCode = actualException is COMException comException
+                ? comException.ErrorCode
+                : 0;
+            retryFailure = new ChildSessionConnectionFailedEventArgs(
+                $"重试桌面分身连接失败：{actualException.Message}",
+                errorCode);
+        }
+        finally
+        {
+            _connectionRetryInProgress = false;
+        }
+
+        if (retryFailure is not null)
+        {
+            OnRdpConnectionFailed(this, retryFailure);
+        }
+    }
+
+    private void CompleteConnectionFailure(ChildSessionConnectionFailedEventArgs e)
+    {
+        _autoLaunchBetterGiPending = false;
+        _initialConnectionRetriesRemaining = 0;
+        _connectionAttemptCompletionSource?.TrySetResult(false);
         _logger.LogError(
             "桌面分身 RDP 连接失败：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
             e.Message,

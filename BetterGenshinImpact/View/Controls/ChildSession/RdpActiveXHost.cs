@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Service.ChildSession;
 using DrawingSize = System.Drawing.Size;
@@ -14,6 +15,7 @@ internal sealed class RdpActiveXHost : AxHost
     private const string RdpClientClsid = "A0C63C30-F08D-4AB4-907C-34905D770C7D";
     private const short VariantFalse = 0;
     private const short VariantTrue = -1;
+    private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
 
     private static readonly RemoteKey LeftWindowsKey = new(0x5B, IsExtended: true);
     private static readonly RemoteKey DKey = new(0x20, IsExtended: false);
@@ -23,9 +25,13 @@ internal sealed class RdpActiveXHost : AxHost
     private bool _connectionAttemptInProgress;
     private bool _connectionFailureReported;
     private bool _disconnectRequested;
+    private bool _sendSystemShortcutsToRemote = true;
+    private DrawingSize? _pendingReconnectDesktopSize;
     private bool _smartSizingEnabled = true;
 
     internal event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
+
+    internal event EventHandler? LoginCompleted;
 
     internal RdpActiveXHost()
         : base(RdpClientClsid)
@@ -69,8 +75,11 @@ internal sealed class RdpActiveXHost : AxHost
 
         var securedSettings = GetComProperty(client, "SecuredSettings2")
             ?? throw new COMException("RDP ActiveX 未返回 SecuredSettings2。");
-        RunComStep("将系统组合键发送到桌面分身", () =>
-            SetComProperty(securedSettings, "KeyboardHookMode", 1));
+        RunComStep("设置系统组合键发送位置", () =>
+            SetComProperty(
+                securedSettings,
+                "KeyboardHookMode",
+                _sendSystemShortcutsToRemote ? 1 : 0));
 
         var advancedSettings = GetComProperty(client, "AdvancedSettings7")
             ?? throw new COMException("RDP ActiveX 未返回 AdvancedSettings7。");
@@ -148,24 +157,69 @@ internal sealed class RdpActiveXHost : AxHost
             SetComProperty(advancedSettings, "SmartSizing", enabled));
     }
 
+    internal void SetSendSystemShortcutsToRemote(bool enabled)
+    {
+        _sendSystemShortcutsToRemote = enabled;
+    }
+
+    internal void ReconnectToChildSession(DrawingSize desktopSize)
+    {
+        if (_disconnectRequested || _pendingReconnectDesktopSize.HasValue)
+        {
+            _pendingReconnectDesktopSize = desktopSize;
+            return;
+        }
+
+        if (ConnectedState == 0)
+        {
+            ConnectToChildSession(desktopSize);
+            return;
+        }
+
+        _pendingReconnectDesktopSize = desktopSize;
+        try
+        {
+            if (!DisconnectCore())
+            {
+                _pendingReconnectDesktopSize = null;
+                ConnectToChildSession(desktopSize);
+            }
+        }
+        catch
+        {
+            _pendingReconnectDesktopSize = null;
+            throw;
+        }
+    }
+
     internal void DisconnectSession()
+    {
+        _pendingReconnectDesktopSize = null;
+        _ = DisconnectCore();
+    }
+
+    private bool DisconnectCore()
     {
         if (IsHandleCreated)
         {
             ChildSessionNativeMethods.ClearRdpInputWindowCache(Handle);
         }
-        if (ConnectedState != 0)
+
+        if (ConnectedState == 0)
         {
-            _disconnectRequested = true;
-            try
-            {
-                InvokeComMethod(GetRequiredOcx(), "Disconnect");
-            }
-            catch
-            {
-                _disconnectRequested = false;
-                throw;
-            }
+            return false;
+        }
+
+        _disconnectRequested = true;
+        try
+        {
+            InvokeComMethod(GetRequiredOcx(), "Disconnect");
+            return true;
+        }
+        catch
+        {
+            _disconnectRequested = false;
+            throw;
         }
     }
 
@@ -255,6 +309,7 @@ internal sealed class RdpActiveXHost : AxHost
     {
         _connectionAttemptInProgress = false;
         _connectionFailureReported = false;
+        LoginCompleted?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnDisconnected(int disconnectReason)
@@ -265,6 +320,17 @@ internal sealed class RdpActiveXHost : AxHost
         if (_disconnectRequested)
         {
             _disconnectRequested = false;
+            if (_pendingReconnectDesktopSize.HasValue && !IsDisposed && !Disposing)
+            {
+                try
+                {
+                    BeginInvoke(new Action(ConnectPendingReconnect));
+                }
+                catch (InvalidOperationException)
+                {
+                    _pendingReconnectDesktopSize = null;
+                }
+            }
             return;
         }
 
@@ -290,6 +356,35 @@ internal sealed class RdpActiveXHost : AxHost
             message,
             disconnectReason,
             extendedDisconnectReason);
+    }
+
+    private async void ConnectPendingReconnect()
+    {
+        await Task.Delay(ReconnectDelay);
+
+        var desktopSize = _pendingReconnectDesktopSize;
+        _pendingReconnectDesktopSize = null;
+        if (!desktopSize.HasValue || IsDisposed || Disposing)
+        {
+            return;
+        }
+
+        try
+        {
+            ConnectToChildSession(desktopSize.Value);
+        }
+        catch (Exception exception) when (exception is COMException
+                                              or TargetInvocationException
+                                              or InvalidOperationException)
+        {
+            var actualException = exception.GetBaseException();
+            var errorCode = actualException is COMException comException
+                ? comException.ErrorCode
+                : 0;
+            ReportConnectionFailure(
+                $"RDP 自动重新连接失败：{actualException.Message}",
+                errorCode);
+        }
     }
 
     private void OnFatalError(int errorCode)
