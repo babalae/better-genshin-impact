@@ -87,7 +87,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public bool CheckBeforeBurst { get; set; } = false;
     public bool IsFirstCheck { get; set; } = true;    
     public int RotaryFactor { get; set; } = 10;
-    public bool SkipFightEndCheckWhenEnemyVisible { get; set; } = false;
     public bool BurstEnabled { get; set; } = false;
     
     public bool QinDoublePickUp { get; set; } = false;

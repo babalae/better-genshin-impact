@@ -17,6 +17,15 @@ using AutoFightParam = BetterGenshinImpact.GameTask.AutoFight.AutoFightParam;
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
 /// <summary>
+/// 战斗中视觉识别配置（从 AutoFightParam 或全局配置集中获取）
+/// </summary>
+public sealed record VisualRecognitionConfig(
+    int TargetingDetectionInterval = 50,
+    bool DrawRecognitionResults = true,
+    double LockLostWaitTime = 0.5,
+    DamageNumberRecognitionMode DamageNumberRecognitionMode = DamageNumberRecognitionMode.Color);
+
+/// <summary>
 /// 战斗识别相关的通用工具函数
 /// </summary>
 public static class AvatarRecognition
@@ -180,16 +189,16 @@ public static class AvatarRecognition
     /// 获取视觉识别相关配置项。
     /// 调用方通过此方法获取配置，而非直接读取全局 config，确保配置访问集中管理。
     /// </summary>
-    public static (int TargetingDetectionInterval, bool DrawRecognitionResults, double LockLostWaitTime, DamageNumberRecognitionMode DamageNumberRecognitionMode) GetVisualRecognitionConfig()
+    public static VisualRecognitionConfig GetVisualRecognitionConfig()
     {
         var param = _currentAutoFightParam.Value;
         if (param != null)
         {
-            return (param.TargetingDetectionInterval, param.DrawRecognitionResults, param.LockLostWaitTime, param.DamageNumberRecognitionMode);
+            return new VisualRecognitionConfig(param.TargetingDetectionInterval, param.DrawRecognitionResults, param.LockLostWaitTime, param.DamageNumberRecognitionMode);
         }
 
         var config = TaskContext.Instance().Config.AutoFightConfig;
-        return (config.TargetingDetectionInterval, config.DrawRecognitionResults, config.LockLostWaitTime, config.DamageNumberRecognitionMode);
+        return new VisualRecognitionConfig(config.TargetingDetectionInterval, config.DrawRecognitionResults, config.LockLostWaitTime, config.DamageNumberRecognitionMode);
     }
 
     /// <summary>
@@ -358,7 +367,10 @@ public static class AvatarRecognition
         Func<bool>? isFightEnd = null)
     {
         var dpi = TaskContext.Instance().DpiScale;
-        var (frameIntervalMs, drawResults, lockLostWaitTime, _) = GetVisualRecognitionConfig();
+        var visConfig = GetVisualRecognitionConfig();
+        var frameIntervalMs = visConfig.TargetingDetectionInterval;
+        var drawResults = visConfig.DrawRecognitionResults;
+        var lockLostWaitTime = visConfig.LockLostWaitTime;
         DateTime? lastSeenTargetTime = null;  // 最后找到目标的时间（null = 从未找到）
 
         try

@@ -211,7 +211,10 @@ public static class AvatarSpecialAction
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
                     var dpi = TaskContext.Instance().DpiScale;
-                    var (frameIntervalMs, drawResults, lockLostWaitTime, damageMode) = AvatarRecognition.GetVisualRecognitionConfig();
+                    var visConfig = AvatarRecognition.GetVisualRecognitionConfig();
+                    var frameIntervalMs = visConfig.TargetingDetectionInterval;
+                    var drawResults = visConfig.DrawRecognitionResults;
+                    var lockLostWaitTime = visConfig.LockLostWaitTime;
 
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
 
@@ -297,6 +300,10 @@ public static class AvatarSpecialAction
 
                             Sleep(frameIntervalMs);
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     finally
                     {
