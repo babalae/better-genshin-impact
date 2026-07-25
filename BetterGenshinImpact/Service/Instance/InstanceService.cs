@@ -16,13 +16,14 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Service.Instance;
 
 public sealed class InstanceService : IHostedService, IAsyncDisposable
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan PendingLaunchLifetime = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
 
     private readonly InstanceBootstrap _bootstrap;
     private readonly ILogger<InstanceService> _logger;
@@ -32,11 +33,11 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private readonly CancellationTokenSource _lifetimeCancellationTokenSource = new();
     private readonly ConcurrentQueue<string[]> _pendingActivations = new();
     private readonly object _activationLock = new();
-    private readonly object _parentConnectionLock = new();
+    private readonly object _rootConnectionLock = new();
 
     private Task? _acceptLoopTask;
-    private Task? _parentConnectionLoopTask;
-    private InstanceConnection? _parentConnection;
+    private Task? _rootConnectionLoopTask;
+    private InstanceConnection? _rootConnection;
     private bool _applicationReady;
     private int _stopStarted;
 
@@ -53,7 +54,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             Context,
             serviceProvider,
             rawInputMonitor,
-            IsParentConnection,
+            IsRootConnection,
             logger);
         if (Context.InstanceType == BetterGiInstanceType.Primary)
         {
@@ -64,10 +65,12 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             Context,
             _messageState,
             _relativeMouseMessageHandler,
-            CanCreate,
             EnqueueActivation,
+            DispatchWebViewMessage,
             logger);
     }
+
+    public event EventHandler<WebViewMessageReceivedEventArgs>? WebViewMessageReceived;
 
     public InstanceContext Context => _bootstrap.Context;
 
@@ -81,20 +84,28 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var firstServer = _bootstrap.TakeFirstServer();
-        _acceptLoopTask = AcceptLoopAsync(firstServer, _lifetimeCancellationTokenSource.Token);
-        if (Context.ParentInstanceId is not null
-            && !string.IsNullOrWhiteSpace(Context.ParentPipeName))
+        if (Context.InstanceType == BetterGiInstanceType.Primary)
         {
-            _parentConnectionLoopTask = ParentConnectionLoopAsync(
+            var firstServer = _bootstrap.TakeFirstServer()
+                              ?? throw new InvalidOperationException(
+                                  "根实例未取得首个命名管道服务端。");
+            _acceptLoopTask = AcceptLoopAsync(
+                firstServer,
+                _lifetimeCancellationTokenSource.Token);
+        }
+        else
+        {
+            _rootConnectionLoopTask = RootConnectionLoopAsync(
+                _bootstrap.TakeFirstRootConnection(),
                 _lifetimeCancellationTokenSource.Token);
         }
 
         _logger.LogInformation(
-            "实例 IPC 已启动：{InstanceType} {InstanceId}，管道 {PipeName}",
+            "实例 IPC v2 已启动：{InstanceType}，进程 {ProcessId}，Session {SessionId}，根管道 {PipeName}",
             Context.InstanceType,
-            Context.InstanceId,
-            Context.PipeName);
+            Context.ProcessId,
+            Context.WindowsSessionId,
+            Context.RootPipeName);
         return Task.CompletedTask;
     }
 
@@ -105,38 +116,22 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             return;
         }
 
-        InstanceConnection? parentConnection;
-        lock (_parentConnectionLock)
-        {
-            parentConnection = _parentConnection;
-            _parentConnection = null;
-        }
-
-        if (parentConnection is not null)
-        {
-            try
-            {
-                await parentConnection.SendRequestAsync(
-                    InstanceOperations.InstanceUnregister,
-                    Context.InstanceId,
-                    null,
-                    TimeSpan.FromSeconds(1),
-                    cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception exception) when (exception is IOException
-                                              or TimeoutException
-                                              or OperationCanceledException)
-            {
-                _logger.LogDebug(exception, "向父实例发送注销消息失败");
-            }
-
-            await parentConnection.DisposeAsync().ConfigureAwait(false);
-        }
-
         _lifetimeCancellationTokenSource.Cancel();
         _relativeMouseMessageHandler.Stop();
 
-        var connections = _messageState.Children.Values
+        InstanceConnection? rootConnection;
+        lock (_rootConnectionLock)
+        {
+            rootConnection = _rootConnection;
+            _rootConnection = null;
+        }
+        if (rootConnection is not null)
+        {
+            await rootConnection.DisposeAsync().ConfigureAwait(false);
+        }
+
+        var connections = _messageState.BetterGiConnectionsBySession.Values
+            .Concat(_messageState.WebViewConnectionsByProcessId.Values)
             .Select(x => x.Connection)
             .Distinct()
             .ToArray();
@@ -146,41 +141,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         }
 
         await AwaitBackgroundTaskAsync(_acceptLoopTask).ConfigureAwait(false);
-        await AwaitBackgroundTaskAsync(_parentConnectionLoopTask).ConfigureAwait(false);
-    }
-
-    public InstanceLaunchInfo BeginChildLaunch(BetterGiInstanceType instanceType)
-    {
-        RemoveExpiredPendingLaunches();
-        if (!CanCreate(instanceType))
-        {
-            throw new InvalidOperationException(
-                $"{Context.InstanceType} 实例不能创建 {instanceType} 子实例。");
-        }
-
-        if (instanceType == BetterGiInstanceType.ChildSession
-            && (_messageState.Children.Values.Any(
-                    x => x.Descriptor.InstanceType == BetterGiInstanceType.ChildSession)
-                || _messageState.PendingChildLaunches.Values.Any(x =>
-                    x.InstanceType == BetterGiInstanceType.ChildSession)))
-        {
-            throw new InvalidOperationException("当前实例已经存在桌面分身 BetterGI。");
-        }
-
-        var launchInfo = new InstanceLaunchInfo(
-            InstanceIds.Create(),
-            instanceType,
-            Context.InstanceId,
-            Context.PipeName);
-        _messageState.PendingChildLaunches[launchInfo.InstanceId] = new PendingChildLaunch(
-            instanceType,
-            DateTimeOffset.UtcNow);
-        return launchInfo;
-    }
-
-    public void CancelPendingChildLaunch(string instanceId)
-    {
-        _messageState.PendingChildLaunches.TryRemove(instanceId, out _);
+        await AwaitBackgroundTaskAsync(_rootConnectionLoopTask).ConfigureAwait(false);
     }
 
     public void MarkApplicationReady()
@@ -199,6 +160,87 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         {
             DispatchActivation(args);
         }
+    }
+
+    public async Task<InstanceEndpoint[]> GetVisibleWebViewsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (Context.InstanceType == BetterGiInstanceType.Primary)
+        {
+            return _messageState.WebViewConnectionsByProcessId.Values
+                .Select(x => x.Endpoint)
+                .OrderBy(x => x.WindowsSessionId)
+                .ThenBy(x => x.ProcessId)
+                .ToArray();
+        }
+        if (Context.InstanceType == BetterGiInstanceType.WebView)
+        {
+            return [];
+        }
+
+        var rootConnection = GetRequiredRootConnection();
+        var response = await rootConnection.SendRequestAsync(
+            InstanceOperations.WebViewList,
+            null,
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+        return response.Data?.ToObject<WebViewListResponse>(InstanceIpcProtocol.Serializer)
+                   ?.Endpoints
+               ?? [];
+    }
+
+    public async Task SendWebViewMessageAsync(
+        int targetProcessId,
+        string operation,
+        JToken? data = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(operation))
+        {
+            throw new ArgumentException("WebView 操作名称不能为空。", nameof(operation));
+        }
+        if (Context.InstanceType == BetterGiInstanceType.WebView)
+        {
+            throw new InvalidOperationException("WebView 不能向其他 WebView 发送消息。");
+        }
+
+        if (Context.InstanceType == BetterGiInstanceType.Primary)
+        {
+            if (!_messageState.WebViewConnectionsByProcessId.TryGetValue(
+                    targetProcessId,
+                    out var target))
+            {
+                throw new InvalidOperationException(
+                    $"WebView 进程 {targetProcessId} 当前不在线。");
+            }
+
+            var targetResponse = await target.Connection.SendRequestAsync(
+                InstanceOperations.WebViewMessage,
+                new WebViewMessage
+                {
+                    SourceProcessId = Context.ProcessId,
+                    Operation = operation,
+                    Data = data
+                },
+                RequestTimeout,
+                cancellationToken).ConfigureAwait(false);
+            EnsureSuccessfulResponse(targetResponse);
+            return;
+        }
+
+        var rootConnection = GetRequiredRootConnection();
+        var response = await rootConnection.SendRequestAsync(
+            InstanceOperations.WebViewSend,
+            new WebViewSendRequest
+            {
+                TargetProcessId = targetProcessId,
+                Operation = operation,
+                Data = data
+            },
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
     }
 
     internal async Task<InstanceIpcEnvelope?> HandleRequestAsync(
@@ -230,35 +272,55 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         _relativeMouseMessageHandler.HandleResult(connection, result);
     }
 
-    private bool IsParentConnection(InstanceConnection connection)
+    private bool IsRootConnection(InstanceConnection connection)
     {
-        lock (_parentConnectionLock)
+        lock (_rootConnectionLock)
         {
-            return ReferenceEquals(_parentConnection, connection);
+            return ReferenceEquals(_rootConnection, connection);
         }
     }
 
     internal void ConnectionClosed(InstanceConnection connection)
     {
-        if (connection.RemoteDescriptor is { } descriptor)
+        if (Context.InstanceType == BetterGiInstanceType.Primary
+            && connection.RemoteEndpoint is { } endpoint)
         {
-            if (_messageState.Children.TryGetValue(descriptor.InstanceId, out var child)
+            if (endpoint.InstanceType == BetterGiInstanceType.ChildSession
+                && _messageState.BetterGiConnectionsBySession.TryGetValue(
+                    endpoint.WindowsSessionId,
+                    out var child)
                 && ReferenceEquals(child.Connection, connection))
             {
-                _messageState.Children.TryRemove(descriptor.InstanceId, out _);
-                _relativeMouseMessageHandler.RemoveTarget(descriptor.InstanceId);
+                _messageState.BetterGiConnectionsBySession.TryRemove(
+                    endpoint.WindowsSessionId,
+                    out _);
+                _relativeMouseMessageHandler.RemoveTarget(endpoint.WindowsSessionId);
                 _logger.LogInformation(
-                    "子实例已断开：{InstanceType} {InstanceId}",
-                    descriptor.InstanceType,
-                    descriptor.InstanceId);
+                    "桌面分身 BetterGI 已断开：进程 {ProcessId}，Session {SessionId}",
+                    endpoint.ProcessId,
+                    endpoint.WindowsSessionId);
+            }
+            else if (endpoint.InstanceType == BetterGiInstanceType.WebView
+                     && _messageState.WebViewConnectionsByProcessId.TryGetValue(
+                         endpoint.ProcessId,
+                         out var webView)
+                     && ReferenceEquals(webView.Connection, connection))
+            {
+                _messageState.WebViewConnectionsByProcessId.TryRemove(
+                    endpoint.ProcessId,
+                    out _);
+                _logger.LogInformation(
+                    "WebView 已断开：进程 {ProcessId}，Session {SessionId}",
+                    endpoint.ProcessId,
+                    endpoint.WindowsSessionId);
             }
         }
 
-        lock (_parentConnectionLock)
+        lock (_rootConnectionLock)
         {
-            if (ReferenceEquals(_parentConnection, connection))
+            if (ReferenceEquals(_rootConnection, connection))
             {
-                _parentConnection = null;
+                _rootConnection = null;
             }
         }
 
@@ -282,7 +344,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             while (!cancellationToken.IsCancellationRequested)
             {
                 server ??= InstancePipeFactory.CreateServer(
-                    Context.PipeName,
+                    Context.RootPipeName,
                     firstPipeInstance: false);
                 try
                 {
@@ -303,7 +365,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(exception, "实例命名管道监听异常终止");
+                _logger.LogError(exception, "根实例命名管道监听异常终止");
             }
         }
         finally
@@ -317,90 +379,134 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         await connection.Completion.ConfigureAwait(false);
     }
 
-    private async Task ParentConnectionLoopAsync(CancellationToken cancellationToken)
+    private async Task RootConnectionLoopAsync(
+        InitialRootConnection? initialRootConnection,
+        CancellationToken cancellationToken)
     {
+        var pendingInitialConnection = initialRootConnection;
+        var includeActivationArguments = pendingInitialConnection is null;
+        var restartFromProcessId = CommandLineOptions.Instance.RestartFromProcessId;
+
         while (!cancellationToken.IsCancellationRequested)
         {
             InstanceConnection? connection = null;
             try
             {
-                var client = new NamedPipeClientStream(
-                    ".",
-                    Context.ParentPipeName!,
-                    PipeDirection.InOut,
-                    PipeOptions.Asynchronous | PipeOptions.WriteThrough);
-                await client.ConnectAsync(cancellationToken).ConfigureAwait(false);
-                connection = new InstanceConnection(client, this, _logger);
-                connection.Start(cancellationToken);
-
-                var registerResponse = await connection.SendRequestAsync(
-                    InstanceOperations.InstanceRegister,
-                    Context.InstanceId,
-                    new InstanceRegisterRequest
-                    {
-                        ParentInstanceId = Context.ParentInstanceId!,
-                        Descriptor = Context.ToDescriptor()
-                    },
-                    RequestTimeout,
-                    cancellationToken).ConfigureAwait(false);
-                EnsureSuccessfulResponse(registerResponse);
-
-                lock (_parentConnectionLock)
+                ConnectionOpenResponse openResponse;
+                if (pendingInitialConnection is not null)
                 {
-                    _parentConnection = connection;
+                    openResponse = pendingInitialConnection.Response;
+                    connection = new InstanceConnection(
+                        pendingInitialConnection.Client,
+                        this,
+                        _logger);
+                    pendingInitialConnection = null;
+                }
+                else
+                {
+                    var client = new NamedPipeClientStream(
+                        ".",
+                        Context.RootPipeName,
+                        PipeDirection.InOut,
+                        PipeOptions.Asynchronous | PipeOptions.WriteThrough);
+                    await client.ConnectAsync(cancellationToken).ConfigureAwait(false);
+                    connection = new InstanceConnection(client, this, _logger);
+                    connection.Start(cancellationToken);
+
+                    var openResult = await connection.SendRequestAsync(
+                        InstanceOperations.ConnectionOpen,
+                        new ConnectionOpenRequest
+                        {
+                            RequestedType = Context.InstanceType,
+                            RestartFromProcessId = restartFromProcessId,
+                            Arguments = includeActivationArguments
+                                ? Environment.GetCommandLineArgs()
+                                : []
+                        },
+                        RequestTimeout,
+                        cancellationToken).ConfigureAwait(false);
+                    EnsureSuccessfulResponse(openResult);
+                    openResponse =
+                        openResult.Data?.ToObject<ConnectionOpenResponse>(
+                            InstanceIpcProtocol.Serializer)
+                        ?? throw new InvalidDataException("根实例连接响应缺少数据。");
                 }
 
+                if (openResponse.Disposition
+                    == ConnectionOpenDisposition.ActivationForwarded)
+                {
+                    RequestApplicationShutdown();
+                    return;
+                }
+                if (openResponse.AssignedType != Context.InstanceType)
+                {
+                    throw new InvalidOperationException(
+                        $"根实例分配了不匹配的客户端类型：{openResponse.AssignedType}。");
+                }
+
+                Context.SetRootSessionId(openResponse.RootSessionId);
+                connection.RemoteEndpoint = new InstanceEndpoint
+                {
+                    InstanceType = BetterGiInstanceType.Primary,
+                    ProcessId = openResponse.RootProcessId,
+                    WindowsSessionId = openResponse.RootSessionId,
+                    StartedAt = DateTimeOffset.UtcNow
+                };
+                if (!connection.IsStarted)
+                {
+                    connection.Start(cancellationToken);
+                }
+                if (connection.Completion.IsCompleted)
+                {
+                    throw new IOException("根实例连接在完成登记前已经关闭。");
+                }
+
+                lock (_rootConnectionLock)
+                {
+                    _rootConnection = connection;
+                }
+
+                includeActivationArguments = false;
+                restartFromProcessId = null;
                 _logger.LogInformation(
-                    "已连接父实例 {ParentInstanceId}，管道 {ParentPipeName}",
-                    Context.ParentInstanceId,
-                    Context.ParentPipeName);
+                    "已连接 BetterGI 根实例：进程 {ProcessId}，Session {SessionId}",
+                    openResponse.RootProcessId,
+                    openResponse.RootSessionId);
 
                 if (Context.InstanceType == BetterGiInstanceType.ChildSession)
                 {
                     var subscribeResponse = await connection.SendRequestAsync(
                         InstanceOperations.RelativeMouseSubscribe,
-                        Context.InstanceId,
                         null,
                         RequestTimeout,
                         cancellationToken).ConfigureAwait(false);
                     EnsureSuccessfulResponse(subscribeResponse);
                 }
 
-                while (!connection.Completion.IsCompleted
-                       && !cancellationToken.IsCancellationRequested)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
-                    var heartbeatResponse = await connection.SendRequestAsync(
-                        InstanceOperations.InstanceHeartbeat,
-                        Context.InstanceId,
-                        null,
-                        RequestTimeout,
-                        cancellationToken).ConfigureAwait(false);
-                    EnsureSuccessfulResponse(heartbeatResponse);
-                }
-
                 await connection.Completion.ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException
+                                              or UnauthorizedAccessException
                                               or TimeoutException
                                               or OperationCanceledException
+                                              or ObjectDisposedException
                                               or InvalidOperationException)
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     _logger.LogWarning(
                         exception,
-                        "连接父实例失败，稍后重试：{ParentPipeName}",
-                        Context.ParentPipeName);
+                        "连接 BetterGI 根实例失败，稍后重试：{PipeName}",
+                        Context.RootPipeName);
                 }
             }
             finally
             {
-                lock (_parentConnectionLock)
+                lock (_rootConnectionLock)
                 {
-                    if (ReferenceEquals(_parentConnection, connection))
+                    if (ReferenceEquals(_rootConnection, connection))
                     {
-                        _parentConnection = null;
+                        _rootConnection = null;
                     }
                 }
 
@@ -412,20 +518,18 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(ReconnectDelay, cancellationToken).ConfigureAwait(false);
             }
         }
     }
 
-    private bool CanCreate(BetterGiInstanceType childType)
+    private InstanceConnection GetRequiredRootConnection()
     {
-        return Context.InstanceType switch
+        lock (_rootConnectionLock)
         {
-            BetterGiInstanceType.Primary => childType is BetterGiInstanceType.ChildSession
-                or BetterGiInstanceType.WebView,
-            BetterGiInstanceType.ChildSession => childType == BetterGiInstanceType.WebView,
-            _ => false
-        };
+            return _rootConnection
+                   ?? throw new InvalidOperationException("当前尚未连接 BetterGI 根实例。");
+        }
     }
 
     private void EnqueueActivation(string[] args)
@@ -459,27 +563,37 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         }));
     }
 
+    private void DispatchWebViewMessage(WebViewMessage message)
+    {
+        WebViewMessageReceived?.Invoke(
+            this,
+            new WebViewMessageReceivedEventArgs(
+                message.SourceProcessId,
+                message.Operation,
+                message.Data));
+    }
+
+    private static void RequestApplicationShutdown()
+    {
+        var application = Application.Current;
+        if (application is null)
+        {
+            Environment.Exit(0);
+            return;
+        }
+
+        _ = application.Dispatcher.BeginInvoke(new Action(application.Shutdown));
+    }
+
     private static void EnsureSuccessfulResponse(InstanceIpcEnvelope response)
     {
         if (response.Success == true)
         {
             return;
         }
+
         throw new InvalidOperationException(
             response.ErrorMessage ?? response.ErrorCode ?? "实例 IPC 请求失败。");
-    }
-
-
-    private void RemoveExpiredPendingLaunches()
-    {
-        var expiresBefore = DateTimeOffset.UtcNow - PendingLaunchLifetime;
-        foreach (var pending in _messageState.PendingChildLaunches)
-        {
-            if (pending.Value.CreatedAt < expiresBefore)
-            {
-                _messageState.PendingChildLaunches.TryRemove(pending.Key, out _);
-            }
-        }
     }
 
     private static async Task AwaitBackgroundTaskAsync(Task? task)
@@ -499,5 +613,16 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             // HostedService 停止期间的正常清理。
         }
     }
+}
 
+public sealed class WebViewMessageReceivedEventArgs(
+    int sourceProcessId,
+    string operation,
+    JToken? data) : EventArgs
+{
+    public int SourceProcessId { get; } = sourceProcessId;
+
+    public string Operation { get; } = operation;
+
+    public JToken? Data { get; } = data;
 }

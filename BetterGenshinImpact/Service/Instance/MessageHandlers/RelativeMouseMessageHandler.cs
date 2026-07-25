@@ -33,8 +33,7 @@ internal sealed class RelativeMouseMessageHandler
     private readonly LocalCursorCapture _localCursorCapture;
     private readonly Func<InstanceConnection, bool> _isParentConnection;
     private readonly ILogger _logger;
-    private readonly ConcurrentDictionary<string, InstanceConnection> _targets =
-        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<int, InstanceConnection> _targets = new();
     private readonly object _subscriptionLock = new();
     private readonly object _accumulatorLock = new();
 
@@ -111,11 +110,11 @@ internal sealed class RelativeMouseMessageHandler
         RelativeMouseResult result)
     {
         if (_context.InstanceType != BetterGiInstanceType.Primary
-            || connection.RemoteDescriptor is not
+            || connection.RemoteEndpoint is not
             {
                 InstanceType: BetterGiInstanceType.ChildSession
-            } descriptor
-            || !_targets.TryGetValue(descriptor.InstanceId, out var target)
+            } endpoint
+            || !_targets.TryGetValue(endpoint.WindowsSessionId, out var target)
             || !ReferenceEquals(target, connection))
         {
             return;
@@ -142,21 +141,20 @@ internal sealed class RelativeMouseMessageHandler
             throw new InvalidOperationException("只有 Primary 实例可以转发桌面分身相对鼠标数据。");
         }
 
-        var descriptor = connection.RemoteDescriptor
+        var endpoint = connection.RemoteEndpoint
                          ?? throw new InvalidOperationException("相对鼠标订阅方尚未注册为子实例。");
-        if (descriptor.InstanceType != BetterGiInstanceType.ChildSession)
+        if (endpoint.InstanceType != BetterGiInstanceType.ChildSession)
         {
             throw new InvalidOperationException("只有 ChildSession 子实例可以订阅相对鼠标数据。");
         }
 
-        _targets[descriptor.InstanceId] = connection;
+        _targets[endpoint.WindowsSessionId] = connection;
         if (IsGameMouseModeEnabled)
         {
             StartForwarding();
         }
         return InstanceIpcEnvelope.Response(
             request,
-            _context.InstanceId,
             new RelativeMouseState { IsSubscribed = true });
     }
 
@@ -164,22 +162,21 @@ internal sealed class RelativeMouseMessageHandler
         InstanceConnection connection,
         InstanceIpcEnvelope request)
     {
-        if (connection.RemoteDescriptor is { } descriptor)
+        if (connection.RemoteEndpoint is { } endpoint)
         {
-            RemoveTarget(descriptor.InstanceId);
+            RemoveTarget(endpoint.WindowsSessionId);
         }
         return InstanceIpcEnvelope.Response(
             request,
-            _context.InstanceId,
             new RelativeMouseState { IsSubscribed = false });
     }
 
     /// <summary>
     /// 在子实例注销或连接断开时移除目标；最后一个目标移除后恢复本地鼠标状态。
     /// </summary>
-    internal void RemoveTarget(string instanceId)
+    internal void RemoveTarget(int windowsSessionId)
     {
-        _targets.TryRemove(instanceId, out _);
+        _targets.TryRemove(windowsSessionId, out _);
         StopIfUnused();
     }
 

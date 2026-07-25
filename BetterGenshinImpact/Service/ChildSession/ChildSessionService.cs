@@ -386,7 +386,10 @@ public sealed class ChildSessionService : IDisposable
             _desktopWindow.RdpHost.ConnectionFailed -= OnRdpConnectionFailed;
             _desktopWindow.RdpHost.LoginCompleted -= OnRdpLoginCompleted;
             TryDisconnectRdpHost();
+        }
 
+        if (_instanceService.Context.IsRoot)
+        {
             try
             {
                 _ = ChildSessionNativeMethods.TerminateChildSession(wait: false);
@@ -395,7 +398,10 @@ public sealed class ChildSessionService : IDisposable
             {
                 // 应用正在退出，Child Session 清理失败不应阻止主程序关闭。
             }
+        }
 
+        if (_desktopWindow is not null)
+        {
             _desktopWindow.AllowClose = true;
             _desktopWindow.Close();
             _desktopWindow = null;
@@ -479,25 +485,15 @@ public sealed class ChildSessionService : IDisposable
     private async Task LaunchBetterGiCoreAsync(bool isAutomatic)
     {
         await _launchSemaphore.WaitAsync();
-        InstanceLaunchInfo? launchInfo = null;
         try
         {
             var childSessionId = GetRequiredChildSessionId();
-            launchInfo = _instanceService.BeginChildLaunch(BetterGiInstanceType.ChildSession);
             RefreshState(isAutomatic
                 ? "桌面分身已加载，正在自动以管理员权限启动 BetterGI"
                 : "正在以管理员权限启动 BetterGI");
-            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId, launchInfo);
+            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId);
             RefreshState(
                 $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 BetterGI");
-        }
-        catch
-        {
-            if (launchInfo is not null)
-            {
-                _instanceService.CancelPendingChildLaunch(launchInfo.InstanceId);
-            }
-            throw;
         }
         finally
         {

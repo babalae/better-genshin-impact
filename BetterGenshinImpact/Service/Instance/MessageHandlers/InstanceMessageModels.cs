@@ -1,13 +1,60 @@
 namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 
 /// <summary>
-/// 子实例向父实例注册时携带的身份信息。
+/// 客户端连接固定根管道后提交的用途和启动信息。
 /// </summary>
-internal sealed class InstanceRegisterRequest
+internal sealed class ConnectionOpenRequest
 {
-    public string ParentInstanceId { get; init; } = string.Empty;
+    public BetterGiInstanceType RequestedType { get; init; }
 
-    public InstanceDescriptor Descriptor { get; init; } = new();
+    public int? RestartFromProcessId { get; init; }
+
+    public string[] Arguments { get; init; } = [];
+}
+
+internal enum ConnectionOpenDisposition
+{
+    Accepted,
+    ActivationForwarded
+}
+
+internal sealed class ConnectionOpenResponse
+{
+    public ConnectionOpenDisposition Disposition { get; init; }
+
+    public BetterGiInstanceType AssignedType { get; init; }
+
+    public int RootProcessId { get; init; }
+
+    public int RootSessionId { get; init; }
+}
+
+internal sealed class ActivationDispatchRequest
+{
+    public string[] Arguments { get; init; } = [];
+}
+
+internal sealed class WebViewListResponse
+{
+    public InstanceEndpoint[] Endpoints { get; init; } = [];
+}
+
+internal sealed class WebViewSendRequest
+{
+    public int TargetProcessId { get; init; }
+
+    public string Operation { get; init; } = string.Empty;
+
+    public Newtonsoft.Json.Linq.JToken? Data { get; init; }
+}
+
+internal sealed class WebViewMessage
+{
+    public int SourceProcessId { get; init; }
+
+    public string Operation { get; init; } = string.Empty;
+
+    public Newtonsoft.Json.Linq.JToken? Data { get; init; }
 }
 
 /// <summary>

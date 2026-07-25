@@ -9,26 +9,21 @@ namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 /// </summary>
 internal sealed class InstanceMessageState
 {
-    internal ConcurrentDictionary<string, ChildInstanceConnection> Children { get; } =
-        new(StringComparer.Ordinal);
+    internal object RegistrationLock { get; } = new();
 
-    internal ConcurrentDictionary<string, PendingChildLaunch> PendingChildLaunches { get; } =
-        new(StringComparer.Ordinal);
+    internal ConcurrentDictionary<int, RegisteredInstanceConnection> BetterGiConnectionsBySession { get; } =
+        new();
 
-    internal ConcurrentDictionary<string, BetterGiInstanceType> KnownChildTypes { get; } =
-        new(StringComparer.Ordinal);
+    internal ConcurrentDictionary<int, RegisteredInstanceConnection> WebViewConnectionsByProcessId { get; } =
+        new();
 }
 
 /// <summary>
 /// 已注册子实例的描述信息及其 IPC 连接。
 /// </summary>
-internal sealed record ChildInstanceConnection(
-    InstanceDescriptor Descriptor,
+internal sealed record RegisteredInstanceConnection(
+    InstanceEndpoint Endpoint,
     InstanceConnection Connection);
 
-/// <summary>
-/// 主实例主动发起、等待子实例完成注册的启动记录。
-/// </summary>
-internal sealed record PendingChildLaunch(
-    BetterGiInstanceType InstanceType,
-    DateTimeOffset CreatedAt);
+// v1 中主实例会创建“等待子实例完成注册”的启动记录。
+// v2 不再预先创建启动记录；连接关系由根管道、用途和实际 Windows Session 决定。

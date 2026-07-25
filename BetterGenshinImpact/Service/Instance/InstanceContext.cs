@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
-using System.Globalization;
-using BetterGenshinImpact.Helpers;
+using System.Security.Principal;
 
 namespace BetterGenshinImpact.Service.Instance;
 
@@ -12,67 +11,26 @@ public enum BetterGiInstanceType
     WebView
 }
 
-internal static class InstanceIds
-{
-    internal const int Length = 8;
-
-    internal static string Create()
-    {
-        return Guid.NewGuid().ToString("N")[..Length];
-    }
-
-    internal static bool TryNormalize(string? value, out string normalized)
-    {
-        if (value?.Length == Length
-            && uint.TryParse(
-                value,
-                NumberStyles.AllowHexSpecifier,
-                CultureInfo.InvariantCulture,
-                out _))
-        {
-            normalized = value.ToLowerInvariant();
-            return true;
-        }
-
-        normalized = string.Empty;
-        return false;
-    }
-
-    internal static bool IsValid(string? value)
-    {
-        return TryNormalize(value, out var normalized)
-               && string.Equals(value, normalized, StringComparison.Ordinal);
-    }
-}
-
 public sealed class InstanceContext
 {
     internal InstanceContext(
-        string instanceId,
         BetterGiInstanceType instanceType,
-        string pipeName,
-        string? parentInstanceId,
-        string? parentPipeName)
+        string rootPipeName,
+        int? rootSessionId)
     {
-        InstanceId = instanceId;
         InstanceType = instanceType;
-        PipeName = pipeName;
-        ParentInstanceId = parentInstanceId;
-        ParentPipeName = parentPipeName;
+        RootPipeName = rootPipeName;
+        RootSessionId = rootSessionId;
         ProcessId = Environment.ProcessId;
         WindowsSessionId = Process.GetCurrentProcess().SessionId;
         StartedAt = DateTimeOffset.UtcNow;
     }
 
-    public string InstanceId { get; }
-
     public BetterGiInstanceType InstanceType { get; }
 
-    public string PipeName { get; }
+    public string RootPipeName { get; }
 
-    public string? ParentInstanceId { get; }
-
-    public string? ParentPipeName { get; }
+    public int? RootSessionId { get; private set; }
 
     public int ProcessId { get; }
 
@@ -80,19 +38,18 @@ public sealed class InstanceContext
 
     public DateTimeOffset StartedAt { get; }
 
-    public bool CanCreateChildSession => InstanceType == BetterGiInstanceType.Primary;
+    public bool IsRoot => InstanceType == BetterGiInstanceType.Primary;
 
-    public bool CanCreateWebView => InstanceType is BetterGiInstanceType.Primary
-        or BetterGiInstanceType.ChildSession;
-
-    public InstanceDescriptor ToDescriptor()
+    internal void SetRootSessionId(int rootSessionId)
     {
-        return new InstanceDescriptor
+        RootSessionId = rootSessionId;
+    }
+
+    public InstanceEndpoint ToEndpoint()
+    {
+        return new InstanceEndpoint
         {
-            InstanceId = InstanceId,
             InstanceType = InstanceType,
-            ParentInstanceId = ParentInstanceId,
-            PipeName = PipeName,
             ProcessId = ProcessId,
             WindowsSessionId = WindowsSessionId,
             StartedAt = StartedAt
@@ -100,15 +57,9 @@ public sealed class InstanceContext
     }
 }
 
-public sealed class InstanceDescriptor
+public sealed class InstanceEndpoint
 {
-    public string InstanceId { get; init; } = string.Empty;
-
     public BetterGiInstanceType InstanceType { get; init; }
-
-    public string? ParentInstanceId { get; init; }
-
-    public string PipeName { get; init; } = string.Empty;
 
     public int ProcessId { get; init; }
 
@@ -117,56 +68,20 @@ public sealed class InstanceDescriptor
     public DateTimeOffset StartedAt { get; init; }
 }
 
-public sealed class InstanceTreeNode
-{
-    public InstanceDescriptor Instance { get; init; } = new();
-
-    public InstanceTreeNode[] Children { get; init; } = [];
-}
-
-public sealed record InstanceLaunchInfo(
-    string InstanceId,
-    BetterGiInstanceType InstanceType,
-    string ParentInstanceId,
-    string ParentPipeName)
-{
-    public string ToCommandLineArguments()
-    {
-        var instanceType = InstanceType switch
-        {
-            BetterGiInstanceType.ChildSession => "childSession",
-            BetterGiInstanceType.WebView => "webview",
-            _ => throw new InvalidOperationException("Primary 实例不能作为子实例启动。")
-        };
-        return string.Join(
-            " ",
-            CommandLineOptions.InstanceArgument,
-            instanceType,
-            CommandLineOptions.InstanceIdArgument,
-            InstanceId,
-            CommandLineOptions.ParentInstanceArgument,
-            ParentInstanceId,
-            CommandLineOptions.ParentPipeArgument,
-            Quote(ParentPipeName));
-    }
-
-    private static string Quote(string value)
-    {
-        return $"\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\"";
-    }
-}
-
 internal static class InstancePipeNames
 {
-    private const string Prefix = "BetterGI.v1.";
+    private const string Prefix = "BetterGI.v2.user-";
 
-    internal static string ForSession(int windowsSessionId)
+    internal static string ForCurrentUser()
     {
-        return $"{Prefix}session-{windowsSessionId}";
+        using var identity = WindowsIdentity.GetCurrent();
+        var userSid = identity.User
+                      ?? throw new InvalidOperationException("无法取得当前 Windows 用户 SID。");
+        return ForUserSid(userSid.Value);
     }
 
-    internal static string ForInstance(string instanceId)
+    internal static string ForUserSid(string userSid)
     {
-        return $"{Prefix}instance-{instanceId}";
+        return $"{Prefix}{userSid}.root";
     }
 }

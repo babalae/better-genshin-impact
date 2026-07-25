@@ -1,4 +1,6 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
+using System.IO.Pipes;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
@@ -10,26 +12,19 @@ public class InstanceIpcProtocolTests
     [Fact]
     public void CommandLineParser_ShouldSeparateInstanceMetadataAndActivation()
     {
-        const string instanceId = "A1B2C3D4";
-        const string parentInstanceId = "89ABCDEF";
         var options = CommandLineOptions.Parse(
         [
             "BetterGI.exe",
             "--instance",
             "childSession",
-            "--instance-id",
-            instanceId,
-            "--parent-instance",
-            parentInstanceId,
-            "--parent-pipe",
-            "BetterGI.v1.session-1",
+            "--restart-from-pid",
+            "1234",
             "bettergi://start"
         ]);
 
         Assert.Equal(BetterGiInstanceType.ChildSession, options.InstanceType);
-        Assert.Equal(instanceId.ToLowerInvariant(), options.RequestedInstanceId);
-        Assert.Equal(parentInstanceId.ToLowerInvariant(), options.ParentInstanceId);
-        Assert.Equal("BetterGI.v1.session-1", options.ParentPipeName);
+        Assert.True(options.HasExplicitInstanceType);
+        Assert.Equal(1234, options.RestartFromProcessId);
         Assert.Equal(CommandLineAction.Start, options.Action);
     }
 
@@ -44,6 +39,7 @@ public class InstanceIpcProtocolTests
         ]);
 
         Assert.Equal(BetterGiInstanceType.WebView, options.InstanceType);
+        Assert.True(options.HasExplicitInstanceType);
         Assert.Equal(CommandLineAction.None, options.Action);
     }
 
@@ -55,17 +51,13 @@ public class InstanceIpcProtocolTests
             "BetterGI.exe",
             "--instance",
             "unsupported",
-            "--instance-id",
-            "invalid-instance-id",
-            "--parent-instance",
-            "invalid-parent-id",
-            "--parent-pipe"
+            "--restart-from-pid",
+            "invalid-process-id"
         ]);
 
-        Assert.True(options.IsPrimaryInstance);
-        Assert.Null(options.RequestedInstanceId);
-        Assert.Null(options.ParentInstanceId);
-        Assert.Null(options.ParentPipeName);
+        Assert.Equal(BetterGiInstanceType.Primary, options.InstanceType);
+        Assert.False(options.HasExplicitInstanceType);
+        Assert.Null(options.RestartFromProcessId);
         Assert.Equal(CommandLineAction.None, options.Action);
     }
 
@@ -79,45 +71,55 @@ public class InstanceIpcProtocolTests
             "primary"
         ]);
 
-        Assert.True(options.IsPrimaryInstance);
+        Assert.Equal(BetterGiInstanceType.Primary, options.InstanceType);
+        Assert.False(options.HasExplicitInstanceType);
         Assert.Equal(CommandLineAction.None, options.Action);
     }
 
     [Fact]
-    public void LaunchInfo_ShouldEmitInstanceTypeAndParentMetadata()
+    public void RootPipeName_ShouldBeStableForWindowsUser()
     {
-        const string instanceId = "0123abcd";
-        const string parentInstanceId = "89abcdef";
-        var launchInfo = new InstanceLaunchInfo(
-            instanceId,
-            BetterGiInstanceType.WebView,
-            parentInstanceId,
-            "BetterGI.v1.session-9");
+        const string userSid = "S-1-5-21-1000-2000-3000-4000";
 
-        var arguments = launchInfo.ToCommandLineArguments();
+        var pipeName = InstancePipeNames.ForUserSid(userSid);
 
-        Assert.Contains("--instance webview", arguments);
-        Assert.Contains($"--instance-id {instanceId}", arguments);
-        Assert.Contains($"--parent-instance {parentInstanceId}", arguments);
-        Assert.Contains("--parent-pipe \"BetterGI.v1.session-9\"", arguments);
+        Assert.Equal($"BetterGI.v2.user-{userSid}.root", pipeName);
     }
 
     [Fact]
-    public void InstanceId_ShouldUseFirstEightLowercaseUuidCharacters()
+    public async Task Server_ShouldDeriveClientProcessAndSessionFromPipe()
     {
-        var instanceId = InstanceIds.Create();
+        var pipeName = $"BetterGI.UnitTest.{Guid.NewGuid():N}";
+        await using var server = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+        await using var client = new NamedPipeClientStream(
+            ".",
+            pipeName,
+            PipeDirection.InOut,
+            PipeOptions.Asynchronous);
 
-        Assert.Matches("^[0-9a-f]{8}$", instanceId);
-        Assert.Equal($"BetterGI.v1.instance-{instanceId}", InstancePipeNames.ForInstance(instanceId));
+        var waitForConnection = server.WaitForConnectionAsync();
+        await client.ConnectAsync();
+        await waitForConnection;
+
+        var result = InstancePipePeerInfo.TryGetClientProcessAndSession(
+            server.SafePipeHandle,
+            out var processId,
+            out var sessionId);
+
+        Assert.True(result);
+        Assert.Equal(Environment.ProcessId, processId);
+        Assert.Equal(Process.GetCurrentProcess().SessionId, sessionId);
     }
 
     [Fact]
     public async Task JsonFrame_ShouldRoundTrip()
     {
-        const string sourceInstanceId = "0123abcd";
-        var request = InstanceIpcEnvelope.Request(
-            InstanceOperations.Ping,
-            sourceInstanceId);
+        var request = InstanceIpcEnvelope.Request(InstanceOperations.Ping);
         await using var stream = new MemoryStream();
 
         await InstanceIpcProtocol.WriteJsonAsync(stream, request, CancellationToken.None);
@@ -128,7 +130,7 @@ public class InstanceIpcProtocolTests
         Assert.Equal(InstanceIpcProtocol.Version, result.Version);
         Assert.Equal(request.RequestId, result.RequestId);
         Assert.Equal(InstanceOperations.Ping, result.Operation);
-        Assert.Equal(sourceInstanceId, result.SourceInstanceId);
+        Assert.Null(result.ErrorCode);
     }
 
     [Fact]

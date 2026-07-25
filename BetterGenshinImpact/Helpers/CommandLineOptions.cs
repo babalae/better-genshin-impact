@@ -11,9 +11,7 @@ namespace BetterGenshinImpact.Helpers;
 public class CommandLineOptions
 {
     public const string InstanceArgument = "--instance";
-    public const string InstanceIdArgument = "--instance-id";
-    public const string ParentInstanceArgument = "--parent-instance";
-    public const string ParentPipeArgument = "--parent-pipe";
+    public const string RestartFromProcessIdArgument = "--restart-from-pid";
 
     private static CommandLineOptions? _instance;
 
@@ -26,22 +24,15 @@ public class CommandLineOptions
     /// </summary>
     public BetterGiInstanceType InstanceType { get; }
 
-    public bool IsPrimaryInstance => InstanceType == BetterGiInstanceType.Primary;
+    /// <summary>
+    /// 是否通过命令行明确指定了只能作为客户端运行的实例类型。
+    /// </summary>
+    public bool HasExplicitInstanceType { get; }
 
     /// <summary>
-    /// 启动方为当前进程预分配的实例 ID。
+    /// 应用重启时被替换的旧进程 ID。
     /// </summary>
-    public string? RequestedInstanceId { get; }
-
-    /// <summary>
-    /// 父实例 ID。
-    /// </summary>
-    public string? ParentInstanceId { get; }
-
-    /// <summary>
-    /// 父实例公开的命名管道名称。
-    /// </summary>
-    public string? ParentPipeName { get; }
+    public int? RestartFromProcessId { get; }
 
     /// <summary>
     /// startOneDragon 时可选的配置名称（第 3 个参数）
@@ -71,26 +62,23 @@ public class CommandLineOptions
         string? oneDragonConfigName = null,
         string[]? groupNames = null,
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
-        string? requestedInstanceId = null,
-        string? parentInstanceId = null,
-        string? parentPipeName = null)
+        bool hasExplicitInstanceType = false,
+        int? restartFromProcessId = null)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
         GroupNames = groupNames ?? [];
         InstanceType = instanceType;
-        RequestedInstanceId = requestedInstanceId;
-        ParentInstanceId = parentInstanceId;
-        ParentPipeName = parentPipeName;
+        HasExplicitInstanceType = hasExplicitInstanceType;
+        RestartFromProcessId = restartFromProcessId;
     }
 
     internal static CommandLineOptions Parse(string[] args)
     {
         var launchArgs = args.Skip(1).Select(x => x.Trim()).ToArray();
         var instanceType = BetterGiInstanceType.Primary;
-        string? requestedInstanceId = null;
-        string? parentInstanceId = null;
-        string? parentPipeName = null;
+        var hasExplicitInstanceType = false;
+        int? restartFromProcessId = null;
         var commandArgs = new List<string>();
 
         for (var index = 0; index < launchArgs.Length; index++)
@@ -100,42 +88,28 @@ public class CommandLineOptions
             {
                 if (TryReadNext(launchArgs, ref index, out var instanceTypeValue))
                 {
-                    instanceType = instanceTypeValue.ToLowerInvariant() switch
+                    var parsedType = instanceTypeValue.ToLowerInvariant() switch
                     {
-                        "primary" => BetterGiInstanceType.Primary,
                         "childsession" => BetterGiInstanceType.ChildSession,
                         "webview" => BetterGiInstanceType.WebView,
-                        _ => BetterGiInstanceType.Primary
+                        _ => (BetterGiInstanceType?)null
                     };
+                    if (parsedType is not null)
+                    {
+                        instanceType = parsedType.Value;
+                        hasExplicitInstanceType = true;
+                    }
                 }
                 continue;
             }
 
-            if (argument.Equals(InstanceIdArgument, StringComparison.OrdinalIgnoreCase))
+            if (argument.Equals(RestartFromProcessIdArgument, StringComparison.OrdinalIgnoreCase))
             {
-                if (TryReadNext(launchArgs, ref index, out var instanceIdValue)
-                    && InstanceIds.TryNormalize(instanceIdValue, out var parsedInstanceId))
+                if (TryReadNext(launchArgs, ref index, out var processIdValue)
+                    && int.TryParse(processIdValue, out var parsedProcessId)
+                    && parsedProcessId > 0)
                 {
-                    requestedInstanceId = parsedInstanceId;
-                }
-                continue;
-            }
-
-            if (argument.Equals(ParentInstanceArgument, StringComparison.OrdinalIgnoreCase))
-            {
-                if (TryReadNext(launchArgs, ref index, out var parentInstanceValue)
-                    && InstanceIds.TryNormalize(parentInstanceValue, out var parsedParentInstanceId))
-                {
-                    parentInstanceId = parsedParentInstanceId;
-                }
-                continue;
-            }
-
-            if (argument.Equals(ParentPipeArgument, StringComparison.OrdinalIgnoreCase))
-            {
-                if (TryReadNext(launchArgs, ref index, out var parentPipeValue))
-                {
-                    parentPipeName = parentPipeValue;
+                    restartFromProcessId = parsedProcessId;
                 }
                 continue;
             }
@@ -189,9 +163,8 @@ public class CommandLineOptions
                 oneDragonConfigName,
                 groupNames,
                 instanceType,
-                requestedInstanceId,
-                parentInstanceId,
-                parentPipeName);
+                hasExplicitInstanceType,
+                restartFromProcessId);
         }
     }
 

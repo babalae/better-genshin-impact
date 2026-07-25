@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -8,17 +9,23 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Instance.MessageHandlers;
 
 namespace BetterGenshinImpact.Service.Instance;
 
 public sealed class InstanceBootstrap : IDisposable
 {
     private NamedPipeServerStream? _firstServer;
+    private InitialRootConnection? _firstRootConnection;
 
-    private InstanceBootstrap(InstanceContext context, NamedPipeServerStream firstServer)
+    private InstanceBootstrap(
+        InstanceContext context,
+        NamedPipeServerStream? firstServer,
+        InitialRootConnection? firstRootConnection)
     {
         Context = context;
         _firstServer = firstServer;
+        _firstRootConnection = firstRootConnection;
     }
 
     public static InstanceBootstrap Current { get; private set; } = null!;
@@ -33,96 +40,152 @@ public sealed class InstanceBootstrap : IDisposable
         }
 
         var options = CommandLineOptions.Instance;
-        var instanceId = options.RequestedInstanceId ?? InstanceIds.Create();
-        var sessionPipeName = InstancePipeNames.ForSession(Process.GetCurrentProcess().SessionId);
-        NamedPipeServerStream firstServer;
-        string pipeName;
+        var rootPipeName = InstancePipeNames.ForCurrentUser();
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
 
-        if (options.InstanceType == BetterGiInstanceType.Primary
-            && !Environment.GetCommandLineArgs().Contains("--no-single", StringComparer.OrdinalIgnoreCase))
+        if (options.HasExplicitInstanceType)
         {
-            try
+            var initialConnection = TryOpenRootConnectionAsync(
+                    rootPipeName,
+                    options.InstanceType,
+                    options.RestartFromProcessId,
+                    Environment.GetCommandLineArgs(),
+                    [TimeSpan.Zero],
+                    TimeSpan.FromMilliseconds(200),
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            if (initialConnection?.Response.Disposition
+                == ConnectionOpenDisposition.ActivationForwarded)
             {
-                firstServer = InstancePipeFactory.CreateServer(sessionPipeName, firstPipeInstance: true);
-                pipeName = sessionPipeName;
-            }
-            catch (Exception exception) when (exception is IOException
-                                              or UnauthorizedAccessException)
-            {
-                var forwarded = ForwardActivationAsync(
-                        sessionPipeName,
-                        instanceId,
-                        Environment.GetCommandLineArgs(),
-                        CancellationToken.None)
-                    .GetAwaiter()
-                    .GetResult();
-                if (!forwarded)
-                {
-                    Trace.TraceError(
-                        "无法将启动请求转发给现有 BetterGI，命名管道：{0}",
-                        sessionPipeName);
-                }
-                Environment.Exit(forwarded ? 0 : 0xFFFF);
+                initialConnection.Client.Dispose();
+                Environment.Exit(0);
                 throw new InvalidOperationException("当前实例已将启动请求转发给现有 BetterGI。");
             }
-        }
-        else if (options.InstanceType == BetterGiInstanceType.ChildSession)
-        {
-            try
-            {
-                firstServer = InstancePipeFactory.CreateServer(sessionPipeName, firstPipeInstance: true);
-                pipeName = sessionPipeName;
-            }
-            catch (Exception exception) when (exception is IOException
-                                              or UnauthorizedAccessException)
-            {
-                pipeName = InstancePipeNames.ForInstance(instanceId);
-                firstServer = InstancePipeFactory.CreateServer(pipeName, firstPipeInstance: true);
-            }
-        }
-        else
-        {
-            pipeName = InstancePipeNames.ForInstance(instanceId);
-            firstServer = InstancePipeFactory.CreateServer(pipeName, firstPipeInstance: true);
+
+            Current = new InstanceBootstrap(
+                new InstanceContext(
+                    initialConnection?.Response.AssignedType ?? options.InstanceType,
+                    rootPipeName,
+                    initialConnection?.Response.RootSessionId),
+                firstServer: null,
+                initialConnection);
+            return;
         }
 
-        Current = new InstanceBootstrap(
-            new InstanceContext(
-                instanceId,
-                options.InstanceType,
-                pipeName,
-                options.ParentInstanceId,
-                options.ParentPipeName),
-            firstServer);
+        WaitForRestartSource(options.RestartFromProcessId);
+        try
+        {
+            var firstServer = InstancePipeFactory.CreateServer(
+                rootPipeName,
+                firstPipeInstance: true);
+            Current = new InstanceBootstrap(
+                new InstanceContext(
+                    BetterGiInstanceType.Primary,
+                    rootPipeName,
+                    currentSessionId),
+                firstServer,
+                firstRootConnection: null);
+        }
+        catch (Exception exception) when (exception is IOException
+                                          or UnauthorizedAccessException)
+        {
+            var initialConnection = TryOpenRootConnectionAsync(
+                    rootPipeName,
+                    BetterGiInstanceType.Primary,
+                    options.RestartFromProcessId,
+                    Environment.GetCommandLineArgs(),
+                    [
+                        TimeSpan.Zero,
+                        TimeSpan.FromMilliseconds(200),
+                        TimeSpan.FromMilliseconds(500)
+                    ],
+                    TimeSpan.FromSeconds(2),
+                    CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            if (initialConnection is null)
+            {
+                Trace.TraceError(
+                    "无法连接当前用户的 BetterGI 根管道：{0}",
+                    rootPipeName);
+                Environment.Exit(0xFFFF);
+                throw new InvalidOperationException("无法连接当前用户的 BetterGI 根实例。");
+            }
+
+            if (initialConnection.Response.Disposition
+                == ConnectionOpenDisposition.ActivationForwarded)
+            {
+                initialConnection.Client.Dispose();
+                Environment.Exit(0);
+                throw new InvalidOperationException("当前实例已将启动请求转发给现有 BetterGI。");
+            }
+
+            Current = new InstanceBootstrap(
+                new InstanceContext(
+                    initialConnection.Response.AssignedType,
+                    rootPipeName,
+                    initialConnection.Response.RootSessionId),
+                firstServer: null,
+                initialConnection);
+        }
     }
 
-    internal NamedPipeServerStream TakeFirstServer()
+    internal NamedPipeServerStream? TakeFirstServer()
     {
-        return Interlocked.Exchange(ref _firstServer, null)
-               ?? throw new InvalidOperationException("首个命名管道服务端实例已被接管。");
+        return Interlocked.Exchange(ref _firstServer, null);
+    }
+
+    internal InitialRootConnection? TakeFirstRootConnection()
+    {
+        return Interlocked.Exchange(ref _firstRootConnection, null);
     }
 
     public void Dispose()
     {
         Interlocked.Exchange(ref _firstServer, null)?.Dispose();
+        Interlocked.Exchange(ref _firstRootConnection, null)?.Client.Dispose();
     }
 
-    private static async Task<bool> ForwardActivationAsync(
+    private static void WaitForRestartSource(int? restartFromProcessId)
+    {
+        if (restartFromProcessId is null || restartFromProcessId == Environment.ProcessId)
+        {
+            return;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById(restartFromProcessId.Value);
+            if (!process.WaitForExit(milliseconds: 15_000))
+            {
+                throw new TimeoutException(
+                    $"等待旧 BetterGI 进程 {restartFromProcessId.Value} 退出超时。");
+            }
+        }
+        catch (ArgumentException)
+        {
+            // 旧进程已经退出。
+        }
+    }
+
+    private static async Task<InitialRootConnection?> TryOpenRootConnectionAsync(
         string pipeName,
-        string sourceInstanceId,
+        BetterGiInstanceType requestedType,
+        int? restartFromProcessId,
         string[] args,
+        IReadOnlyList<TimeSpan> retryDelays,
+        TimeSpan connectTimeout,
         CancellationToken cancellationToken)
     {
         var request = InstanceIpcEnvelope.Request(
-            InstanceOperations.ActivationForward,
-            sourceInstanceId,
-            new ActivationForwardRequest { Arguments = args });
-        var retryDelays = new[]
-        {
-            TimeSpan.Zero,
-            TimeSpan.FromMilliseconds(200),
-            TimeSpan.FromMilliseconds(500)
-        };
+            InstanceOperations.ConnectionOpen,
+            new ConnectionOpenRequest
+            {
+                RequestedType = requestedType,
+                RestartFromProcessId = restartFromProcessId,
+                Arguments = args
+            });
 
         foreach (var retryDelay in retryDelays)
         {
@@ -133,25 +196,54 @@ public sealed class InstanceBootstrap : IDisposable
 
             try
             {
-                await using var client = new NamedPipeClientStream(
+                var client = new NamedPipeClientStream(
                     ".",
                     pipeName,
                     PipeDirection.InOut,
                     PipeOptions.Asynchronous | PipeOptions.WriteThrough);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(TimeSpan.FromSeconds(2));
-                await client.ConnectAsync(timeout.Token).ConfigureAwait(false);
-                await InstanceIpcProtocol.WriteJsonAsync(client, request, timeout.Token).ConfigureAwait(false);
-                var frame = await InstanceIpcProtocol.ReadFrameAsync(client, timeout.Token).ConfigureAwait(false);
-                if (frame is null)
+                timeout.CancelAfter(connectTimeout);
+                try
                 {
-                    continue;
-                }
+                    await client.ConnectAsync(timeout.Token).ConfigureAwait(false);
+                    await InstanceIpcProtocol.WriteJsonAsync(
+                        client,
+                        request,
+                        timeout.Token).ConfigureAwait(false);
+                    var frame = await InstanceIpcProtocol.ReadFrameAsync(
+                        client,
+                        timeout.Token).ConfigureAwait(false);
+                    if (frame is null)
+                    {
+                        client.Dispose();
+                        continue;
+                    }
 
-                var response = InstanceIpcProtocol.ReadJson(frame.Value);
-                return response.Operation == InstanceOperations.Response
-                       && response.RequestId == request.RequestId
-                       && response.Success == true;
+                    var response = InstanceIpcProtocol.ReadJson(frame.Value);
+                    if (response.Operation != InstanceOperations.Response
+                        || response.RequestId != request.RequestId)
+                    {
+                        client.Dispose();
+                        continue;
+                    }
+                    if (response.Success != true)
+                    {
+                        client.Dispose();
+                        throw new InvalidOperationException(
+                            response.ErrorMessage ?? response.ErrorCode ?? "根实例拒绝连接。");
+                    }
+
+                    var openResponse =
+                        response.Data?.ToObject<ConnectionOpenResponse>(
+                            InstanceIpcProtocol.Serializer)
+                        ?? throw new InvalidDataException("根实例连接响应缺少数据。");
+                    return new InitialRootConnection(client, openResponse);
+                }
+                catch
+                {
+                    client.Dispose();
+                    throw;
+                }
             }
             catch (Exception exception) when (exception is IOException
                                               or UnauthorizedAccessException
@@ -160,15 +252,19 @@ public sealed class InstanceBootstrap : IDisposable
             {
                 Debug.WriteLine(exception);
                 Trace.TraceWarning(
-                    "转发 BetterGI 启动请求失败，命名管道：{0}，原因：{1}",
+                    "连接 BetterGI 根管道失败，命名管道：{0}，原因：{1}",
                     pipeName,
                     exception.GetBaseException().Message);
             }
         }
 
-        return false;
+        return null;
     }
 }
+
+internal sealed record InitialRootConnection(
+    NamedPipeClientStream Client,
+    ConnectionOpenResponse Response);
 
 internal static class InstancePipeFactory
 {
@@ -205,9 +301,4 @@ internal static class InstancePipeFactory
             outBufferSize: 16 * 1024,
             security);
     }
-}
-
-internal sealed class ActivationForwardRequest
-{
-    public string[] Arguments { get; init; } = [];
 }

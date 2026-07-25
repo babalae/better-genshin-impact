@@ -19,10 +19,9 @@ internal static class ChildSessionProcessLauncher
     private const int TaskRunUseSessionId = 0x4;
 
     internal static Task LaunchBetterGiAsync(
-        uint childSessionId,
-        InstanceLaunchInfo launchInfo)
+        uint childSessionId)
     {
-        var startInfo = CreateBetterGiStartInfo(launchInfo);
+        var startInfo = CreateBetterGiStartInfo();
         return LaunchElevatedAsync(
             childSessionId,
             startInfo.ExecutablePath,
@@ -54,7 +53,7 @@ internal static class ChildSessionProcessLauncher
                 workingDirectory));
     }
 
-    private static ProcessLaunchInfo CreateBetterGiStartInfo(InstanceLaunchInfo launchInfo)
+    private static ProcessLaunchInfo CreateBetterGiStartInfo()
     {
         var currentProcessPath = Environment.ProcessPath
             ?? throw new InvalidOperationException("无法取得 BetterGI 程序路径。");
@@ -74,13 +73,14 @@ internal static class ChildSessionProcessLauncher
 
             return new ProcessLaunchInfo(
                 fullProcessPath,
-                $"{QuoteArgument(Path.GetFullPath(entryAssemblyPath))} {launchInfo.ToCommandLineArguments()}",
+                $"{QuoteArgument(Path.GetFullPath(entryAssemblyPath))} "
+                + $"{CommandLineOptions.InstanceArgument} childSession",
                 AppContext.BaseDirectory);
         }
 
         return new ProcessLaunchInfo(
             ValidateExecutablePath(fullProcessPath),
-            launchInfo.ToCommandLineArguments(),
+            $"{CommandLineOptions.InstanceArgument} childSession",
             AppContext.BaseDirectory);
     }
 
