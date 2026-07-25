@@ -253,6 +253,7 @@ public class AutoFightJsonTask : ISoloTask
     {
         _ct = ct;
         AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
+        AvatarRecognition.ClearLegendaryBarTracker();
         try
         {
             LogScreenResolution();

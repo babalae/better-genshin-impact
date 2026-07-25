@@ -49,6 +49,18 @@ public static class AvatarRecognition
     public static void ClearCurrentAutoFightParam() => _currentAutoFightParam.Value = null;
 
     /// <summary>
+    /// 清除传奇血条追踪状态。每次新战斗开始时应调用，避免上一场战斗
+    /// 已累积的阈值在新战斗的普通血条上被误判为传奇血条。
+    /// </summary>
+    public static void ClearLegendaryBarTracker()
+    {
+        lock (_legendaryBarLock)
+        {
+            _legendaryBarTracker.Clear();
+        }
+    }
+
+    /// <summary>
     /// 持续索敌跳过标记：当某角色进行独占视角操作（如重击索敌）时设为 true，
     /// 持续索敌循环将跳过本帧，避免两者争夺鼠标控制权。
     /// </summary>

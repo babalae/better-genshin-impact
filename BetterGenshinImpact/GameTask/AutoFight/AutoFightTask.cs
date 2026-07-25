@@ -241,6 +241,7 @@ public class AutoFightTask : ISoloTask
     {
         _ct = ct;
         AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
+        AvatarRecognition.ClearLegendaryBarTracker();
         try
         {
             LogScreenResolution();
