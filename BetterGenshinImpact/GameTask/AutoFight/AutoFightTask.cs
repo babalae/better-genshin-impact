@@ -876,7 +876,8 @@ public class AutoFightTask : ISoloTask
                     using var quickCapture = CaptureToRectArea();
                     var bars = AvatarRecognition.FindBloodBars(quickCapture);
                     // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
-                    if (bars.Count > 0)
+                    // 过滤左侧 UI 区域 (x <= 200)，避免队伍头像等红色元素被误判为敌人血条
+                    if (bars.Any(b => b.x > (int)(200 * _assetScale)))
                     {
                         _skipCheckCounter++;
                         Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
