@@ -939,7 +939,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             ExpBasedPickupEnabled = false,
             KazuhaPickupEnabled = false,
             PickDropsAfterFightEnabled = false,
-            Timeout = 600,
+            Timeout = _taskParam.Timeout,
         };
 
         var jsonTask = new AutoFightJsonTask(jsonParam);
