@@ -207,7 +207,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         var iconRoi = new Rect(
             foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
             (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-        var chatIconRo = RecognitionAssets.Get("AutoSkip", "ChatIcon", content.CaptureRectArea);
+        var chatIconRo = RecognitionAssets.Get("AutoSkip", "ChatIcon", content.CaptureRectArea).Clone();
         chatIconRo.RegionOfInterest = iconRoi;
         using var chatIconRa = content.CaptureRectArea.Find(chatIconRo);
         speedTimer.Record("识别聊天图标");
@@ -218,7 +218,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         else
         {
-            var settingsIconRo = RecognitionAssets.Get("AutoPick", "SettingsIcon", content.CaptureRectArea);
+            var settingsIconRo = RecognitionAssets.Get("AutoPick", "SettingsIcon", content.CaptureRectArea).Clone();
             settingsIconRo.RegionOfInterest = iconRoi;
             using var settingsIconRa = content.CaptureRectArea.Find(settingsIconRo);
             speedTimer.Record("识别设置图标");

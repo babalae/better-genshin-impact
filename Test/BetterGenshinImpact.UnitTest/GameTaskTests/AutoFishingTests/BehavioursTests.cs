@@ -24,7 +24,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public BehavioursTests(PaddleFixture paddle, TorchFixture torch, LocalizationFixture localization, GridIconModelFixture iconModel)
         {
             this.paddle = paddle;
-            this.useTorch = torch.UseTorch;
             this.stringLocalizer = localization.CreateStringLocalizer<AutoFishingTask>();
             this.session = iconModel.modelLoader.Value.session;
             this.prototypes = iconModel.modelLoader.Value.prototypes;
@@ -41,7 +40,5 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                         .CreateYoloPredictor(BgiOnnxModel.BgiFish));
             }
         }
-
-        private readonly bool useTorch;
     }
 }

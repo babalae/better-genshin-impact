@@ -15,7 +15,7 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-    <StackPanel Margin="42,16,42,12">
+    <StackPanel Margin="{StaticResource PagePadding}">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="辅助操控设置" />

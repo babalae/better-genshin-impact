@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -9,8 +9,11 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Controls.Markdown;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
@@ -60,6 +63,8 @@ public partial class HomePageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
 
+    public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
+
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
@@ -75,10 +80,15 @@ public partial class HomePageViewModel : ViewModel
 
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
+    private readonly ChildSessionService _childSessionService;
 
-    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public HomePageViewModel(
+        IConfigService configService,
+        TaskTriggerDispatcher taskTriggerDispatcher,
+        ChildSessionService childSessionService)
     {
         _taskDispatcher = taskTriggerDispatcher;
+        _childSessionService = childSessionService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
@@ -121,6 +131,12 @@ public partial class HomePageViewModel : ViewModel
     private bool _autoRun = true;
 
     [RelayCommand]
+    private void OpenChildSessionWindow()
+    {
+        _childSessionService.ShowWindow();
+    }
+
+    [RelayCommand]
     private void OnLoaded()
     {
         // OnTest();
@@ -135,10 +151,18 @@ public partial class HomePageViewModel : ViewModel
 
         // 只对纯 "start" 参数自动启动截图器
         // startOneDragon、--startGroups 等由各自流程中的 StartGameTask 处理
-        if (CommandLineOptions.Instance.Action == CommandLineAction.Start)
+        HandleActivation(CommandLineOptions.Instance);
+    }
+
+    public void HandleActivation(CommandLineOptions commandLineOptions)
+    {
+        if (commandLineOptions.Action == CommandLineAction.Start)
         {
             _ = OnStartTriggerAsync();
         }
+
+        // TODO: 多实例独立任务选择面板入口预留。
+        // 后续在此判断可用子实例，并由选择面板决定 task.* 请求的目标实例。
     }
 
     private void OnClosed()
@@ -468,23 +492,15 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenGameCommandLineDocument()
     {
-        string md = File.ReadAllText(Global.Absolute(@"Assets\Strings\gicli.md"), Encoding.UTF8);
-
-        var flowDoc = MarkdownToFlowDocumentConverter.ConvertToFlowDocument(md);
-
-        // 创建 RichTextBox 来显示内容
-        var richTextBox = new System.Windows.Controls.RichTextBox
+        // 创建 MarkdownView 来显示内容
+        var markdownView = new MarkdownView
         {
-            IsReadOnly = true,
-            IsDocumentEnabled = true,
-            BorderThickness = new Thickness(0),
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Document = flowDoc,
+            FilePath = Global.Absolute(@"Assets\Strings\gicli.md"),
             Background = Brushes.Transparent,
             VerticalAlignment = VerticalAlignment.Stretch,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Margin = new Thickness(12, 0, 12, 12)
+            Margin = new Thickness(12, 0, 12, 12),
+            LinkNavigationMode = MarkdownLinkNavigationMode.SystemDefault
         };
 
         // 创建两行的 Grid 容器
@@ -504,9 +520,9 @@ public partial class HomePageViewModel : ViewModel
         System.Windows.Controls.Grid.SetRow(titleBar, 0);
         grid.Children.Add(titleBar);
 
-        // 将 RichTextBox 添加到第二行
-        System.Windows.Controls.Grid.SetRow(richTextBox, 1);
-        grid.Children.Add(richTextBox);
+        // 将 MarkdownView 添加到第二行
+        System.Windows.Controls.Grid.SetRow(markdownView, 1);
+        grid.Children.Add(markdownView);
 
         // 创建 FluentWindow 来显示内容
         var dialogWindow = new FluentWindow

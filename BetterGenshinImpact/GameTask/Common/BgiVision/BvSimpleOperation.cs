@@ -70,6 +70,7 @@ public static partial class Bv
                 return false;
             }
 
+            ro = ro.Clone();
             ro.RegionOfInterest = effectiveSearchRect;
         }
 

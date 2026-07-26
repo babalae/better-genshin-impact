@@ -29,7 +29,7 @@
                     d:DesignHeight="1600"
                     HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto">
-        <StackPanel Height="Auto" Width="700" Margin="42,16,42,12">
+        <StackPanel Height="Auto" MaxWidth="700" Margin="{StaticResource PagePadding}">
 
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"

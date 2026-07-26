@@ -23,10 +23,11 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
-    <StackPanel Margin="42,16,42,12">
-        <ui:TextBlock Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="独立任务设置" />
+    <StackPanel Margin="{StaticResource PagePadding}">
+        <TextBlock Margin="0,0,0,12"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Text="独立任务设置" />
         <!--  ~1~  停止任务  @1@  -->
         <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}"> -->
         <!--     <ui:CardControl.Header> -->
@@ -1057,20 +1058,20 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="聚集材料动作"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  Margin="90,0,5,0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  FontSize="10"
-                                  FontTypography="Body"
-                                  VerticalAlignment="Bottom"
-                                  Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
-                                  TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="0"
+                                Orientation="Horizontal">
+                        <ui:TextBlock FontTypography="Body"
+                                      VerticalAlignment="Center"
+                                      Text="聚集材料动作"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Margin="6,0,5,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      FontSize="10"
+                                      VerticalAlignment="Center"
+                                      Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
                     
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -1083,23 +1084,22 @@
                                      Margin="0,0,10,0"
                                      IsChecked="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
                     
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="2"
-                                     Margin="0,0,38,0"
-                                     IsEnabled="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
-                                     IsChecked="{Binding Config.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.RowSpan="2"
-                                  Grid.Column="2"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  FontSize="8"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Margin="0,0,38,26"
-                                  FontTypography="Body"
-                                  Text="二次拾取"
-                                  TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="2"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="0,0,38,0">
+                        <ui:ToggleSwitch IsEnabled="{Binding Config.AutoFightConfig.KazuhaPickupEnabled}"
+                                         IsChecked="{Binding Config.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
+                        <ui:TextBlock Margin="4,0,0,0"
+                                      VerticalAlignment="Center"
+                                      FontSize="8"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      FontTypography="Body"
+                                      Text="二次拾取"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
                 </Grid>
                 <Separator Margin="-18,0"
                            BorderThickness="0,1,0,0" />
@@ -1327,6 +1327,7 @@
                               Grid.Column="1"
                               Width="180"
                               Margin="0,0,36,0"
+                              behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}"
                               behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                               ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                               SelectedCascadingItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -1768,6 +1769,7 @@
                                            Grid.Column="1"
                                            Width="200"
                                            Margin="0,0,36,0"
+                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoBossConfig.BossName, Mode=TwoWay}"
                                            behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                            ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
                                            SelectedCascadingItem="{Binding Config.AutoBossConfig.BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}" />
@@ -2524,41 +2526,6 @@
                                      IsEnabled="{Binding Config.CommonConfig.ScreenshotEnabled}"
                                      IsChecked="{Binding SaveScreenshotOnKeyTick, Mode=TwoWay}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="torch库文件地址（仅限2.5.1版本）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        请
-                        <Hyperlink Command="{Binding GoToTorchPreviousVersionsCommand}"
-                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            下载
-                        </Hyperlink>
-                        到本地后填入torch_cpu.dll或torch_cuda.dll的完整地址。如未生效可尝试重启BGI。
-
-                    </ui:TextBlock>
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.AutoFishingConfig.TorchDllFullPath, Mode=TwoWay}"
-                                TextWrapping="Wrap" Cursor="IBeam" />
-                </Grid>
             </StackPanel>
         </ui:CardExpander>
 
@@ -2835,20 +2802,20 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="聚集材料动作"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  Margin="90,0,5,0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  FontSize="10"
-                                  FontTypography="Body"
-                                  VerticalAlignment="Bottom"
-                                  Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
-                                  TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="0"
+                                Orientation="Horizontal">
+                        <ui:TextBlock FontTypography="Body"
+                                      VerticalAlignment="Center"
+                                      Text="聚集材料动作"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Margin="6,0,5,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      FontSize="10"
+                                      VerticalAlignment="Center"
+                                      Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
 
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -2861,23 +2828,22 @@
                                      Margin="0,0,10,0"
                                      IsChecked="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
 
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="2"
-                                     Margin="0,0,38,0"
-                                     IsEnabled="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
-                                     IsChecked="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.QinDoublePickUp, Mode=TwoWay}" />
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.RowSpan="2"
-                                  Grid.Column="2"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  FontSize="8"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Margin="0,0,38,26"
-                                  FontTypography="Body"
-                                  Text="二次拾取"
-                                  TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="2"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="0,0,38,0">
+                        <ui:ToggleSwitch IsEnabled="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.KazuhaPickupEnabled}"
+                                         IsChecked="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.QinDoublePickUp, Mode=TwoWay}" />
+                        <ui:TextBlock Margin="4,0,0,0"
+                                      VerticalAlignment="Center"
+                                      FontSize="8"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      FontTypography="Body"
+                                      Text="二次拾取"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
