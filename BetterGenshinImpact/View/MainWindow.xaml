@@ -62,6 +62,9 @@
                            IsTopSeparatorVisible="False"
                            IsFooterSeparatorVisible="False"
                            OpenPaneLength="160">
+            <b:Interaction.Behaviors>
+                <behavior:AnimatedNavigationSelectionIndicatorBehavior />
+            </b:Interaction.Behaviors>
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"
