@@ -973,7 +973,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             ExpBasedPickupEnabled = false,
             KazuhaPartyName = string.Empty,
             BattleThresholdForLoot = -1,
-            OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite"
+            OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite",
+            Timeout = _taskParam.Timeout
         };
         taskParam.Timeout = taskParamTimeout;
         return taskParam;
