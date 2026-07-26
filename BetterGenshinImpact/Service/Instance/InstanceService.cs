@@ -489,8 +489,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                                               or UnauthorizedAccessException
                                               or TimeoutException
                                               or OperationCanceledException
-                                              or ObjectDisposedException
-                                              or InvalidOperationException)
+                                              or ObjectDisposedException)
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
@@ -499,6 +498,19 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                         "连接 BetterGI 根实例失败，稍后重试：{PipeName}",
                         Context.RootPipeName);
                 }
+            }
+            catch (Exception exception) when (exception is InvalidOperationException
+                                              or InvalidDataException)
+            {
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogError(
+                        exception,
+                        "连接 BetterGI 根实例时发生不可恢复的协议错误，停止重连：{PipeName}",
+                        Context.RootPipeName);
+                    RequestApplicationShutdown();
+                }
+                return;
             }
             finally
             {

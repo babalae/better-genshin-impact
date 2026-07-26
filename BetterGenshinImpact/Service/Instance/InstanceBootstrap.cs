@@ -256,6 +256,17 @@ public sealed class InstanceBootstrap : IDisposable
                     pipeName,
                     exception.GetBaseException().Message);
             }
+            catch (Exception exception) when (exception is InvalidOperationException
+                                              or InvalidDataException)
+            {
+                Debug.WriteLine(exception);
+                Trace.TraceError(
+                    "初始化 BetterGI 实例连接失败，命名管道：{0}，原因：{1}",
+                    pipeName,
+                    exception.GetBaseException().Message);
+                Environment.Exit(0xFFFF);
+                return null;
+            }
         }
 
         return null;

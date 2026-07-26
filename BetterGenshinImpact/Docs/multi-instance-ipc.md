@@ -163,5 +163,5 @@ repeat sampleCount:
 ```
 
 发送端最多等待 5 ms 或累计 64 个样本后发送。队列拥塞时将后续位移合并，避免阻塞
-Raw Input 采集线程。根 BetterGI 仅在桌面分身窗口可见、RDP 已连接且
+Raw Input 采集线程。根 BetterGI 仅在游戏鼠标模式已启用、桌面分身窗口可见、RDP 已连接且
 `Input Capture Window` 具有键盘焦点时转发。
