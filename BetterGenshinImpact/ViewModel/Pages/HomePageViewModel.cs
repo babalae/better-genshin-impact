@@ -63,7 +63,7 @@ public partial class HomePageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
 
-    public bool IsChildSessionEntryVisible => CommandLineOptions.Instance.IsPrimaryInstance;
+    public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();

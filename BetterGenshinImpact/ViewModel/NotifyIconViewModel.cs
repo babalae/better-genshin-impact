@@ -23,7 +23,7 @@ public partial class NotifyIconViewModel : ObservableObject
 {
     private readonly ChildSessionService _childSessionService;
 
-    public bool IsChildSessionEntryVisible => CommandLineOptions.Instance.IsPrimaryInstance;
+    public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
     public NotifyIconViewModel(ChildSessionService childSessionService)
     {

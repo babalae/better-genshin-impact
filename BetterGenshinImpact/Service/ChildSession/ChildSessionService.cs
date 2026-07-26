@@ -7,8 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DrawingRectangle = System.Drawing.Rectangle;
@@ -26,6 +28,7 @@ public sealed class ChildSessionService : IDisposable
 
     private readonly IServiceProvider _serviceProvider;
     private readonly InstanceService _instanceService;
+    private readonly ChildSessionConfig _config;
     private readonly ILogger<ChildSessionService> _logger;
     private readonly DispatcherTimer _statusTimer;
     private readonly SemaphoreSlim _launchSemaphore = new(1, 1);
@@ -59,13 +62,24 @@ public sealed class ChildSessionService : IDisposable
 
     public bool SendSystemShortcutsToRemote { get; private set; } = true;
 
+    public bool IsGameMouseModeEnabled => _instanceService.IsGameMouseModeEnabled;
+
+    public bool TopmostEnabled => _config.TopmostEnabled;
+
+    public bool SmartSizingEnabled => _config.SmartSizingEnabled;
+
+    public bool KeepAspectRatio => _config.KeepAspectRatio;
+
     public ChildSessionService(
         IServiceProvider serviceProvider,
         InstanceService instanceService,
+        IConfigService configService,
         ILogger<ChildSessionService> logger)
     {
         _serviceProvider = serviceProvider;
         _instanceService = instanceService;
+        _config = configService.Get().ChildSessionConfig;
+        SendSystemShortcutsToRemote = _config.SendSystemShortcutsToRemote;
         _logger = logger;
         _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -172,7 +186,22 @@ public sealed class ChildSessionService : IDisposable
     {
         ThrowIfDisposed();
         EnsureDesktopWindow().RdpHost.SetSmartSizing(enabled);
+        _config.SmartSizingEnabled = enabled;
         RefreshState(enabled ? "窗口显示模式已切换为自适应" : "窗口显示模式已切换为 1:1");
+    }
+
+    public void SetKeepAspectRatio(bool enabled)
+    {
+        ThrowIfDisposed();
+        _config.KeepAspectRatio = enabled;
+        RefreshState(enabled ? "桌面分身窗口将保持宽高比" : "桌面分身窗口不再保持宽高比");
+    }
+
+    public void SetTopmost(bool enabled)
+    {
+        ThrowIfDisposed();
+        _config.TopmostEnabled = enabled;
+        RefreshState(enabled ? "桌面分身窗口已置顶" : "桌面分身窗口已取消置顶");
     }
 
     public bool SetSendSystemShortcutsToRemote(bool enabled)
@@ -184,6 +213,7 @@ public sealed class ChildSessionService : IDisposable
         }
 
         SendSystemShortcutsToRemote = enabled;
+        _config.SendSystemShortcutsToRemote = enabled;
         var window = EnsureDesktopWindow();
         window.RdpHost.SetSendSystemShortcutsToRemote(enabled);
         RefreshState();
@@ -210,6 +240,16 @@ public sealed class ChildSessionService : IDisposable
 
         RefreshState($"系统组合键已改为在{target}生效，正在自动重新连接 RDP");
         return true;
+    }
+
+    public void SetGameMouseModeEnabled(bool enabled)
+    {
+        ThrowIfDisposed();
+        _instanceService.SetGameMouseModeEnabled(enabled);
+        _config.GameMouseModeEnabled = enabled;
+        RefreshState(enabled
+            ? "已切换为游戏鼠标模式"
+            : "已切换为普通鼠标模式");
     }
 
     public Task LaunchBetterGiAsync()
@@ -346,7 +386,10 @@ public sealed class ChildSessionService : IDisposable
             _desktopWindow.RdpHost.ConnectionFailed -= OnRdpConnectionFailed;
             _desktopWindow.RdpHost.LoginCompleted -= OnRdpLoginCompleted;
             TryDisconnectRdpHost();
+        }
 
+        if (_instanceService.Context.IsRoot)
+        {
             try
             {
                 _ = ChildSessionNativeMethods.TerminateChildSession(wait: false);
@@ -355,7 +398,10 @@ public sealed class ChildSessionService : IDisposable
             {
                 // 应用正在退出，Child Session 清理失败不应阻止主程序关闭。
             }
+        }
 
+        if (_desktopWindow is not null)
+        {
             _desktopWindow.AllowClose = true;
             _desktopWindow.Close();
             _desktopWindow = null;
@@ -394,6 +440,7 @@ public sealed class ChildSessionService : IDisposable
         _desktopWindow.IsVisibleChanged += OnDesktopWindowVisibilityChanged;
         _desktopWindow.RdpHost.ConnectionFailed += OnRdpConnectionFailed;
         _desktopWindow.RdpHost.LoginCompleted += OnRdpLoginCompleted;
+        _desktopWindow.RdpHost.SetSmartSizing(_config.SmartSizingEnabled);
         _desktopWindow.RdpHost.SetSendSystemShortcutsToRemote(SendSystemShortcutsToRemote);
         return _desktopWindow;
     }
@@ -438,25 +485,15 @@ public sealed class ChildSessionService : IDisposable
     private async Task LaunchBetterGiCoreAsync(bool isAutomatic)
     {
         await _launchSemaphore.WaitAsync();
-        InstanceLaunchInfo? launchInfo = null;
         try
         {
             var childSessionId = GetRequiredChildSessionId();
-            launchInfo = _instanceService.BeginChildLaunch(BetterGiInstanceType.ChildSession);
             RefreshState(isAutomatic
                 ? "桌面分身已加载，正在自动以管理员权限启动 BetterGI"
                 : "正在以管理员权限启动 BetterGI");
-            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId, launchInfo);
+            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId);
             RefreshState(
                 $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 BetterGI");
-        }
-        catch
-        {
-            if (launchInfo is not null)
-            {
-                _instanceService.CancelPendingChildLaunch(launchInfo.InstanceId);
-            }
-            throw;
         }
         finally
         {

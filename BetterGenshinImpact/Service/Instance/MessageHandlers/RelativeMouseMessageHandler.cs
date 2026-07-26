@@ -33,7 +33,7 @@ internal sealed class RelativeMouseMessageHandler
     private readonly LocalCursorCapture _localCursorCapture;
     private readonly Func<InstanceConnection, bool> _isParentConnection;
     private readonly ILogger _logger;
-    private readonly ConcurrentDictionary<Guid, InstanceConnection> _targets = new();
+    private readonly ConcurrentDictionary<int, InstanceConnection> _targets = new();
     private readonly object _subscriptionLock = new();
     private readonly object _accumulatorLock = new();
 
@@ -47,6 +47,7 @@ internal sealed class RelativeMouseMessageHandler
     private int _handlingConfirmed;
     private int _captureEnabled;
     private int _forwardingEnabled;
+    private int _gameMouseModeEnabled;
 
     internal RelativeMouseMessageHandler(
         InstanceContext context,
@@ -109,11 +110,11 @@ internal sealed class RelativeMouseMessageHandler
         RelativeMouseResult result)
     {
         if (_context.InstanceType != BetterGiInstanceType.Primary
-            || connection.RemoteDescriptor is not
+            || connection.RemoteEndpoint is not
             {
                 InstanceType: BetterGiInstanceType.ChildSession
-            } descriptor
-            || !_targets.TryGetValue(descriptor.InstanceId, out var target)
+            } endpoint
+            || !_targets.TryGetValue(endpoint.WindowsSessionId, out var target)
             || !ReferenceEquals(target, connection))
         {
             return;
@@ -140,18 +141,20 @@ internal sealed class RelativeMouseMessageHandler
             throw new InvalidOperationException("只有 Primary 实例可以转发桌面分身相对鼠标数据。");
         }
 
-        var descriptor = connection.RemoteDescriptor
+        var endpoint = connection.RemoteEndpoint
                          ?? throw new InvalidOperationException("相对鼠标订阅方尚未注册为子实例。");
-        if (descriptor.InstanceType != BetterGiInstanceType.ChildSession)
+        if (endpoint.InstanceType != BetterGiInstanceType.ChildSession)
         {
             throw new InvalidOperationException("只有 ChildSession 子实例可以订阅相对鼠标数据。");
         }
 
-        _targets[descriptor.InstanceId] = connection;
-        StartForwarding();
+        _targets[endpoint.WindowsSessionId] = connection;
+        if (IsGameMouseModeEnabled)
+        {
+            StartForwarding();
+        }
         return InstanceIpcEnvelope.Response(
             request,
-            _context.InstanceId,
             new RelativeMouseState { IsSubscribed = true });
     }
 
@@ -159,23 +162,53 @@ internal sealed class RelativeMouseMessageHandler
         InstanceConnection connection,
         InstanceIpcEnvelope request)
     {
-        if (connection.RemoteDescriptor is { } descriptor)
+        if (connection.RemoteEndpoint is { } endpoint)
         {
-            RemoveTarget(descriptor.InstanceId);
+            RemoveTarget(endpoint.WindowsSessionId);
         }
         return InstanceIpcEnvelope.Response(
             request,
-            _context.InstanceId,
             new RelativeMouseState { IsSubscribed = false });
     }
 
     /// <summary>
     /// 在子实例注销或连接断开时移除目标；最后一个目标移除后恢复本地鼠标状态。
     /// </summary>
-    internal void RemoveTarget(Guid instanceId)
+    internal void RemoveTarget(int windowsSessionId)
     {
-        _targets.TryRemove(instanceId, out _);
+        _targets.TryRemove(windowsSessionId, out _);
         StopIfUnused();
+    }
+
+    internal bool IsGameMouseModeEnabled =>
+        Volatile.Read(ref _gameMouseModeEnabled) != 0;
+
+    /// <summary>
+    /// 切换桌面分身鼠标模式。普通鼠标模式保留子实例订阅，但停止采集和管道转发。
+    /// </summary>
+    internal void SetGameMouseModeEnabled(bool enabled)
+    {
+        if (_context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有 Primary 实例可以切换桌面分身鼠标模式。");
+        }
+
+        var newState = enabled ? 1 : 0;
+        if (Interlocked.Exchange(ref _gameMouseModeEnabled, newState) == newState)
+        {
+            return;
+        }
+
+        if (enabled)
+        {
+            if (!_targets.IsEmpty)
+            {
+                StartForwarding();
+            }
+            return;
+        }
+
+        Stop();
     }
 
     /// <summary>
@@ -216,6 +249,11 @@ internal sealed class RelativeMouseMessageHandler
 
     private void StartForwarding()
     {
+        if (!IsGameMouseModeEnabled)
+        {
+            return;
+        }
+
         Interlocked.Exchange(ref _forwardingEnabled, 1);
         Interlocked.Exchange(ref _handlingConfirmed, 0);
         var dispatcher = Application.Current?.Dispatcher;
@@ -226,7 +264,9 @@ internal sealed class RelativeMouseMessageHandler
 
         _ = dispatcher.BeginInvoke(new Action(() =>
         {
-            if (Volatile.Read(ref _forwardingEnabled) == 0 || _targets.IsEmpty)
+            if (!IsGameMouseModeEnabled
+                || Volatile.Read(ref _forwardingEnabled) == 0
+                || _targets.IsEmpty)
             {
                 return;
             }
@@ -341,7 +381,9 @@ internal sealed class RelativeMouseMessageHandler
     /// </summary>
     private void RefreshCaptureState()
     {
-        if (Volatile.Read(ref _forwardingEnabled) == 0 || _targets.IsEmpty)
+        if (!IsGameMouseModeEnabled
+            || Volatile.Read(ref _forwardingEnabled) == 0
+            || _targets.IsEmpty)
         {
             _stateTimer?.Stop();
             StopRawInputCapture();
@@ -456,7 +498,8 @@ internal sealed class RelativeMouseMessageHandler
 
     private void SendSampleIfFocused(RelativeMouseSample sample)
     {
-        if (Volatile.Read(ref _forwardingEnabled) == 0
+        if (!IsGameMouseModeEnabled
+            || Volatile.Read(ref _forwardingEnabled) == 0
             || _targets.IsEmpty
             || Volatile.Read(ref _pressedAltMask) != 0
             || Volatile.Read(ref _captureEnabled) == 0)
