@@ -525,14 +525,13 @@ public partial class ScriptService : IScriptService
 
             _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
-            var hasSettingsBeforeRun = project.JsScriptSettingsObject != null;
             try
             {
                 await project.Run();
             }
             finally
             {
-                SaveScriptGroupAfterJsRun(project, hasSettingsBeforeRun);
+                SaveScriptGroupAfterJsRun(project);
             }
         }
         else if (project.Type == "KeyMouse")
@@ -555,14 +554,8 @@ public partial class ScriptService : IScriptService
         }
     }
 
-    private void SaveScriptGroupAfterJsRun(ScriptGroupProject project, bool hasSettingsBeforeRun)
+    private void SaveScriptGroupAfterJsRun(ScriptGroupProject project)
     {
-        if (!hasSettingsBeforeRun)
-        {
-            project.JsScriptSettingsObject = null;
-            return;
-        }
-
         var scriptGroup = project.GroupInfo!;
         try
         {
