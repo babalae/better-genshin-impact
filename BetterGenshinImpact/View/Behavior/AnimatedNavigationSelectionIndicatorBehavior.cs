@@ -266,12 +266,16 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
         }
 
         var shouldAnimate = animate && _displayedItem is not null;
+        var useDetachedTransition = _displayedItem is not null
+                                    && (IsFooterMenuItem(_displayedItem)
+                                        || IsFooterMenuItem(selectedItem));
         _adorner.MoveTo(
             position.X,
             position.Y,
             targetWidth,
             targetHeight,
             shouldAnimate,
+            useDetachedTransition,
             Duration);
 
         _displayedItem = selectedItem;
@@ -291,6 +295,22 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
         return FindVisualDescendant<NavigationViewItem>(
             AssociatedObject,
             item => item.IsActive && item.IsVisible);
+    }
+
+    private bool IsFooterMenuItem(NavigationViewItem item)
+    {
+        INavigationViewItem? current = item;
+        while (current is not null)
+        {
+            if (AssociatedObject.FooterMenuItems.Contains(current))
+            {
+                return true;
+            }
+
+            current = current.NavigationViewItemParent;
+        }
+
+        return false;
     }
 
     private void HideNativeIndicators(DependencyObject parent)
@@ -436,6 +456,7 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
             double targetWidth,
             double targetHeight,
             bool animate,
+            bool useDetachedTransition,
             TimeSpan duration)
         {
             targetWidth = targetWidth > 0 ? targetWidth : DefaultIndicatorWidth;
@@ -467,7 +488,7 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
                 duration.TotalMilliseconds,
                 duration.TotalMilliseconds + 100));
 
-            if (!AreClose(currentX, targetX))
+            if (useDetachedTransition || !AreClose(currentX, targetX))
             {
                 AnimateDetachedLevelTransition(
                     currentX,
