@@ -42,10 +42,14 @@ public static class CombatScriptExecutor
             ownsScenes = true;
         }
 
-        try
+        // 仅在内部创建 CombatScenes 时设置 Avatar.Ct，外部传入时由调用方管理
+        if (ownsScenes)
         {
             combatScenes.BeforeTask(ct);
+        }
 
+        try
+        {
             // 提前校验是否存在策略要求的角色
             if (!combatScript.AvatarNames.Contains(CombatScriptParser.CurrentAvatarName))
             {
