@@ -51,6 +51,8 @@ public static class CombatScriptExecutor
         try
         {
             // 提前校验是否存在策略要求的角色
+            // 若脚本中有无前缀的命令（如 a(0.5)），解析后 AvatarNames 会包含 "当前角色" 占位符，
+            // 此时跳过队伍校验是刻意设计：无前缀命令使用当前屏幕上角色，不要求特定角色在队伍中。
             if (!combatScript.AvatarNames.Contains(CombatScriptParser.CurrentAvatarName))
             {
                 bool hasAvatar = combatScenes.GetAvatars().Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
@@ -86,7 +88,14 @@ public static class CombatScriptExecutor
         {
             if (ownsScenes)
             {
-                combatScenes.Dispose();
+                try
+                {
+                    combatScenes.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "释放战斗场景资源时发生异常");
+                }
             }
         }
     }
