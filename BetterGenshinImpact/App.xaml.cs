@@ -66,31 +66,26 @@ public partial class App : Application
                 var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
-                var instanceContext = InstanceBootstrap.Current.Context;
-                var instanceIdentity =
-                    $"{instanceContext.InstanceType}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
 
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
                 var loggerConfiguration = new LoggerConfiguration()
-                    .Enrich.WithProperty("BgiInstance", instanceIdentity)
                     .WriteTo.File(logFile,
                         outputTemplate:
-                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] [{BgiInstance}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
+                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
                         rollingInterval: RollingInterval.Day,
-                        shared: true,
-                        retainedFileCountLimit: null,
+                        retainedFileCountLimit: 31,
                         retainedFileTimeLimit: TimeSpan.FromDays(21))
                     .WriteTo.Console(outputTemplate:
-                        "[{Timestamp:HH:mm:ss} {Level:u3}] [{BgiInstance}] {Message:lj}{NewLine}{Exception}")
+                        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
                 if (all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true })
                 {
                     loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
-                        "[{Timestamp:HH:mm:ss} {Level:u3}] [{BgiInstance}] {Message:lj}{NewLine}{Exception}");
+                        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
@@ -277,7 +272,6 @@ public partial class App : Application
 
         await _host.StopAsync();
         _host.Dispose();
-        Log.CloseAndFlush();
 
         // 释放控制台窗口
         ConsoleHelper.FreeConsoleWindow();
