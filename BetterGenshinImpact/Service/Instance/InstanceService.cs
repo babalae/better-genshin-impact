@@ -11,6 +11,7 @@ using System.Windows.Interop;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -32,6 +33,8 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
     private readonly CancellationTokenSource _lifetimeCancellationTokenSource = new();
     private readonly ConcurrentQueue<string[]> _pendingActivations = new();
+    private readonly ConcurrentDictionary<string, byte> _startedAutomationRuns =
+        new(StringComparer.Ordinal);
     private readonly object _activationLock = new();
     private readonly object _rootConnectionLock = new();
 
@@ -67,6 +70,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             _relativeMouseMessageHandler,
             EnqueueActivation,
             DispatchWebViewMessage,
+            StartOneDragonTaskAsync,
             logger);
     }
 
@@ -80,6 +84,67 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     public void SetGameMouseModeEnabled(bool enabled)
     {
         _relativeMouseMessageHandler.SetGameMouseModeEnabled(enabled);
+    }
+
+    public async Task<InstanceEndpoint> WaitForChildSessionAsync(
+        int windowsSessionId,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Context.IsRoot)
+        {
+            throw new InvalidOperationException("只有根实例可以等待桌面分身注册。");
+        }
+
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_messageState.BetterGiConnectionsBySession.TryGetValue(
+                    windowsSessionId,
+                    out var child)
+                && child.Endpoint.InstanceType == BetterGiInstanceType.ChildSession)
+            {
+                return child.Endpoint;
+            }
+
+            await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+        }
+
+        throw new TimeoutException($"等待桌面分身 Session {windowsSessionId} 注册超时。");
+    }
+
+    public async Task StartOneDragonInChildAsync(
+        int windowsSessionId,
+        string runId,
+        string configName,
+        string resultPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Context.IsRoot)
+        {
+            throw new InvalidOperationException("只有根实例可以向桌面分身下发任务。");
+        }
+        if (!_messageState.BetterGiConnectionsBySession.TryGetValue(
+                windowsSessionId,
+                out var child)
+            || child.Endpoint.InstanceType != BetterGiInstanceType.ChildSession)
+        {
+            throw new InvalidOperationException(
+                $"桌面分身 Session {windowsSessionId} 当前未注册。");
+        }
+
+        var response = await child.Connection.SendRequestAsync(
+            InstanceOperations.TaskStartOneDragon,
+            new StartOneDragonTaskRequest
+            {
+                RunId = runId,
+                ConfigName = configName,
+                ResultPath = resultPath
+            },
+            TimeSpan.FromSeconds(15),
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -571,8 +636,55 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             }
 
             var commandLineOptions = CommandLineOptions.Parse(args);
+            if (commandLineOptions.Action == CommandLineAction.ChildSessionOneDragon)
+            {
+                _ = App.GetService<ChildSessionAutomationService>()
+                    ?.StartAsync(commandLineOptions, shutdownRootWhenDone: false);
+                return;
+            }
             App.GetService<HomePageViewModel>()?.HandleActivation(commandLineOptions);
         }));
+    }
+
+    private async Task StartOneDragonTaskAsync(StartOneDragonTaskRequest request)
+    {
+        if (!_startedAutomationRuns.TryAdd(request.RunId, 0))
+        {
+            return;
+        }
+
+        try
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var viewModel = App.GetService<OneDragonFlowViewModel>()
+                                ?? throw new InvalidOperationException(
+                                    "无法创建一条龙任务协调器。");
+                _ = RunManagedAutomationAndReleaseAsync(viewModel, request);
+            });
+        }
+        catch
+        {
+            _startedAutomationRuns.TryRemove(request.RunId, out _);
+            throw;
+        }
+    }
+
+    private async Task RunManagedAutomationAndReleaseAsync(
+        OneDragonFlowViewModel viewModel,
+        StartOneDragonTaskRequest request)
+    {
+        try
+        {
+            await viewModel.RunManagedAutomationAsync(
+                request.ConfigName,
+                request.RunId,
+                request.ResultPath);
+        }
+        finally
+        {
+            _startedAutomationRuns.TryRemove(request.RunId, out _);
+        }
     }
 
     private void DispatchWebViewMessage(WebViewMessage message)

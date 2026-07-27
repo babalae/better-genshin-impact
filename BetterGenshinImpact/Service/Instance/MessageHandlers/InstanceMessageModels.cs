@@ -57,6 +57,22 @@ internal sealed class WebViewMessage
     public Newtonsoft.Json.Linq.JToken? Data { get; init; }
 }
 
+internal sealed class StartOneDragonTaskRequest
+{
+    public string RunId { get; init; } = string.Empty;
+
+    public string ConfigName { get; init; } = string.Empty;
+
+    public string ResultPath { get; init; } = string.Empty;
+}
+
+internal sealed class StartOneDragonTaskResponse
+{
+    public string RunId { get; init; } = string.Empty;
+
+    public bool Accepted { get; init; }
+}
+
 /// <summary>
 /// 相对鼠标转发订阅操作的响应状态。
 /// </summary>

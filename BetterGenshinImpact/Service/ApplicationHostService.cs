@@ -10,6 +10,7 @@ using System.Windows;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using Wpf.Ui;
 
@@ -20,7 +21,8 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class ApplicationHostService(
     IServiceProvider serviceProvider,
-    InstanceService instanceService) : IHostedService
+    InstanceService instanceService,
+    ChildSessionAutomationService childSessionAutomationService) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
 
@@ -75,6 +77,12 @@ public class ApplicationHostService(
                         // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
                         _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
                         // 后续代码在 OneDragonFlowViewModel / OnLoaded 中。
+                        break;
+
+                    case CommandLineAction.ChildSessionOneDragon:
+                        _ = childSessionAutomationService.StartAsync(
+                            cmdOptions,
+                            shutdownRootWhenDone: true);
                         break;
 
                     case CommandLineAction.StartGroups:

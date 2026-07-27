@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
@@ -39,6 +40,9 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private readonly ScriptService _scriptService;
     private bool _isLoadingTaskListFromConfig;
+    private readonly SemaphoreSlim _managedAutomationSemaphore = new(1, 1);
+    private bool _managedAutomationActive;
+    private bool _managedShutdownRequested;
 
     [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
     [
@@ -697,11 +701,25 @@ public partial class OneDragonFlowViewModel : ViewModel
                         SystemControl.CloseGame();
                         break;
                     case "关闭软件":
-                        Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                        if (_managedAutomationActive)
+                        {
+                            _managedShutdownRequested = true;
+                        }
+                        else
+                        {
+                            Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                        }
                         break;
                     case "关闭游戏和软件":
                         SystemControl.CloseGame();
-                        Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                        if (_managedAutomationActive)
+                        {
+                            _managedShutdownRequested = true;
+                        }
+                        else
+                        {
+                            Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                        }
                         break;
                     case "关机":
                         SystemControl.CloseGame();
@@ -710,6 +728,102 @@ public partial class OneDragonFlowViewModel : ViewModel
                 }
             }
         });
+    }
+
+    public async Task RunManagedAutomationAsync(
+        string configName,
+        string runId,
+        string resultPath)
+    {
+        await _managedAutomationSemaphore.WaitAsync();
+        var status = "failed";
+        string? message = null;
+        try
+        {
+            _managedAutomationActive = true;
+            _managedShutdownRequested = false;
+
+            var config = ConfigList.FirstOrDefault(x =>
+                string.Equals(x.Name, configName, StringComparison.Ordinal));
+            if (config is null)
+            {
+                message = $"未找到一条龙配置：{configName}";
+                return;
+            }
+
+            SelectedConfig = config;
+            OnConfigDropDownChanged();
+            if (TaskList.All(x => !x.IsEnabled))
+            {
+                message = $"一条龙配置没有启用任务：{configName}";
+                return;
+            }
+
+            await OnOneKeyExecute();
+            if (CancellationContext.Instance.IsCancellationRequested)
+            {
+                status = "cancelled";
+                message = "一条龙任务被取消。";
+            }
+            else
+            {
+                status = "succeeded";
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Child Session 一条龙执行失败：{RunId}", runId);
+            message = exception.GetBaseException().Message;
+        }
+        finally
+        {
+            try
+            {
+                await WriteAutomationResultAsync(
+                    resultPath,
+                    runId,
+                    configName,
+                    status,
+                    message);
+            }
+            finally
+            {
+                var shutdownRequested = _managedShutdownRequested;
+                _managedShutdownRequested = false;
+                _managedAutomationActive = false;
+                _managedAutomationSemaphore.Release();
+                if (shutdownRequested)
+                {
+                    _ = Application.Current.Dispatcher.BeginInvoke(
+                        new Action(Application.Current.Shutdown));
+                }
+            }
+        }
+    }
+
+    private static async Task WriteAutomationResultAsync(
+        string resultPath,
+        string runId,
+        string configName,
+        string status,
+        string? message)
+    {
+        var fullPath = Path.GetFullPath(resultPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)
+                                  ?? throw new InvalidOperationException("结果路径缺少目录。"));
+        var temporaryPath = fullPath + $".{Guid.NewGuid():N}.tmp";
+        var json = JsonConvert.SerializeObject(
+            new
+            {
+                runId,
+                configName,
+                status,
+                message,
+                completedAt = DateTimeOffset.UtcNow
+            },
+            Formatting.Indented);
+        await File.WriteAllTextAsync(temporaryPath, json);
+        File.Move(temporaryPath, fullPath, overwrite: true);
     }
 
     /// <summary>

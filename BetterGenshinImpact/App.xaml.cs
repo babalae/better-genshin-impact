@@ -129,6 +129,7 @@ public partial class App : Application
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
                 services.AddSingleton<ChildSessionService>();
+                services.AddSingleton<ChildSessionAutomationService>();
                 services.AddTransient<ChildSessionWindowViewModel>();
                 services.AddTransient<ChildSessionWindow>();
 

@@ -77,6 +77,56 @@ public class InstanceIpcProtocolTests
     }
 
     [Fact]
+    public void CommandLineParser_ShouldRecognizeChildSessionOneDragonAutomation()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--child-session-one-dragon",
+            "每日4点10-自动化总控",
+            "--automation-result",
+            @"C:\ProgramData\BetterGI\automation\run-1.json",
+            "--automation-run-id",
+            "run-1",
+            "--automation-timeout-seconds",
+            "7200"
+        ]);
+
+        Assert.Equal(CommandLineAction.ChildSessionOneDragon, options.Action);
+        Assert.Equal("每日4点10-自动化总控", options.OneDragonConfigName);
+        Assert.Equal(
+            @"C:\ProgramData\BetterGI\automation\run-1.json",
+            options.AutomationResultPath);
+        Assert.Equal("run-1", options.AutomationRunId);
+        Assert.Equal(7200, options.AutomationTimeoutSeconds);
+        Assert.True(options.ShouldDeferGameStart);
+    }
+
+    [Theory]
+    [InlineData("10", 60)]
+    [InlineData("999999", 86400)]
+    [InlineData("invalid", 14400)]
+    public void CommandLineParser_ShouldClampChildSessionAutomationTimeout(
+        string rawTimeout,
+        int expectedTimeout)
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--child-session-one-dragon",
+            "配置",
+            "--automation-result",
+            "result.json",
+            "--automation-run-id",
+            "run",
+            "--automation-timeout-seconds",
+            rawTimeout
+        ]);
+
+        Assert.Equal(expectedTimeout, options.AutomationTimeoutSeconds);
+    }
+
+    [Fact]
     public void RootPipeName_ShouldBeStableForWindowsUser()
     {
         const string userSid = "S-1-5-21-1000-2000-3000-4000";

@@ -23,6 +23,7 @@ internal sealed class InstanceRequestHandler
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
     private readonly Action<string[]> _enqueueActivation;
     private readonly Action<WebViewMessage> _dispatchWebViewMessage;
+    private readonly Func<StartOneDragonTaskRequest, Task> _startOneDragonTask;
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<Guid, InstanceIpcEnvelope> _activationResponses = new();
 
@@ -32,6 +33,7 @@ internal sealed class InstanceRequestHandler
         RelativeMouseMessageHandler relativeMouseMessageHandler,
         Action<string[]> enqueueActivation,
         Action<WebViewMessage> dispatchWebViewMessage,
+        Func<StartOneDragonTaskRequest, Task> startOneDragonTask,
         ILogger logger)
     {
         _context = context;
@@ -39,6 +41,7 @@ internal sealed class InstanceRequestHandler
         _relativeMouseMessageHandler = relativeMouseMessageHandler;
         _enqueueActivation = enqueueActivation;
         _dispatchWebViewMessage = dispatchWebViewMessage;
+        _startOneDragonTask = startOneDragonTask;
         _logger = logger;
     }
 
@@ -76,15 +79,14 @@ internal sealed class InstanceRequestHandler
                         request,
                         cancellationToken).ConfigureAwait(false),
                 InstanceOperations.WebViewMessage => HandleWebViewMessage(connection, request),
+                InstanceOperations.TaskStartOneDragon =>
+                    await HandleStartOneDragonTaskAsync(connection, request).ConfigureAwait(false),
                 _ => InstanceIpcEnvelope.Failure(
                     request,
                     "unsupported_operation",
                     $"不支持的实例 IPC 操作：{request.Operation}")
             };
 
-            // TODO: 多实例独立任务入口预留。
-            // 后续在此增加目标实例选择、任务下发与状态回传。
-            // 当前版本不注册任何 task.* 操作。
         }
         catch (Exception exception) when (exception is ArgumentException
                                           or InvalidOperationException
@@ -98,6 +100,36 @@ internal sealed class InstanceRequestHandler
                 "invalid_request",
                 exception.GetBaseException().Message);
         }
+    }
+
+    private async Task<InstanceIpcEnvelope> HandleStartOneDragonTaskAsync(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        if (_context.InstanceType != BetterGiInstanceType.ChildSession
+            || connection.RemoteEndpoint?.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有根实例可以向桌面分身下发一条龙任务。");
+        }
+
+        var taskRequest =
+            request.Data?.ToObject<StartOneDragonTaskRequest>(InstanceIpcProtocol.Serializer)
+            ?? throw new ArgumentException("一条龙任务请求缺少数据。");
+        if (string.IsNullOrWhiteSpace(taskRequest.RunId)
+            || string.IsNullOrWhiteSpace(taskRequest.ConfigName)
+            || string.IsNullOrWhiteSpace(taskRequest.ResultPath))
+        {
+            throw new ArgumentException("一条龙任务请求缺少 run-id、配置名或结果路径。");
+        }
+
+        await _startOneDragonTask(taskRequest).ConfigureAwait(false);
+        return InstanceIpcEnvelope.Response(
+            request,
+            new StartOneDragonTaskResponse
+            {
+                RunId = taskRequest.RunId,
+                Accepted = true
+            });
     }
 
     /// <summary>

@@ -12,6 +12,10 @@ public class CommandLineOptions
 {
     public const string InstanceArgument = "--instance";
     public const string RestartFromProcessIdArgument = "--restart-from-pid";
+    public const string ChildSessionOneDragonArgument = "--child-session-one-dragon";
+    public const string AutomationResultArgument = "--automation-result";
+    public const string AutomationRunIdArgument = "--automation-run-id";
+    public const string AutomationTimeoutArgument = "--automation-timeout-seconds";
 
     private static CommandLineOptions? _instance;
 
@@ -44,6 +48,12 @@ public class CommandLineOptions
     /// </summary>
     public string[] GroupNames { get; } = [];
 
+    public string? AutomationResultPath { get; }
+
+    public string? AutomationRunId { get; }
+
+    public int AutomationTimeoutSeconds { get; }
+
     /// <summary>
     /// 是否有命令行任务参数（startOneDragon / --startGroups / --TaskProgress / start）
     /// </summary>
@@ -54,6 +64,7 @@ public class CommandLineOptions
     /// （一条龙、配置组、任务进度由各自流程中的 StartGameTask 启动游戏）
     /// </summary>
     public bool ShouldDeferGameStart => Action is CommandLineAction.StartOneDragon
+        or CommandLineAction.ChildSessionOneDragon
         or CommandLineAction.StartGroups
         or CommandLineAction.TaskProgress;
 
@@ -63,7 +74,10 @@ public class CommandLineOptions
         string[]? groupNames = null,
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
         bool hasExplicitInstanceType = false,
-        int? restartFromProcessId = null)
+        int? restartFromProcessId = null,
+        string? automationResultPath = null,
+        string? automationRunId = null,
+        int automationTimeoutSeconds = 14_400)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
@@ -71,6 +85,9 @@ public class CommandLineOptions
         InstanceType = instanceType;
         HasExplicitInstanceType = hasExplicitInstanceType;
         RestartFromProcessId = restartFromProcessId;
+        AutomationResultPath = automationResultPath;
+        AutomationRunId = automationRunId;
+        AutomationTimeoutSeconds = automationTimeoutSeconds;
     }
 
     internal static CommandLineOptions Parse(string[] args)
@@ -125,6 +142,21 @@ public class CommandLineOptions
         var arg1 = commandArgs[0];
         var extra = commandArgs.Skip(1).ToArray();
 
+        if (arg1.Equals(ChildSessionOneDragonArgument, StringComparison.OrdinalIgnoreCase))
+        {
+            var configName = extra.FirstOrDefault(x => !x.StartsWith("--", StringComparison.Ordinal));
+            return Create(
+                CommandLineAction.ChildSessionOneDragon,
+                oneDragonConfigName: configName,
+                automationResultPath: ReadOption(extra, AutomationResultArgument),
+                automationRunId: ReadOption(extra, AutomationRunIdArgument),
+                automationTimeoutSeconds: int.TryParse(
+                    ReadOption(extra, AutomationTimeoutArgument),
+                    out var timeoutSeconds)
+                    ? Math.Clamp(timeoutSeconds, 60, 86_400)
+                    : 14_400);
+        }
+
         if (arg1.Contains("startOneDragon", StringComparison.OrdinalIgnoreCase))
         {
             return Create(
@@ -156,7 +188,10 @@ public class CommandLineOptions
         CommandLineOptions Create(
             CommandLineAction action,
             string? oneDragonConfigName = null,
-            string[]? groupNames = null)
+            string[]? groupNames = null,
+            string? automationResultPath = null,
+            string? automationRunId = null,
+            int automationTimeoutSeconds = 14_400)
         {
             return new CommandLineOptions(
                 action,
@@ -164,8 +199,24 @@ public class CommandLineOptions
                 groupNames,
                 instanceType,
                 hasExplicitInstanceType,
-                restartFromProcessId);
+                restartFromProcessId,
+                automationResultPath,
+                automationRunId,
+                automationTimeoutSeconds);
         }
+    }
+
+    private static string? ReadOption(string[] args, string option)
+    {
+        for (var index = 0; index < args.Length - 1; index++)
+        {
+            if (args[index].Equals(option, StringComparison.OrdinalIgnoreCase))
+            {
+                return args[index + 1];
+            }
+        }
+
+        return null;
     }
 
     private static bool TryReadNext(string[] args, ref int index, out string value)
@@ -191,6 +242,9 @@ public enum CommandLineAction
 
     /// <summary>startOneDragon — 启动一条龙</summary>
     StartOneDragon,
+
+    /// <summary>在 BetterGI 内置 Child Session 中执行指定一条龙。</summary>
+    ChildSessionOneDragon,
 
     /// <summary>--startGroups — 启动调度组</summary>
     StartGroups,
