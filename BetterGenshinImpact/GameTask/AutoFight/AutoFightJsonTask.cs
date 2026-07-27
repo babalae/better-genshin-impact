@@ -805,7 +805,6 @@ public class AutoFightJsonTask : ISoloTask
                         await Delay(200, _ct);
                         if (picker.TrySwitch(10))
                         {
-                            picker.Switch();
                             await picker.WaitSkillCd(_ct);
                             await SimulateHoldElementalSkillAsync(800, _ct);
                             await SimulateMouseLeftClickLoopAsync(6, _ct);
@@ -831,7 +830,6 @@ public class AutoFightJsonTask : ISoloTask
                     await Delay(150, _ct);
                     if (picker.TrySwitch(10))
                     {
-                        picker.Switch();
                         foreach (var miningActionStr in actionsToUse)
                         {
                             var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);
