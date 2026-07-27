@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="MarkdownForegroundBrush"
+                     Color="{DynamicResource TextFillColorPrimary}" />
+    <SolidColorBrush x:Key="MarkdownSecondaryForegroundBrush"
+                     Color="{DynamicResource TextFillColorSecondary}" />
+    <SolidColorBrush x:Key="MarkdownLinkBrush"
+                     Color="{DynamicResource SystemAccentColorPrimary}" />
+    <SolidColorBrush x:Key="MarkdownBorderBrush"
+                     Color="{DynamicResource ControlStrokeColorDefault}" />
+    <SolidColorBrush x:Key="MarkdownHeadingBorderBrush"
+                     Color="{DynamicResource ControlStrokeColorSecondary}" />
+    <SolidColorBrush x:Key="MarkdownQuoteBackgroundBrush"
+                     Color="{DynamicResource ControlFillColorSecondary}"
+                     Opacity="0.55" />
+    <SolidColorBrush x:Key="MarkdownQuoteBorderBrush"
+                     Color="{DynamicResource SystemAccentColorPrimary}" />
+    <SolidColorBrush x:Key="MarkdownCodeBackgroundBrush"
+                     Color="{DynamicResource ControlFillColorSecondary}" />
+    <SolidColorBrush x:Key="MarkdownTableHeaderBackgroundBrush"
+                     Color="{DynamicResource ControlFillColorTertiary}" />
+    <SolidColorBrush x:Key="MarkdownTableAlternateRowBackgroundBrush"
+                     Color="{DynamicResource ControlFillColorSecondary}"
+                     Opacity="0.35" />
+    <SolidColorBrush x:Key="MarkdownImagePlaceholderBrush"
+                     Color="{DynamicResource ControlFillColorSecondary}"
+                     Opacity="0.6" />
+    <SolidColorBrush x:Key="MarkdownErrorBrush" Color="#E05252" />
+    <SolidColorBrush x:Key="MarkdownWarningBrush" Color="#E6A23C" />
+    <SolidColorBrush x:Key="MarkdownSuccessBrush" Color="#42B883" />
+    <FontFamily x:Key="MarkdownCodeFontFamily">Cascadia Mono,Consolas</FontFamily>
+</ResourceDictionary>

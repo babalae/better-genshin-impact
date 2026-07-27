@@ -16,11 +16,12 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
-    <StackPanel Margin="42,16,42,12">
+    <StackPanel Margin="{StaticResource PagePadding}">
 
-        <ui:TextBlock Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="实时触发的自动化任务设置" />
+        <TextBlock Margin="0,0,0,12"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Text="实时触发的自动化任务设置" />
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon HandWave24}">

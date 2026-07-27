@@ -1193,6 +1193,28 @@ public class TpTask
         await MoveMapToCore(x, y, mapName, finalZoomLevel, true, 0);
     }
 
+    /// <summary>
+    /// 点击大地图上的指定坐标。
+    /// </summary>
+    /// <remarks>
+    /// 先将目标移动到可点击安全区域，
+    /// 再将原神地图坐标转换为游戏截图区域坐标并点击。
+    /// </remarks>
+    /// <param name="x">目标 x 坐标。</param>
+    /// <param name="y">目标 y 坐标。</param>
+    /// <param name="mapName">大地图名称。</param>
+    public async Task ClickMapPoint(double x, double y, string mapName)
+    {
+        await MoveMapTo(x, y, mapName);
+        if (!TryGetClickableTargetPosition(mapName, x, y, 0, out _, out var clickX, out var clickY))
+        {
+            throw new Exception($"目标点未移动到可点击区域：map={mapName}, target=({x:0.##},{y:0.##})");
+        }
+
+        using var clickCapture = CaptureToRectArea();
+        clickCapture.ClickTo(clickX, clickY);
+    }
+
     private async Task MoveMapToTeleportClickArea(double x, double y, string mapName, double requiredVisibleRadius)
     {
         await MoveMapToCore(x, y, mapName, MinTeleportZoomLevel, false, requiredVisibleRadius);
@@ -3154,7 +3176,6 @@ public class TpTask
     private List<MapChooseCandidate> GetMapChooseCandidates(ImageRegion imageRegion)
     {
         var candidates = new List<MapChooseCandidate>();
-        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
         const double threshold = 0.65;
 
         for (var i = 0; i < _assets.MapChooseIconGreyMatList.Count; i++)
@@ -3185,9 +3206,11 @@ public class TpTask
                 using var textRa = imageRegion.DeriveCrop(textRect);
                 using var textRegion = textRa.Find(new RecognitionObject
                 {
-                    RecognitionType = isHdrCapture ? RecognitionTypes.Ocr : RecognitionTypes.ColorRangeAndOcr,
-                    LowerColor = new Scalar(249, 249, 249), // 只取白色文字
-                    UpperColor = new Scalar(255, 255, 255),
+                    // RecognitionType = RecognitionTypes.Ocr,
+                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
+                    ColorConversionCode = ColorConversionCodes.BGR2HLS,
+                    LowerColor = new Scalar(0, 245, 0),
+                    UpperColor = new Scalar(180, 255, 15),
                 });
                 var text = CleanCandidateText(textRegion.Text);
                 if (string.IsNullOrEmpty(text) || text.Length == 1)

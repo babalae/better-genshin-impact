@@ -518,6 +518,7 @@
                                           Width="100"
                                           HorizontalAlignment="Left"
                                           Margin="10,0,10,0"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.DomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -649,6 +650,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.DomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -685,6 +687,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -722,6 +725,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -758,6 +762,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -795,6 +800,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -832,6 +838,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -870,6 +877,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -907,6 +915,7 @@
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
@@ -1220,6 +1229,7 @@
                                                        Grid.Column="1"
                                                        Width="200"
                                                        Margin="0,0,36,0"
+                                                       behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.AutoBossName, Mode=TwoWay}"
                                                        behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                                        ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
                                                        SelectedCascadingItem="{Binding SelectedConfig.AutoBossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}" />

@@ -466,6 +466,20 @@ public partial class CommonSettingsPageViewModel : ViewModel
         Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
+
+    [RelayCommand]
+    private void SelectCrosshairImage()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
+            Title = "选择准星图片"
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            Config.MaskWindowConfig.CrosshairImagePath = dialog.FileName;
+        }
+    }
 }
 
 // 只服务于设置页：把固定指标枚举、显示文案和配置字典中的开关包装成复选框可双向绑定的对象。

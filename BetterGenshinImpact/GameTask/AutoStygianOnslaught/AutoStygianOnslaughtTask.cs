@@ -857,7 +857,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         var found = await NewRetry.WaitForAction(() =>
         {
             // 如果已经在困难模式，直接返回
-            if (page.GetByText("困难").WithRoi(r => r.CutRightTop(0.5, 0.2)).IsExist())
+            if (page.GetByText("困难").WithRoi(r => r.CutTop(0.2)).IsExist())
             {
                 return true;
             }
@@ -880,19 +880,24 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 // 点击常规挑战右侧 400 像素处打开难度菜单
                 page.Click(normalChallenge.X + normalChallenge.Width + 400, normalChallenge.Y + normalChallenge.Height / 2);
                 Sleep(500, _ct);
-
-                // 在难度菜单中查找并点击"困难"
-                var hardMode = page.GetByText("困难").FindAll().FirstOrDefault();
-                if (hardMode != null)
-                {
-                    Logger.LogInformation($"{Name}：点击困难模式");
-                    hardMode.Click();
-                    Sleep(300, _ct);
-                }
-                return false;
+            }
+            else
+            {
+                // 如果界面不显示“常规挑战/至危挑战”，直接点击顶部难度栏
+                Logger.LogInformation($"{Name}：未检测到挑战模式选项，点击顶部难度栏");
+                page.Click(1300, 190);
+                Sleep(500, _ct);
             }
 
-            Sleep(300, _ct);
+            // 在难度菜单中查找并点击“困难”
+            var hardMode = page.GetByText("困难").FindAll().FirstOrDefault();
+            if (hardMode != null)
+            {
+                Logger.LogInformation($"{Name}：点击困难模式");
+                hardMode.Click();
+                Sleep(300, _ct);
+            }
+
             return false;
         }, _ct, 10, 500);
 

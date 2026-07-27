@@ -6,6 +6,7 @@
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
@@ -17,10 +18,11 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
-    <StackPanel Margin="42,16,42,12">
-        <ui:TextBlock Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="软件设置" />
+    <StackPanel Margin="{StaticResource PagePadding}">
+        <TextBlock Margin="0,0,0,12"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Text="软件设置" />
         
                 <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Globe24}">
             <ui:CardControl.Header>
@@ -376,6 +378,258 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.MaskWindowConfig.DisplayRecognitionResultsOnMask, Mode=TwoWay}" />
                 </Grid>
+                <!-- 准星配置 -->
+                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 Icon="{ui:SymbolIcon SquareHintSparkles24}">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="启用准星"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="在遮罩窗口中心显示准星"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             IsChecked="{Binding Config.MaskWindowConfig.CrosshairEnabled, Mode=TwoWay}" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <!-- 准星类型 -->
+                        <Grid Margin="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Column="0"
+                                          VerticalAlignment="Center"
+                                          FontTypography="Body"
+                                          Text="准星类型"
+                                          TextWrapping="Wrap" />
+                            <ComboBox Grid.Column="1"
+                                      Width="140"
+                                      SelectedValue="{Binding Config.MaskWindowConfig.CrosshairType, Mode=TwoWay}"
+                                      SelectedValuePath="Tag">
+                                <ComboBoxItem Tag="{x:Static config:CrosshairType.Crosshair}">十字准星</ComboBoxItem>
+                                <ComboBoxItem Tag="{x:Static config:CrosshairType.Diagonal}">倒V字准星</ComboBoxItem>
+                                <ComboBoxItem Tag="{x:Static config:CrosshairType.Dot}">圆点准星</ComboBoxItem>
+                                <ComboBoxItem Tag="{x:Static config:CrosshairType.DotCrosshair}">中心点十字</ComboBoxItem>
+                                <ComboBoxItem Tag="{x:Static config:CrosshairType.Custom}">自定义准星</ComboBoxItem>
+                            </ComboBox>
+                            <!-- 右对齐占位 -->
+                            <Rectangle Grid.Column="2" Width="36" />
+                        </Grid>
+
+                        <!-- 十字/V字/圆点通用配置 -->
+                        <Grid Margin="16,0,16,16">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Config.MaskWindowConfig.CrosshairType}" Value="{x:Static config:CrosshairType.Crosshair}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Config.MaskWindowConfig.CrosshairType}" Value="{x:Static config:CrosshairType.Diagonal}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Config.MaskWindowConfig.CrosshairType}" Value="{x:Static config:CrosshairType.Dot}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Config.MaskWindowConfig.CrosshairType}" Value="{x:Static config:CrosshairType.DotCrosshair}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <Border Padding="12,8"
+                                    CornerRadius="4"
+                                    Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                <StackPanel>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      FontTypography="Body"
+                                                      Text="准星颜色"
+                                                      TextWrapping="Wrap" />
+                                        <Rectangle Grid.Column="1" />
+                                        <TextBox Grid.Column="2"
+                                                 Width="100"
+                                                 VerticalAlignment="Center"
+                                                 Text="{Binding Config.MaskWindowConfig.CrosshairColor, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      FontTypography="Body"
+                                                      Text="线宽"
+                                                      TextWrapping="Wrap" />
+                                        <Rectangle Grid.Column="1" />
+                                        <ui:NumberBox Grid.Column="2"
+                                                      Width="100"
+                                                      VerticalAlignment="Center"
+                                                      AcceptsExpression="False"
+                                                      Maximum="100"
+                                                      MaxDecimalPlaces="0"
+                                                      Minimum="1"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.MaskWindowConfig.CrosshairLineWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      FontTypography="Body"
+                                                      Text="大小"
+                                                      TextWrapping="Wrap" />
+                                        <Rectangle Grid.Column="1" />
+                                        <ui:NumberBox Grid.Column="2"
+                                                      Width="100"
+                                                      VerticalAlignment="Center"
+                                                      AcceptsExpression="False"
+                                                      Maximum="1000"
+                                                      MaxDecimalPlaces="0"
+                                                      Minimum="1"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.MaskWindowConfig.CrosshairSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                    <Grid Margin="0,4">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Config.MaskWindowConfig.CrosshairType}" Value="{x:Static config:CrosshairType.DotCrosshair}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      FontTypography="Body"
+                                                      Text="中心点间隔"
+                                                      TextWrapping="Wrap" />
+                                        <Rectangle Grid.Column="1" />
+                                        <ui:NumberBox Grid.Column="2"
+                                                      Width="100"
+                                                      VerticalAlignment="Center"
+                                                      AcceptsExpression="False"
+                                                      Maximum="1000"
+                                                      MaxDecimalPlaces="0"
+                                                      Minimum="0"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.MaskWindowConfig.CrosshairGap, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- 自定义准星配置 -->
+                        <Grid Margin="16,0,16,16">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Config.MaskWindowConfig.CrosshairType}" Value="{x:Static config:CrosshairType.Custom}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <Border Padding="12,8"
+                                    CornerRadius="4"
+                                    Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                <StackPanel>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      FontTypography="Body"
+                                                      Text="选择图片"
+                                                      TextWrapping="Wrap" />
+                                        <Rectangle Grid.Column="1" />
+                                        <StackPanel Grid.Column="2"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <TextBox Width="180"
+                                                     VerticalAlignment="Center"
+                                                     Text="{Binding Config.MaskWindowConfig.CrosshairImagePath, Mode=TwoWay}"
+                                                     IsReadOnly="True" />
+                                            <Button Margin="8,0,0,0"
+                                                    Command="{Binding SelectCrosshairImageCommand}"
+                                                    Content="浏览" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      FontTypography="Body"
+                                                      Text="缩放方式"
+                                                      TextWrapping="Wrap" />
+                                        <Rectangle Grid.Column="1" />
+                                        <ComboBox Grid.Column="2"
+                                                  Width="140"
+                                                  VerticalAlignment="Center"
+                                                  SelectedValue="{Binding Config.MaskWindowConfig.CrosshairScaleMode, Mode=TwoWay}"
+                                                  SelectedValuePath="Tag">
+                                            <ComboBoxItem Tag="{x:Static config:CrosshairScaleMode.Original}">原图</ComboBoxItem>
+                                            <ComboBoxItem Tag="{x:Static config:CrosshairScaleMode.Fit}">自适应</ComboBoxItem>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

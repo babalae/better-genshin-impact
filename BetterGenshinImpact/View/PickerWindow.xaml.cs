@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
@@ -16,7 +16,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using TorchSharp.Data;
 using Vanara.PInvoke;
 using Wpf.Ui.Controls;
 
