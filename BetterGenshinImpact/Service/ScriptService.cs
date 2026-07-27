@@ -610,6 +610,11 @@ public partial class ScriptService : IScriptService
         if (!homePageViewModel!.TaskDispatcherEnabled)
         {
             await homePageViewModel.OnStartTriggerAsync();
+            if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "原神关联启动失败：150 秒内未检测到当前 Child Session 中的游戏窗口。");
+            }
 
             if (waitForMainUi)
             {
@@ -621,6 +626,12 @@ public partial class ScriptService : IScriptService
                     var loseFocusCount = 0;
                     while (true)
                     {
+                        if (sw.Elapsed >= TimeSpan.FromMinutes(5))
+                        {
+                            throw new TimeoutException(
+                                "自动进入游戏超时：5 分钟内未到达原神主界面，请检查开门页、登录弹窗或网络状态。");
+                        }
+
                         if (CancellationContext.Instance.IsCancellationRequested)
                         {
                             TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");

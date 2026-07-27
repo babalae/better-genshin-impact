@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -16,6 +17,8 @@ public class SystemControl
 {
     private const string ChildSessionGenshinStartArgs =
         "-popupwindow -screen-width 1920 -screen-height 1080";
+    private static readonly TimeSpan GenshinWindowWaitTimeout = TimeSpan.FromSeconds(75);
+    private static readonly ILogger<SystemControl> Logger = App.GetLogger<SystemControl>();
 
     public static nint FindGenshinImpactHandle()
     {
@@ -41,42 +44,129 @@ public class SystemControl
                 : $"{arg} {ChildSessionGenshinStartArgs}";
         }
 
-        if (cfg.StartGameWithCmd)
+        StartLocalGame(path, workdir, arg, cfg.StartGameWithCmd);
+        var handle = await WaitForGenshinWindowAsync(GenshinWindowWaitTimeout);
+        if (handle != 0)
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c start \"\" /d \"{workdir}\" \"{path}\" {arg}",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            Process.Start(psi);
+            return handle;
+        }
+
+        if (!IsGenshinImpactRunningInCurrentSession())
+        {
+            Logger.LogWarning("关联启动后 75 秒内未发现原神进程，自动重试启动一次");
+            StartLocalGame(path, workdir, arg, cfg.StartGameWithCmd);
         }
         else
         {
-            Process.Start(new ProcessStartInfo(path)
+            Logger.LogWarning("原神进程已经出现但窗口尚未就绪，继续等待窗口");
+        }
+
+        handle = await WaitForGenshinWindowAsync(GenshinWindowWaitTimeout);
+        if (handle == 0)
+        {
+            Logger.LogError("关联启动原神失败：150 秒内未发现当前会话中的游戏窗口");
+        }
+
+        return handle;
+    }
+
+    internal static ProcessStartInfo BuildLocalGameStartInfo(
+        string path,
+        string workdir,
+        string arg,
+        bool startGameWithCmd)
+    {
+        if (!startGameWithCmd)
+        {
+            return new ProcessStartInfo(path)
             {
                 UseShellExecute = true,
                 Arguments = arg,
                 WorkingDirectory = workdir
-            });
+            };
         }
 
-        for (var i = 0; i < 5; i++)
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+            WorkingDirectory = workdir
+        };
+        startInfo.ArgumentList.Add("/d");
+        startInfo.ArgumentList.Add("/c");
+
+        var extension = Path.GetExtension(path);
+        if (extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".bat", StringComparison.OrdinalIgnoreCase))
+        {
+            startInfo.ArgumentList.Add(
+                string.IsNullOrWhiteSpace(arg)
+                    ? $"call \"{path}\""
+                    : $"call \"{path}\" {arg}");
+        }
+        else
+        {
+            startInfo.ArgumentList.Add(
+                $"start \"\" /d \"{workdir}\" \"{path}\" {arg}".TrimEnd());
+        }
+
+        return startInfo;
+    }
+
+    private static void StartLocalGame(
+        string path,
+        string workdir,
+        string arg,
+        bool startGameWithCmd)
+    {
+        Process.Start(BuildLocalGameStartInfo(path, workdir, arg, startGameWithCmd));
+    }
+
+    private static async Task<nint> WaitForGenshinWindowAsync(TimeSpan timeout)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
         {
             var handle = FindGenshinImpactHandle();
             if (handle != 0)
             {
-                await Task.Delay(2333);
-                handle = FindGenshinImpactHandle();
-                await Task.Delay(2577);
-                return handle;
+                await Task.Delay(2500);
+                return FindGenshinImpactHandle();
             }
 
-            await Task.Delay(5577);
+            await Task.Delay(2000);
         }
 
         return FindGenshinImpactHandle();
+    }
+
+    private static bool IsGenshinImpactRunningInCurrentSession()
+    {
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
+        foreach (var processName in TaskContext.Instance().GetGenshinGameProcessNameList())
+        {
+            foreach (var process in Process.GetProcessesByName(processName))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        if (process.SessionId == currentSessionId && !process.HasExited)
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        // Process exited while it was being inspected.
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     public static bool IsGenshinImpactActiveByProcess()

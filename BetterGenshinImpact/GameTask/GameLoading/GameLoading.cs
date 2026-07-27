@@ -56,7 +56,9 @@ public class GameLoadingTrigger : ITaskTrigger
     private bool biliLoginClicked = false;
     private (double x1080, double y1080)? lastAgreementClickPos = null;
     private DateTime _prevAgePromptOcrTime = DateTime.MinValue;
+    private DateTime _prevDoorFallbackClickTime = DateTime.MinValue;
     private bool _agePromptTextMatched = false;
+    private int _doorFallbackClickCount;
     private List<Region> _latestLoadingOcrRegions = [];
 
     public GameLoadingTrigger()
@@ -269,6 +271,7 @@ public class GameLoadingTrigger : ITaskTrigger
                 {
                     agePopup.Click();
                     _logger.LogInformation("检测到适龄提示，自动点击确认");
+                    return;
                 }
             }
         }
@@ -313,6 +316,7 @@ public class GameLoadingTrigger : ITaskTrigger
             if (!extraEnterGameBtn.IsEmpty())
             {
                 extraEnterGameBtn.Click();
+                _logger.LogInformation("检测到进入游戏确认按钮，已自动点击");
                 return;
             }
         }
@@ -324,7 +328,44 @@ public class GameLoadingTrigger : ITaskTrigger
         {
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             biliLoginClicked = true;
+            _logger.LogInformation("检测到开门按钮，已自动点击进入游戏");
             return;
+        }
+
+        if (!IsBili)
+        {
+            var loadingText = string.Join(
+                " ",
+                _latestLoadingOcrRegions
+                    .Select(region => region.Text)
+                    .Where(text => !string.IsNullOrWhiteSpace(text)));
+            var hasDoorText = loadingText.Contains("点击进入") ||
+                              loadingText.Contains("进入游戏");
+            var hasBlockingPrompt = loadingText.Contains("适龄") ||
+                                    loadingText.Contains("监护") ||
+                                    loadingText.Contains("用户协议") ||
+                                    loadingText.Contains("登录") ||
+                                    loadingText.Contains("公告") ||
+                                    loadingText.Contains("更新");
+            var fallbackInterval = hasDoorText
+                ? TimeSpan.FromSeconds(5)
+                : TimeSpan.FromSeconds(15);
+            var mayUseTimedFallback =
+                (DateTime.Now - _triggerStartTime) >= TimeSpan.FromSeconds(20);
+
+            if (!hasBlockingPrompt &&
+                (hasDoorText || mayUseTimedFallback) &&
+                (DateTime.Now - _prevDoorFallbackClickTime) >= fallbackInterval)
+            {
+                _prevDoorFallbackClickTime = DateTime.Now;
+                _doorFallbackClickCount++;
+                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                _logger.LogInformation(
+                    "自动开门兜底点击：方式={Mode}，次数={Count}",
+                    hasDoorText ? "OCR" : "定时",
+                    _doorFallbackClickCount);
+                return;
+            }
         }
 
         // 只有在"进入游戏"按钮未出现时，才进行B服登录处理
