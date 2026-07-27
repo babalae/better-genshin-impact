@@ -742,6 +742,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             _managedAutomationActive = true;
             _managedShutdownRequested = false;
+            InitConfigList();
 
             var config = ConfigList.FirstOrDefault(x =>
                 string.Equals(x.Name, configName, StringComparison.Ordinal));

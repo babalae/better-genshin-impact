@@ -82,7 +82,7 @@ public class ApplicationHostService(
                     case CommandLineAction.ChildSessionOneDragon:
                         _ = childSessionAutomationService.StartAsync(
                             cmdOptions,
-                            shutdownRootWhenDone: true);
+                            hideRootWhenDone: true);
                         break;
 
                     case CommandLineAction.StartGroups:

@@ -627,6 +627,14 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     {
         Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
         {
+            var commandLineOptions = CommandLineOptions.Parse(args);
+            if (commandLineOptions.Action == CommandLineAction.ChildSessionOneDragon)
+            {
+                _ = App.GetService<ChildSessionAutomationService>()
+                    ?.StartAsync(commandLineOptions, hideRootWhenDone: false);
+                return;
+            }
+
             var mainWindow = Application.Current.MainWindow;
             mainWindow?.Show();
             mainWindow?.Activate();
@@ -635,13 +643,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                 SystemControl.RestoreWindow(new WindowInteropHelper(mainWindow).Handle);
             }
 
-            var commandLineOptions = CommandLineOptions.Parse(args);
-            if (commandLineOptions.Action == CommandLineAction.ChildSessionOneDragon)
-            {
-                _ = App.GetService<ChildSessionAutomationService>()
-                    ?.StartAsync(commandLineOptions, shutdownRootWhenDone: false);
-                return;
-            }
             App.GetService<HomePageViewModel>()?.HandleActivation(commandLineOptions);
         }));
     }

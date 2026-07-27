@@ -28,7 +28,7 @@ public sealed class ChildSessionAutomationService(
 
     public async Task StartAsync(
         CommandLineOptions options,
-        bool shutdownRootWhenDone)
+        bool hideRootWhenDone)
     {
         var runId = options.AutomationRunId;
         var configName = options.OneDragonConfigName;
@@ -106,11 +106,11 @@ public sealed class ChildSessionAutomationService(
         {
             try
             {
-                await childSessionService.LogoffAndHideAsync();
+                childSessionService.HideWindow();
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Child Session 清理失败：{RunId}", runId);
+                logger.LogError(exception, "隐藏 Child Session 窗口失败：{RunId}", runId);
                 await WriteStateAsync(
                     resultPath,
                     runId,
@@ -121,10 +121,10 @@ public sealed class ChildSessionAutomationService(
 
             _runSemaphore.Release();
             _knownRuns.TryRemove(runId, out _);
-            if (shutdownRootWhenDone)
+            if (hideRootWhenDone)
             {
                 _ = Application.Current.Dispatcher.BeginInvoke(
-                    new Action(Application.Current.Shutdown));
+                    new Action(() => Application.Current.MainWindow?.Hide()));
             }
         }
     }

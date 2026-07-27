@@ -5,14 +5,16 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Service.ChildSession;
+using Microsoft.Win32;
 using DrawingSize = System.Drawing.Size;
 
 namespace BetterGenshinImpact.View.Controls.ChildSession;
 
 internal sealed class RdpActiveXHost : AxHost
 {
-    // Windows 10+ 自带的非脚本化 RDP ActiveX 控件（MsRdpClient10）。
-    private const string RdpClientClsid = "A0C63C30-F08D-4AB4-907C-34905D770C7D";
+    // MsTscAx 会同时注册多个版本；必须使用系统 CurVer 指向的兼容版本。
+    // 固定使用更高版本的 CLSID 可能可以创建控件，却在 Child Session 握手前超时。
+    private const string FallbackRdpClientClsid = "8B918B82-7985-4C24-89DF-C33AD2BBFBCD";
     private const short VariantFalse = 0;
     private const short VariantTrue = -1;
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
@@ -34,9 +36,36 @@ internal sealed class RdpActiveXHost : AxHost
     internal event EventHandler? LoginCompleted;
 
     internal RdpActiveXHost()
-        : base(RdpClientClsid)
+        : base(ResolveRdpClientClsid())
     {
         Dock = DockStyle.Fill;
+    }
+
+    private static string ResolveRdpClientClsid()
+    {
+        try
+        {
+            using var currentVersionKey = Registry.ClassesRoot.OpenSubKey(
+                @"MsTscAx.MsTscAx\CurVer",
+                writable: false);
+            var currentVersion = currentVersionKey?.GetValue(null) as string;
+            if (string.IsNullOrWhiteSpace(currentVersion))
+            {
+                return FallbackRdpClientClsid;
+            }
+
+            using var clsidKey = Registry.ClassesRoot.OpenSubKey(
+                $@"{currentVersion}\CLSID",
+                writable: false);
+            return clsidKey?.GetValue(null) is string clsid
+                   && Guid.TryParse(clsid, out _)
+                ? clsid
+                : FallbackRdpClientClsid;
+        }
+        catch
+        {
+            return FallbackRdpClientClsid;
+        }
     }
 
     internal int ConnectedState
