@@ -94,24 +94,25 @@ public class SystemControl
             WindowStyle = ProcessWindowStyle.Hidden,
             WorkingDirectory = workdir
         };
-        startInfo.ArgumentList.Add("/d");
-        startInfo.ArgumentList.Add("/c");
 
         var extension = Path.GetExtension(path);
+        string command;
         if (extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".bat", StringComparison.OrdinalIgnoreCase))
         {
-            startInfo.ArgumentList.Add(
-                string.IsNullOrWhiteSpace(arg)
-                    ? $"call \"{path}\""
-                    : $"call \"{path}\" {arg}");
+            command = string.IsNullOrWhiteSpace(arg)
+                ? $"\"{path}\""
+                : $"\"{path}\" {arg}";
         }
         else
         {
-            startInfo.ArgumentList.Add(
-                $"start \"\" /d \"{workdir}\" \"{path}\" {arg}".TrimEnd());
+            command = $"start \"\" /d \"{workdir}\" \"{path}\" {arg}".TrimEnd();
         }
 
+        // cmd.exe does not understand the backslash-escaped quotes generated when a
+        // complete command is placed in ProcessStartInfo.ArgumentList. Supplying the
+        // conventional /s /c "<command>" string keeps quoted paths with spaces intact.
+        startInfo.Arguments = $"/d /s /c \"{command}\"";
         return startInfo;
     }
 
@@ -121,7 +122,46 @@ public class SystemControl
         string arg,
         bool startGameWithCmd)
     {
-        Process.Start(BuildLocalGameStartInfo(path, workdir, arg, startGameWithCmd));
+        var startInfo = BuildLocalGameStartInfo(path, workdir, arg, startGameWithCmd);
+        Logger.LogInformation(
+            "启动原神关联命令：Path={Path}, WorkingDirectory={WorkingDirectory}, StartGameWithCmd={StartGameWithCmd}, Arguments={Arguments}, Session={SessionId}",
+            path,
+            workdir,
+            startGameWithCmd,
+            arg,
+            Process.GetCurrentProcess().SessionId);
+
+        var process = Process.Start(startInfo);
+        if (process is null)
+        {
+            throw new InvalidOperationException($"无法创建原神启动进程：{path}");
+        }
+
+        Logger.LogInformation(
+            "原神关联启动进程已创建：PID={ProcessId}, ProcessName={ProcessName}, Session={SessionId}",
+            process.Id,
+            process.ProcessName,
+            process.SessionId);
+
+        process.EnableRaisingEvents = true;
+        process.Exited += (_, _) =>
+        {
+            try
+            {
+                Logger.LogInformation(
+                    "原神关联启动进程已退出：PID={ProcessId}, ExitCode={ExitCode}",
+                    process.Id,
+                    process.ExitCode);
+            }
+            catch (InvalidOperationException)
+            {
+                // The process object may no longer expose its exit code during shutdown.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        };
     }
 
     private static async Task<nint> WaitForGenshinWindowAsync(TimeSpan timeout)

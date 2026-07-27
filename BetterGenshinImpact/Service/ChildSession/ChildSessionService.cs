@@ -388,17 +388,8 @@ public sealed class ChildSessionService : IDisposable
             TryDisconnectRdpHost();
         }
 
-        if (_instanceService.Context.IsRoot)
-        {
-            try
-            {
-                _ = ChildSessionNativeMethods.TerminateChildSession(wait: false);
-            }
-            catch (Exception exception) when (IsExpectedChildSessionException(exception))
-            {
-                // 应用正在退出，Child Session 清理失败不应阻止主程序关闭。
-            }
-        }
+        // 关闭根实例只断开内嵌 RDP 控件。保留 Windows Child Session，
+        // 让会话内的游戏和自动化继续运行；显式“注销并隐藏”仍由 LogoffAndHideAsync 负责。
 
         if (_desktopWindow is not null)
         {

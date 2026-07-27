@@ -184,7 +184,36 @@ public sealed class ChildSessionAutomationService(
                 updatedAt = DateTimeOffset.UtcNow
             },
             Formatting.Indented);
-        await File.WriteAllTextAsync(temporaryPath, json);
-        File.Move(temporaryPath, fullPath, overwrite: true);
+        try
+        {
+            await File.WriteAllTextAsync(temporaryPath, json);
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temporaryPath, fullPath, overwrite: true);
+                    return;
+                }
+                catch (Exception exception)
+                    when (exception is IOException or UnauthorizedAccessException
+                          && attempt < 20)
+                {
+                    // The PowerShell wrapper polls this file and can briefly hold
+                    // a handle without delete sharing while an atomic update lands.
+                    await Task.Delay(Math.Min(attempt * 25, 250));
+                }
+            }
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(temporaryPath);
+            }
+            catch
+            {
+                // The state update exception is more useful than cleanup noise.
+            }
+        }
     }
 }

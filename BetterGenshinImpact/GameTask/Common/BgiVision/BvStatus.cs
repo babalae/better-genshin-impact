@@ -76,8 +76,20 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInMainUi(ImageRegion captureRa)
     {
-        using var ra = captureRa.Find(ElementRecognition.Get("PaimonMenu", captureRa));
-        return ra.IsExist() && !IsInRevivePrompt(captureRa);
+        using var paimonMenu = captureRa.Find(
+            ElementRecognition.Get("PaimonMenu", captureRa));
+        if (paimonMenu.IsExist())
+        {
+            return !IsInRevivePrompt(captureRa);
+        }
+
+        // Notification badges can cover enough of the Paimon icon to make its
+        // template miss. The friend-chat button is another stable main-HUD
+        // element and prevents an already-loaded game from being treated as
+        // the login door indefinitely.
+        using var friendChat = captureRa.Find(
+            ElementRecognition.Get("FriendChat", captureRa));
+        return friendChat.IsExist() && !IsInRevivePrompt(captureRa);
     }
 
     /// <summary>

@@ -94,8 +94,13 @@ internal sealed class RdpActiveXHost : AxHost
         var client = GetRequiredOcx();
         var width = Math.Clamp(desktopSize.Width, 200, 8192);
         var height = Math.Clamp(desktopSize.Height, 200, 8192);
+        var savedCredential = ChildSessionCredentialStore.TryRead();
 
         SetComProperty(client, "Server", "localhost");
+        if (savedCredential is not null)
+        {
+            SetComProperty(client, "UserName", savedCredential.UserName);
+        }
         SetComProperty(client, "DesktopWidth", width);
         SetComProperty(client, "DesktopHeight", height);
         SetComProperty(client, "ColorDepth", 32);
@@ -119,6 +124,12 @@ internal sealed class RdpActiveXHost : AxHost
                 ChildSessionNativeMethods.GetConfiguredRdpPort()));
         RunComStep("启用 CredSSP", () =>
             SetComProperty(advancedSettings, "EnableCredSspSupport", true));
+        if (savedCredential is not null)
+        {
+            RunComStep("应用 BetterGI 桌面分身凭据", () =>
+                ((IMsRdpClientNonScriptable)client).put_ClearTextPassword(
+                    savedCredential.Password));
+        }
         RunComStep("启用远程 Windows 键", () =>
             SetComProperty(advancedSettings, "EnableWindowsKey", 1));
         RunComStep("设置显示缩放", () =>
