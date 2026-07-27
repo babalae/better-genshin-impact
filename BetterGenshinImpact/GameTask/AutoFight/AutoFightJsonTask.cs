@@ -61,6 +61,11 @@ public class AutoFightJsonTask : ISoloTask
     private DateTime _lastLogTime = DateTime.MinValue;
 
     /// <summary>
+    /// 当前操作的角色名（私有状态，不污染全局 CurrentAvatarName）
+    /// </summary>
+    private string _currentAvatarName = "";
+
+    /// <summary>
     /// 展开后的优先级动作条目
     /// 每个 JsonAction 展开为 1+N 个条目（1个主条件 + N个 morePriorities）
     /// </summary>
@@ -314,7 +319,7 @@ public class AutoFightJsonTask : ISoloTask
     
             combatScenes.BeforeTask(cts2.Token);
             // 设置初始当前角色名（用于无 Character 字段的通用 action 回退）
-            CombatScriptParser.CurrentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? CombatScriptParser.CurrentAvatarName;
+            _currentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? _currentAvatarName;
             TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout);
             Stopwatch timeoutStopwatch = Stopwatch.StartNew();
     
@@ -388,7 +393,7 @@ public class AutoFightJsonTask : ISoloTask
                                     if (avatar == null) continue;
     
                                     avatar.Switch();
-                                    CombatScriptParser.CurrentAvatarName = action.Character;
+                                    _currentAvatarName = action.Character;
                                 }
     
                                 // 执行动作
@@ -398,7 +403,7 @@ public class AutoFightJsonTask : ISoloTask
                                 if (action.EnsureCast)
                                 {
                                     var characterName = string.IsNullOrEmpty(action.Character)
-                                        ? CombatScriptParser.CurrentAvatarName
+                                        ? _currentAvatarName
                                         : action.Character;
                                     var avatar = combatScenes.SelectAvatar(characterName);
                                     if (avatar != null)
@@ -548,7 +553,7 @@ public class AutoFightJsonTask : ISoloTask
         try
         {
             var character = string.IsNullOrEmpty(action.Character)
-                ? CombatScriptParser.CurrentAvatarName
+                ? _currentAvatarName
                 : action.Character;
 
             var commands = CombatScriptParser.ParseLinePart(action.Action, character);
@@ -579,7 +584,7 @@ public class AutoFightJsonTask : ISoloTask
             }
 
             // 更新当前角色名，供后续无指定角色动作使用
-            CombatScriptParser.CurrentAvatarName = character;
+            _currentAvatarName = character;
         }
         catch (Exception e)
         {
@@ -730,7 +735,7 @@ public class AutoFightJsonTask : ISoloTask
             if (_ct.IsCancellationRequested) break;
 
             var firstSpaceIndex = preAction.IndexOf(' ');
-            var character = CombatScriptParser.CurrentAvatarName;
+            var character = _currentAvatarName;
             var commands = preAction;
             if (firstSpaceIndex > 0)
             {
