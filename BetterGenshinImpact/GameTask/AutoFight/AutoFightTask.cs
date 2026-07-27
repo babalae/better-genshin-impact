@@ -683,6 +683,7 @@ public class AutoFightTask : ISoloTask
                         await Delay(200, ct);
                         if (picker.TrySwitch(10))
                         {
+                            picker.Switch();
                             // 等待元素战技 CD 就绪
                             await picker.WaitSkillCd(ct);
                             
@@ -718,6 +719,7 @@ public class AutoFightTask : ISoloTask
                     await Delay(150, ct);
                     if (picker.TrySwitch(10))
                     {
+                        picker.Switch();
                         foreach (var miningActionStr in actionsToUse)
                         {
                             var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);
