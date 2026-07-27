@@ -7,6 +7,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Microsoft.Xaml.Behaviors;
@@ -336,11 +337,11 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
         }
     }
 
-    private static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
+    internal static T? FindVisualAncestor<T>(DependencyObject child) where T : DependencyObject
     {
         for (DependencyObject? current = child;
              current is not null;
-             current = VisualTreeHelper.GetParent(current))
+             current = GetParent(current))
         {
             if (current is T ancestor)
             {
@@ -349,6 +350,22 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
         }
 
         return null;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject child)
+    {
+        if (child is ContentElement contentElement)
+        {
+            return ContentOperations.GetParent(contentElement)
+                   ?? (contentElement as FrameworkContentElement)?.Parent;
+        }
+
+        if (child is Visual or Visual3D)
+        {
+            return VisualTreeHelper.GetParent(child);
+        }
+
+        return LogicalTreeHelper.GetParent(child);
     }
 
     private static T? FindVisualDescendant<T>(
