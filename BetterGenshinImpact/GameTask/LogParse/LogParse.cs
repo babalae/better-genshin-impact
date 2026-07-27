@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -19,6 +19,9 @@ namespace BetterGenshinImpact.GameTask.LogParse
     {
         private static readonly string _configPath = Global.Absolute(@"log\logparse\config.json");
         private static readonly string _assets_dir = Global.Absolute($@"GameTask\LogParse\Assets");
+        private static readonly Regex LogHeaderRegex = new(
+            @"^\[\d{2}:\d{2}:\d{2}\.\d+\] \[[^\]]+\](?: \[(?<Instance>[^\]]+)\])?",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
         // 添加一个静态事件用于通知日志的生成状态
         public static event Action<string> HtmlGenerationStatusChanged = delegate { };
         private static void NotifyHtmlGenerationStatus(string status)
@@ -49,17 +52,35 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
         public static List<ConfigGroupEntity> ParseFile(List<(string, string)> logFiles)
         {
-            List<(string, string)> logLines = new();
+            Dictionary<string, List<(string, string)>> instanceLogLines = new(StringComparer.Ordinal);
             foreach (var logFile in logFiles)
             {
-                string[] logstrs = SafeReadAllLines(logFile.Item1).ToArray();
-                foreach (var logstr in logstrs)
+                string? currentInstance = null;
+                foreach (var logLine in SafeReadAllLines(logFile.Item1))
                 {
-                    logLines.Add((logstr, logFile.Item2));
+                    var headerMatch = LogHeaderRegex.Match(logLine);
+                    if (headerMatch.Success)
+                    {
+                        var instanceGroup = headerMatch.Groups["Instance"];
+                        currentInstance = instanceGroup.Success ? instanceGroup.Value : null;
+                        if (currentInstance is not null
+                            && !instanceLogLines.ContainsKey(currentInstance))
+                        {
+                            instanceLogLines[currentInstance] = [];
+                        }
+                    }
+
+                    if (currentInstance is not null)
+                    {
+                        instanceLogLines[currentInstance].Add((logLine, logFile.Item2));
+                    }
                 }
             }
 
-            return Parse(logLines);
+            return instanceLogLines.Values
+                .SelectMany(Parse)
+                .OrderBy(entity => entity.StartDate)
+                .ToList();
         }
 
         public static List<ConfigGroupEntity> Parse(List<(string, string)> logLines)
@@ -304,7 +325,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
             }
 
             // 定义文件名匹配的正则表达式
-            string pattern = @"^better-genshin-impact(\d{8})(_\d{3})*\.log$";
+            string pattern = @"^better-genshin-impact(\d{8})\.log$";
             Regex regex = new Regex(pattern);
 
             // 遍历文件夹中的所有文件
@@ -323,7 +344,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
                     if (DateTime.TryParseExact(dateString, "yyyyMMdd", null, DateTimeStyles.None,
                             out DateTime parsedDate))
                     {
-                        result.Add((folderPath + "\\" + fileName, parsedDate.ToString("yyyy-MM-dd")));
+                        result.Add((Path.Combine(folderPath, fileName), parsedDate.ToString("yyyy-MM-dd")));
                     }
                 }
             }
