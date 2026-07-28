@@ -715,7 +715,6 @@ public class AutoFightTask : ISoloTask
                         .ToArray();
 
                     var find = _taskParam.QinDoublePickUp;
-                    await Delay(150, ct);
                     if (picker.TrySwitch(10))
                     {
                         await Delay(100, ct);
