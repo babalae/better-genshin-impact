@@ -118,6 +118,7 @@ internal class GoToSereniteaPotTask
 
         for (int i = 0; i < 5; i++)
         {
+            ra = CaptureToRectArea();
             var sereniteaPotHomeIcon = ra.Find(ElementRecognition.Get("SereniteaPotHome", ra));
             if (!sereniteaPotHomeIcon.IsExist())
             {
@@ -128,6 +129,9 @@ internal class GoToSereniteaPotTask
             }
             else
             {
+                await Delay(100, ct);
+                Simulation.ReleaseAllKey();
+                await Delay(200, ct);
                 sereniteaPotHomeIcon.Click();
                 await Delay(500, ct);
                 break;
