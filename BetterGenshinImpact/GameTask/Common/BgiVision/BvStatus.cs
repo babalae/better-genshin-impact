@@ -208,7 +208,7 @@ public static partial class Bv
 
     public static double GetBigMapScale(ImageRegion region, CancellationToken ct = default)
     {
-        const int maxRetries = 20;
+        const int maxRetries = 5;
         for (var i = 1; i <= maxRetries; i++)
         {
             // 首次使用传入的region，重试时重新截图
