@@ -211,21 +211,25 @@ public static partial class Bv
         const int maxRetries = 20;
         for (var i = 1; i <= maxRetries; i++)
         {
-            // 首次使用传入的region，重试时重新截图（Region.Dispose为空实现，需手动释放SrcMat）
+            // 首次使用传入的region，重试时重新截图
             ImageRegion? ownedCapture = null;
-            var searchRegion = i == 1 ? region : (ownedCapture = TaskControl.CaptureToRectArea())!;
-            using var scaleRa = searchRegion.Find(RecognitionAssets.Get("QuickTeleport", "MapScaleButton", searchRegion));
-            if (!scaleRa.IsEmpty())
+            try
             {
-                // 原先这里的起止区间和config里写死的值差1
-                var start = TaskContext.Instance().Config.TpConfig.ZoomStartY;
-                var end = TaskContext.Instance().Config.TpConfig.ZoomEndY;
-                var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
-                ownedCapture?.Dispose();
-                return (end * 1.0 - cur) / (end - start);
+                var searchRegion = i == 1 ? region : (ownedCapture = TaskControl.CaptureToRectArea())!;
+                using var scaleRa = searchRegion.Find(RecognitionAssets.Get("QuickTeleport", "MapScaleButton", searchRegion));
+                if (!scaleRa.IsEmpty())
+                {
+                    // 原先这里的起止区间和config里写死的值差1
+                    var start = TaskContext.Instance().Config.TpConfig.ZoomStartY;
+                    var end = TaskContext.Instance().Config.TpConfig.ZoomEndY;
+                    var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
+                    return (end * 1.0 - cur) / (end - start);
+                }
             }
-
-            ownedCapture?.Dispose();
+            finally
+            {
+                ownedCapture?.Dispose();
+            }
             TaskControl.Logger.LogWarning("未找到MapScaleButton图标，重试第{RetryCount}次", i);
             TaskControl.Sleep(100, ct);
         }
