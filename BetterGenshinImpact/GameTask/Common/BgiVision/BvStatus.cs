@@ -208,18 +208,26 @@ public static partial class Bv
 
     public static double GetBigMapScale(ImageRegion region)
     {
-        using var scaleRa = region.Find(RecognitionAssets.Get("QuickTeleport", "MapScaleButton", region));
-        if (scaleRa.IsEmpty())
+        const int maxRetries = 20;
+        for (var i = 1; i <= maxRetries; i++)
         {
-            throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
+            using var currentRegion = i == 1 ? null : TaskControl.CaptureToRectArea();
+            var searchRegion = currentRegion ?? region;
+            using var scaleRa = searchRegion.Find(RecognitionAssets.Get("QuickTeleport", "MapScaleButton", searchRegion));
+            if (!scaleRa.IsEmpty())
+            {
+                // 原先这里的起止区间和config里写死的值差1
+                var start = TaskContext.Instance().Config.TpConfig.ZoomStartY;
+                var end = TaskContext.Instance().Config.TpConfig.ZoomEndY;
+                var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
+                return (end * 1.0 - cur) / (end - start);
+            }
+
+            TaskControl.Logger.LogWarning("未找到MapScaleButton图标，重试第{RetryCount}次", i);
+            Thread.Sleep(100);
         }
 
-        // 原先这里的起止区间和config里写死的值差1
-        var start = TaskContext.Instance().Config.TpConfig.ZoomStartY;
-        var end = TaskContext.Instance().Config.TpConfig.ZoomEndY;
-        var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
-
-        return (end * 1.0 - cur) / (end - start);
+        throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
     }
 
     public static MotionStatus GetMotionStatus(ImageRegion captureRa)
