@@ -211,9 +211,7 @@ public static partial class Bv
         const int maxRetries = 20;
         for (var i = 1; i <= maxRetries; i++)
         {
-            using var currentRegion = i == 1 ? null : TaskControl.CaptureToRectArea();
-            var searchRegion = currentRegion ?? region;
-            using var scaleRa = searchRegion.Find(RecognitionAssets.Get("QuickTeleport", "MapScaleButton", searchRegion));
+            using var scaleRa = region.Find(RecognitionAssets.Get("QuickTeleport", "MapScaleButton", region));
             if (!scaleRa.IsEmpty())
             {
                 // 原先这里的起止区间和config里写死的值差1
