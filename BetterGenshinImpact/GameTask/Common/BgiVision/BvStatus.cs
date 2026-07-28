@@ -206,7 +206,7 @@ public static partial class Bv
         return ra.IsExist();
     }
 
-    public static double GetBigMapScale(ImageRegion region)
+    public static double GetBigMapScale(ImageRegion region, CancellationToken ct = default)
     {
         const int maxRetries = 20;
         for (var i = 1; i <= maxRetries; i++)
@@ -224,7 +224,7 @@ public static partial class Bv
             }
 
             TaskControl.Logger.LogWarning("未找到MapScaleButton图标，重试第{RetryCount}次", i);
-            Thread.Sleep(100);
+            TaskControl.Sleep(100, ct);
         }
 
         throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");

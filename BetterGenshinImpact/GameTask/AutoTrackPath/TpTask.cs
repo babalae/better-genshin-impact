@@ -3445,7 +3445,7 @@ public class TpTask
     /// <returns></returns>
     public double GetBigMapZoomLevel(ImageRegion region)
     {
-        var s = Bv.GetBigMapScale(region);
+        var s = Bv.GetBigMapScale(region, ct);
         // 1~6 的缩放等级
         return (-5 * s) + 6;
     }
