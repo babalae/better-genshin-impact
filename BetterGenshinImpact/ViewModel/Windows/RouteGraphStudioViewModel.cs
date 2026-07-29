@@ -103,6 +103,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
 
     partial void OnFilterMapChanged(string value)
     {
+        ConnectionStartNode = null;
         if (IsPathDrawing || DraftPathPoints.Count > 0)
         {
             IsPathDrawing = false;
@@ -702,6 +703,12 @@ public partial class RouteGraphStudioViewModel : ViewModel
 
     private bool AddManualEdge(RouteNavigationNode from, RouteNavigationNode to)
     {
+        if (!Same(from.MapName, to.MapName))
+        {
+            StatusText = $"不能连接不同地图的节点：{from.MapName} → {to.MapName}";
+            return false;
+        }
+
         var moveMode = string.IsNullOrWhiteSpace(EdgeMoveMode) ? MoveModeEnum.Walk.Code : EdgeMoveMode;
         if (_snapshot.Graph.Edges.Any(edge =>
                 Same(edge.FromNodeId, from.NodeId) &&

@@ -544,7 +544,9 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
                     options.CostOptions,
                     "local-navigation")
             })
-            .Where(item => item.LocalCost.IsValid)
+            .Where(item =>
+                item.LocalCost.IsValid &&
+                item.LocalCost.GameDistance <= options.CostOptions.LocalDirectMaxGameDistance)
             .OrderBy(item => item.LocalCost.Seconds)
             .ThenBy(item => item.Distance)
             .ThenBy(item => item.Teleport.AnchorId, StringComparer.OrdinalIgnoreCase)

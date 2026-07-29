@@ -86,18 +86,18 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
                 return false;
             }
 
-            var signature = BuildLoadSignature(graphFilePath, _overrideStore.DirectoryPath);
-            if (!forceReload && _snapshot != null && string.Equals(signature, _loadedSignature, StringComparison.Ordinal))
-            {
-                snapshot = _snapshot;
-                status = snapshot.IsEmpty
-                    ? RouteNavigationGraphLoadStatus.Empty
-                    : RouteNavigationGraphLoadStatus.Loaded;
-                return status == RouteNavigationGraphLoadStatus.Loaded;
-            }
-
             try
             {
+                var signature = BuildLoadSignature(graphFilePath, _overrideStore.DirectoryPath);
+                if (!forceReload && _snapshot != null && string.Equals(signature, _loadedSignature, StringComparison.Ordinal))
+                {
+                    snapshot = _snapshot;
+                    status = snapshot.IsEmpty
+                        ? RouteNavigationGraphLoadStatus.Empty
+                        : RouteNavigationGraphLoadStatus.Loaded;
+                    return status == RouteNavigationGraphLoadStatus.Loaded;
+                }
+
                 var json = File.ReadAllText(graphFilePath);
                 var graph = JsonSerializer.Deserialize<RouteNavigationGraph>(json, CreateJsonOptions()) ?? new RouteNavigationGraph();
                 if (string.IsNullOrWhiteSpace(graph.GraphId))

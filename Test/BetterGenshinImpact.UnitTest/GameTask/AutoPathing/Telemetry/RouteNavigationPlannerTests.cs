@@ -576,10 +576,10 @@ public class RouteNavigationPlannerTests
             Y = 0,
             AnchorIds = ["tp"]
         };
-        var a = new RouteNavigationNode { NodeId = "a", MapName = "Teyvat", X = 100, Y = 100 };
-        var b = new RouteNavigationNode { NodeId = "b", MapName = "Teyvat", X = 0, Y = 100 };
-        var c = new RouteNavigationNode { NodeId = "c", MapName = "Teyvat", X = 100, Y = 0 };
-        var target = new RouteNavigationNode { NodeId = "target", MapName = "Teyvat", X = 200, Y = 0 };
+        var a = new RouteNavigationNode { NodeId = "a", MapName = "Teyvat", X = 40, Y = 40 };
+        var b = new RouteNavigationNode { NodeId = "b", MapName = "Teyvat", X = 0, Y = 40 };
+        var c = new RouteNavigationNode { NodeId = "c", MapName = "Teyvat", X = 40, Y = 0 };
+        var target = new RouteNavigationNode { NodeId = "target", MapName = "Teyvat", X = 70, Y = 0 };
         var edges = new List<RouteNavigationEdge>
         {
             CreateHistoricalEdge("one", start, a),
@@ -605,7 +605,7 @@ public class RouteNavigationPlannerTests
         {
             MapName = "Teyvat",
             HasCurrentPosition = false,
-            TargetImagePoint = new RouteGraphPoint(200, 0)
+            TargetImagePoint = new RouteGraphPoint(70, 0)
         };
 
         var succeeded = planner.TryPlan(request, out var plan, TeleportOptions());
@@ -615,7 +615,7 @@ public class RouteNavigationPlannerTests
         Assert.Equal("nearest", plan.Teleport?.Name);
         Assert.Empty(plan.Edges);
         Assert.Equal(2, plan.Task!.Positions.Count);
-        Assert.Equal(200, plan.Task.Positions[^1].X, precision: 2);
+        Assert.Equal(70, plan.Task.Positions[^1].X, precision: 2);
     }
 
     [Fact]
@@ -723,6 +723,36 @@ public class RouteNavigationPlannerTests
         Assert.Equal(WaypointType.Teleport.Code, plan.Task.Positions[0].Type);
         Assert.Equal(1000, plan.Task.Positions[1].X, precision: 2);
         Assert.Equal(WaypointType.Target.Code, plan.Task.Positions[1].Type);
+    }
+
+    [Fact]
+    public void TryPlan_WhenTargetTeleportExceedsLocalLimit_DoesNotCreateDirectRoute()
+    {
+        var farA = new RouteNavigationNode { NodeId = "far-a", MapName = "Teyvat", X = 5000, Y = 0 };
+        var farB = new RouteNavigationNode { NodeId = "far-b", MapName = "Teyvat", X = 5010, Y = 0 };
+        var snapshot = new RouteNavigationGraphSnapshot(
+            new RouteNavigationGraph
+            {
+                Nodes = [farA, farB],
+                Edges = [CreateHistoricalEdge("far", farA, farB)]
+            },
+            64,
+            [CreateTeleport("far-from-target", "far-from-target", 0)]);
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(snapshot),
+            new IdentityCoordinateConverter());
+        var request = new RouteNavigationPlanRequest
+        {
+            MapName = "Teyvat",
+            HasCurrentPosition = false,
+            TargetImagePoint = new RouteGraphPoint(200, 0)
+        };
+
+        var succeeded = planner.TryPlan(request, out var plan, TeleportOptions());
+
+        Assert.False(succeeded);
+        Assert.Equal(RouteNavigationFailureCode.TeleportUnavailable, plan.FailureCode);
+        Assert.Null(plan.Task);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
@@ -234,7 +235,8 @@ public sealed class RouteNavigationCostModel(IRouteCoordinateConverter coordinat
 
     private static bool IsTelemetry(RouteNavigationEdge edge)
     {
-        return edge.SourceKind.Contains("telemetry", StringComparison.OrdinalIgnoreCase);
+        return edge.SourceKind.Contains("telemetry", StringComparison.OrdinalIgnoreCase) ||
+               edge.Sources.Any(source => source.IsTelemetry);
     }
 
     private static double ResolveSpeed(string? moveMode, RouteNavigationCostOptions options)

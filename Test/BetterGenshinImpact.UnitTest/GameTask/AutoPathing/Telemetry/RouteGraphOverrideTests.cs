@@ -213,6 +213,40 @@ public class RouteGraphOverrideTests
     }
 
     [Fact]
+    public void Provider_WhenOverrideCannotBeRead_ReturnsInvalidInsteadOfThrowing()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))).FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(directory, RouteNavigationGraphBuilder.GraphFileName),
+                JsonSerializer.Serialize(CreateGraph()));
+            var provider = new RouteNavigationGraphProvider(directory);
+            Directory.CreateDirectory(provider.OverrideDirectoryPath);
+            var overridePath = Path.Combine(provider.OverrideDirectoryPath, "locked.json");
+            File.WriteAllText(overridePath, "{}");
+
+            bool succeeded = false;
+            var status = default(RouteNavigationGraphLoadStatus);
+            Exception? exception;
+            using (new FileStream(overridePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                exception = Record.Exception(() =>
+                    succeeded = provider.TryGetSnapshot(out _, out status));
+            }
+
+            Assert.Null(exception);
+            Assert.False(succeeded);
+            Assert.Equal(RouteNavigationGraphLoadStatus.Invalid, status);
+            Assert.Contains(RouteNavigationGraphBuilder.GraphFileName, provider.LastLoadError);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public void Apply_CanEditNodeTypeTeleportAssociationAndDeleteConnectedNode()
     {
         var graph = CreateGraph();

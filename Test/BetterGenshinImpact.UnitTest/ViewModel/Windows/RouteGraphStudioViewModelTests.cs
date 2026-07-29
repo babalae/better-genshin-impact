@@ -117,4 +117,96 @@ public sealed class RouteGraphStudioViewModelTests
             Directory.Delete(directory, true);
         }
     }
+
+    [Fact]
+    public async Task FilterMapChange_ClearsConnectionStart()
+    {
+        var directory = CreateCrossMapGraphDirectory();
+        try
+        {
+            var viewModel = new RouteGraphStudioViewModel(directory, "Teyvat");
+            await viewModel.InitializeAsync();
+            viewModel.SelectedNode = viewModel.VisibleNodes[0];
+            viewModel.SetConnectionStartCommand.Execute(null);
+
+            viewModel.FilterMap = "TheChasm";
+
+            Assert.Null(viewModel.ConnectionStartNode);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public async Task AddConnection_DoesNotCreateCrossMapEdge()
+    {
+        var directory = CreateCrossMapGraphDirectory();
+        try
+        {
+            var viewModel = new RouteGraphStudioViewModel(directory, "Teyvat")
+            {
+                AddBidirectionalEdge = false
+            };
+            await viewModel.InitializeAsync();
+            var teyvatNode = viewModel.VisibleNodes[0];
+            viewModel.FilterMap = "TheChasm";
+            viewModel.ConnectionStartNode = teyvatNode;
+            viewModel.SelectedNode = viewModel.VisibleNodes[0];
+
+            viewModel.AddConnectionCommand.Execute(null);
+
+            Assert.Equal(0, viewModel.PendingOperationCount);
+            Assert.Contains("不同地图", viewModel.StatusText);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    private static string CreateCrossMapGraphDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "bgi-graph-studio-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var graph = new RouteNavigationGraph
+        {
+            GraphId = "cross-map-graph",
+            Nodes =
+            [
+                new RouteNavigationNode { NodeId = "teyvat-a", MapName = "Teyvat", X = 0, Y = 0 },
+                new RouteNavigationNode { NodeId = "teyvat-b", MapName = "Teyvat", X = 10, Y = 0 },
+                new RouteNavigationNode { NodeId = "chasm-a", MapName = "TheChasm", X = 0, Y = 0 },
+                new RouteNavigationNode { NodeId = "chasm-b", MapName = "TheChasm", X = 10, Y = 0 }
+            ],
+            Edges =
+            [
+                CreateEdge("teyvat-edge", "Teyvat", "teyvat-a", "teyvat-b"),
+                CreateEdge("chasm-edge", "TheChasm", "chasm-a", "chasm-b")
+            ]
+        };
+        File.WriteAllText(
+            Path.Combine(directory, RouteNavigationGraphBuilder.GraphFileName),
+            JsonSerializer.Serialize(graph));
+        return directory;
+    }
+
+    private static RouteNavigationEdge CreateEdge(
+        string edgeId,
+        string mapName,
+        string fromNodeId,
+        string toNodeId) =>
+        new()
+        {
+            EdgeId = edgeId,
+            FromNodeId = fromNodeId,
+            ToNodeId = toNodeId,
+            MapName = mapName,
+            Points =
+            [
+                new TelemetryPoint2D { X = 0, Y = 0 },
+                new TelemetryPoint2D { X = 10, Y = 0 }
+            ]
+        };
 }
