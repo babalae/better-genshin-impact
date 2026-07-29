@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -153,7 +154,8 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
             .Aggregate(signature, (current, path) =>
             {
                 var info = new FileInfo(path);
-                return $"{current}|{info.Name}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+                var contentHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+                return $"{current}|{info.Name}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{contentHash}";
             });
     }
 }
