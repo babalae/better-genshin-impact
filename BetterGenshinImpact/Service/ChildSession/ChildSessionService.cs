@@ -71,6 +71,17 @@ public sealed class ChildSessionService : IDisposable
 
     public bool KeepAspectRatio => _config.KeepAspectRatio;
 
+    public bool HasActiveChildSession()
+    {
+        if (!_instanceService.Context.IsRoot)
+        {
+            return false;
+        }
+
+        RefreshState();
+        return ChildSessionId is not null;
+    }
+
     public ChildSessionService(
         IServiceProvider serviceProvider,
         InstanceService instanceService,
