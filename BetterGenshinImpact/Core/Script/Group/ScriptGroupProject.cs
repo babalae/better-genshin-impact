@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.FarmingPlan;
-using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -194,20 +193,6 @@ public partial class ScriptGroupProject : ObservableObject
 
     public async Task Run()
     {
-        //执行记录
-        ExecutionRecord executionRecord = new ExecutionRecord()
-        {
-            ServerStartTime =
-                GroupInfo?.Config.PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime ?? false
-                    ? ServerTimeHelper.GetServerTimeNow()
-                    : DateTimeOffset.Now,
-            StartTime = DateTime.Now,
-            GroupName = GroupInfo?.Name ?? "",
-            FolderName = FolderName,
-            ProjectName = Name,
-            Type = Type
-        };
-        ExecutionRecordStorage.SaveExecutionRecord(executionRecord);
         if (Type == "Javascript")
         {
             if (Project == null)
@@ -225,7 +210,7 @@ public partial class ScriptGroupProject : ObservableObject
         else if (Type == "KeyMouse")
         {
             // 加载并执行
-            var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
+            var json = await File.ReadAllTextAsync(Path.Combine(KeyMouseRecordPageViewModel.ScriptPath, Name));
             await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
         }
         else if (Type == "Pathing")
@@ -245,7 +230,6 @@ public partial class ScriptGroupProject : ObservableObject
             await pathingTask.Pathing(task);
 
             
-            executionRecord.IsSuccessful = pathingTask.SuccessEnd;
             OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
             if (!pathingTask.SuccessEnd)
             {
@@ -311,18 +295,6 @@ public partial class ScriptGroupProject : ObservableObject
             var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
             await task.Start(CancellationContext.Instance.Cts.Token);
         }
-
-        if (Type != "Pathing")
-        {
-            executionRecord.IsSuccessful = true;
-        }
-
-        executionRecord.ServerEndTime =
-            GroupInfo?.Config.PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime ?? false
-                ? ServerTimeHelper.GetServerTimeNow()
-                : DateTimeOffset.Now;
-        executionRecord.EndTime = DateTime.Now;
-        ExecutionRecordStorage.SaveExecutionRecord(executionRecord);
     }
 
     partial void OnTypeChanged(string value)

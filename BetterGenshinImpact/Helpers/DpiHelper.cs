@@ -16,8 +16,7 @@ public class DpiHelper
 
     private static float GetScaleY()
     {
-        if (Environment.OSVersion.Version >= new Version(6, 3)
-         && UIDispatcherHelper.MainWindow != null)
+        if (Environment.OSVersion.Version >= new Version(6, 3))
         {
             HWND hWnd = HWND.NULL;
             if (TaskContext.Instance().IsInitialized)
@@ -26,18 +25,42 @@ public class DpiHelper
             }
             else
             {
-                hWnd = new WindowInteropHelper(Application.Current?.MainWindow).Handle;
+                hWnd = GetMainWindowHandle();
             }
 
-            HMONITOR hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
-            SHCore.GetDpiForMonitor(hMonitor, SHCore.MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out _, out uint dpiY);
-            return dpiY / 96f;
+            if (hWnd != HWND.NULL)
+            {
+                HMONITOR hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
+                SHCore.GetDpiForMonitor(hMonitor, SHCore.MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out _, out uint dpiY);
+                return dpiY / 96f;
+            }
         }
 
         HDC hdc = User32.GetDC(HWND.NULL);
         float scaleY = Gdi32.GetDeviceCaps(hdc, Gdi32.DeviceCap.LOGPIXELSY);
         _ = User32.ReleaseDC(0, hdc);
         return scaleY / 96f;
+    }
+
+    private static HWND GetMainWindowHandle()
+    {
+        var application = Application.Current;
+        if (application?.Dispatcher == null)
+        {
+            return HWND.NULL;
+        }
+
+        if (application.Dispatcher.CheckAccess())
+        {
+            return application.MainWindow == null
+                ? HWND.NULL
+                : new WindowInteropHelper(application.MainWindow).Handle;
+        }
+
+        return application.Dispatcher.Invoke(() =>
+            application.MainWindow == null
+                ? HWND.NULL
+                : new WindowInteropHelper(application.MainWindow).Handle);
     }
 
     public static DpiScaleF GetScale(nint hWnd = 0)

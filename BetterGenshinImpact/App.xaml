@@ -33,6 +33,8 @@
             <bgivc:InverseBooleanConverter x:Key="InverseBooleanConverter" />
             <bgivc:NotNullConverter x:Key="NotNullConverter" />
             <bgivc:EnumToKVPConverter x:Key="EnumToKVPConverter" />
+            <bgivc:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter" />
+            <bgivc:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
             <bgivc:CultureInfoNameToKVPConverter x:Key="CultureInfoNameToKVPConverter" />
             <bgivc:StringToColorConverter x:Key="StringToColorConverter" />
             <bgivc:TrConverter x:Key="TrConverter" />

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -18,7 +19,6 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.FarmingPlan;
-using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -101,12 +101,6 @@ public partial class ScriptService : IScriptService
             }
 
             
-        }
-        string skipMessage;
-        if (ExecutionRecordStorage.IsSkipTask(project,out skipMessage))
-        {
-            TaskControl.Logger.LogInformation($"{project.Name}:{skipMessage},跳过此任务！");
-            return true;
         }
         return false; // 不跳过
     }
@@ -210,15 +204,8 @@ public partial class ScriptService : IScriptService
                             var preExecutionProjects = new List<ScriptGroupProject>();
                             foreach (var group in scriptGroups)
                             {
-                                var skipConfig = group.Config.PathingConfig.TaskCompletionSkipRuleConfig;
-                                var records = ExecutionRecordStorage.GetRecentExecutionRecordsByConfig(skipConfig);
-
                                 foreach (var p in group.Projects)
                                 {
-                                    // 检查是否应该跳过任务
-                                    if (ExecutionRecordStorage.IsSkipTask(p, out _, records))
-                                        continue;
-
                                     // 生成项目唯一标识
                                     var projectKey = $"{p.Name}|{p.FolderName}|{p.GroupInfo?.Name}";
 
@@ -608,7 +595,19 @@ public partial class ScriptService : IScriptService
         var homePageViewModel = App.GetService<HomePageViewModel>();
         if (!homePageViewModel!.TaskDispatcherEnabled)
         {
-            await homePageViewModel.OnStartTriggerAsync();
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher?.CheckAccess() == true)
+            {
+                await homePageViewModel.OnStartTriggerAsync();
+            }
+            else if (dispatcher != null)
+            {
+                await dispatcher.InvokeAsync(homePageViewModel.OnStartTriggerAsync).Task.Unwrap();
+            }
+            else
+            {
+                await homePageViewModel.OnStartTriggerAsync();
+            }
 
             if (waitForMainUi)
             {
