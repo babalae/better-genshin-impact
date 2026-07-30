@@ -30,11 +30,12 @@ public static class OverlayMetricItemDefaults
         OverlayMetricItem.CaptureCost,
         OverlayMetricItem.TriggerCost,
         OverlayMetricItem.SkippedTicks,
-        OverlayMetricItem.BgiMemoryUsage,
-        OverlayMetricItem.BgiCpuUsage,
         OverlayMetricItem.GpuUsage,
         OverlayMetricItem.CpuUsage,
-        OverlayMetricItem.MemoryUsage
+        OverlayMetricItem.MemoryUsage,
+        OverlayMetricItem.BgiMemoryUsage,
+        OverlayMetricItem.BgiCpuUsage
+
     ];
 
     public static Dictionary<string, bool> CreateDefaultItems()
@@ -51,7 +52,6 @@ public static class OverlayMetricItemDefaults
             or OverlayMetricItem.CaptureCost
             or OverlayMetricItem.SkippedTicks
             or OverlayMetricItem.BgiMemoryUsage
-            or OverlayMetricItem.BgiCpuUsage
             or OverlayMetricItem.MemoryUsage;
     }
 
