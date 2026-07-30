@@ -299,7 +299,7 @@
                         </b:Interaction.Triggers>
                     </ui:ToggleSwitch>
                 </Grid>
-                <!-- 固定三行三列，顺序来自 OverlayMetricItemDefaults.AllItems，与遮罩实际展示顺序一致。 -->
+                <!-- 固定四行三列，顺序来自 OverlayMetricItemDefaults.AllItems，与遮罩实际展示顺序一致。 -->
                 <ItemsControl Margin="48,0,52,12"
                               ItemsSource="{Binding OverlayMetricItems}">
                     <ItemsControl.ItemsPanel>
