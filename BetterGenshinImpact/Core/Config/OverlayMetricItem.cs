@@ -67,7 +67,7 @@ public static class OverlayMetricItemDefaults
             OverlayMetricItem.SkippedTicks => "跳过次数",
             OverlayMetricItem.CpuUsage => "CPU占用",
             OverlayMetricItem.GpuUsage => "显卡占用",
-            OverlayMetricItem.MemoryUsage => "系统内存",
+            OverlayMetricItem.MemoryUsage => "内存占用",
             OverlayMetricItem.BgiMemoryUsage => "BGI内存",
             OverlayMetricItem.BgiCpuUsage => "BGI CPU",
             _ => item.ToString()
