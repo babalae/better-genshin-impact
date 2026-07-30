@@ -14,7 +14,9 @@ public enum OverlayMetricItem
     SkippedTicks,
     CpuUsage,
     GpuUsage,
-    MemoryUsage
+    MemoryUsage,
+    BgiMemoryUsage,
+    BgiCpuUsage
 }
 
 public static class OverlayMetricItemDefaults
@@ -30,7 +32,9 @@ public static class OverlayMetricItemDefaults
         OverlayMetricItem.SkippedTicks,
         OverlayMetricItem.GpuUsage,
         OverlayMetricItem.CpuUsage,
-        OverlayMetricItem.MemoryUsage
+        OverlayMetricItem.MemoryUsage,
+        OverlayMetricItem.BgiMemoryUsage,
+        OverlayMetricItem.BgiCpuUsage
     ];
 
     public static Dictionary<string, bool> CreateDefaultItems()
@@ -46,6 +50,7 @@ public static class OverlayMetricItemDefaults
             or OverlayMetricItem.PeakProcessingCost
             or OverlayMetricItem.CaptureCost
             or OverlayMetricItem.SkippedTicks
+            or OverlayMetricItem.BgiMemoryUsage
             or OverlayMetricItem.MemoryUsage;
     }
 
@@ -62,6 +67,8 @@ public static class OverlayMetricItemDefaults
             OverlayMetricItem.CpuUsage => "CPU占用",
             OverlayMetricItem.GpuUsage => "显卡占用",
             OverlayMetricItem.MemoryUsage => "内存占用",
+            OverlayMetricItem.BgiMemoryUsage => "BGI内存",
+            OverlayMetricItem.BgiCpuUsage => "BGI CPU",
             _ => item.ToString()
         };
     }
@@ -79,6 +86,8 @@ public static class OverlayMetricItemDefaults
             OverlayMetricItem.CpuUsage => "CPU 总占用率，读取不到时自动隐藏。",
             OverlayMetricItem.GpuUsage => "原神当前使用显卡的整体占用率，按最繁忙 GPU 引擎计算；不可用时自动隐藏。",
             OverlayMetricItem.MemoryUsage => "系统内存占用率，读取不到时自动隐藏。",
+            OverlayMetricItem.BgiMemoryUsage => "BetterGI 进程自身占用的私有内存。",
+            OverlayMetricItem.BgiCpuUsage => "BetterGI 进程自身占用的 CPU 使用率。",
             _ => string.Empty
         };
     }
