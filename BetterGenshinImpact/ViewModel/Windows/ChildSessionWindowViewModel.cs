@@ -11,6 +11,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using Wpf.Ui.Controls;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -129,6 +131,22 @@ public partial class ChildSessionWindowViewModel : ViewModel
     [RelayCommand]
     private async Task StartAsync()
     {
+        if (_childSessionService.ConnectedState != 1
+            && _childSessionService.IsRdpWrapperEnabled())
+        {
+            var result = await ThemedMessageBox.WarningAsync(
+                "检测到系统已安装并启用 RDP Wrapper。\n\n"
+                + "RDP Wrapper 提供了更强大的远程多用户支持，但与当前的桌面分身功能不兼容，"
+                + "可能导致桌面分身无法正常启动。\n\n是否仍要继续？",
+                "RDP Wrapper 兼容性提醒",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
         _startRequested = true;
         IsConnectionPromptVisible = false;
 
