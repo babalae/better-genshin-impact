@@ -35,7 +35,6 @@ public static class OverlayMetricItemDefaults
         OverlayMetricItem.MemoryUsage,
         OverlayMetricItem.BgiMemoryUsage,
         OverlayMetricItem.BgiCpuUsage
-
     ];
 
     public static Dictionary<string, bool> CreateDefaultItems()
