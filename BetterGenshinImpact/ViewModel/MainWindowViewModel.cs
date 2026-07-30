@@ -34,6 +34,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
 using Newtonsoft.Json;
 using Wpf.Ui;
@@ -48,7 +50,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
+    private readonly ChildSessionService _childSessionService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    public bool IsChildSessionInstance =>
+        InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
 
     [ObservableProperty] private bool _isVisible = true;
 
@@ -87,10 +92,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     public MainWindowViewModel(
         INavigationService navigationService,
-        IConfigService configService)
+        IConfigService configService,
+        ChildSessionService childSessionService)
     {
         _navigationService = navigationService;
         _configService = configService;
+        _childSessionService = childSessionService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
     }
@@ -243,6 +250,15 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private void OnClosing(CancelEventArgs e)
     {
+        if (_childSessionService.HasActiveChildSession())
+        {
+            e.Cancel = true;
+            ThemedMessageBox.Warning(
+                "桌面分身仍在运行，请先关闭桌面分身，再关闭主窗口。",
+                "桌面分身未关闭");
+            return;
+        }
+
         if (Config.CommonConfig.ExitToTray)
         {
             e.Cancel = true;

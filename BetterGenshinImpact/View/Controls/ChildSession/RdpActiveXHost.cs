@@ -26,6 +26,7 @@ internal sealed class RdpActiveXHost : AxHost
     private RdpEventSink? _eventSink;
     private bool _connectionAttemptInProgress;
     private bool _connectionFailureReported;
+    private ChildSessionConnectionFailedEventArgs? _lastConnectionDiagnostic;
     private bool _disconnectRequested;
     private bool _sendSystemShortcutsToRemote = true;
     private DrawingSize? _pendingReconnectDesktopSize;
@@ -34,6 +35,9 @@ internal sealed class RdpActiveXHost : AxHost
     internal event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
 
     internal event EventHandler? LoginCompleted;
+
+    internal ChildSessionConnectionFailedEventArgs? LastConnectionDiagnostic =>
+        _lastConnectionDiagnostic;
 
     internal RdpActiveXHost()
         : base(ResolveRdpClientClsid())
@@ -145,6 +149,7 @@ internal sealed class RdpActiveXHost : AxHost
 
         _connectionAttemptInProgress = true;
         _connectionFailureReported = false;
+        _lastConnectionDiagnostic = null;
         _disconnectRequested = false;
         try
         {
@@ -349,6 +354,7 @@ internal sealed class RdpActiveXHost : AxHost
     {
         _connectionAttemptInProgress = false;
         _connectionFailureReported = false;
+        _lastConnectionDiagnostic = null;
         LoginCompleted?.Invoke(this, EventArgs.Empty);
     }
 
@@ -442,15 +448,23 @@ internal sealed class RdpActiveXHost : AxHost
 
     private void OnLogonError(int errorCode)
     {
-        if (_disconnectRequested
-            || !TryGetLogonErrorDescription(errorCode, out var errorDescription))
+        if (_disconnectRequested)
         {
+            return;
+        }
+
+        var message =
+            $"RDP 登录阶段：{GetLogonErrorDescription(errorCode)}\n\n错误代码：{FormatErrorCode(errorCode)}";
+        if (IsNonTerminalLogonEvent(errorCode))
+        {
+            _lastConnectionDiagnostic =
+                new ChildSessionConnectionFailedEventArgs(message, errorCode);
             return;
         }
 
         _connectionAttemptInProgress = false;
         ReportConnectionFailure(
-            $"RDP 登录失败：{errorDescription}\n\n错误代码：{FormatErrorCode(errorCode)}",
+            message.Replace("RDP 登录阶段：", "RDP 登录失败：", StringComparison.Ordinal),
             errorCode);
     }
 
@@ -543,22 +557,31 @@ internal sealed class RdpActiveXHost : AxHost
         };
     }
 
-    private static bool TryGetLogonErrorDescription(
-        int errorCode,
-        out string errorDescription)
+    private static string GetLogonErrorDescription(int errorCode)
     {
-        errorDescription = errorCode switch
+        return errorCode switch
         {
+            -7 => "Winlogon 正在显示“拒绝断开现有会话”对话框。",
+            -6 => "Winlogon 正在显示“无权限”对话框。",
+            -5 => "Winlogon 正在显示会话争用选项。",
+            -4 => "Winlogon 正在显示重新连接选项。",
+            -3 => "Winlogon 已静默终止登录。",
             -1 => "访问被拒绝。",
             0 => "登录凭据无效。",
             1 => "密码已过期，必须先修改密码。",
             2 => "登录或登录后的处理发生错误。",
+            3 => "RDP 客户端正在显示登录警告。",
             unchecked((int)0xC000006D) => "用户名或身份验证信息无效。",
             unchecked((int)0xC000006E) => "身份验证受到用户账户限制。",
             unchecked((int)0xC0000224) => "密码已过期，必须先修改密码。",
-            _ => string.Empty
+            _ => "登录阶段发生未识别的错误或事件。"
         };
-        return errorDescription.Length > 0;
+    }
+
+    private static bool IsNonTerminalLogonEvent(int errorCode)
+    {
+        // 这些代码表示登录仍在继续或 ActiveX 正在显示可交互选项，不应提前判定连接失败。
+        return errorCode is -5 or -4 or -2 or 3;
     }
 
     private object GetRequiredOcx()
