@@ -16,12 +16,14 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
 {
     private RECT captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    private readonly ILogger<Genshin> _logger = App.GetLogger<Genshin>();
 
     /// <summary>
     /// 游戏宽度
@@ -75,7 +77,6 @@ public class Genshin
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, mapName, force);
     }
 
-
     public async Task Tp(double x, double y, bool force)
     {
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, MapTypes.Teyvat.ToString(), force);
@@ -120,6 +121,23 @@ public class Genshin
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
+    }
+
+    /// <summary>
+    /// 点击大地图上的指定坐标。
+    /// </summary>
+    /// <remarks>
+    /// 该方法会先把目标移动到大地图的可点击安全区域，再执行一次点击。
+    /// </remarks>
+    /// <param name="x">目标X坐标。</param>
+    /// <param name="y">目标Y坐标。</param>
+    /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null。</param>
+    public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
+    {
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        await tpTask.CheckInBigMapUi();
+        await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+        await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
     }
 
     /// <summary>
@@ -287,12 +305,37 @@ public class Genshin
         {
             return await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
         }
-        catch (PartySetupFailedException ex)
+        catch (PartySetupFailedException)
         {
-            return false;//释放失败状态到JS，否则失败后会退出任务。
+            return false;//释放失败状态给调用方，否则失败后会退出任务。
         }
     }
-    
+
+    /// <summary>
+    /// 按槽位重组当前队伍角色。
+    /// </summary>
+    /// <param name="slot1">1 号位角色名。</param>
+    /// <param name="slot2">2 号位角色名。</param>
+    /// <param name="slot3">3 号位角色名。</param>
+    /// <param name="slot4">4 号位角色名。</param>
+    /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
+    /// <remarks>
+    /// 未传入的槽位默认跳过；空字符串表示跳过对应槽位。
+    /// 调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", "", "钟离");</c>
+    /// 该方法表示重组队伍槽位角色，不是按数字键切换当前出战角色。
+    /// </remarks>
+    public async Task<bool> SwitchCharacter(string slot1 = "", string slot2 = "", string slot3 = "", string slot4 = "")
+    {
+        try
+        {
+            return await new SwitchCharacterStateMachineTask().Start(slot1, slot2, slot3, slot4, CancellationContext.Instance.Cts.Token);
+        }
+        catch (PartySetupFailedException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// 清除当前调度器的队伍缓存
     /// </summary>

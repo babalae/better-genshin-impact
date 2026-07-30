@@ -1,0 +1,27 @@
+{
+  "objects": {
+    "ClaimText": {
+      "type": "TemplateMatch",
+      "template": "claim_text.png",
+      "roi": "rect(0, 0, cw, ch)",
+      "threshold": 0.86,
+      "maxMatchCount": 20,
+      "draw": true
+    },
+    "ClaimGift": {
+      "type": "TemplateMatch",
+      "template": "claim_gift.png",
+      "roi": "rect(0, 0, cw, ch)",
+      "threshold": 0.86,
+      "maxMatchCount": 20,
+      "draw": true
+    },
+    "ClickBlankContinue": {
+      "type": "TemplateMatch",
+      "template": "click_blank_continue.png",
+      "roi": "rect(0, 0, cw, ch)",
+      "threshold": 0.82,
+      "draw": false
+    }
+  }
+}

@@ -4,7 +4,7 @@ using System;
 namespace BetterGenshinImpact.GameTask.AutoBoss;
 
 /// <summary>
-/// 自动首领讨伐的持久化配置，由独立任务页和一条龙入口复用。
+/// 自动首领讨伐的持久化配置，由独立任务页使用。
 /// </summary>
 [Serializable]
 public partial class AutoBossConfig : ObservableObject
@@ -41,7 +41,12 @@ public partial class AutoBossConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _rewardRecognitionEnabled = false;
-
+    
+    /// <summary>
+    /// 战斗超时
+    /// </summary>
+    [ObservableProperty]
+    private int _timeout  = 240;
     /// <summary>
     /// 关闭指定讨伐次数时清空补充树脂开关，避免树脂耗尽模式误用须臾或脆弱树脂。
     /// </summary>

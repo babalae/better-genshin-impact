@@ -77,7 +77,7 @@ public static class OverlayMetricItemDefaults
             OverlayMetricItem.TriggerCost => "本轮实际执行触发器的总耗时。",
             OverlayMetricItem.SkippedTicks => "上一轮未结束导致本秒跳过的调度次数。",
             OverlayMetricItem.CpuUsage => "CPU 总占用率，读取不到时自动隐藏。",
-            OverlayMetricItem.GpuUsage => "显卡核心占用率，读取不到时自动隐藏。",
+            OverlayMetricItem.GpuUsage => "原神当前使用显卡的整体占用率，按最繁忙 GPU 引擎计算；不可用时自动隐藏。",
             OverlayMetricItem.MemoryUsage => "系统内存占用率，读取不到时自动隐藏。",
             _ => string.Empty
         };

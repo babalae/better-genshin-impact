@@ -68,7 +68,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                     var ra = CaptureToRectArea();
 
                     // 小地图匹配
-                    var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;
+                    var tar = ElementRecognition.Get("PaimonMenu").TemplateImageGreyMat!;
                     var p = MatchTemplateHelper.MatchTemplate(ra.CacheGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
                     if (p.X == 0 || p.Y == 0)
                     {

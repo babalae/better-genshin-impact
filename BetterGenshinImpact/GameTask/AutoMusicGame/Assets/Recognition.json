@@ -1,0 +1,44 @@
+{
+  "objects": {
+    "UiLeftTopAlbumIcon": {
+      "type": "TemplateMatch",
+      "template": "ui_left_top_album_icon.png",
+      "roi": "rect(0, 0, 150 * s, 120 * s)"
+    },
+    "BtnPause": {
+      "type": "TemplateMatch",
+      "template": "btn_pause.png",
+      "roi": "cutRightTop(0.2, 0.2)"
+    },
+    "AlbumMusicComplate": {
+      "type": "TemplateMatch",
+      "template": "album_music_complate.png",
+      "roi": "rect(900 * s, 320 * s, 100 * s, 80 * s)"
+    },
+    "BtnList": {
+      "type": "TemplateMatch",
+      "template": "btn_list.png",
+      "roi": "cutRightBottom(0.4, 0.2)"
+    },
+    "MusicCanorusLevel1": {
+      "type": "TemplateMatch",
+      "template": "music_canorus.png",
+      "roi": "rect(450 * s, 430 * s, 200 * s, 60 * s)"
+    },
+    "MusicCanorusLevel2": {
+      "type": "TemplateMatch",
+      "template": "music_canorus.png",
+      "roi": "rect(450 * s, 520 * s, 200 * s, 60 * s)"
+    },
+    "MusicCanorusLevel3": {
+      "type": "TemplateMatch",
+      "template": "music_canorus.png",
+      "roi": "rect(450 * s, 610 * s, 200 * s, 60 * s)"
+    },
+    "MusicCanorusLevel4": {
+      "type": "TemplateMatch",
+      "template": "music_canorus.png",
+      "roi": "rect(450 * s, 690 * s, 200 * s, 60 * s)"
+    }
+  }
+}

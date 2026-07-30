@@ -7,20 +7,24 @@ using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
-using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +54,7 @@ public partial class App : Application
     private static readonly IHost _host = Host.CreateDefaultBuilder()
         .CheckIntegration()
         .UseElevated()
-        .UseSingleInstance("BetterGI")
+        .UseInstanceIpc()
         .ConfigureLogging(builder => { builder.ClearProviders(); })
         .ConfigureServices((context, services) =>
             {
@@ -62,17 +66,23 @@ public partial class App : Application
                 var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
+                var instanceContext = InstanceBootstrap.Current.Context;
+                var instanceIdentity =
+                    $"{instanceContext.InstanceType}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
 
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
                 var loggerConfiguration = new LoggerConfiguration()
-                    .WriteTo.File(logFile,
-                        outputTemplate:
-                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
-                        rollingInterval: RollingInterval.Day,
-                        retainedFileCountLimit: 31,
-                        retainedFileTimeLimit: TimeSpan.FromDays(21))
+                    .WriteTo.Logger(fileLoggerConfiguration => fileLoggerConfiguration
+                        .Enrich.WithProperty("BgiInstance", instanceIdentity)
+                        .WriteTo.File(logFile,
+                            outputTemplate:
+                            "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] [{BgiInstance}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
+                            rollingInterval: RollingInterval.Day,
+                            shared: true,
+                            retainedFileCountLimit: 31,
+                            retainedFileTimeLimit: TimeSpan.FromDays(21)))
                     .WriteTo.Console(outputTemplate:
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Debug()
@@ -108,6 +118,9 @@ public partial class App : Application
                 services.AddLocalization();
 
                 services.AddNavigationViewPageProvider();
+                services.AddSingleton(InstanceBootstrap.Current);
+                services.AddSingleton<InstanceService>();
+                services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
@@ -121,6 +134,9 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
+                services.AddSingleton<ChildSessionService>();
+                services.AddTransient<ChildSessionWindowViewModel>();
+                services.AddTransient<ChildSessionWindow>();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();
@@ -151,13 +167,15 @@ public partial class App : Application
                 // services.AddSingleton<TcgViewModel>();
 
                 // My Services
+                services.AddSingleton<DirectInputMonitor>();
+                services.AddSingleton<RawInputMonitor>();
+                services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
-                services.AddSingleton<HutaoNamedPipe>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
@@ -260,6 +278,7 @@ public partial class App : Application
 
         await _host.StopAsync();
         _host.Dispose();
+        Log.CloseAndFlush();
 
         // 释放控制台窗口
         ConsoleHelper.FreeConsoleWindow();

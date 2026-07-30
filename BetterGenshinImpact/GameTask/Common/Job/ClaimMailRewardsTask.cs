@@ -42,30 +42,31 @@ public class ClaimMailRewardsTask
 
         await Delay(1300, ct);
 
-        var ra = CaptureToRectArea();
-        var mailIcon = ra.Find(ElementAssets.Instance.EscMailReward);
-        if (mailIcon.IsExist())
+        using (var ra = CaptureToRectArea())
         {
-            mailIcon.Click();
-            await Delay(1000, ct);
-            ra = CaptureToRectArea();
-            var claimAll = ra.Find(ElementAssets.Instance.CollectRo);
-            if (claimAll.IsExist())
+            var mailIcon = ra.Find(ElementRecognition.Get("EscMailReward", ra));
+            if (mailIcon.IsExist())
             {
-                claimAll.Click();
-                Logger.LogInformation("邮件：{Text}", "全部领取");
-                await Delay(200, ct);
-                // TODO 截图
-                
-                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE); // ESC 
+                mailIcon.Click();
+                await Delay(1000, ct);
+
+                using var claimArea = CaptureToRectArea();
+                var claimAll = claimArea.Find(ElementRecognition.Get("Collect", claimArea));
+                if (claimAll.IsExist())
+                {
+                    claimAll.Click();
+                    Logger.LogInformation("邮件：{Text}", "全部领取");
+                    await Delay(200, ct);
+                    // TODO 截图
+
+                    TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE); // ESC 
+                }
+            }
+            else
+            {
+                Logger.LogInformation("邮件：{Text}", "没有邮件奖励");
             }
         }
-        else
-        {
-            Logger.LogInformation("邮件：{Text}", "没有邮件奖励");
-        }
-
-        ra.Dispose();
 
         // 关闭
         await _returnMainUiTask.Start(ct);

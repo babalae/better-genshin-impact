@@ -62,6 +62,9 @@
                            IsTopSeparatorVisible="False"
                            IsFooterSeparatorVisible="False"
                            OpenPaneLength="160">
+            <b:Interaction.Behaviors>
+                <behavior:AnimatedNavigationSelectionIndicatorBehavior />
+            </b:Interaction.Behaviors>
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"
@@ -243,10 +246,32 @@
             </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
 
-        <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0" Grid.Column="0">
+        <ui:TitleBar Grid.Row="0" Grid.Column="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
+            <ui:TitleBar.Header>
+                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                    <b:Interaction.Behaviors>
+                        <behavior:WindowDragBehavior />
+                    </b:Interaction.Behaviors>
+                    <TextBlock VerticalAlignment="Center"
+                               Text="{Binding Title, Mode=OneWay}" />
+                    <Border Height="22"
+                            Margin="8,0,0,0"
+                            Padding="8,0"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                            CornerRadius="11"
+                            Visibility="{Binding IsChildSessionInstance, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   Text="桌面分身" />
+                    </Border>
+                </StackPanel>
+            </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
                     <ui:Button Width="40"
@@ -289,6 +314,11 @@
                     <ContextMenu.DataContext>
                         <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
                     </ContextMenu.DataContext>
+                    <ui:MenuItem Command="{Binding OpenChildSessionWindowCommand}"
+                                  Header="桌面分身"
+                                  Icon="{ui:SymbolIcon DesktopCursor24}"
+                                  Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Separator Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding CheckUpdateCommand}"
                                  Header="检查更新"
                                  Icon="{ui:SymbolIcon ArrowAutofitUp24}" />

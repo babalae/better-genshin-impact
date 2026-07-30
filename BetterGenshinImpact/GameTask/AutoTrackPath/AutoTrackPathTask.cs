@@ -333,7 +333,7 @@ public class AutoTrackPathTask
 
     public Mat? GetMiniMapMat(ImageRegion ra)
     {
-        var paimon = ra.Find(ElementAssets.Instance.PaimonMenuRo);
+        var paimon = ra.Find(ElementRecognition.Get("PaimonMenu", ra));
         if (paimon.IsExist())
         {
             return new Mat(ra.SrcMat, new Rect(paimon.X + 24, paimon.Y - 15, 210, 210));

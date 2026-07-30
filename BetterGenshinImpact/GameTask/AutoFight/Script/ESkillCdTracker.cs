@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +42,75 @@ public static class ESkillCdTracker
     /// <summary>角色名 → E 技能就绪的时间戳（UTC）</summary>
     private static readonly ConcurrentDictionary<string, DateTime> EReadyAt = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly ILogger Logger = App.GetLogger<ConditionEvaluator>();
+    /// <summary>E 键检测防抖：短时间多次触发仅最后一次生效</summary>
+    private static CancellationTokenSource? _debounceCts;
+    private static readonly object _debounceLock = new();
+
+    private static readonly ILogger Logger = App.GetLogger<ConditionEvaluator>(); // ESkillCdTracker 是静态类，不能用作泛型参数
+
+    /// <summary>
+    /// 防抖触发 E 技能 CD 检测。
+    /// 短时间内的多次调用仅最后一次生效，延迟 200ms 后执行 <paramref name="ocrFunc"/> 并记录/兜底。
+    /// </summary>
+    /// <param name="ocrFunc">执行 OCR 的函数，返回 CD 秒数（&gt;0 为有效值）</param>
+    /// <param name="characterName">角色名</param>
+    /// <param name="ct">外部取消令牌</param>
+    public static void TriggerECheck(Func<double> ocrFunc, string characterName, CancellationToken ct)
+    {
+        CancellationTokenSource? oldCts;
+        CancellationTokenSource newCts;
+        lock (_debounceLock)
+        {
+            oldCts = _debounceCts;
+            _debounceCts = newCts = new CancellationTokenSource();
+        }
+
+        // 只取消旧 CTS（唤醒旧 Task），Dispose 由旧 Task 自身的 finally 处理
+        try { oldCts?.Cancel(); } catch (ObjectDisposedException) { }
+
+        var capturedCts = newCts;
+        var debounceToken = capturedCts.Token;
+
+        Task.Run(() =>
+        {
+            try
+            {
+                ct.ThrowIfCancellationRequested();
+
+                // 等待 200ms 防抖窗口，有新触发或外部取消时提前退出
+                if (debounceToken.WaitHandle.WaitOne(200)) return;
+
+                ct.ThrowIfCancellationRequested();
+                debounceToken.ThrowIfCancellationRequested();
+
+                var cd = ocrFunc();
+
+                ct.ThrowIfCancellationRequested();
+                debounceToken.ThrowIfCancellationRequested();
+
+                var recordedCd = Record(characterName, cd);
+                if (recordedCd <= 0)
+                {
+                    recordedCd = ApplyFallback(characterName);
+                }
+
+                if (recordedCd > 0)
+                {
+                    Logger.LogInformation("{Name} 元素战技，cd:{Cooldown} 秒",
+                        characterName, Math.Round(recordedCd, 2));
+                }
+                else
+                {
+                    Logger.LogWarning("{Name} 战技cd未更新", characterName);
+                }
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                capturedCts.Dispose();
+            }
+        }, CancellationToken.None);
+    }
 
     /// <summary>
     /// 记录传入的 CD 值。> 0 时才写入，否则忽略。
@@ -59,7 +129,7 @@ public static class ESkillCdTracker
     /// 根据 <see cref="CdFallbackMap"/> 兜底设置 CD。
     /// 返回实际记录的 CD 值，无兜底或兜底失败时返回 0。
     /// </summary>
-    internal static double ApplyFallback(string characterName)
+    internal static double ApplyFallback(string characterName, bool log = true)
     {
         if (!CdFallbackMap.TryGetValue(characterName, out var fallbackType)) return 0;
 
@@ -71,7 +141,8 @@ public static class ESkillCdTracker
         if (fallbackType == FallbackType.SetFull)
         {
             Record(characterName, cfgCd);
-            Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(cfgCd, 2));
+            if (log)
+                Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(cfgCd, 2));
             return cfgCd;
         }
         else if (fallbackType == FallbackType.MinRemaining)
@@ -79,7 +150,8 @@ public static class ESkillCdTracker
             var remaining = GetRemainingCd(characterName);
             var actual = remaining > 0 ? Math.Min(remaining, cfgCd) : cfgCd;
             EReadyAt[characterName] = DateTime.UtcNow.AddSeconds(actual);
-            Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(actual, 2));
+            if (log)
+                Logger.LogInformation("{Name} 点按元素战技，cd:{Cd}秒（兜底设置）", characterName, Math.Round(actual, 2));
             return actual;
         }
 

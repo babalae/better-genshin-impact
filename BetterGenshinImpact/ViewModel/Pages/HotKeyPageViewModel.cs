@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Macro;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickBuy;
+using BetterGenshinImpact.GameTask.QuickClaimReward;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
@@ -399,6 +400,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        systemDirectory.Children.Add(new HotKeySettingModel(
+            "遮罩指标栏展示开关",
+            nameof(Config.HotKeyConfig.OverlayMetricsDisplayHotkey),
+            Config.HotKeyConfig.OverlayMetricsDisplayHotkey,
+            Config.HotKeyConfig.OverlayMetricsDisplayHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics = !TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics;
+            }
+        ));
+
         var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),
@@ -527,6 +539,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             (_, _) => { QuickBuyTask.Done(); },
             true
         ));
+
+        macroDirectory.Children.Add(new HotKeySettingModel(
+            "一键领取奖励",
+            nameof(Config.HotKeyConfig.OneKeyClaimRewardHotkey),
+            Config.HotKeyConfig.OneKeyClaimRewardHotkey,
+            Config.HotKeyConfig.OneKeyClaimRewardHotkeyType,
+            null,
+            true)
+        {
+            OnKeyDownAction = (_, _) => { OneKeyClaimRewardTask.Instance.KeyDown(); },
+            OnKeyUpAction = (_, _) => { OneKeyClaimRewardTask.Instance.KeyUp(); }
+        });
 
         macroDirectory.Children.Add(new HotKeySettingModel(
             "按下快速进出尘歌壶",

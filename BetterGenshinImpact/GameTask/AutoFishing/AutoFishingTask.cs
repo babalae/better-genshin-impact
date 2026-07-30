@@ -1,11 +1,11 @@
 using BehaviourTree;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -58,7 +58,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             IOcrService ocrService = OcrFactory.Paddle;
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
-            Blackboard blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
+            Blackboard blackboard = new Blackboard(_predictor, this.Sleep);
 
             // @formatter:off
             var behaviourTree = FluentBuilder.Create<ImageRegion>()
@@ -92,7 +92,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                         .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                                             //.MySimpleParallel("举起鱼竿并抛竿", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                                                             //    .PushLeaf(() => new LiftAndHold("举起鱼竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, param.UseTorch, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                                     //.End()
                                                     .End()
                                                 .End()
@@ -125,7 +125,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
             _logger.LogWarning("请不要携带任何{Msg}，极有可能会误识别导致拖慢速度！", "跟宠");
             _logger.LogInformation(
-                $"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}, {param.GameCultureInfo}, {param.UseTorch}");
+                $"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}, {param.GameCultureInfo}");
             TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
             _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");
 
@@ -170,7 +170,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             using var ra = TaskControl.CaptureToRectArea(forceNew: true);
-            if (ra.FindMulti(AutoFightAssets.Instance.PRa).Count != 0)
+            if (ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)).Count != 0)
             {
                 _logger.LogInformation("当前处于联机状态，不使用昼夜设置");
                 tickARound();
@@ -413,7 +413,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return BehaviourStatus.Running;
                 }
 
-                if (imageRegion.Find(blackboard.AutoFishingAssets.ExitFishingButtonRo).IsEmpty())
+                if (imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion)).IsEmpty())
                 {
                     if (overallWaitEndTime < timeProvider.GetLocalNow())
                     {

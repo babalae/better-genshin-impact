@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "regions": {
+    "option": "rect(cw / 2, ch / 12, cw - cw / 2 - cw / 6, ch - ch / 12 - 10)"
+  },
+  "objects": {
+    "StopAutoButton": {
+      "type": "TemplateMatch",
+      "template": "stop_auto.png",
+      "roi": "rect(0, 0, cw / 5, ch / 8)",
+      "draw": true
+    },
+    "DisabledUiButton": {
+      "type": "TemplateMatch",
+      "template": "disabled_ui.png",
+      "roi": "rect(0, 0, cw / 3, ch / 8)",
+      "draw": true
+    },
+    "PlayingText": {
+      "type": "OcrMatch",
+      "roi": "rect(100 * s, 35 * s, 85 * s, 35 * s)",
+      "oneContains": [
+        "播",
+        "番",
+        "放",
+        "中"
+      ],
+      "draw": true
+    },
+    "ChatIcon": {
+      "type": "TemplateMatch",
+      "template": "icon_option.png",
+      "draw": false
+    },
+    "OptionIcon": {
+      "type": "TemplateMatch",
+      "template": "icon_option.png",
+      "roi": "@option",
+      "draw": false
+    },
+    "DailyRewardIcon": {
+      "type": "TemplateMatch",
+      "template": "icon_daily_reward.png",
+      "roi": "@option",
+      "draw": false
+    },
+    "ExploreIcon": {
+      "type": "TemplateMatch",
+      "template": "icon_explore.png",
+      "roi": "@option",
+      "draw": false
+    },
+    "ExclamationIcon": {
+      "type": "TemplateMatch",
+      "template": "icon_exclamation.png",
+      "roi": "@option",
+      "draw": false
+    },
+    "PageClose": {
+      "type": "TemplateMatch",
+      "template": "page_close.png",
+      "roi": "rect(cw - cw / 8, 0, cw / 8, ch / 8)",
+      "draw": true
+    },
+    "Cook": {
+      "type": "TemplateMatch",
+      "template": "cook.png",
+      "roi": "rect(cw / 15, 0, cw / 14, ch / 14)",
+      "draw": true
+    },
+    "PageCloseMain": {
+      "type": "TemplateMatch",
+      "template": "page_close_main.png",
+      "roi": "rect(0, 0, cw / 25, ch / 14)",
+      "draw": true
+    },
+    "Collect": {
+      "type": "TemplateMatch",
+      "template": "collect.png",
+      "roi": "rect(0, ch - ch / 3, cw / 4, ch / 3)",
+      "draw": false
+    },
+    "Re": {
+      "type": "TemplateMatch",
+      "template": "re.png",
+      "roi": "rect(cw / 2, ch - ch / 4, cw / 4, ch / 4)",
+      "draw": false
+    },
+    "Primogem": {
+      "type": "TemplateMatch",
+      "template": "primogem.png",
+      "roi": "rect(0, ch / 3, cw, ch / 3)",
+      "draw": false
+    },
+    "SubmitExclamationIcon": {
+      "type": "TemplateMatch",
+      "template": "submit_icon_exclamation.png",
+      "roi": "rect(0, 0, cw, ch / 4)",
+      "draw": false
+    },
+    "SubmitGoods": {
+      "type": "TemplateMatch",
+      "template": "submit_goods.png",
+      "roi": "rect(0, 0, cw / 2, ch / 3)",
+      "threshold": 0.9,
+      "use3Channels": true,
+      "templateMatchMode": "CCorrNormed",
+      "draw": true
+    },
+    "HangoutSelected": {
+      "type": "TemplateMatch",
+      "template": "hangout_selected.png",
+      "draw": true
+    },
+    "HangoutUnselected": {
+      "type": "TemplateMatch",
+      "template": "hangout_unselected.png",
+      "draw": true
+    },
+    "HangoutSkip": {
+      "type": "TemplateMatch",
+      "template": "hangout_skip.png",
+      "roi": "rect(0, 0, cw / 5, ch / 8)"
+    }
+  }
+}

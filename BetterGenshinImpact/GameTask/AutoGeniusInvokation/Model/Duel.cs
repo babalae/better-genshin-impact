@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
@@ -63,7 +63,6 @@ public class Duel
         {
             Notify.Event(NotificationEvent.TcgStart).Success("自动七圣召唤启动");
             
-            AutoGeniusInvokationAssets.DestroyInstance();
             
             GeniusInvokationControl.GetInstance().Init(ct);
 

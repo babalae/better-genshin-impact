@@ -86,23 +86,42 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     /// 是否启用奖励名称识别。默认关闭。
     /// </summary>
     public bool RewardRecognitionEnabled { get; set; }
-
+    
+    /// <summary>
+    /// 战斗超时
+    /// </summary>
+    public int Timeout { get; set; } = 240;
+    
     /// <summary>
     /// 使用当前全局 AutoBoss 配置创建参数，主要用于 JS 无参构造和一条龙默认启动。
     /// </summary>
-    public AutoBossParam() : base(null, null)
+    public AutoBossParam() : this(true)
     {
-        SetDefault();
     }
 
     /// <summary>
     /// 使用当前全局 AutoBoss 配置创建参数，并用传入路径覆盖实际战斗策略路径。
     /// </summary>
     /// <param name="combatStrategyPath">自动战斗策略文件或策略目录路径。</param>
-    public AutoBossParam(string combatStrategyPath) : base(null, null)
+    public AutoBossParam(string combatStrategyPath) : this(true)
     {
-        SetDefault();
         CombatStrategyPath = combatStrategyPath;
+    }
+
+    private AutoBossParam(bool loadDefaultConfig) : base(null, null)
+    {
+        if (loadDefaultConfig)
+        {
+            SetDefault();
+        }
+    }
+
+    internal static AutoBossParam CreateWithoutDefaultConfig(string combatStrategyPath)
+    {
+        return new AutoBossParam(false)
+        {
+            CombatStrategyPath = combatStrategyPath
+        };
     }
 
     /// <summary>
@@ -129,6 +148,7 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
         ReviveRetryCount = config.ReviveRetryCount;
         ReturnToStatueAfterEachRound = config.ReturnToStatueAfterEachRound;
         RewardRecognitionEnabled = config.RewardRecognitionEnabled;
+        Timeout = config.Timeout;
     }
 
     /// <summary>

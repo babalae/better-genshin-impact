@@ -59,6 +59,26 @@ public class BigMapTeyvat256Layer : BaseMapLayer
         return _siftMatcher.KnnMatchRect(TrainKeyPoints, TrainDescriptors, greyBigMapMat);
     }
 
+    public Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter)
+    {
+        using var resizedGrey = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
+        if (!IsValidPoint(expectedCenter) || SplitBlocks.Length == 0 || SplitBlocks[0].Length == 0)
+        {
+            return _siftMatcher.Match(TrainKeyPoints, TrainDescriptors, resizedGrey);
+        }
+
+        var searchRect = BuildLocalSearchRect(expectedCenter, resizedGrey.Size(), _mapSize256);
+        var result = _siftMatcher.KnnMatchLocal(
+            SplitBlocks,
+            TrainDescriptors,
+            _mapSize256,
+            searchRect,
+            resizedGrey);
+        return result == default
+            ? _siftMatcher.Match(TrainKeyPoints, TrainDescriptors, resizedGrey)
+            : result;
+    }
+
     /// <summary>
     /// 根据上一个矩形位置，自适应地扩大搜索范围
     /// 自适应扩展：
@@ -109,5 +129,22 @@ public class BigMapTeyvat256Layer : BaseMapLayer
             return _siftMatcher.KnnMatchRect(TrainKeyPoints, TrainDescriptors, greyBigMapMat);
         }
         return res;
+    }
+
+    private static bool IsValidPoint(Point2f point)
+    {
+        return float.IsFinite(point.X) && float.IsFinite(point.Y) &&
+               (Math.Abs(point.X) > float.Epsilon || Math.Abs(point.Y) > float.Epsilon);
+    }
+
+    private static Rect BuildLocalSearchRect(Point2f center, Size querySize, Size trainImageSize)
+    {
+        var width = Math.Min(trainImageSize.Width, Math.Max(querySize.Width * 2.0, trainImageSize.Width / 4.0));
+        var height = Math.Min(trainImageSize.Height, Math.Max(querySize.Height * 2.0, trainImageSize.Height / 4.0));
+        var rectWidth = (int)Math.Round(width);
+        var rectHeight = (int)Math.Round(height);
+        var x = Math.Clamp((int)Math.Round(center.X - rectWidth / 2.0), 0, Math.Max(0, trainImageSize.Width - rectWidth));
+        var y = Math.Clamp((int)Math.Round(center.Y - rectHeight / 2.0), 0, Math.Max(0, trainImageSize.Height - rectHeight));
+        return new Rect(x, y, rectWidth, rectHeight);
     }
 }

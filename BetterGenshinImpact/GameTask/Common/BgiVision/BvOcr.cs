@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
@@ -17,7 +17,7 @@ public static partial class Bv
 {
     public static string FindFKeyText(ImageRegion region)
     {
-        using var foundRectArea = region.Find(AutoPickAssets.Instance.PickRo);
+        using var foundRectArea = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo);
         if (foundRectArea.IsEmpty())
         {
             return string.Empty;

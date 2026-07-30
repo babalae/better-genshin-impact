@@ -62,7 +62,8 @@ public partial class CaptureTestWindow
     {
         var sw = new Stopwatch();
         sw.Start();
-        using var mat = _capture?.Capture();
+        using var captureFrame = _capture?.Capture();
+        var mat = captureFrame?.Frame;
         sw.Stop();
         Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
         _captureTime += sw.ElapsedMilliseconds;
