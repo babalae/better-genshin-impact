@@ -19,6 +19,8 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 public partial class ChildSessionWindowViewModel : ViewModel
 {
     private const string DesktopHelpUrl = "https://www.bettergi.com/feats/command/session.html";
+    private const double DefaultWindowWidth = 1280d;
+    private const double SmallWindowWidth = 500d;
 
     private readonly ChildSessionService _childSessionService;
     private readonly DispatcherTimer _notificationTimer;
@@ -61,6 +63,15 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _keepAspectRatio = true;
 
     [ObservableProperty]
+    private int _smallWindowResizeRequest;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WindowSizeModeMenuHeader))]
+    [NotifyPropertyChangedFor(nameof(WindowSizeModeMenuToolTip))]
+    [NotifyPropertyChangedFor(nameof(WindowResizeTargetWidth))]
+    private bool _isSmallWindowMode;
+
+    [ObservableProperty]
     private bool _sendSystemShortcutsToRemote = true;
 
     [ObservableProperty]
@@ -94,6 +105,16 @@ public partial class ChildSessionWindowViewModel : ViewModel
     public string GameMouseModeButtonToolTip => IsGameMouseModeEnabled
         ? "桌面分身内的 BetterGI 打开时生效；当前窗口处于焦点时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。"
         : "切换至游戏鼠标模式。桌面分身内的 BetterGI 打开时生效；当前窗口处于前台时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。";
+
+    public string WindowSizeModeMenuHeader => IsSmallWindowMode ? "还原窗口" : "小窗模式";
+
+    public string WindowSizeModeMenuToolTip => IsSmallWindowMode
+        ? "将桌面分身窗口还原至默认大小"
+        : "将桌面分身窗口缩放至宽 750，并按 16:9 比例同步缩小高度";
+
+    public double WindowResizeTargetWidth => IsSmallWindowMode
+        ? SmallWindowWidth
+        : DefaultWindowWidth;
 
     public bool HasChildSession => _childSessionService.ChildSessionId is not null;
 
@@ -212,6 +233,13 @@ public partial class ChildSessionWindowViewModel : ViewModel
         IsOneToOne = true;
         OnPropertyChanged(nameof(IsAdaptive));
         OnPropertyChanged(nameof(IsOneToOne));
+    }
+
+    [RelayCommand]
+    private void ToggleSmallWindowMode()
+    {
+        IsSmallWindowMode = !IsSmallWindowMode;
+        SmallWindowResizeRequest++;
     }
 
     [RelayCommand]
