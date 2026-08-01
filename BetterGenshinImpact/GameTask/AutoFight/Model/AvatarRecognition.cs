@@ -66,28 +66,43 @@ public static class AvatarRecognition
     }
 
     /// <summary>
-    /// 持续索敌跳过标记：当某角色进行独占视角操作（如重击索敌）时设为 true，
-    /// 持续索敌循环将跳过本帧，避免两者争夺鼠标控制权。
+    /// 排他锁：保护持续索敌的"检查+MoveMouseBy"与独占操作的 BeginExclusiveOperation/Dispose 互斥，
+    /// 解决 volatile bool 的 check-then-act 竞态。
     /// </summary>
-    private static volatile bool _skipSeek;
+    private static readonly object _seekLock = new();
 
     /// <summary>
-    /// 开始独占视角操作。
-    /// 返回的 <see cref="SkipSeekScope"/> 在 Dispose 时自动重置跳过标记。
+    /// 持续索敌跳过引用计数：&gt;0 表示至少有一个独占视角操作正在进行，
+    /// 持续索敌循环应跳过本帧。使用引用计数支持嵌套独占操作。
+    /// </summary>
+    private static int _skipSeekCount;
+
+    /// <summary>
+    /// 开始独占视角操作（引用计数 +1，含锁保证互斥）。
+    /// 返回的 <see cref="SkipSeekScope"/> 在 Dispose 时自动递减计数。
     /// 使用方应通过 using 语句确保异常安全。
     /// </summary>
     internal static SkipSeekScope BeginExclusiveOperation()
     {
-        _skipSeek = true;
+        lock (_seekLock)
+        {
+            _skipSeekCount++;
+        }
         return new SkipSeekScope();
     }
 
     /// <summary>
-    /// 独占操作作用域。Dispose 时自动重置 SkipSeek，避免遗漏恢复。
+    /// 独占操作作用域。Dispose 时自动递减排他计数（锁内递减保证互斥）。
     /// </summary>
     internal readonly struct SkipSeekScope : IDisposable
     {
-        public void Dispose() => _skipSeek = false;
+        public void Dispose()
+        {
+            lock (_seekLock)
+            {
+                _skipSeekCount--;
+            }
+        }
     }
 
     /// <summary>
@@ -401,8 +416,8 @@ public static class AvatarRecognition
         {
             while (!ct.IsCancellationRequested && !(isFightEnd?.Invoke() ?? false))
             {
-                // SkipSeek 为 true 时跳过本轮索敌，避免视角控制冲突
-                if (_skipSeek)
+                // 快速路径：排他计数 > 0 时跳过本轮，避免不必要的截图开销
+                if (Volatile.Read(ref _skipSeekCount) > 0)
                 {
                     await Task.Delay(frameIntervalMs, ct);
                     continue;
@@ -437,9 +452,12 @@ public static class AvatarRecognition
                             Math.Abs((b.y + b.height / 2) - preAimY)).First();
                         var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                         var offsetY = (nearest.y + nearest.height / 2) - preAimY;
-                        if (_skipSeek) continue;
-                        Simulation.SendInput.Mouse.MoveMouseBy(
-                            (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                        lock (_seekLock)
+                        {
+                            if (_skipSeekCount > 0) continue;
+                            Simulation.SendInput.Mouse.MoveMouseBy(
+                                (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                        }
 
                         // 叠加层：最近血条绿色粗框，其余红色细框
                         if (drawResults)
@@ -467,9 +485,12 @@ public static class AvatarRecognition
                             lastSeenTargetTime = DateTime.UtcNow;
                             var offsetX = dcx - preAimX;
                             var offsetY = dcy - preAimY;
-                            if (_skipSeek) continue;
-                            Simulation.SendInput.Mouse.MoveMouseBy(
-                                (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                            lock (_seekLock)
+                            {
+                                if (_skipSeekCount > 0) continue;
+                                Simulation.SendInput.Mouse.MoveMouseBy(
+                                    (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                            }
 
                             // 叠加层：伤害数字区域绿色框
                             if (drawResults)
@@ -488,8 +509,11 @@ public static class AvatarRecognition
                             if (!lastSeenTargetTime.HasValue ||
                                 (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
                             {
-                                if (_skipSeek) continue;
-                                Simulation.SendInput.Mouse.MoveMouseBy((int)(250 * dpi), 0);
+                                lock (_seekLock)
+                                {
+                                    if (_skipSeekCount > 0) continue;
+                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(250 * dpi), 0);
+                                }
                             }
                         }
                     }
