@@ -15,6 +15,7 @@ using System.Windows.Interop;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.View.Windows;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -55,6 +56,14 @@ public partial class NotifyIconViewModel : ObservableObject
     [RelayCommand]
     public void Exit()
     {
+        if (_childSessionService.HasActiveChildSession())
+        {
+            ThemedMessageBox.Warning(
+                "桌面分身仍在运行，请先关闭桌面分身，再退出 BetterGI。",
+                "桌面分身未关闭");
+            return;
+        }
+
         App.GetService<IConfigService>()?.Save();
         Application.Current.Shutdown();
     }

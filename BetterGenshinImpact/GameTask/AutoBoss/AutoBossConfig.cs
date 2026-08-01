@@ -41,7 +41,12 @@ public partial class AutoBossConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _rewardRecognitionEnabled = false;
-
+    
+    /// <summary>
+    /// 战斗超时
+    /// </summary>
+    [ObservableProperty]
+    private int _timeout  = 240;
     /// <summary>
     /// 关闭指定讨伐次数时清空补充树脂开关，避免树脂耗尽模式误用须臾或脆弱树脂。
     /// </summary>

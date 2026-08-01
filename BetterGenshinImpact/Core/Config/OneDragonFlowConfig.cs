@@ -32,7 +32,6 @@ public partial class OneDragonFlowConfig : ObservableObject
     /// 任务定义（Id → 任务名），用于支持同名任务重复添加
     /// </summary>
     public Dictionary<string, string> TaskDefinitions { get; set; } = new();
-   
     // 合成树脂的国家
     [ObservableProperty]
     private string _craftingBenchCountry = "枫丹";
@@ -83,7 +82,9 @@ public partial class OneDragonFlowConfig : ObservableObject
 
     [ObservableProperty]
     private bool _autoBossRewardRecognitionEnabled = false;
-
+    
+    [ObservableProperty]
+    private int _autoBossTimeout = 240;
     partial void OnAutoBossSpecifyRunCountChanged(bool value)
     {
         if (value)

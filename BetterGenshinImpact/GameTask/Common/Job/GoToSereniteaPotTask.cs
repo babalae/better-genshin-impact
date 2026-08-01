@@ -118,7 +118,8 @@ internal class GoToSereniteaPotTask
 
         for (int i = 0; i < 5; i++)
         {
-            var sereniteaPotHomeIcon = ra.Find(ElementRecognition.Get("SereniteaPotHome", ra));
+            using var currentRa = CaptureToRectArea();
+            var sereniteaPotHomeIcon = currentRa.Find(ElementRecognition.Get("SereniteaPotHome", currentRa));
             if (!sereniteaPotHomeIcon.IsExist())
             {
                 Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
@@ -128,6 +129,9 @@ internal class GoToSereniteaPotTask
             }
             else
             {
+                await Delay(100, ct);
+                Simulation.ReleaseAllKey();
+                await Delay(200, ct);
                 sereniteaPotHomeIcon.Click();
                 await Delay(500, ct);
                 break;

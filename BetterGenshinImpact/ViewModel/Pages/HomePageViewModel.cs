@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
@@ -315,6 +316,7 @@ public partial class HomePageViewModel : ViewModel
                 _maskWindow ??= new MaskWindow();
                 _maskWindow.Show();
                 MaskWindow.Instance().RefreshPosition();
+                App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
             }

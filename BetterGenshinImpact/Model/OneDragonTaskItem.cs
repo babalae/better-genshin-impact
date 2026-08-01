@@ -79,7 +79,7 @@ public partial class OneDragonTaskItem : ObservableObject
                 {
                     try
                     {
-                        await new GoToCraftingBenchTask().Start(config.CraftingBenchCountry,
+                        await new GoToCraftingBenchTask().GoCraftResin(config.CraftingBenchCountry,
                             CancellationContext.Instance.Cts.Token);
                     }
                     catch (Exception e)
@@ -155,6 +155,8 @@ public partial class OneDragonTaskItem : ObservableObject
                     param.ReviveRetryCount = config.AutoBossReviveRetryCount;
                     param.ReturnToStatueAfterEachRound = config.AutoBossReturnToStatueAfterEachRound;
                     param.RewardRecognitionEnabled = config.AutoBossRewardRecognitionEnabled;
+                    param.RewardRecognitionEnabled = config.AutoBossRewardRecognitionEnabled;
+                    param.Timeout = config.AutoBossTimeout;
                     await new AutoBossTask(param).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
