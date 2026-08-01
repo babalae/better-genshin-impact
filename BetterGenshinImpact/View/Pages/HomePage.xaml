@@ -29,6 +29,8 @@
             <Border.ContextMenu>
                 <ContextMenu>
                     <ui:MenuItem Header="更换背景图片" Command="{Binding ChangeBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
+                    <ui:MenuItem Header="使用网络图片" Command="{Binding ChangeWebBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
+                    <ui:MenuItem Header="刷新网络图片" Command="{Binding RefreshWebBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" Visibility="{Binding IsCustomNetworkBanner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <ui:MenuItem Header="恢复默认图片" Command="{Binding ResetBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" />
                 </ContextMenu>
             </Border.ContextMenu>

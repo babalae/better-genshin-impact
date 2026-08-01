@@ -146,6 +146,7 @@ public partial class App : Application
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
+                services.AddSingleton<WebImageInputViewModel>();
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
 
