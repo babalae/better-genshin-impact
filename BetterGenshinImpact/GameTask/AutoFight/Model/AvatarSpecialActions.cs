@@ -33,6 +33,11 @@ public static class AvatarSpecialAction
     private const double OverheatThreshold = 0.5;
 
     /// <summary>
+    /// 桑多涅特化叠加层目标框共享画笔（避免每帧新建 Pen 导致 GDI+ 句柄抖动）
+    /// </summary>
+    private static readonly System.Drawing.Pen _targetPen = new(System.Drawing.Color.LimeGreen, 2);
+
+    /// <summary>
     /// 木偶（桑多涅）红温状态特征模型（硬编码自训练工具导出的 JSON）。
     /// </summary>
     private static readonly FeatureScorerExportData _overheatModel = new()
@@ -364,7 +369,7 @@ public static class AvatarSpecialAction
                                         {
                                             var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
                                             if (b.x == nearest.x && b.y == nearest.y && b.width == nearest.width && b.height == nearest.height)
-                                                drawList.Add(capture.ToRectDrawable(rect, "target", new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                                drawList.Add(capture.ToRectDrawable(rect, "target", _targetPen));
                                             else
                                                 drawList.Add(capture.ToRectDrawable(rect, "blood"));
                                         }
@@ -385,7 +390,7 @@ public static class AvatarSpecialAction
                                             drawList.Add(capture.ToRectDrawable(
                                                 new OpenCvSharp.Rect(dx, dy, dw, dh),
                                                 "damage_target",
-                                                new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                                _targetPen));
                                         }
                                     }
 

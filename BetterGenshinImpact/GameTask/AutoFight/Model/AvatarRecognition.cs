@@ -38,6 +38,11 @@ public static class AvatarRecognition
     private static readonly AsyncLocal<AutoFightParam?> _currentAutoFightParam = new();
 
     /// <summary>
+    /// 索敌叠加层目标框共享画笔（避免每帧新建 Pen 导致 GDI+ 句柄抖动）
+    /// </summary>
+    private static readonly System.Drawing.Pen _targetPen = new(System.Drawing.Color.LimeGreen, 2);
+
+    /// <summary>
     /// 设置当前战斗参数，后续的视觉配置读取将优先使用此参数中的值而非全局配置。
     /// 应在 Start 开头调用，并在 Start 的 finally 中调用 <see cref="ClearCurrentAutoFightParam"/> 清理。
     /// </summary>
@@ -447,7 +452,7 @@ public static class AvatarRecognition
                                 drawList.Add(capture.ToRectDrawable(rect,
                                     isTarget ? "target" : "blood",
                                     isTarget
-                                        ? new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)
+                                        ? _targetPen
                                         : null));
                             }
                         }
@@ -472,7 +477,7 @@ public static class AvatarRecognition
                                 drawList.Add(capture.ToRectDrawable(
                                     new OpenCvSharp.Rect(dx, dy, dw, dh),
                                     "damage_target",
-                                    new System.Drawing.Pen(System.Drawing.Color.LimeGreen, 2)));
+                                    _targetPen));
                             }
                         }
 
