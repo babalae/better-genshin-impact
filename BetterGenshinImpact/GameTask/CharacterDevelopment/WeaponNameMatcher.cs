@@ -13,7 +13,9 @@ namespace BetterGenshinImpact.GameTask.CharacterDevelopment;
 /// </summary>
 /// <param name="Name">物品原型表中的标准武器名称。</param>
 /// <param name="Distance">OCR 文本与标准名称的 Levenshtein 编辑距离。</param>
-internal sealed record WeaponNameMatch(string Name, int Distance);
+/// <param name="Similarity">按较长文本长度归一化后的相似度，范围为 0 到 1。</param>
+/// <param name="IsReliable">匹配是否满足自动纠错的可信度要求。</param>
+internal sealed record WeaponNameMatch(string Name, int Distance, double Similarity, bool IsReliable);
 
 /// <summary>
 /// 使用物品图标 ONNX 配套表格修正武器名称 OCR。
@@ -24,6 +26,9 @@ internal sealed record WeaponNameMatch(string Name, int Distance);
 /// </remarks>
 internal static class WeaponNameMatcher
 {
+    private const int MaximumEditDistance = 1;
+    private const double MinimumSimilarity = 2d / 3d;
+    private const int MinimumDistanceMargin = 1;
     private const string WeaponPrototypePath = @"Assets\Model\ItemV2\item.csv";
     private static readonly Lazy<IReadOnlyList<string>> WeaponNames = new(LoadWeaponNames);
 
@@ -36,7 +41,7 @@ internal static class WeaponNameMatcher
     }
 
     /// <summary>
-    /// 在给定名称表中选择编辑距离最小的名称；距离相同时按名称序确定结果，保证行为可重复。
+    /// 在给定名称表中选择编辑距离最小的名称，并判断该候选是否足够可信。
     /// </summary>
     internal static WeaponNameMatch MatchClosest(string ocrText, IReadOnlyList<string> weaponNames)
     {
@@ -51,11 +56,27 @@ internal static class WeaponNameMatcher
             throw new InvalidDataException("武器名称表中没有可用的武器。");
         }
 
-        return weaponNames
-            .Select(name => new WeaponNameMatch(name, LevenshteinDistance(normalizedText, name)))
+        var candidates = weaponNames
+            .Select(name =>
+            {
+                var distance = LevenshteinDistance(normalizedText, name);
+                var maximumLength = Math.Max(normalizedText.Length, name.Length);
+                var similarity = 1d - (double)distance / maximumLength;
+                return new WeaponNameMatch(name, distance, similarity, false);
+            })
             .OrderBy(match => match.Distance)
             .ThenBy(match => match.Name, StringComparer.Ordinal)
-            .First();
+            .Take(2)
+            .ToArray();
+
+        var best = candidates[0];
+        var distanceMargin = candidates.Length == 1
+            ? int.MaxValue
+            : candidates[1].Distance - best.Distance;
+        var isReliable = best.Distance <= MaximumEditDistance
+                         && best.Similarity >= MinimumSimilarity
+                         && (best.Distance == 0 || distanceMargin >= MinimumDistanceMargin);
+        return best with { IsReliable = isReliable };
     }
 
     /// <summary>

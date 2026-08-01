@@ -968,10 +968,20 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
             {
                 var match = WeaponNameMatcher.Match(lastOcrText);
                 lastMatchedName = match.Name;
-                var isStable = stableNames.Add(match.Name);
-                if (isStable)
+                if (!match.IsReliable)
                 {
-                    return match.Name;
+                    stableNames.Reset();
+                    _logger.LogDebug(
+                        "角色养成识别：武器名称 OCR 第 {Attempt}/{MaxAttempts} 次匹配不可信，原文={OcrText}，候选={MatchedName}，编辑距离={Distance}，相似度={Similarity:F2}",
+                        attempt, MaxOcrAttempts, lastOcrText, match.Name, match.Distance, match.Similarity);
+                }
+                else
+                {
+                    var isStable = stableNames.Add(match.Name);
+                    if (isStable)
+                    {
+                        return match.Name;
+                    }
                 }
             }
 
