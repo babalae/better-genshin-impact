@@ -107,6 +107,23 @@ public partial class AutoFightConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private bool _skipFightEndCheckWhenEnemyVisible = false;
+
+        /// <summary>
+        /// 与"敌人可见时跳过战斗结束检查"互斥：开启旋转寻找敌人时关闭跳过检查，
+        /// 避免跳过分支不清零旋转计数导致战斗被误判结束。
+        /// </summary>
+        partial void OnRotateFindEnemyEnabledChanged(bool value)
+        {
+            if (value) SkipFightEndCheckWhenEnemyVisible = false;
+        }
+
+        /// <summary>
+        /// 与"旋转寻找敌人位置"互斥：开启跳过战斗结束检查时关闭旋转寻找敌人。
+        /// </summary>
+        partial void OnSkipFightEndCheckWhenEnemyVisibleChanged(bool value)
+        {
+            if (value) RotateFindEnemyEnabled = false;
+        }
     }
     /// <summary>
     /// 战斗结束相关配置

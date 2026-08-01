@@ -612,7 +612,7 @@
                                                   Text="敌人可见时跳过战斗结束检查"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="检测到敌人血条或伤害数字时跳过战斗结束检查，避免频繁打开队伍界面。连续跳过5次后强制检查一次，防误判。"
+                                                  Text="检测到敌人血条时跳过战斗结束检查。与&#x201C;旋转寻找敌人位置&#x201D;互斥。"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                                 <ui:ToggleSwitch Grid.Column="1"
