@@ -194,8 +194,8 @@ public static class AvatarRecognition
                 }
             }
 
-            // 自动更新传奇血条动态追踪
-            UpdateLegendaryBarTracker(results.Select(r => (r.x, r.y)));
+            // 自动更新传奇血条动态追踪（排除左侧 UI 区域 x<=200，避免队伍头像等红色元素被误计为传奇血条）
+            UpdateLegendaryBarTracker(results.Where(r => r.x > (int)(200 * AssetScale)).Select(r => (r.x, r.y)));
 
             return results;
         }
@@ -426,7 +426,7 @@ public static class AvatarRecognition
 
                     var drawList = new List<RectDrawable>();
 
-                    bool hasLegendaryBar = bars.Any(b => IsLegendaryBar(b.x, b.y));
+                    bool hasLegendaryBar = valid.Any(b => IsLegendaryBar(b.x, b.y));
 
                     // 2. 血条追踪：存在有效普通血条且无传奇时，朝最近血条方向移动鼠标
                     if (valid.Count > 0 && !hasLegendaryBar)

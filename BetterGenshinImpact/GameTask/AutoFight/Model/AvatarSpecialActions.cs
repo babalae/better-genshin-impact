@@ -352,7 +352,7 @@ public static class AvatarSpecialAction
 
                                 var drawList = new System.Collections.Generic.List<View.Drawable.RectDrawable>();
 
-                                bool hasLegendaryBar = bars.Any(b => AvatarRecognition.IsLegendaryBar(b.x, b.y));
+                                bool hasLegendaryBar = valid.Any(b => AvatarRecognition.IsLegendaryBar(b.x, b.y));
 
                                 if (valid.Count > 0 && !hasLegendaryBar)
                                 {
