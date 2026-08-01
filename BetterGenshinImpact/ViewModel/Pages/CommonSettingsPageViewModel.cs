@@ -589,6 +589,7 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
     {
         return
         [
+            new OverlayStyleSettingGroup("全局遮罩配置", "控制整个遮罩窗口的通用显示效果。", OverlayStyleSettingGroupKind.Global, CreateGlobalItems(config, onChanged)),
             new OverlayStyleSettingGroup("日志遮罩", "显示运行日志，方便查看当前任务执行到哪一步。", OverlayStyleSettingGroupKind.Log, [
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBackgroundColor), "日志区域背景色", "日志窗口底色。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBorderColor), "日志区域边框颜色", "日志窗口边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
@@ -617,6 +618,7 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBorderColor), "指标栏边框颜色", "指标栏边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsPanelBorderThickness), "指标栏边框粗细", "指标栏边框线宽。填 0 表示不显示边框。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsTextColor), "指标文字颜色", "指标文字颜色。", onChanged),
+                OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.MetricsFontScale), "指标栏缩放率", "启用遮罩缩放后，在指标字号和布局尺寸的基础上叠加缩放，范围为 0.5-3.0 倍。", MaskWindowConfig.MinLogFontScale, MaskWindowConfig.MaxLogFontScale, 0.1, onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsFontSize), "指标文字大小", "指标栏字号。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsLineHeight), "指标单行高度", "每一行指标占用的高度。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsItemWidth), "单个指标项宽度", "每个指标项占用的宽度。", onChanged),
@@ -634,7 +636,6 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowOpacity), "方位文字阴影透明度", "方位文字阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowBlurRadius), "方位文字阴影模糊半径", "方位文字阴影的扩散范围，数值越大阴影越柔和。", onChanged),
             ], config, nameof(MaskWindowConfig.DirectionsEnabled), onChanged),
-            new OverlayStyleSettingGroup("全局遮罩", "控制整个遮罩窗口的通用显示效果。", OverlayStyleSettingGroupKind.Global, CreateGlobalItems(config, onChanged)),
             new OverlayStyleSettingGroup("识别结果遮罩", "显示图像识别的框线和文字。", OverlayStyleSettingGroupKind.Recognition, [
                 OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.RecognitionUseDrawableStyle), "统一识别框线颜色", "关闭时保留任务自己指定的颜色；开启后使用下面设置的统一颜色。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionRectStrokeColor), "识别矩形边框颜色", "开启统一颜色后，识别矩形框使用的颜色。", onChanged),
@@ -653,6 +654,8 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
 
     private static IEnumerable<OverlayStyleSettingItem> CreateGlobalItems(MaskWindowConfig config, Action onChanged)
     {
+        yield return OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.OverlayScalingEnabled), "启用遮罩字体缩放", "开启后根据游戏分辨率和系统 DPI 缩放日志、状态、FPS 与指标栏的字体大小；关闭后直接使用各项基础尺寸。", onChanged);
+        yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.LogFontScale), "遮罩字体缩放率", "启用遮罩字体缩放后，在日志、状态和 FPS 基础字号上叠加缩放，范围为 0.5-3.0 倍。", MaskWindowConfig.MinLogFontScale, MaskWindowConfig.MaxLogFontScale, 0.1, onChanged);
         yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.TextOpacity), "遮罩文字透明度", "调整遮罩上所有文字的透明度，1 表示完全不透明，0 表示完全透明。", 0, 1, 0.1, onChanged);
         yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.OverlayWindowBackgroundColor), "主遮罩窗口背景色", "遮罩窗口本身的背景色。", onChanged);
 

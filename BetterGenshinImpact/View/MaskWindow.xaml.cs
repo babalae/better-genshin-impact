@@ -178,7 +178,7 @@ public partial class MaskWindow : Window
     {
         if (DataContext is MaskWindowViewModel vm)
         {
-            vm.OnDpiChanged();
+            vm.OnDpiChanged(e.NewDpi.DpiScaleY);
         }
     }
 

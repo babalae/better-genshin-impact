@@ -56,6 +56,16 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private double _maskWindowHeight;
 
+        /// <summary>
+        /// 游戏分辨率相对于 1080P 的运行时缩放比例。
+        /// </summary>
+        [ObservableProperty] private double _scaleTo1080PRatio = 1.0;
+
+        /// <summary>
+        /// 遮罩窗口所在显示器的运行时 DPI 缩放比例。
+        /// </summary>
+        [ObservableProperty] private double _displayDpiScale = 1.0;
+
         [ObservableProperty] private bool _isInBigMapUi;
 
         [ObservableProperty] private bool _isMapPointPickerOpen;
@@ -241,6 +251,7 @@ namespace BetterGenshinImpact.ViewModel
                 Config.MaskWindowConfig.EnsureOverlayMetricItems();
                 Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
                 RecalculateScaleTo1080PRatio();
+                RefreshDisplayDpiScale();
                 OnPropertyChanged(nameof(Config));
                 OnPropertyChanged(nameof(IsOverlayMetricsVisible));
             }
@@ -252,11 +263,23 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         /// <summary>
-        /// 当显示器 DPI 发生变化时调用，触发遮罩 UI 字号重新计算。
+        /// 当显示器 DPI 发生变化时调用，刷新遮罩 UI 的运行时缩放比例。
         /// </summary>
-        public void OnDpiChanged()
+        public void OnDpiChanged(double dpiScale)
         {
-            Config?.MaskWindowConfig?.NotifyDpiDependentProperties();
+            DisplayDpiScale = double.IsFinite(dpiScale) && dpiScale > 0 ? dpiScale : 1.0;
+        }
+
+        private void RefreshDisplayDpiScale()
+        {
+            try
+            {
+                OnDpiChanged(DpiHelper.ScaleY);
+            }
+            catch
+            {
+                OnDpiChanged(1.0);
+            }
         }
 
         /// <summary>
@@ -265,11 +288,10 @@ namespace BetterGenshinImpact.ViewModel
         /// </summary>
         private void RecalculateScaleTo1080PRatio()
         {
-            if (Config?.MaskWindowConfig == null) return;
             var gameScreenRect = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
             if (gameScreenRect.Width > 0)
             {
-                Config.MaskWindowConfig.ScaleTo1080PRatio = gameScreenRect.Width / 1920d;
+                ScaleTo1080PRatio = gameScreenRect.Width / 1920d;
             }
         }
 
