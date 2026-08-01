@@ -28,6 +28,96 @@ public static class AvatarSpecialAction
     private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
 
     /// <summary>
+    /// 木偶（桑多涅）红温状态评分阈值（固定 0.5）。
+    /// </summary>
+    private const double OverheatThreshold = 0.5;
+
+    /// <summary>
+    /// 木偶（桑多涅）红温状态特征模型（硬编码自训练工具导出的 JSON）。
+    /// </summary>
+    private static readonly FeatureScorerExportData _overheatModel = new()
+    {
+        Features =
+        {
+            new FeatureScorerItem
+            {
+                Type = "F1", Channel = "H", X = 1095, Y = 519, W = 1, H = 1,
+                IsCircular = true, Range = 360, RefVal = 301.808, Weight = 0.7914,
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0007, 0.0019, 0.0051, 0.0138, 0.0366, 0.0937, 0.2193, 0.433, 0.6749, 0.8494, 0.9388, 0.9766, 0.9913, 0.9968]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F1", Channel = "H", X = 1095, Y = 518, W = 1, H = 1,
+                IsCircular = true, Range = 360, RefVal = 300.5802, Weight = 0.789,
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0023, 0.0062, 0.0166, 0.0439, 0.1109, 0.2532, 0.4796, 0.7147, 0.872, 0.9487, 0.9805, 0.9927, 0.9973]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F1", Channel = "H", X = 1095, Y = 517, W = 1, H = 1,
+                IsCircular = true, Range = 360, RefVal = 297.9216, Weight = 0.7738,
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.0011, 0.0029, 0.0079, 0.0213, 0.0558, 0.1384, 0.3038, 0.5426, 0.7633, 0.8976, 0.9597, 0.9848, 0.9944]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1096, Y = 513, W = 1, H = 4,
+                IsCircular = false, Range = 1, Weight = 0.5461,
+                RefHist = [0.0705, 0.0023, 0, 0, 0, 0.0018, 0.0739, 0.8516],
+                ProbTable = [0, 0, 0.0001, 0.0002, 0.0005, 0.0015, 0.004, 0.0108, 0.0289, 0.0747, 0.18, 0.3737, 0.6186, 0.8151, 0.923, 0.9702, 0.9888, 0.9959, 0.9985, 0.9994, 0.9998]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1097, Y = 516, W = 1, H = 4,
+                IsCircular = false, Range = 1, Weight = 0.5088,
+                RefHist = [0.1062, 0.0046, 0, 0, 0, 0, 0.0201, 0.8691],
+                ProbTable = [0, 0, 0.0001, 0.0004, 0.001, 0.0026, 0.0071, 0.0192, 0.0504, 0.1262, 0.2819, 0.5162, 0.7436, 0.8874, 0.9554, 0.9831, 0.9937, 0.9977, 0.9991, 0.9997, 0.9999]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "H", X = 1090, Y = 552, W = 4, H = 1,
+                IsCircular = false, Range = 1, Weight = 0.4793,
+                RefHist = [0, 0, 0.0191, 0.9213, 0.0576, 0.002, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0021, 0.0058, 0.0156, 0.0414, 0.1051, 0.2419, 0.4645, 0.7022, 0.865, 0.9457, 0.9793, 0.9923, 0.9972]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F1", Channel = "H", X = 1105, Y = 564, W = 2, H = 3,
+                IsCircular = true, Range = 360, RefVal = 349.1209, Weight = 0.7477,
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0007, 0.0018, 0.0049, 0.0133, 0.0353, 0.0905, 0.2129, 0.4237, 0.6665, 0.8446, 0.9366, 0.9757]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1095, Y = 572, W = 1, H = 4,
+                IsCircular = false, Range = 1, Weight = 0.5165,
+                RefHist = [0.9278, 0.0164, 0, 0, 0.0052, 0, 0.0121, 0.0384],
+                ProbTable = [0, 0.0001, 0.0002, 0.0004, 0.0011, 0.003, 0.0082, 0.0221, 0.0578, 0.143, 0.3121, 0.5522, 0.7702, 0.9011, 0.9612, 0.9854, 0.9946, 0.998, 0.9993, 0.9997, 0.9999]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F1", Channel = "H", X = 1105, Y = 572, W = 5, H = 4,
+                IsCircular = true, Range = 360, RefVal = 351.1534, Weight = 0.7542,
+                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.0011, 0.0029, 0.0079, 0.0212, 0.0556, 0.138, 0.3032, 0.5419, 0.7628, 0.8973, 0.9596, 0.9848]
+            },
+        }
+    };
+
+    /// <summary>
+    /// 判断当前木偶是否处于红温状态（特征评分 ≥ 阈值）。
+    /// 评分异常时降级返回 false，不中断战斗。
+    /// </summary>
+    private static bool IsOverheated(ImageRegion capture)
+    {
+        try
+        {
+            return ImageFeatureScorer.Score(_overheatModel, capture.SrcMat) >= OverheatThreshold;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning("红温状态评分异常: {Message}", e.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 特化规则：(动作, 角色) → 参数条件（null=无条件，仅检查动作+角色即生效）
     /// 不在此字典中的组合直接跳过，走通用逻辑。
     /// </summary>
@@ -221,6 +311,7 @@ public static class AvatarSpecialAction
                     DateTime? lastSeenTargetTime = null;
                     var startTime = DateTime.UtcNow;
                     var maxDurationMs = ms;
+                    int overheatCount = 0;  // 红温连续命中计数
 
                     try
                     {
@@ -228,6 +319,26 @@ public static class AvatarSpecialAction
                         {
                             using (var capture = CaptureToRectArea())
                             {
+                                // 距重击开始超过 3 秒后开始检测红温，连续命中 3 次（1/3 → 2/3 → 3/3）才提前退出
+                                if ((DateTime.UtcNow - startTime).TotalSeconds >= 3)
+                                {
+                                    if (IsOverheated(capture))
+                                    {
+                                        overheatCount++;
+                                        if (overheatCount >= 3)
+                                        {
+                                            Logger.LogInformation("桑多涅重击特化：连续 3 次检测到红温状态，提前退出");
+                                            break;
+                                        }
+
+                                        Logger.LogInformation("桑多涅重击特化：检测到红温状态 {OverheatCount}/3", overheatCount);
+                                    }
+                                    else
+                                    {
+                                        overheatCount = 0;
+                                    }
+                                }
+
                                 int preAimX = (int)(capture.Width * 0.5);
                                 int preAimY = (int)(capture.Height * (480.0 / 1080.0));
 
