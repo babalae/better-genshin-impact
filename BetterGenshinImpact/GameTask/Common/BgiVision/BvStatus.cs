@@ -375,12 +375,6 @@ public static partial class Bv
             var y = 1051;
             var width = 234;
             var height = 28;
-            var scaleTo1080PRatio = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-            
-            x = (int)Math.Round(x * scaleTo1080PRatio);
-            y = (int)Math.Round(y * scaleTo1080PRatio);
-            width = (int)Math.Round(width * scaleTo1080PRatio);
-            height = (int)Math.Round(height * scaleTo1080PRatio);
             
             using var region = TaskControl.CaptureToRectArea();
             var recognitionObjectOcr = RecognitionObject.Ocr(x, y, width, height);
