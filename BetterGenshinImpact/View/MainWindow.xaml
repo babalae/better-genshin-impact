@@ -56,7 +56,6 @@
         <ui:NavigationView x:Name="RootNavigation"
                            Grid.Column="0"
                            Grid.Row="1"
-                           Margin="0,0,0,5"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            IsTopSeparatorVisible="False"
@@ -246,10 +245,32 @@
             </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
 
-        <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0" Grid.Column="0">
+        <ui:TitleBar Grid.Row="0" Grid.Column="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
+            <ui:TitleBar.Header>
+                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                    <b:Interaction.Behaviors>
+                        <behavior:WindowDragBehavior />
+                    </b:Interaction.Behaviors>
+                    <TextBlock VerticalAlignment="Center"
+                               Text="{Binding Title, Mode=OneWay}" />
+                    <Border Height="22"
+                            Margin="8,0,0,0"
+                            Padding="8,0"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                            CornerRadius="11"
+                            Visibility="{Binding IsChildSessionInstance, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   Text="桌面分身" />
+                    </Border>
+                </StackPanel>
+            </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
                     <ui:Button Width="40"

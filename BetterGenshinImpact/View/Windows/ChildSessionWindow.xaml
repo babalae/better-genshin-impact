@@ -125,6 +125,9 @@
                             <ContextMenu>
                                 <ui:MenuItem Header="运行 BetterGI"
                                              Command="{Binding LaunchBetterGiCommand}" />
+                                <ui:MenuItem Header="{Binding WindowSizeModeMenuHeader}"
+                                             Command="{Binding ToggleSmallWindowModeCommand}"
+                                             ToolTip="{Binding WindowSizeModeMenuToolTip}" />
                                 <Separator />
                                 <ui:MenuItem Header="桌面分辨率">
                                     <ui:MenuItem Header="1920 × 1080"
@@ -214,6 +217,11 @@
 
         <Grid Grid.Row="1"
               Background="Black">
+            <b:Interaction.Behaviors>
+                <behavior:WindowResizeBehavior AspectRatio="1.7777777777777777"
+                                               ResizeRequest="{Binding SmallWindowResizeRequest}"
+                                               TargetWidth="{Binding WindowResizeTargetWidth}" />
+            </b:Interaction.Behaviors>
             <wfi:WindowsFormsHost x:Name="RdpFormsHost"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch"

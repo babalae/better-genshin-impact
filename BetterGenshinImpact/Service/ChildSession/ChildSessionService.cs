@@ -37,6 +37,7 @@ public sealed class ChildSessionService : IDisposable
     private ChildSessionWindow? _desktopWindow;
     private bool _autoLaunchBetterGiPending;
     private TaskCompletionSource<bool>? _connectionAttemptCompletionSource;
+    private ChildSessionConnectionFailedEventArgs? _lastConnectionFailure;
     private int _initialConnectionRetriesRemaining;
     private bool _connectionRetryInProgress;
     private bool _systemShortcutsReconnectPending;
@@ -69,6 +70,22 @@ public sealed class ChildSessionService : IDisposable
     public bool SmartSizingEnabled => _config.SmartSizingEnabled;
 
     public bool KeepAspectRatio => _config.KeepAspectRatio;
+
+    public bool IsRdpWrapperEnabled()
+    {
+        return ChildSessionNativeMethods.IsRdpWrapperEnabled();
+    }
+
+    public bool HasActiveChildSession()
+    {
+        if (!_instanceService.Context.IsRoot)
+        {
+            return false;
+        }
+
+        RefreshState();
+        return ChildSessionId is not null;
+    }
 
     public ChildSessionService(
         IServiceProvider serviceProvider,
@@ -107,6 +124,7 @@ public sealed class ChildSessionService : IDisposable
             completionSource = new TaskCompletionSource<bool>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             _connectionAttemptCompletionSource = completionSource;
+            _lastConnectionFailure = null;
 
             try
             {
@@ -134,10 +152,7 @@ public sealed class ChildSessionService : IDisposable
             {
                 _autoLaunchBetterGiPending = false;
                 _initialConnectionRetriesRemaining = 0;
-                CompleteConnectionFailure(
-                    new ChildSessionConnectionFailedEventArgs(
-                        $"桌面分身连接及登录初始化未能在 {ConnectionTimeout.TotalSeconds:0} 秒内完成。",
-                        ErrorTimeout));
+                CompleteConnectionFailure(CreateConnectionTimeoutFailure());
                 TryDisconnectRdpHost();
             }
         }
@@ -529,6 +544,8 @@ public sealed class ChildSessionService : IDisposable
         object? sender,
         ChildSessionConnectionFailedEventArgs e)
     {
+        _lastConnectionFailure = e;
+
         if (_systemShortcutsReconnectPending)
         {
             if (_systemShortcutsReconnectRetryInProgress)
@@ -560,6 +577,7 @@ public sealed class ChildSessionService : IDisposable
     // 使用 OnLoginComplete 等待实际登录完成，避免依赖固定时长的延时。
     private async void OnRdpLoginCompleted(object? sender, EventArgs e)
     {
+        _lastConnectionFailure = null;
         _initialConnectionRetriesRemaining = 0;
         _connectionRetryInProgress = false;
         _connectionAttemptCompletionSource?.TrySetResult(true);
@@ -694,7 +712,7 @@ public sealed class ChildSessionService : IDisposable
             }
 
             RefreshState();
-            if (ConnectedState != 0 || _desktopWindow is null)
+            if (_desktopWindow is null)
             {
                 return;
             }
@@ -702,7 +720,9 @@ public sealed class ChildSessionService : IDisposable
             RefreshState(
                 $"正在重试桌面分身连接（{retryNumber}/{InitialConnectionRetryCount}）");
             _connectionRetryInProgress = false;
-            _desktopWindow.RdpHost.ConnectToChildSession(DefaultDesktopSize);
+            // OnLogonError 触发后 ActiveX 可能仍处于连接状态，必须先断开再重连。
+            // 否则这里直接退出会丢失已捕获的真实错误，最终只剩外层连接超时。
+            _desktopWindow.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -730,6 +750,7 @@ public sealed class ChildSessionService : IDisposable
 
     private void CompleteConnectionFailure(ChildSessionConnectionFailedEventArgs e)
     {
+        _lastConnectionFailure = e;
         _autoLaunchBetterGiPending = false;
         _initialConnectionRetriesRemaining = 0;
         _connectionAttemptCompletionSource?.TrySetResult(false);
@@ -740,6 +761,26 @@ public sealed class ChildSessionService : IDisposable
             e.ExtendedErrorCode);
         RefreshState(e.Message);
         ConnectionFailed?.Invoke(this, e);
+    }
+
+    private ChildSessionConnectionFailedEventArgs CreateConnectionTimeoutFailure()
+    {
+        var timeoutMessage =
+            $"桌面分身连接及登录初始化未能在 {ConnectionTimeout.TotalSeconds:0} 秒内完成。";
+        var lastDiagnostic =
+            _desktopWindow?.RdpHost.LastConnectionDiagnostic
+            ?? _lastConnectionFailure;
+        if (lastDiagnostic is null)
+        {
+            return new ChildSessionConnectionFailedEventArgs(
+                $"{timeoutMessage}\n\nRDP ActiveX 未报告更具体的失败原因。",
+                ErrorTimeout);
+        }
+
+        return new ChildSessionConnectionFailedEventArgs(
+            $"{timeoutMessage}\n\nRDP ActiveX 最后报告：\n{lastDiagnostic.Message}",
+            lastDiagnostic.ErrorCode,
+            lastDiagnostic.ExtendedErrorCode);
     }
 
     private void TryDisconnectRdpHost()
