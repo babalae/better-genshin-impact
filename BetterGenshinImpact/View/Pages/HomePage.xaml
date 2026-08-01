@@ -69,6 +69,8 @@
             </Grid>
         </Border>
 
+
+
         <!--  更好的原神，启动！  -->
         <ui:CardExpander Margin="0,12,0,12"
                          ContentPadding="0"
@@ -569,6 +571,31 @@
                 </Grid>-->
             </StackPanel>
         </ui:CardExpander>
+
+        <ui:CardControl Margin="0,0,0,12"
+                        Icon="{ui:SymbolIcon DesktopCursor24}"
+                        Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  FontTypography="Body"
+                                  Text="BetterGI 桌面分身"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="游戏在桌面分身中运行时，可以不占用当前桌面鼠标。"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+                       Command="{Binding OpenChildSessionWindowCommand}"
+                       Content="打开"
+                       Icon="{ui:SymbolIcon Open24}" />
+        </ui:CardControl>
 
         <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
 

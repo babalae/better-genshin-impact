@@ -3,7 +3,7 @@
     "ChooseEnterGame": {
       "type": "TemplateMatch",
       "template": "choose_enter_game.png",
-      "roi": "rect(0, ch / 2, cw, ch / 2)",
+      "roi": "rect(cw * 685 / 1920, ch * 595 / 1080, cw * 549 / 1920, ch * 64 / 1080)",
       "draw": false
     },
     "EnterGame": {

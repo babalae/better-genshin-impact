@@ -27,7 +27,7 @@
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto">
-        <StackPanel Width="700" Margin="42,16,42,12">
+        <StackPanel MaxWidth="700" Margin="{StaticResource PagePadding}">
             <!--  推理设备配置  -->
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"

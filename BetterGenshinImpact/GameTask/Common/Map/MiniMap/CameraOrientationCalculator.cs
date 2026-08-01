@@ -117,6 +117,10 @@ public class CameraOrientationCalculator : IDisposable
         Cv2.Integral(resultShift, result);
         Cv2.MinMaxLoc(result, out _, out var maxVal, out _, out var maxLoc);
         var degree = (float)(maxLoc.X - 1) / ThetaLength * 360 / Scale - 45;
+        if (degree < 0)
+        {
+            degree += 360;
+        }
         var rotationConfidence = (float)(maxVal + peakRegionSum) / (PeakWidth * RLength * 255);
         return (degree, rotationConfidence);
     }

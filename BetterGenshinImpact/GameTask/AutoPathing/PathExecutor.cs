@@ -897,8 +897,10 @@ public partial class PathExecutor
 
                 if (consecutiveRotationCountBeyondAngle > 10)
                 {
-                    // 直接站定好转向
+                    // 松W键，站定好转向，转完重新按下W继续走
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                     await WaitUntilRotatedTo(targetOrientation, 2);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                 }
             }
 

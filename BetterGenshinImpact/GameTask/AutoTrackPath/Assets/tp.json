@@ -1,6 +1,6 @@
 {
   "language": "CHS",
-  "version": "82e74382e7788e318ad41fca926739a752c0bed6",
+  "version": "d8ab29ce843fe7f2a41aa63458fd020a9da130ff",
   "data": [
     {
       "sceneId": 3,
@@ -14462,6 +14462,25 @@
             "亵渎的新芽",
             "扭曲的枯枝",
             "赝作的树脂"
+          ]
+        },
+        {
+          "id": 2119,
+          "type": "Other",
+          "name": "隐居处",
+          "country": "枫丹",
+          "areas": [
+            "苍晶区"
+          ],
+          "position": [
+            2667.7,
+            335.0652,
+            4643.944
+          ],
+          "tranPosition": [
+            2667.7,
+            335.06516,
+            4643.944
           ]
         },
         {

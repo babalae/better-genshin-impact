@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -50,12 +50,34 @@ public partial class PathExecutor
     // 赶路切换角色黑名单，防止切人后触发夜魂传递
     private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉"];
 
+    /// <summary>
+    /// 各角色在连续赶路模式下的转向夹角阈值（度）。
+    /// 当路径转向角 ≥ 该角色的阈值时，视为急转弯，提前下车步行接近防止冲过头。
+    /// 未显式列出的角色使用默认值 120°（几乎只有掉头才下车）。
+    /// </summary>
+    private static readonly Dictionary<string, double> TurnAngleThresholds = new()
+    {
+        { "桑多涅", 45 },
+        { "恰斯卡", 45 },
+        { "伊法", 45 },
+        { "流浪者", 45 },
+        { "玛薇卡", 60 },
+        { "闲云", 120 },
+        { "希诺宁", 120 },
+    };
+
     private string _hurryOnAvatar = "";
     private DateTime _lastJumpFlyTime = DateTime.MinValue;
+    private bool _jumpFlySafetyPending;
     private DateTime _lastMavikaBoardTime = DateTime.MinValue;
     private DateTime _lastSkillCheckTime = DateTime.MinValue;
     private DateTime _lastLandingTime = DateTime.MinValue;
-    private int _sandroneCount;
+    /// <summary>
+    /// 上一帧识别的体力值，用于跨帧 fallback。初始为满值 240。
+    /// </summary>
+    private int _lastStamina = 240;
+    private int _lastWaypointIndex = -1;
+    private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
 
     /// <summary>
@@ -106,7 +128,7 @@ public partial class PathExecutor
     /// <returns>true = 跳过本次通用移动逻辑（continue）；false = 继续执行通用移动逻辑</returns>
     private async Task<bool> ExecuteHurryOnAsync(
         WaypointForTrack waypoint,
-        Waypoint? nextWaypoint,
+        WaypointForTrack? nextWaypoint,
         double distance,
         double? nextDistance,
         bool isPoint,
@@ -136,9 +158,17 @@ public partial class PathExecutor
         // Logger.LogInformation("[赶路调试] ExecuteHurryOnAsync: avatar={a}, dist={d}, nextDist={nd}, moveMode={m}, type={t}, num={n}, pending={pa}",
         //     avatar.Name, Math.Round(distance, 1), nextDistance, waypoint?.MoveMode, waypoint?.Type, num, state.PendingApproach);
 
+        double interval = PartyConfig.MwkJumpFlyIntervalSeconds > 0 ? PartyConfig.MwkJumpFlyIntervalSeconds : 1;
+
         switch (avatar.Name)
         {
             case "玛薇卡":
+                if (CurWaypoint.Item1 != _lastWaypointIndex)
+                {
+                    _jumpFlySafetyPending = false;
+                    _lastWaypointIndex = CurWaypoint.Item1;
+                }
+
                 if (state.OriginalMoveMode != null)
                 {
                     waypoint.MoveMode = state.OriginalMoveMode;
@@ -149,10 +179,11 @@ public partial class PathExecutor
 
                 if (state.PendingApproach)
                 {
-                    var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                    if (needsApproach)
+                    if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         state.PendingApproach = false;
                         var colorDiff = GetMavikaColorDifference(screen2);
                         if (colorDiff < 15 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
@@ -197,8 +228,6 @@ public partial class PathExecutor
 
                 if (PartyConfig.MwkJumpFlyEnabled && distance > 2 * PartyConfig.Distance && state.RotationStableCount >= 1)
                 {
-                    var interval = PartyConfig.MwkJumpFlyIntervalSeconds > 0 ? PartyConfig.MwkJumpFlyIntervalSeconds : 2;
-
                     if (!(boarded || GetMavikaColorDifference(screen2) <= 15 && await ReadEskillCdAsync("玛薇卡") < 1))
                     {
                         return false;
@@ -220,6 +249,7 @@ public partial class PathExecutor
                     Simulation.SendInput.SimulateAction(GIActions.Jump);
                     await Delay(150, ct);
                     _lastJumpFlyTime = DateTime.UtcNow;
+                    _jumpFlySafetyPending = true;
 
                     using var jumpCheckRegion = CaptureToRectArea();
                     if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
@@ -245,6 +275,16 @@ public partial class PathExecutor
                     }
 
                     return true;
+                }
+
+                // 安全降落：同路段最后一次跳飞后，间隔已过仍可能在空中 → 普攻防摔伤
+                if (_lastJumpFlyTime != DateTime.MinValue
+                    && _jumpFlySafetyPending
+                    && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds > interval)
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    await Delay(100, ct);
+                    _jumpFlySafetyPending = false;
                 }
 
                 if ((boarded || GetMavikaColorDifference(screen2) <= 15) && distance > PartyConfig.Distance)
@@ -331,6 +371,7 @@ public partial class PathExecutor
             //
             //         if (shouldApproach)
             //         {
+            //             Simulation.ReleaseAllKey();
             //             state.PendingApproach = false;
             //             if (PartyConfig.SwitchToWalkEnabled)
             //             {
@@ -463,6 +504,7 @@ public partial class PathExecutor
 
                     if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         // Logger.LogInformation("[赶路调试] 希诺宁 触发接近: dist={d}, spaceExist={s}",
                         //     Math.Round(distance, 1), SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -478,15 +520,12 @@ public partial class PathExecutor
                         else if (SpaceAtSecondPlaceExist(state))
                         {
                             Logger.LogInformation("自动赶路：希诺宁接近节点，关闭E技能赶路状态");
-                            for (var retries = 0; retries < 10; retries++)
+                            var retries = 0;
+                            while (SpaceAtSecondPlaceExist(state) && retries < 10)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                 await Delay(100, ct);
-                                var cd = await ReadEskillCdAsync("希诺宁");
-                                if (cd > 0)
-                                {
-                                    break;
-                                }
+                                retries++;
                             }
                         }
                         return false;
@@ -520,6 +559,7 @@ public partial class PathExecutor
                 break;
 
             case "闲云":
+            {
                 if (distance > PartyConfig.Distance
                     && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                 {
@@ -529,7 +569,6 @@ public partial class PathExecutor
                     if (cd <= 0 && state.RotationStableCount >= 1)
                     {
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        var interval = PartyConfig.MwkJumpFlyIntervalSeconds > 0 ? PartyConfig.MwkJumpFlyIntervalSeconds : 1;
                         await Delay((int)(interval / 2.0 * 1000), ct);
                         avatar.LastSkillTime = DateTime.UtcNow;
                         return true;
@@ -538,44 +577,50 @@ public partial class PathExecutor
                     return false;
                 }
                 break;
+            }
 
             case "桑多涅":
                 try
                 {
-                    // ① 小于停止距离 → 尝试主动下车
+                    // Step 1: 状态同步 — 每次进入 reconcile FlyingState 与实际游戏状态
+                    //    FlyingState=true 但实际技能已结束 → 主动降落
+                    //    FlyingState=false 但实际技能已生效 → 同步状态
+                    if (state.FlyingState && !DashAtSecondPlaceExist())
+                    {
+                        state.FlyingState = false;
+                        _lastSandroneSkillTime = DateTime.UtcNow;
+                        await SafeLanding(ct);
+                        Logger.LogInformation("自动赶路：桑多涅技能耗尽，安全降落");
+                        return false;
+                    }
+                    if (!state.FlyingState && DashAtSecondPlaceExist())
+                    {
+                        state.FlyingState = true;
+                    }
+
+                    // Step 2: 小于停止距离 → 主动下车
                     if (state.FlyingState && distance < PartyConfig.ApproachStopDistance)
                     {
-                        var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-                        if (needsApproach)
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                        if (shouldApproach)
                         {
-                            // Logger.LogInformation("[赶路调试] 桑多涅 触发接近: dist={d}, dashExist={de}", Math.Round(distance, 1), DashAtSecondPlaceExist());
+                            Simulation.ReleaseAllKey();
                             state.FlyingState = false;
-                            if (DashAtSecondPlaceExist())
+                            var retries = 0;
+                            while (DashAtSecondPlaceExist() && retries < 10)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
                                 await Delay(50, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                retries++;
                             }
+                            await Delay(150, ct);
                             await SafeLanding(ct);
                             Logger.LogInformation("自动赶路：桑多涅接近节点");
                             return false;
                         }
                     }
 
-                    // ② 飞行态监控区域（≥ ApproachStopDistance）：不主动上下车，持续检测技能是否结束
-                    if (state.FlyingState && distance >= PartyConfig.ApproachStopDistance)
-                    {
-                        if (!DashAtSecondPlaceExist())
-                        {
-                            state.FlyingState = false;
-                            await SafeLanding(ct);
-                            _lastSandroneSkillTime = DateTime.UtcNow;
-                            Logger.LogInformation("自动赶路：桑多涅技能耗尽，安全降落");
-                        }
-                        return true;
-                    }
-
-                    // ③ 大于启用距离且未上车 → 尝试上车
+                    // Step 3: 大于启用距离且未上车 → 尝试上车
                     if (!state.FlyingState
                         && distance > PartyConfig.Distance
                         && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
@@ -589,15 +634,12 @@ public partial class PathExecutor
                                 var sandroneCd = await ReadEskillCdAsync("桑多涅");
                                 if (sandroneCd <= 0)
                                 {
-                                    // Logger.LogInformation("[赶路调试] 桑多涅 启动E技能: dist={d}, sandroneCd={cd}",
-                                    //     Math.Round(distance, 1), sandroneCd);
                                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                     await Delay(150, ct);
                                     if (DashAtSecondPlaceExist())
                                     {
                                         _lastSandroneSkillTime = DateTime.UtcNow;
                                         state.FlyingState = true;
-                                        _sandroneCount++;
                                     }
                                     else
                                     {
@@ -611,14 +653,14 @@ public partial class PathExecutor
                         return false;
                     }
 
-                    // ④ 已上车：跳过行走逻辑
+                    // Step 4: 已上车：体力 < 120 时纯飘（桑多涅技能代步），否则正常步行/冲刺
                     if (state.FlyingState)
                     {
                         if (nextWaypoint?.MoveMode == MoveModeEnum.Fly.Code)
                         {
                             return true;
                         }
-                        else if (SandroneShouldSkip(_sandroneCount))
+                        else if (DetectStamina() < 120)
                         {
                             return true;
                         }
@@ -646,10 +688,11 @@ public partial class PathExecutor
                 {
                     if (state.PendingApproach)
                     {
-                        var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                        if (shouldApproachX)
+                        if (shouldApproach)
                         {
+                            Simulation.ReleaseAllKey();
                             // Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
                             //     avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                             state.PendingApproach = false;
@@ -741,10 +784,11 @@ public partial class PathExecutor
             case "流浪者":
                 if (state.PendingApproach)
                 {
-                    var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                    if (shouldApproachX)
+                    if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         // Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
                         //     Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -854,47 +898,66 @@ public partial class PathExecutor
         );
     }
 
-    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, Waypoint? nextWaypoint, string avatarName)
+    /// <summary>
+    /// 计算上一节点→当前节点→下一节点形成的转向夹角（度）。
+    /// 使用 GameX/GameY（原神世界坐标）以保证坐标系一致。
+    /// </summary>
+    private static double CalculateTurnAngle(WaypointForTrack? prev, WaypointForTrack curr, WaypointForTrack? next)
+    {
+        if (prev == null || next == null) return 0;
+
+        double baX = curr.GameX - prev.GameX;
+        double baY = curr.GameY - prev.GameY;
+        double bcX = next.GameX - curr.GameX;
+        double bcY = next.GameY - curr.GameY;
+
+        double dot = baX * bcX + baY * bcY;
+        double magBA = Math.Sqrt(baX * baX + baY * baY);
+        double magBC = Math.Sqrt(bcX * bcX + bcY * bcY);
+
+        if (magBA < 0.001 || magBC < 0.001) return 0;
+
+        double cosAngle = dot / (magBA * magBC);
+        cosAngle = Math.Clamp(cosAngle, -1.0, 1.0);
+
+        return Math.Acos(cosAngle) * 180.0 / Math.PI;
+    }
+
+    /// <summary>
+    /// 检查当前路径转向角是否超过角色的阈值，是则应提前下车。
+    /// </summary>
+    private bool IsTurnTooSharp(WaypointForTrack waypoint, WaypointForTrack? nextWaypoint, string avatarName)
+    {
+        if (CurWaypoint.Item1 <= 0) return false;
+        var prev = CurWaypoints.Item2[CurWaypoint.Item1 - 1];
+        var angle = CalculateTurnAngle(prev, waypoint, nextWaypoint);
+        var threshold = TurnAngleThresholds.GetValueOrDefault(avatarName, 120);
+        return angle >= threshold;
+    }
+
+    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, WaypointForTrack? nextWaypoint, string avatarName)
     {
         var effectiveStopDist = Math.Min(PartyConfig.ApproachStopDistance, PartyConfig.Distance);
 
-        // 终点：接近到停止距离内才下车
-        // 不加距离限制会导致远距离提前下车走一大段路，然后重新上车的震荡
-        if (nextWaypoint == null)
+        // 精确接近模式下直接使用停止距离阈值
+        if (PartyConfig.TravelMode == "精准靠近"
+            && distance < effectiveStopDist)
         {
-            if (distance < effectiveStopDist)
-            {
-                // Logger.LogInformation("[赶路调试] ShouldApproach 终点节点: dist={d}, stopDist={s}",
-                //     Math.Round(distance, 1), effectiveStopDist);
-                return true;
-            }
-            return false;
-        }
-
-        // 下一个节点不是 Run/Dash 时（如 Fly/Walk/Climb），接近到停止距离内才下车
-        // 不加距离限制会导致远距离提前下车走一段、然后重新上车的反复震荡
-        if (nextWaypoint.MoveMode != MoveModeEnum.Run.Code && nextWaypoint.MoveMode != MoveModeEnum.Dash.Code)
-        {
-            if (distance < effectiveStopDist)
-            {
-                // Logger.LogInformation("[赶路调试] ShouldApproach 非RunDash节点接近: dist={d}, stopDist={s}, nextMode={m}",
-                //     Math.Round(distance, 1), effectiveStopDist, nextWaypoint.MoveMode);
-                return true;
-            }
-            return false;
-        }
-
-        // 连续赶路模式下飞行角色转弯表现差，强制使用精确接近阈值
-        if (distance < effectiveStopDist && (PartyConfig.TravelMode == "精准靠近" || (PartyConfig.TravelMode == "连续赶路" && (avatarName == "恰斯卡" || avatarName == "伊法" || avatarName == "流浪者"))))
-        {
-            // Logger.LogInformation("[赶路调试] ShouldApproach 精确接近阈值: dist={d}, stopDist={s}, mode={tm}, avatar={a}",
-            //     Math.Round(distance, 1), effectiveStopDist, PartyConfig.TravelMode, avatarName);
             return true;
         }
 
-        if (PartyConfig.TravelMode == "连续赶路" && distance < Math.Max(effectiveStopDist, 15) &&
-            (nextDistance < 25 || nextWaypoint?.Type == WaypointType.Target.Code || waypoint.Type == WaypointType.Target.Code
-             || waypoint?.Action == ActionEnum.CombatScript.Code))
+        if (PartyConfig.TravelMode == "连续赶路"                            // 连续赶路模式
+            && distance < Math.Max(effectiveStopDist, 15)                   // 距离当前航点足够近
+            && (nextDistance < 25                                           // 下一个航点也很近（密集区域）
+                || nextWaypoint?.Type == WaypointType.Target.Code           // 下一个是目标点
+                || (nextWaypoint == null                                        // 终点节点
+                    || nextWaypoint?.Type == WaypointType.Teleport.Code)     // 或传送节点
+                || (nextWaypoint?.MoveMode != MoveModeEnum.Run.Code         // 下一个节点不是Run/Dash
+                    && nextWaypoint?.MoveMode != MoveModeEnum.Dash.Code)
+                || waypoint?.Action == ActionEnum.Fight.Code                // 当前是战斗节点
+                || waypoint.Type == WaypointType.Target.Code                // 当前是目标点
+                || waypoint?.Action == ActionEnum.CombatScript.Code         // 当前节点有简易策略脚本
+                || IsTurnTooSharp(waypoint, nextWaypoint, avatarName)))      // 路径转向角过大
         {
             // Logger.LogInformation("[赶路调试] ShouldApproach 连续赶路+特殊条件: dist={d}, stopDist={s}, nextDist={nd}, nextType={nt}, waypointType={wt}",
             //     Math.Round(distance, 1), effectiveStopDist, nextDistance, nextWaypoint?.Type, waypoint?.Type);
@@ -906,14 +969,114 @@ public partial class PathExecutor
         return false;
     }
 
-    private bool SandroneShouldSkip(int count)
+    private int DetectStamina(ImageRegion? existingCapture = null)
     {
-        return count switch
+        // 进入新节点且上一个节点是战斗或传送时重置体力为满值
+        if (CurWaypoint.Item1 != _lastWaypointIndex
+            && CurWaypoint.Item1 > 0)
         {
-            0 => false,
-            1 => false,
-            _ => count % 2 == 0,
-        };
+            var prev = CurWaypoints.Item2[CurWaypoint.Item1 - 1];
+            var isFightOrTeleport = prev.Type == WaypointType.Teleport.Code
+                || prev.Action == ActionEnum.Fight.Code;
+            if (isFightOrTeleport)
+            {
+                _lastStamina = 240;
+                _lastWaypointIndex = CurWaypoint.Item1;
+                RecordStaminaResult(240);
+                return 240;
+            }
+        }
+
+        var ownedCapture = existingCapture == null ? CaptureToRectArea() : null;
+        try
+        {
+            var ra = ownedCapture ?? existingCapture!;
+
+            // 体力条区域：1000,430 - 1100,630（1920×1080）
+            using var crop = ra.DeriveCrop(1000, 430, 100, 200);
+
+            // #FFC700 → BGR(0, 199, 255)，精确匹配，无色差
+            using var mask = new Mat();
+            Cv2.InRange(crop.SrcMat, new Scalar(0, 199, 255), new Scalar(0, 199, 255), mask);
+
+            using var labels = new Mat();
+            using var stats = new Mat();
+            using var centroids = new Mat();
+
+            var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+            int totalArea = 0;
+            for (int i = 1; i < numLabels; i++)
+            {
+                var area = stats.At<int>(i, 4); // CC_STAT_AREA = 4
+                if (area >= 21)
+                {
+                    totalArea += area;
+                }
+            }
+
+            if (totalArea > 0)
+            {
+                _lastStamina = totalArea;
+                // Logger.LogInformation("INF 体力识别：{Value}", totalArea);
+                RecordStaminaResult(totalArea);
+                return totalArea;
+            }
+
+            // 无任何有效黄色连通域 → 检查历史趋势强制返回值
+            int forced;
+            if (HasStaminaStreak(0, 20, 39))
+                forced = 0;
+            else if (HasStaminaStreak(240, 20, 39))
+                forced = 240;
+            else
+                forced = _lastStamina > 120 ? 240 : 0;
+
+            // Logger.LogInformation("INF 体力识别：无有效区域，上次={Last}，强制={Forced}", _lastStamina, forced);
+            RecordStaminaResult(forced);
+            return forced;
+        }
+        finally
+        {
+            ownedCapture?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 记录体力识别返回值，保留最近至多50次。
+    /// </summary>
+    private void RecordStaminaResult(int value)
+    {
+        _staminaHistory.Add(value);
+        if (_staminaHistory.Count > 50)
+        {
+            _staminaHistory.RemoveRange(0, _staminaHistory.Count - 50);
+        }
+    }
+
+    /// <summary>
+    /// 在最近 lookback 次历史记录中，检查是否存在连续 streakCount 次等于 target 的记录。
+    /// </summary>
+    private bool HasStaminaStreak(int target, int streakCount, int lookback)
+    {
+        var count = _staminaHistory.Count;
+        if (count < streakCount) return false;
+        var start = Math.Max(0, count - lookback);
+        var consecutive = 0;
+        for (int i = start; i < count; i++)
+        {
+            if (_staminaHistory[i] == target)
+            {
+                consecutive++;
+                if (consecutive >= streakCount) return true;
+            }
+            else
+            {
+                consecutive = 0;
+            }
+        }
+        return false;
     }
 
     private bool DashAtSecondPlaceExist()
@@ -940,12 +1103,15 @@ public partial class PathExecutor
 
     private async Task SafeLanding(CancellationToken ct)
     {
-        await Delay(150, ct);
+        await Delay(250, ct);
         Simulation.SendInput.SimulateAction(GIActions.Jump);
         await Delay(150, ct);
 
         using var screen = CaptureToRectArea();
-        if (Bv.GetMotionStatus(screen) == MotionStatus.Fly)
+        var stamina = DetectStamina(screen);
+        if (Bv.GetMotionStatus(screen) == MotionStatus.Fly
+            || stamina == 0
+            || stamina == 240)
         {
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
             await Delay(300, ct);
