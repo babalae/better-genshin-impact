@@ -193,6 +193,90 @@ public partial class MaskWindowConfig : ObservableObject
     [ObservableProperty]
     private double _textOpacity = 1.0;
 
+    /// <summary>
+    /// 是否启用遮罩 UI 缩放。关闭后直接使用各遮罩元素的基础尺寸。
+    /// </summary>
+    [ObservableProperty]
+    private bool _overlayScalingEnabled = true;
+
+    /// <summary>
+    /// 遮罩 UI 缩放率 (0.5-3.0)，叠加到日志、状态和 FPS 的基础字号上。
+    /// </summary>
+    [ObservableProperty]
+    private double _logFontScale = 1.0;
+
+    /// <summary>
+    /// 指标栏缩放率 (0.5-3.0)，叠加到指标栏的基础字号和布局尺寸上。
+    /// 独立于遮罩 UI 缩放率。
+    /// </summary>
+    [ObservableProperty]
+    private double _metricsFontScale = 1.0;
+
+    /// <summary>遮罩日志缩放率允许的最小值。</summary>
+    public const double MinLogFontScale = 0.5;
+
+    /// <summary>遮罩日志缩放率允许的最大值。</summary>
+    public const double MaxLogFontScale = 3.0;
+
+    /// <summary>
+    /// 纯函数：把任意缩放率夹取到 [MinLogFontScale, MaxLogFontScale]。无副作用，供 PBT。
+    /// NaN 视为非法，回落到 1.0。
+    /// </summary>
+    public static double ComputeClampedScale(double scale)
+    {
+        if (double.IsNaN(scale))
+        {
+            return 1.0;
+        }
+        return Math.Clamp(scale, MinLogFontScale, MaxLogFontScale);
+    }
+
+    /// <summary>
+    /// 纯函数：计算遮罩 UI 实际渲染尺寸。
+    /// 禁用缩放时直接返回有效的基础尺寸。
+    /// = baseSize × clamp(scale) × scaleTo1080pRatio / displayDpiScale，AwayFromZero 四舍五入。
+    /// 乘以 ScaleTo1080PRatio 适配不同游戏分辨率，除以 DisplayDpiScale 抵消 WPF 自动 DPI 缩放。
+    /// </summary>
+    public static double ComputeEffectiveSize(double baseSize, double scale, double scaleTo1080pRatio,
+        double displayDpiScale, bool scalingEnabled)
+    {
+        var safeBaseSize = double.IsFinite(baseSize) && baseSize > 0 ? baseSize : 1.0;
+        if (!scalingEnabled)
+        {
+            return safeBaseSize;
+        }
+
+        var resolutionScale = double.IsFinite(scaleTo1080pRatio) ? Math.Max(scaleTo1080pRatio, 0.1) : 1.0;
+        var dpiScale = double.IsFinite(displayDpiScale) ? Math.Max(displayDpiScale, 0.1) : 1.0;
+        var result = Math.Round(safeBaseSize * ComputeClampedScale(scale) * resolutionScale / dpiScale,
+            MidpointRounding.AwayFromZero);
+        return Math.Max(result, 1.0);
+    }
+
+    /// <summary>
+    /// 缩放率变更钩子：仅当传入值越界时回写夹取后的值（防 setter 递归）。
+    /// </summary>
+    partial void OnLogFontScaleChanged(double value)
+    {
+        var clamped = ComputeClampedScale(value);
+        if (value != clamped)
+        {
+            LogFontScale = clamped;
+        }
+    }
+
+    /// <summary>
+    /// 指标栏缩放率变更钩子：仅当传入值越界时回写夹取后的值（防 setter 递归）。
+    /// </summary>
+    partial void OnMetricsFontScaleChanged(double value)
+    {
+        var clamped = ComputeClampedScale(value);
+        if (value != clamped)
+        {
+            MetricsFontScale = clamped;
+        }
+    }
+
     [ObservableProperty]
     private string _overlayWindowBackgroundColor = DefaultOverlayWindowBackgroundColor;
 
@@ -396,6 +480,9 @@ public partial class MaskWindowConfig : ObservableObject
     public void ResetOverlayStyle()
     {
         TextOpacity = 1.0;
+        OverlayScalingEnabled = true;
+        LogFontScale = 1.0;
+        MetricsFontScale = 1.0;
         OverlayWindowBackgroundColor = DefaultOverlayWindowBackgroundColor;
         WineOverlayBackgroundColor = DefaultWineOverlayBackgroundColor;
 

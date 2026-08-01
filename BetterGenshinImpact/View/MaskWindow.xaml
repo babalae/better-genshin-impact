@@ -37,7 +37,9 @@
             <converters:ColorStringToColorConverter x:Key="ColorStringToColorConverter" />
             <converters:ShadowOpacityConverter x:Key="ShadowOpacityConverter" />
             <converters:EnabledColorBrushConverter x:Key="EnabledColorBrushConverter" />
+            <converters:OverlayScaledSizeConverter x:Key="OverlayScaledSizeConverter" />
             <converters:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter" />
+            <sys:Double x:Key="FpsBaseFontSize">16</sys:Double>
             <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
             <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
         </ResourceDictionary>
@@ -199,9 +201,17 @@
                                         </Style>
                                     </StackPanel.Resources>
                                     <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
-                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.StatusFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}">
+                                        <TextBlock.FontSize>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.LogFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.FontSize>
                                         <TextBlock.Foreground>
                                             <MultiBinding Converter="{StaticResource EnabledColorBrushConverter}">
                                                 <Binding Path="IsEnabled" />
@@ -276,11 +286,19 @@
                                  Background="{Binding Config.MaskWindowConfig.LogPanelBackgroundColor, Converter={StaticResource ColorStringToBrushConverter}}"
                                  BorderThickness="0"
                                  FontFamily="{Binding Config.MaskWindowConfig.LogFontFamily}"
-                                 FontSize="{Binding Config.MaskWindowConfig.LogFontSize}"
                                  Foreground="{Binding Config.MaskWindowConfig.LogTextColor, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=LightGray}"
                                  IsHitTestVisible="False"
                                  VerticalScrollBarVisibility="Hidden"
                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}">
+                        <RichTextBox.FontSize>
+                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                <Binding Path="Config.MaskWindowConfig.LogFontSize" />
+                                <Binding Path="Config.MaskWindowConfig.LogFontScale" />
+                                <Binding Path="ScaleTo1080PRatio" />
+                                <Binding Path="DisplayDpiScale" />
+                                <Binding Path="Config.MaskWindowConfig.OverlayScalingEnabled" />
+                            </MultiBinding>
+                        </RichTextBox.FontSize>
                         <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}"
                                         FontSize="{Binding FontSize, ElementName=LogTextBox}">
                             <Paragraph>
@@ -363,33 +381,112 @@
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <!-- 列宽和设置页的三列顺序保持一致，拖窄后也按完整指标项折行。 -->
-                                <WrapPanel ItemWidth="{Binding DataContext.Config.MaskWindowConfig.MetricsItemWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                                           ItemHeight="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                <WrapPanel>
+                                    <WrapPanel.ItemWidth>
+                                        <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsItemWidth" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                        </MultiBinding>
+                                    </WrapPanel.ItemWidth>
+                                    <WrapPanel.ItemHeight>
+                                        <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsLineHeight" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                        </MultiBinding>
+                                    </WrapPanel.ItemHeight>
+                                </WrapPanel>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Width="{Binding DataContext.Config.MaskWindowConfig.MetricsItemWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                                      Height="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}">
+                                <Grid>
+                                    <Grid.Width>
+                                        <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsItemWidth" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                        </MultiBinding>
+                                    </Grid.Width>
+                                    <Grid.Height>
+                                        <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsLineHeight" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                        </MultiBinding>
+                                    </Grid.Height>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="{Binding DataContext.Config.MaskWindowConfig.MetricsNameColumnWidth, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource DoubleToGridLengthConverter}}" />
+                                        <ColumnDefinition>
+                                            <ColumnDefinition.Width>
+                                                <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}" ConverterParameter="GridLength">
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.MetricsNameColumnWidth" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                </MultiBinding>
+                                            </ColumnDefinition.Width>
+                                        </ColumnDefinition>
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
                                                FontFamily="{Binding DataContext.Config.MaskWindowConfig.MetricsFontFamily, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.MetricsFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Foreground="{Binding DataContext.Config.MaskWindowConfig.MetricsTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=LightGray}"
-                                               LineHeight="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}"
-                                               TextWrapping="NoWrap" />
+                                               TextWrapping="NoWrap">
+                                        <TextBlock.FontSize>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.FontSize>
+                                        <TextBlock.LineHeight>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsLineHeight" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.LineHeight>
+                                    </TextBlock>
                                     <TextBlock Grid.Column="1"
                                                FontFamily="{Binding DataContext.Config.MaskWindowConfig.MetricsFontFamily, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               FontSize="{Binding DataContext.Config.MaskWindowConfig.MetricsFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Foreground="{Binding DataContext.Config.MaskWindowConfig.MetricsTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}, ConverterParameter=LightGray}"
-                                               LineHeight="{Binding DataContext.Config.MaskWindowConfig.MetricsLineHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Value}"
                                                TextTrimming="CharacterEllipsis"
-                                               TextWrapping="NoWrap" />
+                                               TextWrapping="NoWrap">
+                                        <TextBlock.FontSize>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.FontSize>
+                                        <TextBlock.LineHeight>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsLineHeight" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.MetricsFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.LineHeight>
+                                    </TextBlock>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -539,8 +636,16 @@
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource DigitalThemeFontFamily}"
-                           FontSize="16"
                            Text="{Binding Fps}">
+                    <TextBlock.FontSize>
+                        <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                            <Binding Source="{StaticResource FpsBaseFontSize}" />
+                            <Binding Path="Config.MaskWindowConfig.LogFontScale" />
+                            <Binding Path="ScaleTo1080PRatio" />
+                            <Binding Path="DisplayDpiScale" />
+                            <Binding Path="Config.MaskWindowConfig.OverlayScalingEnabled" />
+                        </MultiBinding>
+                    </TextBlock.FontSize>
                     <TextBlock.Foreground>
                         <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
                     </TextBlock.Foreground>
