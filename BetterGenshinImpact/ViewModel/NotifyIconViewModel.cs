@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Webview;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,12 +13,30 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.View.Windows;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
 
 public partial class NotifyIconViewModel : ObservableObject
 {
+    private readonly ChildSessionService _childSessionService;
+
+    public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
+
+    public NotifyIconViewModel(ChildSessionService childSessionService)
+    {
+        _childSessionService = childSessionService;
+    }
+
+    [RelayCommand]
+    private void OpenChildSessionWindow()
+    {
+        _childSessionService.ShowWindow();
+    }
+
     [RelayCommand]
     public void ShowOrHide()
     {
@@ -38,6 +56,14 @@ public partial class NotifyIconViewModel : ObservableObject
     [RelayCommand]
     public void Exit()
     {
+        if (_childSessionService.HasActiveChildSession())
+        {
+            ThemedMessageBox.Warning(
+                "桌面分身仍在运行，请先关闭桌面分身，再退出 BetterGI。",
+                "桌面分身未关闭");
+            return;
+        }
+
         App.GetService<IConfigService>()?.Save();
         Application.Current.Shutdown();
     }

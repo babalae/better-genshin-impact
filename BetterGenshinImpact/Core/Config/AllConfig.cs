@@ -256,6 +256,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public HardwareAccelerationConfig HardwareAccelerationConfig { get; set; } = new();
 
+    /// <summary>
+    /// 桌面分身配置
+    /// </summary>
+    public ChildSessionConfig ChildSessionConfig { get; set; } = new();
+
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -291,6 +296,7 @@ public partial class AllConfig : ObservableObject
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
+        ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 

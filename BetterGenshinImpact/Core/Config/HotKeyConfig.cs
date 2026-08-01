@@ -232,6 +232,13 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _logBoxDisplayHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
+    // 遮罩指标栏展示
+    [ObservableProperty]
+    private string _overlayMetricsDisplayHotkey = "";
+
+    [ObservableProperty]
+    private string _overlayMetricsDisplayHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
     // 键鼠录制/停止
     [ObservableProperty]
     private string _keyMouseMacroRecordHotkey = "";

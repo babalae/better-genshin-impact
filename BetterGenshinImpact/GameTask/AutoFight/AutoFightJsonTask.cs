@@ -868,6 +868,8 @@ public class AutoFightJsonTask : ISoloTask
 
             if (picker != null)
             {
+                Simulation.ReleaseAllKey();
+
                 if (picker.Name == "枫原万叶")
                 {
                     var time = TimeSpan.FromSeconds(picker.GetSkillCdSeconds());
@@ -878,9 +880,9 @@ public class AutoFightJsonTask : ISoloTask
                     if (forcePickup || !shouldSkip)
                     {
                         Logger.LogInformation("使用 枫原万叶-长E 拾取掉落物");
-                        await Delay(200, _ct);
                         if (picker.TrySwitch(10))
                         {
+                            await Delay(100, _ct);
                             await picker.WaitSkillCd(_ct);
                             await SimulateHoldElementalSkillAsync(800, _ct);
                             await SimulateMouseLeftClickLoopAsync(6, _ct);
@@ -903,9 +905,9 @@ public class AutoFightJsonTask : ISoloTask
                         .ToArray();
 
                     var find = _taskParam.QinDoublePickUp;
-                    await Delay(150, _ct);
                     if (picker.TrySwitch(10))
                     {
+                        await Delay(100, _ct);
                         foreach (var miningActionStr in actionsToUse)
                         {
                             var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);
