@@ -501,7 +501,7 @@
                 </ItemsControl>
 
                 <!-- 准星配置 -->
-                <ui:CardExpander Margin="0,0,0,12"
+                <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
                     <ui:CardExpander.Header>
@@ -1531,7 +1531,7 @@
                               SelectedValuePath="Item1"
                               DisplayMemberPath="Item2" />
                 </Grid>
-                <ui:CardExpander Margin="0,0,0,12"
+                <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
                     <ui:CardExpander.Header>
@@ -1681,7 +1681,7 @@
                     </StackPanel>
                 </ui:CardExpander>
                 <!--  锄地规划配置  -->
-                <ui:CardExpander Margin="0,0,0,12"
+                <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
                     <ui:CardExpander.Header>
@@ -1774,7 +1774,7 @@
                         </Grid>
                         <StackPanel>
                             <!--  结合米游社数据计算上限  -->
-                            <ui:CardExpander Margin="0,0,0,12"
+                            <ui:CardExpander Margin="16,0,52,12"
                                              ContentPadding="0"
                                              Icon="{ui:SymbolIcon SquareHintSparkles24}">
                                 <ui:CardExpander.Header>
@@ -1871,7 +1871,7 @@
                     </StackPanel>
                 </ui:CardExpander>
                 <!--  米游社相关  -->
-                <ui:CardExpander Margin="0,0,0,12"
+                <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
                     <ui:CardExpander.Header>
@@ -2003,7 +2003,7 @@
                 </ui:CardExpander>
                 <!--  OCR PaddleOCR模型配置  -->
 
-                <ui:CardExpander Margin="0,0,0,12"
+                <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
                     <ui:CardExpander.Header>
