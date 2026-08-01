@@ -45,7 +45,7 @@
                                         <TextBox Grid.Column="1"
                                                  MinWidth="160"
                                                  VerticalAlignment="Center"
-                                                 Text="{Binding Url}"/>
+                                                 Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"/>
                                     </Grid>
             <StackPanel Margin="5"
                         HorizontalAlignment="Right"

@@ -1,4 +1,6 @@
-﻿using BetterGenshinImpact.ViewModel.Windows;
+using BetterGenshinImpact.ViewModel.Windows;
+using System;
+
 namespace BetterGenshinImpact.View.Windows;
 
 public partial class WebImageInput
@@ -8,7 +10,17 @@ public partial class WebImageInput
     public WebImageInput(WebImageInputViewModel viewModel)
     {
         DataContext = ViewModel = viewModel;
-        ViewModel.RequestClose += () => Close();
         InitializeComponent();
+        ViewModel.RequestClose += OnRequestClose;
+        Closed += OnClosed;
+    }
+
+    private void OnRequestClose() => Close();
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        Closed -= OnClosed;
+        ViewModel.RequestClose -= OnRequestClose;
+        ViewModel.CancelDownload();
     }
 }
