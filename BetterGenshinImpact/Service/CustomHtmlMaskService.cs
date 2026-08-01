@@ -49,6 +49,12 @@ public sealed class CustomHtmlMaskService
     public void Preview()
     {
         EnsureDefaultHtmlFile();
+        if (HtmlMaskWindow.Reload(PreviewWindowId))
+        {
+            HtmlMaskWindow.SetClickThrough(PreviewWindowId, _configService.Get().MaskWindowConfig.CustomHtmlMaskClickThrough);
+            return;
+        }
+
         var windowId = HtmlMaskWindow.Show(new Uri(HtmlPath).AbsoluteUri, PreviewWindowId, DirectoryPath);
         HtmlMaskWindow.SetClickThrough(windowId, _configService.Get().MaskWindowConfig.CustomHtmlMaskClickThrough);
     }
@@ -62,7 +68,12 @@ public sealed class CustomHtmlMaskService
     {
         if (_configService.Get().MaskWindowConfig.CustomHtmlMaskEnabled)
         {
-            CloseAutoWindow();
+            if (HtmlMaskWindow.Reload(AutoWindowId))
+            {
+                HtmlMaskWindow.SetClickThrough(AutoWindowId, _configService.Get().MaskWindowConfig.CustomHtmlMaskClickThrough);
+                return;
+            }
+
             ShowIfEnabled();
             return;
         }
