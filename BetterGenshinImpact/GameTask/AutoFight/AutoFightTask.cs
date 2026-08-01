@@ -545,6 +545,7 @@ public class AutoFightTask : ISoloTask
                 await targetingCts.CancelAsync();
                 try { await targetingTask; } catch (OperationCanceledException) { }
             }
+            FightStatusFlag = false;
         }
 
         try

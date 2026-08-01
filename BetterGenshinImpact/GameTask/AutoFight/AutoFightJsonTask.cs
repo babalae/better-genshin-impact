@@ -496,6 +496,7 @@ public class AutoFightJsonTask : ISoloTask
                     await targetingCts.CancelAsync();
                     try { await targetingTask; } catch (OperationCanceledException) { }
                 }
+                AutoFightTask.FightStatusFlag = false;
             }
     
             try
