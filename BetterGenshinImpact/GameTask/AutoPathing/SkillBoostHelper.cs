@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -565,12 +565,13 @@ public partial class PathExecutor
                 {
                     await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
-                    var cd = await ReadEskillCdAsync("闲云");
-                    if (cd <= 0 && state.RotationStableCount >= 1)
+                    // C1 闲云有两次 E 可用，直接尝试施放；E 不可用时按键无副作用，不需要 OCR 检测 CD
+                    // 使用非阻塞时间间隔（复用 _lastJumpFlyTime，类似火神跳飞），避免阻塞期间无法转向
+                    if (state.RotationStableCount >= 1
+                        && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds >= interval / 2.0)
                     {
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay((int)(interval / 2.0 * 1000), ct);
-                        avatar.LastSkillTime = DateTime.UtcNow;
+                        _lastJumpFlyTime = DateTime.UtcNow;
                         return true;
                     }
 

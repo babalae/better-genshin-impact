@@ -401,7 +401,17 @@ public class Genshin
     /// <returns></returns>
     public async Task GoToCraftingBench(string country)
     {
-        await new GoToCraftingBenchTask().Start(country, CancellationContext.Instance.Cts.Token);
+        await new GoToCraftingBenchTask().GoToCraftingBench(country, CancellationContext.Instance.Cts.Token);
+    }
+
+    /// <summary>
+    /// 前往合成台合成浓缩树脂
+    /// </summary>
+    /// <param name="country">国家名称</param>
+    /// <returns></returns>
+    public async Task GoCraftResin(string country)
+    {
+        await new GoToCraftingBenchTask().GoCraftResin(country, CancellationContext.Instance.Cts.Token);
     }
 
     /// <summary>

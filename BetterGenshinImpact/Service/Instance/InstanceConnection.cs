@@ -3,10 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Monitor;
+using Microsoft.Win32.SafeHandles;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -44,11 +46,26 @@ internal sealed class InstanceConnection : IAsyncDisposable
         _stream = stream;
         _owner = owner;
         _logger = logger;
+        if (stream is NamedPipeServerStream server
+            && InstancePipePeerInfo.TryGetClientProcessAndSession(
+                server.SafePipeHandle,
+                out var processId,
+                out var sessionId))
+        {
+            ClientProcessId = processId;
+            ClientSessionId = sessionId;
+        }
     }
 
-    internal InstanceDescriptor? RemoteDescriptor { get; set; }
+    internal InstanceEndpoint? RemoteEndpoint { get; set; }
+
+    internal int? ClientProcessId { get; }
+
+    internal int? ClientSessionId { get; }
 
     internal Task Completion => _receiveTask ?? Task.CompletedTask;
+
+    internal bool IsStarted => _receiveTask is not null;
 
     internal void Start(CancellationToken cancellationToken)
     {
@@ -61,12 +78,11 @@ internal sealed class InstanceConnection : IAsyncDisposable
 
     internal async Task<InstanceIpcEnvelope> SendRequestAsync(
         string operation,
-        Guid sourceInstanceId,
         object? data,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        var request = InstanceIpcEnvelope.Request(operation, sourceInstanceId, data);
+        var request = InstanceIpcEnvelope.Request(operation, data);
         var completionSource = new TaskCompletionSource<InstanceIpcEnvelope>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         if (!_pendingRequests.TryAdd(request.RequestId, completionSource))
@@ -267,6 +283,11 @@ internal sealed class InstanceConnection : IAsyncDisposable
                 await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
+                    if (!_owner.IsGameMouseModeEnabled)
+                    {
+                        continue;
+                    }
+
                     var firstSequence = _nextMouseSequence;
                     _nextMouseSequence += checked((ulong)batch.Count);
                     await InstanceIpcProtocol.WriteRelativeMouseBatchAsync(
@@ -340,5 +361,40 @@ internal sealed class InstanceConnection : IAsyncDisposable
             completionSource.TrySetException(exception);
         }
         _pendingRequests.Clear();
+    }
+}
+
+internal static class InstancePipePeerInfo
+{
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetNamedPipeClientProcessId(
+        SafePipeHandle pipe,
+        out uint clientProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ProcessIdToSessionId(
+        uint processId,
+        out uint sessionId);
+
+    internal static bool TryGetClientProcessAndSession(
+        SafePipeHandle pipe,
+        out int processId,
+        out int sessionId)
+    {
+        if (GetNamedPipeClientProcessId(pipe, out var nativeProcessId)
+            && ProcessIdToSessionId(nativeProcessId, out var nativeSessionId)
+            && nativeProcessId <= int.MaxValue
+            && nativeSessionId <= int.MaxValue)
+        {
+            processId = (int)nativeProcessId;
+            sessionId = (int)nativeSessionId;
+            return true;
+        }
+
+        processId = 0;
+        sessionId = 0;
+        return false;
     }
 }

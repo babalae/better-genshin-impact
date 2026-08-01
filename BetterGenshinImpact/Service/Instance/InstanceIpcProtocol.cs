@@ -15,14 +15,14 @@ public static class InstanceOperations
 {
     public const string Ping = "ping";
     public const string Response = "response";
-    public const string ActivationForward = "activation.forward";
-    public const string InstanceRegister = "instance.register";
-    public const string InstanceUnregister = "instance.unregister";
-    public const string InstanceHeartbeat = "instance.heartbeat";
-    public const string InstanceGetTree = "instance.getTree";
+    public const string ConnectionOpen = "connection.open";
+    public const string ActivationDispatch = "activation.dispatch";
     public const string RelativeMouseSubscribe = "input.relativeMouse.subscribe";
     public const string RelativeMouseUnsubscribe = "input.relativeMouse.unsubscribe";
     public const string RelativeMouseState = "input.relativeMouse.state";
+    public const string WebViewList = "webview.list";
+    public const string WebViewSend = "webview.send";
+    public const string WebViewMessage = "webview.message";
 }
 
 public sealed class InstanceIpcEnvelope
@@ -32,8 +32,6 @@ public sealed class InstanceIpcEnvelope
     public Guid RequestId { get; init; } = Guid.NewGuid();
 
     public string Operation { get; init; } = string.Empty;
-
-    public Guid SourceInstanceId { get; init; }
 
     public bool? Success { get; init; }
 
@@ -45,27 +43,23 @@ public sealed class InstanceIpcEnvelope
 
     internal static InstanceIpcEnvelope Request(
         string operation,
-        Guid sourceInstanceId,
         object? data = null)
     {
         return new InstanceIpcEnvelope
         {
             Operation = operation,
-            SourceInstanceId = sourceInstanceId,
             Data = data is null ? null : JObject.FromObject(data, InstanceIpcProtocol.Serializer)
         };
     }
 
     internal static InstanceIpcEnvelope Response(
         InstanceIpcEnvelope request,
-        Guid sourceInstanceId,
         object? data = null)
     {
         return new InstanceIpcEnvelope
         {
             RequestId = request.RequestId,
             Operation = InstanceOperations.Response,
-            SourceInstanceId = sourceInstanceId,
             Success = true,
             Data = data is null ? null : JObject.FromObject(data, InstanceIpcProtocol.Serializer)
         };
@@ -73,7 +67,6 @@ public sealed class InstanceIpcEnvelope
 
     internal static InstanceIpcEnvelope Failure(
         InstanceIpcEnvelope request,
-        Guid sourceInstanceId,
         string errorCode,
         string errorMessage)
     {
@@ -81,7 +74,6 @@ public sealed class InstanceIpcEnvelope
         {
             RequestId = request.RequestId,
             Operation = InstanceOperations.Response,
-            SourceInstanceId = sourceInstanceId,
             Success = false,
             ErrorCode = errorCode,
             ErrorMessage = errorMessage
@@ -111,7 +103,7 @@ internal readonly record struct RelativeMouseResult(
 
 internal static class InstanceIpcProtocol
 {
-    internal const int Version = 1;
+    internal const int Version = 2;
     internal const int MaxPayloadLength = 1024 * 1024;
     private const int FrameHeaderLength = sizeof(uint) + sizeof(byte);
     private const int RelativeMouseBatchHeaderLength = sizeof(ushort) + sizeof(ulong) + sizeof(long);

@@ -304,7 +304,7 @@
                                                       ItemsSource="{Binding DataContext.OverlayMetricItems, RelativeSource={RelativeSource AncestorType=Page}}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
-                                                    <UniformGrid Columns="3" Rows="3" />
+                                                    <UniformGrid Columns="3" Rows="4" />
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>

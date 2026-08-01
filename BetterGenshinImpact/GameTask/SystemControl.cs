@@ -34,7 +34,7 @@ public class SystemControl
         var cfg = TaskContext.Instance().Config.GenshinStartConfig;
         var workdir = Path.GetDirectoryName(path) ?? "";
         var arg = cfg.GenshinStartArgs.Trim();
-        if (CommandLineOptions.Instance.InstanceType == BetterGiInstanceType.ChildSession)
+        if (InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession)
         {
             arg = string.IsNullOrEmpty(arg)
                 ? ChildSessionGenshinStartArgs
@@ -251,15 +251,32 @@ public class SystemControl
         string exePath = Process.GetCurrentProcess().MainModule.FileName;
 
         // 构建参数字符串
-        string arguments = string.Join(" ", [..newArgs,"--no-single"]);
+        var restartArgs = new List<string>(newArgs);
+        var instanceType = InstanceBootstrap.Current.Context.InstanceType;
+        if (instanceType == BetterGiInstanceType.ChildSession)
+        {
+            restartArgs.Add(CommandLineOptions.InstanceArgument);
+            restartArgs.Add("childSession");
+        }
+        else if (instanceType == BetterGiInstanceType.WebView)
+        {
+            restartArgs.Add(CommandLineOptions.InstanceArgument);
+            restartArgs.Add("webview");
+        }
+        restartArgs.Add(CommandLineOptions.RestartFromProcessIdArgument);
+        restartArgs.Add(Environment.ProcessId.ToString());
 
         // 启动新进程
-        Process.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = exePath,
-            Arguments = arguments,
             UseShellExecute = false
-        });
+        };
+        foreach (var argument in restartArgs)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+        Process.Start(startInfo);
 
         // 关闭当前程序
         Environment.Exit(0);

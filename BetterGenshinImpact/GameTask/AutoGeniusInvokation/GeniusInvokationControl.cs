@@ -379,33 +379,67 @@ public class GeniusInvokationControl
     public static Dictionary<string, List<Point>> FindMultiPicFromOneImage2OneByOne(Mat srcMat,
         IReadOnlyDictionary<string, Mat> imgSubDictionary, double threshold = 0.8)
     {
-        var dictionary = new Dictionary<string, List<Point>>();
+        var allMatches = new List<TemplateDetection>();
         foreach (var kvp in imgSubDictionary)
         {
-            var list = new List<Point>();
+            // 先保留每个模板命中的原始候选及分数，后续统一做跨模板去重。
+            var matches = MatchTemplateHelper.FindMatches(
+                srcMat,
+                kvp.Value,
+                TemplateMatchModes.CCoeffNormed,
+                null,
+                threshold,
+                -1);
 
-            while (true)
+            foreach (var match in matches)
             {
-                var point = MatchTemplateHelper.MatchTemplate(srcMat, kvp.Value, TemplateMatchModes.CCoeffNormed, null,
-                    threshold);
-                if (point != new Point())
-                {
-                    // 把结果给遮掩掉，避免重复识别
-                    Cv2.Rectangle(srcMat, point, new Point(point.X + kvp.Value.Width, point.Y + kvp.Value.Height),
-                        Scalar.Black, -1);
-                    list.Add(point);
-                }
-                else
-                {
-                    break;
-                }
+                allMatches.Add(new TemplateDetection(
+                    kvp.Key,
+                    new Rect(match.Location.X, match.Location.Y, kvp.Value.Width, kvp.Value.Height),
+                    match.Score));
+            }
+        }
+
+        var selectedMatches = new List<TemplateDetection>();
+        // 按分数从高到低保留候选，重叠区域默认取分数最高的那个结果。
+        foreach (var candidate in allMatches.OrderByDescending(x => x.Score))
+        {
+            if (selectedMatches.Any(x => CalculateIou(x.Bounds, candidate.Bounds) >= 0.5))
+            {
+                continue;
             }
 
-            dictionary.Add(kvp.Key, list);
+            selectedMatches.Add(candidate);
+        }
+
+        var dictionary = new Dictionary<string, List<Point>>();
+        foreach (var key in imgSubDictionary.Keys)
+        {
+            dictionary.Add(key, []);
+        }
+
+        // 去重后的候选再按元素类型回填成原调用方需要的返回结构。
+        foreach (var match in selectedMatches)
+        {
+            dictionary[match.Element].Add(match.Bounds.Location);
         }
 
         return dictionary;
     }
+
+    private static double CalculateIou(Rect first, Rect second)
+    {
+        var intersection = first.Intersect(second);
+        if (intersection.Width <= 0 || intersection.Height <= 0)
+        {
+            return 0;
+        }
+
+        var intersectionArea = (double)intersection.Width * intersection.Height;
+        return intersectionArea / (first.Width * first.Height + second.Width * second.Height - intersectionArea);
+    }
+
+    private readonly record struct TemplateDetection(string Element, Rect Bounds, double Score);
 
     /// <summary>
     /// 重投骰子
@@ -1109,7 +1143,7 @@ public class GeniusInvokationControl
 
         // 识别角色能量
         var energyPointList =
-            MatchTemplateHelper.MatchTemplateMulti(characterMat.Clone(), _assets.CharacterEnergyOnMat, 0.8);
+            MatchTemplateHelper.MatchTemplateMulti(characterMat, _assets.CharacterEnergyOnMat, 0.8);
         character.EnergyByRecognition = energyPointList.Count;
 
         character.Hp = hp;
