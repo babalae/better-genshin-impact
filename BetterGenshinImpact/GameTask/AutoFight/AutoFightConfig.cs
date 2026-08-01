@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -101,6 +101,29 @@ public partial class AutoFightConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private bool _checkBeforeBurst = false;
+
+        /// <summary>
+        /// 敌人可见时跳过战斗结束检查
+        /// </summary>
+        [ObservableProperty]
+        private bool _skipFightEndCheckWhenEnemyVisible = false;
+
+        /// <summary>
+        /// 与"敌人可见时跳过战斗结束检查"互斥：开启旋转寻找敌人时关闭跳过检查，
+        /// 避免跳过分支不清零旋转计数导致战斗被误判结束。
+        /// </summary>
+        partial void OnRotateFindEnemyEnabledChanged(bool value)
+        {
+            if (value) SkipFightEndCheckWhenEnemyVisible = false;
+        }
+
+        /// <summary>
+        /// 与"旋转寻找敌人位置"互斥：开启跳过战斗结束检查时关闭旋转寻找敌人。
+        /// </summary>
+        partial void OnSkipFightEndCheckWhenEnemyVisibleChanged(bool value)
+        {
+            if (value) RotateFindEnemyEnabled = false;
+        }
     }
     /// <summary>
     /// 战斗结束相关配置
@@ -169,5 +192,44 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private int _timeout = 120;
 
+    /// <summary>
+    /// 战斗中持续索敌：战斗过程中情况允许时持续尝试面朝敌人
+    /// </summary>
+    [ObservableProperty]
+    private bool _enableCombatTargeting = false;
 
+    /// <summary>
+    /// 脱锁等待时间（秒）：敌人不可见时等待一定时间后开始旋转索敌
+    /// </summary>
+    [ObservableProperty]
+    private double _lockLostWaitTime = 0.5;
+
+    /// <summary>
+    /// 索敌识别间隔（毫秒）
+    /// </summary>
+    [ObservableProperty]
+    private int _targetingDetectionInterval = 50;
+
+    /// <summary>
+    /// 伤害数字识别模式
+    /// </summary>
+    [ObservableProperty]
+    private DamageNumberRecognitionMode _damageNumberRecognitionMode = DamageNumberRecognitionMode.Color;
+
+    /// <summary>
+    /// 绘制识别结果位置：在遮罩窗口上显示血条、伤害数字等识别结果的边框
+    /// </summary>
+    [ObservableProperty]
+    private bool _drawRecognitionResults = true;
+
+}
+
+/// <summary>
+/// 伤害数字识别模式
+/// </summary>
+public enum DamageNumberRecognitionMode
+{
+    Disabled,
+    Ocr,
+    Color
 }
