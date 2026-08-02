@@ -57,12 +57,14 @@ public class ScanPickTask
         while (!ct.IsCancellationRequested && timeoutStopwatch.Elapsed < finishTime)
         {
             var (hasItems, pickItems) = DetectPickableItems();
+            // 扫圈过程中命中物品时，相机已经发生偏转，需要回正后再移动
+            var cameraRotated = false;
             // Logger.LogInformation("存在可拾取物品: {0}", hasItems);
             if (!hasItems)
             {
                 Simulation.ReleaseAllKey();
                 await ResetCamera(ct);
-                for (var i = 0; i < 10; i++)
+                for (var i = 0; i < 10 && timeoutStopwatch.Elapsed < finishTime; i++)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy(400, 0);
                     if (i > 5) //前期不考虑移动扫描
@@ -70,11 +72,25 @@ public class ScanPickTask
                     Simulation.SendInput.SimulateAction(GIActions.Drop);
                     await Delay(300, ct);
                     (hasItems, pickItems) = DetectPickableItems();
-                    if (hasItems) break;
+                    if (hasItems)
+                    {
+                        cameraRotated = true;
+                        break;
+                    }
                 }
             }
 
-            if (!hasItems) break;
+            // 一整圈都没有发现物品时，不要提前结束扫描，继续按配置时长扫描
+            if (!hasItems)
+            {
+                continue;
+            }
+
+            // 扫圈中命中物品时相机已偏转，先回正相机，保证移动按键相对视角一致
+            if (cameraRotated)
+            {
+                await ResetCamera(ct);
+            }
 
             // Assume 1080p resolution
             // approximate dist=(x-960)**2+14*(y-888.88)**2
@@ -100,25 +116,24 @@ public class ScanPickTask
     /// <param name="toPickItem">The item to move towards</param>
     private static void MoveTowardsItem(Rect toPickItem)
     {
-        // 对于比较远的物品（Y坐标靠上）先用前进靠近
         // 需要避免两个对向的键同时按下
-        if (toPickItem.Bottom > 560)
+        // 左右转向不再受物品底边 y 坐标限制：无论远近都按物品中心相对屏幕中心（960）的横向偏移转向，
+        // 避免远处斜向掉落物只能直行靠近、无法拾取的问题
+        var itemCenterX = toPickItem.X + toPickItem.Width / 2.0;
+        if (itemCenterX < 880)
         {
-            if (toPickItem.X < 760)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-            }
-            else if (toPickItem.X > 1040)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
-            }
-            else
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
-            }
+            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+        }
+        else if (itemCenterX > 1040)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
+        }
+        else
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
         }
 
         if (toPickItem.Bottom < 770)
