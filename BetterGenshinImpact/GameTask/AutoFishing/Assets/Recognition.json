@@ -31,8 +31,8 @@
     "ExitFishingButton": {
       "type": "TemplateMatch",
       "template": "exit_fishing.png",
-      "roi": "rect(cw / 8, 0, cw / 4, ch / 4)",
-      "threshold": 0.7,
+      "roi": "rect(cw - 140 * s, ch - 150 * s, 140 * s, 150 * s)",
+      "threshold": 0.8,
       "draw": false
     }
   }
