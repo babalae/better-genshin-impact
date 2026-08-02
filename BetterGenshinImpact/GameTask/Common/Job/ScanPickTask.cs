@@ -57,8 +57,6 @@ public class ScanPickTask
         while (!ct.IsCancellationRequested && timeoutStopwatch.Elapsed < finishTime)
         {
             var (hasItems, pickItems) = DetectPickableItems();
-            // 扫圈过程中命中物品时，相机已经发生偏转，需要回正后再移动
-            var cameraRotated = false;
             // Logger.LogInformation("存在可拾取物品: {0}", hasItems);
             if (!hasItems)
             {
@@ -72,11 +70,7 @@ public class ScanPickTask
                     Simulation.SendInput.SimulateAction(GIActions.Drop);
                     await Delay(300, ct);
                     (hasItems, pickItems) = DetectPickableItems();
-                    if (hasItems)
-                    {
-                        cameraRotated = true;
-                        break;
-                    }
+                    if (hasItems) break;
                 }
             }
 
@@ -86,11 +80,8 @@ public class ScanPickTask
                 continue;
             }
 
-            // 扫圈中命中物品时相机已偏转，先回正相机，保证移动按键相对视角一致
-            if (cameraRotated)
-            {
-                await ResetCamera(ct);
-            }
+            // 扫圈中命中物品时相机已转到物品方向，保持当前视角直接移动；
+            // 检测坐标只在当前视角下有效，回正相机会让物品移出视野、坐标失效
 
             // Assume 1080p resolution
             // approximate dist=(x-960)**2+14*(y-888.88)**2
