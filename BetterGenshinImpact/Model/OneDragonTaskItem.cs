@@ -79,7 +79,7 @@ public partial class OneDragonTaskItem : ObservableObject
                 {
                     try
                     {
-                        await new GoToCraftingBenchTask().Start(config.CraftingBenchCountry,
+                        await new GoToCraftingBenchTask().GoCraftResin(config.CraftingBenchCountry,
                             CancellationContext.Instance.Cts.Token);
                     }
                     catch (Exception e)

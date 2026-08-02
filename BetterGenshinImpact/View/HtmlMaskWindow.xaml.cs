@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Vanara.PInvoke;
@@ -33,6 +34,8 @@ public partial class HtmlMaskWindow : Window
     private bool _styleCaptured;
     private int _originalStyle;
     private volatile bool _isClickThrough = true;
+    private bool _isClosing;
+    private Task? _initializationTask;
     private readonly System.Windows.Media.SolidColorBrush _backgroundBrush = new();
 
     /// <summary>
@@ -54,7 +57,7 @@ public partial class HtmlMaskWindow : Window
         InitializeComponent();
         ClickThroughBorder.Background = _backgroundBrush;
         Loaded += OnLoaded;
-        InitializeAsync(url);
+        Closing += (_, _) => _isClosing = true;
     }
 
     #region 静态窗口管理
@@ -101,6 +104,19 @@ public partial class HtmlMaskWindow : Window
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// 重新加载指定窗口。窗口仍在初始化时无需额外操作，初始化完成后会读取最新页面内容。
+    /// </summary>
+    public static bool Reload(string id)
+    {
+        if (!_windows.TryGetValue(id, out var window))
+        {
+            return false;
+        }
+
+        return window.Dispatcher.Invoke(window.ReloadCore);
     }
 
     /// <summary>
@@ -239,18 +255,29 @@ public partial class HtmlMaskWindow : Window
 
     #endregion
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         SetClickThrough(true);
         UpdatePosition();
+
+        if (_initializationTask != null)
+        {
+            return;
+        }
+
+        _initializationTask = InitializeAsync();
+        await _initializationTask;
     }
 
-    private async void InitializeAsync(string url)
+    private async Task InitializeAsync()
     {
         try
         {
-            await WebView.EnsureCoreWebView2Async(
-                await CoreWebView2Environment.CreateAsync(null, _webView2DataPath));
+            var environment = await CoreWebView2Environment.CreateAsync(null, _webView2DataPath);
+            if (_isClosing) return;
+
+            await WebView.EnsureCoreWebView2Async(environment);
+            if (_isClosing) return;
 
             WebView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
             WebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;
@@ -305,6 +332,7 @@ public partial class HtmlMaskWindow : Window
                     window.htmlMask._dispatch(e.data);
                 });
             ");
+            if (_isClosing) return;
 
             // 监听HTML发来的消息，解析 url + data + requestId
             WebView.CoreWebView2.WebMessageReceived += (_, e) =>
@@ -351,15 +379,48 @@ public partial class HtmlMaskWindow : Window
                 });
             };
 
-            if (!string.IsNullOrEmpty(url))
+            if (!string.IsNullOrEmpty(_pageUrl))
             {
-                WebView.Source = new Uri(url);
+                WebView.Source = new Uri(_pageUrl);
             }
+        }
+        catch (Exception e) when (_isClosing)
+        {
+            // 窗口关闭会销毁 WebView2 的宿主句柄，尚未完成的初始化会以 E_ABORT 结束。
+            TaskControl.Logger.LogDebug(e, "HTML遮罩窗口已关闭，WebView2 初始化已取消");
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogError($"WebView2 初始化失败: {e.Message}");
-            Dispatcher.Invoke(() => Close());
+            TaskControl.Logger.LogError(e, "WebView2 初始化失败");
+            if (!_isClosing)
+            {
+                Close();
+            }
+        }
+    }
+
+    private bool ReloadCore()
+    {
+        if (_isClosing)
+        {
+            return false;
+        }
+
+        try
+        {
+            // 初始化尚未完成时，首次导航会直接读取磁盘上的最新内容。
+            if (WebView.CoreWebView2 == null)
+            {
+                return true;
+            }
+
+            _navigationCompleted = false;
+            WebView.CoreWebView2.Reload();
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
         }
     }
 

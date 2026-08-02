@@ -13,29 +13,69 @@ namespace BetterGenshinImpact.GameTask.Common.StateMachine;
 using static TaskControl;
 
 /// <summary>
-/// 状态处理器返回结果，决定状态机如何处理当前状态
+/// 状态处理器基础结果。
 /// </summary>
-public enum StateHandlerResult
+public enum StateHandlerStatus
 {
-    /// <summary>
-    /// 成功：操作完成，状态机自动等待邻接状态转换；源状态持续可见超过动作生效窗口后触发当前状态重试
-    /// </summary>
     Success,
-
-    /// <summary>
-    /// 等待：可预期的等待，状态机继续循环重新检测
-    /// </summary>
     Wait,
-
-    /// <summary>
-    /// 重试：意外失败，状态机重试直到超过最大次数
-    /// </summary>
     Retry,
+    Fail
+}
+
+/// <summary>
+/// 状态处理器返回结果，决定状态机如何处理当前状态。
+/// 可通过 SuccessTo 指定本次动作允许到达的邻接状态。
+/// </summary>
+public readonly struct StateHandlerResult
+{
+    private StateHandlerResult(StateHandlerStatus status, IReadOnlyList<Enum> targetStates)
+    {
+        Status = status;
+        TargetStates = targetStates;
+    }
 
     /// <summary>
-    /// 失败：无法恢复的错误，状态机抛出异常
+    /// 基础处理结果。
     /// </summary>
-    Fail
+    public StateHandlerStatus Status { get; }
+
+    /// <summary>
+    /// 本次动作允许到达的目标状态集合。
+    /// 空集合表示使用当前状态的全部邻接状态。
+    /// </summary>
+    public IReadOnlyList<Enum> TargetStates { get; }
+
+    public static StateHandlerResult Success { get; } = Create(StateHandlerStatus.Success);
+
+    public static StateHandlerResult Wait { get; } = Create(StateHandlerStatus.Wait);
+
+    public static StateHandlerResult Retry { get; } = Create(StateHandlerStatus.Retry);
+
+    public static StateHandlerResult Fail { get; } = Create(StateHandlerStatus.Fail);
+
+    /// <summary>
+    /// 创建成功结果，并将目标收窄到当前状态图中的指定邻接状态。
+    /// </summary>
+    public static StateHandlerResult SuccessTo<TState>(params TState[] targetStates)
+        where TState : struct, Enum
+    {
+        if (targetStates == null || targetStates.Length == 0)
+        {
+            throw new ArgumentException("SuccessTo 至少需要一个目标状态", nameof(targetStates));
+        }
+
+        var distinctTargets = targetStates
+            .Cast<Enum>()
+            .Distinct()
+            .ToArray();
+        return new StateHandlerResult(StateHandlerStatus.Success, Array.AsReadOnly(distinctTargets));
+    }
+
+    private static StateHandlerResult Create(StateHandlerStatus status)
+    {
+        return new StateHandlerResult(status, Array.Empty<Enum>());
+    }
 }
 
 /// <summary>
@@ -682,11 +722,13 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             {
                 var result = await handler(context);
 
-                switch (result)
+                switch (result.Status)
                 {
-                    case StateHandlerResult.Success:
-                        // 成功：等待邻接状态转换；源状态持续可见超过动作生效窗口时触发当前状态重试
-                        var transitionResult = await WaitNextStateTransition(transitionTimeout);
+                    case StateHandlerStatus.Success:
+                        // 成功：等待指定的目标状态，或当前状态的全部邻接状态。
+                        var transitionResult = result.TargetStates.Count > 0
+                            ? await WaitStateTransitionTo(result.TargetStates, transitionTimeout)
+                            : await WaitNextStateTransition(transitionTimeout);
                         switch (transitionResult.Status)
                         {
                             case StateTransitionWaitStatus.ReachedTarget:
@@ -704,19 +746,19 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
                         }
                         break;
 
-                    case StateHandlerResult.Wait:
-                        // 可预期的等待：继续循环，重新检测状态
+                    case StateHandlerStatus.Wait:
+                        // 可预期的等待：状态机继续循环，重新检测状态。
                         Logger.LogDebug("Handler 返回 Wait，状态机继续等待");
                         break;
 
-                    case StateHandlerResult.Retry:
-                        // 意外失败重试：检查重试次数
+                    case StateHandlerStatus.Retry:
+                        // 意外失败重试：检查重试次数。
                         RecordStateRetry("Handler 返回 Retry", retryPolicy, stateRetryStopwatch);
                         nextLoopInterval = retryInterval;
                         break;
 
-                    case StateHandlerResult.Fail:
-                        // 失败：抛出异常
+                    case StateHandlerStatus.Fail:
+                        // 失败：抛出异常。
                         throw new InvalidOperationException($"状态 {CurrentState} 的 Handler 返回失败");
                 }
             }
@@ -912,8 +954,47 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
     }
 
     /// <summary>
-    /// 等待转换到邻接状态（使用状态转换关系）
-    /// 自动使用当前状态注册的邻接状态作为期望状态
+    /// 等待转换到 Handler 指定的目标状态集合。
+    /// </summary>
+    private async Task<StateTransitionWaitResult> WaitStateTransitionTo(IReadOnlyList<Enum> targetStates, int? timeoutMs = null)
+    {
+        var possibleStates = GetPossibleNextStates();
+        if (possibleStates == null || possibleStates.Length == 0)
+        {
+            throw new InvalidOperationException($"当前状态 {CurrentState} 没有注册邻接状态，无法使用 SuccessTo");
+        }
+
+        var typedTargetStates = new TState[targetStates.Count];
+        for (var i = 0; i < targetStates.Count; i++)
+        {
+            if (targetStates[i] is not TState typedState)
+            {
+                throw new InvalidOperationException($"状态 {CurrentState} 的 SuccessTo 目标类型 {targetStates[i].GetType().Name} 与状态机状态类型 {typeof(TState).Name} 不匹配");
+            }
+
+            if (!possibleStates.Contains(typedState))
+            {
+                throw new InvalidOperationException($"状态 {CurrentState} 的 SuccessTo 目标 {typedState} 不是合法邻接状态");
+            }
+
+            if (!_stateDetectors.ContainsKey(typedState))
+            {
+                throw new InvalidOperationException($"状态 {CurrentState} 的 SuccessTo 目标 {typedState} 未注册状态检测器");
+            }
+
+            typedTargetStates[i] = typedState;
+        }
+
+        var observedStates = typedTargetStates
+            .Concat(new[] { CurrentState })
+            .Distinct()
+            .ToArray();
+        return await WaitAnyStateTransition(observedStates, timeoutMs);
+    }
+
+    /// <summary>
+    /// 等待转换到邻接状态（使用状态转换关系）。
+    /// 自动使用当前状态注册的邻接状态作为期望状态。
     /// </summary>
     /// <param name="timeoutMs">超时时间（毫秒）</param>
     /// <returns>转换等待结果</returns>
