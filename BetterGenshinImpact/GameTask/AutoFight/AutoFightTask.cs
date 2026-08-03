@@ -96,11 +96,15 @@ public class AutoFightTask : ISoloTask
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
             SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
-            BlockCheckBeforeBattleSeconds =
-                double.TryParse(finishDetectConfig.BlockCheckBeforeBattleSeconds, out var blockSeconds) ? blockSeconds : 0;
+            // 开战阻断时间（秒）限制在 0-10 之间，超出范围时修饰到对应上下限
+            BlockCheckBeforeBattleSeconds = Math.Clamp(
+                double.TryParse(finishDetectConfig.BlockCheckBeforeBattleSeconds, out var blockSeconds) ? blockSeconds : 0,
+                0, 10);
             PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
-            PaimonEndCheckDelayMs =
-                (int)((double.TryParse(finishDetectConfig.PaimonEndCheckDelay, out var paimonResult) ? paimonResult : 0.1) * 1000);
+            // 派蒙检测延时（秒）限制在 0.05-0.4 之间，超出范围时修饰到对应上下限
+            var paimonDelaySeconds =
+                double.TryParse(finishDetectConfig.PaimonEndCheckDelay, out var paimonResult) ? paimonResult : 0.1;
+            PaimonEndCheckDelayMs = (int)(Math.Clamp(paimonDelaySeconds, 0.05, 0.4) * 1000);
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
