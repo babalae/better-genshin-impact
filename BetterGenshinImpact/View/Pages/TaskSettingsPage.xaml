@@ -660,7 +660,7 @@
                                               ValidationMode="InvalidInputOverwritten"
                                               Minimum="0"
                                               Maximum="10"
-                                              SpinButtonPlacementMode="None" />
+                                              SpinButtonPlacementMode="Hidden" />
                             </Grid>
 
                             <!-- 派蒙辅助检测 -->
@@ -704,7 +704,7 @@
                                               ValidationMode="InvalidInputOverwritten"
                                               Minimum="0.05"
                                               Maximum="0.4"
-                                              SpinButtonPlacementMode="None" />
+                                              SpinButtonPlacementMode="Hidden" />
                             </Grid>
 
                             <!-- 旋转寻找敌人位置：主开关 + 速度滑块 -->
