@@ -41,8 +41,8 @@ public class AutoFightTask : ISoloTask
 
     private readonly BgiYoloPredictor _predictor;
 
-    private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
-    private int _skipCheckCounter;
+    private static DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
+    private static int _skipCheckCounter;
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
     
@@ -57,7 +57,7 @@ public class AutoFightTask : ISoloTask
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
     
-    private class TaskFightFinishDetectConfig
+    public class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
         public int DetectDelayTime = 450;
@@ -875,10 +875,19 @@ public class AutoFightTask : ISoloTask
 
     public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
+        return await CheckFightFinish(_finishDetectConfig, _ct, delayTime, detectDelayTime);
+    }
+
+    /// <summary>
+    /// 战斗结束检测（统一实现，TXT 与 JSON 策略共用）
+    /// </summary>
+    public static async Task<bool> CheckFightFinish(TaskFightFinishDetectConfig finishDetectConfig,
+        CancellationToken ct, int delayTime = 1500, int detectDelayTime = 450)
+    {
         using (AvatarRecognition.BeginExclusiveOperation())
         {
             // 敌人可见时跳过战斗结束检查
-            if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
+            if (finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
             {
                 if (_skipCheckCounter < 5)
                 {
@@ -886,7 +895,7 @@ public class AutoFightTask : ISoloTask
                     var bars = AvatarRecognition.FindBloodBars(quickCapture);
                     // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
                     // 过滤左侧 UI 区域 (x <= 200)，避免队伍头像等红色元素被误判为敌人血条
-                    if (bars.Any(b => b.x > (int)(200 * _assetScale)))
+                    if (bars.Any(b => b.x > (int)(200 * TaskContext.Instance().SystemInfo.AssetScale)))
                     {
                         _skipCheckCounter++;
                         Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
@@ -900,12 +909,12 @@ public class AutoFightTask : ISoloTask
                 _skipCheckCounter = 0;
             }
 
-            if (_finishDetectConfig.RotateFindEnemyEnabled)
+            if (finishDetectConfig.RotateFindEnemyEnabled)
             {
                 bool? result = null;
                 try
                 {
-                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
+                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct);
                 }
                 catch (Exception ex)
                 {
@@ -922,13 +931,13 @@ public class AutoFightTask : ISoloTask
                 }
             }
 
-            if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
+            if (!finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, ct);
             
             // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
             Logger.LogInformation("打开编队界面检查战斗是否结束");
             // 最终方案确认战斗结束
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            await Delay(detectDelayTime, _ct);
+            await Delay(detectDelayTime, ct);
             
             using var ra = CaptureToRectArea();
             //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
@@ -952,13 +961,13 @@ public class AutoFightTask : ISoloTask
             // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
             Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
 
-            if (_finishDetectConfig.RotateFindEnemyEnabled)
+            if (finishDetectConfig.RotateFindEnemyEnabled)
             {
                 Task.Run(() =>
                 {
                     Scalar bloodLower = new Scalar(255, 90, 90);
-                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                } ,_ct);
+                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, ct);
+                } ,ct);
             }
             
             _lastFightFlagTime = DateTime.Now;
@@ -966,7 +975,7 @@ public class AutoFightTask : ISoloTask
         }
     }
 
-    bool IsYellow(int r, int g, int b)
+    static bool IsYellow(int r, int g, int b)
     {
         //Logger.LogInformation($"IsYellow({r},{g},{b})");
         // 黄色范围：R高，G高，B低
@@ -975,7 +984,7 @@ public class AutoFightTask : ISoloTask
                (b >= 0 && b <= 100);
     }
 
-    bool IsWhite(int r, int g, int b)
+    static bool IsWhite(int r, int g, int b)
     {
         //Logger.LogInformation($"IsWhite({r},{g},{b})");
         // 白色范围：R高，G高，B低

@@ -79,137 +79,7 @@ public class AutoFightJsonTask : ISoloTask
     // 战斗点位
     public static WaypointForTrack? FightWaypoint { get; set; } = null;
 
-    private TaskFightFinishDetectConfig _finishDetectConfig;
-
-    private class TaskFightFinishDetectConfig
-    {
-        public int DelayTime = 1500;
-        public int DetectDelayTime = 450;
-        public Dictionary<string, int> DelayTimes = new();
-        public double CheckTime = 5;
-        public List<string> CheckNames = new();
-        public bool FastCheckEnabled;
-        public bool RotateFindEnemyEnabled = false;
-        public bool SkipFightEndCheckWhenEnemyVisible = false;
-
-        public (int, int, int) BattleEndProgressBarColor { get; }
-        public (int, int, int) BattleEndProgressBarColorTolerance { get; }
-
-        public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
-        {
-            FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
-            ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
-            ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
-            BattleEndProgressBarColor =
-                ParseStringToTuple(finishDetectConfig.BattleEndProgressBarColor, (95, 235, 255));
-            BattleEndProgressBarColorTolerance =
-                ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
-            DetectDelayTime =
-                (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
-            RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
-            SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
-        }
-
-        public static void ParseCheckTimeString(
-            string input,
-            out double checkTime,
-            List<string> names)
-        {
-            checkTime = 5;
-            if (string.IsNullOrEmpty(input))
-            {
-                return;
-            }
-
-            var uniqueNames = new HashSet<string>();
-
-            var segments = input.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var segment in segments)
-            {
-                var trimmedSegment = segment.Trim();
-
-                if (double.TryParse(trimmedSegment, NumberStyles.Float, CultureInfo.InvariantCulture,
-                        out double number))
-                {
-                    checkTime = number;
-                }
-                else if (!uniqueNames.Contains(trimmedSegment))
-                {
-                    uniqueNames.Add(trimmedSegment);
-                }
-            }
-
-            names.AddRange(uniqueNames);
-        }
-
-        public static void ParseFastCheckEndDelayString(
-            string input,
-            out int delayTime,
-            Dictionary<string, int> nameDelayMap)
-        {
-            delayTime = 1500;
-
-            if (string.IsNullOrEmpty(input))
-            {
-                return;
-            }
-
-            var segments = input.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var segment in segments)
-            {
-                var parts = segment.Split(',');
-
-                if (parts.Length == 1)
-                {
-                    if (double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture,
-                            out double number))
-                    {
-                        delayTime = (int)(number * 1000);
-                    }
-                }
-                else if (parts.Length == 2)
-                {
-                    string name = parts[0].Trim();
-                    if (double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture,
-                            out double value))
-                    {
-                        nameDelayMap[name] = (int)(value * 1000);
-                    }
-                }
-            }
-        }
-
-        static bool IsSingleNumber(string input, out int result)
-        {
-            return int.TryParse(input, out result);
-        }
-
-        static (int, int, int) ParseSingleOrCommaSeparated(string input, (int, int, int) defaultValue)
-        {
-            if (IsSingleNumber(input, out var singleNumber))
-            {
-                return (singleNumber, singleNumber, singleNumber);
-            }
-
-            return ParseStringToTuple(input, defaultValue);
-        }
-
-        static (int, int, int) ParseStringToTuple(string input, (int, int, int) defaultValue)
-        {
-            var parts = input.Split(',');
-            if (parts.Length == 3 &&
-                int.TryParse(parts[0], out var num1) &&
-                int.TryParse(parts[1], out var num2) &&
-                int.TryParse(parts[2], out var num3))
-            {
-                return (num1, num2, num3);
-            }
-
-            return defaultValue;
-        }
-    }
+    private AutoFightTask.TaskFightFinishDetectConfig _finishDetectConfig;
 
     public AutoFightJsonTask(AutoFightParam taskParam)
     {
@@ -221,7 +91,7 @@ public class AutoFightJsonTask : ISoloTask
             _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
         }
 
-        _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
+        _finishDetectConfig = new AutoFightTask.TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
 
     /// <summary>
@@ -575,7 +445,8 @@ public class AutoFightJsonTask : ISoloTask
                 // 仅由 check 指令触发战斗结束检测
                 if (cmd.Method == Method.Check && _taskParam.FightFinishDetectEnabled)
                 {
-                    _fightEndFlag = await CheckFightFinish(_finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
+                    _fightEndFlag = await AutoFightTask.CheckFightFinish(_finishDetectConfig, _ct,
+                        _finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
                     if (_fightEndFlag)
                     {
                         Logger.LogInformation("{Name} 检测到战斗结束", action.Name);
@@ -595,118 +466,6 @@ public class AutoFightJsonTask : ISoloTask
         {
             Simulation.ReleaseAllKey();
         }
-    }
-
-    /// <summary>战斗结束检测</summary>
-    private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
-    {
-        using (AvatarRecognition.BeginExclusiveOperation())
-        {
-            // 敌人可见时跳过战斗结束检查
-            if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
-            {
-                if (_skipCheckCounter < 5)
-                {
-                    using var quickCapture = CaptureToRectArea();
-                    var bars = AvatarRecognition.FindBloodBars(quickCapture);
-                    // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
-                    // 过滤左侧 UI 区域 (x <= 200)，避免队伍头像等红色元素被误判为敌人血条
-                    if (bars.Any(b => b.x > (int)(200 * _assetScale)))
-                    {
-                        _skipCheckCounter++;
-                        Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
-                        return false;
-                    }
-                }
-                _skipCheckCounter = 0;
-            }
-            else
-            {
-                _skipCheckCounter = 0;
-            }
-
-            if (_finishDetectConfig.RotateFindEnemyEnabled)
-            {
-                bool? result = null;
-                try
-                {
-                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                    result = false;
-                }
-
-                AutoFightSeek.RotationCount = (result == null) ? AutoFightSeek.RotationCount + 1 : 0;
-
-                if (result != null)
-                {
-                    return result.Value;
-                }
-            }
-
-            if (!_finishDetectConfig.RotateFindEnemyEnabled) await Delay(delayTime, _ct);
-
-            Logger.LogInformation("打开编队界面检查战斗是否结束");
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            await Delay(detectDelayTime, _ct);
-
-            using var ra = CaptureToRectArea();
-            // 注意：像素坐标 (50, 790) 和 (50, 768) 是硬编码的，未做分辨率缩放
-            // 与 TXT 版本逻辑保持一致，不进行缩放
-            var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
-            var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
-
-            if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
-                IsYellow(b3.Item2, b3.Item1, b3.Item0))
-            {
-                Logger.LogInformation("识别到战斗结束");
-                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                return true;
-            }
-
-            Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-
-            if (_finishDetectConfig.RotateFindEnemyEnabled)
-            {
-                // 注意：此处使用 await 确保异常能被正确捕获
-                // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        var bloodLower = new Scalar(255, 90, 90);
-                        await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
-                    }
-                }, _ct);
-            }
-
-            _lastFightFlagTime = DateTime.Now;
-            return false;
-        }
-    }
-
-    private bool IsYellow(int r, int g, int b)
-    {
-        return (r >= 200 && r <= 255) &&
-               (g >= 200 && g <= 255) &&
-               (b >= 0 && b <= 100);
-    }
-
-    private bool IsWhite(int r, int g, int b)
-    {
-        return (r >= 240 && r <= 255) &&
-               (g >= 240 && g <= 255) &&
-               (b >= 240 && b <= 255);
     }
 
     /// <summary>日志防刷：同一动作名在1秒内至多输出一次日志</summary>
