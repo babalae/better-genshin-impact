@@ -215,6 +215,70 @@ public class Avatar
             TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
         }
     }
+
+    /// <summary>
+    /// back 动作：有可用的开战点时，在超时时间内尝试返回开战点，返回逻辑同游泳检测。
+    /// 返回成功或超时时退出逻辑，退出时（finally）点按一次 X。
+    /// </summary>
+    /// <param name="timeoutSeconds">总超时（秒），FaceTo 与 MoveTo 均在此时间内完成</param>
+    public void BackToFightWaypoint(double timeoutSeconds)
+    {
+        var waypoint = AutoFightTask.FightWaypoint;
+        if (waypoint is null)
+        {
+            Logger.LogInformation("back：当前没有可用的开战点，跳过");
+            return;
+        }
+
+        Logger.LogInformation("back：尝试返回开战点（{X},{Y}），超时 {T} 秒", waypoint.GameX, waypoint.GameY, timeoutSeconds);
+
+        using (AvatarRecognition.BeginExclusiveOperation())
+        {
+            // 保存原始 MoveMode，用于 finally 还原
+            var originalMoveMode = waypoint.MoveMode;
+            // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+
+            try
+            {
+                var pathExecutor = new PathExecutor(cts.Token);
+
+                // 总超时：FaceTo 与 MoveTo 均在 timeoutSeconds 内完成
+                cts.CancelAfter((int)(timeoutSeconds * 1000));
+
+                // FaceTo 朝向开战点
+                pathExecutor.FaceTo(waypoint).GetAwaiter().GetResult();
+
+                // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
+                waypoint.MoveMode = MoveModeEnum.Climb.Code;
+                Simulation.SendInput.Mouse.RightButtonDown();
+                pathExecutor.MoveTo(waypoint).GetAwaiter().GetResult();
+                Logger.LogInformation("back：返回开战点移动结束");
+            }
+            catch (OperationCanceledException) when (Ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                // 返回开战点超时，静默处理无需日志
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "back：返回开战点异常");
+            }
+            finally
+            {
+                // 确保所有资源和状态在任何路径都被正确清理
+                cts.Cancel(); // 终止 PathExecutor 内部截屏循环
+                waypoint.MoveMode = originalMoveMode;
+                Simulation.SendInput.Mouse.RightButtonUp();
+                Simulation.ReleaseAllKey();
+                // 退出逻辑时点按一次 X
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+            }
+        }
+    }
     
     /// <summary>
     /// 游泳检测（色块连通性检测）

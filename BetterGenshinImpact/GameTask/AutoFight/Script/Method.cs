@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -20,6 +20,7 @@ public class Method
     public static readonly Method A = new(["a"]);
     public static readonly Method S = new(["s"]);
     public static readonly Method D = new(["d"]);
+    public static readonly Method Back = new(["back"]);
 
     public static readonly Method Aim = new(["aim", "r", "瞄准"]);
     public static readonly Method Dash = new(["dash", "冲刺"]);
@@ -53,6 +54,7 @@ public class Method
             yield return A;
             yield return S;
             yield return D;
+            yield return Back;
 
             // yield return Aim;
             yield return Dash;
