@@ -1480,15 +1480,23 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         var supplementRect = ScaleRect(850, 730, 250, 60);
 
-        while (page.Ocr(supplementRect).Any(region =>
-                   region.Text.Contains("补充", StringComparison.Ordinal)
-                   || region.Text.Contains("原粹", StringComparison.Ordinal)
-                   || region.Text.Contains("树脂", StringComparison.Ordinal)))
+        for (var i = 0; i < 50; i++)
         {
             _ct.ThrowIfCancellationRequested();
+            var promptExists = page.Ocr(supplementRect).Any(region =>
+                region.Text.Contains("补充", StringComparison.Ordinal)
+                || region.Text.Contains("原粹", StringComparison.Ordinal)
+                || region.Text.Contains("树脂", StringComparison.Ordinal));
+            if (!promptExists)
+            {
+                return;
+            }
+
             page.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             await page.Wait(300);
         }
+
+        throw new TimeoutException("关闭补充原粹树脂提示超时");
     }
 
     /// <summary>
