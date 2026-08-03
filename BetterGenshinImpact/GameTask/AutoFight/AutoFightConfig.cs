@@ -115,7 +115,7 @@ public partial class AutoFightConfig : ObservableObject
         private bool _skipFightEndCheckWhenEnemyVisible = false;
 
         /// <summary>
-        /// 开战前一段时间阻断战斗结束检查（秒）：默认0不阻断；大于0时，开战前该时间内的战斗结束检查直接视为战斗未结束。
+        /// 开战后一段时间阻断战斗结束检查（秒）：默认0不阻断；大于0时，开战后该时间内的战斗结束检查直接视为战斗未结束。
         /// </summary>
         [ObservableProperty]
         private string _blockCheckBeforeBattleSeconds = "0";
