@@ -37,6 +37,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         [ObservableProperty] private int _rotaryFactor = 10;
         [ObservableProperty] private bool _isFirstCheck = false;
         [ObservableProperty] private bool _checkBeforeBurst = false;
+        [ObservableProperty] private bool _skipFightEndCheckWhenEnemyVisible = false;
         [ObservableProperty] private bool _paimonEndCheckEnabled = false;
         [ObservableProperty] private string _paimonEndCheckDelay = "0.1";
     }
@@ -79,6 +80,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         FinishDetectConfig.RotaryFactor = source.FinishDetectConfig.RotaryFactor;
         FinishDetectConfig.IsFirstCheck = source.FinishDetectConfig.IsFirstCheck;
         FinishDetectConfig.CheckBeforeBurst = source.FinishDetectConfig.CheckBeforeBurst;
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = source.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
         FinishDetectConfig.PaimonEndCheckEnabled = source.FinishDetectConfig.PaimonEndCheckEnabled;
         FinishDetectConfig.PaimonEndCheckDelay = source.FinishDetectConfig.PaimonEndCheckDelay;
     }
@@ -120,6 +122,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
             RotaryFactor = FinishDetectConfig.RotaryFactor,
             IsFirstCheck = FinishDetectConfig.IsFirstCheck,
             CheckBeforeBurst = FinishDetectConfig.CheckBeforeBurst,
+            SkipFightEndCheckWhenEnemyVisible = FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible,
             PaimonEndCheckEnabled = FinishDetectConfig.PaimonEndCheckEnabled,
             PaimonEndCheckDelay = FinishDetectConfig.PaimonEndCheckDelay
         };
