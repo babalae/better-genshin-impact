@@ -72,6 +72,14 @@ public class CombatCommand
             AssertUtils.IsTrue(Args.Count == 1, "scroll方法必须有一个入参，代表滚动格数。例：scroll(1) 或 scroll(-1)");
             AssertUtils.IsTrue(int.TryParse(Args[0], out _), "滚动格数必须是整数");
         }
+        else if (Method == Method.Back)
+        {
+            AssertUtils.IsTrue(Args.Count <= 1, "back方法最多只能有一个入参，代表返回开战点的超时秒数。例：back 或 back(1)");
+            if (Args.Count == 1)
+            {
+                AssertUtils.IsTrue(double.TryParse(Args[0], out var timeout) && timeout > 0, "back方法的入参必须是大于0的秒数。例：back(1)");
+            }
+        }
     }
     
     public override string ToString()
@@ -230,6 +238,12 @@ public class CombatCommand
         else if (Method == Method.Jump)
         {
             avatar.Jump();
+        }
+        else if (Method == Method.Back)
+        {
+            // back：有可用开战点时在超时内返回开战点，返回逻辑同游泳检测；退出时点按一次X
+            var timeoutSeconds = Args is { Count: 1 } ? double.Parse(Args[0]) : 1;
+            avatar.BackToFightWaypoint(timeoutSeconds);
         }
         // 宏
         else if (Method == Method.MouseDown)
