@@ -263,6 +263,10 @@ public class Avatar
             {
                 // 返回开战点超时，静默处理无需日志
             }
+            catch (NormalEndException)
+            {
+                // 用户取消自动任务（正常结束），静默处理无需日志
+            }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "back：返回开战点异常");
