@@ -35,6 +35,11 @@ public class BvPage
         _cancellationToken = cancellationToken;
     }
 
+    public BvFlow Flow()
+    {
+        return new BvFlow(this, DefaultTimeout, DefaultRetryInterval);
+    }
+
     /// <summary>
     /// 截图
     /// </summary>

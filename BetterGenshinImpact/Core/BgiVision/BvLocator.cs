@@ -38,6 +38,11 @@ public class BvLocator
         _cancellationToken = cancellationToken;
     }
 
+    internal BvLocator Clone()
+    {
+        return new BvLocator(RecognitionObject, _cancellationToken);
+    }
+
     /// <summary>
     /// 根据传入的位置信息定位元素
     /// 不建议外部调用使用
