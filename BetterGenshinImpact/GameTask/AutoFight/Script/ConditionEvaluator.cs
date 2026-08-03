@@ -375,6 +375,7 @@ public class ConditionEvaluator
             "t" => EvalT(),
             "since" => EvalSince(args, currentIndex),
             "count" => EvalCount(args, currentIndex),
+            "last-check" => EvalLastCheck(),
             _ => throw new InvalidOperationException($"未知条件函数：{name}")
         };
     }
@@ -593,6 +594,15 @@ public class ConditionEvaluator
     private double EvalT()
     {
         return (DateTime.Now - _battleStartTime).TotalSeconds;
+    }
+
+    /// <summary>
+    /// 距离上次战斗结束检查的时间，单位秒
+    /// 包括动作中的 check 指令与更快触发战斗结束检查触发的检查（两者均走 <see cref="AutoFightTask.CheckFightFinish"/>）
+    /// </summary>
+    private double EvalLastCheck()
+    {
+        return (DateTime.Now - AutoFightTask.LastFightFinishCheckTime).TotalSeconds;
     }
 
     /// <summary>

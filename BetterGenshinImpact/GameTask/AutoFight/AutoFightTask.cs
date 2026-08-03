@@ -57,6 +57,11 @@ public class AutoFightTask : ISoloTask
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
     
+    /// <summary>
+    /// 最近一次战斗结束检查的时间（TXT 与 JSON 策略共用，供 JSON 策略 last-check 条件使用）
+    /// </summary>
+    public static DateTime LastFightFinishCheckTime { get; set; } = DateTime.Now;
+    
     public class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
@@ -889,6 +894,8 @@ public class AutoFightTask : ISoloTask
     public static async Task<bool> CheckFightFinish(TaskFightFinishDetectConfig finishDetectConfig,
         CancellationToken ct, int delayTime = 1500, int detectDelayTime = 450)
     {
+        // 记录最近一次战斗结束检查的时间（供 JSON 策略 last-check 条件使用）
+        LastFightFinishCheckTime = DateTime.Now;
         using (AvatarRecognition.BeginExclusiveOperation())
         {
             // 敌人可见时跳过战斗结束检查

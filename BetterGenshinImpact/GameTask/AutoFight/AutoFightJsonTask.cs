@@ -222,7 +222,8 @@ public class AutoFightJsonTask : ISoloTask
                 try
                 {
                     JsonAction? lastExecutedAction = null;
-                    Stopwatch checkFightFinishStopwatch = Stopwatch.StartNew();
+                    // 战斗开始时重置最近一次检查时间，供更快触发战斗结束检查判断间隔使用
+                    AutoFightTask.LastFightFinishCheckTime = DateTime.Now;
                     TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗结束的超时时间
 
                     while (!cts2.Token.IsCancellationRequested)
@@ -271,10 +272,10 @@ public class AutoFightJsonTask : ISoloTask
 
                                     if (checkAvatarName != prevAvatarName &&
                                         ((_finishDetectConfig.CheckTime > 0 &&
-                                          checkFightFinishStopwatch.Elapsed > checkFightFinishTime)
+                                          (DateTime.Now - AutoFightTask.LastFightFinishCheckTime) > checkFightFinishTime)
                                          || _finishDetectConfig.CheckNames.Contains(prevAvatarName)))
                                     {
-                                        checkFightFinishStopwatch.Restart();
+                                        // LastFightFinishCheckTime 由 CheckFightFinish 内部更新（动作中的 check 指令也会更新）
 
                                         int delayTime = _finishDetectConfig.DelayTime;
                                         if (_finishDetectConfig.DelayTimes.TryGetValue(prevAvatarName, out var characterDelayTime))
