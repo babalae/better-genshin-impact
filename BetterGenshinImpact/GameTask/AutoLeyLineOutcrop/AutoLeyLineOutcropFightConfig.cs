@@ -39,9 +39,9 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         [ObservableProperty] private bool _isFirstCheck = false;
         [ObservableProperty] private bool _checkBeforeBurst = false;
         [ObservableProperty] private bool _skipFightEndCheckWhenEnemyVisible = false;
-        [ObservableProperty] private string _blockCheckBeforeBattleSeconds = "0";
+        [ObservableProperty] private double _blockCheckBeforeBattleSeconds = 0;
         [ObservableProperty] private bool _paimonEndCheckEnabled = false;
-        [ObservableProperty] private string _paimonEndCheckDelay = "0.1";
+        [ObservableProperty] private double _paimonEndCheckDelay = 0.1;
     }
 
     [ObservableProperty] private FightFinishDetectConfig _finishDetectConfig = new();
@@ -77,12 +77,14 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         FinishDetectConfig.FastCheckEnabled = source.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.RotateFindEnemyEnabled = source.FinishDetectConfig.RotateFindEnemyEnabled;
         FinishDetectConfig.FastCheckParams = source.FinishDetectConfig.FastCheckParams;
+        FinishDetectConfig.CheckAfterSwitchAvatar = source.FinishDetectConfig.CheckAfterSwitchAvatar;
         FinishDetectConfig.CheckEndDelay = source.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = source.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotaryFactor = source.FinishDetectConfig.RotaryFactor;
         FinishDetectConfig.IsFirstCheck = source.FinishDetectConfig.IsFirstCheck;
         FinishDetectConfig.CheckBeforeBurst = source.FinishDetectConfig.CheckBeforeBurst;
         FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = source.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        FinishDetectConfig.BlockCheckBeforeBattleSeconds = source.FinishDetectConfig.BlockCheckBeforeBattleSeconds;
         FinishDetectConfig.PaimonEndCheckEnabled = source.FinishDetectConfig.PaimonEndCheckEnabled;
         FinishDetectConfig.PaimonEndCheckDelay = source.FinishDetectConfig.PaimonEndCheckDelay;
     }

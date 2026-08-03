@@ -1225,7 +1225,7 @@
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束( 默认关闭 )，完成一轮动作后，如果满足条件，则触发一次战斗结束检查（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                                  Text="快速检查战斗结束( 默认关闭 )，完成一轮动作后，如果满足条件，则触发一次战斗结束检查。"
                                                                   TextWrapping="Wrap" />
                                                     <ui:ToggleSwitch Grid.Row="0"
                                                                      Grid.RowSpan="2"
@@ -1252,7 +1252,7 @@
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束的参数，填写数字（秒）时距离上次检查超过该时间则触发检查，填写人名时对应角色动作后触发检查"
+                                                                  Text="快速检查战斗结束的参数，填写数字（秒）时距离上次检查超过该时间则触发检查，填写人名时对应角色动作后触发检查。多项时使用分号分隔，格式如5或5;白术;"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBox Grid.Row="0"
                                                                 Grid.RowSpan="2"
@@ -1306,7 +1306,7 @@
                                                  IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
                             </Grid>
 
-                            <!-- 开战前一段时间阻断战斗结束检查 -->
+                            <!-- 开战后一段时间阻断战斗结束检查 -->
                             <Grid Margin="16,0,16,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -1314,16 +1314,19 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="Body"
-                                                  Text="开战前一段时间阻断战斗结束检查（秒）"
+                                                  Text="开战后一段时间阻断战斗结束检查（秒）"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   Text="开战后该时间内的战斗结束检查直接视为战斗未结束，默认为0表示不阻断。"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
-                                <ui:TextBox Grid.Column="1"
-                                            MinWidth="120"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}" />
+                                <ui:NumberBox Grid.Column="1"
+                                              MinWidth="120"
+                                              Margin="0,0,36,0"
+                                              Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}"
+                                              ValidationMode="InvalidInputOverwritten"
+                                              Minimum="0"
+                                              Maximum="10" />
                             </Grid>
 
                             <!-- 派蒙辅助检测 -->
@@ -1360,10 +1363,13 @@
                                                   Text="按L后等待该时间再检测派蒙头像，默认为0.1秒"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
-                                <ui:TextBox Grid.Column="1"
-                                            MinWidth="120"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}" />
+                                <ui:NumberBox Grid.Column="1"
+                                              MinWidth="120"
+                                              Margin="0,0,36,0"
+                                              Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}"
+                                              ValidationMode="InvalidInputOverwritten"
+                                              Minimum="0.05"
+                                              Maximum="0.4" />
                             </Grid>
 
                             <Grid Margin="16,0,16,16">
@@ -1469,7 +1475,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒( 预设0.4秒 )。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                                  Text="触发战斗结束检查时，先等待该延时以确保角色动作后摇结束。也可为角色单独指定延时，格式如0.4或0.4;钟离,1.5"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -1494,7 +1500,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒( 预设0.4秒 )。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若出现无法结束战斗可以适当提高这个值，比如0.75。但不要太大，确保这个延时不会真的把队伍配置界面切出来。"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
