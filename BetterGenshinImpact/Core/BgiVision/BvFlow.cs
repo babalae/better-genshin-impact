@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using OpenCvSharp;
@@ -10,9 +12,10 @@ public sealed class BvFlow
 {
     private readonly BvPage _page;
     private readonly List<BvFlowStep> _steps = [];
+    private readonly object _syncRoot = new();
     private bool _hasSteps;
     private bool _hasStarted;
-    private bool _isRunning;
+    private int _isRunning;
 
     internal int DefaultTimeout { get; private set; }
     internal int DefaultRetryInterval { get; private set; }
@@ -26,15 +29,23 @@ public sealed class BvFlow
 
     public BvFlow WithDefaultTimeout(int milliseconds)
     {
-        EnsureDefaultsCanChange();
-        DefaultTimeout = ValidatePositive(milliseconds, nameof(milliseconds));
+        var timeout = ValidatePositive(milliseconds, nameof(milliseconds));
+        lock (_syncRoot)
+        {
+            EnsureDefaultsCanChange();
+            DefaultTimeout = timeout;
+        }
         return this;
     }
 
     public BvFlow WithDefaultRetryInterval(int milliseconds)
     {
-        EnsureDefaultsCanChange();
-        DefaultRetryInterval = ValidatePositive(milliseconds, nameof(milliseconds));
+        var retryInterval = ValidatePositive(milliseconds, nameof(milliseconds));
+        lock (_syncRoot)
+        {
+            EnsureDefaultsCanChange();
+            DefaultRetryInterval = retryInterval;
+        }
         return this;
     }
 
@@ -71,18 +82,23 @@ public sealed class BvFlow
 
     public async Task<BvPage> Run()
     {
-        if (_isRunning)
+        if (Interlocked.CompareExchange(ref _isRunning, 1, 0) != 0)
         {
             throw new InvalidOperationException("同一个 BvFlow 不能并发执行");
         }
 
-        _hasStarted = true;
-        _isRunning = true;
         try
         {
-            for (var i = 0; i < _steps.Count; i++)
+            BvFlowStep[] steps;
+            lock (_syncRoot)
             {
-                var step = _steps[i];
+                _hasStarted = true;
+                steps = _steps.ToArray();
+            }
+
+            for (var i = 0; i < steps.Length; i++)
+            {
+                var step = steps[i];
                 try
                 {
                     await step.Action();
@@ -101,19 +117,23 @@ public sealed class BvFlow
         }
         finally
         {
-            _isRunning = false;
+            Volatile.Write(ref _isRunning, 0);
         }
     }
 
     internal BvFlow AddStep(string description, Func<Task> action)
     {
-        if (_hasStarted)
+        lock (_syncRoot)
         {
-            throw new InvalidOperationException("BvFlow 已经开始执行，不能再添加步骤");
+            if (_hasStarted)
+            {
+                throw new InvalidOperationException("BvFlow 已经开始执行，不能再添加步骤");
+            }
+
+            _hasSteps = true;
+            _steps.Add(new BvFlowStep(description, action));
         }
 
-        _hasSteps = true;
-        _steps.Add(new BvFlowStep(description, action));
         return this;
     }
 

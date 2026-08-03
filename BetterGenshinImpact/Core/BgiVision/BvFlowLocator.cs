@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
@@ -66,6 +67,12 @@ public sealed class BvFlowLocator
                 action(results);
                 return Task.CompletedTask;
             };
+        return this;
+    }
+
+    public BvFlowLocator WithRetryAction(Func<List<Region>, Task>? action)
+    {
+        _retryAction = action;
         return this;
     }
 
@@ -141,48 +148,81 @@ public sealed class BvFlowLocator
 
     public BvFlow ClickUntilDisappears()
     {
-        return AddLocatorStep("ClickUntilDisappears", async locator => await locator.ClickUntilDisappears());
+        var snapshot = CreateSnapshot();
+        return _flow.AddStep(Describe("ClickUntilDisappears"), async () =>
+        {
+            Configure(snapshot);
+            var locator = snapshot.Locator;
+            (await locator.WaitFor()).First().Click();
+            locator.WithRetryAction((Action<List<Region>>)(results => results.First().Click()));
+            await locator.WaitForDisappear();
+        });
     }
 
     public BvFlow ClickUntil(BvLocator target)
     {
         ArgumentNullException.ThrowIfNull(target);
+        var sourceSnapshot = CreateSnapshot();
+        var targetSnapshot = CreateSnapshot(target);
         return _flow.AddStep(Describe("ClickUntil"), async () =>
         {
-            Configure(target);
-            target.WithRetryAction(_ =>
-            {
-                var sourceRegions = _locator.FindAll();
-                if (sourceRegions.Count > 0)
-                {
-                    sourceRegions[0].Click();
-                }
-            });
-            await target.WaitFor();
+            Configure(targetSnapshot);
+            targetSnapshot.Locator.RetryAction = CreateClickUntilRetryAction(
+                sourceSnapshot.Locator.FindAll,
+                sourceSnapshot.RetryAction);
+            await targetSnapshot.Locator.WaitFor();
         });
     }
 
     private BvFlow AddLocatorStep(string operation, Func<BvLocator, Task> action)
     {
+        var snapshot = CreateSnapshot();
         return _flow.AddStep(Describe(operation), async () =>
         {
-            Configure(_locator);
-            await action(_locator);
+            Configure(snapshot);
+            await action(snapshot.Locator);
         });
     }
 
-    private void Configure(BvLocator locator)
+    internal BvFlowLocatorSnapshot CreateSnapshot(BvLocator? locator = null)
     {
-        locator.WithTimeout(_timeout ?? _flow.DefaultTimeout)
-            .WithRetryInterval(_retryInterval ?? _flow.DefaultRetryInterval);
+        return new BvFlowLocatorSnapshot(
+            (locator ?? _locator).Clone(),
+            _timeout ?? _flow.DefaultTimeout,
+            _retryInterval ?? _flow.DefaultRetryInterval,
+            _retryAction);
+    }
 
-        if (_retryAction == null)
+    internal static Func<List<Region>, Task> CreateClickUntilRetryAction(
+        Func<List<Region>> findSource,
+        Func<List<Region>, Task>? sourceRetryAction)
+    {
+        return async _ =>
         {
-            locator.WithRetryAction((Action<List<Region>>?)null);
+            var sourceRegions = findSource();
+            if (sourceRegions.Count > 0)
+            {
+                sourceRegions.First().Click();
+            }
+            else if (sourceRetryAction != null)
+            {
+                await sourceRetryAction(sourceRegions);
+            }
+        };
+    }
+
+    private static void Configure(BvFlowLocatorSnapshot snapshot)
+    {
+        snapshot.Locator.WithTimeout(snapshot.Timeout)
+            .WithRetryInterval(snapshot.RetryInterval);
+
+        if (snapshot.RetryAction == null)
+        {
+            snapshot.Locator.WithRetryAction((Action<List<Region>>?)null);
         }
         else
         {
-            locator.RetryAction = _retryAction;
+            snapshot.Locator.RetryAction = snapshot.RetryAction;
         }
     }
 
@@ -195,6 +235,12 @@ public sealed class BvFlowLocator
         };
         return this;
     }
+
+    internal sealed record BvFlowLocatorSnapshot(
+        BvLocator Locator,
+        int Timeout,
+        int RetryInterval,
+        Func<List<Region>, Task>? RetryAction);
 
     private string Describe(string operation)
     {
