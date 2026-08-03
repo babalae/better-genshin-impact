@@ -1287,6 +1287,46 @@
                                                  IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
                             </Grid>
 
+                            <!-- 派蒙辅助检测 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="派蒙辅助检测"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="按L后当派蒙头像可见时提前跳出战斗结束检测。默认关闭。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled, Mode=TwoWay}" />
+                            </Grid>
+
+                            <!-- 派蒙检测延时（勾选派蒙辅助检测后显示） -->
+                            <Grid Margin="16,0,16,16"
+                                  Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="派蒙检测延时（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="按L后等待该时间再检测派蒙头像，默认为0.1秒"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            MinWidth="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}" />
+                            </Grid>
+
                             <Grid Margin="16,0,16,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />

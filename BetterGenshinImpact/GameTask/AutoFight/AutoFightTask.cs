@@ -67,6 +67,8 @@ public class AutoFightTask : ISoloTask
         public bool FastCheckEnabled;
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
+        public bool PaimonEndCheckEnabled = false;
+        public int PaimonEndCheckDelayMs = 100;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
@@ -81,6 +83,9 @@ public class AutoFightTask : ISoloTask
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
             SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+            PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
+            PaimonEndCheckDelayMs =
+                (int)((double.TryParse(finishDetectConfig.PaimonEndCheckDelay, out var paimonResult) ? paimonResult : 0.1) * 1000);
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -937,8 +942,31 @@ public class AutoFightTask : ISoloTask
             Logger.LogInformation("打开编队界面检查战斗是否结束");
             // 最终方案确认战斗结束
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            await Delay(detectDelayTime, ct);
-            
+
+            if (finishDetectConfig.PaimonEndCheckEnabled)
+            {
+                // 派蒙辅助检测：按L后等待PaimonEndCheckDelayMs，检测(32,67)像素是否为派蒙头冠颜色
+                await Delay(finishDetectConfig.PaimonEndCheckDelayMs, ct);
+                using var paimonRa = CaptureToRectArea();
+                var paimonPixel = paimonRa.SrcMat.At<Vec3b>(32, 67);
+                var paimonVisible = IsPaimon(paimonPixel.Item2, paimonPixel.Item1, paimonPixel.Item0);
+                if (paimonVisible)
+                {
+                    // 派蒙头像未消失 → 战斗未结束，跳过黄条检测，提前退出
+                    Logger.LogInformation("派蒙头像可见，提前跳出战斗结束检查");
+                    // 取消正在进行的换队
+                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                    return false;
+                }
+
+                // 派蒙头像已消失 → 战斗可能结束，等待剩余时间后检查黄条
+                await Delay(Math.Max(0, detectDelayTime - finishDetectConfig.PaimonEndCheckDelayMs), ct);
+            }
+            else
+            {
+                await Delay(detectDelayTime, ct);
+            }
+
             using var ra = CaptureToRectArea();
             //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
             // 只提取橙色
@@ -973,6 +1001,14 @@ public class AutoFightTask : ISoloTask
             _lastFightFlagTime = DateTime.Now;
             return false;
         }
+    }
+
+    static bool IsPaimon(int r, int g, int b)
+    {
+        // 派蒙头冠颜色：R高，G中，B低（BGR 143,196,233 转换后 R=233,G=196,B=143，容差±10）
+        return (r >= 223 && r <= 243) &&
+               (g >= 186 && g <= 206) &&
+               (b >= 133 && b <= 153);
     }
 
     static bool IsYellow(int r, int g, int b)
