@@ -226,7 +226,7 @@ public class Avatar
         var waypoint = AutoFightTask.FightWaypoint;
         if (waypoint is null)
         {
-            Logger.LogInformation("back：当前没有可用的开战点，跳过");
+            // 当前没有可用的开战点，静默跳过
             return;
         }
 
