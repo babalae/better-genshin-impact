@@ -274,8 +274,8 @@ public class Avatar
                 waypoint.MoveMode = originalMoveMode;
                 Simulation.SendInput.Mouse.RightButtonUp();
                 Simulation.ReleaseAllKey();
-                // 退出逻辑时点按一次 X
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                // 退出逻辑时触发落下动作（走统一按键配置，默认X，支持用户改键）
+                Simulation.SendInput.SimulateAction(GIActions.Drop);
             }
         }
     }
