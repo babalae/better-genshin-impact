@@ -1225,7 +1225,7 @@
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束( 默认关闭 )，完成一轮动作后，如果满足条件，则触发一次战斗结束检查（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                                  Text="快速检查战斗结束( 默认关闭 )，完成一轮动作后，如果满足条件，则触发一次战斗结束检查。"
                                                                   TextWrapping="Wrap" />
                                                     <ui:ToggleSwitch Grid.Row="0"
                                                                      Grid.RowSpan="2"
@@ -1252,7 +1252,7 @@
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束的参数，填写数字（秒）时距离上次检查超过该时间则触发检查，填写人名时对应角色动作后触发检查"
+                                                                  Text="快速检查战斗结束的参数，填写数字（秒）时距离上次检查超过该时间则触发检查，填写人名时对应角色动作后触发检查。多项时使用分号分隔，格式如5或5;白术;"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBox Grid.Row="0"
                                                                 Grid.RowSpan="2"
@@ -1475,7 +1475,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒( 预设0.4秒 )。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                                  Text="触发战斗结束检查时，先等待该延时以确保角色动作后摇结束。也可为角色单独指定延时，格式如0.4或0.4;钟离,1.5"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -1500,7 +1500,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒( 预设0.4秒 )。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若出现无法结束战斗可以适当提高这个值，比如0.75。但不要太大，确保这个延时不会真的把队伍配置界面切出来。"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
