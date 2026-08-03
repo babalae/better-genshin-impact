@@ -639,7 +639,7 @@
                                                  IsChecked="{Binding Config.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
                             </Grid>
 
-                            <!-- 开战前一段时间阻断战斗结束检查 -->
+                            <!-- 开战后一段时间阻断战斗结束检查 -->
                             <Grid Margin="16,0,16,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -647,16 +647,19 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="Body"
-                                                  Text="开战前一段时间阻断战斗结束检查（秒）"
+                                                  Text="开战后一段时间阻断战斗结束检查（秒）"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   Text="开战后该时间内的战斗结束检查直接视为战斗未结束，默认为0表示不阻断。"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
-                                <ui:TextBox Grid.Column="1"
-                                            MinWidth="120"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}" />
+                                <ui:NumberBox Grid.Column="1"
+                                              MinWidth="120"
+                                              Margin="0,0,36,0"
+                                              Value="{Binding Config.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}"
+                                              ValidationMode="InvalidInputOverwritten"
+                                              Minimum="0"
+                                              Maximum="10" />
                             </Grid>
 
                             <!-- 派蒙辅助检测 -->
@@ -693,10 +696,13 @@
                                                   Text="按L后等待该时间再检测派蒙头像，默认为0.1秒"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
-                                <ui:TextBox Grid.Column="1"
-                                            MinWidth="120"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding Config.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}" />
+                                <ui:NumberBox Grid.Column="1"
+                                              MinWidth="120"
+                                              Margin="0,0,36,0"
+                                              Value="{Binding Config.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}"
+                                              ValidationMode="InvalidInputOverwritten"
+                                              Minimum="0.05"
+                                              Maximum="0.4" />
                             </Grid>
 
                             <!-- 旋转寻找敌人位置：主开关 + 速度滑块 -->

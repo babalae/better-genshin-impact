@@ -118,7 +118,7 @@ public partial class AutoFightConfig : ObservableObject
         /// 开战后一段时间阻断战斗结束检查（秒）：默认0不阻断；大于0时，开战后该时间内的战斗结束检查直接视为战斗未结束。
         /// </summary>
         [ObservableProperty]
-        private string _blockCheckBeforeBattleSeconds = "0";
+        private double _blockCheckBeforeBattleSeconds = 0;
 
         /// <summary>
         /// 派蒙辅助检测：按L后当派蒙头像可见时提前跳出战斗结束检测
@@ -130,7 +130,7 @@ public partial class AutoFightConfig : ObservableObject
         /// 派蒙辅助检测延时（秒），默认为0.1秒
         /// </summary>
         [ObservableProperty]
-        private string _paimonEndCheckDelay = "0.1";
+        private double _paimonEndCheckDelay = 0.1;
 
         /// <summary>
         /// 与"敌人可见时跳过战斗结束检查"互斥：开启旋转寻找敌人时关闭跳过检查，

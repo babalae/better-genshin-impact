@@ -224,8 +224,10 @@ public class AutoFightJsonTask : ISoloTask
                     JsonAction? lastExecutedAction = null;
                     // 战斗开始时重置最近一次检查时间，供更快触发战斗结束检查判断间隔使用
                     AutoFightTask.LastFightFinishCheckTime = DateTime.Now;
-                    // 记录开战时间，供"开战前一段时间阻断战斗结束检查"使用
+                    // 记录开战时间，供"开战后一段时间阻断战斗结束检查"使用
                     AutoFightTask.FightStartTime = DateTime.Now;
+                    // 每场新战斗重置"敌人可见时跳过战斗结束检查"的连续跳过计数
+                    AutoFightTask.ResetSkipCheckCounter();
                     TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗结束的超时时间
 
                     // 更快触发战斗结束检查（参照 txt 逻辑）：发生换人且满足时间/人名条件时触发一次检查
@@ -298,16 +300,16 @@ public class AutoFightJsonTask : ISoloTask
                                 }
 
                                 // 更快触发战斗结束检查（默认在切人前触发；开启"切人后再执行战斗结束检查"时改为切人后触发）
-                                if (!_finishDetectConfig.CheckAfterSwitchAvatar &&
-                                    await FastCheckFightFinishAsync(prevAvatarName, action.Character))
+                                var fightEndDetected = false;
+
+                                // 切人前检查（默认时机）
+                                if (!_finishDetectConfig.CheckAfterSwitchAvatar)
                                 {
-                                    _fightEndFlag = true;
-                                    // 战斗结束则跳过当前动作（切人、执行均不进行）
-                                    break;
+                                    fightEndDetected = await FastCheckFightFinishAsync(prevAvatarName, action.Character);
                                 }
 
-                                // 指定角色的动作：执行前确保切换到该角色
-                                if (!string.IsNullOrEmpty(action.Character))
+                                // 指定角色的动作：执行前确保切换到该角色（战斗已结束时跳过切人）
+                                if (!fightEndDetected && !string.IsNullOrEmpty(action.Character))
                                 {
                                     var avatar = combatScenes.SelectAvatar(action.Character);
                                     if (avatar == null) continue;
@@ -317,11 +319,15 @@ public class AutoFightJsonTask : ISoloTask
                                 }
 
                                 // 切人后再执行战斗结束检查：复用切人等待上一个动作后摇的时间，检查无需再等待
-                                if (_finishDetectConfig.CheckAfterSwitchAvatar &&
-                                    await FastCheckFightFinishAsync(prevAvatarName, action.Character))
+                                if (_finishDetectConfig.CheckAfterSwitchAvatar)
+                                {
+                                    fightEndDetected = await FastCheckFightFinishAsync(prevAvatarName, action.Character);
+                                }
+
+                                if (fightEndDetected)
                                 {
                                     _fightEndFlag = true;
-                                    // 战斗结束则跳过当前动作
+                                    // 战斗结束则跳过当前动作（切人、执行均不进行）
                                     break;
                                 }
     

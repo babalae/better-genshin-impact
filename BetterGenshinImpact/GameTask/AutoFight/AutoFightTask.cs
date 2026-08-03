@@ -44,6 +44,11 @@ public class AutoFightTask : ISoloTask
     private static DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
     private static int _skipCheckCounter;
 
+    /// <summary>
+    /// 重置"敌人可见时跳过战斗结束检查"的连续跳过计数（每场战斗开始时调用，TXT 与 JSON 策略共用）
+    /// </summary>
+    public static void ResetSkipCheckCounter() => _skipCheckCounter = 0;
+
     private readonly double _dpi = TaskContext.Instance().DpiScale;
     
     public static bool FightStatusFlag { get; set; } = false;
@@ -63,7 +68,7 @@ public class AutoFightTask : ISoloTask
     public static DateTime LastFightFinishCheckTime { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// 本次战斗的开战时间（TXT 与 JSON 策略共用，供"开战前一段时间阻断战斗结束检查"使用）
+    /// 本次战斗的开战时间（TXT 与 JSON 策略共用，供"开战后一段时间阻断战斗结束检查"使用）
     /// </summary>
     public static DateTime FightStartTime { get; set; } = DateTime.Now;
     
@@ -97,14 +102,10 @@ public class AutoFightTask : ISoloTask
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
             SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
             // 开战阻断时间（秒）限制在 0-10 之间，超出范围时修饰到对应上下限
-            BlockCheckBeforeBattleSeconds = Math.Clamp(
-                double.TryParse(finishDetectConfig.BlockCheckBeforeBattleSeconds, out var blockSeconds) ? blockSeconds : 0,
-                0, 10);
+            BlockCheckBeforeBattleSeconds = Math.Clamp(finishDetectConfig.BlockCheckBeforeBattleSeconds, 0, 10);
             PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
             // 派蒙检测延时（秒）限制在 0.05-0.4 之间，超出范围时修饰到对应上下限
-            var paimonDelaySeconds =
-                double.TryParse(finishDetectConfig.PaimonEndCheckDelay, out var paimonResult) ? paimonResult : 0.1;
-            PaimonEndCheckDelayMs = (int)(Math.Clamp(paimonDelaySeconds, 0.05, 0.4) * 1000);
+            PaimonEndCheckDelayMs = (int)(Math.Clamp(finishDetectConfig.PaimonEndCheckDelay, 0.05, 0.4) * 1000);
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -266,6 +267,8 @@ public class AutoFightTask : ISoloTask
         _ct = ct;
         AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
         AvatarRecognition.ClearLegendaryBarTracker();
+        // 每场新战斗重置"敌人可见时跳过战斗结束检查"的连续跳过计数，保证拥有完整的跳过次数
+        ResetSkipCheckCounter();
         try
         {
             LogScreenResolution();
@@ -911,7 +914,7 @@ public class AutoFightTask : ISoloTask
     public static async Task<bool> CheckFightFinish(TaskFightFinishDetectConfig finishDetectConfig,
         CancellationToken ct, int delayTime = 1500, int detectDelayTime = 450)
     {
-        // 开战前一段时间阻断战斗结束检查：距离开战时间小于配置值时，提前返回并视为战斗未结束
+        // 开战后一段时间阻断战斗结束检查：距离开战时间小于配置值时，提前返回并视为战斗未结束
         if (finishDetectConfig.BlockCheckBeforeBattleSeconds > 0 &&
             (DateTime.Now - FightStartTime).TotalSeconds < finishDetectConfig.BlockCheckBeforeBattleSeconds)
         {
