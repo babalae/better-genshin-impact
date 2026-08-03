@@ -22,6 +22,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public string BeforeDetectDelay = "";
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
+        public string BlockCheckBeforeBattleSeconds = "0";
         public bool PaimonEndCheckEnabled = false;
         public string PaimonEndCheckDelay = "0.1";
     }
@@ -42,6 +43,8 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        FinishDetectConfig.BlockCheckBeforeBattleSeconds = autoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds;
         FinishDetectConfig.PaimonEndCheckEnabled = autoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled;
         FinishDetectConfig.PaimonEndCheckDelay = autoFightConfig.FinishDetectConfig.PaimonEndCheckDelay;
 
@@ -180,6 +183,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
         FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        FinishDetectConfig.BlockCheckBeforeBattleSeconds = autoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds;
         FinishDetectConfig.PaimonEndCheckEnabled = autoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled;
         FinishDetectConfig.PaimonEndCheckDelay = autoFightConfig.FinishDetectConfig.PaimonEndCheckDelay;
 

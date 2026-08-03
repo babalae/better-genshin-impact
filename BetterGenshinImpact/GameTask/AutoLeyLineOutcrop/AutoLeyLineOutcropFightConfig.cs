@@ -39,6 +39,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         [ObservableProperty] private bool _isFirstCheck = false;
         [ObservableProperty] private bool _checkBeforeBurst = false;
         [ObservableProperty] private bool _skipFightEndCheckWhenEnemyVisible = false;
+        [ObservableProperty] private string _blockCheckBeforeBattleSeconds = "0";
         [ObservableProperty] private bool _paimonEndCheckEnabled = false;
         [ObservableProperty] private string _paimonEndCheckDelay = "0.1";
     }
@@ -125,6 +126,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
             IsFirstCheck = FinishDetectConfig.IsFirstCheck,
             CheckBeforeBurst = FinishDetectConfig.CheckBeforeBurst,
             SkipFightEndCheckWhenEnemyVisible = FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible,
+            BlockCheckBeforeBattleSeconds = FinishDetectConfig.BlockCheckBeforeBattleSeconds,
             PaimonEndCheckEnabled = FinishDetectConfig.PaimonEndCheckEnabled,
             PaimonEndCheckDelay = FinishDetectConfig.PaimonEndCheckDelay
         };

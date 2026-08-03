@@ -224,6 +224,8 @@ public class AutoFightJsonTask : ISoloTask
                     JsonAction? lastExecutedAction = null;
                     // 战斗开始时重置最近一次检查时间，供更快触发战斗结束检查判断间隔使用
                     AutoFightTask.LastFightFinishCheckTime = DateTime.Now;
+                    // 记录开战时间，供"开战前一段时间阻断战斗结束检查"使用
+                    AutoFightTask.FightStartTime = DateTime.Now;
                     TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗结束的超时时间
 
                     // 更快触发战斗结束检查（参照 txt 逻辑）：发生换人且满足时间/人名条件时触发一次检查

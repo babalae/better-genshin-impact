@@ -73,7 +73,7 @@ public partial class AutoFightConfig : ObservableObject
         private string _fastCheckParams = "";
         
         /// <summary>
-        /// 切人后再执行战斗结束检查：将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。
+        /// 切人后再执行战斗结束检查：将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。目前仅 JSON 策略下生效。
         /// </summary>
         [ObservableProperty]
         private bool _checkAfterSwitchAvatar = false;
@@ -109,10 +109,16 @@ public partial class AutoFightConfig : ObservableObject
         private bool _checkBeforeBurst = false;
 
         /// <summary>
-        /// 敌人可见时跳过战斗结束检查
+        /// 敌人可见时跳过战斗结束检查：检测到敌人血条时跳过战斗结束检查。与旋转寻找敌人位置互斥。
         /// </summary>
         [ObservableProperty]
         private bool _skipFightEndCheckWhenEnemyVisible = false;
+
+        /// <summary>
+        /// 开战前一段时间阻断战斗结束检查（秒）：默认0不阻断；大于0时，开战前该时间内的战斗结束检查直接视为战斗未结束。
+        /// </summary>
+        [ObservableProperty]
+        private string _blockCheckBeforeBattleSeconds = "0";
 
         /// <summary>
         /// 派蒙辅助检测：按L后当派蒙头像可见时提前跳出战斗结束检测

@@ -1275,7 +1275,7 @@
                                                                       Text="切人后再执行战斗结束检查"
                                                                       TextWrapping="Wrap" />
                                                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                      Text="将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。"
+                                                                      Text="将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。目前仅 JSON 策略下生效。"
                                                                       TextWrapping="Wrap" />
                                                     </StackPanel>
                                                     <ui:ToggleSwitch Grid.Column="1"
@@ -1304,6 +1304,26 @@
                                 <ui:ToggleSwitch Grid.Column="1"
                                                  Margin="0,0,36,0"
                                                  IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
+                            </Grid>
+
+                            <!-- 开战前一段时间阻断战斗结束检查 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="开战前一段时间阻断战斗结束检查（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="开战后该时间内的战斗结束检查直接视为战斗未结束，默认为0表示不阻断。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            MinWidth="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}" />
                             </Grid>
 
                             <!-- 派蒙辅助检测 -->

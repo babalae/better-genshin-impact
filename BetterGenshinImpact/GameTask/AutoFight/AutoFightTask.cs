@@ -61,6 +61,11 @@ public class AutoFightTask : ISoloTask
     /// 最近一次战斗结束检查的时间（TXT 与 JSON 策略共用，供 JSON 策略 last-check 条件使用）
     /// </summary>
     public static DateTime LastFightFinishCheckTime { get; set; } = DateTime.Now;
+
+    /// <summary>
+    /// 本次战斗的开战时间（TXT 与 JSON 策略共用，供"开战前一段时间阻断战斗结束检查"使用）
+    /// </summary>
+    public static DateTime FightStartTime { get; set; } = DateTime.Now;
     
     public class TaskFightFinishDetectConfig
     {
@@ -73,6 +78,7 @@ public class AutoFightTask : ISoloTask
         public bool CheckAfterSwitchAvatar = false;
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
+        public double BlockCheckBeforeBattleSeconds = 0;
         public bool PaimonEndCheckEnabled = false;
         public int PaimonEndCheckDelayMs = 100;
 
@@ -90,6 +96,8 @@ public class AutoFightTask : ISoloTask
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
             SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+            BlockCheckBeforeBattleSeconds =
+                double.TryParse(finishDetectConfig.BlockCheckBeforeBattleSeconds, out var blockSeconds) ? blockSeconds : 0;
             PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
             PaimonEndCheckDelayMs =
                 (int)((double.TryParse(finishDetectConfig.PaimonEndCheckDelay, out var paimonResult) ? paimonResult : 0.1) * 1000);
@@ -287,6 +295,9 @@ public class AutoFightTask : ISoloTask
         combatScenes.BeforeTask(cts2.Token);
         TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 战斗超时时间
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+
+        // 记录开战时间，供"开战前一段时间阻断战斗结束检查"使用
+        FightStartTime = DateTime.Now;
 
         Stopwatch checkFightFinishStopwatch = Stopwatch.StartNew();
         TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗超时时间的超时时间
@@ -896,6 +907,13 @@ public class AutoFightTask : ISoloTask
     public static async Task<bool> CheckFightFinish(TaskFightFinishDetectConfig finishDetectConfig,
         CancellationToken ct, int delayTime = 1500, int detectDelayTime = 450)
     {
+        // 开战前一段时间阻断战斗结束检查：距离开战时间小于配置值时，提前返回并视为战斗未结束
+        if (finishDetectConfig.BlockCheckBeforeBattleSeconds > 0 &&
+            (DateTime.Now - FightStartTime).TotalSeconds < finishDetectConfig.BlockCheckBeforeBattleSeconds)
+        {
+            return false;
+        }
+
         // 记录最近一次战斗结束检查的时间（供 JSON 策略 last-check 条件使用）
         LastFightFinishCheckTime = DateTime.Now;
         using (AvatarRecognition.BeginExclusiveOperation())
