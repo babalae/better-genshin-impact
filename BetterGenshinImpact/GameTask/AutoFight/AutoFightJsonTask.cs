@@ -438,6 +438,8 @@ public class AutoFightJsonTask : ISoloTask
                     try { await targetingTask; } catch (OperationCanceledException) { }
                 }
                 AutoFightTask.FightStatusFlag = false;
+                // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，back 动作会误用旧点位
+                AutoFightTask.FightWaypoint = null;
             }
     
             try

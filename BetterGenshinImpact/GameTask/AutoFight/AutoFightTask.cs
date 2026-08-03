@@ -576,6 +576,9 @@ public class AutoFightTask : ISoloTask
                 try { await targetingTask; } catch (OperationCanceledException) { }
             }
             FightStatusFlag = false;
+            // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，
+            // 否则后续普通自动战斗/其它策略执行 back 时会误用上一次路径的旧点位
+            FightWaypoint = null;
         }
 
         try
