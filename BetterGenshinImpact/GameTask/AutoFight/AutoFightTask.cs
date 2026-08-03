@@ -986,8 +986,10 @@ public class AutoFightTask : ISoloTask
                 var paimonVisible = IsPaimon(paimonPixel.Item2, paimonPixel.Item1, paimonPixel.Item0);
                 if (paimonVisible)
                 {
-                    // 派蒙头像可见 → 编队界面未打开（按L未生效），战斗未结束，跳过黄条检测，提前退出
+                    // 派蒙头像可见 → 编队界面未打开（按L未生效），战斗未结束，按X取消后提前跳出战斗结束检查
                     Logger.LogInformation("派蒙头像可见，提前跳出战斗结束检查");
+                    // 按X取消编队界面（走统一按键配置，默认X，支持用户改键）
+                    Simulation.SendInput.SimulateAction(GIActions.Drop);
                     return false;
                 }
 
