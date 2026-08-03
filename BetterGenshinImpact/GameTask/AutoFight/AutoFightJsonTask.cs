@@ -232,7 +232,7 @@ public class AutoFightJsonTask : ISoloTask
 
                     // 更快触发战斗结束检查（参照 txt 逻辑）：发生换人且满足时间/人名条件时触发一次检查
                     // 返回是否检测到战斗结束
-                    async Task<bool> FastCheckFightFinishAsync(string prevName, string actionName)
+                    async Task<bool> FastCheckFightFinishAsync(string prevName, string actionName, bool afterSwitch = false)
                     {
                         if (_taskParam is not { FightFinishDetectEnabled: true } || !_finishDetectConfig.FastCheckEnabled)
                             return false;
@@ -246,8 +246,9 @@ public class AutoFightJsonTask : ISoloTask
                              || _finishDetectConfig.CheckNames.Contains(prevName)))
                         {
                             // LastFightFinishCheckTime 由 CheckFightFinish 内部更新（动作中的 check 指令也会更新）
-                            int delayTime = _finishDetectConfig.DelayTime;
-                            if (_finishDetectConfig.DelayTimes.TryGetValue(prevName, out var characterDelayTime))
+                            // 切人后检查：切人动作已包含上一个动作后摇的等待，前置延时缩短为 50ms，仅保留检测界面打开后的 DetectDelayTime
+                            int delayTime = afterSwitch ? 50 : _finishDetectConfig.DelayTime;
+                            if (!afterSwitch && _finishDetectConfig.DelayTimes.TryGetValue(prevName, out var characterDelayTime))
                             {
                                 delayTime = characterDelayTime;
                             }
@@ -321,7 +322,7 @@ public class AutoFightJsonTask : ISoloTask
                                 // 切人后再执行战斗结束检查：复用切人等待上一个动作后摇的时间，检查无需再等待
                                 if (_finishDetectConfig.CheckAfterSwitchAvatar)
                                 {
-                                    fightEndDetected = await FastCheckFightFinishAsync(prevAvatarName, action.Character);
+                                    fightEndDetected = await FastCheckFightFinishAsync(prevAvatarName, action.Character, afterSwitch: true);
                                 }
 
                                 if (fightEndDetected)
