@@ -70,6 +70,7 @@ public class AutoFightTask : ISoloTask
         public double CheckTime = 5;
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
+        public bool CheckAfterSwitchAvatar = false;
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
         public bool PaimonEndCheckEnabled = false;
@@ -78,6 +79,7 @@ public class AutoFightTask : ISoloTask
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
             FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
+            CheckAfterSwitchAvatar = finishDetectConfig.CheckAfterSwitchAvatar;
             ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
             ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
             BattleEndProgressBarColor =

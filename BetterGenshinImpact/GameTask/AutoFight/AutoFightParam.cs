@@ -17,6 +17,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public string BattleEndProgressBarColorTolerance { get; set; } = "";
         public bool FastCheckEnabled = false;
         public string FastCheckParams = "";
+        public bool CheckAfterSwitchAvatar = false;
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
         public bool RotateFindEnemyEnabled = false;
@@ -37,6 +38,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
+        FinishDetectConfig.CheckAfterSwitchAvatar = autoFightConfig.FinishDetectConfig.CheckAfterSwitchAvatar;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
@@ -173,6 +175,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
+        FinishDetectConfig.CheckAfterSwitchAvatar = autoFightConfig.FinishDetectConfig.CheckAfterSwitchAvatar;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;

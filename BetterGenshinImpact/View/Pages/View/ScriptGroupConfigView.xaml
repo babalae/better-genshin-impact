@@ -1263,6 +1263,25 @@
                                                                 Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.FastCheckParams, Mode=TwoWay}"
                                                                 TextWrapping="Wrap" />
                                                 </Grid>
+
+                                                <!-- 切人后再执行战斗结束检查 -->
+                                                <Grid Margin="16">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <ui:TextBlock FontTypography="Body"
+                                                                      Text="切人后再执行战斗结束检查"
+                                                                      TextWrapping="Wrap" />
+                                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                                      Text="将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。"
+                                                                      TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <ui:ToggleSwitch Grid.Column="1"
+                                                                     Margin="0,0,36,0"
+                                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.CheckAfterSwitchAvatar, Mode=TwoWay}" />
+                                                </Grid>
                                             </StackPanel>
                                         </ui:CardExpander>
                                     </Grid>

@@ -32,6 +32,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         [ObservableProperty] private bool _fastCheckEnabled = false;
         [ObservableProperty] private bool _rotateFindEnemyEnabled = false;
         [ObservableProperty] private string _fastCheckParams = "";
+        [ObservableProperty] private bool _checkAfterSwitchAvatar = false;
         [ObservableProperty] private string _checkEndDelay = "";
         [ObservableProperty] private string _beforeDetectDelay = "";
         [ObservableProperty] private int _rotaryFactor = 10;
@@ -117,6 +118,7 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
             FastCheckEnabled = FinishDetectConfig.FastCheckEnabled,
             RotateFindEnemyEnabled = FinishDetectConfig.RotateFindEnemyEnabled,
             FastCheckParams = FinishDetectConfig.FastCheckParams,
+            CheckAfterSwitchAvatar = FinishDetectConfig.CheckAfterSwitchAvatar,
             CheckEndDelay = FinishDetectConfig.CheckEndDelay,
             BeforeDetectDelay = FinishDetectConfig.BeforeDetectDelay,
             RotaryFactor = FinishDetectConfig.RotaryFactor,

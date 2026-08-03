@@ -226,6 +226,39 @@ public class AutoFightJsonTask : ISoloTask
                     AutoFightTask.LastFightFinishCheckTime = DateTime.Now;
                     TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗结束的超时时间
 
+                    // 更快触发战斗结束检查（参照 txt 逻辑）：发生换人且满足时间/人名条件时触发一次检查
+                    // 返回是否检测到战斗结束
+                    async Task<bool> FastCheckFightFinishAsync(string prevName, string actionName)
+                    {
+                        if (_taskParam is not { FightFinishDetectEnabled: true } || !_finishDetectConfig.FastCheckEnabled)
+                            return false;
+
+                        // 本动作执行后的实际角色（无 Character 时沿用当前角色，不视为换人）
+                        var checkAvatarName = string.IsNullOrEmpty(actionName) ? _currentAvatarName : actionName;
+
+                        if (checkAvatarName != prevName &&
+                            ((_finishDetectConfig.CheckTime > 0 &&
+                              (DateTime.Now - AutoFightTask.LastFightFinishCheckTime) > checkFightFinishTime)
+                             || _finishDetectConfig.CheckNames.Contains(prevName)))
+                        {
+                            // LastFightFinishCheckTime 由 CheckFightFinish 内部更新（动作中的 check 指令也会更新）
+                            int delayTime = _finishDetectConfig.DelayTime;
+                            if (_finishDetectConfig.DelayTimes.TryGetValue(prevName, out var characterDelayTime))
+                            {
+                                delayTime = characterDelayTime;
+                            }
+
+                            var endFlag = await AutoFightTask.CheckFightFinish(_finishDetectConfig, _ct,
+                                delayTime, _finishDetectConfig.DetectDelayTime);
+                            if (endFlag)
+                            {
+                                Logger.LogInformation("{Name} 检测到战斗结束", actionName);
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+
                     while (!cts2.Token.IsCancellationRequested)
                     {
                         if (timeoutStopwatch.Elapsed > fightTimeout)
@@ -262,36 +295,13 @@ public class AutoFightJsonTask : ISoloTask
                                     continue;
                                 }
 
-                                // 更快触发战斗结束检查（参照 txt 逻辑）：发生换人且满足时间/人名条件时，在执行前触发一次检查
-                                if (_taskParam is { FightFinishDetectEnabled: true } && _finishDetectConfig.FastCheckEnabled)
+                                // 更快触发战斗结束检查（默认在切人前触发；开启"切人后再执行战斗结束检查"时改为切人后触发）
+                                if (!_finishDetectConfig.CheckAfterSwitchAvatar &&
+                                    await FastCheckFightFinishAsync(prevAvatarName, action.Character))
                                 {
-                                    // 本动作执行后的实际角色（无 Character 时沿用当前角色，不视为换人）
-                                    var checkAvatarName = string.IsNullOrEmpty(action.Character)
-                                        ? _currentAvatarName
-                                        : action.Character;
-
-                                    if (checkAvatarName != prevAvatarName &&
-                                        ((_finishDetectConfig.CheckTime > 0 &&
-                                          (DateTime.Now - AutoFightTask.LastFightFinishCheckTime) > checkFightFinishTime)
-                                         || _finishDetectConfig.CheckNames.Contains(prevAvatarName)))
-                                    {
-                                        // LastFightFinishCheckTime 由 CheckFightFinish 内部更新（动作中的 check 指令也会更新）
-
-                                        int delayTime = _finishDetectConfig.DelayTime;
-                                        if (_finishDetectConfig.DelayTimes.TryGetValue(prevAvatarName, out var characterDelayTime))
-                                        {
-                                            delayTime = characterDelayTime;
-                                        }
-
-                                        _fightEndFlag = await AutoFightTask.CheckFightFinish(_finishDetectConfig, _ct,
-                                            delayTime, _finishDetectConfig.DetectDelayTime);
-                                        if (_fightEndFlag)
-                                        {
-                                            Logger.LogInformation("{Name} 检测到战斗结束", action.Name);
-                                            // 战斗结束则跳过当前动作（切人、执行均不进行）
-                                            break;
-                                        }
-                                    }
+                                    _fightEndFlag = true;
+                                    // 战斗结束则跳过当前动作（切人、执行均不进行）
+                                    break;
                                 }
 
                                 // 指定角色的动作：执行前确保切换到该角色
@@ -299,9 +309,18 @@ public class AutoFightJsonTask : ISoloTask
                                 {
                                     var avatar = combatScenes.SelectAvatar(action.Character);
                                     if (avatar == null) continue;
-    
+
                                     avatar.Switch();
                                     _currentAvatarName = action.Character;
+                                }
+
+                                // 切人后再执行战斗结束检查：复用切人等待上一个动作后摇的时间，检查无需再等待
+                                if (_finishDetectConfig.CheckAfterSwitchAvatar &&
+                                    await FastCheckFightFinishAsync(prevAvatarName, action.Character))
+                                {
+                                    _fightEndFlag = true;
+                                    // 战斗结束则跳过当前动作
+                                    break;
                                 }
     
                                 // 执行动作

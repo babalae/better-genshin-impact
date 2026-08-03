@@ -73,6 +73,12 @@ public partial class AutoFightConfig : ObservableObject
         private string _fastCheckParams = "";
         
         /// <summary>
+        /// 切人后再执行战斗结束检查：将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。
+        /// </summary>
+        [ObservableProperty]
+        private bool _checkAfterSwitchAvatar = false;
+        
+        /// <summary>
         /// 检查战斗结束的延时，即角色，默认为1.5秒。也可以指定特定角色之后延时多少时间检查。格式如：2.5;白术,1.5;钟离,1.0;
         /// </summary>
         [ObservableProperty]
