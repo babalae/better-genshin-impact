@@ -1326,7 +1326,8 @@
                                               Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}"
                                               ValidationMode="InvalidInputOverwritten"
                                               Minimum="0"
-                                              Maximum="10" />
+                                              Maximum="10"
+                                              SpinButtonPlacementMode="None" />
                             </Grid>
 
                             <!-- 派蒙辅助检测 -->
@@ -1369,7 +1370,8 @@
                                               Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}"
                                               ValidationMode="InvalidInputOverwritten"
                                               Minimum="0.05"
-                                              Maximum="0.4" />
+                                              Maximum="0.4"
+                                              SpinButtonPlacementMode="None" />
                             </Grid>
 
                             <Grid Margin="16,0,16,16">
