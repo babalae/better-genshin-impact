@@ -285,7 +285,21 @@ public sealed class BvFlow
         {
             attempts++;
             await snapshot.Action(context);
-            await _services.Delay(snapshot.RetryInterval);
+
+            var remainingMilliseconds = snapshot.Timeout - _services.GetElapsedMilliseconds(startedAt);
+            if (remainingMilliseconds <= 0)
+            {
+                throw new TimeoutException(
+                    $"动作 {snapshot.Description} 执行 {attempts} 次后，等待 {snapshot.TargetDescription} 超时（{snapshot.Timeout}ms）");
+            }
+
+            await _services.Delay(GetDelayMilliseconds(snapshot.RetryInterval, remainingMilliseconds));
+
+            if (_services.GetElapsedMilliseconds(startedAt) >= snapshot.Timeout)
+            {
+                throw new TimeoutException(
+                    $"动作 {snapshot.Description} 执行 {attempts} 次后，等待 {snapshot.TargetDescription} 超时（{snapshot.Timeout}ms）");
+            }
 
             var results = _services.FindAll(snapshot.Target);
             var succeeded = snapshot.WaitForDisappear ? results.Count == 0 : results.Count > 0;
@@ -295,12 +309,6 @@ public sealed class BvFlow
                     ? null
                     : _services.GetMatchRect(results.First());
                 return;
-            }
-
-            if (_services.GetElapsedMilliseconds(startedAt) >= snapshot.Timeout)
-            {
-                throw new TimeoutException(
-                    $"动作 {snapshot.Description} 执行 {attempts} 次后，等待 {snapshot.TargetDescription} 超时（{snapshot.Timeout}ms）");
             }
         }
     }
@@ -333,6 +341,12 @@ public sealed class BvFlow
 
         while (true)
         {
+            var elapsedMilliseconds = _services.GetElapsedMilliseconds(startedAt);
+            if (elapsedMilliseconds >= timeout)
+            {
+                throw new TimeoutException($"等待 {targetDescription} 超时（{timeout}ms）");
+            }
+
             var results = _services.FindAll(target);
             var succeeded = waitForDisappear ? results.Count == 0 : results.Count > 0;
             if (succeeded)
@@ -343,13 +357,19 @@ public sealed class BvFlow
                 return;
             }
 
-            if (_services.GetElapsedMilliseconds(startedAt) >= timeout)
+            var remainingMilliseconds = timeout - _services.GetElapsedMilliseconds(startedAt);
+            if (remainingMilliseconds <= 0)
             {
                 throw new TimeoutException($"等待 {targetDescription} 超时（{timeout}ms）");
             }
 
-            await _services.Delay(retryInterval);
+            await _services.Delay(GetDelayMilliseconds(retryInterval, remainingMilliseconds));
         }
+    }
+
+    private static int GetDelayMilliseconds(int retryInterval, double remainingMilliseconds)
+    {
+        return Math.Min(retryInterval, Math.Max(1, (int)Math.Ceiling(remainingMilliseconds)));
     }
 
     private BvFlow AddStep(string description, Func<BvFlowExecutionContext, Task> action)
