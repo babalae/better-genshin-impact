@@ -613,6 +613,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
         foreach (var task in taskListCopy)
         {
+            var isCurrentTaskSkipped = false;
             if (task is { IsEnabled: true, Action: not null })
             {
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
@@ -620,9 +621,19 @@ public partial class OneDragonFlowViewModel : ViewModel
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
                     await new TaskRunner().RunThreadAsync(async () =>
                     {
-                        await task.Action();
-                        await Task.Delay(1000);
+                        RunnerContext.Instance.BeginOneDragonTaskExecution();
+                        try
+                        {
+                            await task.Action();
+                            await Task.Delay(1000);
+                        }
+                        finally
+                        {
+                            RunnerContext.Instance.EndOneDragonTaskExecution();
+                        }
                     });
+                    isCurrentTaskSkipped = RunnerContext.Instance.ConsumeSkipCurrentOneDragonTaskRequest() &&
+                                           !CancellationContext.Instance.IsManualStop;
                 }
                 else
                 {
@@ -643,7 +654,9 @@ public partial class OneDragonFlowViewModel : ViewModel
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
                             IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
+                            isCurrentTaskSkipped = await scriptService!.RunMulti(
+                                ScriptControlViewModel.GetNextProjects(group), group.Name,
+                                allowSkipCurrentOneDragonTask: true);
                             await Task.Delay(1000);
                         }
                     }
@@ -654,7 +667,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                 }
                 // 如果任务已经被取消，中断所有任务
-                if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                if (CancellationContext.Instance.Cts.IsCancellationRequested && !isCurrentTaskSkipped)
                 {
                     _logger.LogInformation("任务被取消，退出执行");
                     if (CancellationContext.Instance.IsManualStop is false)

@@ -117,7 +117,8 @@ public partial class ScriptService : IScriptService
     //优先执行的配置组，统计每个project执行次数
     private readonly Dictionary<string, int> _projectExecutionCount = new();
     
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
+    public async Task<bool> RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,
+        TaskProgress? taskProgress = null, bool allowSkipCurrentOneDragonTask = false)
     {
         groupName ??= "默认";
 
@@ -147,7 +148,7 @@ public partial class ScriptService : IScriptService
         if (CancellationContext.Instance.IsCancellationRequested)
         {
             _logger.LogInformation("配置组 {Name} 在启动阶段被取消", groupName);
-            return;
+            return false;
         }
         
         
@@ -177,11 +178,18 @@ public partial class ScriptService : IScriptService
         await new TaskRunner()
             .RunThreadAsync(async () =>
             {
-                var stopwatch = new Stopwatch();
-                int projectIndex = -1;
-                for (int x = 0; x < list.Count; x++)
+                if (allowSkipCurrentOneDragonTask)
                 {
-                    var project = list[x];
+                    RunnerContext.Instance.BeginOneDragonTaskExecution();
+                }
+
+                try
+                {
+                    var stopwatch = new Stopwatch();
+                    int projectIndex = -1;
+                    for (int x = 0; x < list.Count; x++)
+                    {
+                        var project = list[x];
                     //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
                     List<ScriptGroupProject> exeProjects = [project];
                     RunnerContext.Instance.IsPreExecution = false;
@@ -423,9 +431,25 @@ public partial class ScriptService : IScriptService
                                 SystemControl.RestartApplication(["--TaskProgress", taskProgress.Name]);
                             }
                         }
+                        }
+                    }
+                }
+                finally
+                {
+                    if (allowSkipCurrentOneDragonTask)
+                    {
+                        RunnerContext.Instance.EndOneDragonTaskExecution();
                     }
                 }
             });
+
+        var isCurrentOneDragonTaskSkipped = allowSkipCurrentOneDragonTask &&
+                                            RunnerContext.Instance.ConsumeSkipCurrentOneDragonTaskRequest() &&
+                                            !CancellationContext.Instance.IsManualStop;
+        if (isCurrentOneDragonTaskSkipped)
+        {
+            _logger.LogInformation("一条龙任务 {Name} 已通过快捷键跳过，准备执行下一个任务", groupName);
+        }
         
 
         // 还原定时器
@@ -440,7 +464,9 @@ public partial class ScriptService : IScriptService
         {
             if (CancellationContext.Instance.IsManualStop is false)
             {
-                Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+                Notify.Event(NotificationEvent.GroupEnd).Success(isCurrentOneDragonTaskSkipped
+                    ? $"配置组{groupName}已跳过"
+                    : $"配置组{groupName}结束");
             }
         }
 
@@ -449,6 +475,7 @@ public partial class ScriptService : IScriptService
             taskProgress.Next = null;
         }
 
+        return isCurrentOneDragonTaskSkipped;
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)

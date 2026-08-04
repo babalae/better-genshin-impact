@@ -72,6 +72,11 @@ public class TaskRunner
 
             await action();
         }
+        catch (NormalEndException e) when (RunnerContext.Instance.IsSkipCurrentOneDragonTaskRequested &&
+                                           !CancellationContext.Instance.IsManualStop)
+        {
+            _logger.LogInformation("当前一条龙任务收到跳过请求: {Msg}", e.Message);
+        }
         catch (NormalEndException e)
         {
             Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
@@ -81,6 +86,11 @@ public class TaskRunner
                 // 连续执行时，抛出异常，终止执行
                 throw;
             }
+        }
+        catch (OperationCanceledException) when (RunnerContext.Instance.IsSkipCurrentOneDragonTaskRequested &&
+                                                  !CancellationContext.Instance.IsManualStop)
+        {
+            _logger.LogInformation("当前一条龙任务收到跳过请求，结束当前任务");
         }
         catch (OperationCanceledException)
         {

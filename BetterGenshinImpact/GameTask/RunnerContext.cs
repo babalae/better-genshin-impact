@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -16,10 +17,85 @@ namespace BetterGenshinImpact.GameTask;
 /// </summary>
 public class RunnerContext : Singleton<RunnerContext>
 {
+    private readonly object _oneDragonTaskSync = new();
+    private bool _isOneDragonTaskRunning;
+    private bool _skipCurrentOneDragonTaskRequested;
+
     /// <summary>
     /// 是否是连续执行配置组的场景
     /// </summary>
     public bool IsContinuousRunGroup { get; set; }
+
+    /// <summary>
+    /// 是否已请求跳过当前一条龙任务。
+    /// </summary>
+    public bool IsSkipCurrentOneDragonTaskRequested
+    {
+        get
+        {
+            lock (_oneDragonTaskSync)
+            {
+                return _skipCurrentOneDragonTaskRequested;
+            }
+        }
+    }
+
+    public void BeginOneDragonTaskExecution()
+    {
+        lock (_oneDragonTaskSync)
+        {
+            _skipCurrentOneDragonTaskRequested = false;
+            _isOneDragonTaskRunning = true;
+        }
+    }
+
+    public void EndOneDragonTaskExecution()
+    {
+        lock (_oneDragonTaskSync)
+        {
+            _isOneDragonTaskRunning = false;
+        }
+    }
+
+    public bool RequestSkipCurrentOneDragonTask()
+    {
+        CancellationTokenSource? ctsToCancel = null;
+        lock (_oneDragonTaskSync)
+        {
+            if (!_isOneDragonTaskRunning)
+            {
+                return false;
+            }
+
+            if (!_skipCurrentOneDragonTaskRequested)
+            {
+                _skipCurrentOneDragonTaskRequested = true;
+                IsSuspend = false;
+                ctsToCancel = CancellationContext.Instance.Cts;
+            }
+        }
+
+        try
+        {
+            ctsToCancel?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 当前任务可能刚好结束，旧令牌已释放时无需继续取消。
+        }
+
+        return true;
+    }
+
+    public bool ConsumeSkipCurrentOneDragonTaskRequest()
+    {
+        lock (_oneDragonTaskSync)
+        {
+            var requested = _skipCurrentOneDragonTaskRequested;
+            _skipCurrentOneDragonTaskRequested = false;
+            return requested;
+        }
+    }
     
     public TaskProgress.TaskProgress? taskProgress  { get; set; }
     
@@ -131,6 +207,12 @@ public class RunnerContext : Singleton<RunnerContext>
     /// </summary>
     public void Reset()
     {
+        lock (_oneDragonTaskSync)
+        {
+            _isOneDragonTaskRunning = false;
+            _skipCurrentOneDragonTaskRequested = false;
+        }
+
         IsContinuousRunGroup = false;
         PartyName = null;
         _combatScenes = null;

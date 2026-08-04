@@ -7,5 +7,6 @@ namespace BetterGenshinImpact.Service.Interface;
 
 public interface IScriptService
 {
-    Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null);
+    Task<bool> RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,
+        TaskProgress? taskProgress = null, bool allowSkipCurrentOneDragonTask = false);
 }

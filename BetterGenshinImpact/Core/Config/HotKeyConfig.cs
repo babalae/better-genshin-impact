@@ -257,6 +257,13 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _cancelTaskHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 跳过一条龙当前任务，保留旧字段名以兼容已有快捷键配置
+    [ObservableProperty]
+    private string _skipCurrentConfigGroupHotkey = "";
+
+    [ObservableProperty]
+    private string _skipCurrentConfigGroupHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
     
     // 停止任意独立任务
     [ObservableProperty]

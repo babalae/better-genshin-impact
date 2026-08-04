@@ -372,6 +372,23 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
         systemDirectory.Children.Add(new HotKeySettingModel(
+            "跳过一条龙当前任务",
+            nameof(Config.HotKeyConfig.SkipCurrentConfigGroupHotkey),
+            Config.HotKeyConfig.SkipCurrentConfigGroupHotkey,
+            Config.HotKeyConfig.SkipCurrentConfigGroupHotkeyType,
+            (_, _) =>
+            {
+                if (RunnerContext.Instance.RequestSkipCurrentOneDragonTask())
+                {
+                    _logger.LogInformation("检测到跳过一条龙当前任务快捷键{Key}按下，结束当前任务并继续下一个任务", Config.HotKeyConfig.SkipCurrentConfigGroupHotkey);
+                }
+                else
+                {
+                    _logger.LogInformation("检测到跳过一条龙当前任务快捷键{Key}按下，但当前没有正在执行的一条龙任务", Config.HotKeyConfig.SkipCurrentConfigGroupHotkey);
+                }
+            }
+        ));
+        systemDirectory.Children.Add(new HotKeySettingModel(
             "暂停当前脚本/独立任务",
             nameof(Config.HotKeyConfig.SuspendHotkey),
             Config.HotKeyConfig.SuspendHotkey,
