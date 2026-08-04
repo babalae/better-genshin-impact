@@ -21,6 +21,7 @@ public class BvLocator
 {
     private static readonly ILogger Logger = App.GetLogger<BvLocator>();
     private readonly CancellationToken _cancellationToken;
+    private readonly IReadOnlyList<string> _anyTexts;
     private int? _timeout;
     private int? _retryInterval;
 
@@ -33,14 +34,25 @@ public class BvLocator
     public static int DefaultRetryInterval { get; set; } = 250;
 
     public BvLocator(RecognitionObject recognitionObject, CancellationToken cancellationToken)
+        : this(recognitionObject, cancellationToken, [])
+    {
+    }
+
+    internal BvLocator(
+        RecognitionObject recognitionObject,
+        CancellationToken cancellationToken,
+        IReadOnlyList<string> anyTexts)
     {
         RecognitionObject = recognitionObject.Clone();
         _cancellationToken = cancellationToken;
+        _anyTexts = anyTexts.ToArray();
     }
+
+    internal IReadOnlyList<string> AnyTexts => _anyTexts;
 
     internal BvLocator Clone()
     {
-        return new BvLocator(RecognitionObject, _cancellationToken);
+        return new BvLocator(RecognitionObject, _cancellationToken, _anyTexts);
     }
 
     /// <summary>
@@ -52,7 +64,11 @@ public class BvLocator
     public List<Region> FindAll()
     {
         using var screen = CaptureToRectArea();
+        return FindAll(screen);
+    }
 
+    internal List<Region> FindAll(ImageRegion screen)
+    {
         if (RecognitionObject.RecognitionType == RecognitionTypes.TemplateMatch)
         {
             var region = screen.Find(RecognitionObject);
@@ -66,17 +82,34 @@ public class BvLocator
         else if (RecognitionObject.RecognitionType == RecognitionTypes.Ocr)
         {
             var results = screen.FindMulti(RecognitionObject);
-            if (!string.IsNullOrEmpty(RecognitionObject.Text))
-            {
-                return results.FindAll(r => r.Text.Contains(RecognitionObject.Text));
-            }
-
-            return results;
+            return FilterOcrResults(results, _anyTexts, RecognitionObject.Text);
         }
         else
         {
             throw new NotSupportedException($"不被 Locator 支持的识别类型: {RecognitionObject.RecognitionType}");
         }
+    }
+
+    internal static IReadOnlyList<List<Region>> FindAll(IReadOnlyList<BvLocator> locators)
+    {
+        using var screen = CaptureToRectArea();
+        return locators.Select(locator => locator.FindAll(screen)).ToArray();
+    }
+
+    internal static List<Region> FilterOcrResults(
+        List<Region> results,
+        IReadOnlyList<string> anyTexts,
+        string text)
+    {
+        if (anyTexts.Count > 0)
+        {
+            return results.FindAll(region =>
+                anyTexts.Any(candidate => region.Text.Contains(candidate, StringComparison.Ordinal)));
+        }
+
+        return string.IsNullOrEmpty(text)
+            ? results
+            : results.FindAll(region => region.Text.Contains(text, StringComparison.Ordinal));
     }
 
     public bool IsExist()
@@ -92,7 +125,7 @@ public class BvLocator
     public async Task<Region> ClickUntilDisappears(int? timeout = null)
     {
         var region = (await WaitFor(timeout)).First().Click();
-        await new BvLocator(RecognitionObject, _cancellationToken)
+        await Clone()
             .WithRetryAction(resList => { resList.First().Click(); }).WaitForDisappear();
         return region;
     }
@@ -135,6 +168,12 @@ public class BvLocator
     {
         if (RecognitionObject.RecognitionType == RecognitionTypes.Ocr)
         {
+            if (_anyTexts.Count > 0)
+            {
+                return new TimeoutException(
+                    $"识别任意文字[{string.Join('|', _anyTexts)}]在 {actualTimeout}ms 后超时未出现！");
+            }
+
             return new TimeoutException($"识别文字[{RecognitionObject.Text}]在 {actualTimeout}ms 后超时未出现！");
         }
         else if (RecognitionObject.RecognitionType == RecognitionTypes.TemplateMatch)

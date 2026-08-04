@@ -155,16 +155,37 @@ public sealed class BvFlow
         return WaitUntil(CreateTextLocator(text, rect), timeout, retryInterval);
     }
 
+    public BvFlow WaitUntilAnyText(
+        object texts,
+        Rect rect = default,
+        int? timeout = null,
+        int? retryInterval = null)
+    {
+        return WaitUntil(CreateAnyTextLocator(texts, rect), timeout, retryInterval);
+    }
+
     public BvFlow WaitUntil(BvLocator target, int? timeout = null, int? retryInterval = null)
     {
         ArgumentNullException.ThrowIfNull(target);
-        return AddWaitStep(target, false, timeout, retryInterval);
+        return AddWaitStep([target.Clone()], BvFlowCondition.AnyAppear, timeout, retryInterval);
+    }
+
+    public BvFlow WaitUntilAny(object targets, int? timeout = null, int? retryInterval = null)
+    {
+        return AddWaitStep(ParseTargets(targets, nameof(targets)), BvFlowCondition.AnyAppear,
+            timeout, retryInterval);
     }
 
     public BvFlow WaitUntilDisappear(BvLocator target, int? timeout = null, int? retryInterval = null)
     {
         ArgumentNullException.ThrowIfNull(target);
-        return AddWaitStep(target, true, timeout, retryInterval);
+        return AddWaitStep([target.Clone()], BvFlowCondition.AllDisappear, timeout, retryInterval);
+    }
+
+    public BvFlow WaitUntilAllDisappear(object targets, int? timeout = null, int? retryInterval = null)
+    {
+        return AddWaitStep(ParseTargets(targets, nameof(targets)), BvFlowCondition.AllDisappear,
+            timeout, retryInterval);
     }
 
     public BvFlow Wait(int milliseconds)
@@ -247,6 +268,18 @@ public sealed class BvFlow
         });
     }
 
+    internal BvLocator CreateAnyTextLocator(object texts, Rect rect)
+    {
+        return _page.GetByAnyText(texts, rect);
+    }
+
+    internal static IReadOnlyList<BvLocator> ParseTargets(object targets, string paramName)
+    {
+        return BvPage.ParseCollection<BvLocator>(targets, paramName)
+            .Select(target => target.Clone())
+            .ToArray();
+    }
+
     internal static int ValidatePositive(int value, string paramName)
     {
         if (value <= 0)
@@ -301,19 +334,22 @@ public sealed class BvFlow
                     $"动作 {snapshot.Description} 执行 {attempts} 次后，等待 {snapshot.TargetDescription} 超时（{snapshot.Timeout}ms）");
             }
 
-            var results = _services.FindAll(snapshot.Target);
-            var succeeded = snapshot.WaitForDisappear ? results.Count == 0 : results.Count > 0;
-            if (succeeded)
+            var result = FindTargets(snapshot.Targets, snapshot.Condition);
+            if (result.Succeeded)
             {
-                context.LastMatchRect = snapshot.WaitForDisappear
+                context.LastMatchRect = result.Match is null
                     ? null
-                    : _services.GetMatchRect(results.First());
+                    : _services.GetMatchRect(result.Match);
                 return;
             }
         }
     }
 
-    private BvFlow AddWaitStep(BvLocator target, bool waitForDisappear, int? timeout, int? retryInterval)
+    private BvFlow AddWaitStep(
+        IReadOnlyList<BvLocator> targets,
+        BvFlowCondition condition,
+        int? timeout,
+        int? retryInterval)
     {
         var actualTimeout = timeout is { } timeoutValue
             ? ValidatePositive(timeoutValue, nameof(timeout))
@@ -321,18 +357,17 @@ public sealed class BvFlow
         var actualRetryInterval = retryInterval is { } retryIntervalValue
             ? ValidatePositive(retryIntervalValue, nameof(retryInterval))
             : DefaultRetryInterval;
-        var clonedTarget = target.Clone();
-        var targetDescription = BvFlowAction.DescribeTarget(clonedTarget.RecognitionObject, waitForDisappear);
+        var targetDescription = BvFlowAction.DescribeTargets(targets, condition);
 
         return AddStep($"WaitUntil {targetDescription}",
-            context => ExecuteWaitStep(clonedTarget, targetDescription, waitForDisappear,
+            context => ExecuteWaitStep(targets, targetDescription, condition,
                 actualTimeout, actualRetryInterval, context));
     }
 
     private async Task ExecuteWaitStep(
-        BvLocator target,
+        IReadOnlyList<BvLocator> targets,
         string targetDescription,
-        bool waitForDisappear,
+        BvFlowCondition condition,
         int timeout,
         int retryInterval,
         BvFlowExecutionContext context)
@@ -347,13 +382,12 @@ public sealed class BvFlow
                 throw new TimeoutException($"等待 {targetDescription} 超时（{timeout}ms）");
             }
 
-            var results = _services.FindAll(target);
-            var succeeded = waitForDisappear ? results.Count == 0 : results.Count > 0;
-            if (succeeded)
+            var result = FindTargets(targets, condition);
+            if (result.Succeeded)
             {
-                context.LastMatchRect = waitForDisappear
+                context.LastMatchRect = result.Match is null
                     ? null
-                    : _services.GetMatchRect(results.First());
+                    : _services.GetMatchRect(result.Match);
                 return;
             }
 
@@ -365,6 +399,27 @@ public sealed class BvFlow
 
             await _services.Delay(GetDelayMilliseconds(retryInterval, remainingMilliseconds));
         }
+    }
+
+    private BvFlowConditionResult FindTargets(
+        IReadOnlyList<BvLocator> targets,
+        BvFlowCondition condition)
+    {
+        var results = _services.FindAll(targets);
+        if (condition == BvFlowCondition.AllDisappear)
+        {
+            return new BvFlowConditionResult(results.All(matches => matches.Count == 0), null);
+        }
+
+        foreach (var matches in results)
+        {
+            if (matches.Count > 0)
+            {
+                return new BvFlowConditionResult(true, matches[0]);
+            }
+        }
+
+        return new BvFlowConditionResult(false, null);
     }
 
     private static int GetDelayMilliseconds(int retryInterval, double remainingMilliseconds)
@@ -397,6 +452,8 @@ public sealed class BvFlow
     }
 
     private sealed record BvFlowStep(string Description, Func<BvFlowExecutionContext, Task> Action);
+
+    private sealed record BvFlowConditionResult(bool Succeeded, Region? Match);
 }
 
 internal sealed class BvFlowExecutionContext
@@ -416,7 +473,7 @@ internal sealed class BvFlowExecutionContext
 
 internal sealed class BvFlowServices
 {
-    public required Func<BvLocator, List<Region>> FindAll { get; set; }
+    public required Func<IReadOnlyList<BvLocator>, IReadOnlyList<List<Region>>> FindAll { get; set; }
     public required Func<Region, Rect> GetMatchRect { get; set; }
     public required Func<int, Task> Delay { get; set; }
     public required Func<long> GetTimestamp { get; set; }
@@ -432,7 +489,7 @@ internal sealed class BvFlowServices
     {
         return new BvFlowServices
         {
-            FindAll = locator => locator.FindAll(),
+            FindAll = BvLocator.FindAll,
             GetMatchRect = region =>
             {
                 var rect = region.ConvertSelfPositionToGameCaptureRegion();

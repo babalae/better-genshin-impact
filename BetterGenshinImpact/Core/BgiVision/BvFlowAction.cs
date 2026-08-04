@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -42,32 +43,47 @@ public sealed class BvFlowAction
         return Until(_flow.CreateTextLocator(text, rect));
     }
 
+    public BvFlow UntilAnyText(object texts, Rect rect = default)
+    {
+        return Until(_flow.CreateAnyTextLocator(texts, rect));
+    }
+
     public BvFlow Until(BvLocator target)
     {
         ArgumentNullException.ThrowIfNull(target);
-        return Complete(target.Clone(), false);
+        return Complete([target.Clone()], BvFlowCondition.AnyAppear);
+    }
+
+    public BvFlow UntilAny(object targets)
+    {
+        return Complete(BvFlow.ParseTargets(targets, nameof(targets)), BvFlowCondition.AnyAppear);
     }
 
     public BvFlow UntilDisappear(BvLocator target)
     {
         ArgumentNullException.ThrowIfNull(target);
-        return Complete(target.Clone(), true);
+        return Complete([target.Clone()], BvFlowCondition.AllDisappear);
     }
 
-    private BvFlow Complete(BvLocator target, bool waitForDisappear)
+    public BvFlow UntilAllDisappear(object targets)
+    {
+        return Complete(BvFlow.ParseTargets(targets, nameof(targets)), BvFlowCondition.AllDisappear);
+    }
+
+    private BvFlow Complete(IReadOnlyList<BvLocator> targets, BvFlowCondition condition)
     {
         EnsureNotCompleted();
         _completed = true;
 
-        var targetDescription = DescribeTarget(target.RecognitionObject, waitForDisappear);
+        var targetDescription = DescribeTargets(targets, condition);
         return _flow.AddActionStep(new BvFlowActionSnapshot(
             _description,
             _action,
-            target,
+            targets,
             targetDescription,
             _timeout ?? _flow.DefaultTimeout,
             _retryInterval ?? _flow.DefaultRetryInterval,
-            waitForDisappear));
+            condition));
     }
 
     private void EnsureNotCompleted()
@@ -78,23 +94,51 @@ public sealed class BvFlowAction
         }
     }
 
-    internal static string DescribeTarget(RecognitionObject recognitionObject, bool waitForDisappear)
+    internal static string DescribeTargets(IReadOnlyList<BvLocator> targets, BvFlowCondition condition)
     {
-        var target = recognitionObject.RecognitionType switch
+        var descriptions = targets.Select(DescribeTarget);
+        var targetDescription = targets.Count == 1
+            ? descriptions.First()
+            : $"目标[{string.Join(" | ", descriptions)}]";
+        if (condition == BvFlowCondition.AllDisappear)
         {
-            RecognitionTypes.Ocr => $"文字[{recognitionObject.Text}]",
-            RecognitionTypes.TemplateMatch => $"图像[{recognitionObject.Name}]",
+            return targets.Count == 1
+                ? $"{targetDescription}消失"
+                : $"{targetDescription}全部消失";
+        }
+
+        return targets.Count == 1 && targets[0].AnyTexts.Count == 0
+            ? $"{targetDescription}出现"
+            : $"{targetDescription}中的任意一个出现";
+    }
+
+    private static string DescribeTarget(BvLocator locator)
+    {
+        if (locator.AnyTexts.Count > 0)
+        {
+            return $"文字[{string.Join('|', locator.AnyTexts)}]";
+        }
+
+        return locator.RecognitionObject.RecognitionType switch
+        {
+            RecognitionTypes.Ocr => $"文字[{locator.RecognitionObject.Text}]",
+            RecognitionTypes.TemplateMatch => $"图像[{locator.RecognitionObject.Name}]",
             _ => "识别元素"
         };
-        return waitForDisappear ? $"{target}消失" : $"{target}出现";
     }
+}
+
+internal enum BvFlowCondition
+{
+    AnyAppear,
+    AllDisappear
 }
 
 internal sealed record BvFlowActionSnapshot(
     string Description,
     Func<BvFlowExecutionContext, Task> Action,
-    BvLocator Target,
+    IReadOnlyList<BvLocator> Targets,
     string TargetDescription,
     int Timeout,
     int RetryInterval,
-    bool WaitForDisappear);
+    BvFlowCondition Condition);
