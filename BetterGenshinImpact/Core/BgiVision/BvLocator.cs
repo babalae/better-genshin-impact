@@ -90,12 +90,6 @@ public class BvLocator
         }
     }
 
-    internal static IReadOnlyList<List<Region>> FindAll(IReadOnlyList<BvLocator> locators)
-    {
-        using var screen = CaptureToRectArea();
-        return locators.Select(locator => locator.FindAll(screen)).ToArray();
-    }
-
     internal static List<Region> FilterOcrResults(
         List<Region> results,
         IReadOnlyList<string> anyTexts,

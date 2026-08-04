@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
@@ -61,6 +62,14 @@ public class BvPage
     {
         await TaskControl.Delay(milliseconds, _cancellationToken);
         return this;
+    }
+
+    internal void ThrowIfCancellationRequested()
+    {
+        if (_cancellationToken.IsCancellationRequested)
+        {
+            throw new NormalEndException("取消自动任务");
+        }
     }
 
     /// <summary>

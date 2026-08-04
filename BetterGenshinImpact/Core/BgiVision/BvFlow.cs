@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
@@ -65,7 +68,17 @@ public sealed class BvFlow
         ArgumentNullException.ThrowIfNull(action);
         return CreateAction("Do", async _ =>
         {
-            object? result = action is Delegate callback ? callback.DynamicInvoke() : action();
+            object? result;
+            try
+            {
+                result = action is Delegate callback ? callback.DynamicInvoke() : action();
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw;
+            }
+
             if (result is Task task)
             {
                 await task;
@@ -220,9 +233,14 @@ public sealed class BvFlow
                 var step = steps[i];
                 try
                 {
+                    _services.ThrowIfCancellationRequested();
                     await step.Action(context);
                 }
                 catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (NormalEndException)
                 {
                     throw;
                 }
@@ -243,6 +261,11 @@ public sealed class BvFlow
     internal BvFlow AddActionStep(BvFlowActionSnapshot snapshot)
     {
         return AddStep(snapshot.Description, context => ExecuteActionStep(snapshot, context));
+    }
+
+    internal BvFlow AddOnceActionStep(string description, Func<BvFlowExecutionContext, Task> action)
+    {
+        return AddStep(description, action);
     }
 
     internal BvFlowAction CreateAction(string description, Func<BvFlowExecutionContext, Task> action)
@@ -316,6 +339,7 @@ public sealed class BvFlow
 
         while (true)
         {
+            _services.ThrowIfCancellationRequested();
             attempts++;
             await snapshot.Action(context);
 
@@ -335,6 +359,12 @@ public sealed class BvFlow
             }
 
             var result = FindTargets(snapshot.Targets, snapshot.Condition);
+            if (_services.GetElapsedMilliseconds(startedAt) >= snapshot.Timeout)
+            {
+                throw new TimeoutException(
+                    $"动作 {snapshot.Description} 执行 {attempts} 次后，等待 {snapshot.TargetDescription} 超时（{snapshot.Timeout}ms）");
+            }
+
             if (result.Succeeded)
             {
                 context.LastMatchRect = result.Match is null
@@ -383,6 +413,11 @@ public sealed class BvFlow
             }
 
             var result = FindTargets(targets, condition);
+            if (_services.GetElapsedMilliseconds(startedAt) >= timeout)
+            {
+                throw new TimeoutException($"等待 {targetDescription} 超时（{timeout}ms）");
+            }
+
             if (result.Succeeded)
             {
                 context.LastMatchRect = result.Match is null
@@ -405,21 +440,7 @@ public sealed class BvFlow
         IReadOnlyList<BvLocator> targets,
         BvFlowCondition condition)
     {
-        var results = _services.FindAll(targets);
-        if (condition == BvFlowCondition.AllDisappear)
-        {
-            return new BvFlowConditionResult(results.All(matches => matches.Count == 0), null);
-        }
-
-        foreach (var matches in results)
-        {
-            if (matches.Count > 0)
-            {
-                return new BvFlowConditionResult(true, matches[0]);
-            }
-        }
-
-        return new BvFlowConditionResult(false, null);
+        return _services.FindTargets(targets, condition);
     }
 
     private static int GetDelayMilliseconds(int retryInterval, double remainingMilliseconds)
@@ -453,8 +474,9 @@ public sealed class BvFlow
 
     private sealed record BvFlowStep(string Description, Func<BvFlowExecutionContext, Task> Action);
 
-    private sealed record BvFlowConditionResult(bool Succeeded, Region? Match);
 }
+
+internal sealed record BvFlowConditionResult(bool Succeeded, Region? Match);
 
 internal sealed class BvFlowExecutionContext
 {
@@ -473,7 +495,8 @@ internal sealed class BvFlowExecutionContext
 
 internal sealed class BvFlowServices
 {
-    public required Func<IReadOnlyList<BvLocator>, IReadOnlyList<List<Region>>> FindAll { get; set; }
+    public required Action ThrowIfCancellationRequested { get; set; }
+    public required Func<IReadOnlyList<BvLocator>, BvFlowCondition, BvFlowConditionResult> FindTargets { get; set; }
     public required Func<Region, Rect> GetMatchRect { get; set; }
     public required Func<int, Task> Delay { get; set; }
     public required Func<long> GetTimestamp { get; set; }
@@ -489,10 +512,15 @@ internal sealed class BvFlowServices
     {
         return new BvFlowServices
         {
-            FindAll = BvLocator.FindAll,
+            ThrowIfCancellationRequested = page.ThrowIfCancellationRequested,
+            FindTargets = (targets, condition) =>
+            {
+                using var screen = page.Screenshot();
+                return EvaluateTargets(targets, condition, target => target.FindAll(screen));
+            },
             GetMatchRect = region =>
             {
-                var rect = region.ConvertSelfPositionToGameCaptureRegion();
+                var rect = region.ConvertPositionToGameCaptureRegion(0, 0, region.Width, region.Height);
                 var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
                 return new Rect(
                     (int)Math.Round(rect.X / scale),
@@ -533,5 +561,29 @@ internal sealed class BvFlowServices
                 }
             }
         };
+    }
+
+    internal static BvFlowConditionResult EvaluateTargets(
+        IReadOnlyList<BvLocator> targets,
+        BvFlowCondition condition,
+        Func<BvLocator, List<Region>> findAll)
+    {
+        foreach (var target in targets)
+        {
+            var matches = findAll(target);
+            if (condition == BvFlowCondition.AnyAppear && matches.Count > 0)
+            {
+                return new BvFlowConditionResult(true, matches[0]);
+            }
+
+            if (condition == BvFlowCondition.AllDisappear && matches.Count > 0)
+            {
+                return new BvFlowConditionResult(false, null);
+            }
+        }
+
+        return condition == BvFlowCondition.AllDisappear
+            ? new BvFlowConditionResult(true, null)
+            : new BvFlowConditionResult(false, null);
     }
 }
