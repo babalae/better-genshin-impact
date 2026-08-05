@@ -1778,6 +1778,7 @@
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:TextBox Grid.Column="1"
+                                                VerticalAlignment="Center"
                                                 Width="120"
                                                 Margin="0,0,36,0"
                                                 Text="{Binding PathingConfig.AutoFightConfig.BackToFightPointDistance, Mode=TwoWay}" />
@@ -1798,6 +1799,7 @@
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:TextBox Grid.Column="1"
+                                                VerticalAlignment="Center"
                                                 Width="120"
                                                 Margin="0,0,36,0"
                                                 Text="{Binding PathingConfig.AutoFightConfig.BackToFightPointInterval, Mode=TwoWay}" />
@@ -1818,6 +1820,7 @@
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:TextBox Grid.Column="1"
+                                            VerticalAlignment="Center"
                                             Width="120"
                                             Margin="0,0,36,0"
                                             Text="{Binding PathingConfig.AutoFightConfig.BackToFightPointTimeout, Mode=TwoWay}" />
@@ -1844,9 +1847,6 @@
                             </StackPanel>
                         </ui:CardExpander>
                     </Grid>
-
-                    <Separator Margin="-18,0"
-                               BorderThickness="0,1,0,0" />
 
                     <Grid Margin="16,10,52,0">
 
@@ -2060,6 +2060,7 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
+                                HorizontalAlignment="Right"
                                 HorizontalContentAlignment="Center"
                                 Margin="10,0,20,0"
                                 MinWidth="50"
