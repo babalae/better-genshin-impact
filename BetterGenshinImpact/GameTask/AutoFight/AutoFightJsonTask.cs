@@ -363,12 +363,12 @@ public class AutoFightJsonTask : ISoloTask
                             break;
                         }
 
-                        // 战斗中回点检查：异步获取当前坐标（不阻塞战斗流程），满足条件时阻塞式执行回点
-                        await AutoFightTask.CheckBackToFightPointAsync(_taskParam, _ct);
-
                         // 每次循环开始：截图一次，供所有条件求值复用
                         using var capture = CaptureToRectArea();
                         evaluator.SetCachedCapture(capture);
+
+                        // 战斗中回点检查：复用本轮战斗截图计算坐标（不额外截图），满足条件时阻塞式执行回点
+                        await AutoFightTask.CheckBackToFightPointAsync(_taskParam, capture, _ct);
     
                         var anyExecuted = false;
     
@@ -503,6 +503,8 @@ public class AutoFightJsonTask : ISoloTask
                 // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，
                 // 否则后续普通自动战斗/其它策略执行回点时误用上一次路径的旧点位
                 AutoFightTask.FightWaypoint = null;
+                // 重置回点检查状态，清理可能仍在运行的坐标任务与超距计数
+                AutoFightTask.ResetBackToFightPointTime();
             }
     
             try

@@ -140,7 +140,10 @@ public class AutoFightTask : ISoloTask
     /// 未完成则直接放弃，本轮不判断。
     /// 连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）时，或距上次回点/开战超过定时时间时，阻塞式执行回点。
     /// </summary>
-    public static async Task CheckBackToFightPointAsync(AutoFightParam taskParam, CancellationToken ct)
+    /// <param name="taskParam">战斗参数</param>
+    /// <param name="capture">本轮战斗截图（复用其计算坐标，不额外截图）；无共享截图时传 null 由内部截图</param>
+    /// <param name="ct">取消令牌</param>
+    public static async Task CheckBackToFightPointAsync(AutoFightParam taskParam, ImageRegion? capture, CancellationToken ct)
     {
         if (!taskParam.BackToFightPointEnabled) return;
         var waypoint = FightWaypoint;
@@ -160,8 +163,11 @@ public class AutoFightTask : ISoloTask
             }
         }
 
-        // 本轮立即启动下一轮坐标获取（异步执行，不阻塞正常战斗流程）
-        _positionTask = Task.Run(() => GetCurrentPosition(waypoint));
+        // 仅当上一轮任务已完成（或从未启动）时才启动下一轮坐标获取，避免叠加多个并发定位任务（异步执行，不阻塞正常战斗流程）
+        if (_positionTask == null || _positionTask.IsCompleted)
+        {
+            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, capture, ct), ct);
+        }
 
         if (position is null)
         {
@@ -193,12 +199,20 @@ public class AutoFightTask : ISoloTask
 
     /// <summary>
     /// 获取当前角色坐标（小地图定位，耗时较长，应异步执行）。识别失败返回 null。
+    /// 优先复用传入的战斗截图；无共享截图时内部截图。取消时通过 ct 提前中断。
     /// </summary>
-    private static Point2f? GetCurrentPosition(WaypointForTrack waypoint)
+    /// <param name="waypoint">开战点（提供地图与匹配方式）</param>
+    /// <param name="capture">本轮战斗截图，复用其计算坐标；null 时内部截图</param>
+    /// <param name="ct">取消令牌</param>
+    private static Point2f? GetCurrentPosition(WaypointForTrack waypoint, ImageRegion? capture, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         try
         {
-            using var ra = CaptureToRectArea();
+            using var ra = capture != null
+                // 复用战斗截图：浅拷贝 Mat（引用计数共享像素数据），即使原截图被主循环释放，数据仍存活到任务结束
+                ? new ImageRegion(new Mat(capture.SrcMat), 0, 0)
+                : CaptureToRectArea();
             var position = Navigation.GetPosition(ra, waypoint.MapName, waypoint.MapMatchMethod);
             if (position == new Point2f())
             {
@@ -507,7 +521,8 @@ public class AutoFightTask : ISoloTask
                     // 所有战斗角色都可以被取消
 
                     // 战斗中回点检查：异步获取当前坐标（不阻塞战斗流程），满足条件时阻塞式执行回点
-                    await CheckBackToFightPointAsync(_taskParam, _ct);
+                    // TXT 战斗循环无共享轮截图，传 null 由内部截图获取坐标
+                    await CheckBackToFightPointAsync(_taskParam, null, _ct);
 
                     #region 本次战斗的跳过战斗判定
 
@@ -730,6 +745,8 @@ public class AutoFightTask : ISoloTask
             // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，
             // 否则后续普通自动战斗/其它策略执行 back 时会误用上一次路径的旧点位
             FightWaypoint = null;
+            // 重置回点检查状态，清理可能仍在运行的坐标任务与超距计数
+            ResetBackToFightPointTime();
         }
 
         try
