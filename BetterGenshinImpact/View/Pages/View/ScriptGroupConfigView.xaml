@@ -1735,6 +1735,121 @@
                     
                     <Grid Margin="16,10,52,0">
 
+                        <!-- 战斗中回点设置 -->
+                        <ui:CardExpander Margin="0,0,0,12"
+                                         ContentPadding="0"
+                                         IsExpanded="False">
+
+                            <ui:CardExpander.Header>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="战斗中回点设置"
+                                                  TextWrapping="Wrap" />
+                                    <ui:ToggleSwitch Grid.Row="0"
+                                                     Grid.RowSpan="2"
+                                                     Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.BackToFightPointEnabled, Mode=TwoWay}" />
+                                </Grid>
+                            </ui:CardExpander.Header>
+                            <StackPanel>
+                                <!-- 回点启用距离 -->
+                                <Grid Margin="16,12,16,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="回点启用距离（米）"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="每轮动作后，连续两轮距离开战点超过指定距离时触发回点动作"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:TextBox Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Width="120"
+                                                Margin="0,0,36,0"
+                                                Text="{Binding PathingConfig.AutoFightConfig.BackToFightPointDistance, Mode=TwoWay}" />
+                                </Grid>
+
+                                <!-- 定时回点 -->
+                                <Grid Margin="16,0,16,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="定时回点（秒）"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="每轮动作后，距离上次回点或开战超过指定时间时触发回点动作，填0时不启用"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:TextBox Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Width="120"
+                                                Margin="0,0,36,0"
+                                                Text="{Binding PathingConfig.AutoFightConfig.BackToFightPointInterval, Mode=TwoWay}" />
+                                </Grid>
+
+                                <!-- 单次回点超时 -->
+                                <Grid Margin="16,0,16,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="单次回点超时（秒）"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="单次回点动作超过指定时间时，终止回点动作继续战斗"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:TextBox Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding PathingConfig.AutoFightConfig.BackToFightPointTimeout, Mode=TwoWay}" />
+                                </Grid>
+
+                                <!-- 游泳检测 -->
+                                <Grid Margin="16,0,16,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="游泳检测"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="检测到游泳状态时触发回点"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.SwimmingEnabled, Mode=TwoWay}" />
+                                </Grid>
+                            </StackPanel>
+                        </ui:CardExpander>
+                    </Grid>
+
+                    <Grid Margin="16,10,52,0">
+
                         <ui:CardExpander Margin="0,0,0,12"
                                          ContentPadding="0"
                                          IsExpanded="False">
@@ -1931,8 +2046,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -1947,27 +2060,12 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
+                                HorizontalAlignment="Right"
                                 HorizontalContentAlignment="Center"
                                 Margin="10,0,20,0"
                                 MinWidth="50"
+                                Width="120"
                                 Text="{Binding PathingConfig.AutoFightConfig.Timeout}"/>
-                    
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="2"
-                                  FontTypography="Body"
-                                  Text="游泳检测(自动战斗过程中)"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="2"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="先回战斗节点，失败则去七天神像"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="3"
-                                     Margin="10,0,36,0"
-                                     HorizontalAlignment="Right"
-                                     IsChecked="{Binding PathingConfig.AutoFightConfig.SwimmingEnabled, Mode=TwoWay}" />
                 </Grid>
                 </StackPanel>
             </ui:CardExpander>

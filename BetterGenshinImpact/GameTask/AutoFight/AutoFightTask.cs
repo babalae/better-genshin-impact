@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,10 +20,12 @@ using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -56,6 +59,383 @@ public class AutoFightTask : ISoloTask
 
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
+
+    /// <summary>
+    /// 回到战斗点位（阻塞式）。逻辑同游泳检测脱困：
+    /// FaceTo 朝向点位，再轻量化 MoveTo 移动到点位。
+    /// FaceTo + MoveTo 共享 totalTimeoutMs 总超时，超时终止回点。
+    /// 结束后释放按键。游泳检测与战斗中回点共用此方法。
+    /// 轻量化实现：不依赖地图追踪引擎（PathExecutor），仅复用 Navigation 定位与 CameraRotateTask 旋转。
+    /// </summary>
+    /// <param name="waypoint">战斗点位（开战点）</param>
+    /// <param name="totalTimeoutMs">整个回点流程（FaceTo + MoveTo）总超时（毫秒），超时终止回点</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>是否成功完成回点（超时/异常/连续两轮定位失败返回 false）</returns>
+    public static async Task<bool> BackToFightWaypointAsync(WaypointForTrack waypoint, int totalTimeoutMs, CancellationToken ct)
+    {
+        using (AvatarRecognition.BeginExclusiveOperation())
+        {
+            // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            try
+            {
+                // 整个回点流程（FaceTo + MoveTo）共享配置的总超时，FaceTo 已消耗的时间计入超时预算
+                cts.CancelAfter(totalTimeoutMs);
+                var rotateTask = new CameraRotateTask(cts.Token);
+
+                // FaceTo：定位 + 计算目标朝向 + 旋转到位
+                await FaceToWaypointLightweight(waypoint, rotateTask, cts.Token);
+
+                // 轻量化移动：持续前进直至到达点位附近（无卡死脱困检测，避免水中死循环）
+                Simulation.SendInput.Mouse.RightButtonDown();
+                if (!await MoveToWaypointLightweight(waypoint, rotateTask, cts.Token))
+                {
+                    // 定位失败放弃回点：战斗回点直接跳出继续战斗；游泳场景由调用方（CheckSwimmingAsync）触发回神像
+                    return false;
+                }
+                Logger.LogInformation("回点：移动结束");
+                return true;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.LogWarning("回点：回到战斗地点超时");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "回点：回到战斗地点异常");
+            }
+            finally
+            {
+                // 确保所有资源和状态在任何路径都被正确清理
+                cts.Cancel(); // 终止回点移动循环
+                Simulation.SendInput.Mouse.RightButtonUp();
+                Simulation.ReleaseAllKey();
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 轻量化朝向点位：定位当前坐标 → 计算目标朝向 → 旋转视角到位。
+    /// 定位失败时目标点距离远，角度计算仍有效，由外层总超时兜底。
+    /// </summary>
+    private static async Task FaceToWaypointLightweight(WaypointForTrack waypoint, CameraRotateTask rotateTask, CancellationToken ct)
+    {
+        using var screen = CaptureToRectArea();
+        var position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        await rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+        await Delay(500, ct);
+    }
+
+    /// <summary>
+    /// 轻量化移动到点位：持续前进，每轮定位 + 旋转逼近，接近点位（距离 &lt; 4）后停止。
+    /// 定位失败（坐标无效或距离异常）连续两轮以上时放弃回点并松开 W（返回 false，由调用方决定后续处理）。
+    /// </summary>
+    /// <returns>true=已到达点位附近；false=连续两轮定位失败放弃回点</returns>
+    private static async Task<bool> MoveToWaypointLightweight(WaypointForTrack waypoint, CameraRotateTask rotateTask, CancellationToken ct)
+    {
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        try
+        {
+            var positionFailCount = 0;
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                using var frameScreen = CaptureToRectArea();
+                var position = Navigation.GetPosition(frameScreen, waypoint.MapName, waypoint.MapMatchMethod);
+                var distance = Navigation.GetDistance(waypoint, position);
+
+                // 定位失败（坐标无效或距离异常）：连续两轮以上放弃回点并松开 W（战斗回点直接跳出，游泳场景由调用方触发回神像）
+                if (position == new Point2f() || distance > 500)
+                {
+                    positionFailCount++;
+                    if (positionFailCount >= 2)
+                    {
+                        Logger.LogWarning("回点：连续两轮定位失败，放弃回点");
+                        return false;
+                    }
+
+                    await Delay(100, ct);
+                    continue;
+                }
+
+                positionFailCount = 0;
+
+                if (distance < 4)
+                {
+                    Logger.LogDebug("回点：到达点位附近");
+                    return true;
+                }
+
+                // 旋转逼近目标朝向
+                var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+                rotateTask.RotateToApproach(targetOrientation, frameScreen);
+
+                await Delay(100, ct);
+            }
+        }
+        finally
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        }
+    }
+
+    // 战斗中回点检查状态（TXT/JSON 战斗共用；同一时刻仅一种战斗在运行，故用静态状态）
+    private static Task<Point2f?>? _positionTask;             // 异步获取当前坐标的任务
+    private static CancellationTokenSource? _positionCts;     // 坐标任务的取消源（回点前取消，避免后台定位与回点前台定位并发）
+    private static int _overDistanceRounds;                   // 连续超过回点距离的轮数
+    private static DateTime _lastBackToFightOrFightStartTime; // 上次回点或开战时间
+
+    /// <summary>
+    /// 重置回点检查状态（时间基准、连续超距轮数、坐标任务），TXT/JSON 战斗开始时调用。
+    /// 战斗结束后旧坐标任务与超距计数会残留，若不复位会导致新战斗立即触发回点。
+    /// </summary>
+    public static void ResetBackToFightPointTime()
+    {
+        _lastBackToFightOrFightStartTime = DateTime.Now;
+        _overDistanceRounds = 0;
+        // 取消并丢弃可能仍在运行的坐标任务，避免其与下一次战斗的定位并发
+        _positionCts?.Cancel();
+        _positionCts?.Dispose();
+        _positionCts = null;
+        _positionTask = null;
+    }
+
+    /// <summary>
+    /// 每轮动作开始时的回点检查。
+    /// 启用战斗中回点且存在开战点时：上一轮异步坐标任务已完成则取结果并立即启动下一轮坐标获取（异步，不阻塞战斗流程），
+    /// 未完成则不等待、本轮跳过距离判断（任务继续在后台运行，后续轮次再检查其结果）。
+    /// 连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）时，或距上次回点/开战超过定时时间时，阻塞式执行回点。
+    /// </summary>
+    /// <param name="taskParam">战斗参数</param>
+    /// <param name="capture">本轮战斗截图（复用其计算坐标，不额外截图）；无共享截图时传 null 由内部截图</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>是否触发了回点。触发回点时调用方可能需要重新截图（回点耗时较长，画面已变化）供后续条件求值使用</returns>
+    public static async Task<bool> CheckBackToFightPointAsync(AutoFightParam taskParam, ImageRegion? capture, CancellationToken ct)
+    {
+        if (!taskParam.BackToFightPointEnabled) return false;
+        var waypoint = FightWaypoint;
+        if (waypoint is null) return false;
+
+        // 定时回点：距上次回点或开战超过指定时间（不依赖坐标，定位失败/未完成时也生效）。
+        // 先于启动下一轮坐标任务判断：定时回点触发时不再启动新任务，避免后台定位与回点前台定位并发
+        if (taskParam.BackToFightPointInterval > 0 &&
+            (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
+        {
+            await ExecuteBackToFightPointAsync(taskParam, ct);
+            return true;
+        }
+
+        // 上一轮坐标任务：已完成则取结果；未完成则不等待、本轮跳过距离判断（任务继续在后台运行，后续轮次再检查其结果）
+        Point2f? position = null;
+        if (_positionTask == null || _positionTask.IsCompleted)
+        {
+            if (_positionTask != null)
+            {
+                try
+                {
+                    // 任务已确认完成，同步取结果即可
+                    position = _positionTask.Result;
+                }
+                catch
+                {
+                    position = null;
+                }
+            }
+
+            // 启动前同步浅拷贝截图 Mat（引用计数共享像素数据），任务延迟执行时原截图被外层释放也不影响
+            var srcMat = capture != null ? new Mat(capture.SrcMat) : null;
+            // 启动下一轮坐标获取（异步执行，不阻塞正常战斗流程），避免叠加多个并发定位任务。
+            // 不把取消令牌传给 Task.Run：排队期间外部取消会直接跳过委托执行，导致上面浅拷贝的 srcMat 无人释放；
+            // 委托总会执行，取消由 GetCurrentPosition 内部在释放保护就绪后再检查处理。
+            // 坐标任务使用独立取消源（与外部令牌链接）：执行回点前取消它，串行化 Navigation.GetPosition 访问
+            _positionCts?.Dispose();
+            _positionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var positionCt = _positionCts.Token;
+            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, srcMat, positionCt));
+        }
+
+        if (position is null)
+        {
+            return false; // 未拿到坐标，本轮不进行距离判断
+        }
+
+        // 距离条件：连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）
+        var distance = Navigation.GetDistance(waypoint, position.Value);
+        var threshold = Math.Clamp(taskParam.BackToFightPointDistance, 5, 100);
+        if (distance > threshold && distance < 500)
+        {
+            _overDistanceRounds++;
+            if (_overDistanceRounds >= 2)
+            {
+                _overDistanceRounds = 0;
+                await ExecuteBackToFightPointAsync(taskParam, ct);
+                return true;
+            }
+            return false;
+        }
+        _overDistanceRounds = 0;
+        return false;
+    }
+
+    /// <summary>
+    /// 获取当前角色坐标（小地图定位，耗时较长，应异步执行）。识别失败返回 null。
+    /// 优先复用传入的战斗截图（调用方已同步浅拷贝的 Mat）；无共享截图时内部截图。取消时通过 ct 提前中断。
+    /// </summary>
+    /// <param name="waypoint">开战点（提供地图与匹配方式）</param>
+    /// <param name="srcMat">调用方同步浅拷贝的战斗截图 Mat；null 时内部截图</param>
+    /// <param name="ct">取消令牌</param>
+    private static Point2f? GetCurrentPosition(WaypointForTrack waypoint, Mat? srcMat, CancellationToken ct)
+    {
+        // 传入的截图 Mat 由调用方同步浅拷贝（引用计数+1），本方法负责释放其引用。
+        // 先进入释放保护（ImageRegion using）再检查取消，避免取消抛出时浅拷贝 Mat 未被包装而泄漏非托管引用
+        using var ra = srcMat != null ? new ImageRegion(srcMat, 0, 0) : CaptureToRectArea();
+        ct.ThrowIfCancellationRequested();
+        try
+        {
+            var position = Navigation.GetPosition(ra, waypoint.MapName, waypoint.MapMatchMethod);
+            if (position == new Point2f())
+            {
+                return null;
+            }
+            return position;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning("战斗中回点：获取当前坐标失败：{Msg}", e.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 回点前取消并等待当前后台定位任务，串行化 Navigation.GetPosition 访问。
+    /// 回点（战斗中回点/游泳脱困）全程阻塞式前台定位，后台任务若仍在运行会并发读写导航缓存（_prevX/_prevY/_captureTime），
+    /// 可能导致回点移动方向、距离判断或后续路径定位异常。
+    /// </summary>
+    private static async Task CancelPositionTaskAsync()
+    {
+        _positionCts?.Cancel();
+        if (_positionTask != null)
+        {
+            try
+            {
+                await _positionTask;
+            }
+            catch
+            {
+                // 任务被取消或定位失败均不影响回点，继续执行
+            }
+        }
+    }
+
+    /// <summary>
+    /// 阻塞式执行回点动作（逻辑同游泳检测，共用 BackToFightWaypointAsync）。
+    /// 超过单次回点超时（配置项）则终止回点，继续战斗。
+    /// </summary>
+    private static async Task ExecuteBackToFightPointAsync(AutoFightParam taskParam, CancellationToken ct)
+    {
+        var waypoint = FightWaypoint;
+        if (waypoint is null) return;
+
+        // 执行回点前取消/等待当前后台定位任务，串行化 Navigation.GetPosition 访问
+        await CancelPositionTaskAsync();
+
+        _overDistanceRounds = 0;
+        Logger.LogInformation("战斗中回点：距离开战点过远或超时，尝试回到战斗地点");
+
+        var moveToTimeoutMs = (int)(taskParam.BackToFightPointTimeout * 1000);
+        var success = await BackToFightWaypointAsync(waypoint, moveToTimeoutMs, ct);
+        // 记录回点时间，作为下一次定时回点的基准（距上次回点或开战时间）
+        _lastBackToFightOrFightStartTime = DateTime.Now;
+
+        Logger.LogInformation(success ? "战斗中回点：已回到战斗地点，继续战斗" : "战斗中回点：回点超时或失败，继续战斗");
+    }
+
+    /// <summary>
+    /// 游泳状态检测与脱困（TXT/JSON 战斗每轮动作切人之前调用）。
+    /// 检测到游泳状态时延迟 800ms 二次确认避免误判，确认后阻塞式回点脱困；
+    /// 回点后仍在游泳则前往七天神像重试。
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
+    /// <param name="capture">调用方现有的战斗截图（复用其做游泳初检，不释放，归调用方管理）；null 时内部截图</param>
+    public static async Task CheckSwimmingAsync(CancellationToken ct, ImageRegion? capture = null)
+    {
+        // 游泳检测使用独立开关（SwimmingEnabled），不受"战斗中回点"总开关（BackToFightPointEnabled）控制：
+        // 即使战斗中回点关闭，游泳检测（默认开启）仍会在落水时触发回点脱困/回神像
+        if (!AutoFightParam.SwimmingEnabled || !FightStatusFlag) return;
+
+        // 第一张检测图：优先复用调用方传入的战斗截图，避免重复截图；仅自己创建的才需要释放
+        var region = capture ?? CaptureToRectArea();
+        try
+        {
+            if (!SwimmingConfirm(region)) return;
+        }
+        finally
+        {
+            if (capture == null) region.Dispose();
+        }
+
+        if (FightWaypoint is not null)
+        {
+            // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
+            await Delay(800, ct);
+            using (var ra = CaptureToRectArea())
+            {
+                if (!SwimmingConfirm(ra)) return;
+            }
+
+            Logger.LogInformation("游泳检测：尝试回到战斗地点");
+
+            // 回点前取消/等待后台定位任务，串行化 Navigation.GetPosition 访问
+            await CancelPositionTaskAsync();
+
+            // 与战斗中回点共用回点方法：FaceTo + MoveTo，MoveTo 超时 15 秒
+            // 注意：回点后不清空开战点，战斗仍在进行，后续回点（游泳/战斗中回点）仍需要开战点；战斗结束时统一清空
+            var success = await BackToFightWaypointAsync(FightWaypoint, 15000, ct);
+
+            // 回点成功后再截图确认脱困；回点失败（超时/异常）或仍处于游泳状态都视为失败，前往七天神像重试
+            if (success)
+            {
+                using (var bitmap2 = CaptureToRectArea())
+                {
+                    if (!SwimmingConfirm(bitmap2))
+                    {
+                        Logger.LogInformation("游泳检测：游泳脱困成功");
+                        return;
+                    }
+                }
+            }
+        }
+
+        Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
+        Avatar.TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
+    }
+
+    /// <summary>
+    /// 游泳检测（色块连通性检测）
+    /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
+    /// </summary>
+    private static bool SwimmingConfirm(Region region)
+    {
+        using var imageRegion = region.ToImageRegion();
+        using var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
+        using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        return numLabels > 1;
+    }
     
     private class TaskFightFinishDetectConfig
     {
@@ -323,10 +703,16 @@ public class AutoFightTask : ISoloTask
             try
             {
                 FightStatusFlag = true;
+                // 重置定时回点的时间基准（距上次回点或开战时间）
+                ResetBackToFightPointTime();
                 
                 while (!cts2.Token.IsCancellationRequested)
                 {
                     // 所有战斗角色都可以被取消
+
+                    // 战斗中回点检查：异步获取当前坐标（不阻塞战斗流程），满足条件时阻塞式执行回点
+                    // TXT 战斗循环无共享轮截图，传 null 由内部截图获取坐标
+                    await CheckBackToFightPointAsync(_taskParam, null, _ct);
 
                     #region 本次战斗的跳过战斗判定
 
@@ -352,7 +738,11 @@ public class AutoFightTask : ISoloTask
                     {
                         var command = combatCommands[i];
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
-                        
+
+                        // 每轮动作执行前触发游泳检测（游泳时切人/移动会失败）；放在盾奶/寻敌等所有发输入的逻辑之前，
+                        // 避免角色落水时先在水中尝试切盾奶/放技能而延迟回点或去七天神像恢复
+                        await CheckSwimmingAsync(ct);
+
                         #region 盾奶位技能优先功能
                         
                         var skipModel = guardianAvatar != null && lastFightName != command.Name;
@@ -546,6 +936,11 @@ public class AutoFightTask : ISoloTask
                 try { await targetingTask; } catch (OperationCanceledException) { }
             }
             FightStatusFlag = false;
+            // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，
+            // 否则后续普通自动战斗/其它策略执行 back 时会误用上一次路径的旧点位
+            FightWaypoint = null;
+            // 重置回点检查状态，清理可能仍在运行的坐标任务与超距计数
+            ResetBackToFightPointTime();
         }
 
         try

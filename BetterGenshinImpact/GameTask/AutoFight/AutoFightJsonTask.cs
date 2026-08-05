@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -75,9 +76,6 @@ public class AutoFightJsonTask : ISoloTask
         public string Expression { get; set; }
         public int Priority { get; set; }
     }
-
-    // 战斗点位
-    public static WaypointForTrack? FightWaypoint { get; set; } = null;
 
     private TaskFightFinishDetectConfig _finishDetectConfig;
 
@@ -325,6 +323,8 @@ public class AutoFightJsonTask : ISoloTask
     
             AutoFightSeek.RotationCount = 0;
             AutoFightTask.FightStatusFlag = true;
+            // 重置定时回点的时间基准（距上次回点或开战时间）
+            AutoFightTask.ResetBackToFightPointTime();
     
             var fightEndFlag = false;
             var timeOutFlag = false;
@@ -362,88 +362,109 @@ public class AutoFightJsonTask : ISoloTask
                             timeOutFlag = true;
                             break;
                         }
-    
+
                         // 每次循环开始：截图一次，供所有条件求值复用
-                        using var capture = CaptureToRectArea();
-                        evaluator.SetCachedCapture(capture);
-    
-                        var anyExecuted = false;
-    
-                        foreach (var prioritizedAction in validActions)
+                        var capture = CaptureToRectArea();
+                        try
+                        {
+                            evaluator.SetCachedCapture(capture);
+
+                            // 战斗中回点检查：复用本轮战斗截图计算坐标（不额外截图），满足条件时阻塞式执行回点
+                            // 若触发了回点：回点过程耗时较长、战斗画面已变化，重新截图供后续条件求值使用
+                            if (await AutoFightTask.CheckBackToFightPointAsync(_taskParam, capture, _ct))
                             {
-                                if (cts2.Token.IsCancellationRequested) break;
-    
-                                var action = prioritizedAction.Action;
-    
-                                // 求值条件表达式（使用展开后的表达式和优先级）
-                                var conditionMet = evaluator.Evaluate(
-                                    prioritizedAction.Expression,
-                                    prioritizedAction.Priority,
-                                    action.Character);
-    
-                                if (!conditionMet)
-                                {
-                                    continue;
-                                }
-    
-                                // 指定角色的动作：执行前确保切换到该角色
-                                if (!string.IsNullOrEmpty(action.Character))
-                                {
-                                    var avatar = combatScenes.SelectAvatar(action.Character);
-                                    if (avatar == null) continue;
-    
-                                    avatar.Switch();
-                                    _currentAvatarName = action.Character;
-                                }
-    
-                                // 执行动作
-                                await ExecuteAction(combatScenes, action);
-    
-                                // 确保E技能释放成功
-                                if (action.EnsureCast)
-                                {
-                                    var characterName = string.IsNullOrEmpty(action.Character)
-                                        ? _currentAvatarName
-                                        : action.Character;
-                                    var avatar = combatScenes.SelectAvatar(characterName);
-                                    if (avatar != null)
-                                    {
-                                        var imageAfterAction = CaptureToRectArea();
-                                        var retry = 5;
-                                        while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
-                                        {
-                                            Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
-                                            // 防止在纳塔飞天或爬墙
-                                            Simulation.ReleaseAllKey();
-                                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                            Simulation.SendInput.SimulateAction(GIActions.Drop);
-                                            await Delay(200, _ct);
-                                            // 重新执行整个动作
-                                            await ExecuteAction(combatScenes, action);
-                                            imageAfterAction = CaptureToRectArea();
-                                            await Task.Delay(30, _ct);
-                                            retry--;
-                                        }
-                                        imageAfterAction.Dispose();
-                                    }
-                                }
-    
-                                evaluator.UpdateLastExecTime(action.Index);
-                                lastExecutedAction = action;
-                                anyExecuted = true;
-                                lastFightName = action.Character ?? "";
-    
-                                if (_fightEndFlag) break;
-    
-                                // 执行完第一个满足条件的动作后重新判断
-                                break;
+                                capture.Dispose();
+                                capture = CaptureToRectArea();
+                                evaluator.SetCachedCapture(capture);
                             }
     
-                        if (fightEndFlag || _fightEndFlag) break;
+                            var anyExecuted = false;
     
-                        if (!anyExecuted)
+                            foreach (var prioritizedAction in validActions)
+                                {
+                                    if (cts2.Token.IsCancellationRequested) break;
+    
+                                    var action = prioritizedAction.Action;
+    
+                                    // 求值条件表达式（使用展开后的表达式和优先级）
+                                    var conditionMet = evaluator.Evaluate(
+                                        prioritizedAction.Expression,
+                                        prioritizedAction.Priority,
+                                        action.Character);
+    
+                                    if (!conditionMet)
+                                    {
+                                        continue;
+                                    }
+
+                                    // 每轮动作执行前触发游泳检测（游泳时切人/移动会失败），复用本轮战斗截图做游泳初检；
+                                    // 无论动作是否有归属角色都检测，通用动作（Character 为空）落水时同样需要回点/去神像恢复
+                                    await AutoFightTask.CheckSwimmingAsync(_ct, capture);
+
+                                    // 指定角色的动作：执行前确保切换到该角色
+                                    if (!string.IsNullOrEmpty(action.Character))
+                                    {
+                                        var avatar = combatScenes.SelectAvatar(action.Character);
+                                        if (avatar == null) continue;
+    
+                                        avatar.Switch();
+                                        _currentAvatarName = action.Character;
+                                    }
+    
+                                    // 执行动作
+                                    await ExecuteAction(combatScenes, action);
+    
+                                    // 确保E技能释放成功
+                                    if (action.EnsureCast)
+                                    {
+                                        var characterName = string.IsNullOrEmpty(action.Character)
+                                            ? _currentAvatarName
+                                            : action.Character;
+                                        var avatar = combatScenes.SelectAvatar(characterName);
+                                        if (avatar != null)
+                                        {
+                                            var imageAfterAction = CaptureToRectArea();
+                                            var retry = 5;
+                                            while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                            {
+                                                Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
+                                                // 防止在纳塔飞天或爬墙
+                                                Simulation.ReleaseAllKey();
+                                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                                Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                                await Delay(200, _ct);
+                                                // 重新执行整个动作
+                                                await ExecuteAction(combatScenes, action);
+                                                imageAfterAction.Dispose();
+                                                imageAfterAction = CaptureToRectArea();
+                                                await Task.Delay(30, _ct);
+                                                retry--;
+                                            }
+                                            imageAfterAction.Dispose();
+                                        }
+                                    }
+    
+                                    evaluator.UpdateLastExecTime(action.Index);
+                                    lastExecutedAction = action;
+                                    anyExecuted = true;
+                                    lastFightName = action.Character ?? "";
+    
+                                    if (_fightEndFlag) break;
+    
+                                    // 执行完第一个满足条件的动作后重新判断
+                                    break;
+                                }
+    
+                            if (fightEndFlag || _fightEndFlag) break;
+    
+                            if (!anyExecuted)
+                            {
+                                await Delay(200, _ct);
+                            }
+                        }
+                        finally
                         {
-                            await Delay(200, _ct);
+                            capture.Dispose();
                         }
                     }
                 }
@@ -497,6 +518,11 @@ public class AutoFightJsonTask : ISoloTask
                     try { await targetingTask; } catch (OperationCanceledException) { }
                 }
                 AutoFightTask.FightStatusFlag = false;
+                // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，
+                // 否则后续普通自动战斗/其它策略执行回点时误用上一次路径的旧点位
+                AutoFightTask.FightWaypoint = null;
+                // 重置回点检查状态，清理可能仍在运行的坐标任务与超距计数
+                AutoFightTask.ResetBackToFightPointTime();
             }
     
             try

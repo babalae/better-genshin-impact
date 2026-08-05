@@ -177,6 +177,10 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private string _kazuhaPartyName = "";
     
+    /// <summary>
+    /// 游泳检测开关：与"战斗中回点"总开关（BackToFightPointEnabled）相互独立，不受其控制。
+    /// 只要此处开启（默认开启），战斗中落水即触发回点脱困，脱困失败则前往七天神像重试。
+    /// </summary>
     [ObservableProperty]
     private bool _swimmingEnabled = true;
 
@@ -221,6 +225,48 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _drawRecognitionResults = true;
+
+    /// <summary>
+    /// 战斗中回点：每轮动作后，连续两轮距离开战点超过指定距离时触发回点动作
+    /// </summary>
+    [ObservableProperty]
+    private bool _backToFightPointEnabled = false;
+
+    /// <summary>
+    /// 回点启用距离（米）：每轮动作后，连续两轮距离开战点超过该距离时触发回点动作
+    /// </summary>
+    [ObservableProperty]
+    private double _backToFightPointDistance = 30;
+
+    /// <summary>
+    /// 定时回点（秒）：每轮动作后，距离上次触发回点超过该时间时触发回点动作，填0时不启用
+    /// </summary>
+    [ObservableProperty]
+    private double _backToFightPointInterval = 0;
+
+    /// <summary>
+    /// 单次回点超时（秒）：单次回点动作超过该时间时，终止回点动作继续战斗
+    /// </summary>
+    [ObservableProperty]
+    private double _backToFightPointTimeout = 2;
+
+    /// <summary>回点启用距离（米）：钳制在 5-100</summary>
+    partial void OnBackToFightPointDistanceChanged(double value)
+    {
+        if (value is < 5 or > 100) BackToFightPointDistance = Math.Clamp(value, 5, 100);
+    }
+
+    /// <summary>定时回点（秒）：钳制在 0-60</summary>
+    partial void OnBackToFightPointIntervalChanged(double value)
+    {
+        if (value is < 0 or > 60) BackToFightPointInterval = Math.Clamp(value, 0, 60);
+    }
+
+    /// <summary>单次回点超时（秒）：钳制在 0.5-15</summary>
+    partial void OnBackToFightPointTimeoutChanged(double value)
+    {
+        if (value is < 0.5 or > 15) BackToFightPointTimeout = Math.Clamp(value, 0.5, 15);
+    }
 
 }
 
