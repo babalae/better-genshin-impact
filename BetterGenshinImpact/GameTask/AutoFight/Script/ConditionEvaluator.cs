@@ -26,6 +26,7 @@ public class ConditionEvaluator
     private readonly Func<ImageRegion> _captureFunc;
     private ImageRegion? _cachedCapture;
     private string? _currentCharacterName;
+    private string? _currentActionName;
     private HashSet<int>? _qReadyCache;
     private bool? _lowHpCache;
 
@@ -74,10 +75,12 @@ public class ConditionEvaluator
     /// <param name="expression">表达式字符串</param>
     /// <param name="currentIndex">当前动作索引</param>
     /// <param name="characterName">当前角色名称</param>
+    /// <param name="actionName">当前动作名称（since/count/last-exec 缺省严格指代当前动作时使用）</param>
     /// <returns>表达式结果</returns>
-    public bool Evaluate(string expression, int currentIndex, string? characterName = null)
+    public bool Evaluate(string expression, int currentIndex, string? characterName = null, string? actionName = null)
     {
         _currentCharacterName = characterName;
+        _currentActionName = actionName;
         if (string.IsNullOrWhiteSpace(expression))
             return true;
 
@@ -413,21 +416,71 @@ public class ConditionEvaluator
         return ToNumber(Eval(node, currentIndex));
     }
 
+    /// <summary>
+    /// 目标动作标识：按序号（Index）和/或动作名称（Name）解析。
+    /// 缺省指代当前动作时为严格指代（Index 与 Name 同时给出，两者都必须匹配）。
+    /// </summary>
+    private readonly record struct TargetRef(int? Index, string? Name);
+
+    /// <summary>
+    /// 解析目标动作标识：纯数字参数按序号解析；裸名称（如 since(动作名)）按动作名称解析；
+    /// 其他表达式（如 since(1+1)）求值后按序号解析。
+    /// </summary>
+    private TargetRef ResolveTarget(AstNode node, int currentIndex)
+    {
+        if (node is NumberNode n)
+            return new TargetRef((int)n.Value, null);
+
+        if (node is FuncCallNode f && f.Args.Count == 0)
+            return new TargetRef(null, f.Name);
+
+        return new TargetRef((int)ToNumber(Eval(node, currentIndex)), null);
+    }
+
+    /// <summary>
+    /// 事件是否匹配目标标识：仅按序号、仅按名称、或序号与名称同时指定（严格指代，两者都必须匹配）。
+    /// </summary>
+    private static bool MatchesTarget((int Index, string Name, double Time) e, TargetRef target)
+    {
+        if (target.Name is not null && target.Index.HasValue)
+            return e.Index == target.Index.Value && string.Equals(e.Name, target.Name, StringComparison.OrdinalIgnoreCase);
+        if (target.Name is not null)
+            return string.Equals(e.Name, target.Name, StringComparison.OrdinalIgnoreCase);
+        return e.Index == target.Index.Value;
+    }
+
+    /// <summary>
+    /// 获取目标动作距上次执行的时间（秒）：
+    /// 反向查找事件历史中最新一条符合目标标识的事件。从未执行返回 null。
+    /// </summary>
+    private double? GetLastExecElapsed(TargetRef target)
+    {
+        var currentT = (DateTime.Now - _battleStartTime).TotalSeconds;
+        for (var i = _execHistory.Count - 1; i >= 0; i--)
+        {
+            if (MatchesTarget(_execHistory[i], target))
+                return currentT - _execHistory[i].Time;
+        }
+        return null;
+    }
+
     // ========== 布尔函数（返回 bool） ==========
 
-    /// <summary>判断动作上次执行距离现在是否超过/少于指定时间</summary>
+    /// <summary>
+    /// 判断动作上次执行距离现在是否超过/少于指定时间。
+    /// 目标动作支持序号或动作名称（如 last-exec(2,true,3)、last-exec(2,true,香菱)），缺省指代当前动作。
+    /// </summary>
     private bool EvalLastExec(List<AstNode> args, int currentIndex)
     {
         if (args.Count < 1) return false;
 
         var timeSec = EvalNumber(args[0], currentIndex);
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
-        var targetIndex = args.Count >= 3 ? (int)EvalNumber(args[2], currentIndex) : currentIndex;
+        var target = args.Count >= 3 ? ResolveTarget(args[2], currentIndex) : new TargetRef(currentIndex, _currentActionName);
 
-        if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
-            return greater;
+        var elapsed = GetLastExecElapsed(target);
+        if (elapsed is null) return greater;
 
-        var elapsed = (DateTime.Now - lastTime).TotalSeconds;
         return greater ? elapsed > timeSec : elapsed < timeSec;
     }
 
@@ -614,29 +667,27 @@ public class ConditionEvaluator
 
     /// <summary>
     /// 距离动作上次执行的时间，单位秒
-    /// 不传参时指代当前动作；从未执行返回正无穷
+    /// 不传参时严格指代当前动作（序号与名称都相同才算）；目标动作支持序号或动作名称（如 since(3)、since(香菱)）；从未执行返回正无穷
     /// </summary>
     private double EvalSince(List<AstNode> args, int currentIndex)
     {
-        var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
+        var target = args.Count >= 1 ? ResolveTarget(args[0], currentIndex) : new TargetRef(currentIndex, _currentActionName);
 
-        if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
-            return double.PositiveInfinity;
-
-        return (DateTime.Now - lastTime).TotalSeconds;
+        var elapsed = GetLastExecElapsed(target);
+        return elapsed ?? double.PositiveInfinity;
     }
 
     /// <summary>
     /// 动作在指定时间范围内的执行次数
-    /// index 不传时指代自己；start 默认为 0（战斗开始）；end 默认为当前时间 t
+    /// 目标动作不传时严格指代自己（序号与名称都相同才算），支持序号或动作名称（如 count(3)、count(香菱)）；start 默认为 0（战斗开始）；end 默认为当前时间 t
     /// </summary>
     private double EvalCount(List<AstNode> args, int currentIndex)
     {
         var currentT = (DateTime.Now - _battleStartTime).TotalSeconds;
-        var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
+        var target = args.Count >= 1 ? ResolveTarget(args[0], currentIndex) : new TargetRef(currentIndex, _currentActionName);
         var start = args.Count >= 2 ? ToNumber(Eval(args[1], currentIndex)) : 0;
         var end = args.Count >= 3 ? ToNumber(Eval(args[2], currentIndex)) : currentT;
 
-        return _execHistory.Count(e => e.Index == targetIndex && e.Time >= start && e.Time <= end);
+        return _execHistory.Count(e => MatchesTarget(e, target) && e.Time >= start && e.Time <= end);
     }
 }

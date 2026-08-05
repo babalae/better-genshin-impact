@@ -380,7 +380,8 @@ public class AutoFightJsonTask : ISoloTask
                                 var conditionMet = evaluator.Evaluate(
                                     prioritizedAction.Expression,
                                     action.Index,
-                                    action.Character);
+                                    action.Character,
+                                    action.Name);
     
                                 if (!conditionMet)
                                 {
