@@ -1,0 +1,25 @@
+{
+  "regions": {
+    "BottomLeft": "rect(0, ch * 0.8, cw * 0.2, ch * 0.2)"
+  },
+  "objects": {
+    "Menu": {
+      "name": "角色菜单",
+      "type": "TemplateMatch",
+      "template": "menu.png",
+      "roi": "@BottomLeft",
+      "threshold": 0.8,
+      "maxMatchCount": -1,
+      "draw": false
+    },
+    "Filter": {
+      "name": "角色筛选",
+      "type": "TemplateMatch",
+      "template": "filter.png",
+      "roi": "@BottomLeft",
+      "threshold": 0.8,
+      "maxMatchCount": -1,
+      "draw": false
+    }
+  }
+}

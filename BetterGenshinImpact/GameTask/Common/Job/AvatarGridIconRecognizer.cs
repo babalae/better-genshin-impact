@@ -37,12 +37,14 @@ internal sealed record AvatarGridIconCandidate(string CharacterName, string Elem
 internal sealed class AvatarGridIconRecognizer : IDisposable
 {
     private const int InputSize = 115;
+    private const int ElementRoiSize = 48;
+    private const int ElementInputSize = 64;
     private const string PrototypePath = @"Assets\Model\AvatarGridIcon\avatar.csv";
 
     private readonly InferenceSession _session;
     private readonly List<AvatarPrototype> _prototypes;
 
-    private sealed record AvatarPrototype(string CharacterName, string ElementType, string WeaponName, float[] Embedding);
+    private sealed record AvatarPrototype(string CharacterName, string ElementType, string WeaponType, float[] Embedding);
 
     /// <summary>
     /// 初始化头像 ONNX 模型会话并加载角色头像原型表。
@@ -61,26 +63,37 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     /// <returns>按角色名聚合后的最高分识别候选。</returns>
     public AvatarGridIconCandidate Recognize(Mat mat)
     {
-        using Mat resized = mat.Resize(new Size(InputSize, InputSize));
-        using Mat rgb = resized.CvtColor(ColorConversionCodes.BGR2RGB);
-        var tensor = new DenseTensor<float>(new[] { 1, 3, InputSize, InputSize });
-        for (int y = 0; y < rgb.Height; y++)
-        {
-            for (int x = 0; x < rgb.Width; x++)
-            {
-                var pixel = rgb.At<Vec3b>(y, x);
-                tensor[0, 0, y, x] = (pixel[0] / 255f - 0.5f) / 0.5f;
-                tensor[0, 1, y, x] = (pixel[1] / 255f - 0.5f) / 0.5f;
-                tensor[0, 2, y, x] = (pixel[2] / 255f - 0.5f) / 0.5f;
-            }
-        }
+        var (imageTensor, elementImageTensor) = CreateInputTensors(mat);
+        return Recognize(imageTensor, elementImageTensor, false);
+    }
 
-        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input_image", tensor) };
+    /// <summary>
+    /// 使用独立裁剪的头像和元素图标识别角色；需要时以元素分类头覆盖原型表中的元素类型。
+    /// </summary>
+    public AvatarGridIconCandidate Recognize(Mat avatarMat, Mat elementMat, bool recognizeElementType)
+    {
+        using Mat resizedAvatar = avatarMat.Resize(new Size(InputSize, InputSize));
+        using Mat resizedElement = elementMat.Resize(new Size(ElementInputSize, ElementInputSize));
+        var imageTensor = CreateNormalizedRgbTensor(resizedAvatar);
+        var elementImageTensor = CreateNormalizedRgbTensor(resizedElement);
+        return Recognize(imageTensor, elementImageTensor, recognizeElementType);
+    }
+
+    private AvatarGridIconCandidate Recognize(
+        DenseTensor<float> imageTensor,
+        DenseTensor<float> elementImageTensor,
+        bool recognizeElementType)
+    {
+        var inputs = new List<NamedOnnxValue>
+        {
+            NamedOnnxValue.CreateFromTensor("input_image", imageTensor),
+            NamedOnnxValue.CreateFromTensor("input_element_image", elementImageTensor)
+        };
         using var results = _session.Run(inputs);
         float[] feature = results.First(r => r.Name == "embedding").AsEnumerable<float>().ToArray();
         NormalizeVectorInPlace(feature);
 
-        return _prototypes
+        var candidate = _prototypes
             // 两侧 embedding 都已 L2 归一化，点积即余弦相似度。
             .Select(prototype =>
             {
@@ -96,6 +109,60 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
             .Select(group => group.OrderByDescending(candidate => candidate.Score).First())
             .OrderByDescending(candidate => candidate.Score)
             .FirstOrDefault() ?? AvatarGridIconCandidate.Empty;
+
+        if (!recognizeElementType || candidate == AvatarGridIconCandidate.Empty)
+        {
+            return candidate;
+        }
+
+        var logits = results.First(result => result.Name == "element_logits").AsEnumerable<float>().ToArray();
+        var elementTypes = _prototypes
+            .Select(prototype => prototype.ElementType)
+            .Where(elementType => !string.IsNullOrWhiteSpace(elementType))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(elementType => elementType, StringComparer.Ordinal)
+            .ToArray();
+        if (logits.Length != elementTypes.Length || logits.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"角色头像模型元素输出数量异常：logits={logits.Length}, elements={elementTypes.Length}");
+        }
+
+        var predictedElementType = elementTypes[Array.IndexOf(logits, logits.Max())];
+        return candidate with { ElementType = predictedElementType };
+    }
+
+    /// <summary>
+    /// 按模型训练协议生成头像和元素图标两个输入张量。
+    /// </summary>
+    /// <remarks>
+    /// 完整头像缩放为 115x115；元素输入必须从该图左上角裁剪 48x48 后再缩放为 64x64。
+    /// 两个输入均执行 BGR→RGB 及 [-1,1] 归一化，不能用完整头像代替元素输入。
+    /// </remarks>
+    internal static (DenseTensor<float> Image, DenseTensor<float> ElementImage) CreateInputTensors(Mat mat)
+    {
+        using Mat resized = mat.Resize(new Size(InputSize, InputSize));
+        using Mat elementRoi = resized.SubMat(0, ElementRoiSize, 0, ElementRoiSize);
+        using Mat resizedElementRoi = elementRoi.Resize(new Size(ElementInputSize, ElementInputSize));
+        return (CreateNormalizedRgbTensor(resized), CreateNormalizedRgbTensor(resizedElementRoi));
+    }
+
+    private static DenseTensor<float> CreateNormalizedRgbTensor(Mat bgr)
+    {
+        using Mat rgb = bgr.CvtColor(ColorConversionCodes.BGR2RGB);
+        var tensor = new DenseTensor<float>(new[] { 1, 3, rgb.Height, rgb.Width });
+        for (int y = 0; y < rgb.Height; y++)
+        {
+            for (int x = 0; x < rgb.Width; x++)
+            {
+                var pixel = rgb.At<Vec3b>(y, x);
+                tensor[0, 0, y, x] = (pixel[0] / 255f - 0.5f) / 0.5f;
+                tensor[0, 1, y, x] = (pixel[1] / 255f - 0.5f) / 0.5f;
+                tensor[0, 2, y, x] = (pixel[2] / 255f - 0.5f) / 0.5f;
+            }
+        }
+
+        return tensor;
     }
 
     /// <summary>
@@ -109,13 +176,13 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     }
 
     /// <summary>
-    /// 获取指定角色的武器名称
+    /// 获取指定角色的武器筛选类型。
     /// </summary>
     /// <param name="characterName">角色标准名称。</param>
-    /// <returns>角色武器名称。</returns>
-    public string GetWeaponName(string characterName)
+    /// <returns><c>avatar.csv</c> 的 <c>weapon_type</c>，例如“单手剑”。</returns>
+    public string GetWeaponType(string characterName)
     {
-        return _prototypes.First(prototype => prototype.CharacterName == characterName).WeaponName;
+        return _prototypes.First(prototype => prototype.CharacterName == characterName).WeaponType;
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
@@ -18,7 +19,9 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.CharacterDevelopment;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using Region = BetterGenshinImpact.GameTask.Model.Area.Region;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -38,6 +41,7 @@ public class EngineExtend
         engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir));
         engine.AddHostObject("pathingScript", new AutoPathingScript(workDir, config));
         engine.AddHostObject("genshin", new Dependence.Genshin());
+        engine.AddHostObject("characterDevelopmentTask", new CharacterDevelopmentTask());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
         engine.AddHostObject("http", new Http()); // 限制文件访问
@@ -67,6 +71,9 @@ public class EngineExtend
         engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));
         engine.AddHostType("ImageRegion", typeof(ImageRegion));
         engine.AddHostType("Region", typeof(Region));
+        
+        engine.AddHostType("Pen", typeof(Pen));
+        engine.AddHostType("Color", typeof(Color));
         
         engine.AddHostType("CombatScenes", typeof(CombatScenes));
         engine.AddHostType("Avatar", typeof(Avatar));
