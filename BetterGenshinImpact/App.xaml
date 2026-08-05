@@ -19,12 +19,18 @@
             <!-- ===== 字体 ===== -->
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
-
             <!-- ===== 设计令牌 ===== -->
             <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
             <Thickness x:Key="PagePadding">48,20,48,28</Thickness>
 
             <!-- ===== 全局 Converter ===== -->
+            <SolidColorBrush x:Key="InfoBadgeInformationSeverityBackgroundBrush" Color="#0E7490" />
+            <DropShadowEffect x:Key="ControlElevationBorderShadow"
+                              BlurRadius="16"
+                              ShadowDepth="2"
+                              Direction="270"
+                              Opacity="0.35"
+                              Color="#000000" />
             <bgivc:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
             <bgivc:AutoBossNameToCascadingItemConverter x:Key="AutoBossNameConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />

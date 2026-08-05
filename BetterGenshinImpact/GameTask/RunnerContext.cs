@@ -40,7 +40,26 @@ public class RunnerContext : Singleton<RunnerContext>
     /// <summary>
     /// 是否正在自动领取派遣任务
     /// </summary>
-    public bool isAutoFetchDispatch { get; set; }
+    private int _isAutoFetchDispatch;
+
+    /// <summary>
+    /// 是否正在自动领取派遣任务
+    /// </summary>
+    public bool isAutoFetchDispatch
+    {
+        get => Interlocked.CompareExchange(ref _isAutoFetchDispatch, 0, 0) != 0;
+        set => Interlocked.Exchange(ref _isAutoFetchDispatch, value ? 1 : 0);
+    }
+
+    public bool TryBeginAutoFetchDispatch()
+    {
+        return Interlocked.CompareExchange(ref _isAutoFetchDispatch, 1, 0) == 0;
+    }
+
+    public void EndAutoFetchDispatch()
+    {
+        Interlocked.Exchange(ref _isAutoFetchDispatch, 0);
+    }
 
     /// <summary>
     /// 当前使用队伍名称

@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -9,10 +10,15 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 [Serializable]
 public class PathingTaskInfo
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
 
     public string? Author { get; set; }
+
+    public List<PathingTaskAuthor> Authors { get; set; } = [];
 
     public string? Version { get; set; }
 
@@ -61,4 +67,12 @@ public class PathingTaskInfo
     
     public List<MaterialInfo> Items { get; set; } = [];
     
+}
+
+[Serializable]
+public class PathingTaskAuthor
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Links { get; set; } = string.Empty;
 }

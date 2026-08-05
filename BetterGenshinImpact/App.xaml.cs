@@ -151,6 +151,8 @@ public partial class App : Application
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
+                services.AddSingleton<MapMiniFollowViewModel>();
+                services.AddSingleton<MapMiniFollowWindowController>();
                 services.AddSingleton<PathingConfigViewModel>();
                 services.AddSingleton<IBannerImageService, BannerImageService>();
                 services.AddTransient<WebImageInputViewModel>();

@@ -14,6 +14,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -77,7 +78,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                     }
 
                     var p2 = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).GetMiniMapPosition(new Mat(ra.SrcMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
-                    if (!p2.IsEmpty())
+                    if (PathingPositionValidator.IsKnownPosition(p2))
                     {
                         way.AddPoint(p2);
                         Debug.WriteLine($"AddPoint: {p2}");
