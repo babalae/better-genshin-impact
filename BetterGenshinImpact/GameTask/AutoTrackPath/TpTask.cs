@@ -52,7 +52,11 @@ public class TpTask
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
 
-    private const double DisplayTpPointZoomLevel = 4.4; // 传送点显示的时候的地图比例
+    private const double DefaultDisplayTpPointZoomLevel = 4.4; // 传送点显示时的默认地图比例
+    private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
+    private const int DefaultBigMapOpenTimeoutMs = 2400;
+    private const int MoonCanonBigMapOpenTimeoutMs = 7000;
+    private const int BigMapOpenCheckIntervalMs = 200;
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
@@ -335,7 +339,7 @@ public class TpTask
     ///释放所有按键，并打开大地图界面
     /// </summary>
     /// <param name="retryCount">重试次数</param>
-    public async Task OpenBigMapUi(int retryCount = 3)
+    public async Task OpenBigMapUi(int retryCount = 3, string? mapName = null)
     {
         for (var i = 0; i < retryCount; i++)
         {
@@ -344,7 +348,7 @@ public class TpTask
                 // 打开地图前释放所有按键
                 Simulation.ReleaseAllKey();
                 await Delay(GetTeleportOperationDelay(20), ct);
-                await CheckInBigMapUi();
+                await CheckInBigMapUi(mapName);
                 return;
             }
             catch (Exception e) when (IsTaskStopException(e))
@@ -377,7 +381,7 @@ public class TpTask
     {
         ClearRememberedAreaSwitchCenterPoint();
         // 1. 确认在地图界面，并在传送入口统一切回地表图层
-        await OpenBigMapUi(1);
+        await OpenBigMapUi(1, mapName);
         await SwitchToGroundMapLayerIfNeeded();
 
         var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
@@ -416,7 +420,7 @@ public class TpTask
             Y = y,
             Country = country,
             DistanceToNear = distanceToNear,
-            FinalClickZoomLevel = GetTeleportFinalClickZoomLevel(distanceToNear),
+            FinalClickZoomLevel = GetTeleportFinalClickZoomLevel(distanceToNear, mapName),
         };
     }
 
@@ -526,7 +530,7 @@ public class TpTask
             lastEvaluation = evaluation;
             if (evaluation.View != null)
             {
-                var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel);
+                var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
                 if (!ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     return evaluation.View;
@@ -534,12 +538,13 @@ public class TpTask
 
                 if (finalZoomAttempts >= MaxMapZoomWheelAttempts)
                 {
-                    if (!IsTeleportPointDisplayZoomLevelReached(evaluation.View.ZoomLevel))
+                    if (!IsTeleportPointDisplayZoomLevelReached(evaluation.View.ZoomLevel, mapName))
                     {
+                        var displayTpPointZoomLevel = GetDisplayTpPointZoomLevel(mapName);
                         Logger.LogWarning(
                             "地图缩放未到传送点显示级别，已跳过点击：zoom={ZoomLevel:0.00} required<={RequiredZoomLevel:0.00}",
                             evaluation.View.ZoomLevel,
-                            DisplayTpPointZoomLevel);
+                            displayTpPointZoomLevel);
                         throw new TpPointNotActivate("地图缩放未到传送点显示级别");
                     }
 
@@ -671,7 +676,7 @@ public class TpTask
             return false;
         }
 
-        if (!IsTeleportPointDisplayZoomLevelReached(clickView.ZoomLevel))
+        if (!IsTeleportPointDisplayZoomLevelReached(clickView.ZoomLevel, clickView.MapName))
         {
             return true;
         }
@@ -695,10 +700,10 @@ public class TpTask
         return !IsZoomCloseEnough(clickView.ZoomLevel, targetZoomLevel);
     }
 
-    private bool IsTeleportPointDisplayZoomLevelReached(double zoomLevel)
+    private bool IsTeleportPointDisplayZoomLevelReached(double zoomLevel, string mapName)
     {
         return IsFinite(zoomLevel) &&
-               zoomLevel <= DisplayTpPointZoomLevel + _tpConfig.PrecisionThreshold;
+               zoomLevel <= GetDisplayTpPointZoomLevel(mapName) + _tpConfig.PrecisionThreshold;
     }
 
     private bool IsTeleportClickViewSafeAfterZoom(TeleportClickView clickView, double targetZoomLevel)
@@ -836,10 +841,10 @@ public class TpTask
         }
     }
 
-    private double GetTeleportFinalClickZoomLevel(double nearestTpDistance)
+    private double GetTeleportFinalClickZoomLevel(double nearestTpDistance, string mapName)
     {
         var targetZoomLevel = Math.Max(nearestTpDistance / TeleportFinalZoomDistanceFactor, MinTeleportZoomLevel);
-        return ClampTeleportFinalZoomLevel(targetZoomLevel);
+        return ClampTeleportFinalZoomLevel(targetZoomLevel, mapName);
     }
 
     private double GetTeleportTravelZoomLevel()
@@ -857,9 +862,9 @@ public class TpTask
         return Math.Clamp(zoomLevel, MinTeleportZoomLevel, GetTeleportMaxZoomLevel());
     }
 
-    private static double ClampTeleportFinalZoomLevel(double zoomLevel)
+    private static double ClampTeleportFinalZoomLevel(double zoomLevel, string mapName)
     {
-        return Math.Clamp(zoomLevel, MinTeleportZoomLevel, DisplayTpPointZoomLevel);
+        return Math.Clamp(zoomLevel, MinTeleportZoomLevel, GetDisplayTpPointZoomLevel(mapName));
     }
 
     private double GetCurrentBigMapZoomLevel()
@@ -1063,14 +1068,14 @@ public class TpTask
         return (clickX, clickY);
     }
 
-    public async Task CheckInBigMapUi()
+    public async Task CheckInBigMapUi(string? mapName = null)
     {
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
-        if (!await TryToOpenBigMapUi())
+        if (!await TryToOpenBigMapUi(mapName))
         {
             await new ReturnMainUiTask().Start(ct);
             await Delay(GetTeleportOperationDelay(500), ct);
-            if (!await TryToOpenBigMapUi())
+            if (!await TryToOpenBigMapUi(mapName))
             {
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
             }
@@ -1080,7 +1085,7 @@ public class TpTask
     /// <summary>
     /// 尝试打开地图界面
     /// </summary>
-    private async Task<bool> TryToOpenBigMapUi()
+    private async Task<bool> TryToOpenBigMapUi(string? mapName)
     {
         if (IsInBigMapUi())
         {
@@ -1089,7 +1094,7 @@ public class TpTask
 
         RestartTeleportMToFTiming();
         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-        return await WaitForBigMapUiAppear(12, 200);
+        return await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName), BigMapOpenCheckIntervalMs);
     }
 
     private void RestartTeleportMToFTiming()
@@ -1114,10 +1119,9 @@ public class TpTask
         return Bv.IsInBigMapUi(capture);
     }
 
-    private async Task<bool> WaitForBigMapUiAppear(int checkTimes, int delayMs)
+    private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds, int delayMs)
     {
         var retryInterval = GetTeleportOperationDelay(delayMs);
-        var timeoutMilliseconds = checkTimes * delayMs;
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
         {
@@ -1475,7 +1479,7 @@ public class TpTask
             return (false, default, currentZoomLevel);
         }
 
-        var targetZoomLevel = GetMapPositionRecognitionRecoveryZoomLevel(currentZoomLevel);
+        var targetZoomLevel = GetMapPositionRecognitionRecoveryZoomLevel(currentZoomLevel, mapName);
         if (IsZoomCloseEnough(currentZoomLevel, targetZoomLevel))
         {
             return (false, default, currentZoomLevel);
@@ -1488,22 +1492,37 @@ public class TpTask
             : (false, default, nextZoomLevel);
     }
 
-    private double GetMapPositionRecognitionRecoveryZoomLevel(double currentZoomLevel)
+    private double GetMapPositionRecognitionRecoveryZoomLevel(double currentZoomLevel, string mapName)
     {
         currentZoomLevel = ClampTeleportZoomLevel(currentZoomLevel);
-        if (IsZoomCloseEnough(currentZoomLevel, DisplayTpPointZoomLevel))
+        var displayTpPointZoomLevel = GetDisplayTpPointZoomLevel(mapName);
+        if (IsZoomCloseEnough(currentZoomLevel, displayTpPointZoomLevel))
         {
             return currentZoomLevel >= (MinTeleportZoomLevel + TeleportMaxZoomLevel) / 2d
                 ? Math.Max(MinTeleportZoomLevel, currentZoomLevel - MapPositionRecognitionRecoveryZoomStep)
                 : Math.Min(TeleportMaxZoomLevel, currentZoomLevel + MapPositionRecognitionRecoveryZoomStep);
         }
 
-        if (currentZoomLevel < DisplayTpPointZoomLevel)
+        if (currentZoomLevel < displayTpPointZoomLevel)
         {
-            return Math.Min(DisplayTpPointZoomLevel, currentZoomLevel + MapPositionRecognitionRecoveryZoomStep);
+            return Math.Min(displayTpPointZoomLevel, currentZoomLevel + MapPositionRecognitionRecoveryZoomStep);
         }
 
-        return Math.Max(DisplayTpPointZoomLevel, currentZoomLevel - MapPositionRecognitionRecoveryZoomStep);
+        return Math.Max(displayTpPointZoomLevel, currentZoomLevel - MapPositionRecognitionRecoveryZoomStep);
+    }
+
+    private static double GetDisplayTpPointZoomLevel(string mapName)
+    {
+        return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
+            ? MoonCanonDisplayTpPointZoomLevel
+            : DefaultDisplayTpPointZoomLevel;
+    }
+
+    private static int GetBigMapOpenTimeoutMilliseconds(string? mapName)
+    {
+        return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
+            ? MoonCanonBigMapOpenTimeoutMs
+            : DefaultBigMapOpenTimeoutMs;
     }
 
     /// <summary>
@@ -3349,7 +3368,7 @@ public class TpTask
     {
         return iconFileName switch
         {
-            "TeleportWaypoint.png" => "TeleportWaypoint",
+            "TeleportWaypoint.png" or "MarkTransPointMoonTower.png" => "TeleportWaypoint",
             "StatueOfTheSeven.png" => "Goddess",
             "Domain.png" or "Domain2.png" => "Domain",
             "ObsidianTotemPole.png" => "NatlanObsidianTotemPole",
