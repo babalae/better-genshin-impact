@@ -1123,6 +1123,96 @@
                 
                 <Grid Margin="16,10,52,0">
 
+                    <!-- 战斗中回点设置 -->
+                    <ui:CardExpander Margin="0,0,0,12"
+                                     ContentPadding="0"
+                                     IsExpanded="False">
+
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="战斗中回点设置"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding Config.AutoFightConfig.BackToFightPointEnabled, Mode=TwoWay}" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <!-- 回点启用距离 -->
+                            <Grid Margin="16,12,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="回点启用距离（米）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="每轮动作后，连续两轮距离开战点超过指定距离时触发回点动作"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding Config.AutoFightConfig.BackToFightPointDistance, Mode=TwoWay}" />
+                            </Grid>
+
+                            <!-- 定时回点 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="定时回点（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="每轮动作后，距离上次触发回点超过指定时间时触发回点动作，填0时不启用"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding Config.AutoFightConfig.BackToFightPointInterval, Mode=TwoWay}" />
+                            </Grid>
+
+                            <!-- 单次回点超时 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="单次回点超时（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="单次回点动作超过指定时间时，终止回点动作继续战斗"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:TextBox Grid.Column="1"
+                                            Width="120"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding Config.AutoFightConfig.BackToFightPointTimeout, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+
                     <ui:CardExpander Margin="0,0,0,12"
                                      ContentPadding="0"
                                      IsExpanded="False">

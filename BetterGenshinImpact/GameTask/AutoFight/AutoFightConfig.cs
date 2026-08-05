@@ -222,6 +222,30 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private bool _drawRecognitionResults = true;
 
+    /// <summary>
+    /// 战斗中回点：每轮动作后，连续两轮距离开战点超过指定距离时触发回点动作
+    /// </summary>
+    [ObservableProperty]
+    private bool _backToFightPointEnabled = false;
+
+    /// <summary>
+    /// 回点启用距离（米）：每轮动作后，连续两轮距离开战点超过该距离时触发回点动作
+    /// </summary>
+    [ObservableProperty]
+    private double _backToFightPointDistance = 30;
+
+    /// <summary>
+    /// 定时回点（秒）：每轮动作后，距离上次触发回点超过该时间时触发回点动作，填0时不启用
+    /// </summary>
+    [ObservableProperty]
+    private double _backToFightPointInterval = 0;
+
+    /// <summary>
+    /// 单次回点超时（秒）：单次回点动作超过该时间时，终止回点动作继续战斗
+    /// </summary>
+    [ObservableProperty]
+    private double _backToFightPointTimeout = 2;
+
 }
 
 /// <summary>

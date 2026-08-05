@@ -60,6 +60,10 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
         DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
         LockLostWaitTime = autoFightConfig.LockLostWaitTime;
+        BackToFightPointEnabled = autoFightConfig.BackToFightPointEnabled;
+        BackToFightPointDistance = autoFightConfig.BackToFightPointDistance;
+        BackToFightPointInterval = autoFightConfig.BackToFightPointInterval;
+        BackToFightPointTimeout = autoFightConfig.BackToFightPointTimeout;
         DamageNumberRecognitionMode = autoFightConfig.DamageNumberRecognitionMode;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
@@ -95,6 +99,10 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public int TargetingDetectionInterval { get; set; } = 50;
     public bool DrawRecognitionResults { get; set; } = true;
     public double LockLostWaitTime { get; set; } = 0.5;
+    public bool BackToFightPointEnabled { get; set; } = false;
+    public double BackToFightPointDistance { get; set; } = 30;
+    public double BackToFightPointInterval { get; set; } = 0;
+    public double BackToFightPointTimeout { get; set; } = 2;
     public DamageNumberRecognitionMode DamageNumberRecognitionMode { get; set; } = DamageNumberRecognitionMode.Color;
 
     /// <summary>
@@ -190,6 +198,10 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         TargetingDetectionInterval = autoFightConfig.TargetingDetectionInterval;
         DrawRecognitionResults = autoFightConfig.DrawRecognitionResults;
         LockLostWaitTime = autoFightConfig.LockLostWaitTime;
+        BackToFightPointEnabled = autoFightConfig.BackToFightPointEnabled;
+        BackToFightPointDistance = autoFightConfig.BackToFightPointDistance;
+        BackToFightPointInterval = autoFightConfig.BackToFightPointInterval;
+        BackToFightPointTimeout = autoFightConfig.BackToFightPointTimeout;
         DamageNumberRecognitionMode = autoFightConfig.DamageNumberRecognitionMode;
         ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
     }
