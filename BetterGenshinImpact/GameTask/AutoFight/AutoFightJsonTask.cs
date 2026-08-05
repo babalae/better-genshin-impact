@@ -364,89 +364,102 @@ public class AutoFightJsonTask : ISoloTask
                         }
 
                         // 每次循环开始：截图一次，供所有条件求值复用
-                        using var capture = CaptureToRectArea();
-                        evaluator.SetCachedCapture(capture);
+                        var capture = CaptureToRectArea();
+                        try
+                        {
+                            evaluator.SetCachedCapture(capture);
 
-                        // 战斗中回点检查：复用本轮战斗截图计算坐标（不额外截图），满足条件时阻塞式执行回点
-                        await AutoFightTask.CheckBackToFightPointAsync(_taskParam, capture, _ct);
-    
-                        var anyExecuted = false;
-    
-                        foreach (var prioritizedAction in validActions)
+                            // 战斗中回点检查：复用本轮战斗截图计算坐标（不额外截图），满足条件时阻塞式执行回点
+                            // 若触发了回点：回点过程耗时较长、战斗画面已变化，重新截图供后续条件求值使用
+                            if (await AutoFightTask.CheckBackToFightPointAsync(_taskParam, capture, _ct))
                             {
-                                if (cts2.Token.IsCancellationRequested) break;
-    
-                                var action = prioritizedAction.Action;
-    
-                                // 求值条件表达式（使用展开后的表达式和优先级）
-                                var conditionMet = evaluator.Evaluate(
-                                    prioritizedAction.Expression,
-                                    prioritizedAction.Priority,
-                                    action.Character);
-    
-                                if (!conditionMet)
-                                {
-                                    continue;
-                                }
-    
-                                // 指定角色的动作：执行前确保切换到该角色
-                                if (!string.IsNullOrEmpty(action.Character))
-                                {
-                                    var avatar = combatScenes.SelectAvatar(action.Character);
-                                    if (avatar == null) continue;
-    
-                                    avatar.Switch();
-                                    _currentAvatarName = action.Character;
-                                }
-    
-                                // 执行动作
-                                await ExecuteAction(combatScenes, action);
-    
-                                // 确保E技能释放成功
-                                if (action.EnsureCast)
-                                {
-                                    var characterName = string.IsNullOrEmpty(action.Character)
-                                        ? _currentAvatarName
-                                        : action.Character;
-                                    var avatar = combatScenes.SelectAvatar(characterName);
-                                    if (avatar != null)
-                                    {
-                                        var imageAfterAction = CaptureToRectArea();
-                                        var retry = 5;
-                                        while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
-                                        {
-                                            Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
-                                            // 防止在纳塔飞天或爬墙
-                                            Simulation.ReleaseAllKey();
-                                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                            Simulation.SendInput.SimulateAction(GIActions.Drop);
-                                            await Delay(200, _ct);
-                                            // 重新执行整个动作
-                                            await ExecuteAction(combatScenes, action);
-                                            imageAfterAction = CaptureToRectArea();
-                                            await Task.Delay(30, _ct);
-                                            retry--;
-                                        }
-                                        imageAfterAction.Dispose();
-                                    }
-                                }
-    
-                                evaluator.UpdateLastExecTime(action.Index);
-                                lastExecutedAction = action;
-                                anyExecuted = true;
-                                lastFightName = action.Character ?? "";
-    
-                                if (_fightEndFlag) break;
-    
-                                // 执行完第一个满足条件的动作后重新判断
-                                break;
+                                capture.Dispose();
+                                capture = CaptureToRectArea();
+                                evaluator.SetCachedCapture(capture);
                             }
     
-                        if (fightEndFlag || _fightEndFlag) break;
+                            var anyExecuted = false;
     
-                        if (!anyExecuted)
+                            foreach (var prioritizedAction in validActions)
+                                {
+                                    if (cts2.Token.IsCancellationRequested) break;
+    
+                                    var action = prioritizedAction.Action;
+    
+                                    // 求值条件表达式（使用展开后的表达式和优先级）
+                                    var conditionMet = evaluator.Evaluate(
+                                        prioritizedAction.Expression,
+                                        prioritizedAction.Priority,
+                                        action.Character);
+    
+                                    if (!conditionMet)
+                                    {
+                                        continue;
+                                    }
+    
+                                    // 指定角色的动作：执行前确保切换到该角色
+                                    if (!string.IsNullOrEmpty(action.Character))
+                                    {
+                                        var avatar = combatScenes.SelectAvatar(action.Character);
+                                        if (avatar == null) continue;
+    
+                                        avatar.Switch();
+                                        _currentAvatarName = action.Character;
+                                    }
+    
+                                    // 执行动作
+                                    await ExecuteAction(combatScenes, action);
+    
+                                    // 确保E技能释放成功
+                                    if (action.EnsureCast)
+                                    {
+                                        var characterName = string.IsNullOrEmpty(action.Character)
+                                            ? _currentAvatarName
+                                            : action.Character;
+                                        var avatar = combatScenes.SelectAvatar(characterName);
+                                        if (avatar != null)
+                                        {
+                                            var imageAfterAction = CaptureToRectArea();
+                                            var retry = 5;
+                                            while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                            {
+                                                Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
+                                                // 防止在纳塔飞天或爬墙
+                                                Simulation.ReleaseAllKey();
+                                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                                Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                                await Delay(200, _ct);
+                                                // 重新执行整个动作
+                                                await ExecuteAction(combatScenes, action);
+                                                imageAfterAction = CaptureToRectArea();
+                                                await Task.Delay(30, _ct);
+                                                retry--;
+                                            }
+                                            imageAfterAction.Dispose();
+                                        }
+                                    }
+    
+                                    evaluator.UpdateLastExecTime(action.Index);
+                                    lastExecutedAction = action;
+                                    anyExecuted = true;
+                                    lastFightName = action.Character ?? "";
+    
+                                    if (_fightEndFlag) break;
+    
+                                    // 执行完第一个满足条件的动作后重新判断
+                                    break;
+                                }
+    
+                            if (fightEndFlag || _fightEndFlag) break;
+    
+                            if (!anyExecuted)
+                            {
+                                await Delay(200, _ct);
+                            }
+                        }
+                        finally
                         {
-                            await Delay(200, _ct);
+                            capture.Dispose();
                         }
                     }
                 }

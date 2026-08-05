@@ -142,11 +142,12 @@ public class AutoFightTask : ISoloTask
     /// <param name="taskParam">战斗参数</param>
     /// <param name="capture">本轮战斗截图（复用其计算坐标，不额外截图）；无共享截图时传 null 由内部截图</param>
     /// <param name="ct">取消令牌</param>
-    public static async Task CheckBackToFightPointAsync(AutoFightParam taskParam, ImageRegion? capture, CancellationToken ct)
+    /// <returns>是否触发了回点。触发回点时调用方可能需要重新截图（回点耗时较长，画面已变化）供后续条件求值使用</returns>
+    public static async Task<bool> CheckBackToFightPointAsync(AutoFightParam taskParam, ImageRegion? capture, CancellationToken ct)
     {
-        if (!taskParam.BackToFightPointEnabled) return;
+        if (!taskParam.BackToFightPointEnabled) return false;
         var waypoint = FightWaypoint;
-        if (waypoint is null) return;
+        if (waypoint is null) return false;
 
         // 上一轮坐标任务：已完成则取结果；未完成则不等待、本轮跳过距离判断（任务继续在后台运行，后续轮次再检查其结果）
         Point2f? position = null;
@@ -176,12 +177,12 @@ public class AutoFightTask : ISoloTask
             (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
         {
             await ExecuteBackToFightPointAsync(taskParam, ct);
-            return;
+            return true;
         }
 
         if (position is null)
         {
-            return; // 未拿到坐标，本轮不进行距离判断
+            return false; // 未拿到坐标，本轮不进行距离判断
         }
 
         // 距离条件：连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）
@@ -194,10 +195,12 @@ public class AutoFightTask : ISoloTask
             {
                 _overDistanceRounds = 0;
                 await ExecuteBackToFightPointAsync(taskParam, ct);
+                return true;
             }
-            return;
+            return false;
         }
         _overDistanceRounds = 0;
+        return false;
     }
 
     /// <summary>
