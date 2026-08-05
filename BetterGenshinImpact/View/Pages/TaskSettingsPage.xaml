@@ -1231,6 +1231,12 @@
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
+                </Grid>
+
+                <Separator Margin="-18,0"
+                           BorderThickness="0,1,0,0" />
+
+                <Grid Margin="16,10,52,0">
 
                     <ui:CardExpander Margin="0,0,0,12"
                                      ContentPadding="0"
@@ -1381,6 +1387,7 @@
                                 HorizontalContentAlignment="Center"
                                 Margin="10,0,20,0"
                                 MinWidth="50"
+                                Width="120"
                                 Text="{Binding Config.AutoFightConfig.Timeout}"/>
                 </Grid>
             </StackPanel>
