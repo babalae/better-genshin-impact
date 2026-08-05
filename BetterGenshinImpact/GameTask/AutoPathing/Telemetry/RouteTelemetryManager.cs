@@ -274,7 +274,7 @@ public class RouteTelemetryManager
 
         if (CurrentAnchorContext.Type == Model.Enum.WaypointType.Teleport.Code)
         {
-            if (MapLazyAssets.Instance.ScenesDic.TryGetValue(mapName, out var scene) && scene.Points.Count > 0)
+            if (MapLazyAssets.Get().ScenesDic.TryGetValue(mapName, out var scene) && scene.Points.Count > 0)
             {
                 // 由于 tp.json 已经包含了所有的传送点，这里不再做距离容差限制，直接无条件采用最近传送点的绝对真实坐标
                 var nearest = scene.Points.MinBy(tp => Math.Pow(tp.X - cx, 2) + Math.Pow(tp.Y - cy, 2))!;

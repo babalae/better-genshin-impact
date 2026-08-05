@@ -65,6 +65,11 @@ public partial class PathExecutor
     /// 获取移动控制器。
     /// </summary>
     public PathingMovementController MovementController { get; }
+
+    public Task<bool> MoveTo(WaypointForTrack waypoint)
+    {
+        return MovementController.MoveTo(waypoint);
+    }
     
     public Telemetry.RouteTelemetryManager RouteTelemetryManager { get; } = new();
     

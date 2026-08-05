@@ -33,6 +33,7 @@
                 <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
+            <converters:BooleanOrToVisibilityConverter x:Key="BooleanOrToVisibilityConverter" />
             <converters:ColorStringToBrushConverter x:Key="ColorStringToBrushConverter" />
             <converters:ColorStringToColorConverter x:Key="ColorStringToColorConverter" />
             <converters:ShadowOpacityConverter x:Key="ShadowOpacityConverter" />
@@ -68,18 +69,6 @@
             </Setter>
         </Style>
     </Window.Style>
-
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-            <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
-            <converters:BooleanOrToVisibilityConverter x:Key="BooleanOrToVisibilityConverter" />
-            <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
-            <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
-        </ResourceDictionary>
-    </Window.Resources>
 
     <AdornerDecorator ClipToBounds="True">
         <Grid>

@@ -197,7 +197,7 @@ public class PathRecorder : Singleton<PathRecorder>
             return false;
         }
 
-        using var colorMat = new Mat(screen.SrcMat, MapAssets.Instance.MimiMapRect);
+        using var colorMat = new Mat(screen.SrcMat, MapAssets.Get(screen).MimiMapRect);
         imagePosition = mapBase.GetMiniMapPosition(colorMat);
         return IsValidImagePosition(mapBase, imagePosition);
     }

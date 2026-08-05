@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
@@ -87,7 +87,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
                 return true;
             }
 
-            var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
+            var pRaList = ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)); // 判断是否联机
             if (pRaList.Count > 0)
             {
                 Logger.LogInformation("处于联机状态下，不切换队伍");

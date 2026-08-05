@@ -120,12 +120,12 @@ public class AutoFightHandler : IActionHandler
         ArgumentNullException.ThrowIfNull(config);
         
         var strategyName = config.StrategyName;
-        var path = "根据队伍自动选择".Equals(strategyName, StringComparison.OrdinalIgnoreCase) 
+        var path = string.IsNullOrEmpty(strategyName) ||
+                   "根据队伍自动选择".Equals(strategyName, StringComparison.OrdinalIgnoreCase)
             ? Global.Absolute(@"User\AutoFight\")
-            : Global.Absolute($@"User\AutoFight\{strategyName}.txt");
+            : AutoFightParam.ResolveStrategyPath(strategyName).path;
 
-        var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
-        if (!File.Exists(path))
+        if (!File.Exists(path) && !Directory.Exists(path))
         {
             throw new FileNotFoundException($"战斗策略文件不存在 {path}");
         }
