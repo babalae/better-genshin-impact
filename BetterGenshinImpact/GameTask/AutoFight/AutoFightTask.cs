@@ -61,14 +61,15 @@ public class AutoFightTask : ISoloTask
 
     /// <summary>
     /// 回到战斗点位（阻塞式）。逻辑同游泳检测脱困：
-    /// FaceTo 朝向点位（2秒超时），再以 Climb 模式 MoveTo（跳过卡死脱困检测）移动到点位。
+    /// FaceTo 朝向点位，再以 Climb 模式 MoveTo（跳过卡死脱困检测）移动到点位。
+    /// FaceTo + MoveTo 共享 totalTimeoutMs 总超时，超时终止回点。
     /// 结束后恢复 MoveMode 并释放按键。游泳检测与战斗中回点共用此方法。
     /// </summary>
     /// <param name="waypoint">战斗点位（开战点）</param>
-    /// <param name="moveToTimeoutMs">MoveTo 阶段超时（毫秒），超时终止回点</param>
+    /// <param name="totalTimeoutMs">整个回点流程（FaceTo + MoveTo）总超时（毫秒），超时终止回点</param>
     /// <param name="ct">取消令牌</param>
     /// <returns>是否成功完成回点（超时/异常返回 false）</returns>
-    public static async Task<bool> BackToFightWaypointAsync(WaypointForTrack waypoint, int moveToTimeoutMs, CancellationToken ct)
+    public static async Task<bool> BackToFightWaypointAsync(WaypointForTrack waypoint, int totalTimeoutMs, CancellationToken ct)
     {
         using (AvatarRecognition.BeginExclusiveOperation())
         {
@@ -81,12 +82,10 @@ public class AutoFightTask : ISoloTask
             {
                 var pathExecutor = new PathExecutor(cts.Token);
 
-                // FaceTo 朝向战斗点，超时 2 秒
-                cts.CancelAfter(2000);
+                // 整个回点流程（FaceTo + MoveTo）共享配置的总超时，FaceTo 已消耗的时间计入超时预算
+                cts.CancelAfter(totalTimeoutMs);
                 await pathExecutor.FaceTo(waypoint);
 
-                // 重置超时，MoveTo 超时
-                cts.CancelAfter(moveToTimeoutMs);
                 // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
                 waypoint.MoveMode = MoveModeEnum.Climb.Code;
                 Simulation.SendInput.Mouse.RightButtonDown();
@@ -166,13 +165,23 @@ public class AutoFightTask : ISoloTask
                 }
             }
 
+            // 启动前同步浅拷贝截图 Mat（引用计数共享像素数据），任务延迟执行时原截图被外层释放也不影响
+            var srcMat = capture != null ? new Mat(capture.SrcMat) : null;
             // 启动下一轮坐标获取（异步执行，不阻塞正常战斗流程），避免叠加多个并发定位任务
-            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, capture, ct), ct);
+            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, srcMat, ct), ct);
+        }
+
+        // 定时回点：距上次回点或开战超过指定时间（不依赖坐标，定位失败/未完成时也生效）
+        if (taskParam.BackToFightPointInterval > 0 &&
+            (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
+        {
+            await ExecuteBackToFightPointAsync(taskParam, ct);
+            return;
         }
 
         if (position is null)
         {
-            return; // 未拿到坐标，本轮不判断
+            return; // 未拿到坐标，本轮不进行距离判断
         }
 
         // 距离条件：连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）
@@ -189,31 +198,21 @@ public class AutoFightTask : ISoloTask
             return;
         }
         _overDistanceRounds = 0;
-
-        // 定时回点：距上次回点或开战超过指定时间
-        if (taskParam.BackToFightPointInterval > 0 &&
-            (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
-        {
-            await ExecuteBackToFightPointAsync(taskParam, ct);
-        }
     }
 
     /// <summary>
     /// 获取当前角色坐标（小地图定位，耗时较长，应异步执行）。识别失败返回 null。
-    /// 优先复用传入的战斗截图；无共享截图时内部截图。取消时通过 ct 提前中断。
+    /// 优先复用传入的战斗截图（调用方已同步浅拷贝的 Mat）；无共享截图时内部截图。取消时通过 ct 提前中断。
     /// </summary>
     /// <param name="waypoint">开战点（提供地图与匹配方式）</param>
-    /// <param name="capture">本轮战斗截图，复用其计算坐标；null 时内部截图</param>
+    /// <param name="srcMat">调用方同步浅拷贝的战斗截图 Mat；null 时内部截图</param>
     /// <param name="ct">取消令牌</param>
-    private static Point2f? GetCurrentPosition(WaypointForTrack waypoint, ImageRegion? capture, CancellationToken ct)
+    private static Point2f? GetCurrentPosition(WaypointForTrack waypoint, Mat? srcMat, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         try
         {
-            using var ra = capture != null
-                // 复用战斗截图：浅拷贝 Mat（引用计数共享像素数据），即使原截图被主循环释放，数据仍存活到任务结束
-                ? new ImageRegion(new Mat(capture.SrcMat), 0, 0)
-                : CaptureToRectArea();
+            using var ra = srcMat != null ? new ImageRegion(srcMat, 0, 0) : CaptureToRectArea();
             var position = Navigation.GetPosition(ra, waypoint.MapName, waypoint.MapMatchMethod);
             if (position == new Point2f())
             {
