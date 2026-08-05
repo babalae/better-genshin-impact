@@ -51,6 +51,7 @@ public class StopFlyingHandler : IActionHandler
         if (i == maxAttempts)
         {
             Logger.LogWarning("动作：下落攻击未能在预计时间内完全落地(超时)");
+            throw new WaypointActionFailedException("停止飞行动作超时，角色仍处于飞行状态");
         }
         else
         {

@@ -1,4 +1,7 @@
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 using System;
 using System.Threading;
@@ -59,7 +62,8 @@ public sealed class TargetNavigationWorkflow(
                          RouteNavigationPlanReusePolicy.CanReuse(
                              existingPlan,
                              request,
-                             preparation.CurrentImagePoint);
+                             preparation.CurrentImagePoint,
+                             planner.EffectiveGraphRevision);
             RouteNavigationPlan plan;
             if (reused)
             {
@@ -301,6 +305,113 @@ public sealed class TargetNavigationWorkflow(
                         task,
                         reused);
                 }
+
+                if (!string.IsNullOrWhiteSpace(request.TargetAction))
+                {
+                    if (!converter.TryImageToGame(
+                            request.MapName,
+                            request.MapMatchMethod,
+                            request.TargetImagePoint,
+                            out var actionGamePoint))
+                    {
+                        return Fail(
+                            TargetNavigationState.ExecutionFailed,
+                            TargetNavigationFailure.Create(TargetNavigationFailureCode.CoordinateConversionFailed),
+                            onStatusChanged,
+                            plan,
+                            task,
+                            reused);
+                    }
+
+                    var actionTask = CreateTargetActionTask(request, actionGamePoint);
+                    var actionExecution = await runtime.ExecuteAsync(actionTask, cancellationToken);
+                    if (actionExecution.Cancelled)
+                    {
+                        return Fail(
+                            TargetNavigationState.UserCancelled,
+                            actionExecution.Failure ?? TargetNavigationFailure.Create(TargetNavigationFailureCode.UserCancelled),
+                            onStatusChanged,
+                            plan,
+                            task,
+                            reused);
+                    }
+
+                    if (!actionExecution.Succeeded)
+                    {
+                        return Fail(
+                            TargetNavigationState.ExecutionFailed,
+                            actionExecution.Failure ?? TargetNavigationFailure.Create(
+                                TargetNavigationFailureCode.ExecutionFailed,
+                                "局部导航后的目标动作执行失败"),
+                            onStatusChanged,
+                            plan,
+                            task,
+                            reused);
+                    }
+
+                    task ??= actionTask;
+                }
+            }
+
+            var arrival = await runtime.ResolvePlanningPositionAsync(
+                request.MapName,
+                request.MapMatchMethod,
+                cancellationToken);
+            if (!arrival.Succeeded)
+            {
+                return Fail(
+                    TargetNavigationState.ExecutionFailed,
+                    TargetNavigationFailure.Create(
+                        TargetNavigationFailureCode.ExecutionFailed,
+                        arrival.Failure?.Message ?? "到达目标后的实时坐标不可识别"),
+                    onStatusChanged,
+                    plan,
+                    task,
+                    reused);
+            }
+
+            if (!SameMap(request.MapName, arrival.ActualMapName))
+            {
+                return Fail(
+                    TargetNavigationState.ExecutionFailed,
+                    TargetNavigationFailure.Create(
+                        TargetNavigationFailureCode.MapMismatch,
+                        $"到达验证定位为 {arrival.ActualMapName}，目标 {request.MapName}"),
+                    onStatusChanged,
+                    plan,
+                    task,
+                    reused);
+            }
+
+            var arrivalConverter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
+            if (!TryMeasureGameDistance(
+                    arrivalConverter,
+                    request.MapName,
+                    request.MapMatchMethod,
+                    arrival.CurrentImagePoint,
+                    request.TargetImagePoint,
+                    out var finalDistance))
+            {
+                return Fail(
+                    TargetNavigationState.ExecutionFailed,
+                    TargetNavigationFailure.Create(TargetNavigationFailureCode.CoordinateConversionFailed),
+                    onStatusChanged,
+                    plan,
+                    task,
+                    reused);
+            }
+
+            if (finalDistance > request.Options.CostOptions.LocalArrivalGameDistance)
+            {
+                return Fail(
+                    TargetNavigationState.ExecutionFailed,
+                    TargetNavigationFailure.Create(
+                        TargetNavigationFailureCode.ExecutionFailed,
+                        $"执行结束后距目标仍有 {finalDistance:F1}，未达到 {request.Options.CostOptions.LocalArrivalGameDistance:F1} 的到达阈值"),
+                    onStatusChanged,
+                    plan,
+                    task,
+                    reused);
             }
 
             Publish(TargetNavigationState.Completed, "执行完成", onStatusChanged);
@@ -357,6 +468,40 @@ public sealed class TargetNavigationWorkflow(
             Failure = failure,
             Plan = plan,
             ExecutedTask = executedTask
+        };
+    }
+
+    private static PathingTask CreateTargetActionTask(
+        TargetNavigationRequest request,
+        RouteGamePoint targetGamePoint)
+    {
+        return new PathingTask
+        {
+            Info = new PathingTaskInfo
+            {
+                Name = string.IsNullOrWhiteSpace(request.TaskName)
+                    ? "局部导航目标动作"
+                    : request.TaskName,
+                Type = PathingTaskType.Collect.Code,
+                MapName = RouteGraphGeometry.NormalizeMapName(request.MapName),
+                MapMatchMethod = request.MapMatchMethod ??
+                                 TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
+                BgiVersion = Global.Version
+            },
+            Positions =
+            [
+                new Waypoint
+                {
+                    X = Math.Round(targetGamePoint.X, 2),
+                    Y = Math.Round(targetGamePoint.Y, 2),
+                    Type = WaypointType.Target.Code,
+                    MoveMode = string.IsNullOrWhiteSpace(request.TargetMoveMode)
+                        ? MoveModeEnum.Walk.Code
+                        : request.TargetMoveMode,
+                    Action = request.TargetAction,
+                    ActionParams = request.TargetActionParams
+                }
+            ]
         };
     }
 
@@ -452,15 +597,23 @@ internal static class RouteNavigationPlanReusePolicy
     public static bool CanReuse(
         RouteNavigationPlan? plan,
         TargetNavigationRequest request,
-        RouteGraphPoint currentImagePoint)
+        RouteGraphPoint currentImagePoint,
+        string effectiveGraphRevision)
     {
-        if (plan is not { Succeeded: true, Task.Positions.Count: >= 2, Request: not null })
+        if (plan is not { Succeeded: true, Request: not null } ||
+            (plan.CompletionMode != RoutePlanCompletionMode.LocalOnly &&
+             plan.Task is not { Positions.Count: >= 2 }))
         {
             return false;
         }
 
         var plannedRequest = plan.Request;
-        if (!plannedRequest.HasCurrentPosition ||
+        if (!string.Equals(plan.EffectiveGraphRevision, effectiveGraphRevision, StringComparison.Ordinal) ||
+            !string.Equals(
+                plan.PlanningOptionsFingerprint,
+                RouteNavigationPlanningFingerprint.Compute(request.Options),
+                StringComparison.Ordinal) ||
+            !plannedRequest.HasCurrentPosition ||
             !string.Equals(
                 RouteGraphGeometry.NormalizeMapName(plannedRequest.MapName),
                 RouteGraphGeometry.NormalizeMapName(request.MapName),
@@ -472,8 +625,7 @@ internal static class RouteNavigationPlanReusePolicy
             !string.Equals(plannedRequest.TargetActionParams, request.TargetActionParams, StringComparison.Ordinal) ||
             !string.Equals(plannedRequest.TargetResourceId, request.TargetResourceId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(plannedRequest.TargetResourceLabelId, request.TargetResourceLabelId, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(plannedRequest.TargetResourceName, request.TargetResourceName, StringComparison.OrdinalIgnoreCase) ||
-            !SameOptions(plan.Options, request.Options))
+            !string.Equals(plannedRequest.TargetResourceName, request.TargetResourceName, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -482,64 +634,4 @@ internal static class RouteNavigationPlanReusePolicy
         return RouteGraphGeometry.Distance(plannedRequest.CurrentImagePoint, currentImagePoint) <= maximumStartDrift;
     }
 
-    private static bool SameOptions(RouteNavigationPlanOptions? left, RouteNavigationPlanOptions right)
-    {
-        return left != null &&
-               left.AllowTeleport == right.AllowTeleport &&
-               left.AllowDisabledEdges == right.AllowDisabledEdges &&
-               left.AllowUnknownStartConnector == right.AllowUnknownStartConnector &&
-               left.AllowUnknownTargetConnector == right.AllowUnknownTargetConnector &&
-               left.CurrentNodeCandidateLimit == right.CurrentNodeCandidateLimit &&
-               left.TargetNodeCandidateLimit == right.TargetNodeCandidateLimit &&
-               left.TeleportCandidateLimit == right.TeleportCandidateLimit &&
-               left.MaxStartCandidates == right.MaxStartCandidates &&
-               left.CurrentAttachMaxDistance.Equals(right.CurrentAttachMaxDistance) &&
-               left.TargetAttachMaxDistance.Equals(right.TargetAttachMaxDistance) &&
-               left.UnknownConnectorMaxDistance.Equals(right.UnknownConnectorMaxDistance) &&
-               left.TeleportSearchMaxDistance.Equals(right.TeleportSearchMaxDistance) &&
-               left.RouteTeleportAttachMaxDistance.Equals(right.RouteTeleportAttachMaxDistance) &&
-               left.CurrentAttachCostWeight.Equals(right.CurrentAttachCostWeight) &&
-               left.TargetAttachCostWeight.Equals(right.TargetAttachCostWeight) &&
-               left.UnknownConnectorCostWeight.Equals(right.UnknownConnectorCostWeight) &&
-               SameCostOptions(left.CostOptions, right.CostOptions) &&
-               left.OutputPointMinDistance.Equals(right.OutputPointMinDistance) &&
-               left.TargetOutputMinDistance.Equals(right.TargetOutputMinDistance) &&
-               left.OutputSimplificationTolerance.Equals(right.OutputSimplificationTolerance) &&
-               left.ResourceSemanticMaxDistance.Equals(right.ResourceSemanticMaxDistance) &&
-               left.ResourceSemanticAttachCostMultiplier.Equals(right.ResourceSemanticAttachCostMultiplier) &&
-               left.FrontierRemainingTimeWeight.Equals(right.FrontierRemainingTimeWeight) &&
-               left.MaxGraphDetourRatio.Equals(right.MaxGraphDetourRatio) &&
-               left.GraphRouteRevisitDistance.Equals(right.GraphRouteRevisitDistance) &&
-               left.GraphTurnbackCosineThreshold.Equals(right.GraphTurnbackCosineThreshold);
-    }
-
-    private static bool SameCostOptions(RouteNavigationCostOptions left, RouteNavigationCostOptions right)
-    {
-        return left.WalkSpeed.Equals(right.WalkSpeed) &&
-               left.RunSpeed.Equals(right.RunSpeed) &&
-               left.DashSpeed.Equals(right.DashSpeed) &&
-               left.SwimSpeed.Equals(right.SwimSpeed) &&
-               left.FlySpeed.Equals(right.FlySpeed) &&
-               left.ClimbSpeed.Equals(right.ClimbSpeed) &&
-               left.JumpSpeed.Equals(right.JumpSpeed) &&
-               left.TeleportDurationSeconds.Equals(right.TeleportDurationSeconds) &&
-               left.MinimumTeleportSavingsSeconds.Equals(right.MinimumTeleportSavingsSeconds) &&
-               left.LocalDirectMaxGameDistance.Equals(right.LocalDirectMaxGameDistance) &&
-               left.OffGraphDirectCostMultiplier.Equals(right.OffGraphDirectCostMultiplier) &&
-               left.ReplanDriftGameDistance.Equals(right.ReplanDriftGameDistance) &&
-               left.TalkWaitTimeoutSeconds.Equals(right.TalkWaitTimeoutSeconds) &&
-               left.LocalIconMissRetryCount == right.LocalIconMissRetryCount &&
-               left.LocalFollowTimeoutSeconds.Equals(right.LocalFollowTimeoutSeconds) &&
-               left.LocalRecognitionRetryDelayMilliseconds == right.LocalRecognitionRetryDelayMilliseconds &&
-               left.LocalForwardStepMilliseconds == right.LocalForwardStepMilliseconds &&
-               left.LocalJumpIntervalMilliseconds == right.LocalJumpIntervalMilliseconds &&
-               left.LocalSettleMilliseconds == right.LocalSettleMilliseconds &&
-               left.LocalArrivalGameDistance.Equals(right.LocalArrivalGameDistance) &&
-               left.LocalTemplateThreshold.Equals(right.LocalTemplateThreshold) &&
-               left.LocalIconCenterX.Equals(right.LocalIconCenterX) &&
-               left.LocalIconCenterTolerance.Equals(right.LocalIconCenterTolerance) &&
-               left.LocalIconMaximumY.Equals(right.LocalIconMaximumY) &&
-               left.LocalMouseAdjustmentUnit == right.LocalMouseAdjustmentUnit &&
-               left.LocalVerticalMouseAdjustment == right.LocalVerticalMouseAdjustment;
-    }
 }

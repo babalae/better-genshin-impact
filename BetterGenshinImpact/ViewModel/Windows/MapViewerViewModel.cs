@@ -762,7 +762,7 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _graphProvider = new RouteNavigationGraphProvider(_routeSaveDir);
         _routeNavigationPlanner = new RouteNavigationPlanner(_graphProvider);
-        var targetNavigationRuntime = new BetterGiTargetNavigationRuntime(_graphProvider);
+        var targetNavigationRuntime = new BetterGiTargetNavigationRuntime();
         _targetNavigationWorkflow = new TargetNavigationWorkflow(
             _routeNavigationPlanner,
             targetNavigationRuntime,

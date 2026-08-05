@@ -18,7 +18,7 @@ public class RouteNavigationPlannerTests
     {
         var planner = new RouteNavigationPlanner(new FakeGraphProvider(RouteNavigationGraphSnapshot.Empty, loadStatus), new FakeCoordinateConverter());
 
-        var succeeded = planner.TryPlan(CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(10, 0)), out var plan, StrictOptions());
+        var succeeded = planner.TryPlan(CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(100, 0)), out var plan, StrictOptions());
 
         Assert.False(succeeded);
         Assert.Equal(expected, plan.FailureCode);
@@ -72,7 +72,7 @@ public class RouteNavigationPlannerTests
         var succeeded = planner.TryPlan(
             CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(100, 0)),
             out var plan,
-            StrictOptions());
+            StrictOptions(localDirectMaxGameDistance: 80));
 
         Assert.True(succeeded);
         Assert.Equal(RoutePlanCompletionMode.PartialToFrontier, plan.CompletionMode);
@@ -103,12 +103,12 @@ public class RouteNavigationPlannerTests
         var succeeded = planner.TryPlan(
             CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(50, 0)),
             out var plan,
-            StrictOptions());
+            StrictOptions(localDirectMaxGameDistance: 80));
 
         Assert.True(succeeded);
         Assert.Equal(RoutePlanCompletionMode.LocalOnly, plan.CompletionMode);
         Assert.Null(plan.Task);
-        Assert.Equal("current", plan.FrontierNode?.NodeId);
+        Assert.Equal("local-current", plan.FrontierNode?.NodeId);
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public class RouteNavigationPlannerTests
         var succeeded = planner.TryPlan(
             CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(10, 0)),
             out var plan,
-            TeleportOptions());
+            TeleportOptions(localDirectMaxGameDistance: 5));
 
         Assert.True(succeeded);
         Assert.True(plan.UsesTeleport);
@@ -325,7 +325,8 @@ public class RouteNavigationPlannerTests
             CurrentAttachMaxDistance = 2,
             TargetAttachMaxDistance = 20,
             OutputPointMinDistance = 0,
-            TargetOutputMinDistance = 0
+            TargetOutputMinDistance = 0,
+            CostOptions = new RouteNavigationCostOptions { LocalDirectMaxGameDistance = 0 }
         };
 
         var succeeded = planner.TryPlan(
@@ -840,6 +841,158 @@ public class RouteNavigationPlannerTests
         Assert.Equal(200, plan.Task.Positions[^1].X, precision: 2);
     }
 
+    [Fact]
+    public void TryPlan_NearbyCurrentPositionUsesLocalNavigationWithoutLoadedGraph()
+    {
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(RouteNavigationGraphSnapshot.Empty, RouteNavigationGraphLoadStatus.FileMissing),
+            new IdentityCoordinateConverter());
+
+        var succeeded = planner.TryPlan(
+            CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(50, 0)),
+            out var plan,
+            new RouteNavigationPlanOptions
+            {
+                CostOptions = new RouteNavigationCostOptions { LocalDirectMaxGameDistance = 80 }
+            });
+
+        Assert.True(succeeded);
+        Assert.Equal(RoutePlanCompletionMode.LocalOnly, plan.CompletionMode);
+        Assert.Null(plan.Task);
+    }
+
+    [Fact]
+    public void TryPlan_PreservesHistoricalEdgeActionAtItsEndpoint()
+    {
+        var snapshot = CreateSnapshot((0, 0), (10, 0));
+        var edge = Assert.Single(snapshot.Graph.Edges);
+        edge.MoveMode = MoveModeEnum.Fly.Code;
+        edge.Action = ActionEnum.StopFlying.Code;
+        edge.ActionParams = "250";
+        edge.Points =
+        [
+            new TelemetryPoint2D { X = 0, Y = 0 },
+            new TelemetryPoint2D { X = 9, Y = 0 },
+            new TelemetryPoint2D { X = 10, Y = 0 }
+        ];
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(snapshot),
+            new IdentityCoordinateConverter());
+
+        var succeeded = planner.TryPlan(
+            CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(10, 0)),
+            out var plan,
+            new RouteNavigationPlanOptions
+            {
+                AllowTeleport = false,
+                AllowUnknownStartConnector = false,
+                AllowUnknownTargetConnector = false,
+                CurrentAttachMaxDistance = 2,
+                TargetAttachMaxDistance = 2,
+                OutputPointMinDistance = 5,
+                TargetOutputMinDistance = 2,
+                CostOptions = new RouteNavigationCostOptions { LocalDirectMaxGameDistance = 0 }
+            });
+
+        Assert.True(succeeded, plan.FailureReason);
+        var actionWaypoint = Assert.Single(plan.Task!.Positions.Where(point =>
+            point.Action == ActionEnum.StopFlying.Code));
+        Assert.Equal(10, actionWaypoint.X, precision: 2);
+        Assert.Equal("250", actionWaypoint.ActionParams);
+        Assert.Equal(MoveModeEnum.Fly.Code, actionWaypoint.MoveMode);
+        Assert.Equal(WaypointType.Target.Code, actionWaypoint.Type);
+    }
+
+    [Fact]
+    public void TryPlan_KeepsDifferentHistoricalAndTargetActionsAtSameCoordinate()
+    {
+        var snapshot = CreateSnapshot((0, 0), (10, 0));
+        var edge = Assert.Single(snapshot.Graph.Edges);
+        edge.Action = ActionEnum.StopFlying.Code;
+        edge.MoveMode = MoveModeEnum.Fly.Code;
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(snapshot),
+            new IdentityCoordinateConverter());
+
+        var succeeded = planner.TryPlan(
+            CreateRequest(
+                new RouteGraphPoint(0, 0),
+                new RouteGraphPoint(10, 0),
+                ActionEnum.UpDownGrabLeaf.Code,
+                "up"),
+            out var plan,
+            StrictOptions());
+
+        Assert.True(succeeded, plan.FailureReason);
+        var actionWaypoints = plan.Task!.Positions
+            .Where(point => !string.IsNullOrWhiteSpace(point.Action))
+            .ToList();
+        Assert.Equal(2, actionWaypoints.Count);
+        Assert.Equal(ActionEnum.StopFlying.Code, actionWaypoints[0].Action);
+        Assert.Equal(ActionEnum.UpDownGrabLeaf.Code, actionWaypoints[1].Action);
+        Assert.Equal(actionWaypoints[0].X, actionWaypoints[1].X, precision: 2);
+        Assert.Equal(actionWaypoints[0].Y, actionWaypoints[1].Y, precision: 2);
+    }
+
+    [Fact]
+    public void TryPlan_WhenGraphCoverageIsInsufficientFallsBackToOneTargetTeleport()
+    {
+        var current = new RouteNavigationNode { NodeId = "current", MapName = "Teyvat", X = 0, Y = 0 };
+        var frontier = new RouteNavigationNode { NodeId = "frontier", MapName = "Teyvat", X = 40, Y = 0 };
+        var target = new RouteNavigationNode { NodeId = "target", MapName = "Teyvat", X = 200, Y = 0 };
+        var targetTail = new RouteNavigationNode { NodeId = "target-tail", MapName = "Teyvat", X = 210, Y = 0 };
+        var snapshot = new RouteNavigationGraphSnapshot(
+            new RouteNavigationGraph
+            {
+                Nodes = [current, frontier, target, targetTail],
+                Edges =
+                [
+                    CreateHistoricalEdge("reachable", current, frontier),
+                    CreateHistoricalEdge("target-component", target, targetTail)
+                ]
+            },
+            64,
+            [CreateTeleport("near-target", "near-target", 150)]);
+        var planner = new RouteNavigationPlanner(
+            new FakeGraphProvider(snapshot),
+            new IdentityCoordinateConverter());
+
+        var succeeded = planner.TryPlan(
+            CreateRequest(new RouteGraphPoint(0, 0), new RouteGraphPoint(200, 0)),
+            out var plan,
+            TeleportOptions());
+
+        Assert.True(succeeded, plan.FailureReason);
+        Assert.Equal(RoutePlanCompletionMode.Complete, plan.CompletionMode);
+        Assert.Equal("near-target", plan.Teleport?.AnchorId);
+        Assert.Single(plan.Task!.Positions.Where(point => point.Type == WaypointType.Teleport.Code));
+    }
+
+    [Fact]
+    public void EffectiveGraphRevision_ChangesWithRuntimeReviewAndTeleportSpawnData()
+    {
+        var snapshot = CreateSnapshot((0, 0), (10, 0));
+        var graph = snapshot.Graph;
+        var teleports =
+            new[]
+            {
+                new RouteGraphTeleportEntry(
+                    "Teyvat", "tp", "tp", "tp", "TeleportWaypoint",
+                    0, 0, 0, 0, 1, 2, 1, 2)
+            };
+        var first = RouteNavigationGraphIdentity.ComputeEffective(graph, teleports);
+
+        graph.Edges[0].ReviewStatus = GraphReviewStatus.Disabled;
+        var changedReview = RouteNavigationGraphIdentity.ComputeEffective(graph, teleports);
+        graph.Edges[0].ReviewStatus = GraphReviewStatus.Unreviewed;
+        var changedTeleport = RouteNavigationGraphIdentity.ComputeEffective(
+            graph,
+            [teleports[0] with { SpawnGameX = 9 }]);
+
+        Assert.NotEqual(first, changedReview);
+        Assert.NotEqual(first, changedTeleport);
+    }
+
     private static RouteNavigationGraphSnapshot CreateSnapshot((double X, double Y) from, (double X, double Y) to)
     {
         var fromNode = new RouteNavigationNode { NodeId = "from", MapName = "Teyvat", X = (float)from.X, Y = (float)from.Y };
@@ -868,7 +1021,11 @@ public class RouteNavigationPlannerTests
         return new RouteNavigationGraphSnapshot(graph, 64, []);
     }
 
-    private static RouteNavigationPlanRequest CreateRequest(RouteGraphPoint current, RouteGraphPoint target)
+    private static RouteNavigationPlanRequest CreateRequest(
+        RouteGraphPoint current,
+        RouteGraphPoint target,
+        string? targetAction = null,
+        string? targetActionParams = null)
     {
         return new RouteNavigationPlanRequest
         {
@@ -876,11 +1033,15 @@ public class RouteNavigationPlannerTests
             MapMatchMethod = "TemplateMatch",
             CurrentImagePoint = current,
             TargetImagePoint = target,
+            TargetAction = targetAction,
+            TargetActionParams = targetActionParams,
             TaskName = "test"
         };
     }
 
-    private static RouteNavigationPlanOptions StrictOptions(double targetOutputMinDistance = 0)
+    private static RouteNavigationPlanOptions StrictOptions(
+        double targetOutputMinDistance = 0,
+        double localDirectMaxGameDistance = 0)
     {
         return new RouteNavigationPlanOptions
         {
@@ -890,11 +1051,17 @@ public class RouteNavigationPlannerTests
             CurrentAttachMaxDistance = 2,
             TargetAttachMaxDistance = 2,
             OutputPointMinDistance = 0,
-            TargetOutputMinDistance = targetOutputMinDistance
+            TargetOutputMinDistance = targetOutputMinDistance,
+            CostOptions = new RouteNavigationCostOptions
+            {
+                LocalDirectMaxGameDistance = localDirectMaxGameDistance
+            }
         };
     }
 
-    private static RouteNavigationPlanOptions TeleportOptions(int teleportCandidateLimit = 0)
+    private static RouteNavigationPlanOptions TeleportOptions(
+        int teleportCandidateLimit = 0,
+        double localDirectMaxGameDistance = 80)
     {
         return new RouteNavigationPlanOptions
         {
@@ -910,7 +1077,8 @@ public class RouteNavigationPlannerTests
             {
                 WalkSpeed = 4.5,
                 TeleportDurationSeconds = 18,
-                MinimumTeleportSavingsSeconds = 8
+                MinimumTeleportSavingsSeconds = 8,
+                LocalDirectMaxGameDistance = localDirectMaxGameDistance
             }
         };
     }

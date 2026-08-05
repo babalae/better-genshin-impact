@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 namespace BetterGenshinImpact.GameTask.AutoPathing.TargetNavigation;
 
 public sealed class BetterGiTargetNavigationRuntime(
-    IRouteNavigationGraphProvider graphProvider,
     IRouteCurrentPositionResolver? positionResolver = null) : ITargetNavigationRuntime
 {
     private readonly IRouteCurrentPositionResolver _positionResolver =
@@ -73,11 +72,6 @@ public sealed class BetterGiTargetNavigationRuntime(
         if (TaskControl.TaskSemaphore.CurrentCount == 0)
         {
             return TargetNavigationPreparationResult.Failed(TargetNavigationFailureCode.TaskRunnerBusy);
-        }
-
-        if (!graphProvider.TryGetSnapshot(out _, out var graphStatus))
-        {
-            return TargetNavigationPreparationResult.Failed(MapGraphFailure(graphStatus));
         }
 
         try
@@ -356,14 +350,4 @@ public sealed class BetterGiTargetNavigationRuntime(
         }
     }
 
-    private static TargetNavigationFailureCode MapGraphFailure(RouteNavigationGraphLoadStatus status)
-    {
-        return status switch
-        {
-            RouteNavigationGraphLoadStatus.FileMissing => TargetNavigationFailureCode.GraphFileMissing,
-            RouteNavigationGraphLoadStatus.Empty => TargetNavigationFailureCode.GraphEmpty,
-            RouteNavigationGraphLoadStatus.Invalid => TargetNavigationFailureCode.GraphInvalid,
-            _ => TargetNavigationFailureCode.GraphNotLoaded
-        };
-    }
 }

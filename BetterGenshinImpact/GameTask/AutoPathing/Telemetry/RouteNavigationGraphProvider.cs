@@ -205,6 +205,7 @@ public sealed class RouteNavigationGraphSnapshot
         _nodeBucketsByMap = BuildNodeBuckets(Nodes, nodeBucketSize);
         _edgeBucketsByMap = BuildEdgeBuckets(Edges, nodeBucketSize, GetEdgePoints);
         Teleports = teleports ?? LoadTeleportEntries();
+        EffectiveGraphRevision = RouteNavigationGraphIdentity.ComputeEffective(graph, Teleports);
         _teleportsByMap = Teleports
             .GroupBy(t => RouteGraphGeometry.NormalizeMapName(t.MapName), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
@@ -220,6 +221,8 @@ public sealed class RouteNavigationGraphSnapshot
     public IReadOnlyList<RouteNavigationEdge> Edges { get; }
 
     public IReadOnlyList<RouteGraphTeleportEntry> Teleports { get; }
+
+    public string EffectiveGraphRevision { get; }
 
     public bool IsEmpty => Nodes.Count == 0 || Edges.Count == 0;
 
