@@ -298,10 +298,10 @@ public class AutoFightJsonTask : ISoloTask
                 }
             }
     
-            // 按优先级排序，相同优先级时原动作排在 morePriorities 之前（通过索引辅助排序）
+            // 按优先级排序（LINQ OrderBy 为稳定排序）：同优先级条目保持策略中的出现顺序，
+            // 即动作声明顺序（每个动作的主条件条目在前、morePriorities 紧随其后，添加顺序即出现顺序）
             validActions = validActions
                 .OrderBy(p => p.Priority)
-                .ThenBy(p => p.Expression == p.Action.Condition.Expression ? 0 : 1)
                 .ToList();
     
             Logger.LogInformation("JSON 策略：共 {Total} 个动作，展开为 {Expanded} 个优先级条目",
