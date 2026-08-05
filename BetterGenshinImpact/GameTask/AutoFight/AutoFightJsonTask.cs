@@ -298,10 +298,10 @@ public class AutoFightJsonTask : ISoloTask
                 }
             }
     
-            // 按优先级排序，相同优先级时原动作排在 morePriorities 之前（通过索引辅助排序）
+            // 按优先级排序（LINQ OrderBy 为稳定排序）：同优先级条目保持策略中的出现顺序，
+            // 即动作声明顺序（每个动作的主条件条目在前、morePriorities 紧随其后，添加顺序即出现顺序）
             validActions = validActions
                 .OrderBy(p => p.Priority)
-                .ThenBy(p => p.Expression == p.Action.Condition.Expression ? 0 : 1)
                 .ToList();
     
             Logger.LogInformation("JSON 策略：共 {Total} 个动作，展开为 {Expanded} 个优先级条目",
@@ -330,8 +330,9 @@ public class AutoFightJsonTask : ISoloTask
             var timeOutFlag = false;
             string lastFightName = "";
     
-            // 初始化条件求值器
-            var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea());
+            // 初始化条件求值器（传入策略动作名，供条件词法按名称合并连字符）
+            var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea(),
+                _strategy.Actions.Where(a => !string.IsNullOrEmpty(a.Name)).Select(a => a.Name));
     
             // 基于经验值的战后拾取检测
             ExperienceDetector? expDetector = null;
@@ -375,11 +376,13 @@ public class AutoFightJsonTask : ISoloTask
     
                                 var action = prioritizedAction.Action;
     
-                                // 求值条件表达式（使用展开后的表达式和优先级）
+                                // 求值条件表达式：当前动作序号（用于 since/last-exec/count 缺省指代本动作）传动作真实 Index，
+                                // 不能传排序用的 Priority（MorePriority 条目的 Priority 与该动作 Index 不同，会导致缺省查询查不到记录）
                                 var conditionMet = evaluator.Evaluate(
                                     prioritizedAction.Expression,
-                                    prioritizedAction.Priority,
-                                    action.Character);
+                                    action.Index,
+                                    action.Character,
+                                    action.Name);
     
                                 if (!conditionMet)
                                 {
@@ -428,7 +431,7 @@ public class AutoFightJsonTask : ISoloTask
                                     }
                                 }
     
-                                evaluator.UpdateLastExecTime(action.Index);
+                                evaluator.UpdateLastExecTime(action.Index, action.Name);
                                 lastExecutedAction = action;
                                 anyExecuted = true;
                                 lastFightName = action.Character ?? "";

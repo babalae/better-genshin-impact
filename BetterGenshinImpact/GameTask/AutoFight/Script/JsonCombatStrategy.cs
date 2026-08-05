@@ -47,7 +47,10 @@ public class JsonInfo
 /// </summary>
 public class JsonAction
 {
-    /// <summary>动作名称（用于日志输出）</summary>
+    /// <summary>
+    /// 动作名称（可选）：用于日志输出、按名称查询执行历史（since/count/last-exec）及条件词法的连字符合并；
+    /// 不允许与内置条件函数同名，不允许包含逗号或无法作为条件标识符解析的字符（解析策略时校验）
+    /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>执行动作的角色名（为空时使用当前角色）</summary>
