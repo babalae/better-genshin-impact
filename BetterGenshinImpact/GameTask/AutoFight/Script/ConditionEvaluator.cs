@@ -66,6 +66,9 @@ public class ConditionEvaluator
     private string? _currentActionName;
     private HashSet<int>? _qReadyCache;
     private bool? _lowHpCache;
+    // 出战角色识别上下文：箭头识别需在同一 context 内累计两次相同结果才返回有效编号，
+    // 跨轮复用避免每次 onfield() 求值都从零统计导致永远识别失败
+    private readonly AvatarActiveCheckContext _avatarActiveCheckContext = new();
 
     public ConditionEvaluator(CombatScenes combatScenes, Func<ImageRegion> captureFunc, IEnumerable<string>? actionNames = null)
     {
@@ -730,7 +733,9 @@ public class ConditionEvaluator
             var capture = GetCapture();
             try
             {
-                if (_combatScenes.GetActiveAvatarIndex(capture, new AvatarActiveCheckContext()) <= 0) return false;
+                // 复用跨轮识别上下文：箭头识别需同一 context 累计两次相同结果才返回有效编号，
+                // 新建 context 会导致每轮都从零统计、箭头识别永远返回 -2（重试）而无法刷新 LastActiveAvatarIndex
+                if (_combatScenes.GetActiveAvatarIndex(capture, _avatarActiveCheckContext) <= 0) return false;
             }
             finally
             {
