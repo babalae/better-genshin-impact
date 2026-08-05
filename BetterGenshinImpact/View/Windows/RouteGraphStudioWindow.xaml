@@ -88,12 +88,23 @@
             <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
         </Style>
 
-        <Style TargetType="ComboBox">
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Height" Value="34" />
             <Setter Property="Padding" Value="8,0" />
             <Setter Property="Background" Value="{StaticResource MapEditorInsetBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource MapEditorStrokeBrush}" />
             <Setter Property="Foreground" Value="{StaticResource MapEditorTextPrimaryBrush}" />
+        </Style>
+
+        <Style x:Key="RouteGraphDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="{StaticResource MapEditorInsetBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource MapEditorTextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource MapEditorGridLineBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
         </Style>
 
         <Style TargetType="DataGrid">
@@ -107,6 +118,7 @@
             <Setter Property="VerticalGridLinesBrush" Value="{StaticResource MapEditorGridLineBrush}" />
             <Setter Property="HeadersVisibility" Value="Column" />
             <Setter Property="RowHeaderWidth" Value="0" />
+            <Setter Property="ColumnHeaderStyle" Value="{StaticResource RouteGraphDataGridColumnHeaderStyle}" />
         </Style>
 
         <Style TargetType="GridSplitter">

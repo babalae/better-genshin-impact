@@ -3413,9 +3413,11 @@
                                                        HorizontalContentAlignment="Center"
                                                        Appearance="Primary"
                                                        Content="更新路网"
-                                                       Icon="{ui:SymbolIcon ArrowClockwise24}"
                                                        IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
                                                        ToolTip="选择从运行遥测或现有 PathingTask 路线更新路网">
+                                        <ui:DropDownButton.Icon>
+                                            <ui:SymbolIcon FontSize="14" Symbol="ArrowClockwise24" />
+                                        </ui:DropDownButton.Icon>
                                         <ui:DropDownButton.Flyout>
                                             <ContextMenu>
                                                 <ui:MenuItem Command="{Binding RebuildRouteGraphCommand}"
