@@ -123,8 +123,16 @@ public class AutoFightTask : ISoloTask
     private static int _overDistanceRounds;                   // 连续超过回点距离的轮数
     private static DateTime _lastBackToFightOrFightStartTime; // 上次回点或开战时间
 
-    /// <summary>重置定时回点的时间基准（开战时间），TXT/JSON 战斗开始时调用</summary>
-    public static void ResetBackToFightPointTime() => _lastBackToFightOrFightStartTime = DateTime.Now;
+    /// <summary>
+    /// 重置回点检查状态（时间基准、连续超距轮数、坐标任务），TXT/JSON 战斗开始时调用。
+    /// 战斗结束后旧坐标任务与超距计数会残留，若不复位会导致新战斗立即触发回点。
+    /// </summary>
+    public static void ResetBackToFightPointTime()
+    {
+        _lastBackToFightOrFightStartTime = DateTime.Now;
+        _overDistanceRounds = 0;
+        _positionTask = null;
+    }
 
     /// <summary>
     /// 每轮动作开始时的回点检查。
