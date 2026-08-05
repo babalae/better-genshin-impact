@@ -14,14 +14,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// <summary>
 /// 条件表达式求值器
 /// 支持语法：||, &&, !, (), +, -, *, /, >, <, =, 函数调用
-/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, onfield, t, since, count
+/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, onfield, t, since, count, min, max
 /// </summary>
 public class ConditionEvaluator
 {
     /// <summary>内置条件函数名（词法解析时优先按函数名合并连字符）</summary>
     public static readonly HashSet<string> FunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count"
+        "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count", "min", "max"
     };
 
     private readonly Dictionary<int, DateTime> _lastExecTimes = new();
@@ -409,6 +409,8 @@ public class ConditionEvaluator
     /// <summary>求值函数调用节点</summary>
     private object EvalFunc(string name, List<AstNode> args, int currentIndex)
     {
+        // 函数名大小写不敏感（min/MIN、MAX/max 均可）
+        name = name.ToLowerInvariant();
         return name switch
         {
             "last-exec" => EvalLastExec(args, currentIndex),
@@ -422,6 +424,8 @@ public class ConditionEvaluator
             "t" => EvalT(),
             "since" => EvalSince(args, currentIndex),
             "count" => EvalCount(args, currentIndex),
+            "min" => EvalMinMax(args, currentIndex, isMax: false),
+            "max" => EvalMinMax(args, currentIndex, isMax: true),
             _ => throw new InvalidOperationException($"未知条件函数：{name}")
         };
     }
@@ -729,5 +733,22 @@ public class ConditionEvaluator
         var end = args.Count >= 3 ? ToNumber(Eval(args[2], currentIndex)) : currentT;
 
         return _execHistory.Count(e => MatchesTarget(e, target) && e.Time >= start && e.Time <= end);
+    }
+
+    /// <summary>
+    /// 返回内部以逗号分隔的各项表达式的最小值或最大值（如 min(since(), 5)、max(since(1), since(2))）。
+    /// 各项求值后取数值；无参数时返回 0。
+    /// </summary>
+    private double EvalMinMax(List<AstNode> args, int currentIndex, bool isMax)
+    {
+        if (args.Count == 0) return 0;
+
+        var result = isMax ? double.NegativeInfinity : double.PositiveInfinity;
+        foreach (var arg in args)
+        {
+            var value = ToNumber(Eval(arg, currentIndex));
+            result = isMax ? Math.Max(result, value) : Math.Min(result, value);
+        }
+        return result;
     }
 }
