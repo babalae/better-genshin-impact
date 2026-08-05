@@ -3401,28 +3401,34 @@
                                                    Height="32"
                                                    Margin="8,0,0,0"
                                                    Padding="0"
-                                                   Command="{Binding RebuildRouteGraphCommand}"
-                                                   Icon="{ui:SymbolIcon Settings24}"
-                                                   IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
-                                                   ToolTip="重建路网" />
-                                        <ui:Button Width="32"
-                                                   Height="32"
-                                                   Margin="8,0,0,0"
-                                                   Padding="0"
                                                    Command="{Binding OpenRoutesFolderCommand}"
                                                    Icon="{ui:SymbolIcon FolderOpen24}"
                                                    ToolTip="打开路网目录" />
                                     </StackPanel>
-                                    <ui:Button Grid.Row="1"
-                                               Grid.ColumnSpan="2"
-                                               Height="36"
-                                               Margin="0,10,0,0"
-                                               HorizontalAlignment="Stretch"
-                                               Command="{Binding ImportPathingTasksToRouteGraphCommand}"
-                                               Content="从已有路线生成路网"
-                                               Icon="{ui:SymbolIcon FolderOpen24}"
-                                               IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
-                                               ToolTip="多选路线目录，递归扫描 JSON，并与已有遥测数据一起生成可导航路网" />
+                                    <ui:DropDownButton Grid.Row="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Height="44"
+                                                       Margin="0,10,0,0"
+                                                       HorizontalAlignment="Stretch"
+                                                       HorizontalContentAlignment="Center"
+                                                       Appearance="Primary"
+                                                       Content="更新路网"
+                                                       Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                                       IsEnabled="{Binding IsRefreshingRouteDiagnostics, Converter={StaticResource InverseBooleanConverter}}"
+                                                       ToolTip="选择从运行遥测或现有 PathingTask 路线更新路网">
+                                        <ui:DropDownButton.Flyout>
+                                            <ContextMenu>
+                                                <ui:MenuItem Command="{Binding RebuildRouteGraphCommand}"
+                                                             Header="从运行遥测更新"
+                                                             Icon="{ui:SymbolIcon Settings24}"
+                                                             ToolTip="读取已采集的 *_Telemetry.json，手动更新路网" />
+                                                <ui:MenuItem Command="{Binding ImportPathingTasksToRouteGraphCommand}"
+                                                             Header="从现有路线更新"
+                                                             Icon="{ui:SymbolIcon FolderOpen24}"
+                                                             ToolTip="多选目录并递归读取 PathingTask 路线 JSON，不混入遥测数据" />
+                                            </ContextMenu>
+                                        </ui:DropDownButton.Flyout>
+                                    </ui:DropDownButton>
                                     <ui:Button Grid.Row="2"
                                                Grid.ColumnSpan="2"
                                                Height="36"

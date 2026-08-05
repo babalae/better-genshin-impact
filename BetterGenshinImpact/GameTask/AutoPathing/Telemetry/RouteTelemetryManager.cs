@@ -29,7 +29,6 @@ public class RouteTelemetryManager
     private static readonly string SaveDir = Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"));
     private readonly ConcurrentBag<RouteTelemetryRecord> _records = new();
     private readonly RouteHealthStore _healthStore = new(SaveDir);
-    private readonly RouteNavigationGraphBuilder _navigationGraphBuilder = new(SaveDir);
     private int _isSaving;
 
     // 当前正在执行的路径片段对应的锚点（起点），常常是最近使用过的传送点
@@ -59,8 +58,6 @@ public class RouteTelemetryManager
         {
             Directory.CreateDirectory(SaveDir);
         }
-
-        ScheduleNavigationGraphBuild();
     }
 
     /// <summary>
@@ -92,6 +89,7 @@ public class RouteTelemetryManager
         var record = new RouteTelemetryRecord
         {
             RecordId = Guid.NewGuid().ToString("N"),
+            ClientVersion = Global.Version,
             Timestamp = DateTime.UtcNow,
             SegmentId = identity.SegmentId,
             MapName = target.MapName ?? "Teyvat",
@@ -216,7 +214,6 @@ public class RouteTelemetryManager
         }
         finally
         {
-            ScheduleNavigationGraphBuild();
             Interlocked.Exchange(ref _isSaving, 0);
             if (!_records.IsEmpty)
             {
@@ -239,12 +236,6 @@ public class RouteTelemetryManager
         var anchorId = CreateAnchorId(target);
         var identity = RouteSegmentIdentity.Create(previous, target, startPoint, anchorId);
         _healthStore.RecordFailure(identity, string.IsNullOrWhiteSpace(reason) ? "unknown failure" : reason);
-        ScheduleNavigationGraphBuild();
-    }
-
-    private void ScheduleNavigationGraphBuild()
-    {
-        _navigationGraphBuilder.ScheduleBuild(_healthStore.GetSnapshot());
     }
 
     private string CreateAnchorId(WaypointForTrack target)
@@ -313,6 +304,7 @@ public class RouteTelemetryManager
 public class RouteTelemetryRecord
 {
     public string RecordId { get; set; } = string.Empty;
+    public string ClientVersion { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public string SegmentId { get; set; } = string.Empty;
     public string MapName { get; set; } = string.Empty;

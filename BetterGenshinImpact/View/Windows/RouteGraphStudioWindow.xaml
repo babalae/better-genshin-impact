@@ -227,7 +227,7 @@
                                 <TextBlock Style="{StaticResource SectionTitleStyle}" Text="自动路网采集" />
                                 <TextBlock Margin="0,6,0,0"
                                            Style="{StaticResource CaptionTextStyle}"
-                                           Text="在“自动寻路设置”开启“自动收集路网遥测数据”，再正常运行任意 Pathing 路线。成功路段会写入 *_Telemetry.json 并自动重建路网；它不是自动遍历整张路网。"
+                                           Text="在“自动寻路设置”开启“自动收集路网遥测数据”，再正常运行任意 Pathing 路线。成功路段会写入 *_Telemetry.json；需要更新路网时，请在地图查看器中手动选择“从运行遥测更新”。"
                                            TextWrapping="Wrap" />
                                 <ui:Button Margin="0,9,0,0"
                                            HorizontalAlignment="Stretch"

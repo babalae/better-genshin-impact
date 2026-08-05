@@ -9,7 +9,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
@@ -19,13 +18,9 @@ public sealed class RouteNavigationGraphBuilder
     public const string LegacyGraphFileName = "route_navigation_graph.json";
     private static readonly Regex PointRegex = new(@"-?\d+(?:\.\d+)?", RegexOptions.Compiled);
 
-    private readonly object _syncRoot = new();
     private readonly string _saveDir;
     private readonly string _graphFilePath;
     private readonly IRouteCoordinateConverter _coordinateConverter;
-    private IReadOnlyCollection<RouteHealthEntry> _pendingHealthEntries = [];
-    private int _isBuilding;
-    private volatile bool _hasPendingBuild;
 
     public RouteNavigationGraphBuilder(
         string saveDir,
@@ -35,22 +30,6 @@ public sealed class RouteNavigationGraphBuilder
         Directory.CreateDirectory(_saveDir);
         _graphFilePath = Path.Combine(_saveDir, GraphFileName);
         _coordinateConverter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
-    }
-
-    public void ScheduleBuild(IReadOnlyCollection<RouteHealthEntry> healthEntries)
-    {
-        lock (_syncRoot)
-        {
-            _pendingHealthEntries = healthEntries.Select(e => e.Clone()).ToList();
-            _hasPendingBuild = true;
-        }
-
-        if (Interlocked.CompareExchange(ref _isBuilding, 1, 0) != 0)
-        {
-            return;
-        }
-
-        _ = Task.Run(BuildLoop);
     }
 
     public RouteNavigationBuildResult BuildNow(IReadOnlyCollection<RouteHealthEntry> healthEntries)
@@ -67,38 +46,6 @@ public sealed class RouteNavigationGraphBuilder
     {
         ArgumentNullException.ThrowIfNull(request);
         return BuildGraph(request);
-    }
-
-    private void BuildLoop()
-    {
-        try
-        {
-            do
-            {
-                IReadOnlyCollection<RouteHealthEntry> healthEntries;
-                lock (_syncRoot)
-                {
-                    _hasPendingBuild = false;
-                    healthEntries = _pendingHealthEntries;
-                }
-
-                BuildGraph(new RouteNavigationBuildRequest
-                {
-                    HealthEntries = healthEntries,
-                    IncludeTelemetry = true,
-                    NodeSnapDistance = 0
-                });
-            }
-            while (_hasPendingBuild);
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _isBuilding, 0);
-            if (_hasPendingBuild && Interlocked.CompareExchange(ref _isBuilding, 1, 0) == 0)
-            {
-                _ = Task.Run(BuildLoop);
-            }
-        }
     }
 
     private RouteNavigationBuildResult BuildGraph(RouteNavigationBuildRequest request)
@@ -435,7 +382,7 @@ public sealed class RouteNavigationBuildRequest
 
     public IReadOnlyList<string> PathingTaskDirectories { get; init; } = [];
 
-    public bool IncludeTelemetry { get; init; } = true;
+    public bool IncludeTelemetry { get; init; }
 
     public double NodeSnapDistance { get; init; } = 6;
 

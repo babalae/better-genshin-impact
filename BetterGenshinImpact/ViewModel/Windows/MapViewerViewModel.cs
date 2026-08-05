@@ -2291,7 +2291,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         IsRefreshingRouteDiagnostics = true;
-        GraphSummary = "正在重建路网...";
+        GraphSummary = "正在从运行遥测更新路网...";
         try
         {
             var result = await Task.Run(() =>
@@ -2311,7 +2311,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            GraphSummary = $"重建失败：{ex.Message}";
+            GraphSummary = $"从运行遥测更新路网失败：{ex.Message}";
         }
         finally
         {
@@ -2363,12 +2363,10 @@ public partial class MapViewerViewModel : ObservableObject
         {
             var result = await Task.Run(() =>
             {
-                var healthEntries = new RouteHealthStore(_routeSaveDir).GetSnapshot();
                 return new RouteNavigationGraphBuilder(_routeSaveDir).BuildNow(new RouteNavigationBuildRequest
                 {
-                    HealthEntries = healthEntries,
                     PathingTaskDirectories = sourceDirectories,
-                    IncludeTelemetry = true,
+                    IncludeTelemetry = false,
                     NodeSnapDistance = 6
                 });
             });
