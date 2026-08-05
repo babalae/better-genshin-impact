@@ -14,12 +14,13 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// <summary>
 /// 条件表达式求值器
 /// 支持语法：||, &&, !, (), +, -, *, /, >, <, =, 函数调用
-/// 支持函数：last-exec, q-ready, low-hp, battle-time, in-party, t, since, count
+/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, t, since, count
 /// </summary>
 public class ConditionEvaluator
 {
     private readonly Dictionary<int, DateTime> _lastExecTimes = new();
-    private readonly List<(int Index, double Time)> _execHistory = new();
+    // 动作执行事件记录：序号、名称、距离开战的相对时间（秒），供 since/count 等按序号或名称查询
+    private readonly List<(int Index, string Name, double Time)> _execHistory = new();
     private readonly DateTime _battleStartTime;
     private readonly CombatScenes _combatScenes;
     private readonly Func<ImageRegion> _captureFunc;
@@ -55,14 +56,16 @@ public class ConditionEvaluator
     }
 
     /// <summary>
-    /// 更新动作的最后执行时间
+    /// 更新动作的最后执行时间，并记录一条执行事件（序号 + 名称 + 距离开战相对时间）。
+    /// since/count 等查询基于该事件记录。
     /// </summary>
-    /// <param name="index">动作索引</param>
-    public void UpdateLastExecTime(int index)
+    /// <param name="index">动作序号</param>
+    /// <param name="name">动作名称</param>
+    public void UpdateLastExecTime(int index, string name)
     {
         var now = DateTime.Now;
         _lastExecTimes[index] = now;
-        _execHistory.Add((index, (now - _battleStartTime).TotalSeconds));
+        _execHistory.Add((index, name, (now - _battleStartTime).TotalSeconds));
     }
 
     /// <summary>

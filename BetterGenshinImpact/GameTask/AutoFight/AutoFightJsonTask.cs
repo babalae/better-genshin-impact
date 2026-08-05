@@ -428,7 +428,7 @@ public class AutoFightJsonTask : ISoloTask
                                     }
                                 }
     
-                                evaluator.UpdateLastExecTime(action.Index);
+                                evaluator.UpdateLastExecTime(action.Index, action.Name);
                                 lastExecutedAction = action;
                                 anyExecuted = true;
                                 lastFightName = action.Character ?? "";
