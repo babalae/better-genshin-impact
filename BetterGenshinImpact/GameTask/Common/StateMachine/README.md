@@ -87,7 +87,7 @@ private bool DetectEventMenu(ImageRegion ra)
 
 ## Handler
 
-Handler 只负责“在当前状态做一步动作”，动作结果用 `StateHandlerResult` 表达。
+Handler 只负责“在当前状态做一步动作”，动作结果用 `StateHandlerResult` 表达。除 `Success` 外，还可以用 `SuccessTo(...)` 将本次动作的等待目标收窄到当前状态图中的一个或多个合法邻接状态。
 
 ```csharp
 [StateHandler(MyState.MainWorld)]
@@ -111,13 +111,27 @@ private async Task<StateHandlerResult> HandleEventMenu(BvPage page)
     await Delay(300, _ct);
     return StateHandlerResult.Success;
 }
+
+[StateHandler(MyState.TargetPage)]
+private async Task<StateHandlerResult> HandleTargetPage(BvPage page)
+{
+    if (/* 当前页面业务条件成立 */)
+    {
+        Simulation.SendInput.SimulateAction(GIActions.OpenPaimonMenu);
+        return StateHandlerResult.SuccessTo(MyState.MainWorld);
+    }
+
+    page.GetByText("前往").FindAll().First().Click();
+    return StateHandlerResult.SuccessTo(MyState.TeleportMap, MyState.DomainEntrance);
+}
 ```
 
-`StateHandlerResult` 语义如下：
+`SuccessTo(...)` 的目标只表示真实的屏幕状态。当前屏幕中的业务条件不能伪造成一个新的状态；应先执行动作，再等待动作后的真实目标状态。
 
 | 返回值 | 框架行为 | 典型场景 |
 | --- | --- | --- |
-| `Success` | 动作完成，框架等待当前状态的邻接状态出现；如果源状态在动作生效窗口内持续可见，会触发当前状态 retry | 点击按钮、发送交互键后等待页面切换 |
+| `Success` | 动作完成，框架等待当前状态的全部合法邻接状态出现；如果源状态在动作生效窗口内持续可见，会触发当前状态 retry | 点击按钮、发送交互键后等待页面切换 |
+| `SuccessTo(targetStates...)` | 动作完成，框架只等待 Handler 指定的一个或多个合法邻接状态；目标仍需由 Detector 确认 | 同一动作可能进入多个已知页面，但不应接受当前状态的其他出边 |
 | `Wait` | 不计 retry，直接进入下一轮检测 | 加载中、动画中、当前状态无需动作 |
 | `Retry` | 当前状态 retry 次数加一，超限后抛异常 | 按钮没找到、OCR 暂时失败、动作没法确认 |
 | `Fail` | 立即抛异常 | 配置错误、关键条件不满足、无法恢复 |
@@ -242,6 +256,21 @@ retry 预算会被两类事件消耗：
 - 源状态和邻接目标都没检测到：说明可能处于加载、黑屏、动画等中间态，动作生效窗口重置，中间态长超时继续计时。
 - 中间态长超时：直接抛出中间态转换超时异常，不计入当前源状态的 retry 预算。
 
+`SuccessTo(targetStates...)` 使用同一套转场等待机制，但将“邻接目标状态”收窄为 Handler 指定的目标集合。状态机在运行时校验每个目标确实是当前状态的合法邻接状态，并且已注册 Detector；校验失败属于状态图或 Handler 契约错误，不会静默回退到全部邻接状态。
+
+例如同一个活动页可以按业务条件走不同真实屏幕节点：
+
+```csharp
+return StateHandlerResult.SuccessTo(StygianState.MainWorld);
+
+// 或
+return StateHandlerResult.SuccessTo(
+    StygianState.TeleportMap,
+    StygianState.DomainEntrance);
+```
+
+前者适用于执行 Esc 后返回主界面，后者适用于点击“前往挑战”后可能进入传送地图或秘境入口。业务条件本身不需要注册为状态，只负责决定本次动作及其目标集合。
+
 可以在节点上覆盖动作生效窗口：
 
 ```csharp
@@ -251,7 +280,6 @@ private async Task<StateHandlerResult> HandleTeleportMap(BvPage page)
     ...
 }
 ```
-
 ## Handler 内可读状态
 
 Handler 内可以读取当前 retry 信息，用于调整动作强度或打印日志：
@@ -291,6 +319,7 @@ flowchart LR
     MainWorld --> EventMenu
     MainWorld --> StygianOnslaughtPage
     EventMenu --> StygianOnslaughtPage
+    StygianOnslaughtPage --> MainWorld
     StygianOnslaughtPage --> TeleportMap
     StygianOnslaughtPage --> DomainEntrance
     TeleportMap --> DomainEntrance

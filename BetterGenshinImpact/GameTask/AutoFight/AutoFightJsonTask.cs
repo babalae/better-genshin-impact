@@ -43,6 +43,7 @@ public class AutoFightJsonTask : ISoloTask
     /// </summary>
     private readonly BgiYoloPredictor? _predictor;
     private DateTime _lastFightFlagTime = DateTime.Now;
+    private int _skipCheckCounter;
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -58,6 +59,11 @@ public class AutoFightJsonTask : ISoloTask
     // 日志防刷：1秒内同一动作名至多输出一次日志
     private string _lastLoggedActionName = "";
     private DateTime _lastLogTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 当前操作的角色名（私有状态，不污染全局 CurrentAvatarName）
+    /// </summary>
+    private string _currentAvatarName = "";
 
     /// <summary>
     /// 展开后的优先级动作条目
@@ -84,6 +90,7 @@ public class AutoFightJsonTask : ISoloTask
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
         public bool RotateFindEnemyEnabled = false;
+        public bool SkipFightEndCheckWhenEnemyVisible = false;
 
         public (int, int, int) BattleEndProgressBarColor { get; }
         public (int, int, int) BattleEndProgressBarColorTolerance { get; }
@@ -100,6 +107,7 @@ public class AutoFightJsonTask : ISoloTask
             DetectDelayTime =
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
+            SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
         }
 
         public static void ParseCheckTimeString(
@@ -249,248 +257,296 @@ public class AutoFightJsonTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-
-        LogScreenResolution();
-        var combatScenes = GetCombatScenesWithRetry();
-
-        // 收集当前队伍角色名
-        foreach (var avatar in combatScenes.GetAvatars())
+        AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
+        AvatarRecognition.ClearLegendaryBarTracker();
+        try
         {
-            _teamCharacterNames.Add(avatar.Name);
-        }
-        Logger.LogInformation("JSON 策略：当前队伍角色：{Names}", string.Join(", ", _teamCharacterNames));
-
-        // 过滤可用动作：Character 为空（通用）或在当前队伍中
-        var filteredActions = _strategy.Actions
-            .Where(a => string.IsNullOrEmpty(a.Character) || _teamCharacterNames.Contains(a.Character))
-            .ToList();
-
-        // 展开为优先级条目：每个动作产生 1个主条目 + N个 morePriorities 条目
-        var validActions = new List<PrioritizedAction>();
-        foreach (var action in filteredActions)
-        {
-            validActions.Add(new PrioritizedAction
+            LogScreenResolution();
+            var combatScenes = GetCombatScenesWithRetry();
+    
+            // 收集当前队伍角色名
+            foreach (var avatar in combatScenes.GetAvatars())
             {
-                Action = action,
-                Expression = action.Condition.Expression,
-                Priority = action.Index
-            });
-
-            foreach (var morePriority in action.MorePriorities)
+                _teamCharacterNames.Add(avatar.Name);
+            }
+            Logger.LogInformation("JSON 策略：当前队伍角色：{Names}", string.Join(", ", _teamCharacterNames));
+    
+            // 过滤可用动作：Character 为空（通用）或在当前队伍中
+            var filteredActions = _strategy.Actions
+                .Where(a => string.IsNullOrEmpty(a.Character) || _teamCharacterNames.Contains(a.Character))
+                .ToList();
+    
+            // 展开为优先级条目：每个动作产生 1个主条目 + N个 morePriorities 条目
+            var validActions = new List<PrioritizedAction>();
+            foreach (var action in filteredActions)
             {
                 validActions.Add(new PrioritizedAction
                 {
                     Action = action,
-                    Expression = morePriority.Expression,
-                    Priority = morePriority.Priority
+                    Expression = action.Condition.Expression,
+                    Priority = action.Index
                 });
-            }
-        }
-
-        // 按优先级排序，相同优先级时原动作排在 morePriorities 之前（通过索引辅助排序）
-        validActions = validActions
-            .OrderBy(p => p.Priority)
-            .ThenBy(p => p.Expression == p.Action.Condition.Expression ? 0 : 1)
-            .ToList();
-
-        Logger.LogInformation("JSON 策略：共 {Total} 个动作，展开为 {Expanded} 个优先级条目",
-            _strategy.Actions.Count, validActions.Count);
-
-        if (validActions.Count == 0)
-        {
-            Logger.LogWarning("JSON 策略：没有可用的动作节点，跳过战斗");
-            return;
-        }
-
-        // 新的取消token
-        var cts2 = new CancellationTokenSource();
-        ct.Register(cts2.Cancel);
-
-        combatScenes.BeforeTask(cts2.Token);
-        // 设置初始当前角色名（用于无 Character 字段的通用 action 回退）
-        CombatScriptParser.CurrentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? CombatScriptParser.CurrentAvatarName;
-        TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout);
-        Stopwatch timeoutStopwatch = Stopwatch.StartNew();
-
-        AutoFightSeek.RotationCount = 0;
-        AutoFightTask.FightStatusFlag = true;
-
-        var fightEndFlag = false;
-        var timeOutFlag = false;
-        string lastFightName = "";
-
-        // 初始化条件求值器
-        var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea());
-
-        // 基于经验值的战后拾取检测
-        ExperienceDetector? expDetector = null;
-        if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
-        {
-            using var gameCaptureRegion = CaptureToRectArea();
-            var expRos = AutoFightAssets.Get(gameCaptureRegion).ExperienceRecognitionObjects;
-            expDetector = new ExperienceDetector(expRos, cts2.Token);
-            expDetector.Start();
-        }
-
-        // 战斗前动作
-        await RunPreActions(combatScenes, evaluator);
-
-        // 战斗操作
-        var fightTask = Task.Run(async () =>
-        {
-            try
-            {
-                JsonAction? lastExecutedAction = null;
-
-                while (!cts2.Token.IsCancellationRequested)
+    
+                foreach (var morePriority in action.MorePriorities)
                 {
-                    if (timeoutStopwatch.Elapsed > fightTimeout)
+                    validActions.Add(new PrioritizedAction
                     {
-                        Logger.LogInformation("战斗超时结束");
-                        fightEndFlag = true;
-                        timeOutFlag = true;
-                        break;
-                    }
-
-                    // 每次循环开始：截图一次，供所有条件求值复用
-                    using var capture = CaptureToRectArea();
-                    evaluator.SetCachedCapture(capture);
-
-                    var anyExecuted = false;
-
-                    foreach (var prioritizedAction in validActions)
-                        {
-                            if (cts2.Token.IsCancellationRequested) break;
-
-                            var action = prioritizedAction.Action;
-
-                            // 求值条件表达式（使用展开后的表达式和优先级）
-                            var conditionMet = evaluator.Evaluate(
-                                prioritizedAction.Expression,
-                                prioritizedAction.Priority,
-                                action.Character);
-
-                            if (!conditionMet)
-                            {
-                                continue;
-                            }
-
-                            // 指定角色的动作：执行前确保切换到该角色
-                            if (!string.IsNullOrEmpty(action.Character))
-                            {
-                                var avatar = combatScenes.SelectAvatar(action.Character);
-                                if (avatar == null) continue;
-
-                                avatar.Switch();
-                                CombatScriptParser.CurrentAvatarName = action.Character;
-                            }
-
-                            // 执行动作
-                            await ExecuteAction(combatScenes, action);
-
-                            // 确保E技能释放成功
-                            if (action.EnsureCast)
-                            {
-                                var characterName = string.IsNullOrEmpty(action.Character)
-                                    ? CombatScriptParser.CurrentAvatarName
-                                    : action.Character;
-                                var avatar = combatScenes.SelectAvatar(characterName);
-                                if (avatar != null)
-                                {
-                                    var imageAfterAction = CaptureToRectArea();
-                                    var retry = 5;
-                                    while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
-                                    {
-                                        Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
-                                        // 防止在纳塔飞天或爬墙
-                                        Simulation.ReleaseAllKey();
-                                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                        Simulation.SendInput.SimulateAction(GIActions.Drop);
-                                        await Delay(200, _ct);
-                                        // 重新执行整个动作
-                                        await ExecuteAction(combatScenes, action);
-                                        imageAfterAction = CaptureToRectArea();
-                                        await Task.Delay(30, _ct);
-                                        retry--;
-                                    }
-                                    imageAfterAction.Dispose();
-                                }
-                            }
-
-                            evaluator.UpdateLastExecTime(action.Index);
-                            lastExecutedAction = action;
-                            anyExecuted = true;
-                            lastFightName = action.Character ?? "";
-
-                            if (_fightEndFlag) break;
-
-                            // 执行完第一个满足条件的动作后重新判断
-                            break;
-                        }
-
-                    if (fightEndFlag || _fightEndFlag) break;
-
-                    if (!anyExecuted)
-                    {
-                        await Delay(200, _ct);
-                    }
+                        Action = action,
+                        Expression = morePriority.Expression,
+                        Priority = morePriority.Priority
+                    });
                 }
             }
-            catch (Exception e)
+    
+            // 按优先级排序（LINQ OrderBy 为稳定排序）：同优先级条目保持策略中的出现顺序，
+            // 即动作声明顺序（每个动作的主条件条目在前、morePriorities 紧随其后，添加顺序即出现顺序）
+            validActions = validActions
+                .OrderBy(p => p.Priority)
+                .ToList();
+    
+            Logger.LogInformation("JSON 策略：共 {Total} 个动作，展开为 {Expanded} 个优先级条目",
+                _strategy.Actions.Count, validActions.Count);
+    
+            if (validActions.Count == 0)
             {
-                Debug.WriteLine(e.Message);
-                Debug.WriteLine(e.StackTrace);
-                throw;
+                Logger.LogWarning("JSON 策略：没有可用的动作节点，跳过战斗");
+                return;
+            }
+    
+            // 新的取消token
+            var cts2 = new CancellationTokenSource();
+            ct.Register(cts2.Cancel);
+    
+            combatScenes.BeforeTask(cts2.Token);
+            // 设置初始当前角色名（用于无 Character 字段的通用 action 回退）
+            _currentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? _currentAvatarName;
+            TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout);
+            Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+    
+            AutoFightSeek.RotationCount = 0;
+            AutoFightTask.FightStatusFlag = true;
+    
+            var fightEndFlag = false;
+            var timeOutFlag = false;
+            string lastFightName = "";
+    
+            // 初始化条件求值器（传入策略动作名，供条件词法按名称合并连字符）
+            var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea(),
+                _strategy.Actions.Where(a => !string.IsNullOrEmpty(a.Name)).Select(a => a.Name));
+    
+            // 基于经验值的战后拾取检测
+            ExperienceDetector? expDetector = null;
+            if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
+            {
+                using var gameCaptureRegion = CaptureToRectArea();
+                var expRos = AutoFightAssets.Get(gameCaptureRegion).ExperienceRecognitionObjects;
+                expDetector = new ExperienceDetector(expRos, cts2.Token);
+                expDetector.Start();
+            }
+    
+            // 战斗前动作
+            await RunPreActions(combatScenes, evaluator);
+    
+            // 战斗操作
+            var fightTask = Task.Run(async () =>
+            {
+                try
+                {
+                    JsonAction? lastExecutedAction = null;
+    
+                    while (!cts2.Token.IsCancellationRequested)
+                    {
+                        if (timeoutStopwatch.Elapsed > fightTimeout)
+                        {
+                            Logger.LogInformation("战斗超时结束");
+                            fightEndFlag = true;
+                            timeOutFlag = true;
+                            break;
+                        }
+    
+                        // 每次循环开始：截图一次，供所有条件求值复用
+                        using var capture = CaptureToRectArea();
+                        evaluator.SetCachedCapture(capture);
+    
+                        var anyExecuted = false;
+    
+                        foreach (var prioritizedAction in validActions)
+                            {
+                                if (cts2.Token.IsCancellationRequested) break;
+    
+                                var action = prioritizedAction.Action;
+    
+                                // 求值条件表达式：当前动作序号（用于 since/last-exec/count 缺省指代本动作）传动作真实 Index，
+                                // 不能传排序用的 Priority（MorePriority 条目的 Priority 与该动作 Index 不同，会导致缺省查询查不到记录）
+                                var conditionMet = evaluator.Evaluate(
+                                    prioritizedAction.Expression,
+                                    action.Index,
+                                    action.Character,
+                                    action.Name);
+    
+                                if (!conditionMet)
+                                {
+                                    continue;
+                                }
+    
+                                // 指定角色的动作：执行前确保切换到该角色
+                                if (!string.IsNullOrEmpty(action.Character))
+                                {
+                                    var avatar = combatScenes.SelectAvatar(action.Character);
+                                    if (avatar == null) continue;
+    
+                                    avatar.Switch();
+                                    _currentAvatarName = action.Character;
+                                }
+    
+                                // 执行动作
+                                await ExecuteAction(combatScenes, action);
+    
+                                // 确保E技能释放成功
+                                if (action.EnsureCast)
+                                {
+                                    var characterName = string.IsNullOrEmpty(action.Character)
+                                        ? _currentAvatarName
+                                        : action.Character;
+                                    var avatar = combatScenes.SelectAvatar(characterName);
+                                    if (avatar != null)
+                                    {
+                                        var imageAfterAction = CaptureToRectArea();
+                                        var retry = 5;
+                                        while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                        {
+                                            Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
+                                            // 防止在纳塔飞天或爬墙
+                                            Simulation.ReleaseAllKey();
+                                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                            Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                            await Delay(200, _ct);
+                                            // 重新执行整个动作
+                                            await ExecuteAction(combatScenes, action);
+                                            imageAfterAction = CaptureToRectArea();
+                                            await Task.Delay(30, _ct);
+                                            retry--;
+                                        }
+                                        imageAfterAction.Dispose();
+                                    }
+                                }
+    
+                                evaluator.UpdateLastExecTime(action.Index, action.Name);
+                                lastExecutedAction = action;
+                                anyExecuted = true;
+                                lastFightName = action.Character ?? "";
+    
+                                if (_fightEndFlag) break;
+    
+                                // 执行完第一个满足条件的动作后重新判断
+                                break;
+                            }
+    
+                        if (fightEndFlag || _fightEndFlag) break;
+    
+                        if (!anyExecuted)
+                        {
+                            await Delay(200, _ct);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                    Debug.WriteLine(e.StackTrace);
+                    throw;
+                }
+                finally
+                {
+                    Simulation.ReleaseAllKey();
+                    AutoFightTask.FightStatusFlag = false;
+                }
+            }, cts2.Token);
+    
+            // 在持续索敌循环启动前标记战斗进行中，避免索敌循环因 FightStatusFlag 仍为 false 而立即退出
+            AutoFightTask.FightStatusFlag = true;
+    
+            // 启动持续索敌循环（异步后台运行，与战斗任务并发）
+            // 使用独立的 CancellationTokenSource，以便在战后独立取消索敌循环，不影响 cts2 关联的其他组件（如 expDetector）
+            using var targetingCts = CancellationTokenSource.CreateLinkedTokenSource(cts2.Token);
+            Task? targetingTask = null;
+            if (_taskParam.EnableCombatTargeting)
+            {
+                targetingTask = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
+                    }
+                    catch (OperationCanceledException) { }
+                    catch (Exception e)
+                    {
+                        Logger.LogError(e, "持续索敌循环异常");
+                    }
+                }, targetingCts.Token);
+            }
+    
+            try
+            {
+                await fightTask;
             }
             finally
             {
-                Simulation.ReleaseAllKey();
+                // 战斗结束后（无论正常/异常），停止并等待索敌循环完成清理（ReleaseAllKey / MiddleButtonClick），
+                // 避免其 finally 在拾取/切人过程中释放按键，干扰万叶E吸怪等操作
+                if (targetingTask != null)
+                {
+                    await targetingCts.CancelAsync();
+                    try { await targetingTask; } catch (OperationCanceledException) { }
+                }
                 AutoFightTask.FightStatusFlag = false;
             }
-        }, cts2.Token);
-
-        await fightTask;
-
-        try
-        {
-            // 基于经验值检测结果的拾取判断
-            if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled && expDetector != null)
+    
+            try
             {
-                if (!expDetector.HasDetectedExperience)
+                // 基于经验值检测结果的拾取判断
+                if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled && expDetector != null)
                 {
-                    Logger.LogInformation("基于经验值判断：等待经验值检测结果");
-                    var waitMs = 1100;
-                    while (!expDetector.HasDetectedExperience && waitMs > 0)
+                    if (!expDetector.HasDetectedExperience)
                     {
-                        await Delay(100, _ct);
-                        waitMs -= 100;
+                        Logger.LogInformation("基于经验值判断：等待经验值检测结果");
+                        var waitMs = 1100;
+                        while (!expDetector.HasDetectedExperience && waitMs > 0)
+                        {
+                            await Delay(100, _ct);
+                            waitMs -= 100;
+                        }
                     }
-                }
-
-                var shouldPickup = expDetector.HasDetectedExperience;
-                Logger.LogInformation("基于经验值判断：{Result} 战后拾取", shouldPickup ? "执行" : "不执行");
-
-                if (!shouldPickup)
-                {
-                    if (_taskParam is { PickDropsAfterFightEnabled: true })
+    
+                    var shouldPickup = expDetector.HasDetectedExperience;
+                    Logger.LogInformation("基于经验值判断：{Result} 战后拾取", shouldPickup ? "执行" : "不执行");
+    
+                    if (!shouldPickup)
                     {
-                        await new ScanPickTask().Start(_ct);
+                        if (_taskParam is { PickDropsAfterFightEnabled: true })
+                        {
+                            await new ScanPickTask().Start(_ct);
+                        }
+                        return;
                     }
-                    return;
                 }
             }
+            finally
+            {
+                if (expDetector != null)
+                {
+                    await expDetector.StopAsync();
+                    expDetector.Dispose();
+                }
+            }
+    
+            // 战后拾取（完全参照 AutoFightTask）
+            await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
         }
         finally
         {
-            if (expDetector != null)
-            {
-                await expDetector.StopAsync();
-                expDetector.Dispose();
-            }
+            AvatarRecognition.ClearCurrentAutoFightParam();
         }
-
-        // 战后拾取（完全参照 AutoFightTask）
-        await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
     }
 
     private bool _fightEndFlag;
@@ -501,7 +557,7 @@ public class AutoFightJsonTask : ISoloTask
         try
         {
             var character = string.IsNullOrEmpty(action.Character)
-                ? CombatScriptParser.CurrentAvatarName
+                ? _currentAvatarName
                 : action.Character;
 
             var commands = CombatScriptParser.ParseLinePart(action.Action, character);
@@ -532,7 +588,7 @@ public class AutoFightJsonTask : ISoloTask
             }
 
             // 更新当前角色名，供后续无指定角色动作使用
-            CombatScriptParser.CurrentAvatarName = character;
+            _currentAvatarName = character;
         }
         catch (Exception e)
         {
@@ -547,73 +603,99 @@ public class AutoFightJsonTask : ISoloTask
     /// <summary>战斗结束检测</summary>
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
+        using (AvatarRecognition.BeginExclusiveOperation())
         {
-            bool? result = null;
-            try
+            // 敌人可见时跳过战斗结束检查
+            if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
+                if (_skipCheckCounter < 5)
+                {
+                    using var quickCapture = CaptureToRectArea();
+                    var bars = AvatarRecognition.FindBloodBars(quickCapture);
+                    // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
+                    // 过滤左侧 UI 区域 (x <= 200)，避免队伍头像等红色元素被误判为敌人血条
+                    if (bars.Any(b => b.x > (int)(200 * _assetScale)))
+                    {
+                        _skipCheckCounter++;
+                        Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
+                        return false;
+                    }
+                }
+                _skipCheckCounter = 0;
             }
-            catch (Exception ex)
+            else
             {
-                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                result = false;
+                _skipCheckCounter = 0;
             }
 
-            AutoFightSeek.RotationCount = (result == null) ? AutoFightSeek.RotationCount + 1 : 0;
-
-            if (result != null)
+            if (_finishDetectConfig.RotateFindEnemyEnabled)
             {
-                return result.Value;
-            }
-        }
-
-        if (!_finishDetectConfig.RotateFindEnemyEnabled) await Delay(delayTime, _ct);
-
-        Logger.LogInformation("打开编队界面检查战斗是否结束");
-        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(detectDelayTime, _ct);
-
-        using var ra = CaptureToRectArea();
-        // 注意：像素坐标 (50, 790) 和 (50, 768) 是硬编码的，未做分辨率缩放
-        // 与 TXT 版本逻辑保持一致，不进行缩放
-        var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
-        var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
-
-        if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
-            IsYellow(b3.Item2, b3.Item1, b3.Item0))
-        {
-            Logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            return true;
-        }
-
-        Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
-        {
-            // 注意：此处使用 await 确保异常能被正确捕获
-            // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
-            Task.Run(async () =>
-            {
+                bool? result = null;
                 try
                 {
-                    var bloodLower = new Scalar(255, 90, 90);
-                    await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                }
-                catch (OperationCanceledException)
-                {
+                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
+                    Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+                    result = false;
                 }
-            }, _ct);
-        }
 
-        _lastFightFlagTime = DateTime.Now;
-        return false;
+                AutoFightSeek.RotationCount = (result == null) ? AutoFightSeek.RotationCount + 1 : 0;
+
+                if (result != null)
+                {
+                    return result.Value;
+                }
+            }
+
+            if (!_finishDetectConfig.RotateFindEnemyEnabled) await Delay(delayTime, _ct);
+
+            Logger.LogInformation("打开编队界面检查战斗是否结束");
+            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+            await Delay(detectDelayTime, _ct);
+
+            using var ra = CaptureToRectArea();
+            // 注意：像素坐标 (50, 790) 和 (50, 768) 是硬编码的，未做分辨率缩放
+            // 与 TXT 版本逻辑保持一致，不进行缩放
+            var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
+            var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
+
+            if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
+                IsYellow(b3.Item2, b3.Item1, b3.Item0))
+            {
+                Logger.LogInformation("识别到战斗结束");
+                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                return true;
+            }
+
+            Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
+
+            if (_finishDetectConfig.RotateFindEnemyEnabled)
+            {
+                // 注意：此处使用 await 确保异常能被正确捕获
+                // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        var bloodLower = new Scalar(255, 90, 90);
+                        await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
+                    }
+                }, _ct);
+            }
+
+            _lastFightFlagTime = DateTime.Now;
+            return false;
+        }
     }
 
     private bool IsYellow(int r, int g, int b)
@@ -657,7 +739,7 @@ public class AutoFightJsonTask : ISoloTask
             if (_ct.IsCancellationRequested) break;
 
             var firstSpaceIndex = preAction.IndexOf(' ');
-            var character = CombatScriptParser.CurrentAvatarName;
+            var character = _currentAvatarName;
             var commands = preAction;
             if (firstSpaceIndex > 0)
             {
@@ -790,6 +872,8 @@ public class AutoFightJsonTask : ISoloTask
 
             if (picker != null)
             {
+                Simulation.ReleaseAllKey();
+
                 if (picker.Name == "枫原万叶")
                 {
                     var time = TimeSpan.FromSeconds(picker.GetSkillCdSeconds());
@@ -800,9 +884,9 @@ public class AutoFightJsonTask : ISoloTask
                     if (forcePickup || !shouldSkip)
                     {
                         Logger.LogInformation("使用 枫原万叶-长E 拾取掉落物");
-                        await Delay(200, _ct);
                         if (picker.TrySwitch(10))
                         {
+                            await Delay(100, _ct);
                             await picker.WaitSkillCd(_ct);
                             await SimulateHoldElementalSkillAsync(800, _ct);
                             await SimulateMouseLeftClickLoopAsync(6, _ct);
@@ -825,9 +909,9 @@ public class AutoFightJsonTask : ISoloTask
                         .ToArray();
 
                     var find = _taskParam.QinDoublePickUp;
-                    await Delay(150, _ct);
                     if (picker.TrySwitch(10))
                     {
+                        await Delay(100, _ct);
                         foreach (var miningActionStr in actionsToUse)
                         {
                             var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);

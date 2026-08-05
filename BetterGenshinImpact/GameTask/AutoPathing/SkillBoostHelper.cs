@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -49,6 +49,22 @@ public partial class PathExecutor
     }
     // 赶路切换角色黑名单，防止切人后触发夜魂传递
     private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉"];
+
+    /// <summary>
+    /// 各角色在连续赶路模式下的转向夹角阈值（度）。
+    /// 当路径转向角 ≥ 该角色的阈值时，视为急转弯，提前下车步行接近防止冲过头。
+    /// 未显式列出的角色使用默认值 120°（几乎只有掉头才下车）。
+    /// </summary>
+    private static readonly Dictionary<string, double> TurnAngleThresholds = new()
+    {
+        { "桑多涅", 45 },
+        { "恰斯卡", 45 },
+        { "伊法", 45 },
+        { "流浪者", 45 },
+        { "玛薇卡", 60 },
+        { "闲云", 120 },
+        { "希诺宁", 120 },
+    };
 
     private string _hurryOnAvatar = "";
     private DateTime _lastJumpFlyTime = DateTime.MinValue;
@@ -112,7 +128,7 @@ public partial class PathExecutor
     /// <returns>true = 跳过本次通用移动逻辑（continue）；false = 继续执行通用移动逻辑</returns>
     private async Task<bool> ExecuteHurryOnAsync(
         WaypointForTrack waypoint,
-        Waypoint? nextWaypoint,
+        WaypointForTrack? nextWaypoint,
         double distance,
         double? nextDistance,
         bool isPoint,
@@ -163,10 +179,11 @@ public partial class PathExecutor
 
                 if (state.PendingApproach)
                 {
-                    var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                    if (needsApproach)
+                    if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         state.PendingApproach = false;
                         var colorDiff = GetMavikaColorDifference(screen2);
                         if (colorDiff < 15 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
@@ -354,6 +371,7 @@ public partial class PathExecutor
             //
             //         if (shouldApproach)
             //         {
+            //             Simulation.ReleaseAllKey();
             //             state.PendingApproach = false;
             //             if (PartyConfig.SwitchToWalkEnabled)
             //             {
@@ -486,6 +504,7 @@ public partial class PathExecutor
 
                     if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         // Logger.LogInformation("[赶路调试] 希诺宁 触发接近: dist={d}, spaceExist={s}",
                         //     Math.Round(distance, 1), SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -501,15 +520,12 @@ public partial class PathExecutor
                         else if (SpaceAtSecondPlaceExist(state))
                         {
                             Logger.LogInformation("自动赶路：希诺宁接近节点，关闭E技能赶路状态");
-                            for (var retries = 0; retries < 10; retries++)
+                            var retries = 0;
+                            while (SpaceAtSecondPlaceExist(state) && retries < 10)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                                 await Delay(100, ct);
-                                var cd = await ReadEskillCdAsync("希诺宁");
-                                if (cd > 0)
-                                {
-                                    break;
-                                }
+                                retries++;
                             }
                         }
                         return false;
@@ -549,12 +565,13 @@ public partial class PathExecutor
                 {
                     await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
-                    var cd = await ReadEskillCdAsync("闲云");
-                    if (cd <= 0 && state.RotationStableCount >= 1)
+                    // C1 闲云有两次 E 可用，直接尝试施放；E 不可用时按键无副作用，不需要 OCR 检测 CD
+                    // 使用非阻塞时间间隔（复用 _lastJumpFlyTime，类似火神跳飞），避免阻塞期间无法转向
+                    if (state.RotationStableCount >= 1
+                        && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds >= interval / 2.0)
                     {
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay((int)(interval / 2.0 * 1000), ct);
-                        avatar.LastSkillTime = DateTime.UtcNow;
+                        _lastJumpFlyTime = DateTime.UtcNow;
                         return true;
                     }
 
@@ -585,17 +602,19 @@ public partial class PathExecutor
                     // Step 2: 小于停止距离 → 主动下车
                     if (state.FlyingState && distance < PartyConfig.ApproachStopDistance)
                     {
-                        var needsApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-                        if (needsApproach)
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                        if (shouldApproach)
                         {
+                            Simulation.ReleaseAllKey();
                             state.FlyingState = false;
-                            if (DashAtSecondPlaceExist())
+                            var retries = 0;
+                            while (DashAtSecondPlaceExist() && retries < 10)
                             {
                                 Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
                                 await Delay(50, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                await Delay(150, ct);
+                                retries++;
                             }
+                            await Delay(150, ct);
                             await SafeLanding(ct);
                             Logger.LogInformation("自动赶路：桑多涅接近节点");
                             return false;
@@ -670,10 +689,11 @@ public partial class PathExecutor
                 {
                     if (state.PendingApproach)
                     {
-                        var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                        if (shouldApproachX)
+                        if (shouldApproach)
                         {
+                            Simulation.ReleaseAllKey();
                             // Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
                             //     avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                             state.PendingApproach = false;
@@ -765,10 +785,11 @@ public partial class PathExecutor
             case "流浪者":
                 if (state.PendingApproach)
                 {
-                    var shouldApproachX = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                    if (shouldApproachX)
+                    if (shouldApproach)
                     {
+                        Simulation.ReleaseAllKey();
                         // Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
                         //     Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -878,47 +899,66 @@ public partial class PathExecutor
         );
     }
 
-    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, Waypoint? nextWaypoint, string avatarName)
+    /// <summary>
+    /// 计算上一节点→当前节点→下一节点形成的转向夹角（度）。
+    /// 使用 GameX/GameY（原神世界坐标）以保证坐标系一致。
+    /// </summary>
+    private static double CalculateTurnAngle(WaypointForTrack? prev, WaypointForTrack curr, WaypointForTrack? next)
+    {
+        if (prev == null || next == null) return 0;
+
+        double baX = curr.GameX - prev.GameX;
+        double baY = curr.GameY - prev.GameY;
+        double bcX = next.GameX - curr.GameX;
+        double bcY = next.GameY - curr.GameY;
+
+        double dot = baX * bcX + baY * bcY;
+        double magBA = Math.Sqrt(baX * baX + baY * baY);
+        double magBC = Math.Sqrt(bcX * bcX + bcY * bcY);
+
+        if (magBA < 0.001 || magBC < 0.001) return 0;
+
+        double cosAngle = dot / (magBA * magBC);
+        cosAngle = Math.Clamp(cosAngle, -1.0, 1.0);
+
+        return Math.Acos(cosAngle) * 180.0 / Math.PI;
+    }
+
+    /// <summary>
+    /// 检查当前路径转向角是否超过角色的阈值，是则应提前下车。
+    /// </summary>
+    private bool IsTurnTooSharp(WaypointForTrack waypoint, WaypointForTrack? nextWaypoint, string avatarName)
+    {
+        if (CurWaypoint.Item1 <= 0) return false;
+        var prev = CurWaypoints.Item2[CurWaypoint.Item1 - 1];
+        var angle = CalculateTurnAngle(prev, waypoint, nextWaypoint);
+        var threshold = TurnAngleThresholds.GetValueOrDefault(avatarName, 120);
+        return angle >= threshold;
+    }
+
+    private bool ShouldApproach(double distance, double? nextDistance, WaypointForTrack waypoint, WaypointForTrack? nextWaypoint, string avatarName)
     {
         var effectiveStopDist = Math.Min(PartyConfig.ApproachStopDistance, PartyConfig.Distance);
 
-        // 终点：接近到停止距离内才下车
-        // 不加距离限制会导致远距离提前下车走一大段路，然后重新上车的震荡
-        if (nextWaypoint == null)
+        // 精确接近模式下直接使用停止距离阈值
+        if (PartyConfig.TravelMode == "精准靠近"
+            && distance < effectiveStopDist)
         {
-            if (distance < effectiveStopDist)
-            {
-                // Logger.LogInformation("[赶路调试] ShouldApproach 终点节点: dist={d}, stopDist={s}",
-                //     Math.Round(distance, 1), effectiveStopDist);
-                return true;
-            }
-            return false;
-        }
-
-        // 下一个节点不是 Run/Dash 时（如 Fly/Walk/Climb），接近到停止距离内才下车
-        // 不加距离限制会导致远距离提前下车走一段、然后重新上车的反复震荡
-        if (nextWaypoint.MoveMode != MoveModeEnum.Run.Code && nextWaypoint.MoveMode != MoveModeEnum.Dash.Code)
-        {
-            if (distance < effectiveStopDist)
-            {
-                // Logger.LogInformation("[赶路调试] ShouldApproach 非RunDash节点接近: dist={d}, stopDist={s}, nextMode={m}",
-                //     Math.Round(distance, 1), effectiveStopDist, nextWaypoint.MoveMode);
-                return true;
-            }
-            return false;
-        }
-
-        // 连续赶路模式下飞行角色转弯表现差，强制使用精确接近阈值
-        if (distance < effectiveStopDist && (PartyConfig.TravelMode == "精准靠近" || (PartyConfig.TravelMode == "连续赶路" && (avatarName == "恰斯卡" || avatarName == "伊法" || avatarName == "流浪者"))))
-        {
-            // Logger.LogInformation("[赶路调试] ShouldApproach 精确接近阈值: dist={d}, stopDist={s}, mode={tm}, avatar={a}",
-            //     Math.Round(distance, 1), effectiveStopDist, PartyConfig.TravelMode, avatarName);
             return true;
         }
 
-        if (PartyConfig.TravelMode == "连续赶路" && distance < Math.Max(effectiveStopDist, 15) &&
-            (nextDistance < 25 || nextWaypoint?.Type == WaypointType.Target.Code || waypoint.Type == WaypointType.Target.Code
-             || waypoint?.Action == ActionEnum.CombatScript.Code))
+        if (PartyConfig.TravelMode == "连续赶路"                            // 连续赶路模式
+            && distance < Math.Max(effectiveStopDist, 15)                   // 距离当前航点足够近
+            && (nextDistance < 25                                           // 下一个航点也很近（密集区域）
+                || nextWaypoint?.Type == WaypointType.Target.Code           // 下一个是目标点
+                || (nextWaypoint == null                                        // 终点节点
+                    || nextWaypoint?.Type == WaypointType.Teleport.Code)     // 或传送节点
+                || (nextWaypoint?.MoveMode != MoveModeEnum.Run.Code         // 下一个节点不是Run/Dash
+                    && nextWaypoint?.MoveMode != MoveModeEnum.Dash.Code)
+                || waypoint?.Action == ActionEnum.Fight.Code                // 当前是战斗节点
+                || waypoint.Type == WaypointType.Target.Code                // 当前是目标点
+                || waypoint?.Action == ActionEnum.CombatScript.Code         // 当前节点有简易策略脚本
+                || IsTurnTooSharp(waypoint, nextWaypoint, avatarName)))      // 路径转向角过大
         {
             // Logger.LogInformation("[赶路调试] ShouldApproach 连续赶路+特殊条件: dist={d}, stopDist={s}, nextDist={nd}, nextType={nt}, waypointType={wt}",
             //     Math.Round(distance, 1), effectiveStopDist, nextDistance, nextWaypoint?.Type, waypoint?.Type);

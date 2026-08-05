@@ -269,7 +269,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private void SetCurrentRoleFilter(TargetRole role)
     {
         _pendingFilterElementType = role.SkipElementFilter ? null : Recognizer.GetElementType(role.PrimaryCandidateName);
-        _pendingFilterWeaponType = role.ForcedWeaponType ?? Recognizer.GetWeaponName(role.PrimaryCandidateName);
+        _pendingFilterWeaponType = role.ForcedWeaponType ?? Recognizer.GetWeaponType(role.PrimaryCandidateName);
         _logger.LogInformation("切换角色：{Slot}. {Name}，武器：{Weapon}，元素筛选：{ElementFilter}",
             role.Slot,
             role.Name,
