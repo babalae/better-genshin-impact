@@ -330,8 +330,9 @@ public class AutoFightJsonTask : ISoloTask
             var timeOutFlag = false;
             string lastFightName = "";
     
-            // 初始化条件求值器
-            var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea());
+            // 初始化条件求值器（传入策略动作名，供条件词法按名称合并连字符）
+            var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea(),
+                _strategy.Actions.Where(a => !string.IsNullOrEmpty(a.Name)).Select(a => a.Name));
     
             // 基于经验值的战后拾取检测
             ExperienceDetector? expDetector = null;

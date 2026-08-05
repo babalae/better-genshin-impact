@@ -77,7 +77,7 @@ public static class JsonCombatStrategyParser
         return strategy;
     }
 
-    /// <summary>校验动作索引唯一性与动作名称合法性（不允许包含逗号，逗号会与条件函数的参数分隔符冲突）</summary>
+    /// <summary>校验动作索引唯一性与动作名称合法性（不允许包含逗号，逗号会与条件函数的参数分隔符冲突；不允许与内置条件函数同名）</summary>
     private static void ValidateActions(List<JsonAction> actions)
     {
         var seen = new HashSet<int>();
@@ -93,6 +93,12 @@ public static class JsonCombatStrategyParser
             {
                 Logger.LogError("JSON 战斗策略中动作名称不允许包含逗号：{Name}", action.Name);
                 throw new InvalidOperationException($"JSON 战斗策略中动作名称不允许包含逗号：{action.Name}");
+            }
+
+            if (!string.IsNullOrEmpty(action.Name) && ConditionEvaluator.FunctionNames.Contains(action.Name))
+            {
+                Logger.LogError("JSON 战斗策略中动作名称不允许与内置条件函数同名：{Name}", action.Name);
+                throw new InvalidOperationException($"JSON 战斗策略中动作名称不允许与内置条件函数同名：{action.Name}");
             }
         }
     }

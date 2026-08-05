@@ -18,23 +18,46 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// </summary>
 public class ConditionEvaluator
 {
+    /// <summary>内置条件函数名（词法解析时优先按函数名合并连字符）</summary>
+    public static readonly HashSet<string> FunctionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count"
+    };
+
     private readonly Dictionary<int, DateTime> _lastExecTimes = new();
     // 动作执行事件记录：序号、名称、距离开战的相对时间（秒），供 since/count 等按序号或名称查询
     private readonly List<(int Index, string Name, double Time)> _execHistory = new();
     private readonly DateTime _battleStartTime;
     private readonly CombatScenes _combatScenes;
     private readonly Func<ImageRegion> _captureFunc;
+    // 策略中声明的动作名（词法解析时用于连字符合并判断）
+    private readonly HashSet<string> _actionNames;
+    private HashSet<string>? _knownIdentifiers;
     private ImageRegion? _cachedCapture;
     private string? _currentCharacterName;
     private string? _currentActionName;
     private HashSet<int>? _qReadyCache;
     private bool? _lowHpCache;
 
-    public ConditionEvaluator(CombatScenes combatScenes, Func<ImageRegion> captureFunc)
+    public ConditionEvaluator(CombatScenes combatScenes, Func<ImageRegion> captureFunc, IEnumerable<string>? actionNames = null)
     {
         _battleStartTime = DateTime.Now;
         _combatScenes = combatScenes;
         _captureFunc = captureFunc;
+        _actionNames = actionNames != null
+            ? new HashSet<string>(actionNames, StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>词法解析时的已知标识符集合：内置函数名 + 策略动作名（首次使用时构建）</summary>
+    private HashSet<string> GetKnownIdentifiers()
+    {
+        if (_knownIdentifiers == null)
+        {
+            _knownIdentifiers = new HashSet<string>(FunctionNames, StringComparer.OrdinalIgnoreCase);
+            foreach (var name in _actionNames) _knownIdentifiers.Add(name);
+        }
+        return _knownIdentifiers;
     }
 
     /// <summary>
@@ -86,7 +109,7 @@ public class ConditionEvaluator
 
         try
         {
-            var tokens = Tokenize(expression);
+            var tokens = Tokenize(expression, GetKnownIdentifiers());
             var pos = 0;
             var ast = ParseOrExpr(tokens, ref pos);
             return ToBool(Eval(ast, currentIndex));
@@ -108,7 +131,7 @@ public class ConditionEvaluator
         public string Value { get; } = value;
     }
 
-    private static List<Token> Tokenize(string expr)
+    private static List<Token> Tokenize(string expr, HashSet<string> knownIdentifiers)
     {
         var tokens = new List<Token>();
         var i = 0;
@@ -144,10 +167,27 @@ public class ConditionEvaluator
                 continue;
             }
 
-            if (char.IsLetter(c) || c == '-')
+            if (char.IsLetter(c))
             {
                 var start = i;
-                while (i < expr.Length && (char.IsLetterOrDigit(expr[i]) || (expr[i] == '-' && i + 1 < expr.Length && char.IsLetter(expr[i + 1])))) i++;
+                // 先读取基础字母/数字段（中文名、角色名、函数名首段）
+                while (i < expr.Length && char.IsLetterOrDigit(expr[i])) i++;
+                // 贪婪合并连字符段：候选整体（如 e-ready、芙芙-e）必须在已知标识符表（内置函数名/策略动作名）中才并入，
+                // 否则 `-` 保持为独立减号运算符（如 t-5、since(1)-3）
+                while (i < expr.Length && expr[i] == '-'
+                       && i + 1 < expr.Length && char.IsLetterOrDigit(expr[i + 1]))
+                {
+                    var segEnd = i + 1;
+                    while (segEnd < expr.Length && char.IsLetterOrDigit(expr[segEnd])) segEnd++;
+                    if (knownIdentifiers.Contains(expr[start..segEnd]))
+                    {
+                        i = segEnd;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
                 var word = expr[start..i];
                 tokens.Add(word is "true" or "false"
                     ? new Token(TokenType.Bool, word)
