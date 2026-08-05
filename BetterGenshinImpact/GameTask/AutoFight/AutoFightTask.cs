@@ -137,7 +137,7 @@ public class AutoFightTask : ISoloTask
     /// <summary>
     /// 每轮动作开始时的回点检查。
     /// 启用战斗中回点且存在开战点时：上一轮异步坐标任务已完成则取结果并立即启动下一轮坐标获取（异步，不阻塞战斗流程），
-    /// 未完成则直接放弃，本轮不判断。
+    /// 未完成则不等待、本轮跳过距离判断（任务继续在后台运行，后续轮次再检查其结果）。
     /// 连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）时，或距上次回点/开战超过定时时间时，阻塞式执行回点。
     /// </summary>
     /// <param name="taskParam">战斗参数</param>
@@ -149,23 +149,24 @@ public class AutoFightTask : ISoloTask
         var waypoint = FightWaypoint;
         if (waypoint is null) return;
 
-        // 上一轮坐标任务：已完成则取结果；未完成则不等待直接放弃，本轮记为 null
+        // 上一轮坐标任务：已完成则取结果；未完成则不等待、本轮跳过距离判断（任务继续在后台运行，后续轮次再检查其结果）
         Point2f? position = null;
-        if (_positionTask != null && _positionTask.IsCompleted)
-        {
-            try
-            {
-                position = await _positionTask;
-            }
-            catch
-            {
-                position = null;
-            }
-        }
-
-        // 仅当上一轮任务已完成（或从未启动）时才启动下一轮坐标获取，避免叠加多个并发定位任务（异步执行，不阻塞正常战斗流程）
         if (_positionTask == null || _positionTask.IsCompleted)
         {
+            if (_positionTask != null)
+            {
+                try
+                {
+                    // 任务已确认完成，同步取结果即可
+                    position = _positionTask.Result;
+                }
+                catch
+                {
+                    position = null;
+                }
+            }
+
+            // 启动下一轮坐标获取（异步执行，不阻塞正常战斗流程），避免叠加多个并发定位任务
             _positionTask = Task.Run(() => GetCurrentPosition(waypoint, capture, ct), ct);
         }
 
