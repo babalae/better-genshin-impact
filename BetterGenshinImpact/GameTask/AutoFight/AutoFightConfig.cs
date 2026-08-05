@@ -177,6 +177,10 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private string _kazuhaPartyName = "";
     
+    /// <summary>
+    /// 游泳检测开关：与"战斗中回点"总开关（BackToFightPointEnabled）相互独立，不受其控制。
+    /// 只要此处开启（默认开启），战斗中落水即触发回点脱困，脱困失败则前往七天神像重试。
+    /// </summary>
     [ObservableProperty]
     private bool _swimmingEnabled = true;
 
