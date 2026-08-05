@@ -27,11 +27,11 @@ public class ConditionEvaluator
     /// <summary>
     /// 校验动作名能否作为条件表达式中的单个标识符解析：
     /// 将动作名置于"全部动作名 + 内置函数名"的已知表内做词法解析，要求恰好解析为一个标识符。
-    /// 拒绝布尔字面量（true/false）、纯数字、含空白/逗号/运算符等无法作为动作标识符的名称，以及内置函数名。
+    /// 拒绝布尔字面量（true/false，不区分大小写）、纯数字、含空白/逗号/运算符等无法作为动作标识符的名称，以及内置函数名。
     /// </summary>
     public static bool IsValidActionName(string name, IEnumerable<string> allActionNames)
     {
-        if (string.IsNullOrEmpty(name) || name is "true" or "false") return false;
+        if (string.IsNullOrEmpty(name) || bool.TryParse(name, out _)) return false;
         if (FunctionNames.Contains(name)) return false;
 
         var known = new HashSet<string>(FunctionNames, StringComparer.OrdinalIgnoreCase);
