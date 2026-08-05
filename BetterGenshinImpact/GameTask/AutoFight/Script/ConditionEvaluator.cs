@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// <summary>
 /// 条件表达式求值器
 /// 支持语法：||, &&, !, (), +, -, *, /, >, <, =, 函数调用
-/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, t, since, count
+/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, onfield, t, since, count
 /// </summary>
 public class ConditionEvaluator
 {
@@ -375,6 +375,7 @@ public class ConditionEvaluator
             "low-hp" => EvalLowHp(),
             "battle-time" => EvalBattleTime(args),
             "in-party" => EvalInParty(args),
+            "onfield" => EvalOnField(),
             "t" => EvalT(),
             "since" => EvalSince(args, currentIndex),
             "count" => EvalCount(args, currentIndex),
@@ -586,6 +587,19 @@ public class ConditionEvaluator
 
         var targetName = f.Name;
         return _combatScenes.SelectAvatar(targetName) != null;
+    }
+
+    /// <summary>
+    /// 判断动作的归属角色是否正在场上。
+    /// 动作无归属角色（Character 为空）、归属角色不在队伍中或不在场上时返回 false。
+    /// </summary>
+    private bool EvalOnField()
+    {
+        if (string.IsNullOrEmpty(_currentCharacterName)) return false;
+        if (_combatScenes.LastActiveAvatarIndex <= 0) return false;
+
+        var avatar = _combatScenes.SelectAvatar(_currentCharacterName);
+        return avatar != null && avatar.Index == _combatScenes.LastActiveAvatarIndex;
     }
 
     // ========== 数值函数（返回 double） ==========
