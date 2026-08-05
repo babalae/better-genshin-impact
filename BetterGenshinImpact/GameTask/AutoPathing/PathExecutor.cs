@@ -735,7 +735,7 @@ public partial class PathExecutor
 
     public async Task FaceTo(WaypointForTrack waypoint)
     {
-        var screen = CaptureToRectArea();
+        using var screen = CaptureToRectArea();
         var position = await GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
@@ -750,7 +750,7 @@ public partial class PathExecutor
         // 切人
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
 
-        var screen = CaptureToRectArea();
+        using var screen = CaptureToRectArea();
         var (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
@@ -780,12 +780,12 @@ public partial class PathExecutor
                 throw new RetryException("路径点执行超时，放弃整条路径");
             }
 
-            screen = CaptureToRectArea();
+            using var frameScreen = CaptureToRectArea();
 
-            EndJudgment(screen);
+            EndJudgment(frameScreen);
 
             // position = await GetPosition(screen, waypoint);
-             (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
+             (position, additionalTimeInMs) = await GetPositionAndTime(frameScreen, waypoint);
              if (additionalTimeInMs>0)
              {
                  if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
@@ -834,7 +834,7 @@ public partial class PathExecutor
                         // 取余减少判断频率
                         if (distanceTooFarRetryCount % 10 == 0)
                         {
-                            await ResolveAnomalies(screen);
+                            await ResolveAnomalies(frameScreen);
                             Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
                             Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
                             // 淡入淡出特效
@@ -883,7 +883,7 @@ public partial class PathExecutor
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             //执行旋转
-            var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
+            var diff = _rotateTask.RotateToApproach(targetOrientation, frameScreen);
             if (num > 20)
             {
                 if (Math.Abs(diff) > 5)
@@ -905,7 +905,7 @@ public partial class PathExecutor
             }
 
             // 赶路逻辑（使用角色技能加速赶路）
-            var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
+            var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, frameScreen, num, hurryOnState);
             if (hurryOnResult)
             {
                 // continue 会跳过底部 await Delay(100, ct)，
@@ -918,7 +918,7 @@ public partial class PathExecutor
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
             {
-                var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
+                var isFlying = Bv.GetMotionStatus(frameScreen) == MotionStatus.Fly;
                 if (!isFlying)
                 {
                     Debug.WriteLine("未进入飞行状态，按下空格");
