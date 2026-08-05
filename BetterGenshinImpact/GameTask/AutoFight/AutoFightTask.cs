@@ -189,6 +189,7 @@ public class AutoFightTask : ISoloTask
 
     // 战斗中回点检查状态（TXT/JSON 战斗共用；同一时刻仅一种战斗在运行，故用静态状态）
     private static Task<Point2f?>? _positionTask;             // 异步获取当前坐标的任务
+    private static CancellationTokenSource? _positionCts;     // 坐标任务的取消源（回点前取消，避免后台定位与回点前台定位并发）
     private static int _overDistanceRounds;                   // 连续超过回点距离的轮数
     private static DateTime _lastBackToFightOrFightStartTime; // 上次回点或开战时间
 
@@ -200,6 +201,10 @@ public class AutoFightTask : ISoloTask
     {
         _lastBackToFightOrFightStartTime = DateTime.Now;
         _overDistanceRounds = 0;
+        // 取消并丢弃可能仍在运行的坐标任务，避免其与下一次战斗的定位并发
+        _positionCts?.Cancel();
+        _positionCts?.Dispose();
+        _positionCts = null;
         _positionTask = null;
     }
 
@@ -218,6 +223,15 @@ public class AutoFightTask : ISoloTask
         if (!taskParam.BackToFightPointEnabled) return false;
         var waypoint = FightWaypoint;
         if (waypoint is null) return false;
+
+        // 定时回点：距上次回点或开战超过指定时间（不依赖坐标，定位失败/未完成时也生效）。
+        // 先于启动下一轮坐标任务判断：定时回点触发时不再启动新任务，避免后台定位与回点前台定位并发
+        if (taskParam.BackToFightPointInterval > 0 &&
+            (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
+        {
+            await ExecuteBackToFightPointAsync(taskParam, ct);
+            return true;
+        }
 
         // 上一轮坐标任务：已完成则取结果；未完成则不等待、本轮跳过距离判断（任务继续在后台运行，后续轮次再检查其结果）
         Point2f? position = null;
@@ -240,16 +254,12 @@ public class AutoFightTask : ISoloTask
             var srcMat = capture != null ? new Mat(capture.SrcMat) : null;
             // 启动下一轮坐标获取（异步执行，不阻塞正常战斗流程），避免叠加多个并发定位任务。
             // 不把取消令牌传给 Task.Run：排队期间外部取消会直接跳过委托执行，导致上面浅拷贝的 srcMat 无人释放；
-            // 委托总会执行，取消由 GetCurrentPosition 内部在释放保护就绪后再检查处理
-            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, srcMat, ct));
-        }
-
-        // 定时回点：距上次回点或开战超过指定时间（不依赖坐标，定位失败/未完成时也生效）
-        if (taskParam.BackToFightPointInterval > 0 &&
-            (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
-        {
-            await ExecuteBackToFightPointAsync(taskParam, ct);
-            return true;
+            // 委托总会执行，取消由 GetCurrentPosition 内部在释放保护就绪后再检查处理。
+            // 坐标任务使用独立取消源（与外部令牌链接）：执行回点前取消它，串行化 Navigation.GetPosition 访问
+            _positionCts?.Dispose();
+            _positionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var positionCt = _positionCts.Token;
+            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, srcMat, positionCt));
         }
 
         if (position is null)
@@ -305,6 +315,27 @@ public class AutoFightTask : ISoloTask
     }
 
     /// <summary>
+    /// 回点前取消并等待当前后台定位任务，串行化 Navigation.GetPosition 访问。
+    /// 回点（战斗中回点/游泳脱困）全程阻塞式前台定位，后台任务若仍在运行会并发读写导航缓存（_prevX/_prevY/_captureTime），
+    /// 可能导致回点移动方向、距离判断或后续路径定位异常。
+    /// </summary>
+    private static async Task CancelPositionTaskAsync()
+    {
+        _positionCts?.Cancel();
+        if (_positionTask != null)
+        {
+            try
+            {
+                await _positionTask;
+            }
+            catch
+            {
+                // 任务被取消或定位失败均不影响回点，继续执行
+            }
+        }
+    }
+
+    /// <summary>
     /// 阻塞式执行回点动作（逻辑同游泳检测，共用 BackToFightWaypointAsync）。
     /// 超过单次回点超时（配置项）则终止回点，继续战斗。
     /// </summary>
@@ -312,6 +343,9 @@ public class AutoFightTask : ISoloTask
     {
         var waypoint = FightWaypoint;
         if (waypoint is null) return;
+
+        // 执行回点前取消/等待当前后台定位任务，串行化 Navigation.GetPosition 访问
+        await CancelPositionTaskAsync();
 
         _overDistanceRounds = 0;
         Logger.LogInformation("战斗中回点：距离开战点过远或超时，尝试回到战斗地点");
@@ -356,6 +390,9 @@ public class AutoFightTask : ISoloTask
             }
 
             Logger.LogInformation("游泳检测：尝试回到战斗地点");
+
+            // 回点前取消/等待后台定位任务，串行化 Navigation.GetPosition 访问
+            await CancelPositionTaskAsync();
 
             // 与战斗中回点共用回点方法：FaceTo + MoveTo，MoveTo 超时 15 秒
             // 注意：回点后不清空开战点，战斗仍在进行，后续回点（游泳/战斗中回点）仍需要开战点；战斗结束时统一清空
