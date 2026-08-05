@@ -321,6 +321,43 @@ public class RouteGraphOverrideTests
     }
 
     [Fact]
+    public void MoveNode_UpdatesIncomingOutgoingSelfLoopAndMalformedEdgeEndpoints()
+    {
+        var graph = new RouteNavigationGraph
+        {
+            Nodes =
+            [
+                new RouteNavigationNode { NodeId = "a", MapName = "Teyvat", X = 0, Y = 0 },
+                new RouteNavigationNode { NodeId = "b", MapName = "Teyvat", X = 10, Y = 0 },
+                new RouteNavigationNode { NodeId = "c", MapName = "Teyvat", X = 20, Y = 0 }
+            ],
+            Edges =
+            [
+                CreateEdge("incoming", "b", "a", 10, 0, 0, 0),
+                CreateEdge("outgoing", "a", "c", 0, 0, 20, 0),
+                CreateEdge("self", "a", "a", 0, 0, 0, 0),
+                new RouteNavigationEdge
+                {
+                    EdgeId = "malformed",
+                    FromNodeId = "a",
+                    ToNodeId = "b",
+                    MapName = "Teyvat",
+                    Points = [new TelemetryPoint2D { X = 0, Y = 0 }]
+                }
+            ]
+        };
+
+        Assert.True(RouteGraphMutationService.MoveNode(graph, "a", 5, 6));
+
+        Assert.Equal((5f, 6f), Endpoint(graph, "incoming", last: true));
+        Assert.Equal((5f, 6f), Endpoint(graph, "outgoing", last: false));
+        Assert.Equal((5f, 6f), Endpoint(graph, "self", last: false));
+        Assert.Equal((5f, 6f), Endpoint(graph, "self", last: true));
+        Assert.Equal((5f, 6f), Endpoint(graph, "malformed", last: false));
+        Assert.Equal((10f, 0f), Endpoint(graph, "malformed", last: true));
+    }
+
+    [Fact]
     public void GraphIdentity_IgnoresReviewStateButChangesWithGeneratedGeometry()
     {
         var first = CreateGraph();
@@ -375,5 +412,35 @@ public class RouteGraphOverrideTests
                 }
             ]
         };
+    }
+
+    private static RouteNavigationEdge CreateEdge(
+        string edgeId,
+        string fromNodeId,
+        string toNodeId,
+        float fromX,
+        float fromY,
+        float toX,
+        float toY)
+    {
+        return new RouteNavigationEdge
+        {
+            EdgeId = edgeId,
+            FromNodeId = fromNodeId,
+            ToNodeId = toNodeId,
+            MapName = "Teyvat",
+            Points =
+            [
+                new TelemetryPoint2D { X = fromX, Y = fromY },
+                new TelemetryPoint2D { X = toX, Y = toY }
+            ]
+        };
+    }
+
+    private static (float X, float Y) Endpoint(RouteNavigationGraph graph, string edgeId, bool last)
+    {
+        var points = graph.Edges.Single(edge => edge.EdgeId == edgeId).Points;
+        var point = last ? points[^1] : points[0];
+        return (point.X, point.Y);
     }
 }

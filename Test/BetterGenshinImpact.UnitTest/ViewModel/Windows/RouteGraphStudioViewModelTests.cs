@@ -166,6 +166,48 @@ public sealed class RouteGraphStudioViewModelTests
         }
     }
 
+    [Fact]
+    public async Task ValidatePlan_UsesUnsavedDraftInsteadOfDiskGraph()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "bgi-graph-studio-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var graph = new RouteNavigationGraph
+            {
+                GraphId = "draft-validation-graph",
+                Nodes =
+                [
+                    new RouteNavigationNode { NodeId = "a", MapName = "Teyvat", X = 0, Y = 0 },
+                    new RouteNavigationNode { NodeId = "b", MapName = "Teyvat", X = 1000, Y = 0 }
+                ],
+                Edges = [CreateEdge("edge", "Teyvat", "a", "b")]
+            };
+            graph.Edges[0].Points[^1].X = 1000;
+            File.WriteAllText(
+                Path.Combine(directory, RouteNavigationGraphBuilder.GraphFileName),
+                JsonSerializer.Serialize(graph));
+            var viewModel = new RouteGraphStudioViewModel(directory, "Teyvat");
+            await viewModel.InitializeAsync();
+            var start = viewModel.VisibleNodes.Single(node => node.NodeId == "a");
+            var target = viewModel.VisibleNodes.Single(node => node.NodeId == "b");
+            viewModel.SelectedNode = start;
+            viewModel.SetConnectionStartCommand.Execute(null);
+            viewModel.SelectedEdge = Assert.Single(viewModel.VisibleEdges);
+            viewModel.DisableEdgeCommand.Execute(null);
+            viewModel.SelectedNode = target;
+
+            viewModel.ValidatePlanCommand.Execute(null);
+
+            Assert.Contains("规划验证失败", viewModel.StatusText);
+            Assert.Equal(1, viewModel.PendingOperationCount);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     private static string CreateCrossMapGraphDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), "bgi-graph-studio-" + Guid.NewGuid().ToString("N"));

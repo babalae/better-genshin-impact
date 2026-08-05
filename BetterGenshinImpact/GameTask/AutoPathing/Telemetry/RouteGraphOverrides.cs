@@ -86,6 +86,60 @@ public sealed class RouteGraphOverrideApplyResult
     public List<string> Errors { get; } = [];
 }
 
+public static class RouteGraphMutationService
+{
+    public static bool MoveNode(RouteNavigationGraph graph, string nodeId, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(graph);
+        var node = graph.Nodes.FirstOrDefault(item =>
+            string.Equals(item.NodeId, nodeId, StringComparison.OrdinalIgnoreCase));
+        if (node == null)
+        {
+            return false;
+        }
+
+        node.X = x;
+        node.Y = y;
+        foreach (var edge in graph.Edges.Where(item =>
+                     string.Equals(item.FromNodeId, nodeId, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(item.ToNodeId, nodeId, StringComparison.OrdinalIgnoreCase)))
+        {
+            var fromNode = graph.Nodes.FirstOrDefault(item =>
+                string.Equals(item.NodeId, edge.FromNodeId, StringComparison.OrdinalIgnoreCase));
+            var toNode = graph.Nodes.FirstOrDefault(item =>
+                string.Equals(item.NodeId, edge.ToNodeId, StringComparison.OrdinalIgnoreCase));
+            if (fromNode == null || toNode == null)
+            {
+                continue;
+            }
+
+            if (edge.Points is not { Count: >= 2 })
+            {
+                edge.Points =
+                [
+                    new TelemetryPoint2D { X = (float)fromNode.X, Y = (float)fromNode.Y },
+                    new TelemetryPoint2D { X = (float)toNode.X, Y = (float)toNode.Y }
+                ];
+                continue;
+            }
+
+            if (string.Equals(edge.FromNodeId, nodeId, StringComparison.OrdinalIgnoreCase))
+            {
+                edge.Points[0].X = (float)x;
+                edge.Points[0].Y = (float)y;
+            }
+
+            if (string.Equals(edge.ToNodeId, nodeId, StringComparison.OrdinalIgnoreCase))
+            {
+                edge.Points[^1].X = (float)x;
+                edge.Points[^1].Y = (float)y;
+            }
+        }
+
+        return true;
+    }
+}
+
 public sealed class RouteGraphOverrideApplier
 {
     public RouteGraphOverrideApplyResult Apply(
@@ -262,8 +316,11 @@ public sealed class RouteGraphOverrideApplier
                 graph.Nodes.Add(operation.Node!);
                 break;
             case RouteGraphOverrideOperationType.MoveNode:
-                node!.X = operation.X ?? node.X;
-                node.Y = operation.Y ?? node.Y;
+                RouteGraphMutationService.MoveNode(
+                    graph,
+                    operation.NodeId,
+                    operation.X ?? node!.X,
+                    operation.Y ?? node!.Y);
                 break;
             case RouteGraphOverrideOperationType.DeleteNode:
                 graph.Edges.RemoveAll(item =>

@@ -237,6 +237,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
     [RelayCommand]
     private void ApplyFilters()
     {
+        RebuildDraftSnapshot();
         var map = FilterMap;
         var layer = FilterLayer;
         var search = SearchText.Trim();
@@ -322,8 +323,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
                 X = NodeX,
                 Y = NodeY
             });
-            SelectedNode.X = NodeX;
-            SelectedNode.Y = NodeY;
+            RouteGraphMutationService.MoveNode(_snapshot.Graph, SelectedNode.NodeId, NodeX, NodeY);
         }
 
         if (!Same(NodeLayer, SelectedNode.LayerId) || NodeFloor != SelectedNode.Floor ||
@@ -583,6 +583,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
         SelectedNode.AnchorIds.Add(SelectedTeleport.AnchorId);
         SelectedNodeAnchorsText = string.Join(", ", SelectedNode.AnchorIds.Order());
         SelectionSummary = $"已暂存关联：{SelectedTeleport.Name} → {SelectedNode.NodeId}";
+        ApplyFilters();
     }
 
     [RelayCommand]
@@ -601,6 +602,7 @@ public partial class RouteGraphStudioViewModel : ViewModel
         SelectedNode.AnchorIds.Remove(SelectedTeleport.AnchorId);
         SelectedNodeAnchorsText = SelectedNode.AnchorIds.Count == 0 ? "无" : string.Join(", ", SelectedNode.AnchorIds.Order());
         SelectionSummary = $"已暂存取消关联：{SelectedTeleport.Name} / {SelectedNode.NodeId}";
+        ApplyFilters();
     }
 
     [RelayCommand]
@@ -671,7 +673,8 @@ public partial class RouteGraphStudioViewModel : ViewModel
             StatusText = "请先设置连接起点，再选择一个目标节点";
             return;
         }
-        var planner = new RouteNavigationPlanner(_provider);
+        RebuildDraftSnapshot();
+        var planner = new RouteNavigationPlanner(new DraftGraphProvider(_snapshot));
         var succeeded = planner.TryPlan(
             new RouteNavigationPlanRequest
             {
@@ -829,6 +832,11 @@ public partial class RouteGraphStudioViewModel : ViewModel
         StatusText = $"已暂存 {PendingOperationCount} 项人工修正，尚未写入补丁";
     }
 
+    private void RebuildDraftSnapshot()
+    {
+        _snapshot = new RouteNavigationGraphSnapshot(_snapshot.Graph, 64, _snapshot.Teleports);
+    }
+
     private void RefreshFilterOptions()
     {
         ReplaceMapOptions(MapOptions, _snapshot.Nodes.Select(node => RouteGraphGeometry.NormalizeMapName(node.MapName)));
@@ -864,4 +872,21 @@ public partial class RouteGraphStudioViewModel : ViewModel
 
     private static bool Contains(string? value, string search) =>
         !string.IsNullOrWhiteSpace(value) && value.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+    private sealed class DraftGraphProvider(RouteNavigationGraphSnapshot snapshot) : IRouteNavigationGraphProvider
+    {
+        public string GraphFilePath => string.Empty;
+
+        public bool TryGetSnapshot(
+            out RouteNavigationGraphSnapshot result,
+            out RouteNavigationGraphLoadStatus status,
+            bool forceReload = false)
+        {
+            result = snapshot;
+            status = snapshot.IsEmpty
+                ? RouteNavigationGraphLoadStatus.Empty
+                : RouteNavigationGraphLoadStatus.Loaded;
+            return status == RouteNavigationGraphLoadStatus.Loaded;
+        }
+    }
 }
