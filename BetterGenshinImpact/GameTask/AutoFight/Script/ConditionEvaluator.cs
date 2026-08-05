@@ -24,7 +24,35 @@ public class ConditionEvaluator
         "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count", "min", "max"
     };
 
-    private readonly Dictionary<int, DateTime> _lastExecTimes = new();
+    /// <summary>
+    /// 校验动作名能否作为条件表达式中的单个标识符解析：
+    /// 将动作名置于"全部动作名 + 内置函数名"的已知表内做词法解析，要求恰好解析为一个标识符。
+    /// 拒绝布尔字面量（true/false）、纯数字、含空白/逗号/运算符等无法作为动作标识符的名称，以及内置函数名。
+    /// </summary>
+    public static bool IsValidActionName(string name, IEnumerable<string> allActionNames)
+    {
+        if (string.IsNullOrEmpty(name) || name is "true" or "false") return false;
+        if (FunctionNames.Contains(name)) return false;
+
+        var known = new HashSet<string>(FunctionNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var n in allActionNames) known.Add(n);
+
+        List<Token> tokens;
+        try
+        {
+            tokens = Tokenize(name, known);
+        }
+        catch (InvalidOperationException)
+        {
+            return false; // 含无法识别的字符
+        }
+
+        // 期望恰好一个 Identifier token，且与动作名一致，其余仅有 End
+        return tokens.Count == 2
+               && tokens[0].Type == TokenType.Identifier
+               && string.Equals(tokens[0].Value, name, StringComparison.OrdinalIgnoreCase);
+    }
+
     // 动作执行事件记录：序号、名称、距离开战的相对时间（秒），供 since/count 等按序号或名称查询
     private readonly List<(int Index, string Name, double Time)> _execHistory = new();
     private readonly DateTime _battleStartTime;
@@ -88,7 +116,6 @@ public class ConditionEvaluator
     public void UpdateLastExecTime(int index, string name)
     {
         var now = DateTime.Now;
-        _lastExecTimes[index] = now;
         _execHistory.Add((index, name, (now - _battleStartTime).TotalSeconds));
     }
 
@@ -172,21 +199,17 @@ public class ConditionEvaluator
                 var start = i;
                 // 先读取基础字母/数字段（中文名、角色名、函数名首段）
                 while (i < expr.Length && char.IsLetterOrDigit(expr[i])) i++;
-                // 贪婪合并连字符段：候选整体（如 e-ready、芙芙-e）必须在已知标识符表（内置函数名/策略动作名）中才并入，
-                // 否则 `-` 保持为独立减号运算符（如 t-5、since(1)-3）
-                while (i < expr.Length && expr[i] == '-'
-                       && i + 1 < expr.Length && char.IsLetterOrDigit(expr[i + 1]))
+                // 连字符合并：先扫描出基础段之后最长的"字母数字+连字符"候选，再回退到最长的已知标识符。
+                // 多段动作名（如 芙芙-e-开场）只需其完整名称已声明即可整体并入，中间段无需单独声明；
+                // 没有任何已知前缀时 `-` 保持为独立减号运算符（如 t-5、since(1)-3）
+                if (i < expr.Length && expr[i] == '-')
                 {
-                    var segEnd = i + 1;
-                    while (segEnd < expr.Length && char.IsLetterOrDigit(expr[segEnd])) segEnd++;
-                    if (knownIdentifiers.Contains(expr[start..segEnd]))
-                    {
-                        i = segEnd;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    var candidateEnd = i + 1;
+                    while (candidateEnd < expr.Length && (char.IsLetterOrDigit(expr[candidateEnd]) || expr[candidateEnd] == '-'))
+                        candidateEnd++;
+                    while (candidateEnd > i && !knownIdentifiers.Contains(expr[start..candidateEnd]))
+                        candidateEnd--;
+                    if (candidateEnd > i) i = candidateEnd;
                 }
                 var word = expr[start..i];
                 tokens.Add(word is "true" or "false"
@@ -490,7 +513,7 @@ public class ConditionEvaluator
             return e.Index == target.Index.Value && string.Equals(e.Name, target.Name, StringComparison.OrdinalIgnoreCase);
         if (target.Name is not null)
             return string.Equals(e.Name, target.Name, StringComparison.OrdinalIgnoreCase);
-        return e.Index == target.Index.Value;
+        return target.Index == e.Index;
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -77,10 +78,15 @@ public static class JsonCombatStrategyParser
         return strategy;
     }
 
-    /// <summary>校验动作索引唯一性与动作名称合法性（不允许包含逗号，逗号会与条件函数的参数分隔符冲突；不允许与内置条件函数同名）</summary>
+    /// <summary>
+    /// 校验动作索引唯一性与动作名称合法性。
+    /// 动作名必须能作为条件表达式中的单个标识符解析（复用 <see cref="ConditionEvaluator.IsValidActionName"/>：
+    /// 不能是布尔字面量 true/false、纯数字，不能含空白、逗号、运算符等，也不能与内置条件函数同名）。
+    /// </summary>
     private static void ValidateActions(List<JsonAction> actions)
     {
         var seen = new HashSet<int>();
+        var actionNames = actions.Where(a => !string.IsNullOrEmpty(a.Name)).Select(a => a.Name).ToList();
         foreach (var action in actions)
         {
             if (!seen.Add(action.Index))
@@ -89,16 +95,10 @@ public static class JsonCombatStrategyParser
                 throw new InvalidOperationException($"JSON 战斗策略中存在重复的 index：{action.Index}");
             }
 
-            if (!string.IsNullOrEmpty(action.Name) && action.Name.Contains(','))
+            if (!string.IsNullOrEmpty(action.Name) && !ConditionEvaluator.IsValidActionName(action.Name, actionNames))
             {
-                Logger.LogError("JSON 战斗策略中动作名称不允许包含逗号：{Name}", action.Name);
-                throw new InvalidOperationException($"JSON 战斗策略中动作名称不允许包含逗号：{action.Name}");
-            }
-
-            if (!string.IsNullOrEmpty(action.Name) && ConditionEvaluator.FunctionNames.Contains(action.Name))
-            {
-                Logger.LogError("JSON 战斗策略中动作名称不允许与内置条件函数同名：{Name}", action.Name);
-                throw new InvalidOperationException($"JSON 战斗策略中动作名称不允许与内置条件函数同名：{action.Name}");
+                Logger.LogError("JSON 战斗策略中动作名称无法作为条件标识符解析（不能是布尔字面量、纯数字，不能含空白、逗号、运算符等，也不能与内置条件函数同名）：{Name}", action.Name);
+                throw new InvalidOperationException($"JSON 战斗策略中动作名称无法作为条件标识符解析：{action.Name}");
             }
         }
     }
