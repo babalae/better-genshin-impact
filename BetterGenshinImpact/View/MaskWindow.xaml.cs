@@ -262,6 +262,8 @@ public partial class MaskWindow : Window
             e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
         {
             Dispatcher.Invoke(UpdateClickThroughState);
+            // 地图状态变化后重绘，立即移除/恢复准星，避免关闭穿透时旧准星画面残留拦截点击
+            Dispatcher.Invoke(InvalidateVisual);
         }
 
         if (e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
@@ -659,6 +661,11 @@ public partial class MaskWindow : Window
     {
         var config = _maskWindowConfig;
         if (config == null || !config.CrosshairEnabled) return;
+
+        // 窗口关闭点击穿透时（地图界面/遮罩布局编辑），WPF 分层窗口按像素 alpha 做命中测试，
+        // 准星非透明像素会拦截鼠标点击，故此时跳过准星绘制
+        var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
+        if (editEnabled || _viewModel?.IsInBigMapUi == true) return;
 
         var centerX = ActualWidth / 2;
         var centerY = ActualHeight / 2;
