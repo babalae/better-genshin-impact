@@ -1,0 +1,77 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.CustomHtmlMaskEditorWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:codeEditor="clr-namespace:BetterGenshinImpact.View.Controls.CodeEditor"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="编辑 HTML 遮罩"
+                 Width="900"
+                 Height="680"
+                 MinWidth="720"
+                 MinHeight="520"
+                 d:DesignHeight="680"
+                 d:DesignWidth="900"
+                 ExtendsContentIntoTitleBar="True"
+                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 Tag="CustomHtmlMaskEditorWindow"
+                 WindowBackdropType="Mica"
+                 WindowStartupLocation="CenterOwner"
+                 mc:Ignorable="d">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/CodeEditor/CodeBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid Margin="16,48,16,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Background="#1E1E1E"
+                    BorderBrush="#333333"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <codeEditor:CodeBox Code="{Binding CustomHtmlMaskContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Background="#1E1E1E"
+                                    Foreground="White"
+                                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                    FontSize="13"
+                                    LineWrap="False" />
+            </Border>
+
+            <StackPanel Grid.Row="1"
+                        Margin="0,12,0,0"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal">
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding SaveCustomHtmlMaskCommand}"
+                           Content="保存 HTML" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding ToggleCustomHtmlMaskPreviewCommand}"
+                           Content="{Binding PreviewButtonText}" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding RestoreDefaultCustomHtmlMaskCommand}"
+                           Content="恢复默认 HTML" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding OpenCustomHtmlMaskFolderCommand}"
+                           Content="打开目录" />
+                <ui:Button Command="{Binding CloseCommand}"
+                           Content="关闭" />
+            </StackPanel>
+        </Grid>
+
+        <ui:TitleBar Title="编辑 HTML 遮罩">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+    </Grid>
+</ui:FluentWindow>

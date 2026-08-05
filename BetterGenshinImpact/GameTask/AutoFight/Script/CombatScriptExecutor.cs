@@ -28,25 +28,30 @@ public static class CombatScriptExecutor
         CombatScenes? combatScenes = null)
     {
         var ownsScenes = false;
-        if (combatScenes == null)
-        {
-            using var capture = CaptureToRectArea();
-            combatScenes = new CombatScenes();
-            combatScenes.InitializeTeam(capture);
-            if (!combatScenes.CheckTeamInitialized())
-            {
-                logger.LogError("队伍识别未初始化成功！");
-                combatScenes.Dispose();
-                return;
-            }
-            ownsScenes = true;
-        }
-
         try
         {
-            combatScenes.BeforeTask(ct);
+            if (combatScenes == null)
+            {
+                using var capture = CaptureToRectArea();
+                combatScenes = new CombatScenes();
+                ownsScenes = true;
+                combatScenes.InitializeTeam(capture);
+                if (!combatScenes.CheckTeamInitialized())
+                {
+                    logger.LogError("队伍识别未初始化成功！");
+                    return;
+                }
+            }
+
+            // 仅在内部创建 CombatScenes 时设置 Avatar.Ct，外部传入时由调用方管理
+            if (ownsScenes)
+            {
+                combatScenes.BeforeTask(ct);
+            }
 
             // 提前校验是否存在策略要求的角色
+            // 若脚本中有无前缀的命令（如 a(0.5)），解析后 AvatarNames 会包含 "当前角色" 占位符，
+            // 此时跳过队伍校验是刻意设计：无前缀命令使用当前屏幕上角色，不要求特定角色在队伍中。
             if (!combatScript.AvatarNames.Contains(CombatScriptParser.CurrentAvatarName))
             {
                 bool hasAvatar = combatScenes.GetAvatars().Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
@@ -82,8 +87,24 @@ public static class CombatScriptExecutor
         {
             if (ownsScenes)
             {
-                combatScenes.Dispose();
+                SafeDispose(combatScenes!, logger);
             }
+        }
+    }
+
+    /// <summary>
+    /// 安全释放 CombatScenes，异常仅记录不抛出，
+    /// 避免释放异常覆盖 try 块中的原始异常。
+    /// </summary>
+    private static void SafeDispose(CombatScenes combatScenes, ILogger logger)
+    {
+        try
+        {
+            combatScenes.Dispose();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "释放战斗场景资源时发生异常");
         }
     }
 }

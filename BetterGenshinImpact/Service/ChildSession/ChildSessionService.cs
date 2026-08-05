@@ -71,6 +71,11 @@ public sealed class ChildSessionService : IDisposable
 
     public bool KeepAspectRatio => _config.KeepAspectRatio;
 
+    public bool IsRdpWrapperEnabled()
+    {
+        return ChildSessionNativeMethods.IsRdpWrapperEnabled();
+    }
+
     public bool HasActiveChildSession()
     {
         if (!_instanceService.Context.IsRoot)

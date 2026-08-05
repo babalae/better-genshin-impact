@@ -15,6 +15,9 @@ internal static class ChildSessionNativeMethods
     private const int ErrorNotFound = 1168;
     private const string RdpTcpRegistryPath =
         @"SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp";
+    private const string TermServiceParametersRegistryPath =
+        @"SYSTEM\CurrentControlSet\Services\TermService\Parameters";
+    private const string RdpWrapperLibraryName = "rdpwrap.dll";
     private const uint NoChildSessionId = uint.MaxValue;
     private static readonly IntPtr CurrentServerHandle = IntPtr.Zero;
     private static readonly ConcurrentDictionary<IntPtr, IntPtr> RdpInputWindows = new();
@@ -93,6 +96,29 @@ internal static class ChildSessionNativeMethods
                                               or IOException)
         {
             return DefaultRdpPort;
+        }
+    }
+
+    internal static bool IsRdpWrapperEnabled()
+    {
+        try
+        {
+            using var localMachine = RegistryKey.OpenBaseKey(
+                RegistryHive.LocalMachine,
+                RegistryView.Registry64);
+            using var termServiceParametersKey =
+                localMachine.OpenSubKey(TermServiceParametersRegistryPath);
+            var serviceLibraryPath =
+                termServiceParametersKey?.GetValue("ServiceDll") as string;
+            return serviceLibraryPath?.Contains(
+                RdpWrapperLibraryName,
+                StringComparison.OrdinalIgnoreCase) == true;
+        }
+        catch (Exception exception) when (exception is SecurityException
+                                              or UnauthorizedAccessException
+                                              or IOException)
+        {
+            return false;
         }
     }
 
