@@ -141,56 +141,6 @@ public class Avatar
             Sleep(600, ct);
             TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
-        else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
-        {
-            if (AutoFightTask.FightWaypoint is not null)
-            {
-                // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
-                Sleep(800, ct);
-                using var ra = CaptureToRectArea();
-                if (!SwimmingConfirm(ra))
-                {
-                    return;
-                }
-                
-                Logger.LogInformation("游泳检测：尝试回到战斗地点");
-                
-                // 使用提取的公共回点方法（与战斗中回点共用）：FaceTo + MoveTo，MoveTo 超时 15 秒
-                // 注意：回点后不清空开战点，战斗仍在进行，后续回点（游泳/战斗中回点）仍需要开战点；战斗结束时统一清空
-                AutoFightTask.BackToFightWaypointAsync(AutoFightTask.FightWaypoint, 15000, ct).GetAwaiter().GetResult();
-                
-                using var bitmap2 = CaptureToRectArea();
-                if (!SwimmingConfirm(bitmap2))
-                {
-                    Logger.LogInformation("游泳检测：游泳脱困成功");
-                    return;
-                }
-                
-                Logger.LogWarning("游泳检测：回到战斗地点失败");
-            }
-            
-            Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
-            TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
-        }
-    }
-    
-    /// <summary>
-    /// 游泳检测（色块连通性检测）
-    /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
-    /// </summary>
-    private static bool SwimmingConfirm(Region region)
-    {
-        using var imageRegion = region.ToImageRegion();
-        using var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
-        using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
-        using var labels = new Mat();
-        using var stats = new Mat();
-        using var centroids = new Mat();
-
-        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-        
-        return numLabels > 1;
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,10 +22,10 @@ using Vanara;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -61,35 +62,38 @@ public class AutoFightTask : ISoloTask
 
     /// <summary>
     /// 回到战斗点位（阻塞式）。逻辑同游泳检测脱困：
-    /// FaceTo 朝向点位，再以 Climb 模式 MoveTo（跳过卡死脱困检测）移动到点位。
+    /// FaceTo 朝向点位，再轻量化 MoveTo 移动到点位。
     /// FaceTo + MoveTo 共享 totalTimeoutMs 总超时，超时终止回点。
-    /// 结束后恢复 MoveMode 并释放按键。游泳检测与战斗中回点共用此方法。
+    /// 结束后释放按键。游泳检测与战斗中回点共用此方法。
+    /// 轻量化实现：不依赖地图追踪引擎（PathExecutor），仅复用 Navigation 定位与 CameraRotateTask 旋转。
     /// </summary>
     /// <param name="waypoint">战斗点位（开战点）</param>
     /// <param name="totalTimeoutMs">整个回点流程（FaceTo + MoveTo）总超时（毫秒），超时终止回点</param>
     /// <param name="ct">取消令牌</param>
-    /// <returns>是否成功完成回点（超时/异常返回 false）</returns>
+    /// <returns>是否成功完成回点（超时/异常/连续两轮定位失败返回 false）</returns>
     public static async Task<bool> BackToFightWaypointAsync(WaypointForTrack waypoint, int totalTimeoutMs, CancellationToken ct)
     {
         using (AvatarRecognition.BeginExclusiveOperation())
         {
-            // 保存原始 MoveMode，用于 finally 还原
-            var originalMoveMode = waypoint.MoveMode;
             // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
             try
             {
-                var pathExecutor = new PathExecutor(cts.Token);
-
                 // 整个回点流程（FaceTo + MoveTo）共享配置的总超时，FaceTo 已消耗的时间计入超时预算
                 cts.CancelAfter(totalTimeoutMs);
-                await pathExecutor.FaceTo(waypoint);
+                var rotateTask = new CameraRotateTask(cts.Token);
 
-                // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
-                waypoint.MoveMode = MoveModeEnum.Climb.Code;
+                // FaceTo：定位 + 计算目标朝向 + 旋转到位
+                await FaceToWaypointLightweight(waypoint, rotateTask, cts.Token);
+
+                // 轻量化移动：持续前进直至到达点位附近（无卡死脱困检测，避免水中死循环）
                 Simulation.SendInput.Mouse.RightButtonDown();
-                await pathExecutor.MoveTo(waypoint);
+                if (!await MoveToWaypointLightweight(waypoint, rotateTask, cts.Token))
+                {
+                    // 定位失败放弃回点：战斗回点直接跳出继续战斗；游泳场景由调用方（CheckSwimmingAsync）触发回神像
+                    return false;
+                }
                 Logger.LogInformation("回点：移动结束");
                 return true;
             }
@@ -108,12 +112,78 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 // 确保所有资源和状态在任何路径都被正确清理
-                cts.Cancel(); // 终止 PathExecutor 内部截屏循环
-                waypoint.MoveMode = originalMoveMode;
+                cts.Cancel(); // 终止回点移动循环
                 Simulation.SendInput.Mouse.RightButtonUp();
                 Simulation.ReleaseAllKey();
             }
             return false;
+        }
+    }
+
+    /// <summary>
+    /// 轻量化朝向点位：定位当前坐标 → 计算目标朝向 → 旋转视角到位。
+    /// 定位失败时目标点距离远，角度计算仍有效，由外层总超时兜底。
+    /// </summary>
+    private static async Task FaceToWaypointLightweight(WaypointForTrack waypoint, CameraRotateTask rotateTask, CancellationToken ct)
+    {
+        using var screen = CaptureToRectArea();
+        var position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        await rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+        await Delay(500, ct);
+    }
+
+    /// <summary>
+    /// 轻量化移动到点位：持续前进，每轮定位 + 旋转逼近，接近点位（距离 &lt; 4）后停止。
+    /// 定位失败（坐标无效或距离异常）连续两轮以上时放弃回点并松开 W（返回 false，由调用方决定后续处理）。
+    /// </summary>
+    /// <returns>true=已到达点位附近；false=连续两轮定位失败放弃回点</returns>
+    private static async Task<bool> MoveToWaypointLightweight(WaypointForTrack waypoint, CameraRotateTask rotateTask, CancellationToken ct)
+    {
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        try
+        {
+            var positionFailCount = 0;
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                using var frameScreen = CaptureToRectArea();
+                var position = Navigation.GetPosition(frameScreen, waypoint.MapName, waypoint.MapMatchMethod);
+                var distance = Navigation.GetDistance(waypoint, position);
+
+                // 定位失败（坐标无效或距离异常）：连续两轮以上放弃回点并松开 W（战斗回点直接跳出，游泳场景由调用方触发回神像）
+                if (position == new Point2f() || distance > 500)
+                {
+                    positionFailCount++;
+                    if (positionFailCount >= 2)
+                    {
+                        Logger.LogWarning("回点：连续两轮定位失败，放弃回点");
+                        return false;
+                    }
+
+                    await Delay(100, ct);
+                    continue;
+                }
+
+                positionFailCount = 0;
+
+                if (distance < 4)
+                {
+                    Logger.LogDebug("回点：到达点位附近");
+                    return true;
+                }
+
+                // 旋转逼近目标朝向
+                var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+                rotateTask.RotateToApproach(targetOrientation, frameScreen);
+
+                await Delay(100, ct);
+            }
+        }
+        finally
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         }
     }
 
@@ -248,6 +318,73 @@ public class AutoFightTask : ISoloTask
         _lastBackToFightOrFightStartTime = DateTime.Now;
 
         Logger.LogInformation(success ? "战斗中回点：已回到战斗地点，继续战斗" : "战斗中回点：回点超时或失败，继续战斗");
+    }
+
+    /// <summary>
+    /// 游泳状态检测与脱困（TXT/JSON 战斗每轮动作切人之前调用）。
+    /// 检测到游泳状态时延迟 800ms 二次确认避免误判，确认后阻塞式回点脱困；
+    /// 回点后仍在游泳则前往七天神像重试。
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
+    public static async Task CheckSwimmingAsync(CancellationToken ct)
+    {
+        if (!AutoFightParam.SwimmingEnabled || !FightStatusFlag) return;
+
+        using (var region = CaptureToRectArea())
+        {
+            if (!SwimmingConfirm(region)) return;
+        }
+
+        if (FightWaypoint is not null)
+        {
+            // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
+            await Delay(800, ct);
+            using (var ra = CaptureToRectArea())
+            {
+                if (!SwimmingConfirm(ra)) return;
+            }
+
+            Logger.LogInformation("游泳检测：尝试回到战斗地点");
+
+            // 与战斗中回点共用回点方法：FaceTo + MoveTo，MoveTo 超时 15 秒
+            // 注意：回点后不清空开战点，战斗仍在进行，后续回点（游泳/战斗中回点）仍需要开战点；战斗结束时统一清空
+            var success = await BackToFightWaypointAsync(FightWaypoint, 15000, ct);
+
+            // 回点成功后再截图确认脱困；回点失败（超时/异常）或仍处于游泳状态都视为失败，前往七天神像重试
+            if (success)
+            {
+                using (var bitmap2 = CaptureToRectArea())
+                {
+                    if (!SwimmingConfirm(bitmap2))
+                    {
+                        Logger.LogInformation("游泳检测：游泳脱困成功");
+                        return;
+                    }
+                }
+            }
+        }
+
+        Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
+        Avatar.TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
+    }
+
+    /// <summary>
+    /// 游泳检测（色块连通性检测）
+    /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
+    /// </summary>
+    private static bool SwimmingConfirm(Region region)
+    {
+        using var imageRegion = region.ToImageRegion();
+        using var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
+        using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        return numLabels > 1;
     }
     
     private class TaskFightFinishDetectConfig
@@ -639,6 +776,8 @@ public class AutoFightTask : ISoloTask
                         }
                         #endregion
 
+                        // 每轮动作切人之前触发游泳检测（游泳时切人/移动会失败）
+                        await CheckSwimmingAsync(ct);
                         command.Execute(combatScenes, lastCommand);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
