@@ -238,8 +238,10 @@ public class AutoFightTask : ISoloTask
 
             // 启动前同步浅拷贝截图 Mat（引用计数共享像素数据），任务延迟执行时原截图被外层释放也不影响
             var srcMat = capture != null ? new Mat(capture.SrcMat) : null;
-            // 启动下一轮坐标获取（异步执行，不阻塞正常战斗流程），避免叠加多个并发定位任务
-            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, srcMat, ct), ct);
+            // 启动下一轮坐标获取（异步执行，不阻塞正常战斗流程），避免叠加多个并发定位任务。
+            // 不把取消令牌传给 Task.Run：排队期间外部取消会直接跳过委托执行，导致上面浅拷贝的 srcMat 无人释放；
+            // 委托总会执行，取消由 GetCurrentPosition 内部在释放保护就绪后再检查处理
+            _positionTask = Task.Run(() => GetCurrentPosition(waypoint, srcMat, ct));
         }
 
         // 定时回点：距上次回点或开战超过指定时间（不依赖坐标，定位失败/未完成时也生效）
@@ -282,10 +284,12 @@ public class AutoFightTask : ISoloTask
     /// <param name="ct">取消令牌</param>
     private static Point2f? GetCurrentPosition(WaypointForTrack waypoint, Mat? srcMat, CancellationToken ct)
     {
+        // 传入的截图 Mat 由调用方同步浅拷贝（引用计数+1），本方法负责释放其引用。
+        // 先进入释放保护（ImageRegion using）再检查取消，避免取消抛出时浅拷贝 Mat 未被包装而泄漏非托管引用
+        using var ra = srcMat != null ? new ImageRegion(srcMat, 0, 0) : CaptureToRectArea();
         ct.ThrowIfCancellationRequested();
         try
         {
-            using var ra = srcMat != null ? new ImageRegion(srcMat, 0, 0) : CaptureToRectArea();
             var position = Navigation.GetPosition(ra, waypoint.MapName, waypoint.MapMatchMethod);
             if (position == new Point2f())
             {
@@ -695,7 +699,11 @@ public class AutoFightTask : ISoloTask
                     {
                         var command = combatCommands[i];
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
-                        
+
+                        // 每轮动作执行前触发游泳检测（游泳时切人/移动会失败）；放在盾奶/寻敌等所有发输入的逻辑之前，
+                        // 避免角色落水时先在水中尝试切盾奶/放技能而延迟回点或去七天神像恢复
+                        await CheckSwimmingAsync(ct);
+
                         #region 盾奶位技能优先功能
                         
                         var skipModel = guardianAvatar != null && lastFightName != command.Name;
@@ -783,8 +791,6 @@ public class AutoFightTask : ISoloTask
                         }
                         #endregion
 
-                        // 每轮动作切人之前触发游泳检测（游泳时切人/移动会失败）
-                        await CheckSwimmingAsync(ct);
                         command.Execute(combatScenes, lastCommand);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)

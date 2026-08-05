@@ -396,13 +396,14 @@ public class AutoFightJsonTask : ISoloTask
                                     {
                                         continue;
                                     }
-    
+
+                                    // 每轮动作执行前触发游泳检测（游泳时切人/移动会失败），复用本轮战斗截图做游泳初检；
+                                    // 无论动作是否有归属角色都检测，通用动作（Character 为空）落水时同样需要回点/去神像恢复
+                                    await AutoFightTask.CheckSwimmingAsync(_ct, capture);
+
                                     // 指定角色的动作：执行前确保切换到该角色
                                     if (!string.IsNullOrEmpty(action.Character))
                                     {
-                                        // 每轮动作切人之前触发游泳检测（游泳时切人/移动会失败），复用本轮战斗截图做游泳初检
-                                        await AutoFightTask.CheckSwimmingAsync(_ct, capture);
-
                                         var avatar = combatScenes.SelectAvatar(action.Character);
                                         if (avatar == null) continue;
     
