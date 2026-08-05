@@ -246,6 +246,24 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private double _backToFightPointTimeout = 2;
 
+    /// <summary>回点启用距离（米）：钳制在 5-100</summary>
+    partial void OnBackToFightPointDistanceChanged(double value)
+    {
+        if (value is < 5 or > 100) BackToFightPointDistance = Math.Clamp(value, 5, 100);
+    }
+
+    /// <summary>定时回点（秒）：钳制在 0-60</summary>
+    partial void OnBackToFightPointIntervalChanged(double value)
+    {
+        if (value is < 0 or > 60) BackToFightPointInterval = Math.Clamp(value, 0, 60);
+    }
+
+    /// <summary>单次回点超时（秒）：钳制在 0.5-15</summary>
+    partial void OnBackToFightPointTimeoutChanged(double value)
+    {
+        if (value is < 0.5 or > 15) BackToFightPointTimeout = Math.Clamp(value, 0.5, 15);
+    }
+
 }
 
 /// <summary>

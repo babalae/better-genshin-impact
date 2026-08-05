@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -75,9 +76,6 @@ public class AutoFightJsonTask : ISoloTask
         public string Expression { get; set; }
         public int Priority { get; set; }
     }
-
-    // 战斗点位
-    public static WaypointForTrack? FightWaypoint { get; set; } = null;
 
     private TaskFightFinishDetectConfig _finishDetectConfig;
 
@@ -325,6 +323,8 @@ public class AutoFightJsonTask : ISoloTask
     
             AutoFightSeek.RotationCount = 0;
             AutoFightTask.FightStatusFlag = true;
+            // 重置定时回点的时间基准（距上次回点或开战时间）
+            AutoFightTask.ResetBackToFightPointTime();
     
             var fightEndFlag = false;
             var timeOutFlag = false;
@@ -362,7 +362,10 @@ public class AutoFightJsonTask : ISoloTask
                             timeOutFlag = true;
                             break;
                         }
-    
+
+                        // 战斗中回点检查：异步获取当前坐标（不阻塞战斗流程），满足条件时阻塞式执行回点
+                        await AutoFightTask.CheckBackToFightPointAsync(_taskParam, _ct);
+
                         // 每次循环开始：截图一次，供所有条件求值复用
                         using var capture = CaptureToRectArea();
                         evaluator.SetCachedCapture(capture);
@@ -497,6 +500,9 @@ public class AutoFightJsonTask : ISoloTask
                     try { await targetingTask; } catch (OperationCanceledException) { }
                 }
                 AutoFightTask.FightStatusFlag = false;
+                // 战斗结束（无论正常/异常/取消）清空开战点，避免残留到下一次任务，
+                // 否则后续普通自动战斗/其它策略执行回点时误用上一次路径的旧点位
+                AutoFightTask.FightWaypoint = null;
             }
     
             try

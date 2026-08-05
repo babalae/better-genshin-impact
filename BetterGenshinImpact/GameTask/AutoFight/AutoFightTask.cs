@@ -19,7 +19,9 @@ using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
@@ -56,6 +58,172 @@ public class AutoFightTask : ISoloTask
 
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
+
+    /// <summary>
+    /// 回到战斗点位（阻塞式）。逻辑同游泳检测脱困：
+    /// FaceTo 朝向点位（2秒超时），再以 Climb 模式 MoveTo（跳过卡死脱困检测）移动到点位。
+    /// 结束后恢复 MoveMode 并释放按键。游泳检测与战斗中回点共用此方法。
+    /// </summary>
+    /// <param name="waypoint">战斗点位（开战点）</param>
+    /// <param name="moveToTimeoutMs">MoveTo 阶段超时（毫秒），超时终止回点</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>是否成功完成回点（超时/异常返回 false）</returns>
+    public static async Task<bool> BackToFightWaypointAsync(WaypointForTrack waypoint, int moveToTimeoutMs, CancellationToken ct)
+    {
+        using (AvatarRecognition.BeginExclusiveOperation())
+        {
+            // 保存原始 MoveMode，用于 finally 还原
+            var originalMoveMode = waypoint.MoveMode;
+            // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            try
+            {
+                var pathExecutor = new PathExecutor(cts.Token);
+
+                // FaceTo 朝向战斗点，超时 2 秒
+                cts.CancelAfter(2000);
+                await pathExecutor.FaceTo(waypoint);
+
+                // 重置超时，MoveTo 超时
+                cts.CancelAfter(moveToTimeoutMs);
+                // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
+                waypoint.MoveMode = MoveModeEnum.Climb.Code;
+                Simulation.SendInput.Mouse.RightButtonDown();
+                await pathExecutor.MoveTo(waypoint);
+                Logger.LogInformation("回点：移动结束");
+                return true;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.LogWarning("回点：回到战斗地点超时");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "回点：回到战斗地点异常");
+            }
+            finally
+            {
+                // 确保所有资源和状态在任何路径都被正确清理
+                cts.Cancel(); // 终止 PathExecutor 内部截屏循环
+                waypoint.MoveMode = originalMoveMode;
+                Simulation.SendInput.Mouse.RightButtonUp();
+                Simulation.ReleaseAllKey();
+            }
+            return false;
+        }
+    }
+
+    // 战斗中回点检查状态（TXT/JSON 战斗共用；同一时刻仅一种战斗在运行，故用静态状态）
+    private static Task<Point2f?>? _positionTask;             // 异步获取当前坐标的任务
+    private static int _overDistanceRounds;                   // 连续超过回点距离的轮数
+    private static DateTime _lastBackToFightOrFightStartTime; // 上次回点或开战时间
+
+    /// <summary>重置定时回点的时间基准（开战时间），TXT/JSON 战斗开始时调用</summary>
+    public static void ResetBackToFightPointTime() => _lastBackToFightOrFightStartTime = DateTime.Now;
+
+    /// <summary>
+    /// 每轮动作开始时的回点检查。
+    /// 启用战斗中回点且存在开战点时：上一轮异步坐标任务已完成则取结果并立即启动下一轮坐标获取（异步，不阻塞战斗流程），
+    /// 未完成则直接放弃，本轮不判断。
+    /// 连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）时，或距上次回点/开战超过定时时间时，阻塞式执行回点。
+    /// </summary>
+    public static async Task CheckBackToFightPointAsync(AutoFightParam taskParam, CancellationToken ct)
+    {
+        if (!taskParam.BackToFightPointEnabled) return;
+        var waypoint = FightWaypoint;
+        if (waypoint is null) return;
+
+        // 上一轮坐标任务：已完成则取结果；未完成则不等待直接放弃，本轮记为 null
+        Point2f? position = null;
+        if (_positionTask != null && _positionTask.IsCompleted)
+        {
+            try
+            {
+                position = await _positionTask;
+            }
+            catch
+            {
+                position = null;
+            }
+        }
+
+        // 本轮立即启动下一轮坐标获取（异步执行，不阻塞正常战斗流程）
+        _positionTask = Task.Run(() => GetCurrentPosition(waypoint));
+
+        if (position is null)
+        {
+            return; // 未拿到坐标，本轮不判断
+        }
+
+        // 距离条件：连续两轮距离开战点超过阈值（钳制5-100）且小于异常值（500）
+        var distance = Navigation.GetDistance(waypoint, position.Value);
+        var threshold = Math.Clamp(taskParam.BackToFightPointDistance, 5, 100);
+        if (distance > threshold && distance < 500)
+        {
+            _overDistanceRounds++;
+            if (_overDistanceRounds >= 2)
+            {
+                _overDistanceRounds = 0;
+                await ExecuteBackToFightPointAsync(taskParam, ct);
+            }
+            return;
+        }
+        _overDistanceRounds = 0;
+
+        // 定时回点：距上次回点或开战超过指定时间
+        if (taskParam.BackToFightPointInterval > 0 &&
+            (DateTime.Now - _lastBackToFightOrFightStartTime).TotalSeconds >= taskParam.BackToFightPointInterval)
+        {
+            await ExecuteBackToFightPointAsync(taskParam, ct);
+        }
+    }
+
+    /// <summary>
+    /// 获取当前角色坐标（小地图定位，耗时较长，应异步执行）。识别失败返回 null。
+    /// </summary>
+    private static Point2f? GetCurrentPosition(WaypointForTrack waypoint)
+    {
+        try
+        {
+            using var ra = CaptureToRectArea();
+            var position = Navigation.GetPosition(ra, waypoint.MapName, waypoint.MapMatchMethod);
+            if (position == new Point2f())
+            {
+                return null;
+            }
+            return position;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning("战斗中回点：获取当前坐标失败：{Msg}", e.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 阻塞式执行回点动作（逻辑同游泳检测，共用 BackToFightWaypointAsync）。
+    /// 超过单次回点超时（配置项）则终止回点，继续战斗。
+    /// </summary>
+    private static async Task ExecuteBackToFightPointAsync(AutoFightParam taskParam, CancellationToken ct)
+    {
+        var waypoint = FightWaypoint;
+        if (waypoint is null) return;
+
+        _overDistanceRounds = 0;
+        Logger.LogInformation("战斗中回点：距离开战点过远或超时，尝试回到战斗地点");
+
+        var moveToTimeoutMs = (int)(taskParam.BackToFightPointTimeout * 1000);
+        var success = await BackToFightWaypointAsync(waypoint, moveToTimeoutMs, ct);
+        // 记录回点时间，作为下一次定时回点的基准（距上次回点或开战时间）
+        _lastBackToFightOrFightStartTime = DateTime.Now;
+
+        Logger.LogInformation(success ? "战斗中回点：已回到战斗地点，继续战斗" : "战斗中回点：回点超时或失败，继续战斗");
+    }
     
     private class TaskFightFinishDetectConfig
     {
@@ -323,10 +491,15 @@ public class AutoFightTask : ISoloTask
             try
             {
                 FightStatusFlag = true;
+                // 重置定时回点的时间基准（距上次回点或开战时间）
+                ResetBackToFightPointTime();
                 
                 while (!cts2.Token.IsCancellationRequested)
                 {
                     // 所有战斗角色都可以被取消
+
+                    // 战斗中回点检查：异步获取当前坐标（不阻塞战斗流程），满足条件时阻塞式执行回点
+                    await CheckBackToFightPointAsync(_taskParam, _ct);
 
                     #region 本次战斗的跳过战斗判定
 

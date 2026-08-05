@@ -155,51 +155,9 @@ public class Avatar
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
                 
-                using (AvatarRecognition.BeginExclusiveOperation())
-                {
-                // 保存原始 MoveMode，用于 finally 还原
-                var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
-                // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                
-                try
-                {
-                    var pathExecutor = new PathExecutor(cts.Token);
-                    
-                    // FaceTo 朝向战斗点，超时 2 秒
-                    cts.CancelAfter(2000);
-                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
-                    
-                    // 重置超时，MoveTo 超时 15 秒
-                    cts.CancelAfter(15000);
-                    // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
-                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
-                    Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
-                    Logger.LogInformation("游泳检测：移动结束");
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (OperationCanceledException)
-                {
-                    Logger.LogWarning("游泳检测：回到战斗地点超时");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "游泳检测：回到战斗地点异常");
-                }
-                finally
-                {
-                    // 确保所有资源和状态在任何路径都被正确清理
-                    cts.Cancel(); // 终止 PathExecutor 内部截屏循环
-                    AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
-                    AutoFightTask.FightWaypoint = null;
-                    Simulation.SendInput.Mouse.RightButtonUp();
-                    Simulation.ReleaseAllKey();
-                }
-                }
+                // 使用提取的公共回点方法（与战斗中回点共用）：FaceTo + MoveTo，MoveTo 超时 15 秒
+                // 注意：回点后不清空开战点，战斗仍在进行，后续回点（游泳/战斗中回点）仍需要开战点；战斗结束时统一清空
+                AutoFightTask.BackToFightWaypointAsync(AutoFightTask.FightWaypoint, 15000, ct).GetAwaiter().GetResult();
                 
                 using var bitmap2 = CaptureToRectArea();
                 if (!SwimmingConfirm(bitmap2))
