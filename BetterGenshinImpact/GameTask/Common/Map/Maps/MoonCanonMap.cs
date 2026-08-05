@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// <summary>
 /// 霜月
 /// </summary>
-public class MoonMap : SceneBaseMap
+public class MoonCanonMap : SceneBaseMap
 {
     #region 每次地图扩大都要更新的参数
 
@@ -20,14 +20,14 @@ public class MoonMap : SceneBaseMap
 
     static readonly int MoonMapImageBlockWidth = 1024;
 
-    public MoonMap() : base(type: MapTypes.MoonCanon,
+    public MoonCanonMap() : base(type: MapTypes.MoonCanon,
         mapSize: new Size(GameMapCols * MoonMapImageBlockWidth, GameMapRows * MoonMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * MoonMapImageBlockWidth, (GameMapUpRows + 1) * MoonMapImageBlockWidth),
         mapImageBlockWidth: MoonMapImageBlockWidth,
         splitRow: 0,
         splitCol: 0)
     {
-        ExtractAndSaveFeature(Global.Absolute("Assets/Map/MoonCanon/MoonCanon_0_1024.png"));
+        // ExtractAndSaveFeature(Global.Absolute("Assets/Map/MoonCanon/MoonCanon_0_1024.png"));
     }
 
 }
