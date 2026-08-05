@@ -63,7 +63,7 @@ public class AutoFightTask : ISoloTask
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
     
     /// <summary>
-    /// 最近一次战斗结束检查的时间（TXT 与 JSON 策略共用，供 JSON 策略 last-check 条件使用）
+    /// 最近一次战斗结束检查的时间（TXT 与 JSON 策略共用，供更快触发战斗结束检查判断间隔使用）
     /// </summary>
     public static DateTime LastFightFinishCheckTime { get; set; } = DateTime.Now;
 
@@ -921,7 +921,7 @@ public class AutoFightTask : ISoloTask
             return false;
         }
 
-        // 记录最近一次战斗结束检查的时间（供 JSON 策略 last-check 条件使用）
+        // 记录最近一次战斗结束检查的时间（供更快触发战斗结束检查判断间隔使用）
         LastFightFinishCheckTime = DateTime.Now;
         using (AvatarRecognition.BeginExclusiveOperation())
         {
