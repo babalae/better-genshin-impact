@@ -400,8 +400,8 @@ public class AutoFightJsonTask : ISoloTask
                                     // 指定角色的动作：执行前确保切换到该角色
                                     if (!string.IsNullOrEmpty(action.Character))
                                     {
-                                        // 每轮动作切人之前触发游泳检测（游泳时切人/移动会失败）
-                                        await AutoFightTask.CheckSwimmingAsync(_ct);
+                                        // 每轮动作切人之前触发游泳检测（游泳时切人/移动会失败），复用本轮战斗截图做游泳初检
+                                        await AutoFightTask.CheckSwimmingAsync(_ct, capture);
 
                                         var avatar = combatScenes.SelectAvatar(action.Character);
                                         if (avatar == null) continue;
@@ -434,6 +434,7 @@ public class AutoFightJsonTask : ISoloTask
                                                 await Delay(200, _ct);
                                                 // 重新执行整个动作
                                                 await ExecuteAction(combatScenes, action);
+                                                imageAfterAction.Dispose();
                                                 imageAfterAction = CaptureToRectArea();
                                                 await Task.Delay(30, _ct);
                                                 retry--;

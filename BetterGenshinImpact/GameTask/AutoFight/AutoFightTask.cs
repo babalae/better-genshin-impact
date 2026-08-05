@@ -326,13 +326,20 @@ public class AutoFightTask : ISoloTask
     /// 回点后仍在游泳则前往七天神像重试。
     /// </summary>
     /// <param name="ct">取消令牌</param>
-    public static async Task CheckSwimmingAsync(CancellationToken ct)
+    /// <param name="capture">调用方现有的战斗截图（复用其做游泳初检，不释放，归调用方管理）；null 时内部截图</param>
+    public static async Task CheckSwimmingAsync(CancellationToken ct, ImageRegion? capture = null)
     {
         if (!AutoFightParam.SwimmingEnabled || !FightStatusFlag) return;
 
-        using (var region = CaptureToRectArea())
+        // 第一张检测图：优先复用调用方传入的战斗截图，避免重复截图；仅自己创建的才需要释放
+        var region = capture ?? CaptureToRectArea();
+        try
         {
             if (!SwimmingConfirm(region)) return;
+        }
+        finally
+        {
+            if (capture == null) region.Dispose();
         }
 
         if (FightWaypoint is not null)
