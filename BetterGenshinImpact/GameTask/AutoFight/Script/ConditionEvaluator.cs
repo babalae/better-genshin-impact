@@ -499,7 +499,13 @@ public class ConditionEvaluator
             return new TargetRef((int)n.Value, null);
 
         if (node is FuncCallNode f && f.Args.Count == 0)
+        {
+            // 裸名称必须已声明为策略动作名：拼错/未知名称直接报错（Evaluate 捕获后返回 false），
+            // 否则会被当作"从未执行"处理，since(拼错名)>N 与 last-exec(N,true,拼错名) 会在战斗开始就为 true
+            if (!_actionNames.Contains(f.Name))
+                throw new InvalidOperationException($"未知动作名称：{f.Name}，按名称查询必须使用策略中已声明的动作名");
             return new TargetRef(null, f.Name);
+        }
 
         return new TargetRef((int)ToNumber(Eval(node, currentIndex)), null);
     }
@@ -716,7 +722,22 @@ public class ConditionEvaluator
     private bool EvalOnField()
     {
         if (string.IsNullOrEmpty(_currentCharacterName)) return false;
-        if (_combatScenes.LastActiveAvatarIndex <= 0) return false;
+
+        // 首次求值时 LastActiveAvatarIndex 尚未初始化（InitializeTeam 只识别队伍，不识别出战角色），
+        // 直接用缓存截图刷新当前出战编号；仍识别失败才返回 false，避免 onfield() 开战第一轮误判
+        if (_combatScenes.LastActiveAvatarIndex <= 0)
+        {
+            var capture = GetCapture();
+            try
+            {
+                if (_combatScenes.GetActiveAvatarIndex(capture, new AvatarActiveCheckContext()) <= 0) return false;
+            }
+            finally
+            {
+                // 仅释放自己新建的截图；缓存截图归调用方管理，不在此释放
+                if (_cachedCapture == null) capture.Dispose();
+            }
+        }
 
         var avatar = _combatScenes.SelectAvatar(_currentCharacterName);
         return avatar != null && avatar.Index == _combatScenes.LastActiveAvatarIndex;
