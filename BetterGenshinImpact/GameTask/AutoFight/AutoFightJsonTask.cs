@@ -375,10 +375,11 @@ public class AutoFightJsonTask : ISoloTask
     
                                 var action = prioritizedAction.Action;
     
-                                // 求值条件表达式（使用展开后的表达式和优先级）
+                                // 求值条件表达式：当前动作序号（用于 since/last-exec/count 缺省指代本动作）传动作真实 Index，
+                                // 不能传排序用的 Priority（MorePriority 条目的 Priority 与该动作 Index 不同，会导致缺省查询查不到记录）
                                 var conditionMet = evaluator.Evaluate(
                                     prioritizedAction.Expression,
-                                    prioritizedAction.Priority,
+                                    action.Index,
                                     action.Character);
     
                                 if (!conditionMet)
