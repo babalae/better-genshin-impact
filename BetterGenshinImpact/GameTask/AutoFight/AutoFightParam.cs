@@ -23,8 +23,8 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
         public double BlockCheckBeforeBattleSeconds = 0;
-        public bool PaimonEndCheckEnabled = false;
-        public double PaimonEndCheckDelay = 0.1;
+        public bool PaimonEndCheckEnabled = true;
+        public double PaimonEndCheckDelay = 0.075;
     }
 
     public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)

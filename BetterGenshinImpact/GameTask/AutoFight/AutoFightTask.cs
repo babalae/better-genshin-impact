@@ -84,8 +84,8 @@ public class AutoFightTask : ISoloTask
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
         public double BlockCheckBeforeBattleSeconds = 0;
-        public bool PaimonEndCheckEnabled = false;
-        public int PaimonEndCheckDelayMs = 100;
+        public bool PaimonEndCheckEnabled = true;
+        public int PaimonEndCheckDelayMs = 75;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
