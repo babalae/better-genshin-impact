@@ -359,6 +359,7 @@ public sealed class BvFlow
             }
 
             var result = FindTargets(snapshot.Targets, snapshot.Condition);
+            _services.ThrowIfCancellationRequested();
             if (_services.GetElapsedMilliseconds(startedAt) >= snapshot.Timeout)
             {
                 throw new TimeoutException(
@@ -406,6 +407,7 @@ public sealed class BvFlow
 
         while (true)
         {
+            _services.ThrowIfCancellationRequested();
             var elapsedMilliseconds = _services.GetElapsedMilliseconds(startedAt);
             if (elapsedMilliseconds >= timeout)
             {
@@ -413,6 +415,7 @@ public sealed class BvFlow
             }
 
             var result = FindTargets(targets, condition);
+            _services.ThrowIfCancellationRequested();
             if (_services.GetElapsedMilliseconds(startedAt) >= timeout)
             {
                 throw new TimeoutException($"等待 {targetDescription} 超时（{timeout}ms）");
