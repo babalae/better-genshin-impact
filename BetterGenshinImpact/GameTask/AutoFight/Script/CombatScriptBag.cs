@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.GameTask.Common.Party;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

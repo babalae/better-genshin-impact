@@ -29,24 +29,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         private readonly object _preStateLock = new();
         private Point2f _prePosition = PathingPositionValidator.UnknownPosition;
         
-        private int _isPositionAndTimeSuspended = 0;
         private int _positionFailCount = 0;
         private const int MaxPositionFailTolerance = 5;
-
-        /// <summary>
-        /// Indicates whether execution logic was suspended. Handles temporal disconnects.
-        /// 指示执行逻辑是否已挂起。用于处理时间性连接断开现象。
-        /// </summary>
-        public bool IsPositionAndTimeSuspended
-        {
-            get => Interlocked.CompareExchange(ref _isPositionAndTimeSuspended, 0, 0) != 0;
-            set => Interlocked.Exchange(ref _isPositionAndTimeSuspended, value ? 1 : 0);
-        }
-
-        public bool CheckAndClearPositionAndTimeSuspended()
-        {
-            return Interlocked.Exchange(ref _isPositionAndTimeSuspended, 0) != 0;
-        }
         
         /// <summary>
         /// Gets or sets the current tracked sequence of waypoints.
@@ -206,13 +190,6 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
             }
 
             var validation = PathingPositionValidator.Validate(position, waypoint, previousWaypoint, null, ignoreContinuityValidation);
-            
-            bool hasSuspendFlag = CheckAndClearPositionAndTimeSuspended();
-
-            if (!PathingPositionValidator.IsKnownPosition(position) && hasSuspendFlag)
-            {
-                throw new RetryNoCountException("可能暂停导致定位异常，重试一次此路线！");
-            }
 
             bool unrecognized = waypoint.Misidentification?.Type?.Contains("unrecognized") ?? false;
             bool pathTooFar = waypoint.Misidentification?.Type?.Contains("pathTooFar") ?? false;
@@ -228,9 +205,9 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                     validation.SegmentDeviation);
                 DateTime start = DateTime.UtcNow;
                 var tpTask = new TpTask(_ct);
-                await tpTask.OpenBigMapUi().ConfigureAwait(false);
                 try
                 {
+                    await tpTask.OpenBigMapUi().ConfigureAwait(false);
                     var gamePosition = tpTask.GetPositionFromBigMap(waypoint.MapName);
                     if (Telemetry.RouteNavigationCoordinateService.Instance.TryGameToImage(
                             waypoint.MapName,
@@ -245,14 +222,21 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                         throw new InvalidOperationException("大地图坐标无法转换到特征图坐标");
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException and not NormalEndException)
                 {
                     Logger?.LogWarning(ex, $"地图中心点识别失败！异常: {ex.Message}");
-                    throw new RetryNoCountException("地图识别异常，重试路线！");
+                    throw new HandledException("大地图定位恢复失败，结束当前路径");
+                }
+                finally
+                {
+                    using var capture = CaptureToRectArea();
+                    if (capture != null && Bv.IsInBigMapUi(capture))
+                    {
+                        Simulation.SendInput?.Keyboard?.KeyPress(User32.VK.VK_ESCAPE);
+                        await WaitForCloseMap(10, 200).ConfigureAwait(false);
+                    }
                 }
 
-                Simulation.SendInput?.Keyboard?.KeyPress(User32.VK.VK_ESCAPE);
-                await WaitForCloseMap(10, 200).ConfigureAwait(false);
                 DateTime end = DateTime.UtcNow;
                 time = (int)(end - start).TotalMilliseconds;
                 Logger?.LogDebug($"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");

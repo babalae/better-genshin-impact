@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class LogOutputHandler : IActionHandler
 {
-    public Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         if (waypointForTrack != null && !string.IsNullOrEmpty(waypointForTrack.LogInfo))
         {

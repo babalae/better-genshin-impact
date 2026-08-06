@@ -27,7 +27,7 @@ public class CombatScriptHandler : IActionHandler
     /// <param name="waypointForTrack">触发脚本执行的当前航点配置，必须包含有效的 <see cref="WaypointForTrack.CombatScript"/> 属性。</param>
     /// <param name="config">透传的额外配置项参数（在该处理器中当前未使用）。</param>
     /// <returns>代表异步执行流程的任务实例。若脚本不符合条件或执行失败会提前记录错误日志并中断。</returns>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         if (waypointForTrack?.CombatScript == null)
         {
@@ -99,7 +99,6 @@ public class CombatScriptHandler : IActionHandler
                 ct.ThrowIfCancellationRequested();
                 var command = combatScript.CombatCommands[i];
                 var lastCommand = i == 0 ? command : combatScript.CombatCommands[i - 1];
-                
                 command.Execute(combatScenes, lastCommand);
             }
         }

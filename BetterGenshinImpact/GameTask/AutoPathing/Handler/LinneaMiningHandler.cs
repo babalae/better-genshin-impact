@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class LinneaMiningHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         var (mineCount, scanRounds) = ParseParams(waypointForTrack?.ActionParams);
 

@@ -20,7 +20,7 @@ public interface IActionHandler
     /// </summary>
     /// <param name="ct">取消令牌 / Cancellation token.</param>
     /// <param name="waypointForTrack">触发该动作的路点信息 / Waypoint information triggering the action.</param>
-    /// <param name="config">可选的附加配置对象 / Optional additional configuration object.</param>
+    /// <param name="context">强类型路径动作上下文 / Strongly typed pathing action context.</param>
     /// <returns>异步任务结果 / Asynchronous task result.</returns>
-    Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null);
+    Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null);
 }

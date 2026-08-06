@@ -27,7 +27,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
     /// <param name="waypointForTrack">触发元素采集的主动航点（Waypoint）上下文。</param>
     /// <param name="config">透传的采集配置对象（当前实现中暂未使用）。</param>
     /// <returns>代表动作流转过程的任务实例。</returns>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【{ElementalType}元素采集】", elementalType);
 

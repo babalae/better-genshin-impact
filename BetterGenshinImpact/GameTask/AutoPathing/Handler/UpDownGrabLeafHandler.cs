@@ -34,12 +34,12 @@ public class UpDownGrabLeafHandler : IActionHandler
     // 四叶印动作会彻底掌管角色位移，覆盖默认的寻路移动
     public bool OverridesLocomotion => true;
 
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【寻找{syy}】", "四叶印");
 
         // 提取自原 Strategy 中，预定位与视角偏转逻辑
-        if (config is PathExecutor executor && waypointForTrack != null)
+        if (context?.Executor is { } executor && waypointForTrack != null)
         {
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Task.Delay(300, ct);

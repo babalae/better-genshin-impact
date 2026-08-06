@@ -22,27 +22,28 @@ public class AutoFightHandler : IActionHandler
     private readonly ILogger<AutoFightHandler> _logger = App.GetLogger<AutoFightHandler>();
 
     /// <inheritdoc/>
-    public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null) => await StartFightAsync(ct, config, waypointForTrack);
+    public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingPartyConfig? partyConfig = null) =>
+        await StartFightAsync(ct, partyConfig, waypointForTrack);
 
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
-        await StartFightAsync(ct, config, waypointForTrack);
+        await StartFightAsync(ct, context?.PartyConfig, waypointForTrack);
     }
 
     /// <summary>
     /// 开始执行自动战斗任务的核心流程。
     /// </summary>
     /// <param name="ct">异步操作取消令牌（CancellationToken）。</param>
-    /// <param name="config">当前队伍的战斗策略配置对象，通常应为 <see cref="PathingPartyConfig"/> 类型。</param>
+    /// <param name="partyConfig">当前队伍的战斗策略配置。</param>
     /// <param name="waypointForTrack">触发战斗的追踪航点（Waypoint）信息，包含怪物标签（MonsterTag）及掉落物配置。</param>
     /// <returns>代表战斗任务执行过程的 <see cref="Task"/>。</returns>
-    private async Task StartFightAsync(CancellationToken ct, object? config = null, WaypointForTrack? waypointForTrack = null)
+    private async Task StartFightAsync(CancellationToken ct, PathingPartyConfig? partyConfig = null, WaypointForTrack? waypointForTrack = null)
     {
         TaskControl.Logger.LogInformation("执行动作: 【自动战斗】");
         
         AutoFightParam taskParams;
-        if (config is PathingPartyConfig partyConfig && partyConfig.AutoFightEnabled)
+        if (partyConfig is { AutoFightEnabled: true })
         {
             taskParams = CreateFightParam(partyConfig.AutoFightConfig);
         }
@@ -59,12 +60,12 @@ public class AutoFightHandler : IActionHandler
             taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
         {
             await RunnerContext.Instance.StopAutoPickRunTask(
-                async () => await new AutoFightTask(taskParams).Start(ct),
+                async () => await new AutoFightTask(taskParams, propagateRetryException: true).Start(ct),
                 5);
             return;
         }
 
-        var fightSoloTask = new AutoFightTask(taskParams);
+        var fightSoloTask = new AutoFightTask(taskParams, propagateRetryException: true);
         await fightSoloTask.Start(ct);
     }
 
@@ -102,9 +103,9 @@ public class AutoFightHandler : IActionHandler
     /// </summary>
     /// <param name="config">选定的自动战斗配置对象 <see cref="AutoFightConfig"/>。</param>
     /// <returns>实例化完毕并包含策略路径的 <see cref="AutoFightParam"/> 参数对象。</returns>
-    private AutoFightParam CreateFightParam(AutoFightConfig? config)
+    private AutoFightParam CreateFightParam(AutoFightConfig config)
     {
-        config ??= TaskContext.Instance().Config.AutoFightConfig;
+        ArgumentNullException.ThrowIfNull(config);
         return new AutoFightParam(GetStrategyPath(config), config);
     }
 

@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -234,7 +235,7 @@ public partial class PathExecutor
                     waypointsList.Count,
                     waypoints.Count);
 
-                var segmentResult = await ExecuteWaypointSegmentAsync(segmentIndex, waypoints, waypointsList);
+                var segmentResult = await ExecuteWaypointSegmentWithRetryAsync(segmentIndex, waypoints, waypointsList);
                 if (segmentResult == PathingSegmentResult.StopPathingSucceeded)
                 {
                     SuccessEnd = true;
@@ -253,12 +254,47 @@ public partial class PathExecutor
         {
             // 任务结束时清理暂停/恢复的临时状态，避免影响下一次路径执行。
             pathExecutorSuspend.Reset();
-            IsPositionAndTimeSuspended = false;
             ResumeAutoPickForInteractTeleport();
             
             // 触发遥测落盘策略，强制当前积累的路线无论多少都全量写入 JSON 文件
             _ = RouteTelemetryManager.FlushAsync();
         }
+    }
+
+    private async Task<PathingSegmentResult> ExecuteWaypointSegmentWithRetryAsync(
+        int segmentIndex,
+        List<WaypointForTrack> waypoints,
+        List<List<WaypointForTrack>> waypointsList)
+    {
+        for (var attempt = 1; attempt <= RetryTimes; attempt++)
+        {
+            try
+            {
+                return await ExecuteWaypointSegmentAsync(segmentIndex, waypoints, waypointsList);
+            }
+            catch (GameWindowNotFocusedException)
+            {
+                throw;
+            }
+            catch (RetryException retryException) when (attempt < RetryTimes)
+            {
+                Logger.LogWarning(
+                    "路径段执行失败，将从传送锚点重试（第 {Attempt}/{MaxAttempts} 次尝试）：{Reason}",
+                    attempt,
+                    RetryTimes,
+                    retryException.Message);
+            }
+            catch (RetryException retryException)
+            {
+                Logger.LogWarning(
+                    "路径段重试次数已耗尽（共 {MaxAttempts} 次尝试），结束路径：{Reason}",
+                    RetryTimes,
+                    retryException.Message);
+                return PathingSegmentResult.StopPathingFailed;
+            }
+        }
+
+        return PathingSegmentResult.StopPathingFailed;
     }
 
     public void PauseAutoPickForInteractTeleport()
@@ -292,77 +328,206 @@ public partial class PathExecutor
     {
         RouteTelemetryManager.CurrentAnchorContext = waypoints.FirstOrDefault();
         CurWaypoints = (segmentIndex, waypoints);
+        var hasTeleportAnchor = waypoints[0].Type == WaypointType.Teleport.Code;
 
-        for (var i = 0; i < RetryTimes; i++)
+        try
         {
-            try
+            await ResolveAnomalies(); // 异常场景处理
+
+            if (!hasTeleportAnchor && !TryInitializeUnanchoredSegment(waypoints[0]))
             {
-                await ResolveAnomalies(); // 异常场景处理
-
-                // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
-                if (waypoints.Count > 0 && waypoints[0].Type != WaypointType.Teleport.Code)
-                {
-                    Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
-                }
-
-                for (var waypointIndex = 0; waypointIndex < waypoints.Count; waypointIndex++) // 一条路径段
-                {
-                    var waypoint = waypoints[waypointIndex];
-                    CurWaypoint = (waypointIndex, waypoint);
-                    PublishCurrentWaypoint(waypoint);
-                    _navigator.TryCloseSkipOtherOperations();
-
-                    var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
-                    if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
-                    {
-                        throw new RetryException("神像回血完成后重试路线");
-                    }
-
-                    var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
-                    if (await strategy.ExecuteAsync(this, waypoint, waypointsList))
-                    {
-                        return PathingSegmentResult.StopPathingSucceeded;
-                    }
-                }
-
-                return PathingSegmentResult.Completed;
-            }
-            catch (HandledException handledExc)
-            {
-                Logger.LogWarning(handledExc.Message);
                 return PathingSegmentResult.StopPathingFailed;
             }
-            catch (TaskCanceledException)
+
+            var waypointIndex = 0;
+            var swimmingRecoveryCount = 0;
+            while (waypointIndex < waypoints.Count)
             {
-                if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
+                var waypoint = waypoints[waypointIndex];
+                CurWaypoint = (waypointIndex, waypoint);
+                PublishCurrentWaypoint(waypoint);
+                _navigator.TryCloseSkipOtherOperations();
+
+                var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
+                if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
                 {
-                    throw;
+                    throw new RetryException("神像回血完成后重试路线");
                 }
 
-                return PathingSegmentResult.StopPathingFailed;
+                var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
+                bool shouldStopPathing;
+                try
+                {
+                    shouldStopPathing = await strategy.ExecuteAsync(this, waypoint, waypointsList);
+                }
+                catch (CombatInterruptionException combatInterruption)
+                    when (combatInterruption.Reason == CombatInterruptionReason.Swimming &&
+                          string.Equals(waypoint.Action, ActionEnum.Fight.Code, StringComparison.OrdinalIgnoreCase))
+                {
+                    swimmingRecoveryCount++;
+                    if (swimmingRecoveryCount >= RetryTimes)
+                    {
+                        throw new RetryException("战斗中重复进入游泳状态，无法在当前战斗点恢复");
+                    }
+
+                    Logger.LogWarning(
+                        "战斗因游泳中断，交由寻路返回当前战斗点后重新战斗（第 {Attempt}/{MaxAttempts} 次尝试）",
+                        swimmingRecoveryCount + 1,
+                        RetryTimes);
+                    continue;
+                }
+
+                if (pathExecutorSuspend.IsResumeRecoveryPending)
+                {
+                    var previousWaypoint = waypointIndex > 0 ? waypoints[waypointIndex - 1] : null;
+                    var canContinueCurrentWaypoint = await TryRecoverAfterResumeAsync(waypoint, previousWaypoint);
+                    pathExecutorSuspend.CompleteResumeRecovery();
+
+                    if (canContinueCurrentWaypoint)
+                    {
+                        Logger.LogInformation("暂停恢复后已重新定位，继续执行当前路径点 {WaypointIndex}", waypointIndex + 1);
+                        continue;
+                    }
+
+                    if (!hasTeleportAnchor)
+                    {
+                        Logger.LogWarning("暂停恢复后无法重新定位，且当前路径段没有传送锚点，结束路径");
+                        return PathingSegmentResult.StopPathingFailed;
+                    }
+
+                    Logger.LogWarning("暂停恢复后无法重新定位，从当前路径段的传送锚点重新执行");
+                    waypointIndex = 0;
+                    continue;
+                }
+
+                if (shouldStopPathing)
+                {
+                    return PathingSegmentResult.StopPathingSucceeded;
+                }
+
+                waypointIndex++;
+                swimmingRecoveryCount = 0;
             }
-            catch (RetryException retryException)
+
+            return PathingSegmentResult.Completed;
+        }
+        catch (HandledException handledExc)
+        {
+            Logger.LogWarning(handledExc.Message);
+            return PathingSegmentResult.StopPathingFailed;
+        }
+        catch (TaskCanceledException)
+        {
+            if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
             {
-                _navigator.StartSkipOtherOperations();
-                Logger.LogWarning(retryException.Message);
                 throw;
             }
-            catch (RetryNoCountException retryException)
+
+            return PathingSegmentResult.StopPathingFailed;
+        }
+        catch (CombatInterruptionException combatInterruption)
+            when (combatInterruption.Reason == CombatInterruptionReason.Defeated)
+        {
+            if (!await _healthController.RecoverFromDefeatAsync(ct))
             {
-                // 特殊情况下，重试不消耗次数
-                i--;
-                _navigator.StartSkipOtherOperations();
-                Logger.LogWarning(retryException.Message);
+                Logger.LogWarning("Pathing 收到角色死亡信号，但未能完成复苏恢复，结束路径");
+                return PathingSegmentResult.StopPathingFailed;
             }
-            finally
+
+            if (!hasTeleportAnchor)
             {
-                // 不管咋样，松开所有按键
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                Logger.LogWarning("角色死亡恢复完成，但当前路径段没有传送锚点，结束路径");
+                return PathingSegmentResult.StopPathingFailed;
             }
+
+            _navigator.StartSkipOtherOperations();
+            throw new RetryException("角色死亡恢复完成，从传送锚点重试路径段");
+        }
+        catch (GameWindowNotFocusedException)
+        {
+            throw;
+        }
+        catch (RetryException retryException)
+        {
+            if (!hasTeleportAnchor)
+            {
+                Logger.LogWarning(retryException, "当前路径段不以传送点开始，没有确定性重启锚点，拒绝重试并结束路径");
+                return PathingSegmentResult.StopPathingFailed;
+            }
+
+            _navigator.StartSkipOtherOperations();
+            Logger.LogWarning(retryException.Message);
+            throw;
+        }
+        finally
+        {
+            // 不管咋样，松开所有按键
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+        }
+    }
+
+    private bool TryInitializeUnanchoredSegment(WaypointForTrack firstWaypoint)
+    {
+        using var screen = CaptureToRectArea();
+        if (!Bv.IsInMainUi(screen))
+        {
+            Logger.LogWarning("路径段不以传送点开始，且当前不在主界面，无法建立初始定位");
+            return false;
         }
 
-        return PathingSegmentResult.StopPathingFailed;
+        Navigation.Reset();
+        var position = Navigation.GetPositionStable(screen, firstWaypoint.MapName, firstWaypoint.MapMatchMethod);
+        if (!PathingPositionValidator.IsKnownPosition(position))
+        {
+            Logger.LogWarning("路径段不以传送点开始，无法识别当前位置，拒绝执行");
+            return false;
+        }
+
+        Navigation.SetPrevPosition(position.X, position.Y);
+        Logger.LogInformation("非传送首段初始定位成功，当前位置：({X:F1}, {Y:F1})", position.X, position.Y);
+        return true;
+    }
+
+    private async Task<bool> TryRecoverAfterResumeAsync(
+        WaypointForTrack waypoint,
+        WaypointForTrack? previousWaypoint)
+    {
+        Logger.LogInformation("检测到暂停恢复，正在返回主界面并重新定位");
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+
+        await new ReturnMainUiTask().Start(ct);
+
+        using var screen = CaptureToRectArea();
+        if (!Bv.IsInMainUi(screen))
+        {
+            Logger.LogWarning("暂停恢复后未能返回主界面");
+            return false;
+        }
+
+        Navigation.Reset();
+        var position = Navigation.GetPositionStable(screen, waypoint.MapName, waypoint.MapMatchMethod);
+        if (!PathingPositionValidator.IsKnownPosition(position))
+        {
+            Logger.LogWarning("暂停恢复后无法识别当前位置");
+            return false;
+        }
+
+        var validation = PathingPositionValidator.ValidateAfterResume(position, waypoint, previousWaypoint);
+        if (!validation.IsValid)
+        {
+            Logger.LogWarning(
+                "暂停恢复后当前位置偏离当前路线段，无法继续当前路径点：原因={Reason}，路线偏差={SegmentDeviation:F1}，目标距离={TargetDistance:F1}",
+                validation.Reason,
+                validation.SegmentDeviation,
+                validation.TargetDistance);
+            return false;
+        }
+
+        Navigation.SetPrevPosition(position.X, position.Y);
+        Logger.LogInformation("暂停恢复后重新定位成功，当前位置：({X:F1}, {Y:F1})", position.X, position.Y);
+        return true;
     }
 
     /// <summary>
@@ -521,16 +686,6 @@ public partial class PathExecutor
     /// 根据时间插值计算点位坐标。
     /// </summary>
     /// <param name="startPoint">Start point. 起始点位。</param>
-    /// <summary>
-    /// Gets or sets the position resolution suspend flag.
-    /// 获取或设置位置解析挂起标识。
-    /// </summary>
-    public bool IsPositionAndTimeSuspended
-    {
-        get => _navigator.IsPositionAndTimeSuspended;
-        set => _navigator.IsPositionAndTimeSuspended = value;
-    }
-
     /// <summary>
     /// 等待直到旋转到目标视口 / Waits until rotated to the target orientation.
     /// </summary>

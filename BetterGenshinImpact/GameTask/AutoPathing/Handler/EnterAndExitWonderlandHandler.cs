@@ -16,7 +16,7 @@ public class EnterAndExitWonderlandHandler : IActionHandler
     private readonly EnterAndExitWonderlandJob _enterAndExitWonderlandJob = new();
 
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【进出幻秘境】");
         await _enterAndExitWonderlandJob.Start(ct);

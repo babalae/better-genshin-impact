@@ -46,7 +46,7 @@ public class MiningHandler : IActionHandler
     private readonly ScanPickTask _scanPickTask = new();
 
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【执行挖矿】");
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);

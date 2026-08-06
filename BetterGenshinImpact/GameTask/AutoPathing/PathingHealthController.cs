@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -238,11 +239,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
 
             if (_visionService.ClickIfInReviveModal())
             {
-                _logger.LogInformation("检测到角色死亡，已执行复苏。");
-                await _visionService.WaitForMainUiAsync(ct);
-                await Task.Delay(4000, ct);
-                await _teleportService.TeleportToStatueOfTheSevenAsync(ct);
-                _logger.LogInformation("已护送残兵败将前往神像，等待上层重置路线。");
+                await CompleteDefeatRecoveryAsync(ct);
                 return HealthRecoveryResult.TeleportedToStatueRequiresRetry;
             }
 
@@ -273,6 +270,27 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         /// <param name="ct">取消标志 / Cancellation token.</param>
         /// <returns>异步任务 / Asynchronous task.</returns>
         public async Task TpStatueOfTheSevenAsync(CancellationToken ct = default) => await _teleportService.TeleportToStatueOfTheSevenAsync(ct);
+
+        public async Task<bool> RecoverFromDefeatAsync(CancellationToken ct)
+        {
+            if (!_visionService.ClickIfInReviveModal())
+            {
+                _logger.LogWarning("未检测到复苏界面，无法执行死亡恢复。");
+                return false;
+            }
+
+            await CompleteDefeatRecoveryAsync(ct);
+            return true;
+        }
+
+        private async Task CompleteDefeatRecoveryAsync(CancellationToken ct)
+        {
+            _logger.LogInformation("检测到角色死亡，已执行复苏。");
+            await _visionService.WaitForMainUiAsync(ct);
+            await Task.Delay(4000, ct);
+            await _teleportService.TeleportToStatueOfTheSevenAsync(ct);
+            _logger.LogInformation("已护送残兵败将前往神像，等待上层重置路线。");
+        }
 
         /// <summary>
         /// 尝试通过队伍治疗 / Attempts to heal via party.

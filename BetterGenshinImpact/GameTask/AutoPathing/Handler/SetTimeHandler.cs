@@ -17,7 +17,7 @@ public class SetTimeHandler : IActionHandler
     private readonly SetTimeTask _setTimeTask = new();
 
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【修改时间】");
 

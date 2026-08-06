@@ -972,14 +972,17 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         {
             try
             {
-                AutoFightTask.FightStatusFlag = true;
                 while (!cts.Token.IsCancellationRequested)
                 {
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
-                        command.Execute(combatScenes, lastCommand);
+                        CombatStateDetector.ThrowIfInterrupted(cts.Token, AutoFightParam.SwimmingEnabled);
+                        command.Execute(
+                            combatScenes,
+                            lastCommand,
+                            avatarToSwitch => CombatSwitchRecovery.Switch(avatarToSwitch, cts.Token));
                     }
                 }
             }
@@ -997,7 +1000,6 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 Logger.LogInformation("自动战斗线程结束");
                 Simulation.ReleaseAllKey();
                 Simulation.SendInput.Mouse.LeftButtonUp();
-                AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
 

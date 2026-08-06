@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Common.Party;
 using System.Linq;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -47,7 +48,7 @@ public class PickUpCollectHandler : IActionHandler
             .Distinct()
     );
     
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【{Nhd}】","聚集材料");
 

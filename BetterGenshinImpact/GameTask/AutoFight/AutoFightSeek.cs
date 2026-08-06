@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using System;
@@ -461,7 +462,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             {
                 while (attempt < retryCount)
                 {
-                    if (guardianAvatar.TrySwitch(10))
+                    if (CombatSwitchRecovery.TrySwitch(guardianAvatar, ct, 10))
                     {
                         guardianAvatar.ManualSkillCd = -1;
                         if (await AvatarSkillAsync(Logger, guardianAvatar, false, 1, ct))
@@ -679,7 +680,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         
         /// <summary>
         /// 全队Q检测函数，备用，后续可用于自动EQ开发
-        /// 不再推荐使用原因，可以参考使用 BetterGenshinImpact.GameTask.AutoFight.Model.Avatar.IsBurstReadyByClassify 方法，识别速度更快，效果更好
+        /// 不再推荐使用原因，可以参考使用 BetterGenshinImpact.GameTask.Common.Party.Avatar.IsBurstReadyByClassify 方法，识别速度更快，效果更好
         /// </summary>
         /// <param name="image"></param>
         /// <param name="useEqList"></param>

@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Microsoft.Extensions.Logging;
 using System;

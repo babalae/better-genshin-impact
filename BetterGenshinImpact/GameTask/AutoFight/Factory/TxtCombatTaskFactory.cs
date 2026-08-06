@@ -9,7 +9,7 @@ public class TxtCombatTaskFactory : ICombatTaskFactory
 {
     public ISoloTask CreateTask(AutoFightParam param)
     {
-        return new AutoFightTask(param);
+        return new AutoFightTask(param, propagateRetryException: false);
     }
 
     public bool CanHandle(string strategyPath)

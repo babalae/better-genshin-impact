@@ -15,28 +15,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
-using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.GameTask.Common;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BetterGenshinImpact.GameTask.AutoFight.Model;
+namespace BetterGenshinImpact.GameTask.Common.Party;
 
 /// <summary>
-/// 队伍内的角色
+/// 队伍中的角色及其通用操作
 /// </summary>
 public class Avatar
 {
@@ -91,163 +85,25 @@ public class Avatar
     public CancellationToken Ct { get; set; }
 
     /// <summary>
-    /// 战斗场景
+    /// 当前队伍上下文
     /// </summary>
-    public CombatScenes CombatScenes { get; set; }
+    private IAvatarPartyContext PartyContext { get; }
 
     /// <summary>
     /// 脱困方向数组（前/后/左/右）
     /// </summary>
-    private static readonly GIActions[] UnstuckDirections =
-    {
-        GIActions.MoveForward,
-        GIActions.MoveBackward,
-        GIActions.MoveLeft,
-        GIActions.MoveRight
-    };
-
-    private static readonly Random UnstuckRandom = new();
-
     private static readonly Lazy<BgiYoloPredictor> QBurstClassifierLazy = new(() =>
         App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiQClassify));
 
 
-    public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
+    public Avatar(IAvatarPartyContext partyContext, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
-        CombatScenes = combatScenes;
+        PartyContext = partyContext ?? throw new ArgumentNullException(nameof(partyContext));
         Name = name;
         Index = index;
         NameRect = nameRect;
         CombatAvatar = DefaultAutoFightConfig.CombatAvatarMap[name];
         ManualSkillCd = manualSkillCd;
-        AutoFightTask.FightStatusFlag = false;
-    }
-
-
-    /// <summary>
-    /// 是否存在角色被击败
-    /// 通过判断确认按钮
-    /// </summary>
-    /// <param name="region"></param>
-    /// <param name="ct"></param>
-    /// <returns></returns>
-    public static void ThrowWhenDefeated(ImageRegion region, CancellationToken ct)
-    {
-        if (Bv.IsInRevivePrompt(region))
-        {
-            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
-            // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
-            Sleep(600, ct);
-            TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
-        }
-        else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
-        {
-            if (AutoFightTask.FightWaypoint is not null)
-            {
-                // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
-                Sleep(800, ct);
-                using var ra = CaptureToRectArea();
-                if (!SwimmingConfirm(ra))
-                {
-                    return;
-                }
-                
-                Logger.LogInformation("游泳检测：尝试回到战斗地点");
-                
-                using (AvatarRecognition.BeginExclusiveOperation())
-                {
-                // 保存原始 MoveMode，用于 finally 还原
-                var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
-                // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                
-                try
-                {
-                    var pathExecutor = new PathExecutor(cts.Token);
-                    
-                    // FaceTo 朝向战斗点，超时 2 秒
-                    cts.CancelAfter(2000);
-                    pathExecutor.MovementController.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
-                    
-                    // 重置超时，MoveTo 超时 15 秒
-                    cts.CancelAfter(15000);
-                    // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
-                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
-                    Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MovementController.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
-                    Logger.LogInformation("游泳检测：移动结束");
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (OperationCanceledException)
-                {
-                    Logger.LogWarning("游泳检测：回到战斗地点超时");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "游泳检测：回到战斗地点异常");
-                }
-                finally
-                {
-                    // 确保所有资源和状态在任何路径都被正确清理
-                    cts.Cancel(); // 终止 PathExecutor 内部截屏循环
-                    AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
-                    AutoFightTask.FightWaypoint = null;
-                    Simulation.SendInput.Mouse.RightButtonUp();
-                    Simulation.ReleaseAllKey();
-                }
-                }
-                
-                using var bitmap2 = CaptureToRectArea();
-                if (!SwimmingConfirm(bitmap2))
-                {
-                    Logger.LogInformation("游泳检测：游泳脱困成功");
-                    return;
-                }
-                
-                Logger.LogWarning("游泳检测：回到战斗地点失败");
-            }
-            
-            Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
-            TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
-        }
-    }
-    
-    /// <summary>
-    /// 游泳检测（色块连通性检测）
-    /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
-    /// </summary>
-    private static bool SwimmingConfirm(Region region)
-    {
-        using var imageRegion = region.ToImageRegion();
-        using var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
-        using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
-        using var labels = new Mat();
-        using var stats = new Mat();
-        using var centroids = new Mat();
-
-        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-        
-        return numLabels > 1;
-    }
-
-    /// <summary>
-    /// tp 到七天神像恢复
-    /// </summary>
-    /// <param name="ct"></param>
-    /// <param name="ex"></param>
-    /// <exception cref="RetryException"></exception>
-    public static void TpForRecover(CancellationToken ct, Exception ex)
-    {
-        // tp 到七天神像复活
-        var tpTask = new TpTask(ct);
-        tpTask.TpToStatueOfTheSeven().Wait(ct);
-        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
-        throw ex;
     }
 
     /// <summary>
@@ -265,10 +121,8 @@ public class Avatar
             }
 
             using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
-
             // 切换成功
-            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
+            if (PartyContext.GetActiveAvatarIndex(region, context) == Index)
             {
                 return;
             }
@@ -276,12 +130,6 @@ public class Avatar
             SimulateSwitchAction(Index);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
-
-            // 第10次重试时，战斗状态下执行脱困动作
-            if (i == 10 && AutoFightTask.FightStatusFlag)
-            {
-                PerformUnstuckAction(Ct);
-            }
 
             Sleep(250, Ct);
         }
@@ -304,11 +152,9 @@ public class Avatar
             }
 
             using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
-
             // 切换成功——即使检测到已为目标角色，也补发一次按键，
             // 防止颜色识别假阳性（如方法3偶发误判）导致实际未切到目标
-            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
+            if (PartyContext.GetActiveAvatarIndex(region, context) == Index)
             {
                 SimulateSwitchAction(Index);
                 return true;
@@ -317,15 +163,7 @@ public class Avatar
             {
                 if (i == tryTimes - 1 && tryTimes == 4) //默认状态，没有特意设置重试次数的情况下，最后一次重试失败才输出日志
                 {
-                    Logger.LogWarning("切换角色失败，最后一次尝试，当前角色编号:{CurrentIndex}，期望角色编号:{ExpectedIndex}", CombatScenes.GetActiveAvatarIndex(region, context), Index);
-                }
-                else
-                {
-                    // 特意需要脱困情形下，会设置重试次数激活脱困检测，第10次重试时(2.5秒切换失败，超过角色的大招动画时间)，如在盾奶位功能中次数会到第十次。
-                    if (i == 9 && AutoFightTask.FightStatusFlag)
-                    {
-                        PerformUnstuckAction(Ct);
-                    }
+                    Logger.LogWarning("切换角色失败，最后一次尝试，当前角色编号:{CurrentIndex}，期望角色编号:{ExpectedIndex}", PartyContext.GetActiveAvatarIndex(region, context), Index);
                 }
             }
 
@@ -365,23 +203,6 @@ public class Avatar
     }
 
     /// <summary>
-    /// 战斗中切换角色卡住时的脱困动作：跳跃 → 随机方向移动+切换 → 攻击 → 释放按键
-    /// </summary>
-    private void PerformUnstuckAction(CancellationToken ct)
-    {
-        var direction = UnstuckDirections[UnstuckRandom.Next(4)];
-        Logger.LogWarning("切换角色卡住，执行脱困（方向：{Dir}）", direction);
-
-        Simulation.SendInput.SimulateAction(GIActions.Jump);
-        Sleep(200, ct);
-        Simulation.SendInput.SimulateAction(direction, KeyType.KeyDown);
-        SimulateSwitchAction(Index);
-        Sleep(1000, ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-        Simulation.ReleaseAllKey();
-    }
-
-    /// <summary>
     /// 切换到本角色
     /// 切换cd是1秒，如果切换失败，会尝试再次切换，最多尝试5次
     /// </summary>
@@ -391,9 +212,7 @@ public class Avatar
         for (var i = 0; i < 10; i++)
         {
             using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
-
-            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
+            if (PartyContext.GetActiveAvatarIndex(region, context) == Index)
             {
                 return;
             }
@@ -533,7 +352,6 @@ public class Avatar
             Sleep(200, Ct);
 
             using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
             var cd = AfterUseSkill(region);
             var recordedCd = ESkillCdTracker.Record(Name, cd);
             if (recordedCd <= 0)
@@ -614,8 +432,6 @@ public class Avatar
                 Sleep(200, Ct);
 
                 using var region = CaptureToRectArea();
-                ThrowWhenDefeated(region, Ct);
-
                 if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
                 {
                     // 找不到角色编号块意味者技能释放成功

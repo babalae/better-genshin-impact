@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 using Microsoft.ClearScript;
 using System.Threading;
 using System.Threading.Tasks;

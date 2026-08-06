@@ -108,7 +108,7 @@ public class TaskControl
             {
                 var name = SystemControl.GetActiveByProcess();
                 Logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
+                throw new GameWindowNotFocusedException("当前获取焦点的窗口不是原神");
             }
         }
 

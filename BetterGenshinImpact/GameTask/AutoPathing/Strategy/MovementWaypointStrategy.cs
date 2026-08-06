@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -27,6 +27,11 @@ public class MovementWaypointStrategy : IWaypointStrategy
     {
         if (executor == null) throw new ArgumentNullException(nameof(executor));
         if (waypoint == null) throw new ArgumentNullException(nameof(waypoint));
+
+        if (executor.pathExecutorSuspend.IsResumeRecoveryPending)
+        {
+            return false;
+        }
         
         PauseAutoPickIfApproachingInteractTeleport(executor, waypoint);
 
@@ -37,14 +42,30 @@ public class MovementWaypointStrategy : IWaypointStrategy
             await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
         }
 
+        if (executor.pathExecutorSuspend.IsResumeRecoveryPending)
+        {
+            return false;
+        }
+
         // 2. 将具体的移动方式委托给对应的行为策略
-        if (await PerformLocomotionAsync(executor, waypoint))
+        var shouldStopPathing = await PerformLocomotionAsync(executor, waypoint);
+        if (executor.pathExecutorSuspend.IsResumeRecoveryPending)
+        {
+            return false;
+        }
+
+        if (shouldStopPathing)
         {
             return true;
         }
 
         // 3. 接近点位的处理（如抵达指定坐标点前如果需要停飞或最后调整）
         var proximityActionExecuted = await PerformProximityAsync(executor, waypoint);
+        if (executor.pathExecutorSuspend.IsResumeRecoveryPending)
+        {
+            return false;
+        }
+
         if (proximityActionExecuted.ShouldStop)
         {
             return true;
@@ -102,7 +123,16 @@ public class MovementWaypointStrategy : IWaypointStrategy
 
         if (executor.IsTargetPoint(waypoint))
         {
-            return (await executor.MovementController.MoveCloseTo(waypoint), actionExecuted);
+            var movementResult = await executor.MovementController.MoveCloseTo(waypoint);
+            return movementResult switch
+            {
+                PreciseMovementResult.Reached => (false, actionExecuted),
+                PreciseMovementResult.EndAction => (true, actionExecuted),
+                PreciseMovementResult.ResumeRecovery => (false, actionExecuted),
+                PreciseMovementResult.PositionLost => throw new RetryException("精确接近目标点时定位持续失败"),
+                PreciseMovementResult.TimedOut => throw new RetryException("精确接近目标点超时"),
+                _ => throw new InvalidOperationException($"未处理的精确移动结果：{movementResult}")
+            };
         }
 
         return (false, actionExecuted);
@@ -121,16 +151,12 @@ public class MovementWaypointStrategy : IWaypointStrategy
 
         if (shouldExecuteAction)
         {
-            AutoFightTask.FightWaypoint = string.Equals(waypoint.Action, ActionEnum.Fight.Code, StringComparison.OrdinalIgnoreCase) 
-                ? waypoint 
-                : null;
-
             var handler = ActionFactory.GetAfterHandler(waypoint.Action ?? string.Empty);
             if (handler != null)
             {
                 InvalidatePositionContinuityBeforeHandlerIfNeeded(executor, waypoint);
-                object handlerConfig = IsInteractTeleport(waypoint) ? executor : executor.PartyConfig;
-                await handler.RunAsync(executor.ct, waypoint, handlerConfig);
+                var context = new PathingActionContext(executor, executor.PartyConfig);
+                await handler.RunAsync(executor.ct, waypoint, context);
                 ResumeAutoPickIfNeeded(executor, waypoint);
                 
                 // 特定后置统计：战斗次数
@@ -150,9 +176,9 @@ public class MovementWaypointStrategy : IWaypointStrategy
         var handler = factoryMethod(waypoint.Action);
         if (handler != null)
         {
-            // 通过 config 传递 executor 上下文，交给 handler 自己决策细节
+            // 通过强类型上下文传递当前 PathExecutor 与队伍配置。
             InvalidatePositionContinuityBeforeHandlerIfNeeded(executor, waypoint);
-            await handler.RunAsync(executor.ct, waypoint, executor);
+            await handler.RunAsync(executor.ct, waypoint, new PathingActionContext(executor, executor.PartyConfig));
             ResumeAutoPickIfNeeded(executor, waypoint);
             return true;
         }

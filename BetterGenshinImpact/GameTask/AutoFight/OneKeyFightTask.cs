@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;

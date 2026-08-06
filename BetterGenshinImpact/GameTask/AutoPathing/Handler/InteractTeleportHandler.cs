@@ -25,12 +25,12 @@ public class InteractTeleportHandler : IActionHandler
     private const int TeleportSettleIntervalMs = 250;
     private const double TeleportMovementThreshold = 120.0;
 
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         var waitSeconds = ParseWaitSeconds(waypointForTrack?.ActionParams);
         Logger.LogInformation("执行动作: 【交互传送】按下交互键，等待传送状态出现");
 
-        if (waypointForTrack == null || config is not PathExecutor executor)
+        if (waypointForTrack == null || context?.Executor is not { } executor)
         {
             Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
             await DelayIfNeeded(waitSeconds, ct);

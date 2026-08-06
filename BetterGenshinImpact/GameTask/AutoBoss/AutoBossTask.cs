@@ -115,6 +115,23 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                     await RunBossLoop();
                     break;
                 }
+                catch (CombatInterruptionException combatInterruption)
+                    when (combatInterruption.Reason == CombatInterruptionReason.Defeated &&
+                          retryCount < _taskParam.ReviveRetryCount)
+                {
+                    if (!await new DefeatRecoveryTask().Start(_ct))
+                    {
+                        throw;
+                    }
+
+                    retryCount++;
+                    _logger.LogWarning(
+                        "{Name}：角色死亡恢复完成，第 {Retry}/{MaxRetry} 次重试当前首领讨伐",
+                        Name,
+                        retryCount,
+                        _taskParam.ReviveRetryCount);
+                    await Delay(2000, _ct);
+                }
                 catch (RetryException e) when (retryCount < _taskParam.ReviveRetryCount)
                 {
                     retryCount++;
@@ -947,6 +964,10 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         try
         {
             await jsonTask.Start(cts.Token);
+        }
+        catch (CombatInterruptionException)
+        {
+            throw;
         }
         catch (NormalEndException e)
         {

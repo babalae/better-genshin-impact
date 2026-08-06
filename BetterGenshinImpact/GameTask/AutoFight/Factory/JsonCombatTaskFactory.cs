@@ -9,7 +9,7 @@ public class JsonCombatTaskFactory : ICombatTaskFactory
 {
     public ISoloTask CreateTask(AutoFightParam param)
     {
-        return new AutoFightJsonTask(param);
+        return new AutoFightJsonTask(param, propagateRetryException: false);
     }
 
     public bool CanHandle(string strategyPath)

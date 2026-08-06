@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;

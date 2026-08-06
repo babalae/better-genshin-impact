@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 public class StopFlyingHandler : IActionHandler
 {
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         if (waypointForTrack != null && !string.IsNullOrWhiteSpace(waypointForTrack.ActionParams) && 
             int.TryParse(waypointForTrack.ActionParams, out var stopFlyingWaitTime))

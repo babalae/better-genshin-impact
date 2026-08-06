@@ -17,7 +17,7 @@ public class ExitAndReloginHandler : IActionHandler
     private readonly ExitAndReloginJob _exitAndReloginJob = new();
 
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【退出重登】");
         await _exitAndReloginJob.Start(ct);

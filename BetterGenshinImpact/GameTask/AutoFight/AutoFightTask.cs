@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
@@ -31,6 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 public class AutoFightTask : ISoloTask
 {
+    private readonly bool _propagateRetryException;
     public string Name => "自动战斗";
 
     private readonly AutoFightParam _taskParam;
@@ -46,17 +48,12 @@ public class AutoFightTask : ISoloTask
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
     
-    public static bool FightStatusFlag { get; set; } = false;
-    
     private static readonly object PickLock = new object(); 
     
     private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
     
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    // 战斗点位
-    public static WaypointForTrack? FightWaypoint  {get; set;} = null;
-    
     private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
@@ -199,9 +196,10 @@ public class AutoFightTask : ISoloTask
 
     private TaskFightFinishDetectConfig _finishDetectConfig;
 
-    public AutoFightTask(AutoFightParam taskParam)
+    public AutoFightTask(AutoFightParam taskParam, bool propagateRetryException = true)
     {
         _taskParam = taskParam;
+        _propagateRetryException = propagateRetryException;
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
 
         if (_taskParam.FightFinishDetectEnabled)
@@ -322,8 +320,6 @@ public class AutoFightTask : ISoloTask
         {
             try
             {
-                FightStatusFlag = true;
-                
                 while (!cts2.Token.IsCancellationRequested)
                 {
                     // 所有战斗角色都可以被取消
@@ -350,6 +346,7 @@ public class AutoFightTask : ISoloTask
                     
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
+                        CombatStateDetector.ThrowIfInterrupted(cts2.Token, AutoFightParam.SwimmingEnabled);
                         var command = combatCommands[i];
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
                         
@@ -427,10 +424,13 @@ public class AutoFightTask : ISoloTask
 
                         if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
                         {
-                            Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
-                            fightEndFlag = true;
-                            timeOutFlag = true;
-                            break;
+                            var searchExhausted = AutoFightSeek.RotationCount >= 6;
+                            var reason = searchExhausted
+                                ? CombatInterruptionReason.TargetSearchExhausted
+                                : CombatInterruptionReason.Timeout;
+                            var message = searchExhausted ? "索敌旋转次数达到上限" : "战斗执行超时";
+                            Logger.LogWarning("{Message}，本次战斗按失败结束", message);
+                            throw new CombatInterruptionException(reason, message);
                         }
 
                         #region Q前寻敌处理
@@ -440,7 +440,10 @@ public class AutoFightTask : ISoloTask
                         }
                         #endregion
 
-                        command.Execute(combatScenes, lastCommand);
+                        command.Execute(
+                            combatScenes,
+                            lastCommand,
+                            avatarToSwitch => CombatSwitchRecovery.Switch(avatarToSwitch, cts2.Token));
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
                         {
@@ -505,12 +508,8 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 Simulation.ReleaseAllKey();
-                FightStatusFlag = false;
             }
         }, cts2.Token);
-
-        // 在持续索敌循环启动前标记战斗进行中，避免索敌循环因 FightStatusFlag 仍为 false 而立即退出
-        FightStatusFlag = true;
 
         // 启动持续索敌循环（异步后台运行，与战斗任务并发）
         // 使用独立的 CancellationTokenSource，以便在战后独立取消索敌循环，不影响 cts2 关联的其他组件（如 expDetector）
@@ -522,7 +521,7 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
+                    await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception e)
@@ -545,8 +544,17 @@ public class AutoFightTask : ISoloTask
                 await targetingCts.CancelAsync();
                 try { await targetingTask; } catch (OperationCanceledException) { }
             }
-            FightStatusFlag = false;
+
+            // 战斗异常或取消会跳过后续战后处理；必须在异常离开前停止并释放经验检测器。
+            if (!fightTask.IsCompletedSuccessfully && expDetector != null)
+            {
+                await expDetector.StopAsync();
+                expDetector.Dispose();
+                expDetector = null;
+            }
         }
+
+        ct.ThrowIfCancellationRequested();
 
         try
         {
@@ -854,6 +862,10 @@ public class AutoFightTask : ISoloTask
             await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
         }
     }
+        catch (RetryException retryException) when (!_propagateRetryException)
+        {
+            Logger.LogError("自动战斗失败：{Reason}", retryException.Message);
+        }
         finally
         {
             AvatarRecognition.ClearCurrentAutoFightParam();

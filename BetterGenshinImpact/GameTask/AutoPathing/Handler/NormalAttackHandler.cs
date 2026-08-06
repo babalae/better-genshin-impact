@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 public class NormalAttackHandler : IActionHandler
 {
     /// <inheritdoc/>
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         Logger.LogInformation("执行动作: 【普通攻击】");
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);

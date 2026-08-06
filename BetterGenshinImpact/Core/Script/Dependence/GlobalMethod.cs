@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.ObjectModel;

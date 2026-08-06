@@ -16,8 +16,6 @@ public static class PathingPositionValidator
 {
     private const double JumpDistanceThreshold = 150.0;
     private const double SegmentDeviationThreshold = 100.0;
-    private const double NavigationBreakDistanceThreshold = 1000.0;
-
     public static readonly Point2f UnknownPosition = new(float.NaN, float.NaN);
 
     public static PathingPositionValidationResult Validate(
@@ -64,16 +62,20 @@ public static class PathingPositionValidator
         return !float.IsNaN(position.X) && !float.IsNaN(position.Y);
     }
 
-    public static bool IsNavigationBreak(WaypointForTrack? previous, WaypointForTrack target)
+    public static PathingPositionValidationResult ValidateAfterResume(
+        Point2f position,
+        WaypointForTrack target,
+        WaypointForTrack? previous)
     {
-        ArgumentNullException.ThrowIfNull(target);
-
-        if (previous == null || previous.Type == WaypointType.Teleport.Code)
+        // 暂停期间允许玩家主动移动，因此不与暂停前的最后坐标比较；
+        // 但恢复位置仍必须位于当前路线段附近，否则应从传送锚点重跑。
+        var result = Validate(position, target, previous, lastValidPosition: null);
+        if (!result.IsValid || previous != null || result.TargetDistance <= SegmentDeviationThreshold)
         {
-            return false;
+            return result;
         }
 
-        return Navigation.GetDistance(previous, new Point2f((float)target.X, (float)target.Y)) > NavigationBreakDistanceThreshold;
+        return result with { IsValid = false, Reason = "target_deviation" };
     }
 
     private static double GetPointToSegmentDistance(Point2f point, Waypoint start, Waypoint end)

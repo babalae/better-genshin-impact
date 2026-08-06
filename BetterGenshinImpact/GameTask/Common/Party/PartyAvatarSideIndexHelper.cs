@@ -5,14 +5,16 @@ using System.Linq;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.AutoFight.Model;
+namespace BetterGenshinImpact.GameTask.Common.Party;
 
 /// <summary>
 /// 用于处理主界面右侧角色编号的一些方法
