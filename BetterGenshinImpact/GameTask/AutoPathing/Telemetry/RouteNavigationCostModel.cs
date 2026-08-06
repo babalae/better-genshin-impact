@@ -30,6 +30,9 @@ public sealed class RouteNavigationCostOptions
 
     public double RiskyEdgeCostMultiplier { get; init; } = 2.0;
 
+    /// <summary>开启 AllowDisabledEdges 后，Disabled/Rejected 边使用的有限高成本倍数。</summary>
+    public double DisabledEdgeCostMultiplier { get; init; } = 10.0;
+
     public double SyntheticReverseCostMultiplier { get; init; } = 2.0;
 
     public double MinimumTeleportSavingsSeconds { get; init; } = 8.0;

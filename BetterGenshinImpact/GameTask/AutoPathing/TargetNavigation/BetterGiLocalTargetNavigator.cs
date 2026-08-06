@@ -343,24 +343,8 @@ internal static class LocalNavigationTemplateCatalog
 
     public static IReadOnlyList<string> FindDefaultRoots()
     {
-        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            Global.Absolute(Path.Combine("User", "AutoPathing", "LocalNavigationIcons"))
-        };
-
-        for (var directory = new DirectoryInfo(Global.StartUpPath);
-             directory != null;
-             directory = directory.Parent)
-        {
-            roots.Add(Path.Combine(
-                directory.FullName,
-                "BadGI-JsScript",
-                "自动剧情加载器",
-                "Data",
-                "RecognitionObject"));
-        }
-
-        return roots.Where(Directory.Exists).ToList();
+        var root = Global.Absolute(Path.Combine("Assets", "AutoPathing", "LocalNavigationIcons"));
+        return Directory.Exists(root) ? [root] : [];
     }
 
     public static IEnumerable<string> FindTemplates(

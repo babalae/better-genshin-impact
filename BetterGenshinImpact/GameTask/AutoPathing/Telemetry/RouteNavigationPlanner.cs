@@ -1650,7 +1650,9 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
         {
             GraphReviewStatus.Verified => 1.0,
             GraphReviewStatus.Risky => Math.Max(1, options.CostOptions.RiskyEdgeCostMultiplier),
-            GraphReviewStatus.Disabled or GraphReviewStatus.Rejected => double.PositiveInfinity,
+            GraphReviewStatus.Disabled or GraphReviewStatus.Rejected => options.AllowDisabledEdges
+                ? Math.Max(1, options.CostOptions.DisabledEdgeCostMultiplier)
+                : double.PositiveInfinity,
             _ => Math.Max(1, options.CostOptions.UnreviewedEdgeCostMultiplier)
         };
         var reverseMultiplier = edge.IsSyntheticReverse

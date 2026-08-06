@@ -3004,7 +3004,9 @@ public partial class MapViewerViewModel : ObservableObject
             LastKnownCurrentImagePoint = TryGetFreshPlanningPosition(),
             TaskName = "地图目标导航",
             TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
-            TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim(),
+            TargetAction = string.IsNullOrWhiteSpace(TargetAction) || !IsTargetNavigationActionSelectable(TargetAction)
+                ? null
+                : TargetAction.Trim(),
             Options = new RouteNavigationPlanOptions
             {
                 AllowTeleport = AllowTeleport,
@@ -6829,6 +6831,21 @@ public partial class MapViewerViewModel : ObservableObject
             "interact_teleport" => "按拾取/交互键触发场景内传送；通常不需要参数，可填 wait=秒数 追加等待。",
             _ => "动作参数。"
         };
+    }
+
+    /// <summary>
+    /// 目标导航暂未提供动作参数输入，必须携带参数才能执行的动作不允许作为目标动作选择。
+    /// </summary>
+    public static bool IsTargetNavigationActionSelectable(string? actionCode)
+    {
+        if (string.IsNullOrWhiteSpace(actionCode))
+        {
+            return true;
+        }
+
+        return !string.Equals(actionCode, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(actionCode, ActionEnum.LogOutput.Code, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(actionCode, ActionEnum.SetTime.Code, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetMapDisplayName(string mapName)

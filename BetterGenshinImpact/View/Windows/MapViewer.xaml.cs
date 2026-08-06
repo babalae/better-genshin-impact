@@ -376,10 +376,16 @@ public partial class MapViewer
             return;
         }
 
-        OpenActionSelectorMenu(element, option => ViewModel.TargetAction = option.Code);
+        OpenActionSelectorMenu(
+            element,
+            option => ViewModel.TargetAction = option.Code,
+            option => MapViewerViewModel.IsTargetNavigationActionSelectable(option.Code));
     }
 
-    private void OpenActionSelectorMenu(FrameworkElement placementTarget, Action<MapEditorOption> onSelected)
+    private void OpenActionSelectorMenu(
+        FrameworkElement placementTarget,
+        Action<MapEditorOption> onSelected,
+        Func<MapEditorOption, bool>? optionFilter = null)
     {
         var menu = new ContextMenu
         {
@@ -395,6 +401,11 @@ public partial class MapViewer
             {
                 foreach (var option in group.Options)
                 {
+                    if (optionFilter?.Invoke(option) == false)
+                    {
+                        continue;
+                    }
+
                     menu.Items.Add(CreateActionMenuItem(option, onSelected));
                     addedInlineCommonActions = true;
                 }
@@ -411,6 +422,11 @@ public partial class MapViewer
             var groupItem = CreateActionGroupMenuItem(group.DisplayName);
             foreach (var option in group.Options)
             {
+                if (optionFilter?.Invoke(option) == false)
+                {
+                    continue;
+                }
+
                 groupItem.Items.Add(CreateActionMenuItem(option, onSelected));
             }
 
@@ -426,7 +442,10 @@ public partial class MapViewer
                 groupItem.Items.Add(editItem);
             }
 
-            menu.Items.Add(groupItem);
+            if (groupItem.Items.Count > 0)
+            {
+                menu.Items.Add(groupItem);
+            }
         }
 
         placementTarget.ContextMenu = menu;
