@@ -87,7 +87,7 @@ public class TpTask
     private const int RelativePatternDummyCost = 1_000_000;
     private const int RelativePatternInvalidCost = 10_000_000;
     private const string TeleportIconOverlayKey = "TpTeleportIconOverlay";
-    private const int TeleportIconOverlayVisibleMs = 5000;
+    private const int TeleportIconOverlayVisibleMs = 3000;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
     private const double TeleportFinalZoomMinNeighborScreenDistance = 96d;
     private const int TeleportClickableAreaRetryCount = 5;
@@ -833,12 +833,12 @@ public class TpTask
             shouldRequireTargetIcon);
         var fallbackIcon = matchedIcon == null ? ChooseTargetNearbyMapIcon(fallbackIcons) : null;
         var selectedIcon = matchedIcon ?? fallbackIcon;
-        var overlayVersion = ShowTeleportIconOverlay(clickCapture, nearbyMapIcons, selectedIcon, clickView.ClickX, clickView.ClickY);
+        // var overlayVersion = ShowTeleportIconOverlay(clickCapture, nearbyMapIcons, selectedIcon, clickView.ClickX, clickView.ClickY);
         ClickSelectedNearbyMapIcon(clickCapture, selectedIcon, clickView.ClickX, clickView.ClickY);
-        if (overlayVersion > 0)
-        {
-            _ = ClearTeleportIconOverlayAfterDelayAsync(overlayVersion);
-        }
+        // if (overlayVersion > 0)
+        // {
+        //     _ = ClearTeleportIconOverlayAfterDelayAsync(overlayVersion);
+        // }
     }
 
     private double GetTeleportFinalClickZoomLevel(double nearestTpDistance, string mapName)
