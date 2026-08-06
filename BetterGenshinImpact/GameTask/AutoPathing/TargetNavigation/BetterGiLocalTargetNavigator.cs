@@ -91,7 +91,7 @@ internal sealed class BetterGiLocalNavigationPerception(
         {
             if (group == LocalNavigationIconGroup.Task)
             {
-                using var taskMarker = screen.Find(ElementAssets.Instance.BlueTrackPoint);
+                using var taskMarker = screen.Find(ElementRecognition.Get("BlueTrackPoint", screen));
                 if (taskMarker.IsExist())
                 {
                     matches.Add(ToMatch(group, taskMarker));
