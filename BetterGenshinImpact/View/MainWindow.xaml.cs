@@ -201,19 +201,86 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         return null;
     }
 
+    private bool _windowPositionRestored;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
         WindowHelper.TryApplySystemBackdrop(this);
+        RestoreWindowPosition();
+    }
+
+    private void RestoreWindowPosition()
+    {
+        if (_windowPositionRestored)
+        {
+            return;
+        }
+
+        var config = ViewModel.Config.CommonConfig;
+        if (!config.RestoreWindowPositionAndSize)
+        {
+            return;
+        }
+
+        if (config.WindowWidth > 0 && config.WindowHeight > 0)
+        {
+            Width = config.WindowWidth;
+            Height = config.WindowHeight;
+        }
+
+        ClampWindowToScreen(config.WindowLeft, config.WindowTop);
+
+        if (config.WindowState == 2)
+        {
+            Loaded += (_, _) => WindowState = WindowState.Maximized;
+        }
+
+        _windowPositionRestored = true;
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        SaveWindowPosition();
         _logger.LogDebug("主窗体退出");
         CompositionTarget.Rendering -= OnCompositionTargetRendering;
         RemoveHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel));
         base.OnClosed(e);
         App.GetService<NotifyIconViewModel>()?.Exit();
+    }
+
+    private void SaveWindowPosition()
+    {
+        var config = ViewModel.Config.CommonConfig;
+        if (WindowState == WindowState.Normal)
+        {
+            config.WindowState = 0;
+            config.WindowLeft = Left;
+            config.WindowTop = Top;
+            config.WindowWidth = Width;
+            config.WindowHeight = Height;
+        }
+        else
+        {
+            // Maximized or Minimized: save RestoreBounds (the normal bounds before the state change)
+            config.WindowState = WindowState == WindowState.Maximized ? 2 : 0;
+            config.WindowLeft = RestoreBounds.Left;
+            config.WindowTop = RestoreBounds.Top;
+            config.WindowWidth = RestoreBounds.Width;
+            config.WindowHeight = RestoreBounds.Height;
+        }
+    }
+
+    private void ClampWindowToScreen(double left, double top)
+    {
+        var virtualLeft = SystemParameters.VirtualScreenLeft;
+        var virtualTop = SystemParameters.VirtualScreenTop;
+        var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
+        var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
+
+        Left = Math.Max(virtualLeft, Math.Min(left, virtualRight - Width));
+        Top = Math.Max(virtualTop, Math.Min(top, virtualBottom - 30));
+        WindowStartupLocation = WindowStartupLocation.Manual;
     }
 
     private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
