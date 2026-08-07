@@ -238,6 +238,12 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private double _mwkJumpFlyIntervalSeconds = 1;
 
+    /// <summary>
+    /// 玛薇卡在车上禁用冲刺。0命玛薇卡酌情选择，可节约夜魂值，1命及以上不需要。
+    /// </summary>
+    [ObservableProperty]
+    private bool _mwkDisableSprintEnabled = false;
+
     public static PathingPartyConfig BuildDefault()
     {
         // 即便是不启用的情况下也设置默认值，减少后续使用的判断
