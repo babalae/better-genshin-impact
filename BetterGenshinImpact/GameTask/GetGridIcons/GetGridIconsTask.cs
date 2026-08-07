@@ -7,14 +7,17 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -41,11 +44,17 @@ public class GetGridIconsTask : ISoloTask
 
     private readonly bool starAsSuffix;
 
+    private readonly string setIncludesLocalizedString;
+
     public GetGridIconsTask(GridScreenName gridScreenName, bool starAsSuffix, int? maxNumToGet = null)
     {
         this.gridScreenName = gridScreenName;
         this.starAsSuffix = starAsSuffix;
         this.maxNumToGet = maxNumToGet;
+
+        IStringLocalizer<GetGridIconsTask> stringLocalizer = App.GetService<IStringLocalizer<GetGridIconsTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.setIncludesLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "套装包含");
     }
 
     public async Task Start(CancellationToken ct)
@@ -158,13 +167,13 @@ public class GetGridIconsTask : ISoloTask
             itemRegion.Click();
             await Delay(300, ct);
 
-            static bool tryGetFlower(out string flowerName)
+            bool tryGetFlower(out string flowerName)
             {
                 using var ra1 = CaptureToRectArea();
                 using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
                 var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
 
-                var flowerWithGlyph = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains("套装包含")).Skip(1).FirstOrDefault();
+                var flowerWithGlyph = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains(this.setIncludesLocalizedString)).Skip(1).FirstOrDefault();
                 if (flowerWithGlyph == default)
                 {
                     nameRegion.Move();
