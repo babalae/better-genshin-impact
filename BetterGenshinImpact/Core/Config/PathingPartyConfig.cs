@@ -177,6 +177,10 @@ public partial class PathingPartyConfig : ObservableObject
         {
             ApproachStopDistance = value;
         }
+        if (MwkJumpFlyDistance <= value)
+        {
+            MwkJumpFlyDistance = value + 1;
+        }
     }
 
     partial void OnApproachStopDistanceChanged(int value)
@@ -184,6 +188,14 @@ public partial class PathingPartyConfig : ObservableObject
         if (value > Distance)
         {
             _approachStopDistance = Distance;
+        }
+    }
+
+    partial void OnMwkJumpFlyDistanceChanged(int value)
+    {
+        if (value <= Distance)
+        {
+            MwkJumpFlyDistance = Distance + 1;
         }
     }
 
@@ -205,9 +217,6 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _switchToWalkEnabled = false;
 
-    [ObservableProperty]
-    private bool _mwkFlyEnabled = true;
-
     /// <summary>
     /// 玛薇卡跳飞开关
     /// </summary>
@@ -215,10 +224,22 @@ public partial class PathingPartyConfig : ObservableObject
     private bool _mwkJumpFlyEnabled = true;
 
     /// <summary>
+    /// 玛薇卡跳飞启用距离（米），必须大于 <see cref="Distance"/>，越界时自动使用 Distance+1 的值。
+    /// </summary>
+    [ObservableProperty]
+    private int _mwkJumpFlyDistance = 60;
+
+    /// <summary>
     /// 跳飞间隔（秒），闲云使用其1/2值
     /// </summary>
     [ObservableProperty]
     private double _mwkJumpFlyIntervalSeconds = 1;
+
+    /// <summary>
+    /// 玛薇卡在车上禁用冲刺。0命玛薇卡酌情勾选，节约夜魂值。
+    /// </summary>
+    [ObservableProperty]
+    private bool _mwkDisableSprintEnabled = false;
 
     public static PathingPartyConfig BuildDefault()
     {

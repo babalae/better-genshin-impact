@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Windows.System;
 using Wpf.Ui.Violeta.Controls;
@@ -64,9 +65,37 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     {
         ScriptGroupConfig = scriptGroupConfig;
         PathingConfig = scriptGroupConfig.PathingConfig;
+        PathingConfig.PropertyChanged += OnPathingConfigPropertyChanged;
         AutoFightViewModel = new AutoFightViewModel(config);
         ShellConfig = scriptGroupConfig.ShellConfig;
         EnableShellConfig = scriptGroupConfig.EnableShellConfig;
+    }
+
+    // 赶路角色为 自动 或 玛薇卡 时显示跳飞相关配置
+    public bool IsHurryOnMwkOrAuto => PathingConfig.HurryOnAvatar is "自动" or "玛薇卡";
+
+    // 赶路角色为 自动/玛薇卡/闲云 时显示跳飞间隔配置
+    public bool IsHurryOnMwkOrAutoOrXianyun => PathingConfig.HurryOnAvatar is "自动" or "玛薇卡" or "闲云";
+
+    // 跳飞启用距离：仅当角色为 自动/玛薇卡 且启用跳飞时显示
+    public bool IsJumpFlyDistanceVisible => IsHurryOnMwkOrAuto && PathingConfig.MwkJumpFlyEnabled;
+
+    // 玛薇卡在车上禁用冲刺：仅当角色为 自动/玛薇卡 时显示
+    public bool IsDisableSprintVisible => IsHurryOnMwkOrAuto;
+
+    // 切人步行：仅当角色为 自动 或实际应用了该选项的角色（玛薇卡/希诺宁）时显示
+    public bool IsSwitchToWalkVisible => PathingConfig.HurryOnAvatar is "自动" or "玛薇卡" or "希诺宁";
+
+    private void OnPathingConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PathingPartyConfig.HurryOnAvatar) or nameof(PathingPartyConfig.MwkJumpFlyEnabled))
+        {
+            OnPropertyChanged(nameof(IsHurryOnMwkOrAuto));
+            OnPropertyChanged(nameof(IsHurryOnMwkOrAutoOrXianyun));
+            OnPropertyChanged(nameof(IsJumpFlyDistanceVisible));
+            OnPropertyChanged(nameof(IsDisableSprintVisible));
+            OnPropertyChanged(nameof(IsSwitchToWalkVisible));
+        }
     }
 
     [RelayCommand]
