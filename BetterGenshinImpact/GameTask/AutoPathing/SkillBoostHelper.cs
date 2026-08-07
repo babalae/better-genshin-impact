@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -220,6 +220,16 @@ public partial class PathExecutor
                     return false;
                 }
 
+                // 不满足冲刺条件（旋转稳定且在车上）时松开冲刺键，避免残留按住状态
+                var gapIconState = GetMavikaESkillIconState(screen2);
+                if (state.RotationStableCount < 1
+                    || !(gapIconState == 3 || gapIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                    // 重置冲刺计时，避免恢复稳定后立即补一次冲刺（无视CD）
+                    _lastMavikaSprintTime = DateTime.UtcNow;
+                }
+
                 //满足条件时，尝试上车
                 if (distance > PartyConfig.Distance)
                 {
@@ -351,16 +361,17 @@ public partial class PathExecutor
                     return true;
                 }
 
-                // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，按冲刺间隔配置自行处理冲刺
+                // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，旋转稳定时才按冲刺间隔配置冲刺
                 if (iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1)
                 {
-                    // 冲刺间隔（秒），0 = 禁用冲刺：每间隔秒数点按冲刺一次，冷却期间持续按住冲刺键
-                    if (PartyConfig.MwkSprintIntervalSeconds > 0)
+                    // 旋转稳定才执行冲刺；旋转不稳定时不冲刺，但仍跳过通用移动逻辑
+                    if (state.RotationStableCount >= 1 && PartyConfig.MwkSprintIntervalSeconds > 0)
                     {
                         if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= PartyConfig.MwkSprintIntervalSeconds)
                         {
                             _lastMavikaSprintTime = DateTime.UtcNow;
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                            // 松开当前按住状态，下一帧会重新按住，形成一次冲刺
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                         }
                         else
                         {
