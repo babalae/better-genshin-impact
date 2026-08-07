@@ -142,7 +142,7 @@
     <value>Bonus DAN da Geo</value>
   </data>
   <data name="快速选择" xml:space="preserve">
-    <value>Selezione rapida</value>
+    <value>Selezione.*rapida</value>
   </data>
   <data name="攻击力" xml:space="preserve">
     <value>ATT</value>

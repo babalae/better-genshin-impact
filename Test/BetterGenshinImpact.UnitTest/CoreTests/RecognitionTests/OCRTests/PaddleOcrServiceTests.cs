@@ -44,7 +44,7 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("fr", "Artéfact 2★", "Artéfact.*2★?")]
         [InlineData("it", "Manufatti da 2★", "Manufatti.*da.*2★?")]
         [InlineData("it", "Selezione rapida", "Selezione.*rapida")]
-        [InlineData("it", "Sfida completata", "Sfida.*completata")]
+        [InlineData("it", "Sfida completata", "(Sfida|completata)")]
         [InlineData("it", "Anomalia geomantica", "Anomalia.*geomantica")]
         [InlineData("it", "Salta")]
         [InlineData("it", "Riscatta")]

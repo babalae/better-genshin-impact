@@ -121,7 +121,7 @@
     <value>Anomalia geomantica</value>
   </data>
   <data name="挑战达成" xml:space="preserve">
-    <value>Sfida completata</value>
+    <value>(Sfida|completata)</value>
   </data>
   <data name="点击任意位置关闭" xml:space="preserve">
     <value>(Fai clic|Tocca|Premi).*per chiudere</value>
