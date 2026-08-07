@@ -42,6 +42,9 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("fr", "Cliquez pour fermer", "Cliquez.*pour.*fermer")]
         [InlineData("fr", "Sélection rapide", "Sélection.*rapide")]
         [InlineData("fr", "Artéfact 2★", "Artéfact.*2★?")]
+        [InlineData("en", "Daily Commission Rewards", "DailyCommissionRewards")]
+        [InlineData("fr", "Récompenses de missions quotidiennes", "Récompensesdemissionsquotidiennes")]
+        [InlineData("zh-Hant", "每日委託獎勵")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>

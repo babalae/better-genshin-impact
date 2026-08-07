@@ -120,4 +120,10 @@
   <data name="今日奖励已领取" xml:space="preserve">
     <value>今日獎勵已領取</value>
   </data>
+  <data name="每日委托奖励" xml:space="preserve">
+    <value>每日委託獎勵</value>
+  </data>
+  <data name="委托" xml:space="preserve">
+    <value>委託</value>
+  </data>
 </root>
