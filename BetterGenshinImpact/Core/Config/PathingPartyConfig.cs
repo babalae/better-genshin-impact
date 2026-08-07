@@ -236,24 +236,10 @@ public partial class PathingPartyConfig : ObservableObject
     private double _mwkJumpFlyIntervalSeconds = 1;
 
     /// <summary>
-    /// 玛薇卡在车上时冲刺的间隔（秒），填 0 时禁用冲刺以节约夜魂值，默认为 5。
-    /// 0命火神建议酌情禁用，1-5命推荐间隔 5，6命推荐间隔 2。
+    /// 玛薇卡在车上禁用冲刺。0命玛薇卡酌情勾选，节约夜魂值。
     /// </summary>
     [ObservableProperty]
-    private double _mwkSprintIntervalSeconds = 5;
-
-    partial void OnMwkSprintIntervalSecondsChanged(double value)
-    {
-        // 钳制到 0-10 秒
-        if (value < 0)
-        {
-            MwkSprintIntervalSeconds = 0;
-        }
-        else if (value > 10)
-        {
-            MwkSprintIntervalSeconds = 10;
-        }
-    }
+    private bool _mwkDisableSprintEnabled = false;
 
     public static PathingPartyConfig BuildDefault()
     {

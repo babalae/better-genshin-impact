@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -70,7 +70,6 @@ public partial class PathExecutor
     private DateTime _lastJumpFlyTime = DateTime.MinValue;
     private bool _jumpFlySafetyPending;
     private DateTime _lastMavikaBoardTime = DateTime.MinValue;
-    private DateTime _lastMavikaSprintTime = DateTime.MinValue;
     private DateTime _lastSkillCheckTime = DateTime.MinValue;
     private DateTime _lastLandingTime = DateTime.MinValue;
     /// <summary>
@@ -80,20 +79,6 @@ public partial class PathExecutor
     private int _lastWaypointIndex = -1;
     private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
-
-    /// <summary>
-    /// 重置玛薇卡冲刺计时：上车完成/失稳/跳飞动作后，保证下一次冲刺至少等待间隔的一半才触发。
-    /// 若剩余等待时间已超过间隔的一半，则不重置。
-    /// </summary>
-    private void ResetMavikaSprintTime()
-    {
-        var cd = Math.Max(0, PartyConfig.MwkSprintIntervalSeconds);
-        var halfCd = cd / 2;
-        if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds > halfCd)
-        {
-            _lastMavikaSprintTime = DateTime.UtcNow.AddSeconds(-halfCd);
-        }
-    }
 
     /// <summary>
     /// 获取切人步行目标序号：优先行走位（MainAvatarIndex），否则排除赶路角色自身 + 黑名单，取序号最靠前的有效角色。
@@ -234,24 +219,14 @@ public partial class PathExecutor
                     return false;
                 }
 
-                // 不满足冲刺条件（旋转稳定且在车上）时松开冲刺键，避免残留按住状态
-                var gapIconState = GetMavikaESkillIconState(screen2);
-                if (state.RotationStableCount < 1
-                    || !(gapIconState == 3 || gapIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                    // 重置冲刺计时（首次冲刺等待 min(1, 间隔) 秒），避免恢复稳定后立即补一次冲刺（无视CD）
-                    ResetMavikaSprintTime();
-                }
-
                 //满足条件时，尝试上车
                 if (distance > PartyConfig.Distance)
                 {
                     await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     var boardIconState = GetMavikaESkillIconState(screen2);
-                    // 内置冷却：玛薇卡上/下车动作后有约1秒无法再次上/下车，与E技能冷却无关（放宽至3秒防抖）
-                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 3 && boardIconState is 1 or 2)
+                    // 内置冷却：玛薇卡上/下车动作后有约1秒无法再次上/下车，与E技能冷却无关（放宽至2秒防抖）
+                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 2 && boardIconState is 1 or 2)
                     {
                         _lastMavikaBoardTime = DateTime.UtcNow;
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
@@ -268,8 +243,6 @@ public partial class PathExecutor
                         }
 
                         // 上车后不跳出当前帧，继续执行跳飞判定
-                        // 重置冲刺计时（首次冲刺等待 min(1, 间隔) 秒），上车完成后重新开始计算冲刺间隔
-                        ResetMavikaSprintTime();
                     }
                 }
 
@@ -277,7 +250,9 @@ public partial class PathExecutor
                 if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
                 {
                     var jumpFlyIconState = GetMavikaESkillIconState(screen2);
-                    if (!(jumpFlyIconState == 3 || jumpFlyIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
+                    // 刚上车后的2秒内跳过图标检测（上/下车动作期间图标不稳定），强制视为通过
+                    var justBoarded = (DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds < 2;
+                    if (!justBoarded && !(jumpFlyIconState == 3 || jumpFlyIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
                     {
                         return false;
                     }
@@ -299,8 +274,6 @@ public partial class PathExecutor
                     await Delay(150, ct);
                     _lastJumpFlyTime = DateTime.UtcNow;
                     _jumpFlySafetyPending = true;
-                    // 跳飞动作后重置冲刺计时（剩余等待时间钳制为间隔的一半）
-                    ResetMavikaSprintTime();
 
                     using var jumpCheckRegion = CaptureToRectArea();
                     if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
@@ -378,21 +351,10 @@ public partial class PathExecutor
 
                 }
 
-                // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，旋转稳定时才按冲刺间隔配置冲刺
-                if (iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1)
+                // 玛薇卡逻辑最后：勾选了禁用冲刺时，在车上（下车图标刚上车）跳过本帧通用移动逻辑以禁用冲刺
+                if (PartyConfig.MwkDisableSprintEnabled
+                    && (iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
                 {
-                    // 旋转稳定才执行冲刺；旋转不稳定时不冲刺，但仍跳过通用移动逻辑
-                    if (state.RotationStableCount >= 1 && PartyConfig.MwkSprintIntervalSeconds > 0)
-                    {
-                        if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= PartyConfig.MwkSprintIntervalSeconds)
-                        {
-                            _lastMavikaSprintTime = DateTime.UtcNow;
-                            // 点按冲刺一次，不持续按住
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
-                            Logger.LogInformation("自动赶路：玛薇卡冲刺");
-                        }
-                    }
-
                     return true;
                 }
 
@@ -937,45 +899,31 @@ public partial class PathExecutor
         {
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "V", X = 1700, Y = 960, W = 3, H = 4,
-                IsCircular = false, Range = 1, RefVal = 0.9917, Weight = 0.766,
-                RefHist = [0.0012543556332223562, 0.0011810046506758249, 0.0017439523425184357, 0.002752956346626525, 0.0018676885904965039, 0.02072012951858713, 0.9298806206255811, 0.04059929229229214],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0007, 0.0019, 0.0052, 0.014, 0.0371, 0.0947, 0.2214, 0.436, 0.6775, 0.851, 0.9395, 0.9769, 0.9914]
-            },
-            new FeatureScorerItem
-            {
-                Type = "F2", Channel = "V", X = 1676, Y = 970, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9899, Weight = 0.7734,
-                RefHist = [0, 0, 0, 0, 0, 0, 0.06034348986743187, 0.9396565101325682],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0014, 0.0039, 0.0105, 0.028, 0.0727, 0.1756, 0.3667, 0.6115, 0.8106, 0.9208, 0.9693]
+                Type = "F2", Channel = "V", X = 1676, Y = 971, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9824, Weight = 0.8834,
+                RefHist = [0.0277, 0, 0, 0, 0, 0, 0.0114, 0.9609],
+                ProbTable = [0, 0, 0, 0.0001, 0.0002, 0.0007, 0.0018, 0.0049, 0.0133, 0.0355, 0.0908, 0.2136, 0.4247, 0.6674, 0.8451, 0.9368, 0.9758, 0.991, 0.9967, 0.9988, 0.9995]
             },
             new FeatureScorerItem
             {
                 Type = "F2", Channel = "S", X = 1691, Y = 988, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 1, Weight = 0.7986,
-                RefHist = [0, 0, 1, 0, 0, 0, 0, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.0011, 0.0029, 0.0078, 0.0209, 0.0548, 0.1362, 0.3001, 0.5382, 0.7601, 0.896]
+                IsCircular = false, Range = 1, RefVal = 0.9954, Weight = 0.879,
+                RefHist = [0, 0.0052, 0.9827, 0.012, 0, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0013, 0.0036, 0.0096, 0.0258, 0.0671, 0.1635, 0.347, 0.5909, 0.797, 0.9143, 0.9667]
             },
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "V", X = 1696, Y = 970, W = 3, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9932, Weight = 0.7837,
-                RefHist = [0.03324684585190858, 0.9562541387048271, 0.010499015443264311, 0, 0, 0, 0, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.0011, 0.003, 0.0081, 0.0218, 0.057, 0.1412, 0.3088, 0.5484, 0.7675, 0.8997, 0.9606]
+                Type = "F2", Channel = "V", X = 1692, Y = 988, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9796, Weight = 0.8914,
+                RefHist = [0, 0.0203, 0.9703, 0.0094, 0, 0, 0, 0],
+                ProbTable = [0, 0.0001, 0.0003, 0.0009, 0.0024, 0.0064, 0.0171, 0.0452, 0.114, 0.2591, 0.4873, 0.7209, 0.8754, 0.9502, 0.9811, 0.993, 0.9974, 0.999, 0.9996, 0.9999, 1]
             },
             new FeatureScorerItem
             {
                 Type = "F2", Channel = "V", X = 1728, Y = 990, W = 3, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9983, Weight = 0.9122,
-                RefHist = [0, 0, 0, 0, 0, 0.9800984894385059, 0.018037805644772822, 0.0018637049167212296],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0006, 0.0017, 0.0046, 0.0123, 0.0328, 0.0844, 0.2003, 0.405, 0.6492, 0.8342, 0.9318, 0.9738, 0.9902]
-            },
-            new FeatureScorerItem
-            {
-                Type = "F2", Channel = "V", X = 1697, Y = 1022, W = 2, H = 3,
-                IsCircular = false, Range = 1, RefVal = 0.9739, Weight = 0.7739,
-                RefHist = [0, 0, 0, 0.014463663026665165, 0, 0.05699667473142457, 0.9045152581853189, 0.024024404056591495],
-                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0009, 0.0024, 0.0064, 0.0171, 0.0453, 0.1141, 0.2594, 0.4877, 0.7213, 0.8755, 0.9503, 0.9811, 0.993, 0.9974]
+                IsCircular = false, Range = 1, RefVal = 0.9995, Weight = 0.9179,
+                RefHist = [0, 0, 0, 0, 0.0011, 0.9916, 0.0068, 0.0005],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0007, 0.0019, 0.0052, 0.0141, 0.0375, 0.0957, 0.2234, 0.4388, 0.68, 0.8524, 0.9401, 0.9771]
             },
         }
     };
@@ -990,38 +938,38 @@ public partial class PathExecutor
         {
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "V", X = 1686, Y = 963, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9903, Weight = 0.8903,
-                RefHist = [0, 0, 0, 0, 0.9892811138283595, 0.010718886171640567, 0, 0],
-                ProbTable = [0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0021, 0.0056, 0.015, 0.0398, 0.1012, 0.2343, 0.454, 0.6933, 0.86, 0.9435, 0.9785, 0.992, 0.997, 0.9989]
+                Type = "F2", Channel = "V", X = 1685, Y = 962, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9923, Weight = 0.8962,
+                RefHist = [0, 0, 0, 0.0019, 0.9895, 0.0085, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0.0001, 0.0002, 0.0004, 0.0012, 0.0032, 0.0086, 0.023, 0.0601, 0.148, 0.3208, 0.5622, 0.7773, 0.9046, 0.9627, 0.9859, 0.9948, 0.9981]
             },
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "S", X = 1692, Y = 970, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9882, Weight = 0.8568,
-                RefHist = [0, 0.016642596135750816, 0.9638889598441912, 0.01946844402005793, 0, 0, 0, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0013, 0.0034, 0.0092, 0.0245, 0.064, 0.1567, 0.3356, 0.5786, 0.7887, 0.9103, 0.965, 0.9868, 0.9951]
+                Type = "F2", Channel = "S", X = 1694, Y = 974, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9914, Weight = 0.8569,
+                RefHist = [0, 0, 0.0149, 0.9851, 0, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0006, 0.0017, 0.0046, 0.0125, 0.0333, 0.0855, 0.2027, 0.4087, 0.6527, 0.8363, 0.9328, 0.9742, 0.9903, 0.9964]
             },
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "S", X = 1700, Y = 979, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9931, Weight = 0.8834,
-                RefHist = [0, 0, 0.0014888332289077013, 0.9851538051239543, 0.013357361647137802, 0, 0, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0014, 0.0039, 0.0106, 0.0283, 0.0734, 0.1772, 0.3693, 0.6141, 0.8123, 0.9216, 0.9697, 0.9886]
+                Type = "F2", Channel = "S", X = 1710, Y = 992, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9884, Weight = 0.8708,
+                RefHist = [0, 0, 0, 0, 0.009, 0.9751, 0.0159, 0],
+                ProbTable = [0, 0, 0, 0.0001, 0.0003, 0.0009, 0.0026, 0.0069, 0.0187, 0.0491, 0.1231, 0.2763, 0.5092, 0.7383, 0.8846, 0.9542, 0.9827, 0.9935, 0.9976, 0.9991, 0.9997]
             },
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "S", X = 1711, Y = 990, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.991, Weight = 0.8805,
-                RefHist = [0, 0, 0, 0.0017864597868968, 0.016793844158299848, 0.9759536625405839, 0.005466033514219401, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0004, 0.001, 0.0026, 0.0071, 0.019, 0.05, 0.1252, 0.28, 0.5139, 0.7419, 0.8865, 0.955, 0.983, 0.9937, 0.9977]
+                Type = "F2", Channel = "V", X = 1712, Y = 993, W = 2, H = 3,
+                IsCircular = false, Range = 1, RefVal = 0.9942, Weight = 0.8852,
+                RefHist = [0, 0, 0, 0.0006, 0.0014, 0.9909, 0.0071, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0021, 0.0056, 0.0151, 0.0401, 0.1019, 0.2357, 0.456, 0.695, 0.861, 0.9439, 0.9786, 0.992]
             },
             new FeatureScorerItem
             {
                 Type = "F2", Channel = "V", X = 1717, Y = 1011, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9921, Weight = 0.863,
-                RefHist = [0, 0, 0, 0, 0.009584958224132892, 0.9904150417758671, 0, 0],
-                ProbTable = [0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0015, 0.0039, 0.0107, 0.0284, 0.0737, 0.1778, 0.3703, 0.6151, 0.8129, 0.9219, 0.9698, 0.9887, 0.9958, 0.9985, 0.9994]
+                IsCircular = false, Range = 1, RefVal = 0.9934, Weight = 0.8908,
+                RefHist = [0, 0, 0, 0, 0.008, 0.992, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0006, 0.0015, 0.0042, 0.0113, 0.03, 0.0776, 0.1861, 0.3833, 0.6281, 0.8212, 0.9258, 0.9714, 0.9893, 0.996]
             },
         }
     };
@@ -1036,45 +984,24 @@ public partial class PathExecutor
         {
             new FeatureScorerItem
             {
-                Type = "F2", Channel = "S", X = 1698, Y = 966, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9928, Weight = 0.9068,
-                RefHist = [0, 0, 0.02356926501913827, 0.9612878755834396, 0.015142859397422133, 0, 0, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.002, 0.0055, 0.0149, 0.0394, 0.1004, 0.2328, 0.4519, 0.6915, 0.859, 0.9431, 0.9783, 0.9919, 0.997]
-            },
-            new FeatureScorerItem
-            {
-                Type = "F2", Channel = "V", X = 1692, Y = 961, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9999, Weight = 0.8876,
-                RefHist = [0, 0, 0.0018366169880083437, 0, 0, 0.9944093896826848, 0.00375399332930691, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0004, 0.001, 0.0026, 0.0071, 0.019, 0.05, 0.1251, 0.28, 0.5138, 0.7418, 0.8865, 0.955]
-            },
-            new FeatureScorerItem
-            {
-                Type = "F2", Channel = "V", X = 1700, Y = 961, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9993, Weight = 0.7434,
-                RefHist = [0.003399565999189457, 0.0033261401384723347, 0.000976956062830274, 0.007602934387829995, 0.004166150296940107, 0.9744626499323689, 0.006065603182368956, 0],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0013, 0.0035, 0.0095, 0.0253, 0.0659, 0.161, 0.3427, 0.5863, 0.7939, 0.9128]
-            },
-            new FeatureScorerItem
-            {
-                Type = "F2", Channel = "V", X = 1692, Y = 983, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9726, Weight = 0.8227,
-                RefHist = [0, 0, 0.0010456854604408044, 0.002458671439219928, 0.0012471232672327697, 0.009836431437600022, 0.07023793250520412, 0.9151741558903024],
-                ProbTable = [0, 0, 0, 0, 0.0001, 0.0003, 0.0009, 0.0024, 0.0065, 0.0174, 0.0459, 0.1156, 0.2622, 0.4913, 0.7242, 0.8771, 0.951, 0.9814, 0.9931, 0.9974, 0.9991]
+                Type = "F2", Channel = "V", X = 1697, Y = 966, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9821, Weight = 0.8096,
+                RefHist = [0, 0, 0.0062, 0.954, 0.0398, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.001, 0.0028, 0.0075, 0.02, 0.0526, 0.131, 0.2907, 0.527, 0.7518, 0.8917, 0.9572, 0.9838, 0.994, 0.9978]
             },
             new FeatureScorerItem
             {
                 Type = "F2", Channel = "V", X = 1705, Y = 988, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9821, Weight = 0.7976,
-                RefHist = [0, 0, 0, 0, 0, 0, 0.037842264161779195, 0.9621577358382208],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0023, 0.0062, 0.0166, 0.0439, 0.1109, 0.2532, 0.4797, 0.7148, 0.872, 0.9488, 0.9805]
+                IsCircular = false, Range = 1, RefVal = 0.9913, Weight = 0.8934,
+                RefHist = [0, 0, 0, 0, 0, 0, 0.0175, 0.9825],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0014, 0.0038, 0.0102, 0.0272, 0.0706, 0.1711, 0.3594, 0.604, 0.8057, 0.9185, 0.9684, 0.9881]
             },
             new FeatureScorerItem
             {
                 Type = "F2", Channel = "V", X = 1706, Y = 991, W = 2, H = 2,
-                IsCircular = false, Range = 1, RefVal = 0.9933, Weight = 0.8081,
-                RefHist = [0, 0, 0, 0, 0, 0, 0.025740694314201038, 0.974259305685799],
-                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0021, 0.0056, 0.0152, 0.0402, 0.1021, 0.2362, 0.4567, 0.6956, 0.8613, 0.9441]
+                IsCircular = false, Range = 1, RefVal = 0.9947, Weight = 0.8306,
+                RefHist = [0, 0, 0, 0, 0, 0, 0.0222, 0.9778],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0022, 0.006, 0.0162, 0.0428, 0.1084, 0.2483, 0.4731, 0.7094, 0.869, 0.9475]
             },
         }
     };
