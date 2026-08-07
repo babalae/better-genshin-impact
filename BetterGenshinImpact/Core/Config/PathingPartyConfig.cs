@@ -230,7 +230,7 @@ public partial class PathingPartyConfig : ObservableObject
     /// 玛薇卡跳飞启用距离（米），必须大于 <see cref="Distance"/>，越界时自动使用 Distance+1 的值。
     /// </summary>
     [ObservableProperty]
-    private int _mwkJumpFlyDistance = 90;
+    private int _mwkJumpFlyDistance = 60;
 
     /// <summary>
     /// 跳飞间隔（秒），闲云使用其1/2值
