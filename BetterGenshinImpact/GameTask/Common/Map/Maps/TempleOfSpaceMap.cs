@@ -24,8 +24,8 @@ public class TempleOfSpaceMap : SceneBaseMap
         mapSize: new Size(GameMapCols * TempleOfSpaceMapImageBlockWidth, GameMapRows * TempleOfSpaceMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TempleOfSpaceMapImageBlockWidth, (GameMapUpRows + 1) * TempleOfSpaceMapImageBlockWidth),
         mapImageBlockWidth: TempleOfSpaceMapImageBlockWidth,
-        splitRow: 0,
-        splitCol: 0)
+        splitRow: GameMapRows,
+        splitCol: GameMapCols)
     {
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/TempleOfSpace/TempleOfSpace_0_1024.png"));
     }
