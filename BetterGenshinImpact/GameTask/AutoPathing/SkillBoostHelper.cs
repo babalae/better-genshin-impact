@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -80,6 +80,17 @@ public partial class PathExecutor
     private int _lastWaypointIndex = -1;
     private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 重置玛薇卡冲刺计时：上车完成/失稳后，首次冲刺等待 min(1, 间隔) 秒而非完整间隔。
+    /// 将距上次冲刺的时间前拨为 (间隔 - min(1, 间隔)) 秒，剩余 min(1, 间隔) 秒即触发首次冲刺。
+    /// </summary>
+    private void ResetMavikaSprintTime()
+    {
+        var interval = Math.Max(0, PartyConfig.MwkSprintIntervalSeconds);
+        var firstCd = Math.Min(1, interval);
+        _lastMavikaSprintTime = DateTime.UtcNow.AddSeconds(firstCd - interval);
+    }
 
     /// <summary>
     /// 获取切人步行目标序号：优先行走位（MainAvatarIndex），否则排除赶路角色自身 + 黑名单，取序号最靠前的有效角色。
@@ -226,8 +237,8 @@ public partial class PathExecutor
                     || !(gapIconState == 3 || gapIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
                 {
                     Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                    // 重置冲刺计时，避免恢复稳定后立即补一次冲刺（无视CD）
-                    _lastMavikaSprintTime = DateTime.UtcNow;
+                    // 重置冲刺计时（首次冲刺等待 min(1, 间隔) 秒），避免恢复稳定后立即补一次冲刺（无视CD）
+                    ResetMavikaSprintTime();
                 }
 
                 //满足条件时，尝试上车
@@ -254,8 +265,8 @@ public partial class PathExecutor
                         }
 
                         // 上车后不跳出当前帧，继续执行跳飞判定
-                        // 重置冲刺计时，上车完成后重新开始计算冲刺间隔
-                        _lastMavikaSprintTime = DateTime.UtcNow;
+                        // 重置冲刺计时（首次冲刺等待 min(1, 间隔) 秒），上车完成后重新开始计算冲刺间隔
+                        ResetMavikaSprintTime();
                     }
                 }
 
