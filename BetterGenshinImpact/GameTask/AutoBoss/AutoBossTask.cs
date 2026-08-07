@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -53,6 +54,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private static readonly TimeSpan OriginalResinRecoveryInterval = TimeSpan.FromMinutes(8);
     private const int MaxQuickUseQuantity = 20;
+
+    private readonly string touchTrounceBlossomString;
+    private readonly string useOriginalResinString;
+    private readonly string replenishOriginalResinPattern;
+    private readonly string clickAnywhereToContinueString;
+    private readonly string resinSupplementOrPattern;
 
     private string PathingAssetFolder => Global.Absolute(@"GameTask\AutoBoss\Assets\Pathing");
 
@@ -89,6 +96,15 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         {
             _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
         }
+
+        IStringLocalizer<AutoBossTask> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoBossTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.touchTrounceBlossomString = stringLocalizer.WithCultureGet(cultureInfo, "接触征讨之花");
+        this.useOriginalResinString = stringLocalizer.WithCultureGet(cultureInfo, "使用原粹树脂");
+        this.replenishOriginalResinPattern = stringLocalizer.WithCultureGet(cultureInfo, "补充原粹树脂");
+        this.clickAnywhereToContinueString = stringLocalizer.WithCultureGet(cultureInfo, "点击空白区域继续");
+        this.resinSupplementOrPattern = stringLocalizer.WithCultureGet(cultureInfo, "(补充|原粹|树脂)");
     }
 
     /// <summary>
@@ -534,11 +550,34 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         return Math.Max(0, (originalResin.Limit - originalResin.Count) / 60);
     }
 
+    /// <summary>
+    /// 在指定区域轮询 OCR 结果，直到找到匹配 <paramref name="pattern"/>（支持正则）的文本或超时。
+    /// 用于 <see cref="BvPage.Locator(string, Rect)"/> 无法表达正则匹配的场景（其内部仅做字面量 Contains 比较）。
+    /// 时序对齐 <see cref="BetterGenshinImpact.GameTask.Common.NewRetry.WaitForAction"/>：ogni iterazione fa PRIMA
+    /// il delay e POI il controllo (mai un controllo a t=0), cosi' il token di cancellazione viene rispettato
+    /// prima di agire e i tempi coincidono con quelli di <see cref="BvLocator.WaitFor"/>/<see cref="BvLocator.TryWaitFor"/>.
+    /// </summary>
+    private async Task<List<Region>> WaitForOcrPatternAsync(BvPage page, Rect rect, string pattern, int timeoutMs, int intervalMs = 250)
+    {
+        var attempts = Math.Max(1, timeoutMs / intervalMs);
+        for (var i = 0; i < attempts; i++)
+        {
+            await Delay(intervalMs, _ct);
+
+            var matches = page.Ocr(rect).Where(r => Regex.IsMatch(r.Text, pattern)).ToList();
+            if (matches.Count > 0)
+            {
+                return matches;
+            }
+        }
+
+        return [];
+    }
+
     private async Task<bool> TryOpenResinSupplementPane(BvPage page)
     {
         var titleRect = ScaleRect(834, 247, 256, 60);
-        var titleLocator = page.Locator("补充原粹树脂", titleRect).WithRetryInterval(300);
-        if ((await titleLocator.TryWaitFor(500)).Count > 0)
+        if ((await WaitForOcrPatternAsync(page, titleRect, replenishOriginalResinPattern, 500, 300)).Count > 0)
         {
             return true;
         }
@@ -547,25 +586,25 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             .WithRoi(ScaleRect(1200, 25, 580, 50))
             .WithRetryInterval(300);
 
-        try
+        var deadline = DateTime.UtcNow.AddMilliseconds(5000);
+        while (DateTime.UtcNow < deadline)
         {
-            await titleLocator
-                .WithRetryAction(_ =>
-                {
-                    var buttons = openButtonLocator.FindAll();
-                    if (buttons.Count > 0)
-                    {
-                        buttons[0].Click();
-                    }
-                })
-                .WaitFor(5000);
-            return true;
+            await Delay(300, _ct);
+
+            if (page.Ocr(titleRect).Any(r => Regex.IsMatch(r.Text, replenishOriginalResinPattern)))
+            {
+                return true;
+            }
+
+            var buttons = openButtonLocator.FindAll();
+            if (buttons.Count > 0)
+            {
+                buttons[0].Click();
+            }
         }
-        catch (TimeoutException e)
-        {
-            _logger.LogWarning("{Name}：未能打开补充原粹树脂面板，原因：{Reason}", Name, e.Message);
-            return false;
-        }
+
+        _logger.LogWarning("{Name}：未能打开补充原粹树脂面板，超时未检测到标题文本", Name);
+        return false;
     }
 
     private async Task<bool> TrySelectSupplementalResin(BvPage page, SupplementalResinOption resin)
@@ -1230,15 +1269,15 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private bool HasRewardInteractionPrompt(BvPage page)
     {
         var rewardRect = ScaleRect(1210, 300, 200, 400);
-        return page.Ocr(rewardRect).Any(region => region.Text.Contains("接触征讨之花", StringComparison.Ordinal));
+        return page.Ocr(rewardRect).Any(region => region.Text.Contains(touchTrounceBlossomString, StringComparison.Ordinal));
     }
 
     private bool HasRewardPanelPrompt(BvPage page)
     {
         var rewardPanelRect = ScaleRect(850, 740, 250, 35);
         return page.Ocr(rewardPanelRect).Any(region =>
-            region.Text.Contains("使用原粹树脂", StringComparison.Ordinal)
-            || region.Text.Contains("补充原粹树脂", StringComparison.Ordinal));
+            region.Text.Contains(useOriginalResinString, StringComparison.Ordinal)
+            || Regex.IsMatch(region.Text, replenishOriginalResinPattern));
     }
 
     private async Task MonitorRewardPromptTask(BvPage page, CancellationTokenSource navigationCts)
@@ -1430,7 +1469,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         for (var i = 0; i < 20; i++)
         {
             var closeRegion = page.Ocr(closeRect)
-                .FirstOrDefault(r => r.Text.Contains("点击空白区域继续", StringComparison.Ordinal));
+                .FirstOrDefault(r => r.Text.Contains(clickAnywhereToContinueString, StringComparison.Ordinal));
             if (closeRegion != null)
             {
                 return true;
@@ -1453,13 +1492,13 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
         try
         {
-            await page.Locator("使用原粹树脂", useRect).ClickUntilDisappears(3000);
+            await page.Locator(useOriginalResinString, useRect).ClickUntilDisappears(3000);
             await Delay(1000, _ct);
             return true;
         }
         catch (TimeoutException e)
         {
-            var supplementRegions = await page.Locator("补充原粹树脂", useRect).TryWaitFor(1000);
+            var supplementRegions = await WaitForOcrPatternAsync(page, useRect, replenishOriginalResinPattern, 1000);
             if (supplementRegions.Count > 0)
             {
                 _logger.LogInformation("{Name}：领奖界面提示补充原粹树脂，当前原粹树脂不足", Name);
@@ -1483,10 +1522,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         for (var i = 0; i < 50; i++)
         {
             _ct.ThrowIfCancellationRequested();
-            var promptExists = page.Ocr(supplementRect).Any(region =>
-                region.Text.Contains("补充", StringComparison.Ordinal)
-                || region.Text.Contains("原粹", StringComparison.Ordinal)
-                || region.Text.Contains("树脂", StringComparison.Ordinal));
+            var promptExists = page.Ocr(supplementRect).Any(region => Regex.IsMatch(region.Text, resinSupplementOrPattern));
             if (!promptExists)
             {
                 return;
@@ -1517,7 +1553,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             }
 
             var closeRegion = capture.FindMulti(RecognitionObject.Ocr(closeRect))
-                .FirstOrDefault(r => r.Text.Contains("点击空白区域继续", StringComparison.Ordinal));
+                .FirstOrDefault(r => r.Text.Contains(clickAnywhereToContinueString, StringComparison.Ordinal));
             if (closeRegion != null)
             {
                 closeRegion.Click();
