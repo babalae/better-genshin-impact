@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -179,20 +179,21 @@ public partial class PathExecutor
 
                 if (mwkShouldApproach)
                 {
-                    Simulation.ReleaseAllKey();
                     if (PartyConfig.SwitchToWalkEnabled)
                     {
                         // 切人下车：无需检测图标，直接切换步行角色
+                        Simulation.ReleaseAllKey();
                         var nextIdx = GetSwitchToWalkIndex();
                         Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
                         await SwitchAvatar(nextIdx);
                     }
                     else
                     {
-                        // 点按E下车：持续检测，图标为下车(3)时才执行
+                        // 点按E下车：持续检测，图标为下车(3)时才松键并执行下车
                         var approachIconState = GetMavikaESkillIconState(screen2);
                         if (approachIconState == 3 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
                         {
+                            Simulation.ReleaseAllKey();
                             Logger.LogInformation("自动赶路：玛薇卡接近节点，下车步行");
                             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                             await Delay(100, ct);
