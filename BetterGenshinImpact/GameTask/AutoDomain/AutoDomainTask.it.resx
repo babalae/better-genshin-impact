@@ -136,9 +136,9 @@
     <value>Configurazione rapida</value>
   </data>
   <data name="限时开放" xml:space="preserve">
-    <value>Disponibile per un periodo limitato</value>
+    <value>Disponibile.*per.*un.*periodo.*limitato</value>
   </data>
   <data name="限时全部开放" xml:space="preserve">
-    <value>Accesso completo a tempo limitato</value>
+    <value>Accesso.*completo.*a.*tempo.*limitato</value>
   </data>
 </root>
