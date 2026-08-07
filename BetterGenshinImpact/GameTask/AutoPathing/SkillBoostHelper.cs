@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -222,8 +222,7 @@ public partial class PathExecutor
                             await ReadEskillCdAsync("玛薇卡");
                         }
 
-                        // 上车后直接跳过本帧通用移动逻辑，交给下一帧处理
-                        return true;
+                        // 上车后不跳出当前帧，继续执行跳飞判定
                     }
                 }
 
@@ -337,15 +336,27 @@ public partial class PathExecutor
                     switch (PartyConfig.MwkSprintFrequency)
                     {
                         case "少量冲刺":
-                            // 类似 run 逻辑：持续按住冲刺
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                            // 每 5 秒点按冲刺一次，冷却期间持续按住冲刺键
+                            if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= 5)
+                            {
+                                _lastMavikaSprintTime = DateTime.UtcNow;
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                            }
+                            else
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                            }
                             break;
                         case "尽可能冲刺":
-                            // 类似 dash 逻辑：1 秒冷却单次点按冲刺
+                            // 每 1 秒点按冲刺一次，冷却期间持续按住冲刺键
                             if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= 1)
                             {
                                 _lastMavikaSprintTime = DateTime.UtcNow;
                                 Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                            }
+                            else
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
                             }
                             break;
                         default:
