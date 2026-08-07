@@ -49,6 +49,7 @@ public class TpTask
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
 
     private readonly CancellationToken ct;
+    private ILocalMovementService? _localMovementService;
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
 
@@ -218,9 +219,10 @@ public class TpTask
         }
     }
 
-    public TpTask(CancellationToken ct)
+    public TpTask(CancellationToken ct, ILocalMovementService? localMovementService = null)
     {
         this.ct = ct;
+        _localMovementService = localMovementService;
         _assets = QuickTeleportAssets.Get(_captureRect.Width, _captureRect.Height);
         TpTaskParam param = new TpTaskParam();
         this.cultureInfo = param.GameCultureInfo;
@@ -273,7 +275,8 @@ public class TpTask
                 MoveMode = MoveModeEnum.Walk.Code
             };
             var waypointForTrack = new WaypointForTrack(waypoint, nameof(MapTypes.Teyvat), _mapMatchingMethod);
-            await new PathExecutor(ct).MoveTo(waypointForTrack);
+            _localMovementService ??= new LocalMovementService(ct);
+            await _localMovementService.MoveToAsync(waypointForTrack);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
 

@@ -54,9 +54,9 @@ public partial class OneDragonFlowViewModel : ViewModel
     ];
 
 
-    [ObservableProperty] private OneDragonTaskItem _selectedTask;
+    [ObservableProperty] private OneDragonTaskItem? _selectedTask;
 
-    partial void OnSelectedTaskChanged(OneDragonTaskItem value)
+    partial void OnSelectedTaskChanged(OneDragonTaskItem? value)
     {
         if (value != null)
         {

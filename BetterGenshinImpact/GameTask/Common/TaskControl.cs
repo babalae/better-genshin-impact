@@ -77,9 +77,9 @@ public class TaskControl
                 }
 
                 Logger.LogWarning("快捷键触发暂停，等待解除");
-                foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+                foreach (var suspendable in RunnerContext.Instance.GetSuspendablesSnapshot())
                 {
-                    item.Value.Suspend();
+                    suspendable.Suspend();
                 }
 
                 first = false;
@@ -93,9 +93,9 @@ public class TaskControl
         {
             Logger.LogWarning("暂停已经解除");
             RunnerContext.Instance.ResumeAutoPick();
-            foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+            foreach (var suspendable in RunnerContext.Instance.GetSuspendablesSnapshot())
             {
-                item.Value.Resume();
+                suspendable.Resume();
             }
         }
     }

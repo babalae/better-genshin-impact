@@ -625,7 +625,12 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
     {
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
+        var combatCommands = _combatScriptBag?.FindCombatScript(combatScenes.GetAvatars())
+                             ?? throw new InvalidOperationException("战斗脚本尚未初始化");
+        if (combatCommands.Count == 0)
+        {
+            throw new InvalidOperationException("没有可用战斗脚本");
+        }
         var avatar = combatScenes.SelectAvatar(combatCommands[0].Name);
         avatar?.SwitchWithoutCts();
         Sleep(200);

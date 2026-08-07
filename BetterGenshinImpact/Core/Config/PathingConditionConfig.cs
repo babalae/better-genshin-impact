@@ -40,7 +40,7 @@ public partial class PathingConditionConfig : ObservableObject
             if (_recoverTiming is null)
             {
                 // 首次读取时从旧字段自动迁移
-                _recoverTiming = RecoverTimingMigration.Migrate(_onlyInTeleportRecover);
+                _recoverTiming = RecoverTimingMigration.Migrate(OnlyInTeleportRecover);
             }
             return _recoverTiming.Value;
         }

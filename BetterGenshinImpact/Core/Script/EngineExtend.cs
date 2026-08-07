@@ -49,7 +49,7 @@ public class EngineExtend
         engine.AddHostObject("notification", new Notification());
         
         // 任务调度器
-        engine.AddHostObject("dispatcher", new Dispatcher(config));
+        engine.AddHostObject("dispatcher", new Dispatcher(config ?? new object()));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
         engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
@@ -110,7 +110,7 @@ public class EngineExtend
 
         // 自动为当前 JS 环境注册生命周期管理与暂停状态读取
         var jsSuspendHook = new JsScriptSuspendHook();
-        GameTask.RunnerContext.Instance.SuspendableDictionary["DefaultJsEnvironment"] = jsSuspendHook;
+        GameTask.RunnerContext.Instance.SetSuspendable("DefaultJsEnvironment", jsSuspendHook);
         engine.AddHostObject("suspendState", jsSuspendHook);
 
         // 导入 JavaScript 模块

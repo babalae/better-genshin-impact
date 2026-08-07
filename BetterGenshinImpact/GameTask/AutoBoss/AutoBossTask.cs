@@ -896,7 +896,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <exception cref="Exception">没有可用战斗脚本时抛出。</exception>
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
     {
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
+        var combatCommands = _combatScriptBag?.FindCombatScript(combatScenes.GetAvatars())
+                             ?? throw new InvalidOperationException("战斗脚本尚未初始化");
         if (combatCommands.Count == 0)
         {
             throw new Exception("没有可用战斗脚本");

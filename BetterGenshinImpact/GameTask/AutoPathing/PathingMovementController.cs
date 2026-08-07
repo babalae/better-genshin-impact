@@ -47,7 +47,7 @@ public class PathingMovementController
     private readonly PathingNavigator _navigator;
     private readonly CameraRotateTask _rotateTask;
     private readonly TrapEscaper _trapEscaper;
-    private readonly Suspend.PathExecutorSuspend _pathExecutorSuspend;
+    private readonly Suspend.IPathingSuspendState _pathExecutorSuspend;
     private readonly PathingMovementActions _actions;
     private DateTime _moveToStartTime;
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
@@ -66,7 +66,7 @@ public class PathingMovementController
         PathingNavigator navigator,
         CameraRotateTask rotateTask,
         TrapEscaper trapEscaper,
-        Suspend.PathExecutorSuspend pathExecutorSuspend,
+        Suspend.IPathingSuspendState pathExecutorSuspend,
         PathingMovementActions actions)
     {
         _ct = ct;

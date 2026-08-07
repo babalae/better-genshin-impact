@@ -72,8 +72,8 @@ public class AutoFightJsonTask : ISoloTask
     /// </summary>
     private class PrioritizedAction
     {
-        public JsonAction Action { get; set; }
-        public string Expression { get; set; }
+        public required JsonAction Action { get; set; }
+        public required string Expression { get; set; }
         public int Priority { get; set; }
     }
 
@@ -691,21 +691,18 @@ public class AutoFightJsonTask : ISoloTask
             {
                 // 注意：此处使用 await 确保异常能被正确捕获
                 // TXT 版本的 AutoFightTask.CheckFightFinish 中未使用 await，异常可能被吞掉
-                Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        var bloodLower = new Scalar(255, 90, 90);
-                        await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
-                    }
-                }, _ct);
+                    var bloodLower = new Scalar(255, 90, 90);
+                    await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning("MoveForwardAsync 异常：{Msg}", ex.Message);
+                }
             }
 
             _lastFightFlagTime = DateTime.Now;
@@ -876,7 +873,8 @@ public class AutoFightJsonTask : ISoloTask
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
-                        var cs = await RunnerContext.Instance.GetCombatScenes(_ct);
+                        var cs = await RunnerContext.Instance.GetCombatScenes(_ct)
+                                 ?? throw new InvalidOperationException("切换拾取队伍后识别队伍失败");
                         picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
                     }
                 }
@@ -938,7 +936,7 @@ public class AutoFightJsonTask : ISoloTask
                                 foreach (var command in pickUpAction.CombatCommands)
                                 {
                                     command.Execute(combatScenes);
-                                    Task.Run(() =>
+                                    await Task.Run(() =>
                                     {
                                         if (Monitor.TryEnter(PickLock))
                                         {
@@ -960,7 +958,7 @@ public class AutoFightJsonTask : ISoloTask
                                                 Monitor.Exit(PickLock);
                                             }
                                         }
-                                    });
+                                    }, _ct);
                                 }
 
                                 if (!find)

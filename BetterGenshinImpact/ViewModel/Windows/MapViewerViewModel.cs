@@ -2029,8 +2029,11 @@ public partial class MapViewerViewModel : ObservableObject
         if (ReferenceEquals(route, SelectedRecordedRoute))
         {
             RecordFileName = routeName;
-            _recordTaskTemplate.Info ??= new PathingTaskInfo();
-            _recordTaskTemplate.Info.Name = routeName;
+            if (_recordTaskTemplate != null)
+            {
+                _recordTaskTemplate.Info ??= new PathingTaskInfo();
+                _recordTaskTemplate.Info.Name = routeName;
+            }
             PublishRecorderPath();
         }
 
@@ -7004,7 +7007,7 @@ public sealed class ActionUsageEditorItemViewModel(string code, string displayNa
 
     public string DisplayName { get; } = displayName;
 
-    public string DetailText => code;
+    public string DetailText => Code;
 }
 
 public sealed record MapEditorOption(

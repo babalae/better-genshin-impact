@@ -722,7 +722,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         return !isLastTurn;
     }
 
-    private async Task<bool> UseResinAndCheckLast(ImageRegion ra)
+    private Task<bool> UseResinAndCheckLast(ImageRegion ra)
     {
         bool isLastTurn = false;
 
@@ -736,7 +736,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
             {
                 Logger.LogWarning("树脂不足");
-                return true;
+                return Task.FromResult(true);
             }
 
             if (resinStatus.CondensedResinCount > 0)
@@ -778,11 +778,11 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             if (successCount == 0)
             {
                 Logger.LogWarning("指定树脂领取次数时，当前可用树脂选项无法满足配置");
-                return true;
+                return Task.FromResult(true);
             }
         }
 
-        return isLastTurn;
+        return Task.FromResult(isLastTurn);
     }
 
     #endregion
@@ -850,7 +850,12 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
     {
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
+        var combatCommands = _combatScriptBag?.FindCombatScript(combatScenes.GetAvatars())
+                             ?? throw new InvalidOperationException("战斗脚本尚未初始化");
+        if (combatCommands.Count == 0)
+        {
+            throw new InvalidOperationException("没有可用战斗脚本");
+        }
         var avatar = combatScenes.SelectAvatar(combatCommands[0].Name);
         avatar?.SwitchWithoutCts();
         Sleep(200, _ct);

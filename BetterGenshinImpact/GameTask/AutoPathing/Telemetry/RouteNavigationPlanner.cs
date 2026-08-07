@@ -636,7 +636,10 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 
         while (queue.Count > 0)
         {
-            queue.TryDequeue(out var nodeId, out var dequeuedCost);
+            if (!queue.TryDequeue(out var nodeId, out var dequeuedCost) || nodeId == null)
+            {
+                continue;
+            }
             if (!distances.TryGetValue(nodeId, out var currentCost) ||
                 dequeuedCost > currentCost + 0.0001)
             {
@@ -726,7 +729,10 @@ public sealed class RouteNavigationPlanner : IRouteNavigationPlanner
 
         while (queue.Count > 0)
         {
-            queue.TryDequeue(out var nodeId, out var dequeuedCost);
+            if (!queue.TryDequeue(out var nodeId, out var dequeuedCost) || nodeId == null)
+            {
+                continue;
+            }
             if (!distances.TryGetValue(nodeId, out var currentCost) ||
                 dequeuedCost > currentCost + 0.0001)
             {

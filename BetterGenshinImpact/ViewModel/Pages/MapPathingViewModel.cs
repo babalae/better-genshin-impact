@@ -183,7 +183,7 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
-    public async void OnOpenSettings()
+    private void OnOpenSettings()
     {
         // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         // {
@@ -194,9 +194,10 @@ public partial class MapPathingViewModel : ViewModel
         //
         // await uiMessageBox.ShowDialogAsync();
 
-        var vm = App.GetService<PathingConfigViewModel>();
+        var vm = App.GetService<PathingConfigViewModel>()
+                 ?? throw new InvalidOperationException("PathingConfigViewModel 尚未注册");
         var view = new PathingConfigView(vm);
-        view?.ShowDialog();
+        view.ShowDialog();
     }
 
     [RelayCommand]

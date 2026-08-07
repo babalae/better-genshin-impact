@@ -65,12 +65,7 @@ public partial class PathExecutor
     /// Gets the movement controller.
     /// 获取移动控制器。
     /// </summary>
-    public PathingMovementController MovementController { get; }
-
-    public Task<bool> MoveTo(WaypointForTrack waypoint)
-    {
-        return MovementController.MoveTo(waypoint);
-    }
+    internal PathingMovementController MovementController { get; }
     
     public Telemetry.RouteTelemetryManager RouteTelemetryManager { get; } = new();
     
@@ -167,6 +162,40 @@ public partial class PathExecutor
     }
 
     internal DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
+    private PathingTask? _currentTask;
+
+    internal PathingExternalTaskRequest? PendingExternalTaskRequest { get; private set; }
+
+    internal void RequestExternalTask(PathingExternalTaskKind kind, string adventurersGuildCountry)
+    {
+        if (PendingExternalTaskRequest != null || _currentTask == null)
+        {
+            return;
+        }
+
+        var splitTasks = _currentTask.SplitTasks();
+        var currentSegmentIndex = Math.Clamp(CurWaypoints.Item1, 0, Math.Max(0, splitTasks.Count - 1));
+        var resumeTask = splitTasks.Count == 0 ? _currentTask : splitTasks[currentSegmentIndex];
+        if (splitTasks.Count > currentSegmentIndex + 1)
+        {
+            resumeTask.Positions = splitTasks
+                .Skip(currentSegmentIndex)
+                .SelectMany(segment => segment.Positions)
+                .ToList();
+        }
+
+        PendingExternalTaskRequest = new PathingExternalTaskRequest(
+            kind,
+            adventurersGuildCountry,
+            resumeTask);
+    }
+
+    internal PathingExternalTaskRequest? TakeExternalTaskRequest()
+    {
+        var request = PendingExternalTaskRequest;
+        PendingExternalTaskRequest = null;
+        return request;
+    }
 
     private static RecognitionObject GetAutoSkipRecognitionObject(string objectName, ImageRegion region)
     {
@@ -179,17 +208,19 @@ public partial class PathExecutor
     /// </summary>
     /// <param name="task">Pathing task object. 寻路任务对象。</param>
     /// <returns>Asynchronous task. 异步任务。</returns>
-    public async Task Pathing(PathingTask task)
+    public Task Pathing(PathingTask task)
+    {
+        return PathingTaskRunner.RunAsync(this, task);
+    }
+
+    internal async Task ExecutePathingAsync(PathingTask task)
     {
         ArgumentNullException.ThrowIfNull(task);
+        _currentTask = task;
         SuccessEnd = false;
         SuccessFight = 0;
 
-        const string sdKey = "PathExecutor";
-        var sd = RunnerContext.Instance.SuspendableDictionary;
-        sd.Remove(sdKey);
-
-        RunnerContext.Instance.SuspendableDictionary.TryAdd(sdKey, pathExecutorSuspend);
+        using var suspendRegistration = RunnerContext.Instance.RegisterSuspendable("PathExecutor", pathExecutorSuspend);
         try
         {
             if (task.Positions == null || !task.Positions.Any())

@@ -123,12 +123,14 @@ public sealed class PathingTaskRouteImporter(IRouteCoordinateConverter coordinat
         {
             cancellationToken.ThrowIfCancellationRequested();
             var route = candidate.Route;
+            var positions = route.Positions
+                            ?? throw new InvalidOperationException("已筛选的路线缺少路径点");
             var mapName = candidate.MapName;
-            var imagePoints = new RouteGraphPoint?[route.Positions.Count];
-            var safeActions = new (string Action, string ActionParams)[route.Positions.Count];
-            for (var waypointIndex = 0; waypointIndex < route.Positions.Count; waypointIndex++)
+            var imagePoints = new RouteGraphPoint?[positions.Count];
+            var safeActions = new (string Action, string ActionParams)[positions.Count];
+            for (var waypointIndex = 0; waypointIndex < positions.Count; waypointIndex++)
             {
-                var waypoint = route.Positions[waypointIndex];
+                var waypoint = positions[waypointIndex];
                 safeActions[waypointIndex] = ResolveSafeAction(waypoint, report);
                 if (!coordinateConverter.TryGameToImage(
                         mapName,

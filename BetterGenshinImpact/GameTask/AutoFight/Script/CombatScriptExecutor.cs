@@ -22,7 +22,7 @@ public static class CombatScriptExecutor
     /// 可选。传了则使用现成的 CombatScenes（由调用方管理生命周期）；
     /// 不传则在内部通过截图自动创建并管理生命周期。
     /// </param>
-    public static async Task ExecuteAsync(
+    public static Task ExecuteAsync(
         CombatScript combatScript,
         CancellationToken ct,
         ILogger logger,
@@ -40,7 +40,7 @@ public static class CombatScriptExecutor
                 if (!combatScenes.CheckTeamInitialized())
                 {
                     logger.LogError("队伍识别未初始化成功！");
-                    return;
+                    return Task.CompletedTask;
                 }
             }
 
@@ -59,7 +59,7 @@ public static class CombatScriptExecutor
                 if (!hasAvatar)
                 {
                     logger.LogError("简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：{AvatarNames}", string.Join(", ", combatScript.AvatarNames));
-                    return;
+                    return Task.CompletedTask;
                 }
             }
 
@@ -91,6 +91,8 @@ public static class CombatScriptExecutor
                 SafeDispose(combatScenes!, logger);
             }
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

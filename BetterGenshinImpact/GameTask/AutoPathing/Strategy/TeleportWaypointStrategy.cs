@@ -7,7 +7,6 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using Microsoft.Extensions.Logging;
@@ -77,7 +76,7 @@ public class TeleportWaypointStrategy : IWaypointStrategy
     /// <param name="executor">The path executor context managing the navigation lifecycle. 路径执行器上下文，包含导航生命周期与状态配置。</param>
     /// <param name="waypoint">The target waypoint containing destination coordinates. 要传送的目标路点，包含终点坐标数据。</param>
     /// <param name="waypointsList">The full topological waypoint routing dataset. 完整的拓扑路点路由数据集，用于前置状态预测。</param>
-    /// <returns>Always false since teleportation breaks continuous topology and cannot be naively resumed. 始终返回false，因为传送属于物理拓扑断点操作，无法被普通位移机制恢复。</returns>
+    /// <returns>是否需要结束当前路线会话并交给上层执行外部任务。</returns>
     public async Task<bool> ExecuteAsync(PathExecutor executor, WaypointForTrack waypoint, List<List<WaypointForTrack>> waypointsList)
     {
         if (executor.CurWaypoints.Item1 > 0)
@@ -85,8 +84,7 @@ public class TeleportWaypointStrategy : IWaypointStrategy
             await Delay(PreTeleportDelayMs, executor.ct);
         }
 
-        await HandleTeleportWaypoint(executor, waypoint);
-        return false;
+        return await HandleTeleportWaypoint(executor, waypoint);
     }
 
     /// <summary>
@@ -95,12 +93,15 @@ public class TeleportWaypointStrategy : IWaypointStrategy
     /// </summary>
     /// <param name="executor">The current navigation scope instance. 当前导航作用域实例。</param>
     /// <param name="waypoint">The localized target location. 锚定的目标位置。</param>
-    private async Task HandleTeleportWaypoint(PathExecutor executor, WaypointForTrack waypoint)
+    private async Task<bool> HandleTeleportWaypoint(PathExecutor executor, WaypointForTrack waypoint)
     {
         bool forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
         var tpTask = new TpTask(executor.ct);
-        
-        await TryGetExpeditionRewardsDispatch(executor, tpTask);
+
+        if (await TryQueueExpeditionRewardsDispatch(executor, tpTask))
+        {
+            return true;
+        }
         
         // Ensure floating point coordinate math handles extreme bounds properly
         // 浮点数坐标计算，规避极端边界下转换崩溃
@@ -118,16 +119,16 @@ public class TeleportWaypointStrategy : IWaypointStrategy
         }
         
         await Delay(PostTeleportDelayMs, executor.ct);
+        return false;
     }
 
     /// <summary>
-    /// Polls global UI state to heuristically collect expedition rewards without destabilizing the current thread.
-    /// 轮询全局界面状态，启发式地收集派遣奖励，同时保证当前运行线程的物理稳定性不被破坏。
+    /// Polls global UI state and queues expedition collection for the task runner.
+    /// 轮询全局界面状态，并把派遣领取请求交给路线会话外的任务调度器。
     /// </summary>
     /// <param name="executor">The overarching task executor carrying session limits. 包含会话限制的整体任务执行器。</param>
     /// <param name="tpTask">The active teleport UI manipulation context. 活跃的传送UI操控上下文。</param>
-    /// <returns>True if a high-level UI transition occurred. 如果触发了高级UI切换则返回true。</returns>
-    private async Task<bool> TryGetExpeditionRewardsDispatch(PathExecutor executor, TpTask tpTask)
+    private async Task<bool> TryQueueExpeditionRewardsDispatch(PathExecutor executor, TpTask tpTask)
     {
         if (executor._combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true)
         {
@@ -158,38 +159,10 @@ public class TeleportWaypointStrategy : IWaypointStrategy
             return false;
         }
 
-        if (!runnerContext.TryBeginAutoFetchDispatch())
-        {
-            return false;
-        }
-
-        Logger.LogInformation("开始自动领取派遣任务！");
-        try
-        {
-            await new ReturnMainUiTask().Start(executor.ct);
-            await runnerContext.StopAutoPickRunTask(
-                async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, executor.ct, null, true),
-                5);
-            await new ReturnMainUiTask().Start(executor.ct);
-            Logger.LogInformation("自动领取派遣结束，回归原任务！");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "异常发生在自动派遣领取过程中，继续执行主任务");
-            try
-            {
-                await new ReturnMainUiTask().Start(executor.ct);
-            }
-            catch (Exception returnEx)
-            {
-                Logger.LogWarning(returnEx, "自动派遣异常后返回主界面失败，继续执行主任务");
-            }
-        }
-        finally
-        {
-            runnerContext.EndAutoFetchDispatch();
-        }
-
+        executor.RequestExternalTask(
+            PathingExternalTaskKind.FetchExpeditionRewards,
+            adventurersGuildCountry);
+        Logger.LogInformation("检测到可领取的探索派遣奖励，将在当前寻路会话结束后处理");
         return true;
     }
 

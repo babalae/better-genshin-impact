@@ -1,5 +1,4 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OpenCv;

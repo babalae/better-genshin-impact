@@ -289,13 +289,13 @@ public class GlobalMethod
 
             // 模拟Ctrl+V粘贴操作
             Simulation.SendInput.Keyboard.KeyDown(false, VK.VK_CONTROL);
-            Sleep(20);
+            Task.Delay(20, CancellationContext.Instance.Cts.Token).GetAwaiter().GetResult();
             Simulation.SendInput.Keyboard.KeyPress(VK.VK_V);
-            Sleep(20);
+            Task.Delay(20, CancellationContext.Instance.Cts.Token).GetAwaiter().GetResult();
             Simulation.SendInput.Keyboard.KeyUp(false, VK.VK_CONTROL);
 
             // 等待一小段时间确保粘贴完成
-            Sleep(100);
+            Task.Delay(100, CancellationContext.Instance.Cts.Token).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {

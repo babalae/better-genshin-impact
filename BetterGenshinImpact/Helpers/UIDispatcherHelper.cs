@@ -6,7 +6,8 @@ namespace BetterGenshinImpact.Helpers;
 
 public static class UIDispatcherHelper
 {
-    public static Window MainWindow => Invoke(() => Application.Current?.MainWindow) ?? throw new InvalidOperationException();
+    public static Window MainWindow => Invoke(() =>
+        Application.Current?.MainWindow ?? throw new InvalidOperationException("主窗口尚未创建"));
 
     public static void Invoke(Action callback, params object[] args)
     {

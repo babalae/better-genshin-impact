@@ -68,7 +68,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
 
-    public string CombatStrategyPath { get; set; }
+    public string CombatStrategyPath { get; set; } = string.Empty;
 
     public bool FightFinishDetectEnabled { get; set; } = false;
     public bool PickDropsAfterFightEnabled { get; set; } = false;
@@ -78,7 +78,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
     public bool KazuhaPickupEnabled = true;
     public string ActionSchedulerByCd = "";
-    public string KazuhaPartyName;
+    public string KazuhaPartyName = string.Empty;
     public string OnlyPickEliteDropsMode = "";
     public string GuardianAvatar { get; set; } = string.Empty;
     public bool GuardianCombatSkip { get; set; } = false;

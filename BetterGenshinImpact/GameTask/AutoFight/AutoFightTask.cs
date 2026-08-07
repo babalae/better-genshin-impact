@@ -41,7 +41,7 @@ public class AutoFightTask : ISoloTask
 
     private CancellationToken _ct;
 
-    private readonly BgiYoloPredictor _predictor;
+    private readonly BgiYoloPredictor? _predictor;
 
     private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
     private int _skipCheckCounter;
@@ -352,8 +352,8 @@ public class AutoFightTask : ISoloTask
                         
                         #region 盾奶位技能优先功能
                         
-                        var skipModel = guardianAvatar != null && lastFightName != command.Name;
-                        if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,
+                        if (guardianAvatar != null && lastFightName != command.Name)
+                            await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,
                             _taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct,_taskParam.GuardianCombatSkip,_taskParam.BurstEnabled);
                         var avatar = combatScenes.SelectAvatar(command.Name);
                         
@@ -434,7 +434,8 @@ public class AutoFightTask : ISoloTask
                         }
 
                         #region Q前寻敌处理
-                        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.CheckBeforeBurst && (command.Method == Method.Burst || command.Args.Contains("q") || command.Args.Contains("Q")))
+                        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.CheckBeforeBurst &&
+                            (command.Method == Method.Burst || command.Args?.Contains("q") == true || command.Args?.Contains("Q") == true))
                         {
                             fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
                         }
@@ -708,11 +709,12 @@ public class AutoFightTask : ISoloTask
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
-                        var cs = await RunnerContext.Instance.GetCombatScenes(ct);
+                        var cs = await RunnerContext.Instance.GetCombatScenes(ct)
+                                 ?? throw new InvalidOperationException("切换拾取队伍后识别队伍失败");
                         picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Logger.LogInformation("切换队伍异常，跳过此步骤！");
                 }
@@ -783,7 +785,7 @@ public class AutoFightTask : ISoloTask
                                 {
                                     command.Execute(combatScenes);
                                     //异步执行，防止卡顿
-                                    Task.Run(() =>
+                                    await Task.Run(() =>
                                     {
                                         if (Monitor.TryEnter(PickLock))
                                         {
@@ -806,7 +808,7 @@ public class AutoFightTask : ISoloTask
                                             }
                                         }
                                         // 后面没代码了，不用写return？
-                                    });
+                                    }, ct);
                                 }
 
                                 if (!find)
@@ -848,7 +850,7 @@ public class AutoFightTask : ISoloTask
     
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Logger.LogInformation("恢复原队伍失败，跳过此步骤！");
                 }
@@ -966,11 +968,8 @@ public class AutoFightTask : ISoloTask
 
             if (_finishDetectConfig.RotateFindEnemyEnabled)
             {
-                Task.Run(() =>
-                {
-                    Scalar bloodLower = new Scalar(255, 90, 90);
-                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                } ,_ct);
+                var bloodLower = new Scalar(255, 90, 90);
+                await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
             }
             
             _lastFightFlagTime = DateTime.Now;
@@ -1052,7 +1051,8 @@ public class AutoFightTask : ISoloTask
         // {
         //     imageRegion.SrcMat.SaveImage(Global.Absolute(@"log\fight\" + $"{DateTime.Now:yyyyMMdd_HHmmss_ffff}.png"));
         // }
-        var dict = _predictor.Detect(imageRegion);
+        var predictor = _predictor ?? throw new InvalidOperationException("战斗结束识别模型尚未初始化");
+        var dict = predictor.Detect(imageRegion);
         return dict.ContainsKey("health_bar") || dict.ContainsKey("enemy_identify");
     }
 

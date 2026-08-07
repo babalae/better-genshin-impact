@@ -752,11 +752,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return partyConfig;
     }
 
-    private async Task<NodeData> LoadNodeData()
+    private Task<NodeData> LoadNodeData()
     {
         if (_nodeData != null)
         {
-            return _nodeData;
+            return Task.FromResult(_nodeData);
         }
 
         var workDir = Global.Absolute(@"GameTask\AutoLeyLineOutcrop");
@@ -769,7 +769,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var raw = JsonSerializer.Deserialize<RawNodeData>(File.ReadAllText(nodePath))
                   ?? throw new Exception("节点数据解析失败");
         _nodeData = AdaptNodeData(raw);
-        return _nodeData;
+        return Task.FromResult(_nodeData);
     }
 
     private static NodeData AdaptNodeData(RawNodeData raw)
@@ -1137,7 +1137,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                     foreach (var command in pickUpAction.CombatCommands)
                     {
                         command.Execute(combatScenes);
-                        Task.Run(() =>
+                        await Task.Run(() =>
                         {
                             if (Monitor.TryEnter(PickLock))
                             {
@@ -1157,7 +1157,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                                     Monitor.Exit(PickLock);
                                 }
                             }
-                        });
+                        }, _ct);
                     }
 
                     if (!find)
@@ -1553,13 +1553,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return false;
     }
 
-    private async Task<bool> DetectRewardPage()
+    private Task<bool> DetectRewardPage()
     {
         using var capture = CaptureToRectArea();
         // Bv.FindF is faster for common keywords and avoids OCR misses.
         if (Bv.FindF(capture, "接触") || Bv.FindF(capture, "地脉") || Bv.FindF(capture, "之花"))
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         var list = capture.FindMulti(_ocrRoThis);
@@ -1567,18 +1567,18 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             if (res.Text.Contains("原粹树脂", StringComparison.Ordinal))
             {
-                return true;
+                return Task.FromResult(true);
             }
 
             if (res.Text.Contains("接触", StringComparison.Ordinal)
                 || res.Text.Contains("地脉", StringComparison.Ordinal)
                 || res.Text.Contains("之花", StringComparison.Ordinal))
             {
-                return true;
+                return Task.FromResult(true);
             }
         }
 
-        return false;
+        return Task.FromResult(false);
     }
 
     private void LogRewardNav(string message, params object[] args)
@@ -1709,10 +1709,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return true;
     }
 
-    private async Task<bool> VerifyRewardPage()
+    private Task<bool> VerifyRewardPage()
     {
         using var capture = CaptureToRectArea();
-        return HasRewardPrompt(capture);
+        return Task.FromResult(HasRewardPrompt(capture));
     }
 
     private IDisposable DrawOcrOverlayScope(ImageRegion capture, string key, params Rect[] rois)
@@ -2280,18 +2280,18 @@ public class AutoLeyLineOutcropTask : ISoloTask
         await FindAndClickCountry(country);
     }
 
-    private async Task<bool> CheckBigMapOpened()
+    private Task<bool> CheckBigMapOpened()
     {
         if (_mapSettingButtonRo == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         using var capture = CaptureToRectArea();
-        return capture.Find(_mapSettingButtonRo).IsExist();
+        return Task.FromResult(capture.Find(_mapSettingButtonRo).IsExist());
     }
 
-    private async Task FindAndClickCountry(string country)
+    private Task FindAndClickCountry(string country)
     {
         var match = country == "挪德卡莱" ? "挪德卡" : country;
         using var capture = CaptureToRectArea();
@@ -2303,6 +2303,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         target.Click();
+        return Task.CompletedTask;
     }
 
     private async Task<bool> TryOpenBigMapFromHandbook()
@@ -2455,14 +2456,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return result;
     }
 
-    private async Task<int> CountOriginalResin()
+    private Task<int> CountOriginalResin()
     {
         var icon = BuildTemplate("Assets/1920x1080/original_resin.png");
         using var capture = CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
         {
-            return 0;
+            return Task.FromResult(0);
         }
 
         var roi = new Rect(res.X, res.Y, ScaleTo1080(200), ScaleTo1080(40));
@@ -2471,10 +2472,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var match = Regex.Match(text, @"(\d{1,3})\s*/\s*\d+");
         if (match.Success)
         {
-            return int.TryParse(match.Groups[1].Value, out var value) ? value : 0;
+            return Task.FromResult(int.TryParse(match.Groups[1].Value, out var value) ? value : 0);
         }
 
-        return 0;
+        return Task.FromResult(0);
     }
 
     private async Task<int> CountCondensedResin()
@@ -2544,7 +2545,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return await RecognizeNumberByTemplate(region, true);
     }
 
-    private async Task<int> RecognizeNumberByTemplate(ImageRegion region, bool white)
+    private Task<int> RecognizeNumberByTemplate(ImageRegion region, bool white)
     {
         var icons = white
             ? new Dictionary<int, string>
@@ -2570,14 +2571,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
             var result = region.Find(ro);
             if (result.IsExist())
             {
-                return kvp.Key;
+                return Task.FromResult(kvp.Key);
             }
         }
 
-        return 0;
+        return Task.FromResult(0);
     }
 
-    private async Task OpenReplenishResinUi()
+    private Task OpenReplenishResinUi()
     {
         var ro = BuildTemplate("Assets/icon/replenish_resin_button.png");
         using var capture = CaptureToRectArea();
@@ -2586,6 +2587,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             res.Click();
         }
+
+        return Task.CompletedTask;
     }
 
     private class AutoLeyLineConfigData

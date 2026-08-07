@@ -18,7 +18,7 @@ public class CombatCommand
 
     public List<string>? Args { get; set; }
 
-    public List<int> ActivatingRound { get; set; }
+    public List<int> ActivatingRound { get; set; } = [];
 
     public CombatCommand(string name, string command)
     {
@@ -123,7 +123,10 @@ public class CombatCommand
                 }
             }
         }
-        Execute(avatar);
+        if (avatar != null)
+        {
+            Execute(avatar);
+        }
     }
 
     private static void DefaultSwitch(Avatar avatar) => avatar.Switch();

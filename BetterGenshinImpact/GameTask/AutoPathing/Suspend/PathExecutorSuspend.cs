@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 /// <summary>
 /// 路径执行器暂停机制实现 / Path executor suspend logic implementation.
 /// </summary>
-public class PathExecutorSuspend : ISuspendable
+public class PathExecutorSuspend : ISuspendable, IPathingSuspendState
 {
     private readonly PathExecutor _pathExecutor;
     private bool _isSuspended;

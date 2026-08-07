@@ -15,7 +15,6 @@ using System.Linq;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using  OpenCvSharp;
 using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.AutoFight
@@ -292,7 +291,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         if (height > 2 && height < 7)
                         {
                             // logger.LogInformation("画面内有找到敌人，尝试移动...");
-                            Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);
+                            await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct);
                             return false;
                         }
 
@@ -401,7 +400,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         if (height2 > 2 && height2 < 7)
                         {
                             // logger.LogInformation("画面内有找到敌人，尝试移动...");
-                            Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);
+                            await MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct);
                             return false;
                         }
 
@@ -686,7 +685,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         /// <param name="useEqList"></param>
         /// <param name="avatarCurrent"></param>
         /// <returns></returns>
-        [Obsolete]
         public static Task<List<int>> AvatarQSkillAsync(ImageRegion? image = null, List<int>? useEqList = null,int? avatarCurrent = null)
         {
             var ownImage = image == null;
