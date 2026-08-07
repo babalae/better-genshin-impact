@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -358,7 +358,6 @@ public partial class PathExecutor
                         }
                     }
 
-                    return true;
                 }
 
                 // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，旋转稳定时才按冲刺间隔配置冲刺
