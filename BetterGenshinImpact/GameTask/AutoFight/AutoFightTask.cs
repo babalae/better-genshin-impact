@@ -918,6 +918,10 @@ public class AutoFightTask : ISoloTask
         if (finishDetectConfig.BlockCheckBeforeBattleSeconds > 0 &&
             (DateTime.Now - FightStartTime).TotalSeconds < finishDetectConfig.BlockCheckBeforeBattleSeconds)
         {
+            // 阻断期内同样刷新最近检查时间：否则当 CheckTime 小于阻断期时，检查间隔条件
+            // (DateTime.Now - LastFightFinishCheckTime) > CheckTime 会反复成立并重复进入该路径，
+            // 直至阻断期结束 LastFightFinishCheckTime 一直得不到刷新
+            LastFightFinishCheckTime = DateTime.Now;
             return false;
         }
 
