@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -48,7 +48,7 @@ public partial class PathExecutor
         public int WandererFlightCheckCount;
     }
     // 赶路切换角色黑名单，防止切人后触发夜魂传递
-    private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉"];
+    private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉", "伊法", "恰斯卡", "玛拉妮", "基尼奇"];
 
     /// <summary>
     /// 各角色在连续赶路模式下的转向夹角阈值（度）。
@@ -82,12 +82,26 @@ public partial class PathExecutor
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
 
     /// <summary>
-    /// 获取切人步行目标序号：排除赶路角色自身 + 黑名单，取序号最靠前的有效角色。
+    /// 获取切人步行目标序号：优先行走位（MainAvatarIndex），否则排除赶路角色自身 + 黑名单，取序号最靠前的有效角色。
     /// 若排除后无合法角色，则忽略黑名单再试一次。
     /// 返回 "1"/"2"/"3"/"4"，不会返回 null。
     /// </summary>
     private string GetSwitchToWalkIndex()
     {
+        // 第一步：优先行走位（MainAvatarIndex），仍需排除赶路角色自身与黑名单
+        if (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex)
+            && int.TryParse(PartyConfig.MainAvatarIndex, out var mainIdx)
+            && mainIdx >= 1 && mainIdx <= 4)
+        {
+            var mainAvatar = _combatScenes?.SelectAvatar(mainIdx);
+            if (mainAvatar != null
+                && mainAvatar.Name != _hurryOnAvatar
+                && !HurryOnBlacklist.Contains(mainAvatar.Name))
+            {
+                return mainIdx.ToString();
+            }
+        }
+
         for (var i = 1; i <= 4; i++)
         {
             var avatar = _combatScenes?.SelectAvatar(i);
