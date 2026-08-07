@@ -703,7 +703,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.MoonCanon.ToString());
                 _logger.LogInformation("大地图位置：{Position}", p);
             }
         ));

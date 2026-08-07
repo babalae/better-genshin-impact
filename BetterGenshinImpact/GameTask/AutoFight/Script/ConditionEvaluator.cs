@@ -14,25 +14,81 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// <summary>
 /// 条件表达式求值器
 /// 支持语法：||, &&, !, (), +, -, *, /, >, <, =, 函数调用
-/// 支持函数：last-exec, q-ready, low-hp, battle-time, in-party, t, since, count
+/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, onfield, t, since, count, min, max
 /// </summary>
 public class ConditionEvaluator
 {
-    private readonly Dictionary<int, DateTime> _lastExecTimes = new();
-    private readonly List<(int Index, double Time)> _execHistory = new();
+    /// <summary>内置条件函数名（词法解析时优先按函数名合并连字符）</summary>
+    public static readonly HashSet<string> FunctionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count", "min", "max"
+    };
+
+    /// <summary>
+    /// 校验动作名能否作为条件表达式中的单个标识符解析：
+    /// 将动作名置于"全部动作名 + 内置函数名"的已知表内做词法解析，要求恰好解析为一个标识符。
+    /// 拒绝布尔字面量（true/false，不区分大小写）、纯数字、含空白/逗号/运算符等无法作为动作标识符的名称，以及内置函数名。
+    /// </summary>
+    public static bool IsValidActionName(string name, IEnumerable<string> allActionNames)
+    {
+        if (string.IsNullOrEmpty(name) || bool.TryParse(name, out _)) return false;
+        if (FunctionNames.Contains(name)) return false;
+
+        var known = new HashSet<string>(FunctionNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var n in allActionNames) known.Add(n);
+
+        List<Token> tokens;
+        try
+        {
+            tokens = Tokenize(name, known);
+        }
+        catch (InvalidOperationException)
+        {
+            return false; // 含无法识别的字符
+        }
+
+        // 期望恰好一个 Identifier token，且与动作名一致，其余仅有 End
+        return tokens.Count == 2
+               && tokens[0].Type == TokenType.Identifier
+               && string.Equals(tokens[0].Value, name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // 动作执行事件记录：序号、名称、距离开战的相对时间（秒），供 since/count 等按序号或名称查询
+    private readonly List<(int Index, string Name, double Time)> _execHistory = new();
     private readonly DateTime _battleStartTime;
     private readonly CombatScenes _combatScenes;
     private readonly Func<ImageRegion> _captureFunc;
+    // 策略中声明的动作名（词法解析时用于连字符合并判断）
+    private readonly HashSet<string> _actionNames;
+    private HashSet<string>? _knownIdentifiers;
     private ImageRegion? _cachedCapture;
     private string? _currentCharacterName;
+    private string? _currentActionName;
     private HashSet<int>? _qReadyCache;
     private bool? _lowHpCache;
+    // 出战角色识别上下文：箭头识别需在同一 context 内累计两次相同结果才返回有效编号，
+    // 跨轮复用避免每次 onfield() 求值都从零统计导致永远识别失败
+    private readonly AvatarActiveCheckContext _avatarActiveCheckContext = new();
 
-    public ConditionEvaluator(CombatScenes combatScenes, Func<ImageRegion> captureFunc)
+    public ConditionEvaluator(CombatScenes combatScenes, Func<ImageRegion> captureFunc, IEnumerable<string>? actionNames = null)
     {
         _battleStartTime = DateTime.Now;
         _combatScenes = combatScenes;
         _captureFunc = captureFunc;
+        _actionNames = actionNames != null
+            ? new HashSet<string>(actionNames, StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>词法解析时的已知标识符集合：内置函数名 + 策略动作名（首次使用时构建）</summary>
+    private HashSet<string> GetKnownIdentifiers()
+    {
+        if (_knownIdentifiers == null)
+        {
+            _knownIdentifiers = new HashSet<string>(FunctionNames, StringComparer.OrdinalIgnoreCase);
+            foreach (var name in _actionNames) _knownIdentifiers.Add(name);
+        }
+        return _knownIdentifiers;
     }
 
     /// <summary>
@@ -55,14 +111,15 @@ public class ConditionEvaluator
     }
 
     /// <summary>
-    /// 更新动作的最后执行时间
+    /// 更新动作的最后执行时间，并记录一条执行事件（序号 + 名称 + 距离开战相对时间）。
+    /// since/count 等查询基于该事件记录。
     /// </summary>
-    /// <param name="index">动作索引</param>
-    public void UpdateLastExecTime(int index)
+    /// <param name="index">动作序号</param>
+    /// <param name="name">动作名称</param>
+    public void UpdateLastExecTime(int index, string name)
     {
         var now = DateTime.Now;
-        _lastExecTimes[index] = now;
-        _execHistory.Add((index, (now - _battleStartTime).TotalSeconds));
+        _execHistory.Add((index, name, (now - _battleStartTime).TotalSeconds));
     }
 
     /// <summary>
@@ -71,16 +128,18 @@ public class ConditionEvaluator
     /// <param name="expression">表达式字符串</param>
     /// <param name="currentIndex">当前动作索引</param>
     /// <param name="characterName">当前角色名称</param>
+    /// <param name="actionName">当前动作名称（since/count/last-exec 缺省严格指代当前动作时使用）</param>
     /// <returns>表达式结果</returns>
-    public bool Evaluate(string expression, int currentIndex, string? characterName = null)
+    public bool Evaluate(string expression, int currentIndex, string? characterName = null, string? actionName = null)
     {
         _currentCharacterName = characterName;
+        _currentActionName = actionName;
         if (string.IsNullOrWhiteSpace(expression))
             return true;
 
         try
         {
-            var tokens = Tokenize(expression);
+            var tokens = Tokenize(expression, GetKnownIdentifiers());
             var pos = 0;
             var ast = ParseOrExpr(tokens, ref pos);
             return ToBool(Eval(ast, currentIndex));
@@ -102,7 +161,7 @@ public class ConditionEvaluator
         public string Value { get; } = value;
     }
 
-    private static List<Token> Tokenize(string expr)
+    private static List<Token> Tokenize(string expr, HashSet<string> knownIdentifiers)
     {
         var tokens = new List<Token>();
         var i = 0;
@@ -138,10 +197,23 @@ public class ConditionEvaluator
                 continue;
             }
 
-            if (char.IsLetter(c) || c == '-')
+            if (char.IsLetter(c))
             {
                 var start = i;
-                while (i < expr.Length && (char.IsLetterOrDigit(expr[i]) || (expr[i] == '-' && i + 1 < expr.Length && char.IsLetter(expr[i + 1])))) i++;
+                // 先读取基础字母/数字段（中文名、角色名、函数名首段）
+                while (i < expr.Length && char.IsLetterOrDigit(expr[i])) i++;
+                // 连字符合并：先扫描出基础段之后最长的"字母数字+连字符"候选，再回退到最长的已知标识符。
+                // 多段动作名（如 芙芙-e-开场）只需其完整名称已声明即可整体并入，中间段无需单独声明；
+                // 没有任何已知前缀时 `-` 保持为独立减号运算符（如 t-5、since(1)-3）
+                if (i < expr.Length && expr[i] == '-')
+                {
+                    var candidateEnd = i + 1;
+                    while (candidateEnd < expr.Length && (char.IsLetterOrDigit(expr[candidateEnd]) || expr[candidateEnd] == '-'))
+                        candidateEnd++;
+                    while (candidateEnd > i && !knownIdentifiers.Contains(expr[start..candidateEnd]))
+                        candidateEnd--;
+                    if (candidateEnd > i) i = candidateEnd;
+                }
                 var word = expr[start..i];
                 tokens.Add(word is "true" or "false"
                     ? new Token(TokenType.Bool, word)
@@ -363,6 +435,8 @@ public class ConditionEvaluator
     /// <summary>求值函数调用节点</summary>
     private object EvalFunc(string name, List<AstNode> args, int currentIndex)
     {
+        // 函数名大小写不敏感（min/MIN、MAX/max 均可）
+        name = name.ToLowerInvariant();
         return name switch
         {
             "last-exec" => EvalLastExec(args, currentIndex),
@@ -372,9 +446,12 @@ public class ConditionEvaluator
             "low-hp" => EvalLowHp(),
             "battle-time" => EvalBattleTime(args),
             "in-party" => EvalInParty(args),
+            "onfield" => EvalOnField(),
             "t" => EvalT(),
             "since" => EvalSince(args, currentIndex),
             "count" => EvalCount(args, currentIndex),
+            "min" => EvalMinMax(args, currentIndex, isMax: false),
+            "max" => EvalMinMax(args, currentIndex, isMax: true),
             _ => throw new InvalidOperationException($"未知条件函数：{name}")
         };
     }
@@ -409,21 +486,77 @@ public class ConditionEvaluator
         return ToNumber(Eval(node, currentIndex));
     }
 
+    /// <summary>
+    /// 目标动作标识：按序号（Index）和/或动作名称（Name）解析。
+    /// 缺省指代当前动作时为严格指代（Index 与 Name 同时给出，两者都必须匹配）。
+    /// </summary>
+    private readonly record struct TargetRef(int? Index, string? Name);
+
+    /// <summary>
+    /// 解析目标动作标识：纯数字参数按序号解析；裸名称（如 since(动作名)）按动作名称解析；
+    /// 其他表达式（如 since(1+1)）求值后按序号解析。
+    /// </summary>
+    private TargetRef ResolveTarget(AstNode node, int currentIndex)
+    {
+        if (node is NumberNode n)
+            return new TargetRef((int)n.Value, null);
+
+        if (node is FuncCallNode f && f.Args.Count == 0)
+        {
+            // 裸名称必须已声明为策略动作名：拼错/未知名称直接报错（Evaluate 捕获后返回 false），
+            // 否则会被当作"从未执行"处理，since(拼错名)>N 与 last-exec(N,true,拼错名) 会在战斗开始就为 true
+            if (!_actionNames.Contains(f.Name))
+                throw new InvalidOperationException($"未知动作名称：{f.Name}，按名称查询必须使用策略中已声明的动作名");
+            return new TargetRef(null, f.Name);
+        }
+
+        return new TargetRef((int)ToNumber(Eval(node, currentIndex)), null);
+    }
+
+    /// <summary>
+    /// 事件是否匹配目标标识：仅按序号、仅按名称、或序号与名称同时指定（严格指代，两者都必须匹配）。
+    /// </summary>
+    private static bool MatchesTarget((int Index, string Name, double Time) e, TargetRef target)
+    {
+        if (target.Name is not null && target.Index.HasValue)
+            return e.Index == target.Index.Value && string.Equals(e.Name, target.Name, StringComparison.OrdinalIgnoreCase);
+        if (target.Name is not null)
+            return string.Equals(e.Name, target.Name, StringComparison.OrdinalIgnoreCase);
+        return target.Index == e.Index;
+    }
+
+    /// <summary>
+    /// 获取目标动作距上次执行的时间（秒）：
+    /// 反向查找事件历史中最新一条符合目标标识的事件。从未执行返回 null。
+    /// </summary>
+    private double? GetLastExecElapsed(TargetRef target)
+    {
+        var currentT = (DateTime.Now - _battleStartTime).TotalSeconds;
+        for (var i = _execHistory.Count - 1; i >= 0; i--)
+        {
+            if (MatchesTarget(_execHistory[i], target))
+                return currentT - _execHistory[i].Time;
+        }
+        return null;
+    }
+
     // ========== 布尔函数（返回 bool） ==========
 
-    /// <summary>判断动作上次执行距离现在是否超过/少于指定时间</summary>
+    /// <summary>
+    /// 判断动作上次执行距离现在是否超过/少于指定时间。
+    /// 目标动作支持序号或动作名称（如 last-exec(2,true,3)、last-exec(2,true,香菱)），缺省指代当前动作。
+    /// </summary>
     private bool EvalLastExec(List<AstNode> args, int currentIndex)
     {
         if (args.Count < 1) return false;
 
         var timeSec = EvalNumber(args[0], currentIndex);
         var greater = args.Count >= 2 && args[1] is BoolNode b ? b.Value : true;
-        var targetIndex = args.Count >= 3 ? (int)EvalNumber(args[2], currentIndex) : currentIndex;
+        var target = args.Count >= 3 ? ResolveTarget(args[2], currentIndex) : new TargetRef(currentIndex, _currentActionName);
 
-        if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
-            return greater;
+        var elapsed = GetLastExecElapsed(target);
+        if (elapsed is null) return greater;
 
-        var elapsed = (DateTime.Now - lastTime).TotalSeconds;
         return greater ? elapsed > timeSec : elapsed < timeSec;
     }
 
@@ -585,6 +718,36 @@ public class ConditionEvaluator
         return _combatScenes.SelectAvatar(targetName) != null;
     }
 
+    /// <summary>
+    /// 判断动作的归属角色是否正在场上。
+    /// 动作无归属角色（Character 为空）、归属角色不在队伍中或不在场上时返回 false。
+    /// </summary>
+    private bool EvalOnField()
+    {
+        if (string.IsNullOrEmpty(_currentCharacterName)) return false;
+
+        // 首次求值时 LastActiveAvatarIndex 尚未初始化（InitializeTeam 只识别队伍，不识别出战角色），
+        // 直接用缓存截图刷新当前出战编号；仍识别失败才返回 false，避免 onfield() 开战第一轮误判
+        if (_combatScenes.LastActiveAvatarIndex <= 0)
+        {
+            var capture = GetCapture();
+            try
+            {
+                // 复用跨轮识别上下文：箭头识别需同一 context 累计两次相同结果才返回有效编号，
+                // 新建 context 会导致每轮都从零统计、箭头识别永远返回 -2（重试）而无法刷新 LastActiveAvatarIndex
+                if (_combatScenes.GetActiveAvatarIndex(capture, _avatarActiveCheckContext) <= 0) return false;
+            }
+            finally
+            {
+                // 仅释放自己新建的截图；缓存截图归调用方管理，不在此释放
+                if (_cachedCapture == null) capture.Dispose();
+            }
+        }
+
+        var avatar = _combatScenes.SelectAvatar(_currentCharacterName);
+        return avatar != null && avatar.Index == _combatScenes.LastActiveAvatarIndex;
+    }
+
     // ========== 数值函数（返回 double） ==========
 
     /// <summary>
@@ -597,29 +760,44 @@ public class ConditionEvaluator
 
     /// <summary>
     /// 距离动作上次执行的时间，单位秒
-    /// 不传参时指代当前动作；从未执行返回正无穷
+    /// 不传参时严格指代当前动作（序号与名称都相同才算）；目标动作支持序号或动作名称（如 since(3)、since(香菱)）；从未执行返回正无穷
     /// </summary>
     private double EvalSince(List<AstNode> args, int currentIndex)
     {
-        var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
+        var target = args.Count >= 1 ? ResolveTarget(args[0], currentIndex) : new TargetRef(currentIndex, _currentActionName);
 
-        if (!_lastExecTimes.TryGetValue(targetIndex, out var lastTime))
-            return double.PositiveInfinity;
-
-        return (DateTime.Now - lastTime).TotalSeconds;
+        var elapsed = GetLastExecElapsed(target);
+        return elapsed ?? double.PositiveInfinity;
     }
 
     /// <summary>
     /// 动作在指定时间范围内的执行次数
-    /// index 不传时指代自己；start 默认为 0（战斗开始）；end 默认为当前时间 t
+    /// 目标动作不传时严格指代自己（序号与名称都相同才算），支持序号或动作名称（如 count(3)、count(香菱)）；start 默认为 0（战斗开始）；end 默认为当前时间 t
     /// </summary>
     private double EvalCount(List<AstNode> args, int currentIndex)
     {
         var currentT = (DateTime.Now - _battleStartTime).TotalSeconds;
-        var targetIndex = args.Count >= 1 ? (int)ToNumber(Eval(args[0], currentIndex)) : currentIndex;
+        var target = args.Count >= 1 ? ResolveTarget(args[0], currentIndex) : new TargetRef(currentIndex, _currentActionName);
         var start = args.Count >= 2 ? ToNumber(Eval(args[1], currentIndex)) : 0;
         var end = args.Count >= 3 ? ToNumber(Eval(args[2], currentIndex)) : currentT;
 
-        return _execHistory.Count(e => e.Index == targetIndex && e.Time >= start && e.Time <= end);
+        return _execHistory.Count(e => MatchesTarget(e, target) && e.Time >= start && e.Time <= end);
+    }
+
+    /// <summary>
+    /// 返回内部以逗号分隔的各项表达式的最小值或最大值（如 min(since(), 5)、max(since(1), since(2))）。
+    /// 各项求值后取数值；无参数时返回 0。
+    /// </summary>
+    private double EvalMinMax(List<AstNode> args, int currentIndex, bool isMax)
+    {
+        if (args.Count == 0) return 0;
+
+        var result = isMax ? double.NegativeInfinity : double.PositiveInfinity;
+        foreach (var arg in args)
+        {
+            var value = ToNumber(Eval(arg, currentIndex));
+            result = isMax ? Math.Max(result, value) : Math.Min(result, value);
+        }
+        return result;
     }
 }
