@@ -622,7 +622,7 @@
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
                                             Grid.Column="1"
-                                            MinWidth="80"
+                                            MinWidth="60"
                                             Height="35"
                                             HorizontalContentAlignment="Center"
                                             Text="{Binding PathingConfig.MwkSprintIntervalSeconds}" />
