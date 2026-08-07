@@ -64,7 +64,7 @@ public class CheckRewardsTask
                     Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
                     var screen = CaptureToRectArea();
                     var ra = screen.FindMulti(GetConfirmRa())
-                        .FirstOrDefault(btn => string.Equals(btn.Text.Trim(), _commissionsButtonString, StringComparison.OrdinalIgnoreCase));
+                        .FirstOrDefault(btn => Regex.IsMatch(btn.Text.Trim(), $"^(?:{_commissionsButtonString})$", RegexOptions.IgnoreCase));
                         ra?.Click();
                 },ct,4,1000);
             

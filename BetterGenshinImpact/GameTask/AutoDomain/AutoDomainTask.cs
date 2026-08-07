@@ -134,6 +134,20 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         return stringLocalizer.WithCultureGet(cultureInfo, "使用");
     }
 
+    /// <summary>
+    /// 解析树脂名称的本地化匹配串，同一个 idiom 用于 <see cref="PressUseResin(List{Region}, string, string)"/>。
+    /// <paramref name="resinName"/> 是内部使用的中文 key（20/40 原粹树脂已在调用前折叠为"原粹树脂"）；
+    /// 若资源里没有对应条目（如 zh-Hans，或调用方已经传入本地化后的值），本地化器会原样回退返回入参本身，
+    /// 因此对已本地化的调用方（future PR-B）是无操作的、向后兼容的。
+    /// </summary>
+    private static string ResolveResinNamePattern(string resinName)
+    {
+        IStringLocalizer<AutoDomainTask> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        return stringLocalizer.WithCultureGet(cultureInfo, resinName);
+    }
+
     private static RecognitionObject GetConfirmRa(params string[] targetText)
     {
         var screenArea = CaptureToRectArea();
@@ -1193,7 +1207,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => Regex.IsMatch(t.Text, insufficientCountString) || Regex.IsMatch(t.Text, replenishResinString)))
+        if (textListInPrompt.Any(t => Regex.IsMatch(t.Text, insufficientCountString, RegexOptions.IgnoreCase) || Regex.IsMatch(t.Text, replenishResinString, RegexOptions.IgnoreCase)))
         {
             // 没有原粹树脂，直接退出秘境
             Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
@@ -1420,7 +1434,10 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             resinName = "原粹树脂";
         }
 
-        var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
+        // resinName 折叠后仍是内部中文 key（GetResinNum 的分支判断依赖这个中文字面量），
+        // 这里只本地化用于匹配 OCR 文本的模式，不改变 resinName 本身
+        var resinNamePattern = ResolveResinNamePattern(resinName);
+        var resinKey = regionList.FirstOrDefault(t => Regex.IsMatch(t.Text, resinNamePattern));
         if (resinKey != null)
         {
             // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
