@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -217,16 +217,27 @@ public partial class PathExecutor
                         //     Math.Round(distance, 1), Math.Round(GetMavikaColorDifference(screen2), 1));
                         _lastMavikaBoardTime = DateTime.UtcNow;
                         boarded = true;
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(200, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(300, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(700, ct);
+                        if (PartyConfig.MwkLongPressSkillEnabled)
+                        {
+                            // 长按 E 启动摩托，代替连续点按
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                            await Delay(500, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                            await Delay(300, ct);
+                        }
+                        else
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(200, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(300, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(700, ct);
+                        }
                     }
                 }
 
-                if (PartyConfig.MwkJumpFlyEnabled && distance > 2 * PartyConfig.Distance && state.RotationStableCount >= 1)
+                if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
                 {
                     if (!(boarded || GetMavikaColorDifference(screen2) <= 15 && await ReadEskillCdAsync("玛薇卡") < 1))
                     {

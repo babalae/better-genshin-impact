@@ -177,6 +177,10 @@ public partial class PathingPartyConfig : ObservableObject
         {
             ApproachStopDistance = value;
         }
+        if (MwkJumpFlyDistance <= value)
+        {
+            MwkJumpFlyDistance = value + 1;
+        }
     }
 
     partial void OnApproachStopDistanceChanged(int value)
@@ -184,6 +188,14 @@ public partial class PathingPartyConfig : ObservableObject
         if (value > Distance)
         {
             _approachStopDistance = Distance;
+        }
+    }
+
+    partial void OnMwkJumpFlyDistanceChanged(int value)
+    {
+        if (value <= Distance)
+        {
+            MwkJumpFlyDistance = Distance + 1;
         }
     }
 
@@ -209,10 +221,22 @@ public partial class PathingPartyConfig : ObservableObject
     private bool _mwkFlyEnabled = true;
 
     /// <summary>
+    /// 玛薇卡赶路使用长按元素战技（E）代替连续点按启动
+    /// </summary>
+    [ObservableProperty]
+    private bool _mwkLongPressSkillEnabled = false;
+
+    /// <summary>
     /// 玛薇卡跳飞开关
     /// </summary>
     [ObservableProperty]
     private bool _mwkJumpFlyEnabled = true;
+
+    /// <summary>
+    /// 玛薇卡跳飞启用距离（米），必须大于 <see cref="Distance"/>，越界时自动使用 Distance+1 的值。
+    /// </summary>
+    [ObservableProperty]
+    private int _mwkJumpFlyDistance = 90;
 
     /// <summary>
     /// 跳飞间隔（秒），闲云使用其1/2值

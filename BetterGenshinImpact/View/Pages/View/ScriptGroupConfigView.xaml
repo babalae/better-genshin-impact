@@ -540,8 +540,36 @@
                                                  IsChecked="{Binding PathingConfig.SwitchToWalkEnabled, Mode=TwoWay}" />
                             </Grid>
 
+                            <!-- 玛薇卡长按E赶路 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAuto, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="玛薇卡长按E赶路"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="开启后玛薇卡启动摩托使用长按E代替连续点按"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 IsChecked="{Binding PathingConfig.MwkLongPressSkillEnabled, Mode=TwoWay}" />
+                            </Grid>
+
                             <!-- 启用跳飞 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAuto, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -566,8 +594,39 @@
                                                  IsChecked="{Binding PathingConfig.MwkJumpFlyEnabled, Mode=TwoWay}" />
                             </Grid>
 
+                            <!-- 跳飞启用距离 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsJumpFlyDistanceVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="跳飞启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="节点距离大于此值时启用跳飞，需大于赶路启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.MwkJumpFlyDistance}" />
+                            </Grid>
+
                             <!-- 跳飞间隔 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAutoOrXianyun, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
