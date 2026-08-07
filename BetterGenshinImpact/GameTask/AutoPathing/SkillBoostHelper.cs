@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -70,6 +70,7 @@ public partial class PathExecutor
     private DateTime _lastJumpFlyTime = DateTime.MinValue;
     private bool _jumpFlySafetyPending;
     private DateTime _lastMavikaBoardTime = DateTime.MinValue;
+    private DateTime _lastMavikaSprintTime = DateTime.MinValue;
     private DateTime _lastSkillCheckTime = DateTime.MinValue;
     private DateTime _lastLandingTime = DateTime.MinValue;
     /// <summary>
@@ -330,9 +331,28 @@ public partial class PathExecutor
                     return true;
                 }
 
-                // 玛薇卡逻辑最后：勾选跳飞且禁用冲刺时，在车上（下车图标）则跳过本帧通用移动逻辑以禁用冲刺
-                if (PartyConfig.MwkJumpFlyEnabled && PartyConfig.MwkDisableSprintEnabled && iconState == 3)
+                // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，按冲刺频率配置自行处理冲刺
+                if (iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1)
                 {
+                    switch (PartyConfig.MwkSprintFrequency)
+                    {
+                        case "少量冲刺":
+                            // 类似 run 逻辑：持续按住冲刺
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                            break;
+                        case "尽可能冲刺":
+                            // 类似 dash 逻辑：1 秒冷却单次点按冲刺
+                            if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= 1)
+                            {
+                                _lastMavikaSprintTime = DateTime.UtcNow;
+                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                            }
+                            break;
+                        default:
+                            // 禁用冲刺：不执行冲刺操作
+                            break;
+                    }
+
                     return true;
                 }
 
