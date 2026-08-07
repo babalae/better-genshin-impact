@@ -52,6 +52,14 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         AddHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel), true);
 
         Loaded += (s, e) => Activate();
+
+        StateChanged += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized)
+            {
+                _lastNonMinimizedWindowState = WindowState;
+            }
+        };
     }
 
     private void OnGlobalPreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -202,6 +210,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     }
 
     private bool _windowPositionRestored;
+    private WindowState _lastNonMinimizedWindowState;
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -252,9 +261,24 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     private void SaveWindowPosition()
     {
         var config = ViewModel.Config.CommonConfig;
-        if (WindowState == WindowState.Normal)
+
+        // Determine the correct state: if the window is minimized (e.g. hidden to tray),
+        // use the last non-minimized state so a previously maximized window is restored correctly.
+        var effectiveState = WindowState == WindowState.Minimized
+            ? _lastNonMinimizedWindowState
+            : WindowState;
+
+        if (effectiveState == WindowState.Maximized)
+        {
+            config.WindowState = 2;
+        }
+        else
         {
             config.WindowState = 0;
+        }
+
+        if (WindowState == WindowState.Normal)
+        {
             config.WindowLeft = Left;
             config.WindowTop = Top;
             config.WindowWidth = Width;
@@ -263,7 +287,6 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         else
         {
             // Maximized or Minimized: save RestoreBounds (the normal bounds before the state change)
-            config.WindowState = WindowState == WindowState.Maximized ? 2 : 0;
             config.WindowLeft = RestoreBounds.Left;
             config.WindowTop = RestoreBounds.Top;
             config.WindowWidth = RestoreBounds.Width;
@@ -271,15 +294,22 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         }
     }
 
+    /// <summary>
+    /// Clamp the window position so it lands within an actual monitor's working area.
+    /// Validates against each physical monitor rather than the VirtualScreen bounding box,
+    /// avoiding unreachable positions in non-rectangular multi-monitor layouts.
+    /// </summary>
     private void ClampWindowToScreen(double left, double top)
     {
-        var virtualLeft = SystemParameters.VirtualScreenLeft;
-        var virtualTop = SystemParameters.VirtualScreenTop;
-        var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
-        var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
-
-        Left = Math.Max(virtualLeft, Math.Min(left, virtualRight - Width));
-        Top = Math.Max(virtualTop, Math.Min(top, virtualBottom - 30));
+        // Use the center of the title bar area to determine which monitor the window belongs to.
+        // Screen.FromPoint returns the nearest screen even when the point falls in a gap
+        // between non-rectangular monitors, avoiding unreachable positions.
+        var testX = (int)(left + Width / 2);
+        var testY = (int)(top + 15);
+        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(testX, testY));
+        var work = screen.WorkingArea;
+        Left = Math.Max(work.Left, Math.Min(left, work.Right - Width));
+        Top = Math.Max(work.Top, Math.Min(top, work.Bottom - 30));
         WindowStartupLocation = WindowStartupLocation.Manual;
     }
 
