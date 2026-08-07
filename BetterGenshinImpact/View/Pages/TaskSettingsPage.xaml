@@ -674,7 +674,7 @@
                                                   Text="派蒙辅助检测"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="按L后当派蒙头像可见时提前跳出战斗结束检测。默认关闭。"
+                                                  Text="按L后当派蒙头像可见时提前跳出战斗结束检测。默认开启。"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                                 <ui:ToggleSwitch Grid.Column="1"
