@@ -598,7 +598,7 @@
                                             Text="{Binding PathingConfig.MwkJumpFlyDistance}" />
                             </Grid>
 
-                            <!-- 玛薇卡骑行期间冲刺频率 -->
+                            <!-- 玛薇卡骑行期间冲刺间隔（秒） -->
                             <Grid Margin="16,0,16,10"
                                   Visibility="{Binding IsMwkSprintFrequencyVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
@@ -612,19 +612,20 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="玛薇卡骑行期间冲刺频率"
+                                              Text="玛薇卡冲刺间隔"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="0命酌情考虑禁用冲刺以节省夜魂值，6命可选择尽可能冲刺"
+                                              Text="玛薇卡在车上时冲刺的间隔，填0时禁用冲刺以节约夜魂值，默认为5&#x0a;0命火神建议酌情禁用，1-5命推荐间隔5，6命推荐间隔2"
                                               TextWrapping="Wrap" />
-                                <ComboBox Grid.Row="0"
-                                          Grid.RowSpan="2"
-                                          Grid.Column="1"
-                                          MinWidth="100"
-                                          ItemsSource="{Binding PathingConfig.MwkSprintFrequencyList}"
-                                          SelectedItem="{Binding PathingConfig.MwkSprintFrequency}" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="80"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.MwkSprintIntervalSeconds}" />
                             </Grid>
 
                             <!-- 跳飞间隔 -->
