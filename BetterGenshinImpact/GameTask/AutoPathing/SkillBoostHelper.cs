@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -351,38 +351,21 @@ public partial class PathExecutor
                     return true;
                 }
 
-                // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，按冲刺频率配置自行处理冲刺
+                // 玛薇卡逻辑最后：在车上（下车图标刚上车）时跳过本帧通用移动逻辑，按冲刺间隔配置自行处理冲刺
                 if (iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1)
                 {
-                    switch (PartyConfig.MwkSprintFrequency)
+                    // 冲刺间隔（秒），0 = 禁用冲刺：每间隔秒数点按冲刺一次，冷却期间持续按住冲刺键
+                    if (PartyConfig.MwkSprintIntervalSeconds > 0)
                     {
-                        case "少量冲刺":
-                            // 每 5 秒点按冲刺一次，冷却期间持续按住冲刺键
-                            if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= 5)
-                            {
-                                _lastMavikaSprintTime = DateTime.UtcNow;
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
-                            }
-                            else
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
-                            }
-                            break;
-                        case "尽可能冲刺":
-                            // 每 1 秒点按冲刺一次，冷却期间持续按住冲刺键
-                            if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= 1)
-                            {
-                                _lastMavikaSprintTime = DateTime.UtcNow;
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
-                            }
-                            else
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
-                            }
-                            break;
-                        default:
-                            // 禁用冲刺：不执行冲刺操作
-                            break;
+                        if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= PartyConfig.MwkSprintIntervalSeconds)
+                        {
+                            _lastMavikaSprintTime = DateTime.UtcNow;
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                        }
+                        else
+                        {
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                        }
                     }
 
                     return true;
