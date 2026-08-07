@@ -217,9 +217,6 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _switchToWalkEnabled = false;
 
-    [ObservableProperty]
-    private bool _mwkFlyEnabled = true;
-
     /// <summary>
     /// 玛薇卡跳飞开关
     /// </summary>
