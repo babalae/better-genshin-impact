@@ -118,16 +118,16 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="1星圣遗物" xml:space="preserve">
-    <value>Manufatti da 1★</value>
+    <value>Manufatti.*da.*1★?</value>
   </data>
   <data name="2星圣遗物" xml:space="preserve">
-    <value>Manufatti da 2★</value>
+    <value>Manufatti.*da.*2★?</value>
   </data>
   <data name="3星圣遗物" xml:space="preserve">
-    <value>Manufatti da 3★</value>
+    <value>Manufatti.*da.*3★?</value>
   </data>
   <data name="4星圣遗物" xml:space="preserve">
-    <value>Manufatti da 4★</value>
+    <value>Manufatti.*da.*4★?</value>
   </data>
   <data name="元素充能效率" xml:space="preserve">
     <value>Ricarica di energia</value>

@@ -124,7 +124,7 @@
     <value>Sfida completata</value>
   </data>
   <data name="点击任意位置关闭" xml:space="preserve">
-    <value>#{LAYOUT_MOBILE#Tocca un punto qualsiasi}{LAYOUT_PC#Fai clic su un punto qualsiasi}{LAYOUT_PS#Premi Conferma} per chiudere</value>
+    <value>(Fai clic|Tocca|Premi).*per chiudere</value>
   </data>
   <data name="自动退出" xml:space="preserve">
     <value>Esci</value>
