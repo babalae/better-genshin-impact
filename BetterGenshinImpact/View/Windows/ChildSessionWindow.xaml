@@ -170,22 +170,47 @@
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
-                        <ui:Button Width="40"
-                                   Height="32"
-                                   Background="Transparent"
-                                   BorderBrush="Transparent"
-                                   Command="{Binding ToggleTopmostCommand}"
-                                   CornerRadius="0"
-                                   Icon="{ui:SymbolIcon Pin24}"
-                                   ToolTip="{Binding TopmostButtonToolTip}"
-                                   Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
-                        <ui:Button Width="40"
-                                   Height="32"
-                                   Background="Transparent"
+                    <ui:Button Width="40"
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               Command="{Binding ToggleAudioMutedCommand}"
+                               CornerRadius="0"
+                               ToolTip="{Binding AudioButtonToolTip}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon>
+                                <ui:SymbolIcon.Style>
+                                    <Style TargetType="{x:Type ui:SymbolIcon}">
+                                        <Setter Property="Symbol"
+                                                Value="Speaker224" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAudioMuted}"
+                                                         Value="True">
+                                                <Setter Property="Symbol"
+                                                        Value="SpeakerOff24" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <ui:Button Width="40"
+                               Height="32"
+                               Background="Transparent"
                                    BorderBrush="Transparent"
                                    Command="{Binding ToggleTopmostCommand}"
                                    CornerRadius="0"
                                    Icon="{ui:SymbolIcon PinOff24}"
+                                   ToolTip="{Binding TopmostButtonToolTip}"
+                                   Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                    <ui:Button Width="40"
+                               Height="32"
+                               Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding ToggleTopmostCommand}"
+                                   CornerRadius="0"
+                                   Icon="{ui:SymbolIcon Pin24}"
                                    ToolTip="{Binding TopmostButtonToolTip}"
                                    Visibility="{Binding IsTopmost, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </StackPanel>
@@ -236,8 +261,9 @@
                         <Setter Property="Margin"
                                 Value="3,0,3,3" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
-                                         Value="Maximized">
+                            <DataTrigger
+                                Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type ui:FluentWindow}}}"
+                                Value="Maximized">
                                 <Setter Property="Margin"
                                         Value="0" />
                             </DataTrigger>
