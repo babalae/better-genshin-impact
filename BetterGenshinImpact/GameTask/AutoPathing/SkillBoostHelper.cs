@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -193,9 +193,12 @@ public partial class PathExecutor
                         Simulation.ReleaseAllKey();
                         var nextIdx = GetSwitchToWalkIndex();
                         Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
-                        await SwitchAvatar(nextIdx);
-                        // 切人成功即认为下车成功
-                        state.PendingApproach = false;
+                        var nextAvatar = await SwitchAvatar(nextIdx);
+                        // 切人成功才认为下车成功，失败时保留 PendingApproach 以便后续帧重试
+                        if (nextAvatar != null)
+                        {
+                            state.PendingApproach = false;
+                        }
                     }
                     else
                     {
