@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -254,6 +254,8 @@ public partial class PathExecutor
                         }
 
                         // 上车后不跳出当前帧，继续执行跳飞判定
+                        // 重置冲刺计时，上车完成后重新开始计算冲刺间隔
+                        _lastMavikaSprintTime = DateTime.UtcNow;
                     }
                 }
 
