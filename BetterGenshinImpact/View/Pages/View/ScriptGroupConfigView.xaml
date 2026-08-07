@@ -598,36 +598,6 @@
                                             Text="{Binding PathingConfig.MwkJumpFlyDistance}" />
                             </Grid>
 
-                            <!-- 玛薇卡骑行期间冲刺间隔（秒） -->
-                            <Grid Margin="16,0,16,10"
-                                  Visibility="{Binding IsMwkSprintFrequencyVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="玛薇卡冲刺间隔"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="玛薇卡在车上时冲刺的间隔，填0时禁用冲刺以节约夜魂值，默认为5&#x0a;0命火神建议酌情禁用，1-5命推荐间隔5，6命推荐间隔2"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="60"
-                                            Height="35"
-                                            HorizontalContentAlignment="Center"
-                                            Text="{Binding PathingConfig.MwkSprintIntervalSeconds}" />
-                            </Grid>
-
                             <!-- 跳飞间隔 -->
                             <Grid Margin="16,0,16,10"
                                   Visibility="{Binding IsHurryOnMwkOrAutoOrXianyun, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -658,6 +628,33 @@
                                             Text="{Binding PathingConfig.MwkJumpFlyIntervalSeconds}" />
                             </Grid>
 
+                            <!-- 玛薇卡在车上禁用冲刺 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsDisableSprintVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="玛薇卡在车上禁用冲刺"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="0命玛薇卡酌情勾选，节约夜魂值"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,24,0"
+                                                 IsChecked="{Binding PathingConfig.MwkDisableSprintEnabled}" />
+                            </Grid>
 
                         </StackPanel>
                     </ui:CardExpander>

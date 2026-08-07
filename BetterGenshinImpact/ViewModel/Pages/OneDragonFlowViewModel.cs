@@ -39,6 +39,8 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private readonly ScriptService _scriptService;
 
+    private bool _isInitialized;
+
     [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
     [
         new("领取邮件"),
@@ -223,7 +225,11 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Get().DomainNameList];
 
-    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭软件", "关闭游戏和软件", "关机"];
+    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭软件", "关闭游戏和软件", "关机", "启动一条龙"];
+
+    [ObservableProperty] private List<string> _autoResumeModeList = ["禁用断点续跑", "每日刷新", "每次启动刷新", "永不刷新"];
+
+    [ObservableProperty] private List<string> _restartOneDragonNameList = [];
 
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
     
@@ -333,9 +339,35 @@ public partial class OneDragonFlowViewModel : ViewModel
             ConfigList.Add(config);
         }
 
+        // 启动软件时清除"每次启动刷新"模式的断点标记（仅首次初始化执行）
+        if (!_isInitialized)
+        {
+            _isInitialized = true;
+            foreach (var config in configs)
+            {
+                if (config.AutoResumeMode == "每次启动刷新" && !string.IsNullOrEmpty(config.NextTaskId) && config.AutoResumeTimestamp != null)
+                {
+                    config.NextTaskId = string.Empty;
+                    config.AutoResumeTimestamp = null;
+                    WriteConfig(config);
+                    _logger.LogInformation("断点续跑：启动时清除标记（配置：{Name}）", config.Name);
+                }
+            }
+        }
+
         SelectedConfig = selected;
         LoadDisplayTaskListFromConfig(); // 加载 DisplayTaskList 从配置文件
         SetSomeSelectedConfig(SelectedConfig);
+        RefreshRestartOneDragonNameList();
+    }
+
+    private void RefreshRestartOneDragonNameList()
+    {
+        var names = ConfigList.Select(c => c.Name).ToList();
+        if (RestartOneDragonNameList.Count != names.Count || !RestartOneDragonNameList.SequenceEqual(names))
+        {
+            RestartOneDragonNameList = names;
+        }
     }
 
     // 新增方法：从配置文件加载 DisplayTaskList
@@ -424,6 +456,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         WriteConfig(SelectedConfig);
+        RefreshRestartOneDragonNameList();
     }
     
     [RelayCommand]
@@ -540,145 +573,225 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    // 断点续跑：处理清除逻辑，在读取 NextTaskId 之前调用
+    private void HandleAutoResumeClear()
+    {
+        if (SelectedConfig == null || string.IsNullOrEmpty(SelectedConfig.NextTaskId))
+        {
+            return;
+        }
+
+        // 没有时间戳的是手动标记（右键设置），不参与自动清理
+        if (SelectedConfig.AutoResumeTimestamp == null)
+        {
+            return;
+        }
+
+        bool shouldClear = SelectedConfig.AutoResumeMode switch
+        {
+            "禁用断点续跑" => true,
+            "每日刷新" => HasCrossedDailyReset(SelectedConfig.AutoResumeTimestamp),
+            "永不刷新" => false,
+            "每次启动刷新" => false,
+            _ => true
+        };
+
+        if (shouldClear)
+        {
+            _logger.LogInformation("断点续跑：清除标记（模式：{Mode}）", SelectedConfig.AutoResumeMode);
+            SelectedConfig.NextTaskId = string.Empty;
+            SelectedConfig.AutoResumeTimestamp = null;
+            SaveConfig();
+        }
+    }
+
+    /// <summary>
+    /// OnDailyReset 模式：判断上次标记时间是否已跨越凌晨4点
+    /// </summary>
+    private static bool HasCrossedDailyReset(DateTime? lastTimestamp)
+    {
+        if (lastTimestamp == null) return false;
+
+        var serverNow = ServerTimeHelper.GetServerTimeNow();
+        var last = lastTimestamp.Value.ToUniversalTime();
+        var lastOffset = ServerTimeHelper.GetServerTimeOffset();
+        var lastServer = new DateTimeOffset(last).ToOffset(lastOffset);
+
+        // 以凌晨4点为日界，判断所处"日"是否不同
+        var lastDay = lastServer.Hour >= 4 ? lastServer.Date : lastServer.Date.AddDays(-1);
+        var nowDay = serverNow.Hour >= 4 ? serverNow.Date : serverNow.Date.AddDays(-1);
+
+        return nowDay > lastDay;
+    }
+
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
+        await ExecuteChain();
+    }
 
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
-
-        var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
-
-        // 如果设置了 NextTaskId，从指定任务开始执行
-        if (!string.IsNullOrEmpty(SelectedConfig.NextTaskId))
+    private async Task ExecuteChain()
+    {
+        while (true)
         {
-            var taskIndex = taskListCopy.FindIndex(t => t.Id == SelectedConfig.NextTaskId);
-            if (taskIndex >= 0)
+            _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
+
+            // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+            CancellationContext.Instance.Set();
+
+            var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
+
+            // 断点续跑：检查是否需要清除标记
+            HandleAutoResumeClear();
+
+            // 如果设置了 NextTaskId，从指定任务开始执行
+            if (!string.IsNullOrEmpty(SelectedConfig.NextTaskId))
             {
-                _logger.LogInformation("一条龙：任务将从 {Name} 开始执行", taskListCopy[taskIndex].Name);
-                taskListCopy = taskListCopy.Skip(taskIndex).ToList();
-            }
-            else
-            {
-                _logger.LogWarning("一条龙：未找到标记的任务，将从头开始执行");
-            }
-            SelectedConfig.NextTaskId = string.Empty;
-            LoadDisplayTaskListFromConfig();
-        }
-
-        foreach (var task in taskListCopy)
-        {
-            task.InitAction(SelectedConfig);
-        }
-
-        int finishOneTaskcount = 1;
-        int finishTaskcount = 1;
-        int enabledTaskCountall = taskListCopy.Count(t => t.IsEnabled);
-        _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
-        
-        ReadScriptGroup();
-        foreach (var task in ScriptGroupsdefault)
-        {
-            ScriptGroups.Remove(task);
-        }
-
-        if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
-        {
-            Toast.Warning("请先选择任务");
-            _logger.LogInformation("没有配置,退出执行!");
-            return;
-        }
-
-        int enabledoneTaskCount = taskListCopy.Count(t => t.IsEnabled);
-        _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
-
-        await ScriptService.StartGameTask();
-        if (CancellationContext.Instance.IsCancellationRequested)
-        {
-            _logger.LogInformation("一条龙在启动阶段被取消");
-            return;
-        }
-
-        SaveConfig();
-        int enabledTaskCount = taskListCopy.Count(t =>
-            t.IsEnabled && !ScriptGroupsdefault.Any(d => d.Name == t.Name));
-        _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
-
-        if (enabledoneTaskCount <= 0)
-        {
-            _logger.LogInformation("没有一条龙任务!");
-        }
-
-        Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
-        foreach (var task in taskListCopy)
-        {
-            if (task is { IsEnabled: true, Action: not null })
-            {
-                if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
+                var taskIndex = taskListCopy.FindIndex(t => t.Id == SelectedConfig.NextTaskId);
+                if (taskIndex >= 0)
                 {
-                    _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
-                    await new TaskRunner().RunThreadAsync(async () =>
-                    {
-                        await task.Action();
-                        await Task.Delay(1000);
-                    });
+                    _logger.LogInformation("一条龙：任务将从 {Name} 开始执行", taskListCopy[taskIndex].Name);
+                    taskListCopy = taskListCopy.Skip(taskIndex).ToList();
                 }
                 else
                 {
-                    try
-                    {
-                        if (enabledTaskCount <= 0)
-                        {
-                            _logger.LogInformation("没有配置组任务,退出执行!");
-                            return;
-                        }
-
-                        Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
-
-                        if (SelectedConfig.TaskEnabledList[task.Id])
-                        {
-                            _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
-                            await Task.Delay(500);
-                            string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
-                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
-                            IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
-                            await Task.Delay(1000);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug(e, "执行配置组任务时失败");
-                        Toast.Error("执行配置组任务时失败");
-                    }
+                    _logger.LogWarning("一条龙：未找到标记的任务，将从头开始执行");
                 }
-                // 如果任务已经被取消，中断所有任务
-                if (CancellationContext.Instance.Cts.IsCancellationRequested)
-                {
-                    _logger.LogInformation("任务被取消，退出执行");
-                    if (CancellationContext.Instance.IsManualStop is false)
-                    {
-                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
-                    }
-                    return; // 后续的检查任务也不执行
-                }
+                SelectedConfig.NextTaskId = string.Empty;
+                LoadDisplayTaskListFromConfig();
             }
-        }
 
-        // 检查和最终结束的任务
-        await new TaskRunner().RunThreadAsync(async () =>
-        {
-            await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
-            await Task.Delay(500);
-            if (CancellationContext.Instance.IsManualStop is false)
+            foreach (var task in taskListCopy)
             {
-                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                task.InitAction(SelectedConfig);
             }
-            _logger.LogInformation("一条龙和配置组任务结束");
 
-            // 执行完成后操作
-            if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
+            int finishOneTaskcount = 1;
+            int finishTaskcount = 1;
+            int enabledTaskCountall = taskListCopy.Count(t => t.IsEnabled);
+            _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
+            
+            ReadScriptGroup();
+            foreach (var task in ScriptGroupsdefault)
+            {
+                ScriptGroups.Remove(task);
+            }
+
+            if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
+            {
+                Toast.Warning("请先选择任务");
+                _logger.LogInformation("没有配置,退出执行!");
+                return;
+            }
+
+            int enabledoneTaskCount = taskListCopy.Count(t => t.IsEnabled);
+            _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
+
+            await ScriptService.StartGameTask();
+            if (CancellationContext.Instance.IsCancellationRequested)
+            {
+                _logger.LogInformation("一条龙在启动阶段被取消");
+                return;
+            }
+
+            SaveConfig();
+            int enabledTaskCount = taskListCopy.Count(t =>
+                t.IsEnabled && !ScriptGroupsdefault.Any(d => d.Name == t.Name));
+            _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
+
+            if (enabledoneTaskCount <= 0)
+            {
+                _logger.LogInformation("没有一条龙任务!");
+            }
+
+            Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
+            foreach (var task in taskListCopy)
+            {
+                if (task is { IsEnabled: true, Action: not null })
+                {
+                    // 断点续跑：自动保存当前任务标记
+                    if (SelectedConfig.AutoResumeMode != "禁用断点续跑")
+                    {
+                        SelectedConfig.NextTaskId = task.Id;
+                        SelectedConfig.AutoResumeTimestamp = DateTime.UtcNow;
+                        SaveConfig();
+                    }
+
+                    if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
+                    {
+                        _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
+                        await new TaskRunner().RunThreadAsync(async () =>
+                        {
+                            await task.Action();
+                            await Task.Delay(1000);
+                        });
+                    }
+                    else
+                    {
+                        try
+                        {
+                            if (enabledTaskCount <= 0)
+                            {
+                                _logger.LogInformation("没有配置组任务,退出执行!");
+                                return;
+                            }
+
+                            Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
+
+                            if (SelectedConfig.TaskEnabledList[task.Id])
+                            {
+                                _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
+                                await Task.Delay(500);
+                                string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
+                                var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
+                                IScriptService? scriptService = App.GetService<IScriptService>();
+                                await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
+                                await Task.Delay(1000);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogDebug(e, "执行配置组任务时失败");
+                            Toast.Error("执行配置组任务时失败");
+                        }
+                    }
+                    // 如果任务已经被取消，中断所有任务
+                    if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("任务被取消，退出执行");
+                        if (CancellationContext.Instance.IsManualStop is false)
+                        {
+                            Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                        }
+                        return; // 后续的检查任务也不执行
+                    }
+                }
+            }
+
+            // 完成任务检查
+            await new TaskRunner().RunThreadAsync(async () =>
+            {
+                await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+                await Task.Delay(500);
+                if (CancellationContext.Instance.IsManualStop is false)
+                {
+                    Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                }
+                _logger.LogInformation("一条龙和配置组任务结束");
+            });
+
+            // 清除断点续跑标记
+            // 放在检查之后、完成后操作之前，手动取消等场景不会误清
+            if (SelectedConfig.AutoResumeMode != "禁用断点续跑")
+            {
+                _logger.LogInformation("断点续跑：全部任务完成，清除标记");
+                SelectedConfig.NextTaskId = string.Empty;
+                SelectedConfig.AutoResumeTimestamp = null;
+                SaveConfig();
+            }
+
+            // 执行完成后操作（启动一条龙除外，在下层循环处理）
+            if (!string.IsNullOrEmpty(SelectedConfig?.CompletionAction) && SelectedConfig?.CompletionAction != "启动一条龙")
             {
                 switch (SelectedConfig.CompletionAction)
                 {
@@ -698,7 +811,33 @@ public partial class OneDragonFlowViewModel : ViewModel
                         break;
                 }
             }
-        });
+
+            // 链式执行：在循环中处理，避免递归状态机堆积
+            if (SelectedConfig?.CompletionAction == "启动一条龙")
+            {
+                var targetName = string.IsNullOrWhiteSpace(SelectedConfig.RestartOneDragonName)
+                    ? SelectedConfig.Name
+                    : SelectedConfig.RestartOneDragonName;
+                var targetConfig = ConfigList.FirstOrDefault(c => c.Name == targetName);
+                if (targetConfig != null)
+                {
+                    _logger.LogInformation("完成后操作：启动一条龙「{Target}」", targetName);
+                    SelectedConfig = targetConfig;
+                    LoadDisplayTaskListFromConfig();
+                    SetSomeSelectedConfig(SelectedConfig);
+                    continue; // 进入下一轮循环，释放本轮状态机
+                }
+                else
+                {
+                    _logger.LogWarning("完成后操作：未找到一条龙配置「{Target}」", targetName);
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -763,6 +902,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig.NextTaskId = taskItem.Id;
+        SelectedConfig.AutoResumeTimestamp = null;
         foreach (var task in TaskList)
         {
             task.IsNextTask = task.Id == taskItem.Id;
@@ -801,6 +941,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig.NextTaskId = currentTask.Id;
+        SelectedConfig.AutoResumeTimestamp = null;
         foreach (var task in TaskList)
         {
             task.IsNextTask = task.Id == currentTask.Id;
@@ -848,6 +989,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SaveConfig();
+        RefreshRestartOneDragonNameList();
     }
 
     [RelayCommand]
@@ -881,6 +1023,9 @@ public partial class OneDragonFlowViewModel : ViewModel
                 File.Delete(configFile);
             }
 
+            // 记录被删除的配置名
+            var deletedName = SelectedConfig.Name;
+
             // 从列表中移除
             ConfigList.Remove(SelectedConfig);
 
@@ -911,6 +1056,18 @@ public partial class OneDragonFlowViewModel : ViewModel
             
             // 保存配置
             SaveConfig();
+
+            // 修复其他配置对该被删除配置的引用
+            foreach (var config in ConfigList)
+            {
+                if (config.RestartOneDragonName == deletedName)
+                {
+                    config.CompletionAction = "无";
+                    config.RestartOneDragonName = string.Empty;
+                    WriteConfig(config);
+                    _logger.LogInformation("删除配置：将配置「{Config}」的完成后操作恢复为无", config.Name);
+                }
+            }
 
             Toast.Success("配置删除成功");
         }
@@ -967,6 +1124,17 @@ public partial class OneDragonFlowViewModel : ViewModel
 
             // 更新全局配置名称
             TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = newName;
+
+            // 修复其他配置对该旧名称的引用
+            foreach (var config in ConfigList)
+            {
+                if (config != SelectedConfig && config.RestartOneDragonName == oldName)
+                {
+                    config.RestartOneDragonName = newName;
+                    WriteConfig(config);
+                    _logger.LogInformation("重命名配置：同步更新配置「{Config}」的引用", config.Name);
+                }
+            }
 
             Toast.Success("配置重命名成功");
         }

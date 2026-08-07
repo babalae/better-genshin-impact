@@ -55,7 +55,7 @@ public partial class AutoFightConfig : ObservableObject
         
         
         /// <summary>
-        /// 快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。
+        /// 快速检查战斗结束（默认关闭）：完成一轮动作后，如果满足条件，则触发一次战斗结束检查。
         /// </summary>
         [ObservableProperty]
         private bool _fastCheckEnabled = false;
@@ -67,19 +67,25 @@ public partial class AutoFightConfig : ObservableObject
         private bool _rotateFindEnemyEnabled = false;
         
         /// <summary>
-        /// 快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:15,白术;钟离;，如果是数字（小于等于0则不会根据时间去检查），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。
+        /// 快速检查战斗结束的参数，填写数字（秒）时距离上次检查超过该时间则触发检查，填写人名时对应角色动作后触发检查。多项时使用分号分隔，格式如5或5;白术;
         /// </summary>
         [ObservableProperty]
         private string _fastCheckParams = "";
         
         /// <summary>
-        /// 检查战斗结束的延时，即角色，默认为1.5秒。也可以指定特定角色之后延时多少时间检查。格式如：2.5;白术,1.5;钟离,1.0;
+        /// 切人后再执行战斗结束检查：将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。目前仅 JSON 策略下生效。
+        /// </summary>
+        [ObservableProperty]
+        private bool _checkAfterSwitchAvatar = false;
+        
+        /// <summary>
+        /// 触发战斗结束检查时，先等待该延时以确保角色动作后摇结束。也可为角色单独指定延时，格式如0.4或0.4;钟离,1.5
         /// </summary>
         [ObservableProperty]
         private string _checkEndDelay = "0.4;钟离,1.4;";
 
         /// <summary>
-        /// 按下切换队伍后去检查屏幕色块的延迟，默认为0.45秒。若频繁误判可以适当提高这个值。确保这个延迟不会真的把队伍配置界面切出来。
+        /// 按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若出现无法结束战斗可以适当提高这个值，比如0.75。但不要太大，确保这个延时不会真的把队伍配置界面切出来。
         /// </summary>
         [ObservableProperty]
         private string _beforeDetectDelay = "0.4";
@@ -103,10 +109,28 @@ public partial class AutoFightConfig : ObservableObject
         private bool _checkBeforeBurst = false;
 
         /// <summary>
-        /// 敌人可见时跳过战斗结束检查
+        /// 敌人可见时跳过战斗结束检查：检测到敌人血条时跳过战斗结束检查。与旋转寻找敌人位置互斥。
         /// </summary>
         [ObservableProperty]
         private bool _skipFightEndCheckWhenEnemyVisible = false;
+
+        /// <summary>
+        /// 开战后一段时间阻断战斗结束检查（秒）：默认0不阻断；大于0时，开战后该时间内的战斗结束检查直接视为战斗未结束。
+        /// </summary>
+        [ObservableProperty]
+        private double _blockCheckBeforeBattleSeconds = 0;
+
+        /// <summary>
+        /// 派蒙辅助检测：按L后当派蒙头像可见时提前跳出战斗结束检测
+        /// </summary>
+        [ObservableProperty]
+        private bool _paimonEndCheckEnabled = true;
+
+        /// <summary>
+        /// 派蒙辅助检测延时（秒），默认为0.075秒
+        /// </summary>
+        [ObservableProperty]
+        private double _paimonEndCheckDelay = 0.075;
 
         /// <summary>
         /// 与"敌人可见时跳过战斗结束检查"互斥：开启旋转寻找敌人时关闭跳过检查，

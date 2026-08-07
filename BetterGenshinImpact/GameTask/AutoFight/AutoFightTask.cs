@@ -41,8 +41,13 @@ public class AutoFightTask : ISoloTask
 
     private readonly BgiYoloPredictor _predictor;
 
-    private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
-    private int _skipCheckCounter;
+    private static DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
+    private static int _skipCheckCounter;
+
+    /// <summary>
+    /// 重置"敌人可见时跳过战斗结束检查"的连续跳过计数（每场战斗开始时调用，TXT 与 JSON 策略共用）
+    /// </summary>
+    public static void ResetSkipCheckCounter() => _skipCheckCounter = 0;
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
     
@@ -57,7 +62,17 @@ public class AutoFightTask : ISoloTask
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
     
-    private class TaskFightFinishDetectConfig
+    /// <summary>
+    /// 最近一次战斗结束检查的时间（TXT 与 JSON 策略共用，供更快触发战斗结束检查判断间隔使用）
+    /// </summary>
+    public static DateTime LastFightFinishCheckTime { get; set; } = DateTime.Now;
+
+    /// <summary>
+    /// 本次战斗的开战时间（TXT 与 JSON 策略共用，供"开战后一段时间阻断战斗结束检查"使用）
+    /// </summary>
+    public static DateTime FightStartTime { get; set; } = DateTime.Now;
+    
+    public class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
         public int DetectDelayTime = 450;
@@ -65,12 +80,17 @@ public class AutoFightTask : ISoloTask
         public double CheckTime = 5;
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
+        public bool CheckAfterSwitchAvatar = false;
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
+        public double BlockCheckBeforeBattleSeconds = 0;
+        public bool PaimonEndCheckEnabled = true;
+        public int PaimonEndCheckDelayMs = 75;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
             FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
+            CheckAfterSwitchAvatar = finishDetectConfig.CheckAfterSwitchAvatar;
             ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
             ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
             BattleEndProgressBarColor =
@@ -81,6 +101,11 @@ public class AutoFightTask : ISoloTask
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
             SkipFightEndCheckWhenEnemyVisible = finishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+            // 开战阻断时间（秒）限制在 0-10 之间，超出范围时修饰到对应上下限
+            BlockCheckBeforeBattleSeconds = Math.Clamp(finishDetectConfig.BlockCheckBeforeBattleSeconds, 0, 10);
+            PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
+            // 派蒙检测延时（秒）限制在 0.05-0.4 之间，超出范围时修饰到对应上下限
+            PaimonEndCheckDelayMs = (int)(Math.Clamp(finishDetectConfig.PaimonEndCheckDelay, 0.05, 0.4) * 1000);
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -242,6 +267,8 @@ public class AutoFightTask : ISoloTask
         _ct = ct;
         AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
         AvatarRecognition.ClearLegendaryBarTracker();
+        // 每场新战斗重置"敌人可见时跳过战斗结束检查"的连续跳过计数，保证拥有完整的跳过次数
+        ResetSkipCheckCounter();
         try
         {
             LogScreenResolution();
@@ -275,6 +302,9 @@ public class AutoFightTask : ISoloTask
         combatScenes.BeforeTask(cts2.Token);
         TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 战斗超时时间
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+
+        // 记录开战时间，供"开战前一段时间阻断战斗结束检查"使用
+        FightStartTime = DateTime.Now;
 
         Stopwatch checkFightFinishStopwatch = Stopwatch.StartNew();
         TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗超时时间的超时时间
@@ -875,10 +905,28 @@ public class AutoFightTask : ISoloTask
 
     public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
+        return await CheckFightFinish(_finishDetectConfig, _ct, delayTime, detectDelayTime);
+    }
+
+    /// <summary>
+    /// 战斗结束检测（统一实现，TXT 与 JSON 策略共用）
+    /// </summary>
+    public static async Task<bool> CheckFightFinish(TaskFightFinishDetectConfig finishDetectConfig,
+        CancellationToken ct, int delayTime = 1500, int detectDelayTime = 450)
+    {
+        // 开战后一段时间阻断战斗结束检查：距离开战时间小于配置值时，提前返回并视为战斗未结束
+        if (finishDetectConfig.BlockCheckBeforeBattleSeconds > 0 &&
+            (DateTime.Now - FightStartTime).TotalSeconds < finishDetectConfig.BlockCheckBeforeBattleSeconds)
+        {
+            return false;
+        }
+
+        // 记录最近一次战斗结束检查的时间（供更快触发战斗结束检查判断间隔使用）
+        LastFightFinishCheckTime = DateTime.Now;
         using (AvatarRecognition.BeginExclusiveOperation())
         {
             // 敌人可见时跳过战斗结束检查
-            if (_finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
+            if (finishDetectConfig.SkipFightEndCheckWhenEnemyVisible)
             {
                 if (_skipCheckCounter < 5)
                 {
@@ -886,7 +934,7 @@ public class AutoFightTask : ISoloTask
                     var bars = AvatarRecognition.FindBloodBars(quickCapture);
                     // 不进行伤害数字识别。传奇血条（y<96或纵坐标连续出现5帧的y96-200血条）也会被 FindBloodBars 正常返回
                     // 过滤左侧 UI 区域 (x <= 200)，避免队伍头像等红色元素被误判为敌人血条
-                    if (bars.Any(b => b.x > (int)(200 * _assetScale)))
+                    if (bars.Any(b => b.x > (int)(200 * TaskContext.Instance().SystemInfo.AssetScale)))
                     {
                         _skipCheckCounter++;
                         Logger.LogInformation("敌人可见，跳过战斗结束检查（已连续跳过{Count}次）", _skipCheckCounter);
@@ -900,12 +948,12 @@ public class AutoFightTask : ISoloTask
                 _skipCheckCounter = 0;
             }
 
-            if (_finishDetectConfig.RotateFindEnemyEnabled)
+            if (finishDetectConfig.RotateFindEnemyEnabled)
             {
                 bool? result = null;
                 try
                 {
-                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
+                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct);
                 }
                 catch (Exception ex)
                 {
@@ -922,14 +970,37 @@ public class AutoFightTask : ISoloTask
                 }
             }
 
-            if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
+            if (!finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, ct);
             
             // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
             Logger.LogInformation("打开编队界面检查战斗是否结束");
             // 最终方案确认战斗结束
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            await Delay(detectDelayTime, _ct);
-            
+
+            if (finishDetectConfig.PaimonEndCheckEnabled)
+            {
+                // 派蒙辅助检测：按L后等待PaimonEndCheckDelayMs，检测(32,67)像素是否为派蒙头冠颜色
+                await Delay(finishDetectConfig.PaimonEndCheckDelayMs, ct);
+                using var paimonRa = CaptureToRectArea();
+                var paimonPixel = paimonRa.SrcMat.At<Vec3b>(32, 67);
+                var paimonVisible = IsPaimon(paimonPixel.Item2, paimonPixel.Item1, paimonPixel.Item0);
+                if (paimonVisible)
+                {
+                    // 派蒙头像可见 → 编队界面未打开（按L未生效），战斗未结束，按X取消后提前跳出战斗结束检查
+                    Logger.LogInformation("派蒙头像可见，提前跳出战斗结束检查");
+                    // 按X取消编队界面（走统一按键配置，默认X，支持用户改键）
+                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                    return false;
+                }
+
+                // 派蒙头像已消失 → 战斗可能结束，等待剩余时间后检查黄条
+                await Delay(Math.Max(0, detectDelayTime - finishDetectConfig.PaimonEndCheckDelayMs), ct);
+            }
+            else
+            {
+                await Delay(detectDelayTime, ct);
+            }
+
             using var ra = CaptureToRectArea();
             //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
             // 只提取橙色
@@ -952,13 +1023,13 @@ public class AutoFightTask : ISoloTask
             // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
             Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
 
-            if (_finishDetectConfig.RotateFindEnemyEnabled)
+            if (finishDetectConfig.RotateFindEnemyEnabled)
             {
                 Task.Run(() =>
                 {
                     Scalar bloodLower = new Scalar(255, 90, 90);
-                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-                } ,_ct);
+                    MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, ct);
+                } ,ct);
             }
             
             _lastFightFlagTime = DateTime.Now;
@@ -966,7 +1037,15 @@ public class AutoFightTask : ISoloTask
         }
     }
 
-    bool IsYellow(int r, int g, int b)
+    static bool IsPaimon(int r, int g, int b)
+    {
+        // 派蒙头冠颜色：R高，G中，B低（BGR 143,196,233 转换后 R=233,G=196,B=143，容差±10）
+        return (r >= 223 && r <= 243) &&
+               (g >= 186 && g <= 206) &&
+               (b >= 133 && b <= 153);
+    }
+
+    static bool IsYellow(int r, int g, int b)
     {
         //Logger.LogInformation($"IsYellow({r},{g},{b})");
         // 黄色范围：R高，G高，B低
@@ -975,7 +1054,7 @@ public class AutoFightTask : ISoloTask
                (b >= 0 && b <= 100);
     }
 
-    bool IsWhite(int r, int g, int b)
+    static bool IsWhite(int r, int g, int b)
     {
         //Logger.LogInformation($"IsWhite({r},{g},{b})");
         // 白色范围：R高，G高，B低
