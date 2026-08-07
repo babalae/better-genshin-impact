@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -382,12 +382,9 @@ public partial class PathExecutor
                         if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds >= PartyConfig.MwkSprintIntervalSeconds)
                         {
                             _lastMavikaSprintTime = DateTime.UtcNow;
-                            // 松开当前按住状态，下一帧会重新按住，形成一次冲刺
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                        }
-                        else
-                        {
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                            // 点按冲刺一次，不持续按住
+                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                            Logger.LogInformation("自动赶路：玛薇卡冲刺");
                         }
                     }
 
