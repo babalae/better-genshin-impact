@@ -20,15 +20,19 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.StateMachine;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -84,6 +88,23 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private readonly string? _jsonCombatStrategyPath;
     private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
     private LowerHeadThenWalkToTask? _lowerHeadThenWalkToTask;
+
+    private readonly string returnLocalizedString;
+    private readonly string challengeFailedLocalizedString;
+    private readonly string retryChallengeLocalizedString;
+    private readonly string leyLineBlossomLocalizedString;
+    private readonly string condensedResinLocalizedString;
+    private readonly string originalResinLocalizedString;
+    private readonly string characterPreviewLocalizedString;
+    private readonly string startChallengeLocalizedString;
+    private readonly string singlePlayerLocalizedString;
+    private readonly string stygianOnslaughtLocalizedString;
+    private readonly string eventsOverviewLocalizedString;
+    private readonly string disturbanceOutbreakLocalizedString;
+    private readonly string alreadyEndedLocalizedString;
+    private readonly string insufficientQuantityLocalizedString;
+    private readonly string replenishOriginalResinLocalizedString;
+
     public AutoStygianOnslaughtTask(AutoStygianOnslaughtParam taskParam)
     {
         _taskParam = taskParam;
@@ -97,6 +118,13 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             _combatScriptBag = CombatScriptParser.ReadAndParse(taskParam.CombatScriptBagPath);
         }
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
+
+        (returnLocalizedString, challengeFailedLocalizedString, retryChallengeLocalizedString,
+            leyLineBlossomLocalizedString, condensedResinLocalizedString, originalResinLocalizedString,
+            characterPreviewLocalizedString, startChallengeLocalizedString, singlePlayerLocalizedString,
+            stygianOnslaughtLocalizedString, eventsOverviewLocalizedString, disturbanceOutbreakLocalizedString,
+            alreadyEndedLocalizedString, insufficientQuantityLocalizedString, replenishOriginalResinLocalizedString)
+            = BuildLocalizedStrings();
 
         // 注册所有状态处理器
         RegisterAllStateHandlers();
@@ -115,8 +143,42 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         }
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
+        (returnLocalizedString, challengeFailedLocalizedString, retryChallengeLocalizedString,
+            leyLineBlossomLocalizedString, condensedResinLocalizedString, originalResinLocalizedString,
+            characterPreviewLocalizedString, startChallengeLocalizedString, singlePlayerLocalizedString,
+            stygianOnslaughtLocalizedString, eventsOverviewLocalizedString, disturbanceOutbreakLocalizedString,
+            alreadyEndedLocalizedString, insufficientQuantityLocalizedString, replenishOriginalResinLocalizedString)
+            = BuildLocalizedStrings();
+
         // 注册所有状态处理器
         RegisterAllStateHandlers();
+    }
+
+    /// <summary>
+    /// 初始化本地化字符串（供两个构造函数复用，遵循 AutoDomainTask 的 IStringLocalizer + WithCultureGet 惯例）
+    /// </summary>
+    private static (string, string, string, string, string, string, string, string, string, string, string, string, string, string, string) BuildLocalizedStrings()
+    {
+        IStringLocalizer<AutoStygianOnslaughtTask> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoStygianOnslaughtTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        return (
+            stringLocalizer.WithCultureGet(cultureInfo, "返回"),
+            stringLocalizer.WithCultureGet(cultureInfo, "挑战失败"),
+            stringLocalizer.WithCultureGet(cultureInfo, "重新挑战"),
+            stringLocalizer.WithCultureGet(cultureInfo, "地脉之花"),
+            stringLocalizer.WithCultureGet(cultureInfo, "浓缩树脂"),
+            stringLocalizer.WithCultureGet(cultureInfo, "原粹树脂"),
+            stringLocalizer.WithCultureGet(cultureInfo, "角色预览"),
+            stringLocalizer.WithCultureGet(cultureInfo, "开始挑战"),
+            stringLocalizer.WithCultureGet(cultureInfo, "单人挑战"),
+            stringLocalizer.WithCultureGet(cultureInfo, "幽境危战"),
+            stringLocalizer.WithCultureGet(cultureInfo, "活动一览"),
+            stringLocalizer.WithCultureGet(cultureInfo, "紊乱爆发期"),
+            stringLocalizer.WithCultureGet(cultureInfo, "已结束"),
+            stringLocalizer.WithCultureGet(cultureInfo, "数量不足"),
+            stringLocalizer.WithCultureGet(cultureInfo, "补充原粹树脂")
+        );
     }
 
     /// <summary>
@@ -250,7 +312,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         return ra.Find(ElementRecognition.Get("BtnWhiteCancel", ra)).IsExist() &&
                ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.35, ra.Height * 0.7, ra.Width * 0.3, ra.Height * 0.2))
-                 .Any(o => o.Text.Contains("返回"));
+                 .Any(o => o.Text.Contains(returnLocalizedString));
     }
 
     [StateDetector(StygianState.BattleResultLose, Order = 70)]
@@ -258,7 +320,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         return ra.Find(ElementRecognition.Get("BtnWhiteConfirm", ra)).IsExist() &&
                ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.2, ra.Height * 0.3, ra.Width * 0.6, ra.Height * 0.3))
-                 .Any(o => o.Text.Contains("挑战失败") || o.Text.Contains("重新挑战"));
+                 .Any(o => o.Text.Contains(challengeFailedLocalizedString) || o.Text.Contains(retryChallengeLocalizedString));
     }
 
     // ========== 第三优先级：OCR 检测 ==========
@@ -267,15 +329,15 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private bool DetectResinSelect(ImageRegion ra)
     {
         var ocrResult = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.2, ra.Height * 0.2, ra.Width * 0.6, ra.Height * 0.6));
-        return ocrResult.Any(t => t.Text.Contains("地脉之花")) &&
-               ocrResult.Any(t => t.Text.Contains("浓缩树脂") || t.Text.Contains("原粹树脂"));
+        return ocrResult.Any(t => t.Text.Contains(leyLineBlossomLocalizedString)) &&
+               ocrResult.Any(t => t.Text.Contains(condensedResinLocalizedString) || t.Text.Contains(originalResinLocalizedString));
     }
 
     [StateDetector(StygianState.LeylineFlowerPrompt, Order = 90)]
     private bool DetectLeylineFlowerPrompt(ImageRegion ra)
     {
         var ocrResult = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.2, ra.Height * 0.2, ra.Width * 0.6, ra.Height * 0.6));
-        var found = ocrResult.Any(t => t.Text.Contains("地脉之花"));
+        var found = ocrResult.Any(t => t.Text.Contains(leyLineBlossomLocalizedString));
         return found;
     }
 
@@ -285,8 +347,8 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         // "角色预览" 在右上角，"开始挑战" 在右下角
         // 检测右侧整个区域
         var ocrResult = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.5, 0, ra.Width * 0.5, ra.Height));
-        var hasPreview = ocrResult.Any(o => o.Text.Contains("角色预览"));
-        var hasStart = ocrResult.Any(o => o.Text.Contains("开始挑战"));
+        var hasPreview = ocrResult.Any(o => o.Text.Contains(characterPreviewLocalizedString));
+        var hasStart = ocrResult.Any(o => o.Text.Contains(startChallengeLocalizedString));
         var found = hasPreview && hasStart;
         return found;
     }
@@ -296,7 +358,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         // "单人挑战" 在右下角
         return ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.5, ra.Height * 0.7, ra.Width * 0.5, ra.Height * 0.3))
-                 .Any(o => o.Text.Contains("单人挑战"));
+                 .Any(o => o.Text.Contains(singlePlayerLocalizedString));
     }
 
     [StateDetector(StygianState.DomainEntrance, Order = 120)]
@@ -306,7 +368,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         // 坐标：左上角(1223, 510), 右下角(1376, 566)
         // 宽度=153, 高度=56
         return ra.FindMulti(RecognitionObject.Ocr(1223, 510, 153, 56))
-                 .Any(o => o.Text.Contains("幽境危战"));
+                 .Any(o => o.Text.Contains(stygianOnslaughtLocalizedString));
     }
 
     [StateDetector(StygianState.EventMenu, Order = 130)]
@@ -315,7 +377,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         // 活动一览位置：左上角(125, 142), 右下角(238, 170)
         // OCR 参数：(x, y, width, height)
         return ra.FindMulti(RecognitionObject.Ocr(125, 142, 238 - 125, 170 - 142))
-                 .Any(o => o.Text.Contains("活动一览"));
+                 .Any(o => o.Text.Contains(eventsOverviewLocalizedString));
     }
 
     [StateDetector(StygianState.StygianOnslaughtPage, Order = 140)]
@@ -323,7 +385,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         // 活动详情页右侧主标题：左上角(1135, 278)，右下角(1400, 353)
         return ra.FindMulti(RecognitionObject.Ocr(1135, 278, 1400 - 1135, 353 - 278))
-                 .Any(o => o.Text.Contains("幽境危战"));
+                 .Any(o => o.Text.Contains(stygianOnslaughtLocalizedString));
     }
 
     #endregion
@@ -369,7 +431,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             await Delay(500, _ct);
 
             // 2. 在列表区域内查找"幽境危战"并点击
-            var target = page.GetByText("幽境危战").WithRoi(listRegion).FindAll().FirstOrDefault();
+            var target = page.GetByText(stygianOnslaughtLocalizedString).WithRoi(listRegion).FindAll().FirstOrDefault();
             if (target != null)
             {
                 target.Click();
@@ -392,8 +454,8 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         using (var ra = CaptureToRectArea())
         {
             var ocrResult = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.32, ra.Height * 0.68, ra.Width * 0.16, ra.Height * 0.1));
-            if (ocrResult.Any(o => o.Text.Contains("紊乱爆发期")) &&
-                ocrResult.Any(o => o.Text.Contains("已结束")))
+            if (ocrResult.Any(o => o.Text.Contains(disturbanceOutbreakLocalizedString)) &&
+                ocrResult.Any(o => o.Text.Contains(alreadyEndedLocalizedString)))
             {
                 Logger.LogInformation($"{Name}：检测到紊乱爆发期已结束，按 Esc 返回主界面");
                 Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
@@ -679,7 +741,8 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         var textList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
 
         // 检查是否无树脂
-        if (textList.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
+        // 数量不足/补充原粹树脂 sono pattern Regex (contengono .* per EN/FR): Regex.IsMatch, non Contains
+        if (textList.Any(t => Regex.IsMatch(t.Text, insufficientQuantityLocalizedString) || Regex.IsMatch(t.Text, replenishOriginalResinLocalizedString)))
         {
             Logger.LogInformation("原粹树脂已用尽");
             return false;
@@ -739,6 +802,10 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 return true;
             }
 
+            // PressUseResin takes the internal Chinese key, NOT a localized value: since #3404 it
+            // localizes the OCR match pattern itself, and GetResinNum still branches on the Chinese
+            // literal ("原粹树脂" / "浓缩树脂") to read the amount. Passing a localized string here
+            // would make that branch fall through and silently return 0.
             if (resinStatus.CondensedResinCount > 0)
             {
                 AutoDomainTask.PressUseResin(ra, "浓缩树脂", Name);
@@ -874,7 +941,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
             using var ra = CaptureToRectArea();
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-            if (ocrList.Any(t => t.Text.Contains("地脉之花")))
+            if (ocrList.Any(t => t.Text.Contains(leyLineBlossomLocalizedString)))
             {
                 Logger.LogInformation($"{Name}：成功交互地脉花");
                 return true;
@@ -1070,7 +1137,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                     if (ret.IsExist())
                     {
                         var list = ra.FindMulti(RecognitionObject.Ocr(ret.X + 40 * assetScale, ret.Y - 20 * assetScale, 270 * assetScale, ret.Height * 2));
-                        if (list.Any(o => o.Text.Contains("返回")))
+                        if (list.Any(o => o.Text.Contains(returnLocalizedString)))
                         {
                             return true;
                         }
