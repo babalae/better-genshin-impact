@@ -301,15 +301,18 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     /// </summary>
     private void ClampWindowToScreen(double left, double top)
     {
-        // Use the center of the title bar area to determine which monitor the window belongs to.
-        // Screen.FromPoint returns the nearest screen even when the point falls in a gap
-        // between non-rectangular monitors, avoiding unreachable positions.
-        var testX = (int)(left + Width / 2);
-        var testY = (int)(top + 15);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var testX = (int)((left + Width / 2) * dpi.DpiScaleX);
+        var testY = (int)((top + 15) * dpi.DpiScaleY);
         var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(testX, testY));
         var work = screen.WorkingArea;
-        Left = Math.Max(work.Left, Math.Min(left, work.Right - Width));
-        Top = Math.Max(work.Top, Math.Min(top, work.Bottom - 30));
+        var workLeft = work.Left / dpi.DpiScaleX;
+        var workTop = work.Top / dpi.DpiScaleY;
+        var workRight = work.Right / dpi.DpiScaleX;
+        var workBottom = work.Bottom / dpi.DpiScaleY;
+
+        Left = Math.Max(workLeft, Math.Min(left, workRight - Width));
+        Top = Math.Max(workTop, Math.Min(top, workBottom - 30));
         WindowStartupLocation = WindowStartupLocation.Manual;
     }
 
