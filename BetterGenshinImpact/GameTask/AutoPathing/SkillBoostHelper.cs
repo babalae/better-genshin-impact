@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -169,14 +169,8 @@ public partial class PathExecutor
                     _lastWaypointIndex = CurWaypoint.Item1;
                 }
 
-                if (state.OriginalMoveMode != null)
-                {
-                    waypoint.MoveMode = state.OriginalMoveMode;
-                    state.OriginalMoveMode = null;
-                }
-
+                //应该下车时尝试下车
                 var mwkShouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-
                 if (mwkShouldApproach)
                 {
                     if (PartyConfig.SwitchToWalkEnabled)
@@ -204,6 +198,7 @@ public partial class PathExecutor
                     return false;
                 }
 
+                //满足条件时，尝试上车
                 if (distance > PartyConfig.Distance)
                 {
                     await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
@@ -226,11 +221,12 @@ public partial class PathExecutor
                             await ReadEskillCdAsync("玛薇卡");
                         }
 
-                        // 上车后直接跳过本帧通用移动逻辑，交给后续骑行/跳飞逻辑处理
+                        // 上车后直接跳过本帧通用移动逻辑，交给下一帧处理
                         return true;
                     }
                 }
 
+                //满足条件时，尝试跳飞
                 if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
                 {
                     var jumpFlyIconState = GetMavikaESkillIconState(screen2);
@@ -296,46 +292,11 @@ public partial class PathExecutor
                 var iconState = GetMavikaESkillIconState(screen2);
                 if ((iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1) && distance > PartyConfig.Distance)
                 {
-                    if (state.RunToDash == false && distance > 40 && waypoint.MoveMode == MoveModeEnum.Run.Code)
-                    {
-                        state.RunToDash = true;
-                        state.DistanceHalf = distance * 2 / 4;
-                        state.OriginalMoveMode = waypoint.MoveMode;
-                        waypoint.MoveMode = MoveModeEnum.Dash.Code;
-                    }
-                    else if (state.RunToDash == true && distance < state.DistanceHalf)
-                    {
-                        waypoint.MoveMode = state.OriginalMoveMode ?? MoveModeEnum.Run.Code;
-                        Task.Run(async () =>
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
-                                await Delay(1000, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                            }, ct);
-                        state.RunToDash = null;
-                    }
-
                     if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
                     {
                         Simulation.SendInput.SimulateAction(GIActions.Drop);
                         await Delay(500, ct);
                         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                    }
-
-                    if (distance > 10)
-                    {
-                        if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
-                        {
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
-                        }
-                        else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
-                        {
-                            state.RunCount++;
-                            if (state.RunCount < 5)
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
-                            }
-                        }
                     }
 
                     var pos = screen2.SrcMat.At<Vec3b>(1012, 1574);
@@ -366,6 +327,12 @@ public partial class PathExecutor
                         }
                     }
 
+                    return true;
+                }
+
+                // 玛薇卡逻辑最后：勾选跳飞且禁用冲刺时，在车上（下车图标）则跳过本帧通用移动逻辑以禁用冲刺
+                if (PartyConfig.MwkJumpFlyEnabled && PartyConfig.MwkDisableSprintEnabled && iconState == 3)
+                {
                     return true;
                 }
 
