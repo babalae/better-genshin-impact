@@ -247,11 +247,11 @@ public partial class PathingPartyConfig : ObservableObject
         // 钳制到 0-10 秒
         if (value < 0)
         {
-            _mwkSprintIntervalSeconds = 0;
+            MwkSprintIntervalSeconds = 0;
         }
         else if (value > 10)
         {
-            _mwkSprintIntervalSeconds = 10;
+            MwkSprintIntervalSeconds = 10;
         }
     }
 
