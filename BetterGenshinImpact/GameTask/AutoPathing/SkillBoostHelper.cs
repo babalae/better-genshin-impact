@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -249,13 +249,16 @@ public partial class PathExecutor
                     }
                 }
 
+                // 当前帧E技能冷却缓存：跳飞/骑行/禁用冲刺三处判断复用，避免同一帧重复OCR
+                double? mavikaEskillCd = null;
+
                 //满足条件时，尝试跳飞
                 if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
                 {
                     var jumpFlyIconState = GetMavikaESkillIconState(screen2);
                     // 刚上车后的2秒内跳过图标检测（上/下车动作期间图标不稳定），强制视为通过
                     var justBoarded = (DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds < 2;
-                    if (!justBoarded && !(jumpFlyIconState == 3 || jumpFlyIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
+                    if (!justBoarded && !(jumpFlyIconState == 3 || jumpFlyIconState == 4 && (mavikaEskillCd = await ReadEskillCdAsync("玛薇卡", updateTracking: false)) < 1))
                     {
                         return false;
                     }
@@ -315,7 +318,9 @@ public partial class PathExecutor
                 }
 
                 var iconState = GetMavikaESkillIconState(screen2);
-                if ((iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1) && distance > PartyConfig.Distance)
+                // 先判断距离满足骑行条件，避免无谓读取冷却；在车上（下车图标3）时短路不读取冷却
+                if (distance > PartyConfig.Distance
+                    && (iconState == 3 || iconState == 4 && (mavikaEskillCd ??= await ReadEskillCdAsync("玛薇卡", updateTracking: false)) < 1))
                 {
                     if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
                     {
@@ -356,7 +361,7 @@ public partial class PathExecutor
 
                 // 玛薇卡逻辑最后：勾选了禁用冲刺时，在车上（下车图标刚上车）跳过本帧通用移动逻辑以禁用冲刺
                 if (PartyConfig.MwkDisableSprintEnabled
-                    && (iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
+                    && (iconState == 3 || iconState == 4 && (mavikaEskillCd ??= await ReadEskillCdAsync("玛薇卡", updateTracking: false)) < 1))
                 {
                     return true;
                 }
