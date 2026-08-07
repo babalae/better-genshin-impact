@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -175,71 +175,62 @@ public partial class PathExecutor
                     state.OriginalMoveMode = null;
                 }
 
-                bool boarded = false;
+                var mwkShouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
 
-                if (state.PendingApproach)
+                if (mwkShouldApproach)
                 {
-                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-
-                    if (shouldApproach)
+                    Simulation.ReleaseAllKey();
+                    if (PartyConfig.SwitchToWalkEnabled)
                     {
-                        Simulation.ReleaseAllKey();
-                        state.PendingApproach = false;
-                        var colorDiff = GetMavikaColorDifference(screen2);
-                        if (colorDiff < 15 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
-                        {
-                            if (PartyConfig.SwitchToWalkEnabled)
-                            {
-                                var nextIdx = GetSwitchToWalkIndex();
-                                Logger.LogInformation("自动赶路：{t} 节点接近...-i {t2} {t3} {t4}", PartyConfig.TravelMode, nextIdx, waypoint?.MoveMode, Math.Round(colorDiff));
-
-                                await SwitchAvatar(nextIdx);
-                            }
-                            else
-                            {
-                                Logger.LogInformation("自动赶路：玛薇卡接近节点，下车步行");
-                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                            }
-                        }
-                        return false;
+                        // 切人下车：无需检测图标，直接切换步行角色
+                        var nextIdx = GetSwitchToWalkIndex();
+                        Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
+                        await SwitchAvatar(nextIdx);
                     }
+                    else
+                    {
+                        // 点按E下车：持续检测，图标为下车(3)时才执行
+                        var approachIconState = GetMavikaESkillIconState(screen2);
+                        if (approachIconState == 3 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
+                        {
+                            Logger.LogInformation("自动赶路：玛薇卡接近节点，下车步行");
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(100, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            await Delay(50, ct);
+                        }
+                    }
+                    return false;
                 }
 
                 if (distance > PartyConfig.Distance)
                 {
                     await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
-                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 3
-                        && GetMavikaColorDifference(screen2) > 15
-                        && await ReadEskillCdAsync("玛薇卡") <= 0)
+                    var boardIconState = GetMavikaESkillIconState(screen2);
+                    // 内置冷却：玛薇卡上/下车动作后有约1秒无法再次上/下车，与E技能冷却无关（放宽至3秒防抖）
+                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 3 && boardIconState is 1 or 2)
                     {
-                        // Logger.LogInformation("[赶路调试] 玛薇卡 启动摩托: dist={d}, colorDiff={cd}",
-                        //     Math.Round(distance, 1), Math.Round(GetMavikaColorDifference(screen2), 1));
                         _lastMavikaBoardTime = DateTime.UtcNow;
-                        boarded = true;
-                        if (PartyConfig.MwkLongPressSkillEnabled)
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(200, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(300, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(700, ct);
+
+                        // E技能CD跟踪：仅续技能（状态1）触发更新，上车（状态2）不触发
+                        if (boardIconState == 1)
                         {
-                            // 长按 E 启动摩托，代替连续点按
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-                            await Delay(500, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-                            await Delay(300, ct);
-                        }
-                        else
-                        {
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(200, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(300, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(700, ct);
+                            await ReadEskillCdAsync("玛薇卡");
                         }
                     }
                 }
 
                 if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
                 {
-                    if (!(boarded || GetMavikaColorDifference(screen2) <= 15 && await ReadEskillCdAsync("玛薇卡") < 1))
+                    var jumpFlyIconState = GetMavikaESkillIconState(screen2);
+                    if (!(jumpFlyIconState == 3 || jumpFlyIconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1))
                     {
                         return false;
                     }
@@ -298,7 +289,8 @@ public partial class PathExecutor
                     _jumpFlySafetyPending = false;
                 }
 
-                if ((boarded || GetMavikaColorDifference(screen2) <= 15) && distance > PartyConfig.Distance)
+                var iconState = GetMavikaESkillIconState(screen2);
+                if ((iconState == 3 || iconState == 4 && await ReadEskillCdAsync("玛薇卡", updateTracking: false) < 1) && distance > PartyConfig.Distance)
                 {
                     if (state.RunToDash == false && distance > 40 && waypoint.MoveMode == MoveModeEnum.Run.Code)
                     {
@@ -899,15 +891,195 @@ public partial class PathExecutor
         return false;
     }
 
-    private double GetMavikaColorDifference(ImageRegion screen2)
+    /// <summary>
+    /// 玛薇卡E技能图标状态识别阈值（评分须严格大于该值才视为匹配，防止空模型误判）
+    /// </summary>
+    private const double MavikaESkillIconThreshold = 0.5;
+
+    /// <summary>
+    /// 玛薇卡E技能图标状态模型：1=续技能
+    /// 特征模型数据由训练工具导出（指标-续技能.json）
+    /// </summary>
+    private static readonly FeatureScorerExportData MavikaESkillContinueModel = new()
     {
-        var pos = screen2.SrcMat.At<Vec3b>(978, 1692);
-        var pos2 = screen2.SrcMat.At<Vec3b>(995, 1702);
-        return Math.Sqrt(
-            Math.Pow(pos.Item0 - pos2.Item0, 2) +
-            Math.Pow(pos.Item1 - pos2.Item1, 2) +
-            Math.Pow(pos.Item2 - pos2.Item2, 2)
-        );
+        Features =
+        {
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1700, Y = 960, W = 3, H = 4,
+                IsCircular = false, Range = 1, RefVal = 0.9917, Weight = 0.766,
+                RefHist = [0.0012543556332223562, 0.0011810046506758249, 0.0017439523425184357, 0.002752956346626525, 0.0018676885904965039, 0.02072012951858713, 0.9298806206255811, 0.04059929229229214],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0007, 0.0019, 0.0052, 0.014, 0.0371, 0.0947, 0.2214, 0.436, 0.6775, 0.851, 0.9395, 0.9769, 0.9914]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1676, Y = 970, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9899, Weight = 0.7734,
+                RefHist = [0, 0, 0, 0, 0, 0, 0.06034348986743187, 0.9396565101325682],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0014, 0.0039, 0.0105, 0.028, 0.0727, 0.1756, 0.3667, 0.6115, 0.8106, 0.9208, 0.9693]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "S", X = 1691, Y = 988, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 1, Weight = 0.7986,
+                RefHist = [0, 0, 1, 0, 0, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.0011, 0.0029, 0.0078, 0.0209, 0.0548, 0.1362, 0.3001, 0.5382, 0.7601, 0.896]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1696, Y = 970, W = 3, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9932, Weight = 0.7837,
+                RefHist = [0.03324684585190858, 0.9562541387048271, 0.010499015443264311, 0, 0, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0004, 0.0011, 0.003, 0.0081, 0.0218, 0.057, 0.1412, 0.3088, 0.5484, 0.7675, 0.8997, 0.9606]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1728, Y = 990, W = 3, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9983, Weight = 0.9122,
+                RefHist = [0, 0, 0, 0, 0, 0.9800984894385059, 0.018037805644772822, 0.0018637049167212296],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0006, 0.0017, 0.0046, 0.0123, 0.0328, 0.0844, 0.2003, 0.405, 0.6492, 0.8342, 0.9318, 0.9738, 0.9902]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1697, Y = 1022, W = 2, H = 3,
+                IsCircular = false, Range = 1, RefVal = 0.9739, Weight = 0.7739,
+                RefHist = [0, 0, 0, 0.014463663026665165, 0, 0.05699667473142457, 0.9045152581853189, 0.024024404056591495],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0009, 0.0024, 0.0064, 0.0171, 0.0453, 0.1141, 0.2594, 0.4877, 0.7213, 0.8755, 0.9503, 0.9811, 0.993, 0.9974]
+            },
+        }
+    };
+
+    /// <summary>
+    /// 玛薇卡E技能图标状态模型：2=上车
+    /// 特征模型数据由训练工具导出（指标-上车.json）
+    /// </summary>
+    private static readonly FeatureScorerExportData MavikaESkillBoardModel = new()
+    {
+        Features =
+        {
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1686, Y = 963, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9903, Weight = 0.8903,
+                RefHist = [0, 0, 0, 0, 0.9892811138283595, 0.010718886171640567, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0021, 0.0056, 0.015, 0.0398, 0.1012, 0.2343, 0.454, 0.6933, 0.86, 0.9435, 0.9785, 0.992, 0.997, 0.9989]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "S", X = 1692, Y = 970, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9882, Weight = 0.8568,
+                RefHist = [0, 0.016642596135750816, 0.9638889598441912, 0.01946844402005793, 0, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0013, 0.0034, 0.0092, 0.0245, 0.064, 0.1567, 0.3356, 0.5786, 0.7887, 0.9103, 0.965, 0.9868, 0.9951]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "S", X = 1700, Y = 979, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9931, Weight = 0.8834,
+                RefHist = [0, 0, 0.0014888332289077013, 0.9851538051239543, 0.013357361647137802, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0014, 0.0039, 0.0106, 0.0283, 0.0734, 0.1772, 0.3693, 0.6141, 0.8123, 0.9216, 0.9697, 0.9886]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "S", X = 1711, Y = 990, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.991, Weight = 0.8805,
+                RefHist = [0, 0, 0, 0.0017864597868968, 0.016793844158299848, 0.9759536625405839, 0.005466033514219401, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0004, 0.001, 0.0026, 0.0071, 0.019, 0.05, 0.1252, 0.28, 0.5139, 0.7419, 0.8865, 0.955, 0.983, 0.9937, 0.9977]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1717, Y = 1011, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9921, Weight = 0.863,
+                RefHist = [0, 0, 0, 0, 0.009584958224132892, 0.9904150417758671, 0, 0],
+                ProbTable = [0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0015, 0.0039, 0.0107, 0.0284, 0.0737, 0.1778, 0.3703, 0.6151, 0.8129, 0.9219, 0.9698, 0.9887, 0.9958, 0.9985, 0.9994]
+            },
+        }
+    };
+
+    /// <summary>
+    /// 玛薇卡E技能图标状态模型：3=下车
+    /// 特征模型数据由训练工具导出（指标-下车.json）
+    /// </summary>
+    private static readonly FeatureScorerExportData MavikaESkillDismountModel = new()
+    {
+        Features =
+        {
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "S", X = 1698, Y = 966, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9928, Weight = 0.9068,
+                RefHist = [0, 0, 0.02356926501913827, 0.9612878755834396, 0.015142859397422133, 0, 0, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.002, 0.0055, 0.0149, 0.0394, 0.1004, 0.2328, 0.4519, 0.6915, 0.859, 0.9431, 0.9783, 0.9919, 0.997]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1692, Y = 961, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9999, Weight = 0.8876,
+                RefHist = [0, 0, 0.0018366169880083437, 0, 0, 0.9944093896826848, 0.00375399332930691, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0004, 0.001, 0.0026, 0.0071, 0.019, 0.05, 0.1251, 0.28, 0.5138, 0.7418, 0.8865, 0.955]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1700, Y = 961, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9993, Weight = 0.7434,
+                RefHist = [0.003399565999189457, 0.0033261401384723347, 0.000976956062830274, 0.007602934387829995, 0.004166150296940107, 0.9744626499323689, 0.006065603182368956, 0],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0002, 0.0005, 0.0013, 0.0035, 0.0095, 0.0253, 0.0659, 0.161, 0.3427, 0.5863, 0.7939, 0.9128]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1692, Y = 983, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9726, Weight = 0.8227,
+                RefHist = [0, 0, 0.0010456854604408044, 0.002458671439219928, 0.0012471232672327697, 0.009836431437600022, 0.07023793250520412, 0.9151741558903024],
+                ProbTable = [0, 0, 0, 0, 0.0001, 0.0003, 0.0009, 0.0024, 0.0065, 0.0174, 0.0459, 0.1156, 0.2622, 0.4913, 0.7242, 0.8771, 0.951, 0.9814, 0.9931, 0.9974, 0.9991]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1705, Y = 988, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9821, Weight = 0.7976,
+                RefHist = [0, 0, 0, 0, 0, 0, 0.037842264161779195, 0.9621577358382208],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0023, 0.0062, 0.0166, 0.0439, 0.1109, 0.2532, 0.4797, 0.7148, 0.872, 0.9488, 0.9805]
+            },
+            new FeatureScorerItem
+            {
+                Type = "F2", Channel = "V", X = 1706, Y = 991, W = 2, H = 2,
+                IsCircular = false, Range = 1, RefVal = 0.9933, Weight = 0.8081,
+                RefHist = [0, 0, 0, 0, 0, 0, 0.025740694314201038, 0.974259305685799],
+                ProbTable = [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0003, 0.0008, 0.0021, 0.0056, 0.0152, 0.0402, 0.1021, 0.2362, 0.4567, 0.6956, 0.8613, 0.9441]
+            },
+        }
+    };
+
+    /// <summary>
+    /// 识别当前帧玛薇卡E技能图标状态。
+    /// 1=续技能图标，2=上车图标，3=下车图标，4=其他/未知。
+    /// 对三种图标特征模型分别评分，取最高分且严格超过阈值者作为当前状态。
+    /// </summary>
+    private int GetMavikaESkillIconState(ImageRegion screen)
+    {
+        try
+        {
+            var continueScore = ImageFeatureScorer.Score(MavikaESkillContinueModel, screen.SrcMat);
+            var boardScore = ImageFeatureScorer.Score(MavikaESkillBoardModel, screen.SrcMat);
+            var dismountScore = ImageFeatureScorer.Score(MavikaESkillDismountModel, screen.SrcMat);
+
+            if (continueScore >= boardScore && continueScore >= dismountScore && continueScore > MavikaESkillIconThreshold)
+            {
+                return 1;
+            }
+            if (boardScore >= continueScore && boardScore >= dismountScore && boardScore > MavikaESkillIconThreshold)
+            {
+                return 2;
+            }
+            if (dismountScore >= continueScore && dismountScore >= boardScore && dismountScore > MavikaESkillIconThreshold)
+            {
+                return 3;
+            }
+            return 4;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning("玛薇卡E技能图标状态识别异常: {Message}", e.Message);
+            return 4;
+        }
     }
 
     /// <summary>
@@ -1164,17 +1336,30 @@ public partial class PathExecutor
         }
     }
 
-    private async Task<double> ReadEskillCdAsync(string avatarName)
+    /// <summary>
+    /// 读取指定角色 E 技能冷却秒数。
+    /// <paramref name="updateTracking"/> 为 true（默认）时同时更新冷却跟踪（Record + 兜底），
+    /// 仅用于技能施放后刷新跟踪器；纯读取判断请传 false 避免副作用。
+    /// </summary>
+    private async Task<double> ReadEskillCdAsync(string avatarName, bool updateTracking = true)
     {
         using var cdRegion = CaptureToRectArea();
         var eRa = cdRegion.DeriveCrop(AutoFightAssets.Get(cdRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
-        ESkillCdTracker.Record(avatarName, cd);
-        if (cd <= 0)
+        // OCR 常丢失小数点：如 "0.3" 被读成 "03"，此时按 0.x 秒处理
+        if (text != null && text.Length == 2 && text[0] == '0' && char.IsAsciiDigit(text[1]))
         {
-            ESkillCdTracker.ApplyFallback(avatarName, log: false);
+            cd = (text[1] - '0') / 10.0;
+        }
+        if (updateTracking)
+        {
+            ESkillCdTracker.Record(avatarName, cd);
+            if (cd <= 0)
+            {
+                ESkillCdTracker.ApplyFallback(avatarName, log: false);
+            }
         }
         return cd;
     }

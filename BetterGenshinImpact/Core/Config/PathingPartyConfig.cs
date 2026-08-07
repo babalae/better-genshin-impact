@@ -221,12 +221,6 @@ public partial class PathingPartyConfig : ObservableObject
     private bool _mwkFlyEnabled = true;
 
     /// <summary>
-    /// 玛薇卡赶路使用长按元素战技（E）代替连续点按启动
-    /// </summary>
-    [ObservableProperty]
-    private bool _mwkLongPressSkillEnabled = false;
-
-    /// <summary>
     /// 玛薇卡跳飞开关
     /// </summary>
     [ObservableProperty]
