@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -184,9 +184,9 @@ public partial class PathExecutor
                     _lastWaypointIndex = CurWaypoint.Item1;
                 }
 
-                //应该下车时尝试下车
+                //应该下车时尝试下车，下车成功后（PendingApproach=false）本航点内不再重复检测
                 var mwkShouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-                if (mwkShouldApproach)
+                if (mwkShouldApproach && state.PendingApproach)
                 {
                     if (PartyConfig.SwitchToWalkEnabled)
                     {
@@ -195,6 +195,8 @@ public partial class PathExecutor
                         var nextIdx = GetSwitchToWalkIndex();
                         Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
                         await SwitchAvatar(nextIdx);
+                        // 切人成功即认为下车成功
+                        state.PendingApproach = false;
                     }
                     else
                     {
@@ -208,6 +210,11 @@ public partial class PathExecutor
                             await Delay(100, ct);
                             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                             await Delay(50, ct);
+                        }
+                        // 检测到图标1/2（续技能/上车）即认为下车成功
+                        if (approachIconState is 1 or 2)
+                        {
+                            state.PendingApproach = false;
                         }
                     }
                     return false;
