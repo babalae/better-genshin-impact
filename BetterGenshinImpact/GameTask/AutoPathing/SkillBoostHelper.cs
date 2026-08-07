@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -82,14 +82,17 @@ public partial class PathExecutor
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
 
     /// <summary>
-    /// 重置玛薇卡冲刺计时：上车完成/失稳后，首次冲刺等待 min(1, 间隔) 秒而非完整间隔。
-    /// 将距上次冲刺的时间前拨为 (间隔 - min(1, 间隔)) 秒，剩余 min(1, 间隔) 秒即触发首次冲刺。
+    /// 重置玛薇卡冲刺计时：上车完成/失稳/跳飞动作后，保证下一次冲刺至少等待间隔的一半才触发。
+    /// 若剩余等待时间已超过间隔的一半，则不重置。
     /// </summary>
     private void ResetMavikaSprintTime()
     {
-        var interval = Math.Max(0, PartyConfig.MwkSprintIntervalSeconds);
-        var firstCd = Math.Min(1, interval);
-        _lastMavikaSprintTime = DateTime.UtcNow.AddSeconds(firstCd - interval);
+        var cd = Math.Max(0, PartyConfig.MwkSprintIntervalSeconds);
+        var halfCd = cd / 2;
+        if ((DateTime.UtcNow - _lastMavikaSprintTime).TotalSeconds > halfCd)
+        {
+            _lastMavikaSprintTime = DateTime.UtcNow.AddSeconds(-halfCd);
+        }
     }
 
     /// <summary>
@@ -296,6 +299,8 @@ public partial class PathExecutor
                     await Delay(150, ct);
                     _lastJumpFlyTime = DateTime.UtcNow;
                     _jumpFlySafetyPending = true;
+                    // 跳飞动作后重置冲刺计时（剩余等待时间钳制为间隔的一半）
+                    ResetMavikaSprintTime();
 
                     using var jumpCheckRegion = CaptureToRectArea();
                     if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
