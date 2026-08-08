@@ -38,7 +38,6 @@ public enum SwitchCharacterState
     PrepareNextRole, //准备下一个目标角色
     OpenFilterPanel, //打开筛选面板
     FindAndClickAvatar, //查找并点击目标头像
-    ClearFilter, //清除当前筛选条件
     ReturnMainUi, //返回主界面
     Completed //任务已完成
 }
@@ -67,8 +66,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private AvatarGridIconRecognizer? _recognizer;
     private List<TargetRole> _targetRoles = [];
     private TargetRole? _currentRole;
-    private bool _currentRoleIsRefill;
-    private bool _currentAvatarFound;
     private bool _clearCombatScenesAfterReturn;
     private List<TeamSlotSnapshot> _currentTeamSlots = [];
     private bool _teamSnapshotDirty = true;
@@ -109,7 +106,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
     }
 
-    private sealed record TeamSlotSnapshot(int Slot, string? Name, bool IsSelected, Rect? CardRect);
+    private sealed record TeamSlotSnapshot(int Slot, string? Name);
 
     private AvatarGridIconRecognizer Recognizer =>
         _recognizer ?? throw new InvalidOperationException("切换角色：头像识别器未初始化");
@@ -171,12 +168,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 SwitchCharacterState.FindAndClickAvatar
             ]),
             (SwitchCharacterState.FindAndClickAvatar, [
-                SwitchCharacterState.PrepareNextRole,
-                SwitchCharacterState.ClearFilter
-            ]),
-            (SwitchCharacterState.ClearFilter, [
-                SwitchCharacterState.PrepareNextRole,
-                SwitchCharacterState.ReturnMainUi
+                SwitchCharacterState.PrepareNextRole
             ]),
             (SwitchCharacterState.ReturnMainUi, [
                 SwitchCharacterState.Completed
@@ -244,8 +236,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         _workflowState = SwitchCharacterState.BuildSwitchPlan;
         _targetRoles = roles.ToList();
         _currentRole = null;
-        _currentRoleIsRefill = false;
-        _currentAvatarFound = false;
         _clearCombatScenesAfterReturn = false;
         _currentTeamSlots = [];
         _teamSnapshotDirty = true;
@@ -262,12 +252,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 设置当前待处理角色，并初始化筛选条件。
     /// </summary>
     /// <param name="role">待处理角色。</param>
-    /// <param name="isRefill">是否为补位角色。</param>
-    private void SetCurrentRole(TargetRole role, bool isRefill)
+    private void SetCurrentRole(TargetRole role)
     {
         _currentRole = role;
-        _currentRoleIsRefill = isRefill;
-        _currentAvatarFound = false;
         SetCurrentRoleFilter(role);
     }
 
@@ -284,36 +271,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             role.Name,
             _pendingFilterWeaponType,
             _pendingFilterElementType ?? "跳过");
-    }
-
-    /// <summary>
-    /// 当前角色失败时决定跳过补位或中止目标流程。
-    /// </summary>
-    /// <param name="message">日志消息。</param>
-    /// <param name="exception">可选异常。</param>
-    /// <returns>状态处理结果。</returns>
-    private StateHandlerResult SkipRefillOrAbortTarget(string message, Exception? exception = null)
-    {
-        _pendingFilterElementType = null;
-        _pendingFilterWeaponType = null;
-
-        if (_currentRoleIsRefill)
-        {
-            if (exception == null)
-            {
-                _logger.LogWarning("{Message}，跳过补位角色 {Name}", message, _currentRole?.Name);
-            }
-            else
-            {
-                _logger.LogWarning(exception, "{Message}，跳过补位角色 {Name}", message, _currentRole?.Name);
-            }
-
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return StateHandlerResult.Success;
-        }
-
-        throw new PartySetupFailedException(exception == null ? message : $"{message}，{exception.Message}");
     }
 
     #region 状态检测器
@@ -360,17 +317,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private bool DetectFindAndClickAvatar(ImageRegion capture)
     {
         return _workflowState == SwitchCharacterState.FindAndClickAvatar && IsCharacterList(capture);
-    }
-
-    /// <summary>
-    /// 检测清除筛选状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>角色列表中等待清除筛选时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.ClearFilter, Order = 16)]
-    private bool DetectClearFilter(ImageRegion capture)
-    {
-        return _workflowState == SwitchCharacterState.ClearFilter && IsCharacterList(capture);
     }
 
     /// <summary>
@@ -506,16 +452,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         return ContainsText(capture, "队伍配置", Rect1080(119, 30, 108, 37));
     }
 
-    /// <summary>
-    /// 判断当前角色列表是否仍应用了筛选条件。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>识别到清除按钮返回 true。</returns>
-    private bool IsFilterApplied(ImageRegion capture)
-    {
-        return ContainsText(capture, "清除", Rect1080(699, 922, 55, 31));
-    }
-
     #endregion
 
     #region 状态处理器
@@ -632,7 +568,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 .FirstOrDefault(role => !role.Matches(_currentTeamSlots.First(slot => slot.Slot == role.Slot).Name));
             if (nextRole != null)
             {
-                SetCurrentRole(nextRole, false);
+                SetCurrentRole(nextRole);
             }
         }
 
@@ -686,23 +622,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         if (string.IsNullOrWhiteSpace(_pendingFilterWeaponType))
         {
-            if (_currentRoleIsRefill)
-            {
-                _logger.LogWarning("切换角色：补位角色 {Name} 缺少武器筛选项，跳过当前补位", _currentRole?.Name);
-                _pendingFilterElementType = null;
-                _pendingFilterWeaponType = null;
-
-                if (!TryClickText(page, "确认筛选", Rect1080(360, 999, 128, 40)))
-                {
-                    return Task.FromResult(StateHandlerResult.Retry);
-                }
-
-                _currentRole = null;
-                _workflowState = SwitchCharacterState.PrepareNextRole;
-                return Task.FromResult(StateHandlerResult.Success);
-            }
-
-            return Task.FromResult(SkipRefillOrAbortTarget("切换角色：筛选面板缺少武器筛选项"));
+            throw new PartySetupFailedException("切换角色：筛选面板缺少武器筛选项");
         }
 
         _workflowState = string.IsNullOrWhiteSpace(_pendingFilterElementType)
@@ -746,7 +666,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         _workflowState = SwitchCharacterState.SelectWeaponFilter;
         if (string.IsNullOrWhiteSpace(_pendingFilterWeaponType))
         {
-            return Task.FromResult(SkipRefillOrAbortTarget("切换角色：筛选面板缺少武器筛选项"));
+            throw new PartySetupFailedException("切换角色：筛选面板缺少武器筛选项");
         }
 
         if (!TryClickText(page, _pendingFilterWeaponType, GetWeaponFilterOptionsRoi()))
@@ -784,7 +704,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 查找并点击当前角色头像。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>头像查找完成后进入清除筛选状态。</returns>
+    /// <returns>头像查找并提交完成后进入准备下一个目标角色状态。</returns>
     [StateHandler(SwitchCharacterState.FindAndClickAvatar, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private async Task<StateHandlerResult> HandleFindAndClickAvatar(BvPage page)
     {
@@ -793,8 +713,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
-        _currentAvatarFound = await FindAndClickAvatar(_currentRole, Recognizer, _ct);
-        if (!_currentAvatarFound)
+        if (!await FindAndClickAvatar(_currentRole, Recognizer, _ct))
         {
             throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
         }
@@ -807,7 +726,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
         _currentTeamSlots = _currentTeamSlots
             .Select(slot => slot.Slot == _currentRole.Slot
-                ? slot with { Name = _currentRole.PrimaryCandidateName, IsSelected = true }
+                ? slot with { Name = _currentRole.PrimaryCandidateName }
                 : slot)
             .ToList();
         _logger.LogInformation("切换角色：已提交 {Name} 到 {Slot} 号位", _currentRole.Name, _currentRole.Slot);
@@ -815,44 +734,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         _currentRole = null;
         _workflowState = SwitchCharacterState.PrepareNextRole;
         return StateHandlerResult.Success;
-    }
-
-    /// <summary>
-    /// 清除当前筛选条件。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>根据头像查找结果进入确认、补位或返回主界面状态。</returns>
-    [StateHandler(SwitchCharacterState.ClearFilter, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private Task<StateHandlerResult> HandleClearFilter(BvPage page)
-    {
-        using var capture = CaptureToRectArea();
-        if (IsFilterApplied(capture))
-        {
-            ClearFilter(page);
-            _workflowState = SwitchCharacterState.ClearFilter;
-            return Task.FromResult(StateHandlerResult.Wait);
-        }
-
-        if (_currentRole == null)
-        {
-            throw new PartySetupFailedException("切换角色：当前角色状态为空");
-        }
-
-        if (_currentAvatarFound)
-        {
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return Task.FromResult(StateHandlerResult.Success);
-        }
-
-        if (_currentRoleIsRefill)
-        {
-            _logger.LogWarning("切换角色：未找到补位角色 {Name}，保留空位", _currentRole.Name);
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return Task.FromResult(StateHandlerResult.Success);
-        }
-
-        throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
     }
 
     /// <summary>
@@ -1282,7 +1163,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
 
         var result = characterNames
-            .Select((name, index) => new TeamSlotSnapshot(index + 1, name, true, null))
+            .Select((name, index) => new TeamSlotSnapshot(index + 1, name))
             .ToList();
         _logger.LogDebug(
             "切换角色：当前账号可控角色 {ControlCount} 个，生成 {SnapshotCount} 项队伍快照，映射 {SlotMapping}",
@@ -1410,18 +1291,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             attempt,
             EmptyCardDetectionRetryCount,
             cards.Count == 0 ? "无" : string.Join(";", cards.Select(card => card.CardRect)));
-    }
-
-    /// <summary>
-    /// 尝试清除当前筛选条件，为下一个目标角色恢复完整角色列表。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    private void ClearFilter(BvPage page)
-    {
-        if (!TryClickText(page, "清除", Rect1080(699, 922, 55, 31)))
-        {
-            _logger.LogDebug("切换角色：未找到清除筛选按钮，继续执行");
-        }
     }
 
     /// <summary>
