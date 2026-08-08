@@ -744,10 +744,6 @@ public partial class PathExecutor
     }
 
     public DateTime moveToStartTime;
-    /// <summary>
-    /// Run 路段疾跑按键（SprintMouse KeyDown）状态，供赶路逻辑（如玛薇卡车上禁用冲刺）读取并重置
-    /// </summary>
-    private bool _fastMode;
 
     public async Task MoveTo(WaypointForTrack waypoint)
     {
@@ -761,7 +757,7 @@ public partial class PathExecutor
         await WaitUntilRotatedTo(targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
-        _fastMode = false;
+        var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.MinValue;
         var prevNotTooFarPosition = position;
@@ -944,9 +940,9 @@ public partial class PathExecutor
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 20 != _fastMode) // 距离大于20时可以使用疾跑/自由泳
+                if (distance > 20 != fastMode) // 距离大于20时可以使用疾跑/自由泳
                 {
-                    if (_fastMode)
+                    if (fastMode)
                     {
                         Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                     }
@@ -955,7 +951,7 @@ public partial class PathExecutor
                         Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
                     }
 
-                    _fastMode = !_fastMode;
+                    fastMode = !fastMode;
                 }
             }
             else if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
