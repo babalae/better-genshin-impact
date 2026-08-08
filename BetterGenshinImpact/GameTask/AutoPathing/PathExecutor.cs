@@ -299,6 +299,7 @@ public partial class PathExecutor
                     // 不管咋样，松开所有按键
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Mouse.RightButtonUp();
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
                 }
             }
 
@@ -767,6 +768,10 @@ public partial class PathExecutor
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        // 赶路帧间隔：仅当存在解析后的有效赶路角色（_hurryOnAvatar，队伍中确实有该角色）时使用配置值（1-150 钳制），否则使用默认 100
+        var hurryFrameInterval = !string.IsNullOrEmpty(_hurryOnAvatar)
+            ? Math.Clamp(PartyConfig.HurryOnFrameInterval, 1, 150)
+            : 100;
         while (!ct.IsCancellationRequested)
         {
             if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
@@ -909,10 +914,10 @@ public partial class PathExecutor
             var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
             if (hurryOnResult)
             {
-                // continue 会跳过底部 await Delay(100, ct)，
+                // continue 会跳过底部 await Delay(...)，
                 // 导致 async state machine 的 MoveNext() 永不返回，调用栈逐轮叠加直到溢出。
                 // 在此处显式等待以展开栈。
-                await Delay(100, ct);
+                await Delay(hurryFrameInterval, ct);
                 continue;
             }
 
@@ -1014,7 +1019,7 @@ public partial class PathExecutor
                 }
             }
 
-            await Delay(100, ct);
+            await Delay(hurryFrameInterval, ct);
         }
 
         // 抬起w键

@@ -2062,7 +2062,8 @@
     "id": "10000128",
     "name": "法尔伽",
     "nameEn": "Varka",
-    "skillCD": 16,
+    "skillCD": 12,
+    "skillHoldCD": 8,
     "weapon": "10"
   },
   {
