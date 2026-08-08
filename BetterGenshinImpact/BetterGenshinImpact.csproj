@@ -166,6 +166,9 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\Common\Job\SwitchCharacter\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\Json\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
