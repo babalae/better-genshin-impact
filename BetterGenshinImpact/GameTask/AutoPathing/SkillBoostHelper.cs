@@ -1027,7 +1027,9 @@ public partial class PathExecutor
                         }
 
                         var cd = await ReadEskillCdAsync("夜兰");
-                        if (cd <= 0 && state.RotationStableCount >= 1
+                        // 技能可用：OCR 无 CD，或技能槽位出现可用高亮色 #00DCFA（OCR 非唯一判断）
+                        var skillReady = cd <= 0 || secondESkillAvailable();
+                        if (skillReady && state.RotationStableCount >= 1
                             && (DateTime.UtcNow - _lastLandingTime).TotalSeconds >= 2)
                         {
                             Logger.LogInformation("自动赶路：夜兰启动赶路");
@@ -1543,6 +1545,39 @@ public partial class PathExecutor
         using var region = CaptureToRectArea();
         var pixel = region.SrcMat.At<Vec3b>(1028, 1584);
         return pixel.Item0 >= 250 && pixel.Item1 >= 250 && pixel.Item2 >= 250;
+    }
+
+    /// <summary>
+    /// 第二个E技能位是否可用：以技能槽位坐标 (1691,953)（1920×1080 基准）为中心的 11×11 区域内存在面积≥5 的 #00DCFA（BGR 250,220,0）连通域
+    /// </summary>
+    private bool secondESkillAvailable()
+    {
+        using var region = CaptureToRectArea();
+        // 参考 AutoFightAssets：以 1920 宽为基准，按实际捕获宽度缩放坐标（不超过1）
+        var scale = Math.Min(region.Width / 1920d, 1d);
+        // 技能槽位中心 (1691,953) → 11×11 区域左上角 (1686,948)
+        using var crop = region.DeriveCrop(
+            (int)(1686 * scale), (int)(948 * scale),
+            Math.Max(1, (int)(11 * scale)), Math.Max(1, (int)(11 * scale)));
+        using var mask = OpenCvCommonHelper.Threshold(crop.SrcMat,
+            new Scalar(240, 210, 0), new Scalar(255, 235, 15));
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        // 排除仅1像素的孤立噪点：要求存在面积≥5的连通域（CC_STAT_AREA = 4）
+        for (int i = 1; i < numLabels; i++)
+        {
+            if (stats.At<int>(i, 4) >= 5)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task SafeLanding(CancellationToken ct)
