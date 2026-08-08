@@ -905,10 +905,11 @@ public partial class PathExecutor
                     // 正常检测并记录CD（识别结果原样记录，无识别结果时由兜底逻辑处理）
                     var cd = await ReadEskillCdAsync("法尔伽");
 
-                    // 视角稳定且CD就绪时施放E（长按500ms，内部try/finally保证取消时也松开按键），施放后直接记录长按CD 8秒
+                    // 视角稳定且CD就绪时施放E（长按300ms，内部try/finally保证取消时也松开按键），施放后直接记录长按CD 8秒
                     if (cd <= 0 && state.RotationStableCount >= 2)
                     {
-                        await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 500, ct);
+                        Logger.LogInformation("雷霆大跳！");
+                        await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 300, ct);
                         ESkillCdTracker.Record("法尔伽", 8);
                         _falgaNextCheckTime = DateTime.UtcNow.AddSeconds(2);
                         return true;
