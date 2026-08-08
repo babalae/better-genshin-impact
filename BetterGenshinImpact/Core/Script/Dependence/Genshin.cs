@@ -318,17 +318,30 @@ public class Genshin
     /// <param name="slot2">2 号位角色名。</param>
     /// <param name="slot3">3 号位角色名。</param>
     /// <param name="slot4">4 号位角色名。</param>
+    /// <param name="usePhysicalSlots">是否将 slot1-slot4 解释为队伍物理槽位；false 时按当前玩家可控角色顺序解释。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
     /// <remarks>
     /// 未传入的槽位默认跳过；空字符串表示跳过对应槽位。
-    /// 调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", "", "钟离");</c>
+    /// 物理槽位调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", "", "钟离");</c>
+    /// 可控顺序调用示例：<c>await genshin.SwitchCharacter("胡桃", "夜兰", "", "", false);</c>
     /// 该方法表示重组队伍槽位角色，不是按数字键切换当前出战角色。
     /// </remarks>
-    public async Task<bool> SwitchCharacter(string slot1 = "", string slot2 = "", string slot3 = "", string slot4 = "")
+    public async Task<bool> SwitchCharacter(
+        string slot1 = "",
+        string slot2 = "",
+        string slot3 = "",
+        string slot4 = "",
+        bool usePhysicalSlots = true)
     {
         try
         {
-            return await new SwitchCharacterStateMachineTask().Start(slot1, slot2, slot3, slot4, CancellationContext.Instance.Cts.Token);
+            return await new SwitchCharacterStateMachineTask().Start(
+                slot1,
+                slot2,
+                slot3,
+                slot4,
+                usePhysicalSlots,
+                CancellationContext.Instance.Cts.Token);
         }
         catch (PartySetupFailedException ex)
         {

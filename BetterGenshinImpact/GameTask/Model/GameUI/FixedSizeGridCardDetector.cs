@@ -29,7 +29,7 @@ internal static class FixedSizeGridCardDetector
         new Dictionary<FixedSizeGridCardLayout, FixedSizeGridCardDetectionParams>
         {
             [FixedSizeGridCardLayout.CharacterDevelopment] = new(115, 140, 115, 2400, 3000),
-            [FixedSizeGridCardLayout.PartySetupCharacters] = new(132, 161, 132, 3200, 4000)
+            [FixedSizeGridCardLayout.PartySetupCharacters] = new(132, 161, 132, 2500, 4000)
         };
 
     internal static List<FixedSizeGridCard> Detect(

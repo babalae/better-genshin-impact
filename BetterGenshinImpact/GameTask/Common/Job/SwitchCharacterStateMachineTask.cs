@@ -76,6 +76,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private int _multiGamePlayerCount = 1;
     private int _maxControlAvatarCount = 4;
     private Dictionary<int, int> _logicalToPhysicalSlot = Enumerable.Range(1, 4).ToDictionary(slot => slot);
+    private bool _usePhysicalSlots = true;
     private string? _pendingFilterElementType;
     private string? _pendingFilterWeaponType;
 
@@ -190,15 +191,23 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <param name="slot2">2 号槽位角色名。</param>
     /// <param name="slot3">3 号槽位角色名。</param>
     /// <param name="slot4">4 号槽位角色名。</param>
+    /// <param name="usePhysicalSlots">是否将 slot1-slot4 解释为队伍物理槽位；false 时按当前玩家可控角色顺序解释。</param>
     /// <param name="ct">取消令牌。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
     /// <remarks>
-    /// slot1-slot4 均表示队伍中的物理槽位；空字符串或空白字符串表示跳过对应槽位。
+    /// usePhysicalSlots 为 true 时，slot1-slot4 表示队伍中的物理槽位；
+    /// 为 false 时，slot1-slot4 表示当前玩家的第 1-4 个可控角色。空字符串或空白字符串表示跳过对应槽位。
     /// 2 人联机时 1P 可操作 1、2 号槽位，2P 可操作 3、4 号槽位；
     /// 3 人联机时 1P 可操作 1、2 号槽位，2P 可操作 3 号槽位，3P 可操作 4 号槽位；
     /// 4 人联机时各玩家可操作与玩家编号相同的槽位。当前玩家不可操作的槽位参数会被忽略。
     /// </remarks>
-    public async Task<bool> Start(string slot1, string slot2, string slot3, string slot4, CancellationToken ct)
+    public async Task<bool> Start(
+        string slot1,
+        string slot2,
+        string slot3,
+        string slot4,
+        bool usePhysicalSlots,
+        CancellationToken ct)
     {
         Initialize(ct, SwitchCharacterState.Unknown);
         var page = new BvPage(ct);
@@ -210,7 +219,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             throw new PartySetupFailedException("切换角色：未指定角色或同一实际角色被指定到多个槽位");
         }
 
-        ResetWorkflow(roles);
+        ResetWorkflow(roles, usePhysicalSlots);
         using var recognizer = new AvatarGridIconRecognizer();
         _recognizer = recognizer;
 
@@ -229,7 +238,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 重置本次运行的工作流上下文。
     /// </summary>
     /// <param name="roles">解析后的目标角色。</param>
-    private void ResetWorkflow(IReadOnlyList<TargetRole> roles)
+    /// <param name="usePhysicalSlots">是否使用队伍物理槽位解释目标。</param>
+    private void ResetWorkflow(IReadOnlyList<TargetRole> roles, bool usePhysicalSlots)
     {
         _workflowState = SwitchCharacterState.BuildSwitchPlan;
         _targetRoles = roles.ToList();
@@ -243,6 +253,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         _multiGamePlayerCount = 1;
         _maxControlAvatarCount = 4;
         _logicalToPhysicalSlot = Enumerable.Range(1, 4).ToDictionary(slot => slot);
+        _usePhysicalSlots = usePhysicalSlots;
         _pendingFilterElementType = null;
         _pendingFilterWeaponType = null;
     }
@@ -1016,7 +1027,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             MultiGameStatus multiGameStatus;
             try
             {
-                multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(capture, logger: _logger);
+                multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(
+                    capture,
+                    logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
             }
             catch (Exception ex)
             {
@@ -1131,23 +1144,42 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
     private void AdjustTargetsToOperableSlots()
     {
-        var logicalByPhysicalSlot = _logicalToPhysicalSlot
-            .ToDictionary(pair => pair.Value, pair => pair.Key);
-        var ignoredSlots = _targetRoles
-            .Where(role => !logicalByPhysicalSlot.ContainsKey(role.Slot))
-            .Select(role => role.Slot)
-            .OrderBy(slot => slot)
-            .ToArray();
+        int[] ignoredSlots;
+        if (_usePhysicalSlots)
+        {
+            var logicalByPhysicalSlot = _logicalToPhysicalSlot
+                .ToDictionary(pair => pair.Value, pair => pair.Key);
+            ignoredSlots = _targetRoles
+                .Where(role => !logicalByPhysicalSlot.ContainsKey(role.Slot))
+                .Select(role => role.Slot)
+                .OrderBy(slot => slot)
+                .ToArray();
 
-        _targetRoles = _targetRoles
-            .Where(role => logicalByPhysicalSlot.ContainsKey(role.Slot))
-            .Select(role => role with { Slot = logicalByPhysicalSlot[role.Slot] })
-            .OrderBy(role => role.Slot)
-            .ToList();
+            _targetRoles = _targetRoles
+                .Where(role => logicalByPhysicalSlot.ContainsKey(role.Slot))
+                .Select(role => role with { Slot = logicalByPhysicalSlot[role.Slot] })
+                .OrderBy(role => role.Slot)
+                .ToList();
+        }
+        else
+        {
+            ignoredSlots = _targetRoles
+                .Where(role => role.Slot > _maxControlAvatarCount)
+                .Select(role => role.Slot)
+                .OrderBy(slot => slot)
+                .ToArray();
 
-        _logger.LogInformation(
-            "切换角色：目标已按当前账号可操作槽位调整，保留 {Targets}，忽略物理槽位 {IgnoredSlots}",
-            string.Join(",", _targetRoles.Select(role => $"{role.Slot}.{role.Name}")),
+            _targetRoles = _targetRoles
+                .Where(role => role.Slot <= _maxControlAvatarCount)
+                .OrderBy(role => role.Slot)
+                .ToList();
+        }
+
+        _logger.LogDebug(
+            "切换角色：使用 {MappingMode}，保留 {Targets}，忽略输入槽位 {IgnoredSlots}",
+            _usePhysicalSlots ? "物理槽位映射" : "可控顺序映射",
+            string.Join(",", _targetRoles.Select(role =>
+                $"逻辑{role.Slot}->物理{_logicalToPhysicalSlot[role.Slot]}:{role.Name}")),
             ignoredSlots.Length == 0 ? "无" : string.Join(",", ignoredSlots));
     }
 
@@ -1155,7 +1187,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         EnsureSlotIsOperable(logicalSlot);
         var xs = new[] { 470, 800, 1130, 1460 };
-        GameCaptureRegion.GameRegion1080PPosClick(xs[_logicalToPhysicalSlot[logicalSlot] - 1], 550);
+        var physicalSlot = _logicalToPhysicalSlot[logicalSlot];
+        _logger.LogDebug("切换角色：点击逻辑槽位 {LogicalSlot} 对应的物理槽位 {PhysicalSlot}", logicalSlot, physicalSlot);
+        GameCaptureRegion.GameRegion1080PPosClick(xs[physicalSlot - 1], 550);
     }
 
     private async Task<List<TeamSlotSnapshot>> RecognizeTeamSlotsFromCharacterList(
@@ -1212,8 +1246,13 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                     using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
                     var candidate = recognizer.Recognize(avatar);
                     _logger.LogDebug(
-                        "切换角色：角色列表第 {Index} 个队伍角色，卡片={CardRect}，识别为 {Name}，score={Score:0.000}",
-                        characterNames.Count + 1, card.CardRect, candidate.CharacterName, candidate.Score);
+                        "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
+                        card.CardRect.X,
+                        card.CardRect.Y,
+                        card.CardRect.Width,
+                        card.CardRect.Height,
+                        candidate.CharacterName,
+                        candidate.Score);
                     characterNames.Add(candidate.Score >= MatchThreshold ? candidate.CharacterName : null);
                 }
 
@@ -1245,10 +1284,13 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         var result = characterNames
             .Select((name, index) => new TeamSlotSnapshot(index + 1, name, true, null))
             .ToList();
-        for (var slot = result.Count + 1; slot <= 4; slot++)
-        {
-            result.Add(new TeamSlotSnapshot(slot, null, false, null));
-        }
+        _logger.LogDebug(
+            "切换角色：当前账号可控角色 {ControlCount} 个，生成 {SnapshotCount} 项队伍快照，映射 {SlotMapping}",
+            _maxControlAvatarCount,
+            result.Count,
+            string.Join(",", _logicalToPhysicalSlot
+                .OrderBy(pair => pair.Key)
+                .Select(pair => $"逻辑{pair.Key}->物理{pair.Value}")));
 
         return result;
     }
@@ -1314,8 +1356,13 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                     using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
                     var candidate = recognizer.Recognize(avatar);
                     _logger.LogDebug(
-                        "切换角色：卡片={CardRect}，识别头像 {CharacterName}，score={Score:0.000}",
-                        card.CardRect, candidate.CharacterName, candidate.Score);
+                        "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
+                        card.CardRect.X,
+                        card.CardRect.Y,
+                        card.CardRect.Width,
+                        card.CardRect.Height,
+                        candidate.CharacterName,
+                        candidate.Score);
                     if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
                     {
                         using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
