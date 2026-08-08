@@ -1,9 +1,9 @@
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
@@ -30,20 +30,14 @@ public enum SwitchCharacterState
     MainUi, //主界面
     PartyConfigUnavailablePrompt, //当前状态不可进行队伍配置的提示界面
     PartyConfigPage, //队伍配置界面
-    QuickTeamList, //快速编队角色列表界面
     FilterPanel, //角色筛选面板
     SelectElementFilter, //选择元素筛选项
     SelectWeaponFilter, //选择武器筛选项
     ConfirmFilterPanel, //确认筛选面板
     BuildSwitchPlan, //构建本次切换计划
-    ClearSelectedRoles, //取消本次需要替换的已选角色
     PrepareNextRole, //准备下一个目标角色
     OpenFilterPanel, //打开筛选面板
     FindAndClickAvatar, //查找并点击目标头像
-    ClearFilter, //清除当前筛选条件
-    VerifyRoleInSlot, //确认角色已进入目标槽位
-    ClearMisplacedRole, //清理进入非目标槽位的角色
-    SaveConfiguration, //保存当前队伍配置
     ReturnMainUi, //返回主界面
     Completed //任务已完成
 }
@@ -61,6 +55,10 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private const string PlayerBoyName = "空";
     private const string PlayerGirlName = "荧";
     private const string SwordWeaponType = "单手剑";
+    private const int EmptyCardDetectionRetryCount = 3;
+    private const int MaxRoleSwitchAttempts = 3;
+    private const int RemoveConfirmationTimeoutMilliseconds = 3000;
+    private static readonly Rect CharacterGridRoi1080 = new(26, 97, 763, 546);
 
     private readonly ILogger<SwitchCharacterStateMachineTask> _logger = App.GetLogger<SwitchCharacterStateMachineTask>();
     private readonly ReturnMainUiTask _returnMainUiTask = new();
@@ -69,14 +67,24 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private SwitchCharacterState _workflowState;
     private AvatarGridIconRecognizer? _recognizer;
     private List<TargetRole> _targetRoles = [];
-    private List<TeamSlotSnapshot> _initialSlots = [];
-    private HashSet<int> _slotsToClear = [];
-    private Queue<SelectionPlanItem> _selectionPlan = new();
+    private List<TargetRole> _requestedTargetRoles = [];
     private TargetRole? _currentRole;
-    private bool _currentRoleIsRefill;
-    private int _currentRoleAttempt;
-    private bool _currentAvatarFound;
     private bool _clearCombatScenesAfterReturn;
+    private List<TeamSlotSnapshot> _currentTeamSlots = [];
+    private bool _teamSnapshotDirty = true;
+    private bool _needsFinalVerification;
+    private Dictionary<int, int> _roleSwitchAttempts = [];
+    private int _expectedTeamCount;
+    private int? _rebuildStartSlot;
+    private Queue<TargetRole> _rebuildRoles = [];
+    private bool _isRebuildClearing;
+    private bool _prepareSuffixRebuildAfterRemoval;
+    private bool _isAppendingRole;
+    private int _playerIndex;
+    private int _multiGamePlayerCount = 1;
+    private int _maxControlAvatarCount = 4;
+    private Dictionary<int, int> _logicalToPhysicalSlot = Enumerable.Range(1, 4).ToDictionary(slot => slot);
+    private bool _usePhysicalSlots = true;
     private string? _pendingFilterElementType;
     private string? _pendingFilterWeaponType;
 
@@ -109,15 +117,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
     }
 
-    private sealed record TeamSlotSnapshot(int Slot, string? Name, bool IsSelected, Rect? CardRect);
-
-    private sealed record SelectionPlanItem(TargetRole Role, bool IsRefill);
-
-    private sealed record SwitchPlanBuildResult(
-        bool Success,
-        HashSet<int> SlotsToClear,
-        List<SelectionPlanItem> SelectionPlan,
-        string? FailureReason);
+    private sealed record TeamSlotSnapshot(int Slot, string? Name);
 
     private AvatarGridIconRecognizer Recognizer =>
         _recognizer ?? throw new InvalidOperationException("切换角色：头像识别器未初始化");
@@ -133,20 +133,28 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 SwitchCharacterState.MainUi,
                 SwitchCharacterState.PartyConfigUnavailablePrompt,
                 SwitchCharacterState.PartyConfigPage,
-                SwitchCharacterState.QuickTeamList
+                SwitchCharacterState.BuildSwitchPlan
             ]),
-            (SwitchCharacterState.MainUi, [SwitchCharacterState.PartyConfigUnavailablePrompt, SwitchCharacterState.PartyConfigPage]),
-            (SwitchCharacterState.PartyConfigUnavailablePrompt, [SwitchCharacterState.MainUi, SwitchCharacterState.PartyConfigPage]),
-            (SwitchCharacterState.PartyConfigPage, [SwitchCharacterState.QuickTeamList]),
-            (SwitchCharacterState.QuickTeamList, [
+            (SwitchCharacterState.MainUi, [
+                SwitchCharacterState.PartyConfigUnavailablePrompt,
+                SwitchCharacterState.PartyConfigPage
+            ]),
+            (SwitchCharacterState.PartyConfigUnavailablePrompt, [
+                SwitchCharacterState.MainUi,
+                SwitchCharacterState.PartyConfigPage
+            ]),
+            (SwitchCharacterState.PartyConfigPage, [
                 SwitchCharacterState.BuildSwitchPlan,
-                SwitchCharacterState.FindAndClickAvatar,
-                SwitchCharacterState.SaveConfiguration,
+                SwitchCharacterState.PrepareNextRole
+            ]),
+            (SwitchCharacterState.BuildSwitchPlan, [
+                SwitchCharacterState.PrepareNextRole,
                 SwitchCharacterState.ReturnMainUi
             ]),
-            (SwitchCharacterState.BuildSwitchPlan, [SwitchCharacterState.ClearSelectedRoles, SwitchCharacterState.ReturnMainUi]),
-            (SwitchCharacterState.ClearSelectedRoles, [SwitchCharacterState.PrepareNextRole]),
-            (SwitchCharacterState.PrepareNextRole, [SwitchCharacterState.OpenFilterPanel, SwitchCharacterState.SaveConfiguration]),
+            (SwitchCharacterState.PrepareNextRole, [
+                SwitchCharacterState.OpenFilterPanel,
+                SwitchCharacterState.ReturnMainUi
+            ]),
             (SwitchCharacterState.OpenFilterPanel, [
                 SwitchCharacterState.ReturnMainUi,
                 SwitchCharacterState.FilterPanel,
@@ -170,24 +178,12 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 SwitchCharacterState.ReturnMainUi,
                 SwitchCharacterState.FindAndClickAvatar
             ]),
-            (SwitchCharacterState.FindAndClickAvatar, [SwitchCharacterState.ClearFilter]),
-            (SwitchCharacterState.ClearFilter, [
-                SwitchCharacterState.VerifyRoleInSlot,
-                SwitchCharacterState.PrepareNextRole,
-                SwitchCharacterState.ReturnMainUi
+            (SwitchCharacterState.FindAndClickAvatar, [
+                SwitchCharacterState.PrepareNextRole
             ]),
-            (SwitchCharacterState.VerifyRoleInSlot, [
-                SwitchCharacterState.PrepareNextRole,
-                SwitchCharacterState.ClearMisplacedRole,
-                SwitchCharacterState.ReturnMainUi
-            ]),
-            (SwitchCharacterState.ClearMisplacedRole, [
-                SwitchCharacterState.OpenFilterPanel,
-                SwitchCharacterState.PrepareNextRole,
-                SwitchCharacterState.ReturnMainUi
-            ]),
-            (SwitchCharacterState.SaveConfiguration, [SwitchCharacterState.ReturnMainUi]),
-            (SwitchCharacterState.ReturnMainUi, [SwitchCharacterState.Completed])
+            (SwitchCharacterState.ReturnMainUi, [
+                SwitchCharacterState.Completed
+            ])
         );
     }
 
@@ -198,10 +194,23 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <param name="slot2">2 号槽位角色名。</param>
     /// <param name="slot3">3 号槽位角色名。</param>
     /// <param name="slot4">4 号槽位角色名。</param>
+    /// <param name="usePhysicalSlots">是否将 slot1-slot4 解释为队伍物理槽位；false 时按当前玩家可控角色顺序解释。</param>
     /// <param name="ct">取消令牌。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
-    /// <remarks>slot1-slot4 均需传入字符串；空字符串或空白字符串表示跳过对应槽位。</remarks>
-    public async Task<bool> Start(string slot1, string slot2, string slot3, string slot4, CancellationToken ct)
+    /// <remarks>
+    /// usePhysicalSlots 为 true 时，slot1-slot4 表示队伍中的物理槽位；
+    /// 为 false 时，slot1-slot4 表示当前玩家的第 1-4 个可控角色。空字符串或空白字符串表示跳过对应槽位。
+    /// 2 人联机时 1P 可操作 1、2 号槽位，2P 可操作 3、4 号槽位；
+    /// 3 人联机时 1P 可操作 1、2 号槽位，2P 可操作 3 号槽位，3P 可操作 4 号槽位；
+    /// 4 人联机时各玩家可操作与玩家编号相同的槽位。当前玩家不可操作的槽位参数会被忽略。
+    /// </remarks>
+    public async Task<bool> Start(
+        string slot1,
+        string slot2,
+        string slot3,
+        string slot4,
+        bool usePhysicalSlots,
+        CancellationToken ct)
     {
         Initialize(ct, SwitchCharacterState.Unknown);
         var page = new BvPage(ct);
@@ -213,7 +222,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             throw new PartySetupFailedException("切换角色：未指定角色或同一实际角色被指定到多个槽位");
         }
 
-        ResetWorkflow(roles);
+        ResetWorkflow(roles, usePhysicalSlots);
         using var recognizer = new AvatarGridIconRecognizer();
         _recognizer = recognizer;
 
@@ -232,18 +241,29 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 重置本次运行的工作流上下文。
     /// </summary>
     /// <param name="roles">解析后的目标角色。</param>
-    private void ResetWorkflow(IReadOnlyList<TargetRole> roles)
+    /// <param name="usePhysicalSlots">是否使用队伍物理槽位解释目标。</param>
+    private void ResetWorkflow(IReadOnlyList<TargetRole> roles, bool usePhysicalSlots)
     {
         _workflowState = SwitchCharacterState.BuildSwitchPlan;
         _targetRoles = roles.ToList();
-        _initialSlots = [];
-        _slotsToClear = [];
-        _selectionPlan = new Queue<SelectionPlanItem>();
+        _requestedTargetRoles = [];
         _currentRole = null;
-        _currentRoleIsRefill = false;
-        _currentRoleAttempt = 0;
-        _currentAvatarFound = false;
         _clearCombatScenesAfterReturn = false;
+        _currentTeamSlots = [];
+        _teamSnapshotDirty = true;
+        _needsFinalVerification = false;
+        _roleSwitchAttempts = [];
+        _expectedTeamCount = 0;
+        _rebuildStartSlot = null;
+        _rebuildRoles = [];
+        _isRebuildClearing = false;
+        _prepareSuffixRebuildAfterRemoval = false;
+        _isAppendingRole = false;
+        _playerIndex = 0;
+        _multiGamePlayerCount = 1;
+        _maxControlAvatarCount = 4;
+        _logicalToPhysicalSlot = Enumerable.Range(1, 4).ToDictionary(slot => slot);
+        _usePhysicalSlots = usePhysicalSlots;
         _pendingFilterElementType = null;
         _pendingFilterWeaponType = null;
     }
@@ -252,13 +272,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 设置当前待处理角色，并初始化筛选条件。
     /// </summary>
     /// <param name="role">待处理角色。</param>
-    /// <param name="isRefill">是否为补位角色。</param>
-    private void SetCurrentRole(TargetRole role, bool isRefill)
+    private void SetCurrentRole(TargetRole role)
     {
         _currentRole = role;
-        _currentRoleIsRefill = isRefill;
-        _currentRoleAttempt = 1;
-        _currentAvatarFound = false;
         SetCurrentRoleFilter(role);
     }
 
@@ -270,41 +286,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         _pendingFilterElementType = role.SkipElementFilter ? null : Recognizer.GetElementType(role.PrimaryCandidateName);
         _pendingFilterWeaponType = role.ForcedWeaponType ?? Recognizer.GetWeaponType(role.PrimaryCandidateName);
-        _logger.LogInformation("切换角色：{Slot}. {Name}，武器：{Weapon}，元素筛选：{ElementFilter}",
+        _logger.LogDebug("切换角色：{Slot}. {Name}，武器：{Weapon}，元素筛选：{ElementFilter}",
             role.Slot,
             role.Name,
             _pendingFilterWeaponType,
             _pendingFilterElementType ?? "跳过");
-    }
-
-    /// <summary>
-    /// 当前角色失败时决定跳过补位或中止目标流程。
-    /// </summary>
-    /// <param name="message">日志消息。</param>
-    /// <param name="exception">可选异常。</param>
-    /// <returns>状态处理结果。</returns>
-    private StateHandlerResult SkipRefillOrAbortTarget(string message, Exception? exception = null)
-    {
-        _pendingFilterElementType = null;
-        _pendingFilterWeaponType = null;
-
-        if (_currentRoleIsRefill)
-        {
-            if (exception == null)
-            {
-                _logger.LogWarning("{Message}，跳过补位角色 {Name}", message, _currentRole?.Name);
-            }
-            else
-            {
-                _logger.LogWarning(exception, "{Message}，跳过补位角色 {Name}", message, _currentRole?.Name);
-            }
-
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return StateHandlerResult.Success;
-        }
-
-        throw new PartySetupFailedException(exception == null ? message : $"{message}，{exception.Message}");
     }
 
     #region 状态检测器
@@ -313,103 +299,46 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 检测构建切换计划状态。
     /// </summary>
     /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待构建计划时返回 true。</returns>
+    /// <returns>队伍配置页中等待构建计划时返回 true。</returns>
     [StateDetector(SwitchCharacterState.BuildSwitchPlan, Order = 11)]
     private bool DetectBuildSwitchPlan(ImageRegion capture)
     {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.BuildSwitchPlan);
-    }
-
-    /// <summary>
-    /// 检测取消已选角色状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待取消选择时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.ClearSelectedRoles, Order = 12)]
-    private bool DetectClearSelectedRoles(ImageRegion capture)
-    {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.ClearSelectedRoles);
+        return _workflowState == SwitchCharacterState.BuildSwitchPlan && IsPartyConfigPage(capture);
     }
 
     /// <summary>
     /// 检测准备目标角色状态。
     /// </summary>
     /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待准备目标角色时返回 true。</returns>
+    /// <returns>队伍配置页中等待准备目标角色时返回 true。</returns>
     [StateDetector(SwitchCharacterState.PrepareNextRole, Order = 13)]
     private bool DetectPrepareNextRole(ImageRegion capture)
     {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.PrepareNextRole)
-               && !IsFilterApplied(capture);
+        return _workflowState == SwitchCharacterState.PrepareNextRole && IsPartyConfigPage(capture);
     }
 
     /// <summary>
     /// 检测打开筛选面板状态。
     /// </summary>
     /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待打开筛选面板时返回 true。</returns>
+    /// <returns>角色列表中等待打开筛选面板时返回 true。</returns>
     [StateDetector(SwitchCharacterState.OpenFilterPanel, Order = 14)]
     private bool DetectOpenFilterPanel(ImageRegion capture)
     {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.OpenFilterPanel);
+        return _workflowState == SwitchCharacterState.OpenFilterPanel && IsCharacterList(capture);
     }
 
     /// <summary>
     /// 检测头像查找状态。
     /// </summary>
     /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待查找头像时返回 true。</returns>
+    /// <returns>角色列表中等待查找头像时返回 true。</returns>
     [StateDetector(SwitchCharacterState.FindAndClickAvatar, Order = 15)]
     private bool DetectFindAndClickAvatar(ImageRegion capture)
     {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.FindAndClickAvatar);
-    }
-
-    /// <summary>
-    /// 检测清除筛选状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待清除筛选时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.ClearFilter, Order = 16)]
-    private bool DetectClearFilter(ImageRegion capture)
-    {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.ClearFilter);
-    }
-
-    /// <summary>
-    /// 检测槽位确认状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待确认槽位时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.VerifyRoleInSlot, Order = 17)]
-    private bool DetectVerifyRoleInSlot(ImageRegion capture)
-    {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.VerifyRoleInSlot)
-               && !IsFilterApplied(capture);
-    }
-
-    /// <summary>
-    /// 检测误选清理状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待清理误选角色时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.ClearMisplacedRole, Order = 18)]
-    private bool DetectClearMisplacedRole(ImageRegion capture)
-    {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.ClearMisplacedRole)
-               && !IsFilterApplied(capture);
-    }
-
-    /// <summary>
-    /// 检测保存配置状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>快速编队列表中等待保存配置时返回 true。</returns>
-    [StateDetector(SwitchCharacterState.SaveConfiguration, Order = 20)]
-    private bool DetectSaveConfiguration(ImageRegion capture)
-    {
-        return IsWorkflowQuickTeamState(capture, SwitchCharacterState.SaveConfiguration)
-               && !IsFilterApplied(capture);
+        return _workflowState == SwitchCharacterState.FindAndClickAvatar
+               && IsCharacterList(capture)
+               && !IsFilterPanel(capture);
     }
 
     /// <summary>
@@ -420,13 +349,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.ReturnMainUi, Order = 21)]
     private bool DetectReturnMainUi(ImageRegion capture)
     {
-        if (_workflowState == SwitchCharacterState.SaveConfiguration)
-        {
-            return !IsQuickTeamList(capture) && (IsPartyConfigPage(capture) || Bv.IsInMainUi(capture));
-        }
-
         return _workflowState == SwitchCharacterState.ReturnMainUi
-               && (IsQuickTeamList(capture) || IsFilterPanel(capture) || IsPartyConfigPage(capture) || Bv.IsInMainUi(capture));
+               && (IsCharacterList(capture) || IsFilterPanel(capture) || IsPartyConfigPage(capture) || Bv.IsInMainUi(capture));
     }
 
     /// <summary>
@@ -448,14 +372,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.SelectWeaponFilter, Order = 23)]
     private bool DetectSelectWeaponFilter(ImageRegion capture)
     {
-        if (!IsFilterPanel(capture))
-        {
-            return false;
-        }
-
-        return _workflowState == SwitchCharacterState.SelectWeaponFilter
-               || (_workflowState == SwitchCharacterState.SelectElementFilter
-                   && IsFilterTagSelected(capture, _pendingFilterElementType));
+        return _workflowState == SwitchCharacterState.SelectWeaponFilter && IsFilterPanel(capture);
     }
 
     /// <summary>
@@ -466,16 +383,10 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.ConfirmFilterPanel, Order = 24)]
     private bool DetectConfirmFilterPanel(ImageRegion capture)
     {
-        if (!IsFilterPanel(capture))
-        {
-            return false;
-        }
-
-        return _workflowState == SwitchCharacterState.ConfirmFilterPanel
-               || (_workflowState == SwitchCharacterState.SelectWeaponFilter
-                   && IsFilterTagSelected(capture, _pendingFilterWeaponType))
-               || (CurrentState == SwitchCharacterState.ConfirmFilterPanel
-                   && _workflowState == SwitchCharacterState.FindAndClickAvatar);
+        return (_workflowState == SwitchCharacterState.ConfirmFilterPanel
+                || (CurrentState == SwitchCharacterState.ConfirmFilterPanel
+                    && _workflowState == SwitchCharacterState.FindAndClickAvatar))
+               && IsFilterPanel(capture);
     }
 
     /// <summary>
@@ -487,27 +398,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private bool DetectFilterPanel(ImageRegion capture)
     {
         return IsFilterPanel(capture);
-    }
-
-    /// <summary>
-    /// 检测快速编队角色列表。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>识别到元素共鸣文字返回 true；确认筛选完成后才允许回到角色列表。</returns>
-    [StateDetector(SwitchCharacterState.QuickTeamList, Order = 40)]
-    private bool DetectQuickTeamList(ImageRegion capture)
-    {
-        if (!IsQuickTeamList(capture))
-        {
-            return false;
-        }
-
-        if (CurrentState == SwitchCharacterState.ConfirmFilterPanel)
-        {
-            return _workflowState == SwitchCharacterState.FindAndClickAvatar && !IsFilterPanel(capture);
-        }
-
-        return true;
     }
 
     /// <summary>
@@ -555,11 +445,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
-    /// 判断截图是否为快速编队角色列表。
+    /// 判断截图是否为角色列表。
     /// </summary>
     /// <param name="capture">当前截图。</param>
     /// <returns>识别到元素共鸣文字返回 true。</returns>
-    private bool IsQuickTeamList(ImageRegion capture)
+    private bool IsCharacterList(ImageRegion capture)
     {
         return ContainsText(capture, "元素共鸣", Rect1080(1655, 32, 106, 30));
     }
@@ -582,83 +472,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private bool IsPartyConfigPage(ImageRegion capture)
     {
         return ContainsText(capture, "队伍配置", Rect1080(119, 30, 108, 37));
-    }
-
-    /// <summary>
-    /// 判断筛选面板底部是否已出现指定筛选标签。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <param name="text">筛选标签文本。</param>
-    /// <returns>筛选标签已出现返回 true。</returns>
-    private bool IsFilterTagSelected(ImageRegion capture, string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        var ocrTexts = OcrFilterTags(capture);
-        var matched = ocrTexts.Any(ocrText => ocrText.Contains(text, StringComparison.Ordinal));
-        _logger.LogDebug("切换角色：筛选标签 OCR=[{OcrTexts}]，目标={Text}，matched={Matched}",
-            string.Join("|", ocrTexts),
-            text,
-            matched);
-        return matched;
-    }
-
-    /// <summary>
-    /// 对底部已选筛选标签做黑字二值化后 OCR，减少半透明标签栏下层文字干扰。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>识别到的筛选标签文本。</returns>
-    private List<string> OcrFilterTags(ImageRegion capture)
-    {
-        using var tagRegion = capture.DeriveCrop(GetFilterTagsRoi());
-        using var hsv = tagRegion.SrcMat.CvtColor(ColorConversionCodes.BGR2HSV);
-        using var darkMask = new Mat();
-        Cv2.InRange(hsv, new Scalar(0, 0, 0), new Scalar(180, 95, 120), darkMask);
-
-        using var binary = new Mat(tagRegion.SrcMat.Size(), MatType.CV_8UC3, Scalar.White);
-        binary.SetTo(Scalar.Black, darkMask);
-
-        var result = OcrFactory.Paddle.OcrResult(binary);
-        return result.Regions
-            .OrderBy(region => region.Rect.Center.Y)
-            .ThenBy(region => region.Rect.Center.X)
-            .Select(region => region.Text)
-            .ToList();
-    }
-
-    /// <summary>
-    /// 判断当前角色列表是否仍应用了筛选条件。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <returns>识别到清除按钮返回 true。</returns>
-    private bool IsFilterApplied(ImageRegion capture)
-    {
-        return ContainsText(capture, "清除", Rect1080(699, 922, 55, 31));
-    }
-
-    /// <summary>
-    /// 判断当前截图是否可执行指定快速编队业务状态。
-    /// </summary>
-    /// <param name="capture">当前截图。</param>
-    /// <param name="state">期望业务状态。</param>
-    /// <returns>内部状态匹配且位于快速编队列表时返回 true。</returns>
-    private bool IsWorkflowQuickTeamState(ImageRegion capture, SwitchCharacterState state)
-    {
-        if (_workflowState != state || !IsQuickTeamList(capture))
-        {
-            return false;
-        }
-
-        if (CurrentState == SwitchCharacterState.ConfirmFilterPanel
-            && state == SwitchCharacterState.FindAndClickAvatar)
-        {
-            return !IsFilterPanel(capture);
-        }
-
-        return true;
     }
 
     #endregion
@@ -686,8 +499,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateHandler(SwitchCharacterState.MainUi, RetryTimeout = 15000, RetryInterval = 500, TransitionTimeout = 7000)]
     private async Task<StateHandlerResult> HandleMainUi(BvPage page)
     {
-        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(2000, _ct);
+        await DetectPlayerIndexAndOpenPartyConfig(_ct);
         return StateHandlerResult.Success;
     }
 
@@ -708,35 +520,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 处理队伍配置界面。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>点击快速编队按钮返回 Success；未找到按钮返回 Retry。</returns>
+    /// <returns>识别到队伍配置界面后直接返回 Success，由后续状态构建切换计划。</returns>
     [StateHandler(SwitchCharacterState.PartyConfigPage, RetryTimeout = 10000, RetryInterval = 500, TransitionTimeout = 6000)]
     private Task<StateHandlerResult> HandlePartyConfigPage(BvPage page)
     {
-        if (!TryClickText(page, "快速编队", Rect1080(1294, 1003, 126, 32)))
-        {
-            _logger.LogWarning("切换角色：未找到快速编队按钮");
-            return Task.FromResult(StateHandlerResult.Retry);
-        }
-
         return Task.FromResult(StateHandlerResult.Success);
-    }
-
-    /// <summary>
-    /// 处理快速编队角色列表。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>当前工作流已有待执行状态时返回 Success。</returns>
-    [StateHandler(SwitchCharacterState.QuickTeamList, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 6000)]
-    private Task<StateHandlerResult> HandleQuickTeamList(BvPage page)
-    {
-        return _workflowState switch
-        {
-            SwitchCharacterState.BuildSwitchPlan
-                or SwitchCharacterState.FindAndClickAvatar
-                or SwitchCharacterState.SaveConfiguration
-                or SwitchCharacterState.ReturnMainUi => Task.FromResult(StateHandlerResult.Success),
-            _ => Task.FromResult(StateHandlerResult.Fail)
-        };
     }
 
     /// <summary>
@@ -747,14 +535,30 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateHandler(SwitchCharacterState.BuildSwitchPlan, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private async Task<StateHandlerResult> HandleBuildSwitchPlan(BvPage page)
     {
-        _initialSlots = await RecognizeTeamSlots(Recognizer, _ct);
-        var plan = BuildSelectionPlan(_targetRoles, _initialSlots);
-        if (!plan.Success)
+        if (_playerIndex == 0)
         {
-            throw new PartySetupFailedException($"切换角色：{plan.FailureReason}");
+            _logger.LogInformation("切换角色：尚未识别联机人数与玩家编号，先返回主界面完成识别");
+            await _returnMainUiTask.Start(_ct);
+            await DetectPlayerIndexAndOpenPartyConfig(_ct);
+            return StateHandlerResult.Wait;
         }
 
-        if (plan.SelectionPlan.Count == 0)
+        ConfigureOperableSlots();
+        AdjustTargetsToOperableSlots();
+        if (_targetRoles.Count == 0)
+        {
+            _logger.LogInformation("切换角色：传入目标中没有当前账号可操作的联机槽位，结束任务");
+            _workflowState = SwitchCharacterState.ReturnMainUi;
+            return StateHandlerResult.Success;
+        }
+
+        _requestedTargetRoles = _targetRoles.ToList();
+        _currentTeamSlots = await RecognizeTeamSlotsFromCharacterList(Recognizer, _maxControlAvatarCount, _ct);
+        _expectedTeamCount = _currentTeamSlots.Count;
+        _teamSnapshotDirty = false;
+        _targetRoles = BuildDesiredTeamRoles(_targetRoles, _currentTeamSlots);
+        var rolesToSelect = GetRolesToSelect(_targetRoles, _currentTeamSlots);
+        if (rolesToSelect.Count == 0)
         {
             _logger.LogInformation("切换角色：目标角色已在指定槽位");
             _clearCombatScenesAfterReturn = false;
@@ -762,26 +566,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return StateHandlerResult.Success;
         }
 
-        _slotsToClear = plan.SlotsToClear;
-        _selectionPlan = new Queue<SelectionPlanItem>(plan.SelectionPlan);
+        _logger.LogInformation("切换角色：选择计划 {Plan}",
+            string.Join(",", rolesToSelect.Select(role => $"{role.Slot}.{role.Name}")));
 
-        _logger.LogInformation("切换角色：需要取消槽位 {SlotsToClear}，选择计划 {Plan}",
-            string.Join(",", _slotsToClear.OrderBy(slot => slot)),
-            string.Join(",", plan.SelectionPlan.Select(item => $"{item.Role.Slot}.{item.Role.Name}{(item.IsRefill ? "(补位)" : string.Empty)}")));
-
-        _workflowState = SwitchCharacterState.ClearSelectedRoles;
-        return StateHandlerResult.Success;
-    }
-
-    /// <summary>
-    /// 取消本次计划涉及的已选角色。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>取消完成返回 Success。</returns>
-    [StateHandler(SwitchCharacterState.ClearSelectedRoles, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private async Task<StateHandlerResult> HandleClearSelectedRoles(BvPage page)
-    {
-        await ClearSelectedRoles(_initialSlots, _slotsToClear, _ct);
         _workflowState = SwitchCharacterState.PrepareNextRole;
         return StateHandlerResult.Success;
     }
@@ -790,21 +577,138 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 准备下一个目标角色。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>存在计划项时进入筛选流程；计划耗尽时进入保存流程。</returns>
+    /// <returns>存在未完成目标时进入换下或筛选流程；全部完成时返回主界面。</returns>
     [StateHandler(SwitchCharacterState.PrepareNextRole, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private Task<StateHandlerResult> HandlePrepareNextRole(BvPage page)
+    private async Task<StateHandlerResult> HandlePrepareNextRole(BvPage page)
     {
-        if (_selectionPlan.Count == 0)
+        if (_teamSnapshotDirty)
         {
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.SaveConfiguration;
-            return Task.FromResult(StateHandlerResult.Success);
+            _currentTeamSlots = await RecognizeTeamSlotsFromCharacterList(Recognizer, _expectedTeamCount, _ct);
+            _teamSnapshotDirty = false;
+            if (_needsFinalVerification)
+            {
+                _logger.LogInformation("切换角色：已完成最终队伍识别，按实际队伍继续验证目标槽位");
+                _needsFinalVerification = false;
+            }
         }
 
-        var item = _selectionPlan.Dequeue();
-        SetCurrentRole(item.Role, item.IsRefill);
+        if (_prepareSuffixRebuildAfterRemoval)
+        {
+            var firstMismatchSlot = FindFirstMismatchSlot(_targetRoles, _currentTeamSlots);
+            if (firstMismatchSlot == null)
+            {
+                throw new PartySetupFailedException("切换角色：换下错位角色后无法确定需要补回的槽位");
+            }
+
+            StartSuffixRebuild(firstMismatchSlot.Value);
+            _prepareSuffixRebuildAfterRemoval = false;
+        }
+
+        if (_rebuildStartSlot is int rebuildStartSlot)
+        {
+            var minimumRetainedCount = Math.Max(1, rebuildStartSlot - 1);
+            if (_isRebuildClearing && _currentTeamSlots.Count > minimumRetainedCount)
+            {
+                ClickFixedTeamSlot(rebuildStartSlot);
+                await Delay(500, _ct);
+                if (!TryClickText(page, "换下", Rect1080(382, 994, 87, 51)))
+                {
+                    throw new PartySetupFailedException($"切换角色：未找到 {rebuildStartSlot} 号位的换下按钮");
+                }
+
+                await WaitForRoleRemoved(rebuildStartSlot, _ct);
+                _expectedTeamCount--;
+                _teamSnapshotDirty = true;
+                return StateHandlerResult.Wait;
+            }
+
+            _isRebuildClearing = false;
+
+            if (_rebuildRoles.Count > 0)
+            {
+                var refillRole = _rebuildRoles.Peek();
+                if (_roleSwitchAttempts.GetValueOrDefault(refillRole.Slot) >= MaxRoleSwitchAttempts)
+                {
+                    throw new PartySetupFailedException(
+                        $"切换角色：{refillRole.Slot} 号位连续 {MaxRoleSwitchAttempts} 次未能补回 {refillRole.Name}");
+                }
+
+                SetCurrentRole(refillRole);
+                _isAppendingRole = refillRole.Slot > _currentTeamSlots.Count;
+                ClickFixedTeamSlot(refillRole.Slot);
+                _workflowState = SwitchCharacterState.OpenFilterPanel;
+                return StateHandlerResult.Success;
+            }
+
+            _rebuildStartSlot = null;
+        }
+
+        if (_currentRole == null)
+        {
+            var currentNameBySlot = _currentTeamSlots.ToDictionary(slot => slot.Slot, slot => slot.Name);
+            var nextRole = _requestedTargetRoles
+                .OrderBy(role => role.Slot)
+                .FirstOrDefault(role =>
+                    !currentNameBySlot.TryGetValue(role.Slot, out var currentName) || !role.Matches(currentName))
+                ?? _targetRoles
+                .OrderBy(role => role.Slot)
+                .FirstOrDefault(role =>
+                    !currentNameBySlot.TryGetValue(role.Slot, out var currentName) || !role.Matches(currentName));
+            if (nextRole != null)
+            {
+                if (_roleSwitchAttempts.GetValueOrDefault(nextRole.Slot) >= MaxRoleSwitchAttempts)
+                {
+                    throw new PartySetupFailedException(
+                        $"切换角色：{nextRole.Slot} 号位连续 {MaxRoleSwitchAttempts} 次未能切换为 {nextRole.Name}");
+                }
+
+                SetCurrentRole(nextRole);
+            }
+        }
+
+        if (_currentRole == null)
+        {
+            if (_needsFinalVerification)
+            {
+                _logger.LogDebug("切换角色：所有目标已提交，开始统一识别并验证实际队伍");
+                _teamSnapshotDirty = true;
+                return StateHandlerResult.Wait;
+            }
+
+            _workflowState = SwitchCharacterState.ReturnMainUi;
+            return StateHandlerResult.Success;
+        }
+
+        var misplaced = _currentTeamSlots.FirstOrDefault(slot => slot.Slot != _currentRole.Slot && _currentRole.Matches(slot.Name));
+        if (misplaced != null)
+        {
+            if (_currentTeamSlots.Count == 1)
+            {
+                _logger.LogInformation("切换角色：队伍仅剩一个角色，保留该角色并从 1 号位开始通过更换重建队伍");
+                StartSuffixRebuild(1);
+                _currentRole = null;
+                return StateHandlerResult.Wait;
+            }
+
+            ClickFixedTeamSlot(misplaced.Slot);
+            await Delay(500, _ct);
+            if (!TryClickText(page, "换下", Rect1080(382, 994, 87, 51)))
+            {
+                throw new PartySetupFailedException($"切换角色：未找到 {misplaced.Slot} 号位的换下按钮");
+            }
+
+            await WaitForRoleRemoved(misplaced.Slot, _ct);
+            _expectedTeamCount--;
+            _teamSnapshotDirty = true;
+            _prepareSuffixRebuildAfterRemoval = true;
+            _currentRole = null;
+            return StateHandlerResult.Wait;
+        }
+
+        EnsureSlotIsOperable(_currentRole.Slot);
+        ClickFixedTeamSlot(_currentRole.Slot);
         _workflowState = SwitchCharacterState.OpenFilterPanel;
-        return Task.FromResult(StateHandlerResult.Success);
+        return StateHandlerResult.Success;
     }
 
     /// <summary>
@@ -829,23 +733,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         if (string.IsNullOrWhiteSpace(_pendingFilterWeaponType))
         {
-            if (_currentRoleIsRefill)
-            {
-                _logger.LogWarning("切换角色：补位角色 {Name} 缺少武器筛选项，跳过当前补位", _currentRole?.Name);
-                _pendingFilterElementType = null;
-                _pendingFilterWeaponType = null;
-
-                if (!TryClickText(page, "确认筛选", Rect1080(360, 999, 128, 40)))
-                {
-                    return Task.FromResult(StateHandlerResult.Retry);
-                }
-
-                _currentRole = null;
-                _workflowState = SwitchCharacterState.PrepareNextRole;
-                return Task.FromResult(StateHandlerResult.Success);
-            }
-
-            return Task.FromResult(SkipRefillOrAbortTarget("切换角色：筛选面板缺少武器筛选项"));
+            throw new PartySetupFailedException("切换角色：筛选面板缺少武器筛选项");
         }
 
         _workflowState = string.IsNullOrWhiteSpace(_pendingFilterElementType)
@@ -858,18 +746,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 选择元素筛选项。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>已选择或无需选择元素时进入武器筛选；找不到选项时返回 Retry。</returns>
+    /// <returns>点击元素选项后进入武器筛选；找不到选项时返回 Retry。</returns>
     [StateHandler(SwitchCharacterState.SelectElementFilter, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private Task<StateHandlerResult> HandleSelectElementFilter(BvPage page)
     {
         if (string.IsNullOrWhiteSpace(_pendingFilterElementType))
-        {
-            _workflowState = SwitchCharacterState.SelectWeaponFilter;
-            return Task.FromResult(StateHandlerResult.Success);
-        }
-
-        using var capture = CaptureToRectArea();
-        if (IsFilterTagSelected(capture, _pendingFilterElementType))
         {
             _workflowState = SwitchCharacterState.SelectWeaponFilter;
             return Task.FromResult(StateHandlerResult.Success);
@@ -881,6 +762,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return Task.FromResult(StateHandlerResult.Retry);
         }
 
+        _workflowState = SwitchCharacterState.SelectWeaponFilter;
         return Task.FromResult(StateHandlerResult.Success);
     }
 
@@ -888,21 +770,14 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 选择武器筛选项。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>已选择武器时进入确认筛选；找不到选项时返回 Retry。</returns>
+    /// <returns>点击武器选项后进入确认筛选；找不到选项时返回 Retry。</returns>
     [StateHandler(SwitchCharacterState.SelectWeaponFilter, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private Task<StateHandlerResult> HandleSelectWeaponFilter(BvPage page)
     {
         _workflowState = SwitchCharacterState.SelectWeaponFilter;
         if (string.IsNullOrWhiteSpace(_pendingFilterWeaponType))
         {
-            return Task.FromResult(SkipRefillOrAbortTarget("切换角色：筛选面板缺少武器筛选项"));
-        }
-
-        using var capture = CaptureToRectArea();
-        if (IsFilterTagSelected(capture, _pendingFilterWeaponType))
-        {
-            _workflowState = SwitchCharacterState.ConfirmFilterPanel;
-            return Task.FromResult(StateHandlerResult.Success);
+            throw new PartySetupFailedException("切换角色：筛选面板缺少武器筛选项");
         }
 
         if (!TryClickText(page, _pendingFilterWeaponType, GetWeaponFilterOptionsRoi()))
@@ -911,6 +786,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             return Task.FromResult(StateHandlerResult.Retry);
         }
 
+        _workflowState = SwitchCharacterState.ConfirmFilterPanel;
         return Task.FromResult(StateHandlerResult.Success);
     }
 
@@ -939,7 +815,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 查找并点击当前角色头像。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>头像查找完成后进入清除筛选状态。</returns>
+    /// <returns>头像查找并提交完成后进入准备下一个目标角色状态。</returns>
     [StateHandler(SwitchCharacterState.FindAndClickAvatar, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private async Task<StateHandlerResult> HandleFindAndClickAvatar(BvPage page)
     {
@@ -948,123 +824,51 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
-        _currentAvatarFound = await FindAndClickAvatar(_currentRole, Recognizer, _ct);
-        _workflowState = SwitchCharacterState.ClearFilter;
-        return StateHandlerResult.Success;
-    }
-
-    /// <summary>
-    /// 清除当前筛选条件。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>根据头像查找结果进入确认、补位或返回主界面状态。</returns>
-    [StateHandler(SwitchCharacterState.ClearFilter, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private Task<StateHandlerResult> HandleClearFilter(BvPage page)
-    {
-        using var capture = CaptureToRectArea();
-        if (IsFilterApplied(capture))
+        if (!await FindAndClickAvatar(_currentRole, Recognizer, _ct))
         {
-            ClearFilter(page);
-            _workflowState = SwitchCharacterState.ClearFilter;
-            return Task.FromResult(StateHandlerResult.Wait);
+            throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
         }
 
-        if (_currentRole == null)
+        if (!TryClickAnyText(page, ["更换", "加入"], Rect1080(382, 994, 87, 51)))
         {
-            throw new PartySetupFailedException("切换角色：当前角色状态为空");
+            _logger.LogWarning("切换角色：未识别到“更换”或“加入”按钮");
+            return StateHandlerResult.Retry;
         }
 
-        if (_currentAvatarFound)
+        if (_isAppendingRole)
         {
-            _workflowState = SwitchCharacterState.VerifyRoleInSlot;
-            return Task.FromResult(StateHandlerResult.Success);
+            _currentTeamSlots.Add(new TeamSlotSnapshot(_currentRole.Slot, _currentRole.PrimaryCandidateName));
+            _currentTeamSlots = _currentTeamSlots.OrderBy(slot => slot.Slot).ToList();
+            _expectedTeamCount++;
+        }
+        else
+        {
+            _currentTeamSlots = _currentTeamSlots
+                .Select(slot => slot.Slot == _currentRole.Slot
+                    ? slot with { Name = _currentRole.PrimaryCandidateName }
+                    : slot)
+                .ToList();
         }
 
-        if (_currentRoleIsRefill)
+        if (_rebuildStartSlot != null &&
+            _rebuildRoles.Count > 0 &&
+            _rebuildRoles.Peek().Slot == _currentRole.Slot)
         {
-            _logger.LogWarning("切换角色：未找到补位角色 {Name}，保留空位", _currentRole.Name);
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return Task.FromResult(StateHandlerResult.Success);
+            _rebuildRoles.Dequeue();
+            if (_rebuildRoles.Count == 0)
+            {
+                _rebuildStartSlot = null;
+            }
         }
 
-        throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
-    }
-
-    /// <summary>
-    /// 确认当前角色已进入目标槽位。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>确认成功后进入下一角色；失败时重试或结束。</returns>
-    [StateHandler(SwitchCharacterState.VerifyRoleInSlot, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private async Task<StateHandlerResult> HandleVerifyRoleInSlot(BvPage page)
-    {
-        if (_currentRole == null)
-        {
-            throw new PartySetupFailedException("切换角色：当前角色状态为空");
-        }
-
-        if (await WaitForRoleInSlot(_currentRole, Recognizer, _ct))
-        {
-            _logger.LogInformation("切换角色：{Name} 已进入 {Slot} 号位", _currentRole.Name, _currentRole.Slot);
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return StateHandlerResult.Success;
-        }
-
-        if (_currentRoleIsRefill)
-        {
-            _logger.LogWarning("切换角色：补位角色 {Name} 未进入槽位 {Slot}，保留空位", _currentRole.Name, _currentRole.Slot);
-            _currentRole = null;
-            _workflowState = SwitchCharacterState.PrepareNextRole;
-            return StateHandlerResult.Success;
-        }
-
-        if (_currentRoleAttempt < 2)
-        {
-            _workflowState = SwitchCharacterState.ClearMisplacedRole;
-            return StateHandlerResult.Success;
-        }
-
-        throw new PartySetupFailedException($"切换角色：未能将目标角色 {_currentRole.Name} 放入槽位 {_currentRole.Slot}");
-    }
-
-    /// <summary>
-    /// 清理误进入其他槽位的目标角色。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>清理后重新进入筛选流程。</returns>
-    [StateHandler(SwitchCharacterState.ClearMisplacedRole, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
-    private async Task<StateHandlerResult> HandleClearMisplacedRole(BvPage page)
-    {
-        if (_currentRole == null)
-        {
-            throw new PartySetupFailedException("切换角色：当前角色状态为空");
-        }
-
-        await ClearMisplacedRole(_currentRole, Recognizer, _ct);
-        _currentRoleAttempt++;
-        SetCurrentRoleFilter(_currentRole);
-        _workflowState = SwitchCharacterState.OpenFilterPanel;
-        return StateHandlerResult.Success;
-    }
-
-    /// <summary>
-    /// 保存当前配置。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    /// <returns>点击保存配置返回 Success；未找到按钮返回 Retry。</returns>
-    [StateHandler(SwitchCharacterState.SaveConfiguration, RetryTimeout = 12000, RetryInterval = 500, TransitionTimeout = 3000)]
-    private Task<StateHandlerResult> HandleSaveConfiguration(BvPage page)
-    {
-        if (!TryClickText(page, "保存配置", Rect1080(360, 999, 128, 40)))
-        {
-            _logger.LogWarning("切换角色：未找到保存配置按钮");
-            return Task.FromResult(StateHandlerResult.Retry);
-        }
-
+        _roleSwitchAttempts[_currentRole.Slot] = _roleSwitchAttempts.GetValueOrDefault(_currentRole.Slot) + 1;
+        _needsFinalVerification = true;
+        _logger.LogInformation("切换角色：已提交 {Name} 到 {Slot} 号位", _currentRole.Name, _currentRole.Slot);
         _clearCombatScenesAfterReturn = true;
-        return Task.FromResult(StateHandlerResult.Success);
+        _currentRole = null;
+        _isAppendingRole = false;
+        _workflowState = SwitchCharacterState.PrepareNextRole;
+        return StateHandlerResult.Success;
     }
 
     /// <summary>
@@ -1187,6 +991,89 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
+    /// 将显式目标与当前队伍合并为完整的期望队伍，未指定角色优先保留原物理位置。
+    /// </summary>
+    private static List<TargetRole> BuildDesiredTeamRoles(
+        IReadOnlyCollection<TargetRole> requestedRoles,
+        IReadOnlyList<TeamSlotSnapshot> currentSlots)
+    {
+        var desired = new TargetRole?[currentSlots.Count];
+        var remaining = currentSlots
+            .Select(slot => (slot.Slot, Name: slot.Name
+                ?? throw new PartySetupFailedException($"切换角色：{slot.Slot} 号位角色识别为空")))
+            .ToList();
+
+        foreach (var role in requestedRoles.OrderBy(role => role.Slot))
+        {
+            desired[role.Slot - 1] = role;
+            var currentIndex = remaining.FindIndex(item => role.Matches(item.Name));
+            if (currentIndex >= 0)
+            {
+                remaining.RemoveAt(currentIndex);
+            }
+        }
+
+        for (var index = 0; index < desired.Length; index++)
+        {
+            if (desired[index] != null)
+            {
+                continue;
+            }
+
+            var originalIndex = remaining.FindIndex(item => item.Slot == index + 1);
+            if (originalIndex < 0)
+            {
+                continue;
+            }
+
+            desired[index] = CreateTargetRole(index + 1, remaining[originalIndex].Name);
+            remaining.RemoveAt(originalIndex);
+        }
+
+        for (var index = 0; index < desired.Length; index++)
+        {
+            if (desired[index] != null)
+            {
+                continue;
+            }
+
+            if (remaining.Count == 0)
+            {
+                throw new PartySetupFailedException("切换角色：无法为未指定槽位生成补位角色");
+            }
+
+            desired[index] = CreateTargetRole(index + 1, remaining[0].Name);
+            remaining.RemoveAt(0);
+        }
+
+        return desired.Select(role => role!).ToList();
+    }
+
+    private static int? FindFirstMismatchSlot(
+        IReadOnlyList<TargetRole> desiredRoles,
+        IReadOnlyList<TeamSlotSnapshot> currentSlots)
+    {
+        return desiredRoles
+            .OrderBy(role => role.Slot)
+            .FirstOrDefault(role =>
+                role.Slot > currentSlots.Count || !role.Matches(currentSlots[role.Slot - 1].Name))
+            ?.Slot;
+    }
+
+    private void StartSuffixRebuild(int startSlot)
+    {
+        _rebuildStartSlot = startSlot;
+        _isRebuildClearing = true;
+        _rebuildRoles = new Queue<TargetRole>(_targetRoles
+            .Where(role => role.Slot >= startSlot)
+            .OrderBy(role => role.Slot));
+        _logger.LogInformation(
+            "切换角色：从逻辑槽位 {StartSlot} 重建队伍后缀，依次补回 {Roles}",
+            startSlot,
+            string.Join(",", _rebuildRoles.Select(role => $"{role.Slot}.{role.Name}")));
+    }
+
+    /// <summary>
     /// 获取当前不在目标槽位、需要重新选择的目标角色。
     /// </summary>
     /// <param name="roles">目标槽位角色列表。</param>
@@ -1202,285 +1089,343 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
-    /// 计算本次需要取消选择的槽位。
+    /// 在主界面识别联机身份并打开队伍配置页。
     /// </summary>
-    /// <param name="rolesToSelect">需要重新选择的目标角色。</param>
-    /// <param name="currentSlots">当前已选角色快照。</param>
-    /// <returns>需要取消选择的槽位集合。</returns>
-    private static HashSet<int> GetSlotsToClear(IReadOnlyCollection<TargetRole> rolesToSelect, IReadOnlyCollection<TeamSlotSnapshot> currentSlots)
+    /// <param name="ct">取消令牌。</param>
+    private async Task DetectPlayerIndexAndOpenPartyConfig(CancellationToken ct)
     {
-        HashSet<int> slotsToClear = rolesToSelect.Select(role => role.Slot).ToHashSet();
+        await DetectPlayerIndex(ct);
+        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+        await Delay(2000, ct);
+    }
 
-        foreach (var currentSlot in currentSlots)
+    /// <summary>
+    /// 识别联机人数及当前玩家编号。
+    /// </summary>
+    /// <param name="ct">取消令牌。</param>
+    private async Task DetectPlayerIndex(CancellationToken ct)
+    {
+        const int timeoutMilliseconds = 5000;
+        const int retryIntervalMilliseconds = 300;
+        var deadline = Environment.TickCount64 + timeoutMilliseconds;
+        string lastResult = "无";
+
+        do
         {
-            if (currentSlot.Name == null)
+            ct.ThrowIfCancellationRequested();
+            using var capture = CaptureToRectArea(true);
+            using var standAloneIcon = capture.Find(RecognitionAssets.Get(@"Common\Job\SwitchCharacter", "StandAloneIcon", capture));
+            if (standAloneIcon.IsExist())
             {
+                _multiGamePlayerCount = 1;
+                _playerIndex = 1;
+                _logger.LogInformation("切换角色：识别到单机图标，按 4 个可控槽位处理");
+                return;
+            }
+
+            MultiGameStatus multiGameStatus;
+            try
+            {
+                multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(
+                    capture,
+                    logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+            }
+            catch (Exception ex)
+            {
+                lastResult = ex.Message;
+                _logger.LogDebug(ex, "切换角色：联机人数尚未稳定识别，继续等待");
+                await Delay(retryIntervalMilliseconds, ct);
                 continue;
             }
 
-            foreach (var role in rolesToSelect)
+            _multiGamePlayerCount = multiGameStatus.IsInMultiGame
+                ? Math.Max(1, multiGameStatus.PlayerCount)
+                : 1;
+            if (_multiGamePlayerCount == 1)
             {
-                if (role.Matches(currentSlot.Name) && role.Slot != currentSlot.Slot)
+                if (multiGameStatus.IsInMultiGame)
                 {
-                    slotsToClear.Add(currentSlot.Slot);
+                    _playerIndex = 1;
+                    _logger.LogInformation("切换角色：识别到 1 人联机状态，按 4 个可控槽位处理");
+                    return;
+                }
+
+                lastResult = "未命中单机图标，也未识别到联机状态";
+                var singlePlayerRemainingMilliseconds = deadline - Environment.TickCount64;
+                if (singlePlayerRemainingMilliseconds <= 0)
+                {
+                    break;
+                }
+
+                await Delay((int)Math.Min(retryIntervalMilliseconds, singlePlayerRemainingMilliseconds), ct);
+                continue;
+            }
+
+            var matches = Enumerable.Range(1, 4)
+                .SelectMany(playerIndex => capture
+                    .FindMulti(RecognitionAssets.Get(@"Common\Job\SwitchCharacter", $"{playerIndex}PTopLeft", capture))
+                    .Select(region => (PlayerIndex: playerIndex, Region: region)))
+                .ToList();
+            try
+            {
+                var matchedPlayers = matches
+                    .Select(match => match.PlayerIndex)
+                    .Distinct()
+                    .OrderBy(playerIndex => playerIndex)
+                    .ToArray();
+                lastResult = matchedPlayers.Length == 0 ? "无" : string.Join(",", matchedPlayers.Select(index => $"{index}P"));
+
+                if (matchedPlayers.Length == 1 && matchedPlayers[0] <= _multiGamePlayerCount)
+                {
+                    _playerIndex = matchedPlayers[0];
+                    _logger.LogInformation("切换角色：识别到 {PlayerCount} 人联机，当前玩家为 {PlayerIndex}P",
+                        _multiGamePlayerCount, _playerIndex);
+                    return;
+                }
+
+                _logger.LogDebug("切换角色：top_left 当前命中玩家 {Players}，继续等待唯一结果", lastResult);
+            }
+            finally
+            {
+                foreach (var match in matches)
+                {
+                    match.Region.Dispose();
                 }
             }
-        }
 
-        return slotsToClear;
-    }
-
-    /// <summary>
-    /// 获取本次取消选择前被移出的原队角色，作为后续补位候选。
-    /// </summary>
-    /// <param name="initialSlots">取消选择前的已选角色快照。</param>
-    /// <param name="slotsToClear">本次需要取消选择的槽位。</param>
-    /// <param name="roles">目标槽位角色列表。</param>
-    /// <returns>补位候选队列。</returns>
-    private static Queue<string> GetRefillCandidates(
-        IReadOnlyCollection<TeamSlotSnapshot> initialSlots,
-        IReadOnlySet<int> slotsToClear,
-        IReadOnlyCollection<TargetRole> roles)
-    {
-        var excludedNames = roles.SelectMany(role => role.ConflictNames).ToHashSet(StringComparer.Ordinal);
-        Queue<string> candidates = new();
-
-        foreach (var slot in initialSlots.OrderBy(slot => slot.Slot))
-        {
-            if (!slotsToClear.Contains(slot.Slot)
-                || string.IsNullOrEmpty(slot.Name)
-                || excludedNames.Contains(slot.Name))
-            {
-                continue;
-            }
-
-            candidates.Enqueue(slot.Name);
-            excludedNames.Add(slot.Name);
-        }
-
-        return candidates;
-    }
-
-    /// <summary>
-    /// 构建按槽位从小到大执行的角色选择计划。
-    /// </summary>
-    /// <param name="roles">目标槽位角色列表。</param>
-    /// <param name="initialSlots">当前已选角色快照。</param>
-    /// <returns>清空槽位和选择计划；前置空槽无法补齐时返回失败。</returns>
-    private static SwitchPlanBuildResult BuildSelectionPlan(
-        IReadOnlyCollection<TargetRole> roles,
-        IReadOnlyCollection<TeamSlotSnapshot> initialSlots)
-    {
-        var rolesToSelect = GetRolesToSelect(roles, initialSlots);
-        if (rolesToSelect.Count == 0)
-        {
-            return new SwitchPlanBuildResult(true, [], [], null);
-        }
-
-        HashSet<int> slotsToClear = GetSlotsToClear(rolesToSelect, initialSlots);
-        Queue<string> refillCandidates = GetRefillCandidates(initialSlots, slotsToClear, roles);
-        var targetBySlot = rolesToSelect.ToDictionary(role => role.Slot);
-        var slotOccupants = Enumerable.Range(1, 4)
-            .ToDictionary(
-                slot => slot,
-                slot => slotsToClear.Contains(slot)
-                    ? null
-                    : initialSlots.FirstOrDefault(snapshot => snapshot.Slot == slot)?.Name);
-
-        List<SelectionPlanItem> plan = [];
-        int maxTargetSlot = rolesToSelect.Max(role => role.Slot);
-        int maxAffectedSlot = Math.Max(maxTargetSlot, slotsToClear.Max());
-        for (int slot = 1; slot <= maxAffectedSlot; slot++)
-        {
-            if (targetBySlot.TryGetValue(slot, out var targetRole))
-            {
-                plan.Add(new SelectionPlanItem(targetRole, IsRefill: false));
-                slotOccupants[slot] = targetRole.Name;
-                continue;
-            }
-
-            if (!string.IsNullOrEmpty(slotOccupants[slot]))
-            {
-                continue;
-            }
-
-            bool shouldRefill = slotsToClear.Contains(slot)
-                                || targetBySlot.Keys.Any(targetSlot => targetSlot > slot)
-                                || slotsToClear.Any(slotToClear => slotToClear > slot);
-            if (!shouldRefill)
-            {
-                continue;
-            }
-
-            if (!refillCandidates.TryDequeue(out var refillName))
-            {
-                string failureReason = $"目标槽位 {maxTargetSlot} 前存在无法补齐的空槽 {slot}，请同时指定前置槽位";
-                return new SwitchPlanBuildResult(false, slotsToClear, plan, failureReason);
-            }
-
-            var refillRole = CreateTargetRole(slot, refillName);
-            plan.Add(new SelectionPlanItem(refillRole, IsRefill: true));
-            slotOccupants[slot] = refillRole.Name;
-        }
-
-        return new SwitchPlanBuildResult(true, slotsToClear, plan, null);
-    }
-
-    /// <summary>
-    /// 取消本次需要替换的已选角色。
-    /// </summary>
-    /// <param name="currentSlots">当前已选角色快照。</param>
-    /// <param name="slotsToClear">需要取消选择的槽位。</param>
-    /// <param name="ct">取消令牌。</param>
-    private async Task ClearSelectedRoles(
-        IEnumerable<TeamSlotSnapshot> currentSlots,
-        IReadOnlySet<int> slotsToClear,
-        CancellationToken ct)
-    {
-        foreach (var slot in currentSlots
-                     .Where(slot => slot.IsSelected && slotsToClear.Contains(slot.Slot))
-                     .OrderByDescending(slot => slot.Slot))
-        {
-            ClickTeamSlot(slot);
-            await Delay(300, ct);
-        }
-    }
-
-    /// <summary>
-    /// 点击快速编队列表中的已选角色卡片。
-    /// </summary>
-    /// <param name="slot">已选角色快照。</param>
-    private void ClickTeamSlot(TeamSlotSnapshot slot)
-    {
-        if (!slot.CardRect.HasValue)
-        {
-            _logger.LogWarning("切换角色：槽位 {Slot} 缺少网格卡片区域，无法点击取消", slot.Slot);
-            return;
-        }
-
-        var cardRect = slot.CardRect.Value;
-        GameCaptureRegion.GameRegionClick((_, _) => (
-            cardRect.X + cardRect.Width / 2d,
-            cardRect.Y + cardRect.Height / 2d));
-    }
-
-    /// <summary>
-    /// 识别快速编队列表中 1-4 号已选角色。
-    /// </summary>
-    /// <param name="recognizer">头像模型识别器。</param>
-    /// <param name="ct">取消令牌。</param>
-    /// <returns>当前已选角色快照。</returns>
-    private async Task<List<TeamSlotSnapshot>> RecognizeTeamSlots(AvatarGridIconRecognizer recognizer, CancellationToken ct)
-    {
-        var gridScreen = new GridScreen(GridParams.Templates[GridScreenName.PartySetupCharacters], _logger, ct);
-        List<(int X, string? Name, Rect CardRect)> cards = [];
-
-        await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen.WithCancellation(ct))
-        {
-            cards.Add(RecognizeTeamCard(pageRegion, itemRect, recognizer));
-
-            if (cards.Count >= 4)
+            var remainingMilliseconds = deadline - Environment.TickCount64;
+            if (remainingMilliseconds <= 0)
             {
                 break;
             }
+
+            await Delay((int)Math.Min(retryIntervalMilliseconds, remainingMilliseconds), ct);
+        } while (Environment.TickCount64 < deadline);
+
+        throw new PartySetupFailedException(
+            $"切换角色：等待单机图标、联机状态及 top_left 玩家标记超时（{timeoutMilliseconds / 1000} 秒），最后结果：{lastResult}");
+    }
+
+    private void ConfigureOperableSlots()
+    {
+        int[] physicalSlots = (_multiGamePlayerCount, _playerIndex) switch
+        {
+            (1, _) => [1, 2, 3, 4],
+            (2, 1) => [1, 2],
+            (2, 2) => [3, 4],
+            (3, 1) => [1, 2],
+            (3, 2) => [3],
+            (3, 3) => [4],
+            (4, 1) => [1],
+            (4, 2) => [2],
+            (4, 3) => [3],
+            (4, 4) => [4],
+            _ => throw new PartySetupFailedException(
+                $"切换角色：无法为 {_multiGamePlayerCount} 人联机的 {_playerIndex}P 生成可控槽位")
+        };
+
+        _maxControlAvatarCount = physicalSlots.Length;
+        _logicalToPhysicalSlot = physicalSlots
+            .Select((physical, index) => (Logical: index + 1, Physical: physical))
+            .ToDictionary(pair => pair.Logical, pair => pair.Physical);
+
+        _logger.LogInformation("切换角色：{PlayerCount} 人队伍，{PlayerIndex}P 可控物理槽位 {Slots}",
+            _multiGamePlayerCount, _playerIndex, string.Join(",", physicalSlots));
+    }
+
+    private void EnsureSlotIsOperable(int logicalSlot)
+    {
+        if (!_logicalToPhysicalSlot.ContainsKey(logicalSlot))
+        {
+            throw new PartySetupFailedException($"切换角色：{logicalSlot} 号位超出当前账号可操作角色数 {_maxControlAvatarCount}");
+        }
+    }
+
+    private void AdjustTargetsToOperableSlots()
+    {
+        int[] ignoredSlots;
+        if (_usePhysicalSlots)
+        {
+            var logicalByPhysicalSlot = _logicalToPhysicalSlot
+                .ToDictionary(pair => pair.Value, pair => pair.Key);
+            ignoredSlots = _targetRoles
+                .Where(role => !logicalByPhysicalSlot.ContainsKey(role.Slot))
+                .Select(role => role.Slot)
+                .OrderBy(slot => slot)
+                .ToArray();
+
+            _targetRoles = _targetRoles
+                .Where(role => logicalByPhysicalSlot.ContainsKey(role.Slot))
+                .Select(role => role with { Slot = logicalByPhysicalSlot[role.Slot] })
+                .OrderBy(role => role.Slot)
+                .ToList();
+        }
+        else
+        {
+            ignoredSlots = _targetRoles
+                .Where(role => role.Slot > _maxControlAvatarCount)
+                .Select(role => role.Slot)
+                .OrderBy(slot => slot)
+                .ToArray();
+
+            _targetRoles = _targetRoles
+                .Where(role => role.Slot <= _maxControlAvatarCount)
+                .OrderBy(role => role.Slot)
+                .ToList();
         }
 
-        var slots = cards
-            .OrderBy(card => card.X)
-            .Select((card, index) => new TeamSlotSnapshot(index + 1, card.Name, true, card.CardRect))
+        _logger.LogDebug(
+            "切换角色：使用 {MappingMode}，保留 {Targets}，忽略输入槽位 {IgnoredSlots}",
+            _usePhysicalSlots ? "物理槽位映射" : "可控顺序映射",
+            string.Join(",", _targetRoles.Select(role =>
+                $"逻辑{role.Slot}->物理{_logicalToPhysicalSlot[role.Slot]}:{role.Name}")),
+            ignoredSlots.Length == 0 ? "无" : string.Join(",", ignoredSlots));
+    }
+
+    private void ClickFixedTeamSlot(int logicalSlot)
+    {
+        EnsureSlotIsOperable(logicalSlot);
+        var xs = new[] { 470, 800, 1130, 1460 };
+        var physicalSlot = _logicalToPhysicalSlot[logicalSlot];
+        _logger.LogDebug("切换角色：点击逻辑槽位 {LogicalSlot} 对应的物理槽位 {PhysicalSlot}", logicalSlot, physicalSlot);
+        GameCaptureRegion.GameRegion1080PPosClick(xs[physicalSlot - 1], 550);
+    }
+
+    /// <summary>
+    /// 等待“换下”按钮连续两次消失，确认游戏已提交换下操作。
+    /// </summary>
+    private async Task WaitForRoleRemoved(int logicalSlot, CancellationToken ct)
+    {
+        var deadline = Environment.TickCount64 + RemoveConfirmationTimeoutMilliseconds;
+        var consecutiveMissingCount = 0;
+        while (Environment.TickCount64 < deadline)
+        {
+            ct.ThrowIfCancellationRequested();
+            using var capture = CaptureToRectArea();
+            if (IsPartyConfigPage(capture) &&
+                !ContainsText(capture, "换下", Rect1080(382, 994, 87, 51)))
+            {
+                consecutiveMissingCount++;
+                if (consecutiveMissingCount >= 2)
+                {
+                    _logger.LogDebug("切换角色：已确认逻辑槽位 {Slot} 的换下操作生效", logicalSlot);
+                    return;
+                }
+            }
+            else
+            {
+                consecutiveMissingCount = 0;
+            }
+
+            await Delay(150, ct);
+        }
+
+        throw new PartySetupFailedException(
+            $"切换角色：点击逻辑槽位 {logicalSlot} 的换下按钮后，未在 {RemoveConfirmationTimeoutMilliseconds / 1000} 秒内确认操作生效");
+    }
+
+    private async Task<List<TeamSlotSnapshot>> RecognizeTeamSlotsFromCharacterList(
+        AvatarGridIconRecognizer recognizer,
+        int expectedTeamCount,
+        CancellationToken ct)
+    {
+        ClickFixedTeamSlot(1);
+        var listOpened = await NewRetry.WaitForAction(() =>
+        {
+            using var capture = CaptureToRectArea();
+            return IsCharacterList(capture);
+        }, ct, 10, 300);
+        if (!listOpened)
+        {
+            throw new PartySetupFailedException("切换角色：点击队伍槽位后未打开角色列表");
+        }
+
+        List<string?> characterNames = [];
+        var lastDetectedCardCount = 0;
+        try
+        {
+            var gridRoi = Rect1080(
+                CharacterGridRoi1080.X,
+                CharacterGridRoi1080.Y,
+                CharacterGridRoi1080.Width,
+                CharacterGridRoi1080.Height);
+            for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
+            {
+                using var capture = CaptureToRectArea(true);
+                using var gridRegion = capture.DeriveCrop(gridRoi);
+                var cards = DetectCharacterCards(
+                    gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
+                lastDetectedCardCount = cards.Count;
+                LogCardDetection(cards, rejectedCount, connectedComponentCount, attempt);
+                if (cards.Count < expectedTeamCount)
+                {
+                    if (attempt < EmptyCardDetectionRetryCount)
+                    {
+                        await Delay(200, ct);
+                        continue;
+                    }
+
+                    if (cards.Count == 0)
+                    {
+                        throw new PartySetupFailedException("切换角色：连续 3 次未检测到合法角色卡片");
+                    }
+                }
+
+                foreach (var card in cards
+                             .OrderBy(card => card.CardRect.Y)
+                             .ThenBy(card => card.CardRect.X)
+                             .Take(expectedTeamCount))
+                {
+                    using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
+                    var candidate = recognizer.Recognize(avatar);
+                    _logger.LogDebug(
+                        "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
+                        card.CardRect.X,
+                        card.CardRect.Y,
+                        card.CardRect.Width,
+                        card.CardRect.Height,
+                        candidate.CharacterName,
+                        candidate.Score);
+                    characterNames.Add(candidate.Score >= MatchThreshold ? candidate.CharacterName : null);
+                }
+
+                break;
+            }
+        }
+        finally
+        {
+            Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
+        }
+
+        var returned = await NewRetry.WaitForAction(() =>
+        {
+            using var capture = CaptureToRectArea();
+            return IsPartyConfigPage(capture);
+        }, ct, 10, 300);
+        if (!returned)
+        {
+            throw new PartySetupFailedException("切换角色：角色列表关闭后未返回队伍配置页");
+        }
+
+        if (characterNames.Count != expectedTeamCount || characterNames.Any(string.IsNullOrEmpty))
+        {
+            throw new PartySetupFailedException(
+                $"切换角色：角色列表队伍识别不完整，期望 {expectedTeamCount} 个，" +
+                $"末次检测到 {lastDetectedCardCount} 张卡片，成功识别 {characterNames.Count(name => name != null)} 个头像");
+        }
+
+        var result = characterNames
+            .Select((name, index) => new TeamSlotSnapshot(index + 1, name))
             .ToList();
+        _logger.LogDebug(
+            "切换角色：当前账号可控角色 {ControlCount} 个，生成 {SnapshotCount} 项队伍快照，映射 {SlotMapping}",
+            _maxControlAvatarCount,
+            result.Count,
+            string.Join(",", _logicalToPhysicalSlot
+                .OrderBy(pair => pair.Key)
+                .Select(pair => $"逻辑{pair.Key}->物理{pair.Value}")));
 
-        for (int slot = slots.Count + 1; slot <= 4; slot++)
-        {
-            slots.Add(new TeamSlotSnapshot(slot, null, false, null));
-        }
-
-        return slots;
-    }
-
-    /// <summary>
-    /// 识别快速编队列表中指定槽位对应的角色。
-    /// </summary>
-    /// <param name="slot">槽位编号，取值 1-4。</param>
-    /// <param name="recognizer">头像模型识别器。</param>
-    /// <param name="ct">取消令牌。</param>
-    /// <returns>指定槽位快照。</returns>
-    private async Task<TeamSlotSnapshot> RecognizeTeamSlot(int slot, AvatarGridIconRecognizer recognizer, CancellationToken ct)
-    {
-        return (await RecognizeTeamSlots(recognizer, ct)).FirstOrDefault(snapshot => snapshot.Slot == slot)
-               ?? new TeamSlotSnapshot(slot, null, false, null);
-    }
-
-    /// <summary>
-    /// 从网格卡片中识别角色头像。
-    /// </summary>
-    /// <param name="pageRegion">当前网格页截图。</param>
-    /// <param name="itemRect">当前网格卡片区域。</param>
-    /// <param name="recognizer">头像模型识别器。</param>
-    /// <returns>角色卡片横坐标、角色名和卡片区域。</returns>
-    private (int X, string? Name, Rect CardRect) RecognizeTeamCard(ImageRegion pageRegion, Rect itemRect, AvatarGridIconRecognizer recognizer)
-    {
-        var cardRect = pageRegion.ConvertPositionToGameCaptureRegion(itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
-        using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
-        using Mat icon = itemRegion.SrcMat.GetGridIcon();
-        var candidate = recognizer.Recognize(icon);
-        if (candidate.Score < MatchThreshold)
-        {
-            _logger.LogDebug("切换角色：网格卡片 X={X} 识别分数过低，score={Score:0.000}", itemRect.X, candidate.Score);
-            return (itemRect.X, null, cardRect);
-        }
-
-        _logger.LogDebug("切换角色：网格卡片 X={X} 为 {CharacterName}，score={Score:0.000}",
-            itemRect.X,
-            candidate.CharacterName,
-            candidate.Score);
-        return (itemRect.X, candidate.CharacterName, cardRect);
-    }
-
-    /// <summary>
-    /// 等待指定槽位识别为目标角色。
-    /// </summary>
-    /// <param name="role">目标角色。</param>
-    /// <param name="recognizer">头像模型识别器。</param>
-    /// <param name="ct">取消令牌。</param>
-    /// <returns>目标槽位识别为目标角色返回 true。</returns>
-    private async Task<bool> WaitForRoleInSlot(TargetRole role, AvatarGridIconRecognizer recognizer, CancellationToken ct)
-    {
-        return await NewRetry.WaitForAction(async () =>
-        {
-            var snapshot = await RecognizeTeamSlot(role.Slot, recognizer, ct);
-            return role.Matches(snapshot.Name);
-        }, ct, 6, 300);
-    }
-
-    /// <summary>
-    /// 清掉误进入其他槽位的目标角色。
-    /// </summary>
-    /// <param name="role">目标角色。</param>
-    /// <param name="recognizer">头像模型识别器。</param>
-    /// <param name="ct">取消令牌。</param>
-    private async Task ClearMisplacedRole(TargetRole role, AvatarGridIconRecognizer recognizer, CancellationToken ct)
-    {
-        var misplacedSlots = (await RecognizeTeamSlots(recognizer, ct))
-            .Where(slot => slot.Slot != role.Slot && role.Matches(slot.Name))
-            .OrderByDescending(slot => slot.Slot)
-            .ToList();
-
-        foreach (var slot in misplacedSlots)
-        {
-            _logger.LogWarning("切换角色：{Name} 进入了非目标槽位 {Slot}，取消选中后重试", role.Name, slot.Slot);
-            ClickTeamSlot(slot);
-            await Delay(300, ct);
-        }
-    }
-
-    /// <summary>
-    /// 获取筛选面板底部已选筛选标签区域。
-    /// </summary>
-    /// <returns>底部筛选标签区域。</returns>
-    private Rect GetFilterTagsRoi()
-    {
-        return Rect1080(35, 910, 745, 55);
+        return result;
     }
 
     /// <summary>
@@ -1510,34 +1455,93 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <returns>找到并点击目标角色返回 true；遍历结束仍未找到返回 false。</returns>
     private async Task<bool> FindAndClickAvatar(TargetRole role, AvatarGridIconRecognizer recognizer, CancellationToken ct)
     {
-        var gridScreen = new GridScreen(GridParams.Templates[GridScreenName.PartySetupCharacters], _logger, ct);
-        await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen.WithCancellation(ct))
+        var gridParams = GridParams.Templates[GridScreenName.PartySetupCharacters];
+        var scroller = new GridScroller(gridParams, _logger, Simulation.SendInput, ct);
+        var gridRoi = Rect1080(
+            CharacterGridRoi1080.X,
+            CharacterGridRoi1080.Y,
+            CharacterGridRoi1080.Width,
+            CharacterGridRoi1080.Height);
+
+        while (true)
         {
-            using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
-            using Mat icon = itemRegion.SrcMat.GetGridIcon();
-            var candidate = recognizer.Recognize(icon);
-            _logger.LogDebug("切换角色：识别头像 {CharacterName}，score={Score:0.000}", candidate.CharacterName, candidate.Score);
-            if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
+            ct.ThrowIfCancellationRequested();
+            for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
             {
-                itemRegion.Click();
-                await Delay(300, ct);
-                return true;
+                using var capture = CaptureToRectArea(true);
+                using var gridRegion = capture.DeriveCrop(gridRoi);
+                var cards = DetectCharacterCards(
+                    gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
+                LogCardDetection(cards, rejectedCount, connectedComponentCount, attempt);
+                if (cards.Count == 0)
+                {
+                    if (attempt < EmptyCardDetectionRetryCount)
+                    {
+                        await Delay(200, ct);
+                        continue;
+                    }
+
+                    throw new PartySetupFailedException("切换角色：连续 3 次未检测到合法角色卡片");
+                }
+
+                foreach (var card in cards.OrderBy(card => card.CardRect.Y).ThenBy(card => card.CardRect.X))
+                {
+                    using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
+                    var candidate = recognizer.Recognize(avatar);
+                    _logger.LogDebug(
+                        "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
+                        card.CardRect.X,
+                        card.CardRect.Y,
+                        card.CardRect.Width,
+                        card.CardRect.Height,
+                        candidate.CharacterName,
+                        candidate.Score);
+                    if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
+                    {
+                        using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
+                        cardRegion.Click();
+                        await Delay(300, ct);
+                        return true;
+                    }
+                }
+
+                break;
+            }
+
+            if (!await scroller.TryVerticalScollDown((src, _) =>
+                DetectCharacterCards(src, out _, out _).Select(card => card.CardRect)))
+            {
+                return false;
             }
         }
-
-        return false;
     }
 
-    /// <summary>
-    /// 尝试清除当前筛选条件，为下一个目标角色恢复完整角色列表。
-    /// </summary>
-    /// <param name="page">页面操作对象。</param>
-    private void ClearFilter(BvPage page)
+    private List<FixedSizeGridCard> DetectCharacterCards(
+        Mat gridMat,
+        out int rejectedCount,
+        out int connectedComponentCount)
     {
-        if (!TryClickText(page, "清除", Rect1080(699, 922, 55, 31)))
-        {
-            _logger.LogDebug("切换角色：未找到清除筛选按钮，继续执行");
-        }
+        return FixedSizeGridCardDetector.Detect(
+            gridMat,
+            _assetScale,
+            FixedSizeGridCardLayout.PartySetupCharacters,
+            out rejectedCount,
+            out connectedComponentCount);
+    }
+
+    private void LogCardDetection(
+        IReadOnlyCollection<FixedSizeGridCard> cards,
+        int rejectedCount,
+        int connectedComponentCount,
+        int attempt)
+    {
+        _logger.LogDebug(
+            "切换角色：卡片检测：连通域={ConnectedComponentCount}，有效={CardCount}，丢弃={RejectedCount}，次数={Attempt}/{RetryCount}",
+            connectedComponentCount,
+            cards.Count,
+            rejectedCount,
+            attempt,
+            EmptyCardDetectionRetryCount);
     }
 
     /// <summary>
@@ -1571,6 +1575,19 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 region.Dispose();
             }
         }
+    }
+
+    private static bool TryClickAnyText(BvPage page, IReadOnlyCollection<string> texts, Rect roi)
+    {
+        foreach (var text in texts)
+        {
+            if (TryClickText(page, text, roi))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
