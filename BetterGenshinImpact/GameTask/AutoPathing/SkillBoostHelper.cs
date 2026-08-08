@@ -26,7 +26,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 /// <summary>
-/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者、法尔伽）
+/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者、法尔伽、夜兰）
 /// </summary>
 public partial class PathExecutor
 {
@@ -65,6 +65,7 @@ public partial class PathExecutor
         { "闲云", 120 },
         { "希诺宁", 120 },
         { "法尔伽", 120 },
+        { "夜兰", 120 },
     };
 
     private string _hurryOnAvatar = "";
@@ -81,6 +82,18 @@ public partial class PathExecutor
     private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
     /// <summary>
+    /// 夜兰本次飞行开始时间，用于飞行超过5秒超时退出判断
+    /// </summary>
+    private DateTime _lastYelanFlyTime = DateTime.MinValue;
+    /// <summary>
+    /// 夜兰飞行中上一帧距离，用于检测飞行卡顿（连续3帧距离变化不超过8）
+    /// </summary>
+    private double _lastYelanDistance;
+    /// <summary>
+    /// 夜兰飞行中距离无明显变化的连续帧数
+    /// </summary>
+    private int _yelanStillFrames;
+    /// <summary>
     /// 法尔伽下次可施放E的时间（null 表示可施放），施放E后置为2秒后
     /// </summary>
     private DateTime? _falgaNextCheckTime;
@@ -93,9 +106,12 @@ public partial class PathExecutor
     private string GetSwitchToWalkIndex()
     {
         // 第一步：优先行走位（MainAvatarIndex），仍需排除赶路角色自身与黑名单
+        // mainIdx 需在队伍实际人数范围内（AvatarCount），防止越界 SelectAvatar 抛异常
         if (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex)
             && int.TryParse(PartyConfig.MainAvatarIndex, out var mainIdx)
-            && mainIdx >= 1 && mainIdx <= 4)
+            && mainIdx >= 1
+            && _combatScenes != null
+            && mainIdx <= _combatScenes.AvatarCount)
         {
             var mainAvatar = _combatScenes?.SelectAvatar(mainIdx);
             if (mainAvatar != null
@@ -915,6 +931,117 @@ public partial class PathExecutor
                         return true;
                     }
 
+                    return false;
+                }
+                break;
+            }
+
+            case "夜兰":
+            {
+                try
+                {
+                    // 1. 接近处理：距离小于接近距离且需要接近 → 退出飞行（点按跳跃）
+                    if (state.PendingApproach)
+                    {
+                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                        if (shouldApproach)
+                        {
+                            Simulation.ReleaseAllKey();
+                            state.PendingApproach = false;
+                            if (state.FlyingState)
+                            {
+                                state.FlyingState = false;
+                                _lastLandingTime = DateTime.UtcNow;
+                                Logger.LogInformation("自动赶路：夜兰接近节点，退出飞行");
+                                Simulation.SendInput.SimulateAction(GIActions.Jump); // 第1种：点按跳跃
+                            }
+                            return false;
+                        }
+                    }
+
+                    // 飞行状态中
+                    if (state.FlyingState)
+                    {
+                        // 0.5秒节流，避免频繁OCR
+                        if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                            return true;
+                        _lastSkillCheckTime = DateTime.UtcNow;
+
+                        // 2. 识别到CD（技能结束进入冷却）→ 退出飞行（不点按跳跃）
+                        var cd = await ReadEskillCdAsync("夜兰");
+                        if (cd > 0)
+                        {
+                            state.FlyingState = false;
+                            _lastLandingTime = DateTime.UtcNow;
+                            Logger.LogInformation("自动赶路：夜兰技能CD出现，飞行结束");
+                            return false;
+                        }
+
+                        // 3. 飞行超过5秒超时 → 退出飞行（点按跳跃）
+                        if ((DateTime.UtcNow - _lastYelanFlyTime).TotalSeconds >= 5)
+                        {
+                            state.FlyingState = false;
+                            _lastLandingTime = DateTime.UtcNow;
+                            Logger.LogInformation("自动赶路：夜兰飞行超时，退出飞行");
+                            Simulation.SendInput.SimulateAction(GIActions.Jump); // 第3种：点按跳跃
+                            return false;
+                        }
+
+                        // 4. 连续3帧distance变化不超过8（飞行卡顿）→ 退出飞行（点按跳跃）
+                        if (Math.Abs(distance - _lastYelanDistance) <= 8)
+                        {
+                            _yelanStillFrames++;
+                        }
+                        else
+                        {
+                            _yelanStillFrames = 0;
+                        }
+                        _lastYelanDistance = distance;
+
+                        if (_yelanStillFrames >= 3)
+                        {
+                            state.FlyingState = false;
+                            _lastLandingTime = DateTime.UtcNow;
+                            Logger.LogInformation("自动赶路：夜兰飞行卡顿，退出飞行");
+                            Simulation.SendInput.SimulateAction(GIActions.Jump); // 第4种：点按跳跃
+                            return false;
+                        }
+
+                        return true;
+                    }
+
+                    // 2. 进入飞行：大于赶路距离且E技能CD识别无结果（可用）时长按E 300ms
+                    if (distance > PartyConfig.Distance
+                        && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                    {
+                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                        if (!avatar.IsActive(screen2))
+                        {
+                            return false;
+                        }
+
+                        var cd = await ReadEskillCdAsync("夜兰");
+                        if (cd <= 0 && state.RotationStableCount >= 1
+                            && (DateTime.UtcNow - _lastLandingTime).TotalSeconds >= 2)
+                        {
+                            Logger.LogInformation("自动赶路：夜兰启动飞行");
+                            await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 300, ct);
+                            state.FlyingState = true;
+                            _lastYelanFlyTime = DateTime.UtcNow;
+                            _lastYelanDistance = distance;
+                            _yelanStillFrames = 0;
+                            return true;
+                        }
+
+                        return false;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
+                    state.FlyingState = false;
                     return false;
                 }
                 break;
