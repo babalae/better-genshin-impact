@@ -299,6 +299,7 @@ public partial class PathExecutor
                     // 不管咋样，松开所有按键
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Mouse.RightButtonUp();
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
                 }
             }
 

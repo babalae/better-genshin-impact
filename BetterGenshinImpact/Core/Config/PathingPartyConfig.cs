@@ -199,6 +199,13 @@ public partial class PathingPartyConfig : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 赶路角色选择说明：
+    /// - 空选（""）：不进行赶路动作，仅普通跑图
+    /// - 选择具体角色：仅使用该角色的赶路逻辑
+    /// - 选择"自动"：优先使用行走位（MainAvatarIndex）角色跑图，行走位不支持赶路时，按支持列表顺序尝试使用队伍中其他角色
+    /// 支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰、阿蕾奇诺
+    /// </summary>
     [JsonIgnore]
     public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁","法尔伽","夜兰","阿蕾奇诺"];
 

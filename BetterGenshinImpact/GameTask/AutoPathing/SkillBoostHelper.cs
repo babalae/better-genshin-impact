@@ -922,6 +922,11 @@ public partial class PathExecutor
                         return false;
                     }
 
+                    // 0.5秒节流，避免频繁OCR
+                    if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                        return false;
+                    _lastSkillCheckTime = DateTime.UtcNow;
+
                     // 正常检测并记录CD（识别结果原样记录，无识别结果时由兜底逻辑处理）
                     var cd = await ReadEskillCdAsync("法尔伽");
 
@@ -1025,6 +1030,11 @@ public partial class PathExecutor
                         {
                             return false;
                         }
+
+                        // 0.5秒节流，避免频繁OCR
+                        if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
+                            return false;
+                        _lastSkillCheckTime = DateTime.UtcNow;
 
                         var cd = await ReadEskillCdAsync("夜兰");
                         // 技能可用：OCR 无 CD，或技能槽位出现可用高亮色 #00DCFA（OCR 非唯一判断）
