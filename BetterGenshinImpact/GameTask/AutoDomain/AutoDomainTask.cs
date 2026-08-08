@@ -72,6 +72,13 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     private readonly string rapidformationString;
     private readonly string limitedFullyString;
     private readonly string limitedFullyAllString;
+    private readonly string singlePlayerChallengeString;
+    private readonly string startChallengeString;
+    private readonly string retryDomainPromptPattern;
+    private readonly string petrifiedTreeString;
+    private readonly string insufficientCountString;
+    private readonly string replenishResinString;
+    private readonly string cancelButtonString;
 
     private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
 
@@ -106,6 +113,39 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
         this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全部开放");
         this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, "限时开放");
+        this.singlePlayerChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "单人挑战");
+        this.startChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "开始挑战");
+        this.retryDomainPromptPattern = stringLocalizer.WithCultureGet(cultureInfo, "是否仍要.*挑战.*秘境");
+        this.petrifiedTreeString = stringLocalizer.WithCultureGet(cultureInfo, "石化古树");
+        this.insufficientCountString = stringLocalizer.WithCultureGet(cultureInfo, "数量不足");
+        this.replenishResinString = stringLocalizer.WithCultureGet(cultureInfo, "补充原粹树脂");
+        this.cancelButtonString = stringLocalizer.WithCultureGet(cultureInfo, "取消");
+    }
+
+    /// <summary>
+    /// 解析"使用"按键的本地化匹配串。独立于实例字段，因为 <see cref="PressUseResin(List{Region}, string, string)"/>
+    /// 是 static 的，且被 AutoLeyLineOutcropTask/AutoStygianOnslaughtTask 等其他任务类共享调用。
+    /// </summary>
+    private static string ResolveUseButtonPattern()
+    {
+        IStringLocalizer<AutoDomainTask> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        return stringLocalizer.WithCultureGet(cultureInfo, "使用");
+    }
+
+    /// <summary>
+    /// 解析树脂名称的本地化匹配串，同一个 idiom 用于 <see cref="PressUseResin(List{Region}, string, string)"/>。
+    /// <paramref name="resinName"/> 是内部使用的中文 key（20/40 原粹树脂已在调用前折叠为"原粹树脂"）；
+    /// 若资源里没有对应条目（如 zh-Hans，或调用方已经传入本地化后的值），本地化器会原样回退返回入参本身，
+    /// 因此对已本地化的调用方（future PR-B）是无操作的、向后兼容的。
+    /// </summary>
+    private static string ResolveResinNamePattern(string resinName)
+    {
+        IStringLocalizer<AutoDomainTask> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        return stringLocalizer.WithCultureGet(cultureInfo, resinName);
     }
 
     private static RecognitionObject GetConfirmRa(params string[] targetText)
@@ -401,7 +441,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             500
         );
         var menuFound = await NewRetry.WaitForElementAppear(
-            GetConfirmRa("单人挑战"),
+            GetConfirmRa(singlePlayerChallengeString),
             null,//只等待,不执行操作
             _ct,
             20,
@@ -499,12 +539,12 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 {
                     ra2.Click();
                     ra2.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");
+                    Logger.LogInformation("自动秘境：点击 {Text}", singlePlayerChallengeString);
                 }
 
                 using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
                     ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
-                if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
+                if (confirmRectArea2.IsExist() && Regex.IsMatch(confirmRectArea2.Text, retryDomainPromptPattern))
                 {
                     Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
                     throw new Exception("当前树脂不足，自动秘境停止运行。");
@@ -534,14 +574,14 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         // 点击开始挑战确认并等待“开始挑战”文字消失
         var startFightFound = await NewRetry.WaitForElementDisappear(
-            GetConfirmRa("开始挑战"),
+            GetConfirmRa(startChallengeString),
             screen =>
             {
                 screen.Find(RecognitionAssets.Get("AutoFight", "Confirm", screen), ra =>
                 {
                     ra.Click();
                     ra.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "开始挑战");
+                    Logger.LogInformation("自动秘境：点击 {Text}", startChallengeString);
                 });
             },
             _ct,
@@ -1151,7 +1191,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             using var ra = CaptureToRectArea();
             var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-            var res = regionList.FirstOrDefault(t => t.Text.Contains("石化古树"));
+            var res = regionList.FirstOrDefault(t => Regex.IsMatch(t.Text, petrifiedTreeString));
             if (res != null)
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
@@ -1167,7 +1207,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
+        if (textListInPrompt.Any(t => Regex.IsMatch(t.Text, insufficientCountString, RegexOptions.IgnoreCase) || Regex.IsMatch(t.Text, replenishResinString, RegexOptions.IgnoreCase)))
         {
             // 没有原粹树脂，直接退出秘境
             Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
@@ -1320,9 +1360,9 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         // 真没树脂了还有提示兜底
                         await Delay(900, _ct);
                         var textListInNoResinPrompt = CaptureToRectArea().FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-                        if (textListInNoResinPrompt.Any(t => t.Text.Contains("是否仍要") && t.Text.Contains("挑战") && t.Text.Contains("秘境")))
+                        if (textListInNoResinPrompt.Any(t => Regex.IsMatch(t.Text, retryDomainPromptPattern)))
                         {
-                            var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => t.Text.Contains("取消"));
+                            var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => Regex.IsMatch(t.Text, cancelButtonString));
                             if (cancelBtn != null)
                             {
                                 cancelBtn.Click();
@@ -1394,11 +1434,15 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             resinName = "原粹树脂";
         }
 
-        var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
+        // resinName 折叠后仍是内部中文 key（GetResinNum 的分支判断依赖这个中文字面量），
+        // 这里只本地化用于匹配 OCR 文本的模式，不改变 resinName 本身
+        var resinNamePattern = ResolveResinNamePattern(resinName);
+        var resinKey = regionList.FirstOrDefault(t => Regex.IsMatch(t.Text, resinNamePattern));
         if (resinKey != null)
         {
             // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
-            var useList = regionList.Where(t => t.Text.Contains("使用")).ToList();
+            var useButtonPattern = ResolveUseButtonPattern();
+            var useList = regionList.Where(t => Regex.IsMatch(t.Text, useButtonPattern)).ToList();
             if (useList.Count != 0)
             {
                 // 找到使用按键
