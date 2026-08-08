@@ -418,7 +418,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="空选：不进行赶路动作。选择具体角色：使用对应角色。选择自动：优先选择行走位跑图，行走位不支持时尝试使用其他角色。支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰、阿蕾奇诺"
+                                              Text="空选：不进行赶路动作。选择具体角色：使用对应角色。选择自动：优先选择行走位跑图，行走位不支持时尝试使用其他角色。支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"

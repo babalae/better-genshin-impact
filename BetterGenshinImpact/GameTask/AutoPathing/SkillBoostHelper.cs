@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -27,7 +27,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 /// <summary>
-/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者、法尔伽、夜兰、阿蕾奇诺）
+/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者、法尔伽、夜兰）
 /// </summary>
 public partial class PathExecutor
 {
@@ -67,7 +67,6 @@ public partial class PathExecutor
         { "希诺宁", 120 },
         { "法尔伽", 120 },
         { "夜兰", 120 },
-        { "阿蕾奇诺", 120 },
     };
 
     private string _hurryOnAvatar = "";
@@ -84,15 +83,15 @@ public partial class PathExecutor
     private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
     /// <summary>
-    /// 本次飞行开始时间（夜兰/阿蕾奇诺共用），用于飞行超时退出判断
+    /// 本次飞行开始时间（夜兰专用），用于飞行超时退出判断
     /// </summary>
     private DateTime _lastFlyStartTime = DateTime.MinValue;
     /// <summary>
-    /// 飞行中上一帧距离（夜兰/阿蕾奇诺共用），用于检测飞行卡顿（连续3帧距离变化不超过8）
+    /// 飞行中上一帧距离（夜兰专用），用于检测飞行卡顿（连续2帧距离变化不超过8）
     /// </summary>
     private double _lastFlyDistance;
     /// <summary>
-    /// 飞行中距离无明显变化的连续帧数（夜兰/阿蕾奇诺共用）
+    /// 飞行中距离无明显变化的连续帧数（夜兰专用）
     /// </summary>
     private int _flyStillFrames;
     /// <summary>
@@ -606,7 +605,7 @@ public partial class PathExecutor
                     {
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                         _lastJumpFlyTime = DateTime.UtcNow;
-                        return true;
+                        return false;
                     }
 
                     return false;
@@ -930,14 +929,14 @@ public partial class PathExecutor
                     // 正常检测并记录CD（识别结果原样记录，无识别结果时由兜底逻辑处理）
                     var cd = await ReadEskillCdAsync("法尔伽");
 
-                    // 视角稳定且CD就绪时施放E（长按300ms，内部try/finally保证取消时也松开按键），施放后直接记录长按CD 8秒
+                    // 视角稳定且CD就绪时施放E（长按500ms，内部try/finally保证取消时也松开按键），施放后直接记录长按CD 8秒
                     if (cd <= 0 && state.RotationStableCount >= 2)
                     {
                         Logger.LogInformation("雷霆大跳！");
-                        await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 300, ct);
+                        await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 500, ct);
                         ESkillCdTracker.Record("法尔伽", 8);
                         _falgaNextCheckTime = DateTime.UtcNow.AddSeconds(2);
-                        return true;
+                        return false;
                     }
 
                     return false;
@@ -978,13 +977,17 @@ public partial class PathExecutor
                         _lastSkillCheckTime = DateTime.UtcNow;
 
                         // 2. 识别到CD（技能结束进入冷却）→ 退出赶路（不点按跳跃）
-                        var cd = await ReadEskillCdAsync("夜兰");
-                        if (cd > 0)
+                        // 进入飞行后1.5秒内不进行OCR识别退出，避免刚启动时OCR误判导致误退出
+                        if ((DateTime.UtcNow - _lastFlyStartTime).TotalSeconds >= 1.5)
                         {
-                            state.FlyingState = false;
-                            _lastLandingTime = DateTime.UtcNow;
-                            Logger.LogInformation("自动赶路：夜兰技能CD出现，赶路结束");
-                            return false;
+                            var cd = await ReadEskillCdAsync("夜兰");
+                            if (cd > 0)
+                            {
+                                state.FlyingState = false;
+                                _lastLandingTime = DateTime.UtcNow;
+                                Logger.LogInformation("自动赶路：夜兰技能CD出现，赶路结束");
+                                return false;
+                            }
                         }
 
                         // 3. 超过5秒超时 → 退出赶路（点按跳跃）
@@ -997,7 +1000,7 @@ public partial class PathExecutor
                             return false;
                         }
 
-                        // 4. 连续3帧distance变化不超过8（卡顿）→ 退出赶路（点按跳跃）
+                        // 4. 连续2帧distance变化不超过8（卡顿）→ 退出赶路（点按跳跃）
                         if (Math.Abs(distance - _lastFlyDistance) <= 8)
                         {
                             _flyStillFrames++;
@@ -1008,7 +1011,7 @@ public partial class PathExecutor
                         }
                         _lastFlyDistance = distance;
 
-                        if (_flyStillFrames >= 3)
+                        if (_flyStillFrames >= 2)
                         {
                             state.FlyingState = false;
                             _lastLandingTime = DateTime.UtcNow;
@@ -1057,122 +1060,6 @@ public partial class PathExecutor
                 catch (Exception e)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
-                    state.FlyingState = false;
-                    return false;
-                }
-                break;
-            }
-
-            case "阿蕾奇诺":
-            {
-                try
-                {
-                    // 1. 接近处理：接近节点 → 退出飞行（松开左键）
-                    if (state.PendingApproach)
-                    {
-                        var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-
-                        if (shouldApproach)
-                        {
-                            // 只松开左键退出飞行姿态，不松其他按键（保持移动）
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                            state.PendingApproach = false;
-                            if (state.FlyingState)
-                            {
-                                state.FlyingState = false;
-                                _lastLandingTime = DateTime.UtcNow;
-                                Logger.LogInformation("自动赶路：阿蕾奇诺接近节点，退出飞行");
-                            }
-                            return false;
-                        }
-                    }
-
-                    // 飞行姿态中（持续按住左键）
-                    if (state.FlyingState)
-                    {
-                        // 1. 7秒超时 → 退出（松开左键）
-                        if ((DateTime.UtcNow - _lastFlyStartTime).TotalSeconds >= 7)
-                        {
-                            state.FlyingState = false;
-                            _lastLandingTime = DateTime.UtcNow;
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                            Logger.LogInformation("自动赶路：阿蕾奇诺飞行超时，退出飞行");
-                            return false;
-                        }
-
-                        // 3. 夜兰同款：连续3帧distance变化不超过8（飞行卡顿）→ 退出（松开左键）
-                        if (Math.Abs(distance - _lastFlyDistance) <= 8)
-                        {
-                            _flyStillFrames++;
-                        }
-                        else
-                        {
-                            _flyStillFrames = 0;
-                        }
-                        _lastFlyDistance = distance;
-
-                        if (_flyStillFrames >= 3)
-                        {
-                            state.FlyingState = false;
-                            _lastLandingTime = DateTime.UtcNow;
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                            Logger.LogInformation("自动赶路：阿蕾奇诺飞行卡顿，退出飞行");
-                            return false;
-                        }
-
-                        // 4. 体力较低 → 退出（松开左键）
-                        if (DetectStamina() < 60)
-                        {
-                            state.FlyingState = false;
-                            _lastLandingTime = DateTime.UtcNow;
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                            Logger.LogInformation("自动赶路：阿蕾奇诺体力不足，退出飞行");
-                            return false;
-                        }
-
-                        // 飞行姿态期间持续按住左键（普通攻击映射键，重复发送KeyDown无副作用）
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-
-                        return true;
-                    }
-
-                    // 进入飞行姿态：体力较高时按下左键（持续按住）
-                    if (distance > PartyConfig.Distance
-                        && nextWaypoint?.MoveMode != MoveModeEnum.Fly.Code  // 下一节点是飞行则禁止启动
-                        && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
-                    {
-                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
-
-                        if (!avatar.IsActive(screen2))
-                        {
-                            return false;
-                        }
-
-                        // 退出后5秒内不再进入，且体力较高、视角稳定
-                        if ((DateTime.UtcNow - _lastLandingTime).TotalSeconds >= 5
-                            && DetectStamina() >= 150
-                            && state.RotationStableCount >= 1)
-                        {
-                            Logger.LogInformation("自动赶路：阿蕾奇诺启动飞行");
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-                            state.FlyingState = true;
-                            _lastFlyStartTime = DateTime.UtcNow;
-                            _lastFlyDistance = distance;
-                            _flyStillFrames = 0;
-                            return true;
-                        }
-
-                        return false;
-                    }
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
-                    // 异常时确保松开左键
-                    if (state.FlyingState)
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
-                    }
                     state.FlyingState = false;
                     return false;
                 }

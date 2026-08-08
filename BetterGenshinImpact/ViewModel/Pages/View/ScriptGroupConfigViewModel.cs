@@ -88,7 +88,7 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
 
     // 接近停车距离：仅当角色为 自动 或存在接近停车逻辑的角色（闲云/法尔伽无此逻辑）时显示
     public bool IsApproachStopDistanceVisible => PathingConfig.HurryOnAvatar is "自动"
-        or "玛薇卡" or "希诺宁" or "桑多涅" or "恰斯卡" or "伊法" or "流浪者" or "夜兰" or "阿蕾奇诺";
+        or "玛薇卡" or "希诺宁" or "桑多涅" or "恰斯卡" or "伊法" or "流浪者" or "夜兰";
 
     private void OnPathingConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
