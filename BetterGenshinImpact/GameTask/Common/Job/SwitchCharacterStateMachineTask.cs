@@ -57,6 +57,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private const string SwordWeaponType = "单手剑";
     private const int EmptyCardDetectionRetryCount = 3;
     private const int MaxRoleSwitchAttempts = 3;
+    private const int RemoveConfirmationTimeoutMilliseconds = 3000;
     private static readonly Rect CharacterGridRoi1080 = new(26, 97, 763, 546);
 
     private readonly ILogger<SwitchCharacterStateMachineTask> _logger = App.GetLogger<SwitchCharacterStateMachineTask>();
@@ -285,7 +286,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         _pendingFilterElementType = role.SkipElementFilter ? null : Recognizer.GetElementType(role.PrimaryCandidateName);
         _pendingFilterWeaponType = role.ForcedWeaponType ?? Recognizer.GetWeaponType(role.PrimaryCandidateName);
-        _logger.LogInformation("切换角色：{Slot}. {Name}，武器：{Weapon}，元素筛选：{ElementFilter}",
+        _logger.LogDebug("切换角色：{Slot}. {Name}，武器：{Weapon}，元素筛选：{ElementFilter}",
             role.Slot,
             role.Name,
             _pendingFilterWeaponType,
@@ -335,7 +336,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.FindAndClickAvatar, Order = 15)]
     private bool DetectFindAndClickAvatar(ImageRegion capture)
     {
-        return _workflowState == SwitchCharacterState.FindAndClickAvatar && IsCharacterList(capture);
+        return _workflowState == SwitchCharacterState.FindAndClickAvatar
+               && IsCharacterList(capture)
+               && !IsFilterPanel(capture);
     }
 
     /// <summary>
@@ -613,9 +616,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                     throw new PartySetupFailedException($"切换角色：未找到 {rebuildStartSlot} 号位的换下按钮");
                 }
 
+                await WaitForRoleRemoved(rebuildStartSlot, _ct);
                 _expectedTeamCount--;
                 _teamSnapshotDirty = true;
-                await Delay(500, _ct);
                 return StateHandlerResult.Wait;
             }
 
@@ -642,12 +645,15 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
 
         if (_currentRole == null)
         {
+            var currentNameBySlot = _currentTeamSlots.ToDictionary(slot => slot.Slot, slot => slot.Name);
             var nextRole = _requestedTargetRoles
                 .OrderBy(role => role.Slot)
-                .FirstOrDefault(role => !role.Matches(_currentTeamSlots.First(slot => slot.Slot == role.Slot).Name))
+                .FirstOrDefault(role =>
+                    !currentNameBySlot.TryGetValue(role.Slot, out var currentName) || !role.Matches(currentName))
                 ?? _targetRoles
                 .OrderBy(role => role.Slot)
-                .FirstOrDefault(role => !role.Matches(_currentTeamSlots.First(slot => slot.Slot == role.Slot).Name));
+                .FirstOrDefault(role =>
+                    !currentNameBySlot.TryGetValue(role.Slot, out var currentName) || !role.Matches(currentName));
             if (nextRole != null)
             {
                 if (_roleSwitchAttempts.GetValueOrDefault(nextRole.Slot) >= MaxRoleSwitchAttempts)
@@ -664,7 +670,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         {
             if (_needsFinalVerification)
             {
-                _logger.LogInformation("切换角色：所有目标已提交，开始统一识别并验证实际队伍");
+                _logger.LogDebug("切换角色：所有目标已提交，开始统一识别并验证实际队伍");
                 _teamSnapshotDirty = true;
                 return StateHandlerResult.Wait;
             }
@@ -691,11 +697,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 throw new PartySetupFailedException($"切换角色：未找到 {misplaced.Slot} 号位的换下按钮");
             }
 
+            await WaitForRoleRemoved(misplaced.Slot, _ct);
             _expectedTeamCount--;
             _teamSnapshotDirty = true;
             _prepareSuffixRebuildAfterRemoval = true;
             _currentRole = null;
-            await Delay(500, _ct);
             return StateHandlerResult.Wait;
         }
 
@@ -1285,6 +1291,39 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         GameCaptureRegion.GameRegion1080PPosClick(xs[physicalSlot - 1], 550);
     }
 
+    /// <summary>
+    /// 等待“换下”按钮连续两次消失，确认游戏已提交换下操作。
+    /// </summary>
+    private async Task WaitForRoleRemoved(int logicalSlot, CancellationToken ct)
+    {
+        var deadline = Environment.TickCount64 + RemoveConfirmationTimeoutMilliseconds;
+        var consecutiveMissingCount = 0;
+        while (Environment.TickCount64 < deadline)
+        {
+            ct.ThrowIfCancellationRequested();
+            using var capture = CaptureToRectArea();
+            if (IsPartyConfigPage(capture) &&
+                !ContainsText(capture, "换下", Rect1080(382, 994, 87, 51)))
+            {
+                consecutiveMissingCount++;
+                if (consecutiveMissingCount >= 2)
+                {
+                    _logger.LogDebug("切换角色：已确认逻辑槽位 {Slot} 的换下操作生效", logicalSlot);
+                    return;
+                }
+            }
+            else
+            {
+                consecutiveMissingCount = 0;
+            }
+
+            await Delay(150, ct);
+        }
+
+        throw new PartySetupFailedException(
+            $"切换角色：点击逻辑槽位 {logicalSlot} 的换下按钮后，未在 {RemoveConfirmationTimeoutMilliseconds / 1000} 秒内确认操作生效");
+    }
+
     private async Task<List<TeamSlotSnapshot>> RecognizeTeamSlotsFromCharacterList(
         AvatarGridIconRecognizer recognizer,
         int expectedTeamCount,
@@ -1497,13 +1536,12 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         int attempt)
     {
         _logger.LogDebug(
-            "切换角色：白色底栏连通域 {ConnectedComponentCount} 个，生成 {CardCount} 个合法卡片，边界丢弃 {RejectedCount} 个（第 {Attempt}/{RetryCount} 次），卡片={CardRects}",
+            "切换角色：卡片检测：连通域={ConnectedComponentCount}，有效={CardCount}，丢弃={RejectedCount}，次数={Attempt}/{RetryCount}",
             connectedComponentCount,
             cards.Count,
             rejectedCount,
             attempt,
-            EmptyCardDetectionRetryCount,
-            cards.Count == 0 ? "无" : string.Join(";", cards.Select(card => card.CardRect)));
+            EmptyCardDetectionRetryCount);
     }
 
     /// <summary>
