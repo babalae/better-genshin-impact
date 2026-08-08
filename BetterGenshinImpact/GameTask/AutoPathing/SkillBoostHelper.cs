@@ -286,12 +286,13 @@ public partial class PathExecutor
                     }
                 }
 
+                // 刚上车后的2秒内跳过图标检测（上/下车动作期间图标不稳定），跳飞/骑行/禁用冲刺三处共用
+                var justBoarded = (DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds < 2;
+
                 //满足条件时，尝试跳飞
                 if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
                 {
                     var jumpFlyIconState = GetMavikaESkillIconState(screen2);
-                    // 刚上车后的2秒内跳过图标检测（上/下车动作期间图标不稳定），强制视为通过
-                    var justBoarded = (DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds < 2;
                     // 非豁免期间仅下车图标（3）可跳飞；状态4（E可用）由刚上车豁免覆盖，无需额外OCR判断
                     if (!justBoarded && jumpFlyIconState != 3)
                     {
@@ -343,9 +344,9 @@ public partial class PathExecutor
                 }
 
                 var iconState = GetMavikaESkillIconState(screen2);
-                // 先判断距离满足骑行条件，避免无谓读取冷却；在车上（下车图标3）时短路不读取冷却
+                // 先判断距离满足骑行条件，避免无谓读取冷却；刚上车2秒内或下车图标（3）视为在车上
                 if (distance > PartyConfig.Distance
-                    && iconState == 3)
+                    && (justBoarded || iconState == 3))
                 {
                     if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
                     {
@@ -384,9 +385,9 @@ public partial class PathExecutor
 
                 }
 
-                // 玛薇卡逻辑最后：勾选了禁用冲刺时，在车上（下车图标刚上车）跳过本帧通用移动逻辑以禁用冲刺
+                // 玛薇卡逻辑最后：勾选了禁用冲刺时，在车上（刚上车2秒内或下车图标）跳过本帧通用移动逻辑以禁用冲刺
                 if (PartyConfig.MwkDisableSprintEnabled
-                    && iconState == 3)
+                    && (justBoarded || iconState == 3))
                 {
                     // 通用移动逻辑可能已在此前（Run 路段）将冲刺键置为 KeyDown，这里松开一次防止上车后持续冲刺消耗夜魂值
                     Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
