@@ -26,7 +26,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 /// <summary>
-/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者）
+/// 角色技能加速赶路逻辑（玛薇卡、瓦雷莎、希诺宁、闲云、桑多涅、恰斯卡/伊法、流浪者、法尔伽）
 /// </summary>
 public partial class PathExecutor
 {
@@ -64,6 +64,7 @@ public partial class PathExecutor
         { "玛薇卡", 60 },
         { "闲云", 120 },
         { "希诺宁", 120 },
+        { "法尔伽", 120 },
     };
 
     private string _hurryOnAvatar = "";
@@ -79,6 +80,10 @@ public partial class PathExecutor
     private int _lastWaypointIndex = -1;
     private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
+    /// <summary>
+    /// 法尔伽下次可施放E的时间（null 表示可施放），施放E后置为6秒后
+    /// </summary>
+    private DateTime? _falgaNextCheckTime;
 
     /// <summary>
     /// 获取切人步行目标序号：优先行走位（MainAvatarIndex），否则排除赶路角色自身 + 黑名单，取序号最靠前的有效角色。
@@ -877,6 +882,44 @@ public partial class PathExecutor
                 }
 
                 break;
+
+            case "法尔伽":
+            {
+                if (distance > PartyConfig.Distance
+                    && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    // 法尔伽不在场时E技能CD识别无效，跳过检测（等上场后再检测记录）
+                    if (!avatar.IsActive(screen2))
+                    {
+                        return false;
+                    }
+
+                    // 非阻塞时间间隔：施放E后6秒内不再施放（null 表示可施放）
+                    if (_falgaNextCheckTime.HasValue && DateTime.UtcNow < _falgaNextCheckTime.Value)
+                    {
+                        return false;
+                    }
+
+                    // 正常检测并记录CD（ReadEskillCdAsync 内部对法尔伽取 min(识别结果, 剩余值)）
+                    var cd = await ReadEskillCdAsync("法尔伽");
+
+                    // 视角稳定且CD就绪时施放E（按下500ms后松开），施放后直接记录长按CD 8秒
+                    if (cd <= 0 && state.RotationStableCount >= 2)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                        await Delay(500, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                        ESkillCdTracker.Record("法尔伽", 8);
+                        _falgaNextCheckTime = DateTime.UtcNow.AddSeconds(6);
+                        return true;
+                    }
+
+                    return false;
+                }
+                break;
+            }
         }
 
         if ((waypoint?.MoveMode == MoveModeEnum.Fly.Code && PartyConfig.TravelMode == "连续赶路"
