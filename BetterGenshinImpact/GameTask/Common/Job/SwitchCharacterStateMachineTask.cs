@@ -192,7 +192,12 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <param name="slot4">4 号槽位角色名。</param>
     /// <param name="ct">取消令牌。</param>
     /// <returns>完成保存并返回主界面返回 true；参数无效、目标角色未找到或流程失败返回 false。</returns>
-    /// <remarks>slot1-slot4 均需传入字符串；空字符串或空白字符串表示跳过对应槽位。</remarks>
+    /// <remarks>
+    /// slot1-slot4 均表示队伍中的物理槽位；空字符串或空白字符串表示跳过对应槽位。
+    /// 2 人联机时 1P 可操作 1、2 号槽位，2P 可操作 3、4 号槽位；
+    /// 3 人联机时 1P 可操作 1、2 号槽位，2P 可操作 3 号槽位，3P 可操作 4 号槽位；
+    /// 4 人联机时各玩家可操作与玩家编号相同的槽位。当前玩家不可操作的槽位参数会被忽略。
+    /// </remarks>
     public async Task<bool> Start(string slot1, string slot2, string slot3, string slot4, CancellationToken ct)
     {
         Initialize(ct, SwitchCharacterState.Unknown);
@@ -332,7 +337,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.OpenFilterPanel, Order = 14)]
     private bool DetectOpenFilterPanel(ImageRegion capture)
     {
-        return _workflowState == SwitchCharacterState.OpenFilterPanel && IsQuickTeamList(capture);
+        return _workflowState == SwitchCharacterState.OpenFilterPanel && IsCharacterList(capture);
     }
 
     /// <summary>
@@ -343,7 +348,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.FindAndClickAvatar, Order = 15)]
     private bool DetectFindAndClickAvatar(ImageRegion capture)
     {
-        return _workflowState == SwitchCharacterState.FindAndClickAvatar && IsQuickTeamList(capture);
+        return _workflowState == SwitchCharacterState.FindAndClickAvatar && IsCharacterList(capture);
     }
 
     /// <summary>
@@ -354,7 +359,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateDetector(SwitchCharacterState.ClearFilter, Order = 16)]
     private bool DetectClearFilter(ImageRegion capture)
     {
-        return _workflowState == SwitchCharacterState.ClearFilter && IsQuickTeamList(capture);
+        return _workflowState == SwitchCharacterState.ClearFilter && IsCharacterList(capture);
     }
 
     /// <summary>
@@ -366,7 +371,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private bool DetectReturnMainUi(ImageRegion capture)
     {
         return _workflowState == SwitchCharacterState.ReturnMainUi
-               && (IsQuickTeamList(capture) || IsFilterPanel(capture) || IsPartyConfigPage(capture) || Bv.IsInMainUi(capture));
+               && (IsCharacterList(capture) || IsFilterPanel(capture) || IsPartyConfigPage(capture) || Bv.IsInMainUi(capture));
     }
 
     /// <summary>
@@ -465,7 +470,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// </summary>
     /// <param name="capture">当前截图。</param>
     /// <returns>识别到元素共鸣文字返回 true。</returns>
-    private bool IsQuickTeamList(ImageRegion capture)
+    private bool IsCharacterList(ImageRegion capture)
     {
         return ContainsText(capture, "元素共鸣", Rect1080(1655, 32, 106, 30));
     }
@@ -525,9 +530,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateHandler(SwitchCharacterState.MainUi, RetryTimeout = 15000, RetryInterval = 500, TransitionTimeout = 7000)]
     private async Task<StateHandlerResult> HandleMainUi(BvPage page)
     {
-        await DetectPlayerIndex(_ct);
-        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(2000, _ct);
+        await DetectPlayerIndexAndOpenPartyConfig(_ct);
         return StateHandlerResult.Success;
     }
 
@@ -548,7 +551,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// 处理队伍配置界面。
     /// </summary>
     /// <param name="page">页面操作对象。</param>
-    /// <returns>刷新当前队伍快照后返回 Success。</returns>
+    /// <returns>识别到队伍配置界面后直接返回 Success，由后续状态构建切换计划。</returns>
     [StateHandler(SwitchCharacterState.PartyConfigPage, RetryTimeout = 10000, RetryInterval = 500, TransitionTimeout = 6000)]
     private Task<StateHandlerResult> HandlePartyConfigPage(BvPage page)
     {
@@ -563,6 +566,14 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateHandler(SwitchCharacterState.BuildSwitchPlan, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 3000)]
     private async Task<StateHandlerResult> HandleBuildSwitchPlan(BvPage page)
     {
+        if (_playerIndex == 0)
+        {
+            _logger.LogInformation("切换角色：尚未识别联机人数与玩家编号，先返回主界面完成识别");
+            await _returnMainUiTask.Start(_ct);
+            await DetectPlayerIndexAndOpenPartyConfig(_ct);
+            return StateHandlerResult.Wait;
+        }
+
         ConfigureOperableSlots();
         AdjustTargetsToOperableSlots();
         if (_targetRoles.Count == 0)
@@ -968,6 +979,17 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
+    /// 在主界面识别联机身份并打开队伍配置页。
+    /// </summary>
+    /// <param name="ct">取消令牌。</param>
+    private async Task DetectPlayerIndexAndOpenPartyConfig(CancellationToken ct)
+    {
+        await DetectPlayerIndex(ct);
+        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+        await Delay(2000, ct);
+    }
+
+    /// <summary>
     /// 识别联机人数及当前玩家编号。
     /// </summary>
     /// <param name="ct">取消令牌。</param>
@@ -1144,7 +1166,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         var listOpened = await NewRetry.WaitForAction(() =>
         {
             using var capture = CaptureToRectArea();
-            return IsQuickTeamList(capture);
+            return IsCharacterList(capture);
         }, ct, 10, 300);
         if (!listOpened)
         {
@@ -1201,15 +1223,16 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         finally
         {
             Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
-            var returned = await NewRetry.WaitForAction(() =>
-            {
-                using var capture = CaptureToRectArea();
-                return IsPartyConfigPage(capture);
-            }, ct, 10, 300);
-            if (!returned)
-            {
-                throw new PartySetupFailedException("切换角色：角色列表关闭后未返回队伍配置页");
-            }
+        }
+
+        var returned = await NewRetry.WaitForAction(() =>
+        {
+            using var capture = CaptureToRectArea();
+            return IsPartyConfigPage(capture);
+        }, ct, 10, 300);
+        if (!returned)
+        {
+            throw new PartySetupFailedException("切换角色：角色列表关闭后未返回队伍配置页");
         }
 
         if (characterNames.Count != _maxControlAvatarCount || characterNames.Any(string.IsNullOrEmpty))
