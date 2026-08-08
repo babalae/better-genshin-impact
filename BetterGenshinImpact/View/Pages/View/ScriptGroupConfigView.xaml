@@ -486,7 +486,8 @@
                             </Grid>
 
                             <!-- 接近停车距离 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsApproachStopDistanceVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
