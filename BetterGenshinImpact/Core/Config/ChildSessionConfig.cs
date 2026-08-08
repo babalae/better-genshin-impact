@@ -35,4 +35,10 @@ public partial class ChildSessionConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _gameMouseModeEnabled = false;
+
+    /// <summary>
+    /// 桌面分身的 RDP 音频是否静音，不影响主桌面的其他程序。
+    /// </summary>
+    [ObservableProperty]
+    private bool _audioMuted = false;
 }
