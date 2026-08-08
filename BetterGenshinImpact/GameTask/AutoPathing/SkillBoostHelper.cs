@@ -81,7 +81,7 @@ public partial class PathExecutor
     private readonly List<int> _staminaHistory = new(50);
     private DateTime _lastSandroneSkillTime = DateTime.MinValue;
     /// <summary>
-    /// 法尔伽下次可施放E的时间（null 表示可施放），施放E后置为6秒后
+    /// 法尔伽下次可施放E的时间（null 表示可施放），施放E后置为2秒后
     /// </summary>
     private DateTime? _falgaNextCheckTime;
 
@@ -896,23 +896,21 @@ public partial class PathExecutor
                         return false;
                     }
 
-                    // 非阻塞时间间隔：施放E后6秒内不再施放（null 表示可施放）
+                    // 非阻塞时间间隔：施放E后2秒内不再施放（null 表示可施放）
                     if (_falgaNextCheckTime.HasValue && DateTime.UtcNow < _falgaNextCheckTime.Value)
                     {
                         return false;
                     }
 
-                    // 正常检测并记录CD（ReadEskillCdAsync 内部对法尔伽取 min(识别结果, 剩余值)）
+                    // 正常检测并记录CD（识别结果原样记录，无识别结果时由兜底逻辑处理）
                     var cd = await ReadEskillCdAsync("法尔伽");
 
-                    // 视角稳定且CD就绪时施放E（按下500ms后松开），施放后直接记录长按CD 8秒
+                    // 视角稳定且CD就绪时施放E（长按500ms，内部try/finally保证取消时也松开按键），施放后直接记录长按CD 8秒
                     if (cd <= 0 && state.RotationStableCount >= 2)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-                        await Delay(500, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                        await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 500, ct);
                         ESkillCdTracker.Record("法尔伽", 8);
-                        _falgaNextCheckTime = DateTime.UtcNow.AddSeconds(6);
+                        _falgaNextCheckTime = DateTime.UtcNow.AddSeconds(2);
                         return true;
                     }
 
