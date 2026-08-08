@@ -1147,9 +1147,12 @@ public class TpTask
             }
             catch (TpPointNotActivate e)
             {
+                // 未激活点位的详情面板会遮挡后续地图操作，重试前先关闭。
+                // 最后一次失败也需要执行清理，避免影响脚本组中的下一个任务。
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(GetTeleportOperationDelay(300), ct);
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
-                await Delay(GetTeleportOperationDelay(300), ct);
             }
             catch (Exception e) when (IsTaskStopException(e))
             {
@@ -2449,7 +2452,7 @@ public class TpTask
             return TeleportPanelResult.Confirmed;
         }
 
-        var candidate = CheckMapChooseIcon(imageRegion, targetTp);
+        var candidate = await CheckMapChooseIcon(imageRegion, targetTp);
         if (candidate == null)
         {
             return TeleportPanelResult.Waiting;
@@ -3138,7 +3141,7 @@ public class TpTask
     /// <summary>
     /// 识别候选列表，并尽量选择与目标坐标对应的实际传送点。
     /// </summary>
-    private MapChooseCandidate? CheckMapChooseIcon(
+    private async Task<MapChooseCandidate?> CheckMapChooseIcon(
         ImageRegion imageRegion,
         GiTpPosition? targetTp)
     {
@@ -3154,6 +3157,8 @@ public class TpTask
             return null;
         }
 
+        var clickDelay = Math.Max(0, TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay);
+        await Delay(clickDelay, ct);
         ClickMapChooseCandidate(imageRegion, chosenCandidate);
         return chosenCandidate;
     }
@@ -3198,9 +3203,11 @@ public class TpTask
                     UpperColor = new Scalar(180, 255, 15),
                 });
                 var text = CleanCandidateText(textRegion.Text);
-                if (string.IsNullOrEmpty(text) || text.Length == 1)
+                if (text.Length <= 1)
                 {
-                    continue;
+                    // 图标模板已经能够证明这是一个地图候选项。OCR 仅用于名称匹配，
+                    // 识别失败时仍保留候选，让类型、高亮和唯一候选逻辑继续兜底。
+                    text = string.Empty;
                 }
 
                 var clickRect = new Rect(textRect.X, textRect.Y, Math.Min(textRect.Width, 220), textRect.Height).ClampTo(imageRegion.SrcMat);
