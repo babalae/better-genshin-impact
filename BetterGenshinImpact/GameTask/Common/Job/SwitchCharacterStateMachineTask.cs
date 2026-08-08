@@ -56,6 +56,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private const string PlayerGirlName = "荧";
     private const string SwordWeaponType = "单手剑";
     private const int EmptyCardDetectionRetryCount = 3;
+    private const int MaxRoleSwitchAttempts = 3;
     private static readonly Rect CharacterGridRoi1080 = new(26, 97, 763, 546);
 
     private readonly ILogger<SwitchCharacterStateMachineTask> _logger = App.GetLogger<SwitchCharacterStateMachineTask>();
@@ -69,6 +70,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private bool _clearCombatScenesAfterReturn;
     private List<TeamSlotSnapshot> _currentTeamSlots = [];
     private bool _teamSnapshotDirty = true;
+    private bool _needsFinalVerification;
+    private Dictionary<int, int> _roleSwitchAttempts = [];
     private int _playerIndex;
     private int _multiGamePlayerCount = 1;
     private int _maxControlAvatarCount = 4;
@@ -239,6 +242,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         _clearCombatScenesAfterReturn = false;
         _currentTeamSlots = [];
         _teamSnapshotDirty = true;
+        _needsFinalVerification = false;
+        _roleSwitchAttempts = [];
         _playerIndex = 0;
         _multiGamePlayerCount = 1;
         _maxControlAvatarCount = 4;
@@ -560,6 +565,11 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         {
             _currentTeamSlots = await RecognizeTeamSlotsFromCharacterList(Recognizer, _ct);
             _teamSnapshotDirty = false;
+            if (_needsFinalVerification)
+            {
+                _logger.LogInformation("切换角色：已完成最终队伍识别，按实际队伍继续验证目标槽位");
+                _needsFinalVerification = false;
+            }
         }
         if (_currentRole == null)
         {
@@ -568,12 +578,25 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 .FirstOrDefault(role => !role.Matches(_currentTeamSlots.First(slot => slot.Slot == role.Slot).Name));
             if (nextRole != null)
             {
+                if (_roleSwitchAttempts.GetValueOrDefault(nextRole.Slot) >= MaxRoleSwitchAttempts)
+                {
+                    throw new PartySetupFailedException(
+                        $"切换角色：{nextRole.Slot} 号位连续 {MaxRoleSwitchAttempts} 次未能切换为 {nextRole.Name}");
+                }
+
                 SetCurrentRole(nextRole);
             }
         }
 
         if (_currentRole == null)
         {
+            if (_needsFinalVerification)
+            {
+                _logger.LogInformation("切换角色：所有目标已提交，开始统一识别并验证实际队伍");
+                _teamSnapshotDirty = true;
+                return StateHandlerResult.Wait;
+            }
+
             _workflowState = SwitchCharacterState.ReturnMainUi;
             return StateHandlerResult.Success;
         }
@@ -729,6 +752,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 ? slot with { Name = _currentRole.PrimaryCandidateName }
                 : slot)
             .ToList();
+        _roleSwitchAttempts[_currentRole.Slot] = _roleSwitchAttempts.GetValueOrDefault(_currentRole.Slot) + 1;
+        _needsFinalVerification = true;
         _logger.LogInformation("切换角色：已提交 {Name} 到 {Slot} 号位", _currentRole.Name, _currentRole.Slot);
         _clearCombatScenesAfterReturn = true;
         _currentRole = null;
