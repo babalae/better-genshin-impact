@@ -428,6 +428,35 @@
                                           SelectedItem="{Binding PathingConfig.HurryOnAvatar}" />
                             </Grid>
 
+                            <!-- 覆写赶路帧间隔 -->
+                            <Grid Margin="16,0,16,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="覆写赶路帧间隔"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="启用赶路逻辑时移速较快，设备性能富余时可选择适当降低帧间隔以提高稳定性，默认值100（ms）"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.HurryOnFrameInterval}" />
+                            </Grid>
+
                             <!-- 赶路模式 -->
                             <Grid Margin="16,0,16,10">
                                 <Grid.RowDefinitions>

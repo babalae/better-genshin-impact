@@ -215,6 +215,12 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private string _hurryOnAvatar = "";
 
+    /// <summary>
+    /// 覆写赶路帧间隔（ms），默认 100。存在有效赶路角色时生效，有效范围 1-150，超出自动钳制。
+    /// </summary>
+    [ObservableProperty]
+    private int _hurryOnFrameInterval = 100;
+
     [ObservableProperty]
     private string _travelMode = "精准靠近";
 
