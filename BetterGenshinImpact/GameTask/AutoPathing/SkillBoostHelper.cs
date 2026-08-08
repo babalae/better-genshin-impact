@@ -183,6 +183,17 @@ public partial class PathExecutor
                     _lastWaypointIndex = CurWaypoint.Item1;
                 }
 
+                // 安全降落：跳飞后间隔已过仍可能在空中，先普攻落地再继续后续逻辑（空中无法执行下车/切人）
+                // 放在接近处理之前，确保跳飞后快速接近时也能先落地；已下车成功（PendingApproach=false）则不再普攻
+                if (_lastJumpFlyTime != DateTime.MinValue
+                    && _jumpFlySafetyPending
+                    && state.PendingApproach
+                    && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds > interval)
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    _jumpFlySafetyPending = false;
+                }
+
                 //应该下车时尝试下车，下车成功后（PendingApproach=false）本航点内不再重复检测
                 var mwkShouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
                 if (mwkShouldApproach && state.PendingApproach)
@@ -198,6 +209,7 @@ public partial class PathExecutor
                         if (nextAvatar != null)
                         {
                             state.PendingApproach = false;
+                            _jumpFlySafetyPending = false;
                         }
                     }
                     else
@@ -217,6 +229,7 @@ public partial class PathExecutor
                         if (approachIconState is 1 or 2)
                         {
                             state.PendingApproach = false;
+                            _jumpFlySafetyPending = false;
                         }
                     }
                     return false;
@@ -305,16 +318,6 @@ public partial class PathExecutor
                     }
 
                     return true;
-                }
-
-                // 安全降落：同路段最后一次跳飞后，间隔已过仍可能在空中 → 普攻防摔伤
-                if (_lastJumpFlyTime != DateTime.MinValue
-                    && _jumpFlySafetyPending
-                    && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds > interval)
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                    await Delay(100, ct);
-                    _jumpFlySafetyPending = false;
                 }
 
                 var iconState = GetMavikaESkillIconState(screen2);
