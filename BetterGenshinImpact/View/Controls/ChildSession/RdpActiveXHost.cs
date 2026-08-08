@@ -15,6 +15,8 @@ internal sealed class RdpActiveXHost : AxHost
     private const string RdpClientClsid = "A0C63C30-F08D-4AB4-907C-34905D770C7D";
     private const short VariantFalse = 0;
     private const short VariantTrue = -1;
+    private const int RedirectAudioToClient = 0;
+    private const int DisableRemoteAudio = 2;
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
 
     private static readonly RemoteKey LeftWindowsKey = new(0x5B, IsExtended: true);
@@ -27,6 +29,7 @@ internal sealed class RdpActiveXHost : AxHost
     private ChildSessionConnectionFailedEventArgs? _lastConnectionDiagnostic;
     private bool _disconnectRequested;
     private bool _sendSystemShortcutsToRemote = true;
+    private bool _audioMuted;
     private DrawingSize? _pendingReconnectDesktopSize;
     private bool _smartSizingEnabled = true;
 
@@ -84,6 +87,11 @@ internal sealed class RdpActiveXHost : AxHost
                 securedSettings,
                 "KeyboardHookMode",
                 _sendSystemShortcutsToRemote ? 1 : 0));
+        RunComStep("设置远程音频重定向", () =>
+            SetComProperty(
+                securedSettings,
+                "AudioRedirectionMode",
+                _audioMuted ? DisableRemoteAudio : RedirectAudioToClient));
 
         var advancedSettings = GetComProperty(client, "AdvancedSettings7")
             ?? throw new COMException("RDP ActiveX 未返回 AdvancedSettings7。");
@@ -165,6 +173,11 @@ internal sealed class RdpActiveXHost : AxHost
     internal void SetSendSystemShortcutsToRemote(bool enabled)
     {
         _sendSystemShortcutsToRemote = enabled;
+    }
+
+    internal void SetAudioMuted(bool muted)
+    {
+        _audioMuted = muted;
     }
 
     internal void ReconnectToChildSession(DrawingSize desktopSize)

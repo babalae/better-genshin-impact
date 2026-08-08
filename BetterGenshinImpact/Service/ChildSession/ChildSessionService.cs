@@ -23,7 +23,7 @@ public sealed class ChildSessionService : IDisposable
     private static readonly DrawingSize DefaultDesktopSize = new(1920, 1080);
     private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromSeconds(60);
     private const int InitialConnectionRetryCount = 3;
-    private const int SystemShortcutsReconnectRetryCount = 2;
+    private const int RdpSettingsReconnectRetryCount = 2;
     private const int ErrorTimeout = 1460;
 
     private readonly IServiceProvider _serviceProvider;
@@ -40,9 +40,9 @@ public sealed class ChildSessionService : IDisposable
     private ChildSessionConnectionFailedEventArgs? _lastConnectionFailure;
     private int _initialConnectionRetriesRemaining;
     private bool _connectionRetryInProgress;
-    private bool _systemShortcutsReconnectPending;
-    private int _systemShortcutsReconnectRetriesRemaining;
-    private bool _systemShortcutsReconnectRetryInProgress;
+    private RdpSettingChange _pendingRdpSettingChanges;
+    private int _rdpSettingsReconnectRetriesRemaining;
+    private bool _rdpSettingsReconnectRetryInProgress;
     private bool _statusTickInProgress;
     private bool _disposed;
     private string? _lastOperationMessage;
@@ -52,6 +52,8 @@ public sealed class ChildSessionService : IDisposable
     public event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
 
     public event EventHandler? SystemShortcutsReconnectCompleted;
+
+    public event EventHandler? AudioReconnectCompleted;
 
     public string StatusText { get; private set; } = "桌面分身尚未启动";
 
@@ -70,6 +72,8 @@ public sealed class ChildSessionService : IDisposable
     public bool SmartSizingEnabled => _config.SmartSizingEnabled;
 
     public bool KeepAspectRatio => _config.KeepAspectRatio;
+
+    public bool AudioMuted => _config.AudioMuted;
 
     public bool IsRdpWrapperEnabled()
     {
@@ -231,30 +235,28 @@ public sealed class ChildSessionService : IDisposable
         _config.SendSystemShortcutsToRemote = enabled;
         var window = EnsureDesktopWindow();
         window.RdpHost.SetSendSystemShortcutsToRemote(enabled);
-        RefreshState();
-
         var target = enabled ? "桌面分身" : "本机";
-        if (window.RdpHost.ConnectedState == 0 && ChildSessionId is null)
+        return ReconnectForRdpSettingChange(
+            window,
+            RdpSettingChange.SystemShortcuts,
+            $"系统组合键已改为在{target}生效");
+    }
+
+    public bool SetAudioMuted(bool muted)
+    {
+        ThrowIfDisposed();
+        if (AudioMuted == muted)
         {
-            RefreshState($"系统组合键已改为在{target}生效，将在下次 RDP 连接后应用");
             return false;
         }
 
-        _systemShortcutsReconnectPending = true;
-        _systemShortcutsReconnectRetriesRemaining = SystemShortcutsReconnectRetryCount;
-        try
-        {
-            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
-        }
-        catch
-        {
-            _systemShortcutsReconnectPending = false;
-            _systemShortcutsReconnectRetriesRemaining = 0;
-            throw;
-        }
-
-        RefreshState($"系统组合键已改为在{target}生效，正在自动重新连接 RDP");
-        return true;
+        _config.AudioMuted = muted;
+        var window = EnsureDesktopWindow();
+        window.RdpHost.SetAudioMuted(muted);
+        return ReconnectForRdpSettingChange(
+            window,
+            RdpSettingChange.Audio,
+            muted ? "桌面分身声音已关闭" : "桌面分身声音已开启");
     }
 
     public void SetGameMouseModeEnabled(bool enabled)
@@ -316,8 +318,8 @@ public sealed class ChildSessionService : IDisposable
         ThrowIfDisposed();
         _autoLaunchBetterGiPending = false;
         _initialConnectionRetriesRemaining = 0;
-        _systemShortcutsReconnectPending = false;
-        _systemShortcutsReconnectRetriesRemaining = 0;
+        _pendingRdpSettingChanges = RdpSettingChange.None;
+        _rdpSettingsReconnectRetriesRemaining = 0;
         _connectionAttemptCompletionSource?.TrySetResult(false);
 
         await _launchSemaphore.WaitAsync();
@@ -392,8 +394,8 @@ public sealed class ChildSessionService : IDisposable
         _connectionAttemptCompletionSource?.TrySetCanceled();
         _connectionAttemptCompletionSource = null;
         _initialConnectionRetriesRemaining = 0;
-        _systemShortcutsReconnectPending = false;
-        _systemShortcutsReconnectRetriesRemaining = 0;
+        _pendingRdpSettingChanges = RdpSettingChange.None;
+        _rdpSettingsReconnectRetriesRemaining = 0;
 
         if (_desktopWindow is not null)
         {
@@ -457,6 +459,7 @@ public sealed class ChildSessionService : IDisposable
         _desktopWindow.RdpHost.LoginCompleted += OnRdpLoginCompleted;
         _desktopWindow.RdpHost.SetSmartSizing(_config.SmartSizingEnabled);
         _desktopWindow.RdpHost.SetSendSystemShortcutsToRemote(SendSystemShortcutsToRemote);
+        _desktopWindow.RdpHost.SetAudioMuted(AudioMuted);
         return _desktopWindow;
     }
 
@@ -546,20 +549,20 @@ public sealed class ChildSessionService : IDisposable
     {
         _lastConnectionFailure = e;
 
-        if (_systemShortcutsReconnectPending)
+        if (_pendingRdpSettingChanges != RdpSettingChange.None)
         {
-            if (_systemShortcutsReconnectRetryInProgress)
+            if (_rdpSettingsReconnectRetryInProgress)
             {
                 return;
             }
 
-            if (_systemShortcutsReconnectRetriesRemaining > 0)
+            if (_rdpSettingsReconnectRetriesRemaining > 0)
             {
-                RetrySystemShortcutsReconnectAsync(e);
+                RetryRdpSettingsReconnectAsync(e);
                 return;
             }
 
-            _systemShortcutsReconnectPending = false;
+            _pendingRdpSettingChanges = RdpSettingChange.None;
         }
 
         if (_autoLaunchBetterGiPending
@@ -582,15 +585,23 @@ public sealed class ChildSessionService : IDisposable
         _connectionRetryInProgress = false;
         _connectionAttemptCompletionSource?.TrySetResult(true);
 
-        var systemShortcutsReconnectCompleted = _systemShortcutsReconnectPending;
-        if (systemShortcutsReconnectCompleted)
+        var completedSettingChanges = _pendingRdpSettingChanges;
+        if (completedSettingChanges != RdpSettingChange.None)
         {
-            _systemShortcutsReconnectPending = false;
-            _systemShortcutsReconnectRetriesRemaining = 0;
-            _systemShortcutsReconnectRetryInProgress = false;
-            var target = SendSystemShortcutsToRemote ? "桌面分身" : "本机";
-            RefreshState($"自动重新连接完成，系统组合键设置已在{target}生效");
-            SystemShortcutsReconnectCompleted?.Invoke(this, EventArgs.Empty);
+            _pendingRdpSettingChanges = RdpSettingChange.None;
+            _rdpSettingsReconnectRetriesRemaining = 0;
+            _rdpSettingsReconnectRetryInProgress = false;
+            RefreshState("自动重新连接完成，RDP 设置已生效");
+
+            if (completedSettingChanges.HasFlag(RdpSettingChange.SystemShortcuts))
+            {
+                SystemShortcutsReconnectCompleted?.Invoke(this, EventArgs.Empty);
+            }
+
+            if (completedSettingChanges.HasFlag(RdpSettingChange.Audio))
+            {
+                AudioReconnectCompleted?.Invoke(this, EventArgs.Empty);
+            }
         }
         else
         {
@@ -623,19 +634,19 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
-    private async void RetrySystemShortcutsReconnectAsync(
+    private async void RetryRdpSettingsReconnectAsync(
         ChildSessionConnectionFailedEventArgs firstFailure)
     {
-        _systemShortcutsReconnectRetryInProgress = true;
+        _rdpSettingsReconnectRetryInProgress = true;
         ChildSessionConnectionFailedEventArgs? retryFailure = null;
-        var retryNumber = SystemShortcutsReconnectRetryCount
-                          - _systemShortcutsReconnectRetriesRemaining
+        var retryNumber = RdpSettingsReconnectRetryCount
+                          - _rdpSettingsReconnectRetriesRemaining
                           + 1;
-        _systemShortcutsReconnectRetriesRemaining--;
+        _rdpSettingsReconnectRetriesRemaining--;
         var retryDelay = TimeSpan.FromSeconds(1 << retryNumber);
 
         _logger.LogWarning(
-            "系统组合键设置切换后的 RDP 自动重连失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
+            "RDP 设置切换后的自动重连失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
             + "错误：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
             retryDelay.TotalSeconds,
             retryNumber,
@@ -644,19 +655,19 @@ public sealed class ChildSessionService : IDisposable
             firstFailure.ExtendedErrorCode);
         RefreshState(
             $"RDP 自动重连暂未成功，{retryDelay.TotalSeconds:0} 秒后重试"
-            + $"（{retryNumber}/{SystemShortcutsReconnectRetryCount}）");
+            + $"（{retryNumber}/{RdpSettingsReconnectRetryCount}）");
 
         try
         {
             await Task.Delay(retryDelay, _disposeCancellationTokenSource.Token);
-            if (_disposed || !_systemShortcutsReconnectPending)
+            if (_disposed || _pendingRdpSettingChanges == RdpSettingChange.None)
             {
                 return;
             }
 
             RefreshState(
-                $"正在重试 RDP 自动连接（{retryNumber}/{SystemShortcutsReconnectRetryCount}）");
-            _systemShortcutsReconnectRetryInProgress = false;
+                $"正在重试 RDP 自动连接（{retryNumber}/{RdpSettingsReconnectRetryCount}）");
+            _rdpSettingsReconnectRetryInProgress = false;
             EnsureDesktopWindow().RdpHost.ReconnectToChildSession(DefaultDesktopSize);
         }
         catch (OperationCanceledException) when (_disposed)
@@ -674,7 +685,7 @@ public sealed class ChildSessionService : IDisposable
         }
         finally
         {
-            _systemShortcutsReconnectRetryInProgress = false;
+            _rdpSettingsReconnectRetryInProgress = false;
         }
 
         if (retryFailure is not null)
@@ -810,5 +821,47 @@ public sealed class ChildSessionService : IDisposable
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private bool ReconnectForRdpSettingChange(
+        ChildSessionWindow window,
+        RdpSettingChange settingChange,
+        string operationMessage)
+    {
+        RefreshState();
+        if (window.RdpHost.ConnectedState == 0 && ChildSessionId is null)
+        {
+            RefreshState($"{operationMessage}，将在下次 RDP 连接后应用");
+            return false;
+        }
+
+        var previousSettingChanges = _pendingRdpSettingChanges;
+        _pendingRdpSettingChanges |= settingChange;
+        _rdpSettingsReconnectRetriesRemaining = RdpSettingsReconnectRetryCount;
+        try
+        {
+            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+        }
+        catch
+        {
+            _pendingRdpSettingChanges = previousSettingChanges;
+            if (_pendingRdpSettingChanges == RdpSettingChange.None)
+            {
+                _rdpSettingsReconnectRetriesRemaining = 0;
+            }
+
+            throw;
+        }
+
+        RefreshState($"{operationMessage}，正在自动重新连接 RDP");
+        return true;
+    }
+
+    [Flags]
+    private enum RdpSettingChange
+    {
+        None = 0,
+        SystemShortcuts = 1,
+        Audio = 2
     }
 }
