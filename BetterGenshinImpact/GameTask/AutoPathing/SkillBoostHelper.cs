@@ -124,7 +124,9 @@ public partial class PathExecutor
             }
         }
 
-        for (var i = 1; i <= 4; i++)
+        // 两轮遍历均以队伍实际人数为上限，防止 SelectAvatar(int) 在 i > AvatarCount 时抛异常
+        var avatarCount = _combatScenes?.AvatarCount ?? 0;
+        for (var i = 1; i <= avatarCount; i++)
         {
             var avatar = _combatScenes?.SelectAvatar(i);
             if (avatar == null) continue;
@@ -133,7 +135,7 @@ public partial class PathExecutor
             return i.ToString();
         }
 
-        for (var i = 1; i <= 4; i++)
+        for (var i = 1; i <= avatarCount; i++)
         {
             var avatar = _combatScenes?.SelectAvatar(i);
             if (avatar == null) continue;
