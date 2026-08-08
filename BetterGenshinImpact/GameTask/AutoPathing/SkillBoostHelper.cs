@@ -366,6 +366,13 @@ public partial class PathExecutor
                 if (PartyConfig.MwkDisableSprintEnabled
                     && (iconState == 3 || iconState == 4 && (mavikaEskillCd ??= await ReadEskillCdAsync("玛薇卡", updateTracking: false)) < 1))
                 {
+                    // 通用移动逻辑可能已在此前（Run 路段）将冲刺键置为 KeyDown 并置 _fastMode=true，
+                    // 仅 return true 跳过通用逻辑不会抬起冲刺键，这里显式抬起并重置状态，避免上车后持续冲刺消耗夜魂值
+                    if (_fastMode)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                        _fastMode = false;
+                    }
                     return true;
                 }
 
