@@ -1558,7 +1558,7 @@ public partial class PathExecutor
     }
 
     /// <summary>
-    /// 第二个E技能位是否可用：以技能槽位坐标 (1691,953)（1920×1080 基准）为中心的 11×11 区域内存在面积≥5 的 #00DCFA（BGR 250,220,0）连通域
+    /// 第二个E技能位是否可用：以技能槽位坐标 (1691,953)（1920×1080 基准）为中心的 11×11 区域内存在面积≥5 的 #00DCFA（RGB 0,220,250）连通域
     /// </summary>
     private bool secondESkillAvailable()
     {
@@ -1569,8 +1569,9 @@ public partial class PathExecutor
         using var crop = region.DeriveCrop(
             (int)(1686 * scale), (int)(948 * scale),
             Math.Max(1, (int)(11 * scale)), Math.Max(1, (int)(11 * scale)));
+        // Threshold 内部先 BGR2RGB，Scalar 为 RGB 顺序：#00DCFA = R0,G220,B250
         using var mask = OpenCvCommonHelper.Threshold(crop.SrcMat,
-            new Scalar(240, 210, 0), new Scalar(255, 235, 15));
+            new Scalar(0, 210, 240), new Scalar(15, 235, 255));
         using var labels = new Mat();
         using var stats = new Mat();
         using var centroids = new Mat();
