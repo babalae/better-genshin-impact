@@ -296,46 +296,6 @@
                           VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <Border Margin="0,0,0,10"
-                            Padding="16"
-                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1"
-                            CornerRadius="12">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SectionIconStyle}">
-                                <ui:SymbolIcon Symbol="FolderOpen24" />
-                            </Border>
-                            <StackPanel Grid.Column="1"
-                                        Margin="0,0,10,0"
-                                        VerticalAlignment="Center">
-                                <TextBlock FontWeight="SemiBold" Text="曲谱目录" />
-                                <TextBlock Margin="0,4,0,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding ViewModel.MusicFolderDisplayText}"
-                                           TextTrimming="CharacterEllipsis"
-                                           ToolTip="{Binding ViewModel.MusicFolderDisplayText}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        Orientation="Horizontal">
-                                <ui:Button Margin="0,0,6,0"
-                                           Appearance="Secondary"
-                                           Command="{Binding ViewModel.OpenFolderCommand}"
-                                           Content="打开" />
-                                <ui:Button Width="36"
-                                           Command="{Binding ViewModel.ChooseFolderCommand}"
-                                           Icon="{ui:SymbolIcon Options24}"
-                                           ToolTip="更改目录" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <Border Margin="0,0,0,10"
                             Style="{StaticResource MusicCardStyle}">
                         <StackPanel>
                             <Grid>
@@ -575,7 +535,7 @@
         </Grid>
 
         <Border Grid.Row="1"
-                MinHeight="132"
+                MinHeight="100"
                 Margin="0"
                 Padding="0"
                 BorderThickness="0,1,0,0"
@@ -583,7 +543,6 @@
                 Style="{StaticResource MusicCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -600,7 +559,7 @@
                     </b:Interaction.Behaviors>
                 </Slider>
 
-                <Grid Margin="66,7,66,0">
+                <Grid Margin="20,7,20,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="46" />
                         <ColumnDefinition Width="*" />
@@ -618,7 +577,7 @@
                                Text="{Binding ViewModel.TotalTimeText}" />
                 </Grid>
 
-                <Grid Grid.Row="1" Margin="66,7,66,0">
+                <Grid Grid.Row="1" Margin="20,7,20,14">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -691,44 +650,29 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Orientation="Horizontal">
-                        <TextBlock Margin="0,0,6,0"
+                        <ui:Button Width="48"
+                                   Height="40"
+                                   Appearance="Transparent"
+                                   Command="{Binding ViewModel.CyclePlaybackModeCommand}"
+                                   ToolTip="{Binding ViewModel.PlaybackModeToolTip}">
+                            <ui:SymbolIcon FontSize="20"
+                                           Symbol="{Binding ViewModel.PlaybackModeSymbol}" />
+                        </ui:Button>
+                        <TextBlock Margin="12,0,8,0"
                                    VerticalAlignment="Center"
                                    FontSize="12"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                   Text="倍速" />
-                        <ui:NumberBox Width="86"
-                                      MaxDecimalPlaces="2"
-                                      Maximum="2"
-                                      Minimum="0.5"
-                                      SmallChange="0.1"
-                                      SpinButtonPlacementMode="Inline"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding ViewModel.Speed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                   Text="输入方式" />
+                        <TextBlock Width="28"
+                                   Margin="0,0,7,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Text="{Binding ViewModel.InputModeDisplayText}" />
+                        <ui:ToggleSwitch VerticalAlignment="Center"
+                                         IsChecked="{Binding ViewModel.UseBackgroundInput, Mode=TwoWay}"
+                                         ToolTip="{Binding ViewModel.InputModeToolTip}" />
                     </StackPanel>
                 </Grid>
-
-                <StackPanel Grid.Row="2"
-                            Margin="66,9,66,14"
-                            HorizontalAlignment="Right"
-                            Orientation="Horizontal">
-                    <TextBlock Margin="0,0,6,0"
-                               VerticalAlignment="Center"
-                               FontSize="12"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               Text="播放模式" />
-                    <ComboBox Width="126"
-                              ItemsSource="{Binding ViewModel.PlaybackModeOptions}"
-                              SelectedItem="{Binding ViewModel.SelectedPlaybackModeText}" />
-                    <TextBlock Margin="12,0,6,0"
-                               VerticalAlignment="Center"
-                               FontSize="12"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               Text="输入方式" />
-                    <ComboBox Width="150"
-                              ItemsSource="{Binding ViewModel.InputModeOptions}"
-                              SelectedItem="{Binding ViewModel.SelectedInputModeText}"
-                              ToolTip="后台模式会继续向已关联的游戏窗口发键；前台模式要求游戏保持前台。" />
-                </StackPanel>
             </Grid>
         </Border>
     </Grid>

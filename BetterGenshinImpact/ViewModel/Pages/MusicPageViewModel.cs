@@ -69,28 +69,17 @@ public partial class MusicPageViewModel : ViewModel
         Profiles = profileService.Profiles;
         MappingModes = new ObservableCollection<InstrumentMappingMode>(
             Enum.GetValues<InstrumentMappingMode>());
-        SelectedInputModeText = Config.MusicConfig.InputMode == nameof(MusicInputMode.ForegroundSendInput)
-            ? ForegroundInputText
-            : BackgroundInputText;
-        SelectedPlaybackModeText = Config.MusicConfig.PlaybackMode switch
+        UseBackgroundInput = Config.MusicConfig.InputMode != nameof(MusicInputMode.ForegroundSendInput);
+        PlaybackMode = Config.MusicConfig.PlaybackMode switch
         {
-            nameof(MusicPlaybackMode.ListLoop) => ListLoopText,
-            nameof(MusicPlaybackMode.SingleLoop) => SingleLoopText,
-            nameof(MusicPlaybackMode.Shuffle) => ShuffleText,
-            _ => SequentialText
+            nameof(MusicPlaybackMode.SingleLoop) => MusicPlaybackMode.SingleLoop,
+            nameof(MusicPlaybackMode.Shuffle) => MusicPlaybackMode.Shuffle,
+            _ => MusicPlaybackMode.Sequential
         };
-        Speed = Math.Clamp(Config.MusicConfig.Speed, 0.5, 2.0);
 
         _libraryService.FilesChanged += OnLibraryFilesChanged;
         _playbackService.SnapshotChanged += OnPlaybackSnapshotChanged;
     }
-
-    private const string BackgroundInputText = "后台 PostMessage";
-    private const string ForegroundInputText = "前台 SendInput";
-    private const string SequentialText = "顺序播放";
-    private const string ListLoopText = "列表循环";
-    private const string SingleLoopText = "单曲循环";
-    private const string ShuffleText = "随机播放";
 
     public AllConfig Config { get; }
 
@@ -101,12 +90,6 @@ public partial class MusicPageViewModel : ViewModel
     public ObservableCollection<InstrumentProfile> Profiles { get; }
 
     public ObservableCollection<InstrumentMappingMode> MappingModes { get; }
-
-    public ObservableCollection<string> InputModeOptions { get; } =
-        [BackgroundInputText, ForegroundInputText];
-
-    public ObservableCollection<string> PlaybackModeOptions { get; } =
-        [SequentialText, ListLoopText, SingleLoopText, ShuffleText];
 
     public ObservableCollection<string> FormatFilters { get; } = ["全部格式"];
 
@@ -128,16 +111,17 @@ public partial class MusicPageViewModel : ViewModel
     private string _selectedInstrumentFilter = "全部乐器";
 
     [ObservableProperty]
-    private string _selectedInputModeText = BackgroundInputText;
+    [NotifyPropertyChangedFor(nameof(InputModeDisplayText))]
+    [NotifyPropertyChangedFor(nameof(InputModeToolTip))]
+    private bool _useBackgroundInput = true;
 
     [ObservableProperty]
-    private string _selectedPlaybackModeText = SequentialText;
+    [NotifyPropertyChangedFor(nameof(PlaybackModeSymbol))]
+    [NotifyPropertyChangedFor(nameof(PlaybackModeToolTip))]
+    private MusicPlaybackMode _playbackMode;
 
     [ObservableProperty]
     private int _transpose;
-
-    [ObservableProperty]
-    private double _speed = 1.0;
 
     [ObservableProperty]
     private double _currentPositionMilliseconds;
@@ -178,6 +162,21 @@ public partial class MusicPageViewModel : ViewModel
     public SymbolRegular PlayPauseSymbol => IsPlaying
         ? SymbolRegular.Pause24
         : SymbolRegular.Play24;
+
+    public SymbolRegular PlaybackModeSymbol => PlaybackMode switch
+    {
+        MusicPlaybackMode.SingleLoop => SymbolRegular.ArrowRepeatAll24,
+        MusicPlaybackMode.Shuffle => SymbolRegular.ArrowShuffle24,
+        _ => SymbolRegular.ArrowWrap20
+    };
+
+    public string PlaybackModeToolTip => $"播放模式：{GetPlaybackModeText(PlaybackMode)}（点击切换）";
+
+    public string InputModeDisplayText => UseBackgroundInput ? "后台" : "前台";
+
+    public string InputModeToolTip => UseBackgroundInput
+        ? "后台 PostMessage：会继续向已关联的游戏窗口发键。"
+        : "前台 SendInput：游戏需要保持前台。";
 
     partial void OnIsPlayingChanged(bool value)
     {
@@ -262,23 +261,26 @@ public partial class MusicPageViewModel : ViewModel
         MusicItemsView.Refresh();
     }
 
-    partial void OnSelectedInputModeTextChanged(string value)
+    partial void OnUseBackgroundInputChanged(bool value)
     {
         Config.MusicConfig.InputMode = GetInputMode().ToString();
     }
 
-    partial void OnSelectedPlaybackModeTextChanged(string value)
+    partial void OnPlaybackModeChanged(MusicPlaybackMode value)
     {
-        var mode = GetPlaybackMode();
-        Config.MusicConfig.PlaybackMode = mode.ToString();
-        _playbackService.SetPlaybackMode(mode);
+        Config.MusicConfig.PlaybackMode = value.ToString();
+        _playbackService.SetPlaybackMode(value);
     }
 
-    partial void OnSpeedChanged(double value)
+    [RelayCommand]
+    private void CyclePlaybackMode()
     {
-        value = Math.Clamp(value, 0.5, 2.0);
-        Config.MusicConfig.Speed = value;
-        _playbackService.SetSpeed(value);
+        PlaybackMode = PlaybackMode switch
+        {
+            MusicPlaybackMode.Sequential => MusicPlaybackMode.SingleLoop,
+            MusicPlaybackMode.SingleLoop => MusicPlaybackMode.Shuffle,
+            _ => MusicPlaybackMode.Sequential
+        };
     }
 
     [RelayCommand]
@@ -501,8 +503,7 @@ public partial class MusicPageViewModel : ViewModel
         var options = new MusicPlaybackOptions
         {
             InputMode = GetInputMode(),
-            PlaybackMode = GetPlaybackMode(),
-            Speed = Speed
+            PlaybackMode = PlaybackMode
         };
 
         _sessionTask = new TaskRunner().RunThreadAsync(
@@ -537,9 +538,11 @@ public partial class MusicPageViewModel : ViewModel
                             || score.DisplayTitle.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                             || score.Author.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                             || score.RelativePath.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
-        var matchesFormat = SelectedFormatFilter == "全部格式"
+        var matchesFormat = string.IsNullOrWhiteSpace(SelectedFormatFilter)
+                            || SelectedFormatFilter == "全部格式"
                             || score.FormatName == SelectedFormatFilter;
-        var matchesInstrument = SelectedInstrumentFilter == "全部乐器"
+        var matchesInstrument = string.IsNullOrWhiteSpace(SelectedInstrumentFilter)
+                                || SelectedInstrumentFilter == "全部乐器"
                                 || score.Instrument.Split(',', StringSplitOptions.TrimEntries)
                                     .Contains(SelectedInstrumentFilter, StringComparer.OrdinalIgnoreCase);
         return matchesSearch && matchesFormat && matchesInstrument;
@@ -547,6 +550,9 @@ public partial class MusicPageViewModel : ViewModel
 
     private void RebuildFilters()
     {
+        var selectedFormat = SelectedFormatFilter;
+        var selectedInstrument = SelectedInstrumentFilter;
+
         FormatFilters.Clear();
         FormatFilters.Add("全部格式");
         foreach (var format in MusicItems.Select(x => x.FormatName).Distinct().Order())
@@ -564,6 +570,14 @@ public partial class MusicPageViewModel : ViewModel
             InstrumentFilters.Add(instrument);
         }
 
+        SelectedFormatFilter = !string.IsNullOrWhiteSpace(selectedFormat)
+                               && FormatFilters.Contains(selectedFormat)
+            ? selectedFormat
+            : "全部格式";
+        SelectedInstrumentFilter = !string.IsNullOrWhiteSpace(selectedInstrument)
+                                   && InstrumentFilters.Contains(selectedInstrument)
+            ? selectedInstrument
+            : "全部乐器";
         MusicItemsView.Refresh();
     }
 
@@ -650,19 +664,18 @@ public partial class MusicPageViewModel : ViewModel
 
     private MusicInputMode GetInputMode()
     {
-        return SelectedInputModeText == ForegroundInputText
-            ? MusicInputMode.ForegroundSendInput
-            : MusicInputMode.BackgroundPostMessage;
+        return UseBackgroundInput
+            ? MusicInputMode.BackgroundPostMessage
+            : MusicInputMode.ForegroundSendInput;
     }
 
-    private MusicPlaybackMode GetPlaybackMode()
+    private static string GetPlaybackModeText(MusicPlaybackMode mode)
     {
-        return SelectedPlaybackModeText switch
+        return mode switch
         {
-            ListLoopText => MusicPlaybackMode.ListLoop,
-            SingleLoopText => MusicPlaybackMode.SingleLoop,
-            ShuffleText => MusicPlaybackMode.Shuffle,
-            _ => MusicPlaybackMode.Sequential
+            MusicPlaybackMode.SingleLoop => "单曲循环",
+            MusicPlaybackMode.Shuffle => "随机播放",
+            _ => "顺序播放"
         };
     }
 

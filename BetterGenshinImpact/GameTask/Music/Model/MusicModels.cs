@@ -24,7 +24,6 @@ public enum MusicInputMode
 public enum MusicPlaybackMode
 {
     Sequential,
-    ListLoop,
     SingleLoop,
     Shuffle
 }

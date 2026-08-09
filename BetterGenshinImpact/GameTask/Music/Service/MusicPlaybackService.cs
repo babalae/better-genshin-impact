@@ -105,7 +105,6 @@ public sealed class MusicPlaybackService(
                 currentIndex = _playbackMode switch
                 {
                     MusicPlaybackMode.SingleLoop => currentIndex,
-                    MusicPlaybackMode.ListLoop => (currentIndex + 1) % queue.Count,
                     MusicPlaybackMode.Shuffle when queue.Count > 1 => GetRandomIndex(queue.Count, currentIndex),
                     MusicPlaybackMode.Shuffle => currentIndex,
                     MusicPlaybackMode.Sequential when currentIndex < queue.Count - 1 => currentIndex + 1,
