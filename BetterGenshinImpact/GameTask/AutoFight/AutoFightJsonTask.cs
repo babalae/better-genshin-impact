@@ -353,22 +353,30 @@ public class AutoFightJsonTask : ISoloTask
                                     if (avatar != null)
                                     {
                                         var imageAfterAction = CaptureToRectArea();
-                                        var retry = 5;
-                                        while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                        try
                                         {
-                                            Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
-                                            // 防止在纳塔飞天或爬墙
-                                            Simulation.ReleaseAllKey();
-                                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                            Simulation.SendInput.SimulateAction(GIActions.Drop);
-                                            await Delay(200, _ct);
-                                            // 重新执行整个动作
-                                            await ExecuteAction(combatScenes, action);
-                                            imageAfterAction = CaptureToRectArea();
-                                            await Task.Delay(30, _ct);
-                                            retry--;
+                                            var retry = 5;
+                                            while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                            {
+                                                Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
+                                                // 防止在纳塔飞天或爬墙
+                                                Simulation.ReleaseAllKey();
+                                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                                Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                                await Delay(200, _ct);
+                                                // 重新执行整个动作
+                                                await ExecuteAction(combatScenes, action);
+                                                var previousImage = imageAfterAction;
+                                                imageAfterAction = CaptureToRectArea();
+                                                previousImage.Dispose();
+                                                await Task.Delay(30, _ct);
+                                                retry--;
+                                            }
                                         }
-                                        imageAfterAction.Dispose();
+                                        finally
+                                        {
+                                            imageAfterAction.Dispose();
+                                        }
                                     }
                                 }
     

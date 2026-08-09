@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -29,13 +29,13 @@ public class CameraOrientationFromGia
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         // 极坐标展开
         var centerPoint = new Point2f(mat.Width / 2f, mat.Height / 2f);
-        var polarMat = new Mat();
+        using var polarMat = new Mat();
         Cv2.WarpPolar(mat, polarMat, new Size(360, 360), centerPoint, 360d, InterpolationFlags.Linear, WarpPolarMode.Linear);
         // Cv2.ImShow("polarMat", polarMat);
-        var polarRoiMat = new Mat(polarMat, new Rect(10, 0, 70, polarMat.Height));
+        using var polarRoiMat = new Mat(polarMat, new Rect(10, 0, 70, polarMat.Height));
         Cv2.Rotate(polarRoiMat, polarRoiMat, RotateFlags.Rotate90Counterclockwise);
 
-        var scharrResult = new Mat();
+        using var scharrResult = new Mat();
         Cv2.Scharr(polarRoiMat, scharrResult, MatType.CV_32F, 1, 0);
 
         // 求波峰

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -1423,7 +1423,8 @@ public partial class PathExecutor
 
     private bool DashAtSecondPlaceExist()
     {
-        using var region = CaptureToRectArea().DeriveCrop(1595, 1028, 9, 7);
+        using var capture = CaptureToRectArea();
+        using var region = capture.DeriveCrop(1595, 1028, 9, 7);
         using var mask = OpenCvCommonHelper.Threshold(region.SrcMat,
             new Scalar(242, 223, 39), new Scalar(255, 233, 44));
         using var labels = new Mat();

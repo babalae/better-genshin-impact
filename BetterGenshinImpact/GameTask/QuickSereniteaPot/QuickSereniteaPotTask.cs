@@ -78,13 +78,17 @@ public class QuickSereniteaPotTask
             // 点击放置 右下225,60
             // GameCaptureRegion.GameRegionClick((size, assetScale) => (size.Width - 225 * assetScale, size.Height - 60 * assetScale));
             // 也可以使用下面的方法点击放置按钮
-            Bv.ClickWhiteConfirmButton(TaskControl.CaptureToRectArea());
+            using (var confirmCapture = TaskControl.CaptureToRectArea())
+            {
+                Bv.ClickWhiteConfirmButton(confirmCapture);
+            }
             TaskControl.CheckAndSleep(800);
             // 校验是否部署成功
             var seccess = false;
             for (int i = 0; i < 5; i++)
             {
-                if (Bv.IsInMainUi(TaskControl.CaptureToRectArea()))
+                using var mainUiCapture = TaskControl.CaptureToRectArea();
+                if (Bv.IsInMainUi(mainUiCapture))
                 {
                     seccess = true;
                     break;
@@ -93,7 +97,8 @@ public class QuickSereniteaPotTask
             if (!seccess) {
                 for (int i = 0; i < 5; ++i)
                 {
-                    if (!Bv.IsInBigMapUi(TaskControl.CaptureToRectArea()))
+                    using var bigMapCapture = TaskControl.CaptureToRectArea();
+                    if (!Bv.IsInBigMapUi(bigMapCapture))
                     {
                         Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
                     }
@@ -104,7 +109,7 @@ public class QuickSereniteaPotTask
                 }
             }
             // 校验F交互是否是 进入/离开[尘歌壶] 
-            var capture = TaskControl.CaptureToRectArea();
+            using var capture = TaskControl.CaptureToRectArea();
             bool isEnter = Bv.FindF(capture, "进入", "尘歌壶");
             bool isLeave = Bv.FindF(capture, "离开", "尘歌壶");
 

@@ -1,4 +1,4 @@
-﻿using OpenCvSharp;
+using OpenCvSharp;
 using System;
 using System.Linq;
 
@@ -80,8 +80,9 @@ public class MaskCalculator : IDisposable
     private void CreatBgMask(Mat bgrMat)
     {
         using var temp = new Mat();
+        using var morphologyKernel = Mat.Ones(2, 2, MatType.CV_8UC1);
         Cv2.InRange(bgrMat, new Scalar(165, 165, 55), new Scalar(180, 180, 75), temp);
-        Cv2.MorphologyEx(temp, temp, MorphTypes.Open, Mat.Ones(2, 2, MatType.CV_8UC1));
+        Cv2.MorphologyEx(temp, temp, MorphTypes.Open, morphologyKernel);
         if (Cv2.CountNonZero(temp) == 0)
         {
             return;

@@ -42,7 +42,7 @@ public class UseGadgetHandler : IActionHandler
                 double.TryParse(waypointForTrack.ActionParams, out maxWaitSeconds); // 最大等待时间，单位秒
             }
 
-            var screen = CaptureToRectArea();
+            using var screen = CaptureToRectArea();
             var cd = GetCurrentCd(screen);
             if (cd > 100)
             {

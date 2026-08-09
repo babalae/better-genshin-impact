@@ -30,6 +30,7 @@ public partial class PictureInPictureWindow : Window
     private bool _dragging;
     private Point _downPoint;
     private Size _cacheSize;
+    private bool _closed;
 
     public event Action? ClosedByUser;
 
@@ -51,7 +52,7 @@ public partial class PictureInPictureWindow : Window
 
     private void Loop(object? sender, EventArgs e)
     {
-        if (PictureInPictureService.IsManuallyClosed || !IsVisible || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.CaptureLoop))
+        if (_closed || PictureInPictureService.IsManuallyClosed || !IsVisible || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.CaptureLoop))
         {
             return;
         }
@@ -83,8 +84,14 @@ public partial class PictureInPictureWindow : Window
 
     public void SetFrame(Mat? frame)
     {
-        if (frame == null || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.TriggerDispatcher))
+        if (frame == null)
         {
+            return;
+        }
+
+        if (_closed || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.TriggerDispatcher))
+        {
+            frame.Dispose();
             return;
         }
 
@@ -233,7 +240,10 @@ public partial class PictureInPictureWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        base.OnClosed(e);
+        _closed = true;
+        CompositionTarget.Rendering -= Loop;
+        Loaded -= OnLoaded;
         PreviewImage.Source = null;
+        base.OnClosed(e);
     }
 }

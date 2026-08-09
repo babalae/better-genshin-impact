@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
@@ -73,7 +73,8 @@ public class SetTimeTask
             await Delay(200, ct);
             await _returnMainUiTask.Start(ct);
             // 跳过动画不总能成功
-            if (Bv.IsInMainUi(CaptureToRectArea()))
+            using var capture = CaptureToRectArea();
+            if (Bv.IsInMainUi(capture))
             {
                 return;
             }
