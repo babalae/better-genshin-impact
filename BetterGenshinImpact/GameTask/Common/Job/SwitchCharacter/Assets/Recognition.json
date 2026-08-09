@@ -5,6 +5,6 @@
     "2PTopLeft": { "type": "TemplateMatch", "template": "2P_top_left.png", "roi": "rect(0, 0, cw / 4, ch / 4)", "draw": false },
     "3PTopLeft": { "type": "TemplateMatch", "template": "3P_top_left.png", "roi": "rect(0, 0, cw / 4, ch / 4)", "draw": false },
     "4PTopLeft": { "type": "TemplateMatch", "template": "4P_top_left.png", "roi": "rect(0, 0, cw / 4, ch / 4)", "draw": false },
-    "SortButton": { "type": "TemplateMatch", "template": "sort_button.png", "roi": "rect(722, 8, 79, 81)", "draw": false }
+    "SortButton": { "type": "TemplateMatch", "template": "sort_button.png", "roi": "rect(0, 0, cw / 2, ch / 4)", "draw": false }
   }
 }

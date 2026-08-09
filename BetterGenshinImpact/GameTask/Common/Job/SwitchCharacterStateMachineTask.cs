@@ -831,7 +831,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         var avatarFound = false;
         if (_currentRole.UseFriendshipSort)
         {
-            await EnsureFriendshipSort(_ct);
+            await EnsureFriendshipSort(page);
             for (var attempt = 1; attempt <= FriendshipSortSearchAttemptCount; attempt++)
             {
                 ClickSortDirectionButton();
@@ -1481,7 +1481,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <summary>
     /// 确保特殊角色使用好感度排序。
     /// </summary>
-    private async Task EnsureFriendshipSort(CancellationToken ct)
+    private async Task EnsureFriendshipSort(BvPage page)
     {
         var sortTypeRoi = Rect1080(
             SortTypeRoi1080.X,
@@ -1494,11 +1494,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             {
                 return;
             }
-
-            if (!TryClickContainingText(capture, "顺序", sortTypeRoi))
-            {
-                throw new PartySetupFailedException("切换角色：未找到角色列表排序入口“顺序”");
-            }
         }
 
         var sortOptionsRoi = Rect1080(
@@ -1506,24 +1501,22 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             SortOptionsRoi1080.Y,
             SortOptionsRoi1080.Width,
             SortOptionsRoi1080.Height);
-        var friendshipClicked = await NewRetry.WaitForAction(() =>
+        try
         {
-            using var capture = CaptureToRectArea();
-            return TryClickContainingText(capture, "好感", sortOptionsRoi);
-        }, ct, 10, 200);
-        if (!friendshipClicked)
-        {
-            throw new PartySetupFailedException("切换角色：排序菜单中未找到“好感”选项");
+            await page.Flow()
+                .WithDefaultTimeout(2000)
+                .WithDefaultRetryInterval(200)
+                .WaitUntilText("顺序", sortTypeRoi)
+                .Click()
+                .WaitUntilText("好感", sortOptionsRoi)
+                .Click()
+                .WaitUntilText("好感", sortTypeRoi)
+                .Run();
         }
-
-        var friendshipSelected = await NewRetry.WaitForAction(() =>
+        catch (InvalidOperationException ex)
         {
-            using var capture = CaptureToRectArea();
-            return ContainsText(capture, "好感", sortTypeRoi);
-        }, ct, 10, 200);
-        if (!friendshipSelected)
-        {
-            throw new PartySetupFailedException("切换角色：选择“好感”后未确认排序切换成功");
+            throw new PartySetupFailedException(
+                $"切换角色：设置好感排序失败，{ex.GetBaseException().Message}");
         }
     }
 
@@ -1683,36 +1676,6 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// 点击 OCR 区域内第一项包含指定文本的结果。
-    /// </summary>
-    private static bool TryClickContainingText(ImageRegion capture, string text, Rect roi)
-    {
-        var regions = capture.FindMulti(RecognitionObject.Ocr(roi));
-        try
-        {
-            var region = regions
-                .Where(region => region.Text.Contains(text, StringComparison.Ordinal))
-                .OrderBy(region => region.Y)
-                .ThenBy(region => region.X)
-                .FirstOrDefault();
-            if (region == null)
-            {
-                return false;
-            }
-
-            region.Click();
-            return true;
-        }
-        finally
-        {
-            foreach (var region in regions)
-            {
-                region.Dispose();
-            }
-        }
     }
 
     /// <summary>
