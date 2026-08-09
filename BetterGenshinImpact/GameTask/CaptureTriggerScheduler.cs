@@ -20,12 +20,15 @@ internal sealed class CaptureTriggerScheduler : IDisposable
     private readonly Func<IGameCapture?> _gameCaptureProvider;
 
     private readonly System.Timers.Timer _captureTimer = new();
+    private readonly object _captureLifecycleLocker = new();
     private List<ITaskTrigger>? _triggers;
 
     private static readonly object _captureLocker = new();
     private static readonly object _triggerListLocker = new();
     private int _frameIndex;
     private int _skipNextFrame;
+    private bool _acceptCaptureFrames;
+    private int _activeCaptureFrames;
 
     private DateTime _prevManualGc = DateTime.MinValue;
 
@@ -117,14 +120,27 @@ internal sealed class CaptureTriggerScheduler : IDisposable
 
     public void Stop()
     {
-        _captureTimer.Stop();
+        lock (_captureLifecycleLocker)
+        {
+            // 先禁止新帧进入，再等待已经进入的帧完整退出，避免截图资源被提前释放。
+            _acceptCaptureFrames = false;
+            _captureTimer.Stop();
+            while (_activeCaptureFrames > 0)
+            {
+                Monitor.Wait(_captureLifecycleLocker);
+            }
+        }
     }
 
     public void StartTimer()
     {
-        if (!_captureTimer.Enabled)
+        lock (_captureLifecycleLocker)
         {
-            _captureTimer.Start();
+            _acceptCaptureFrames = true;
+            if (!_captureTimer.Enabled)
+            {
+                _captureTimer.Start();
+            }
         }
     }
 
@@ -142,6 +158,35 @@ internal sealed class CaptureTriggerScheduler : IDisposable
     }
 
     public void ProcessCaptureFrame(object? sender, EventArgs e)
+    {
+        lock (_captureLifecycleLocker)
+        {
+            if (!_acceptCaptureFrames)
+            {
+                return;
+            }
+
+            _activeCaptureFrames++;
+        }
+
+        try
+        {
+            ProcessCaptureFrameCore(sender, e);
+        }
+        finally
+        {
+            lock (_captureLifecycleLocker)
+            {
+                _activeCaptureFrames--;
+                if (_activeCaptureFrames == 0)
+                {
+                    Monitor.PulseAll(_captureLifecycleLocker);
+                }
+            }
+        }
+    }
+
+    private void ProcessCaptureFrameCore(object? sender, EventArgs e)
     {
         var hasLock = false;
         var tickMetrics = new DispatcherTickMetrics();
@@ -219,16 +264,28 @@ internal sealed class CaptureTriggerScheduler : IDisposable
 
             lock (_triggerListLocker)
             {
+                // 遮罩调度器发布的状态只用于帧处理门控；窗口可能在两个定时器之间切换，
+                // 因此选择触发器时必须重新检查当前窗口状态，避免向其他前台程序发送输入。
+                if (SystemControl.IsGenshinImpactMinimized())
+                {
+                    return;
+                }
+
+                var backgroundTriggersOnly = availabilityState.BackgroundTriggersOnly
+                                             || !SystemControl.IsGenshinImpactActive();
                 var needRunTriggers = new List<ITaskTrigger>(); // 最终要执行的触发器列表
                 var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {
-                    needRunTriggers.Add(exclusiveTrigger);
+                    if (!backgroundTriggersOnly || exclusiveTrigger.IsBackgroundRunning)
+                    {
+                        needRunTriggers.Add(exclusiveTrigger);
+                    }
                 }
                 else
                 {
                     var runningTriggers = _triggers!.Where(t => t.IsEnabled);
-                    if (availabilityState.BackgroundTriggersOnly)
+                    if (backgroundTriggersOnly)
                     {
                         runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
                     }
@@ -251,6 +308,13 @@ internal sealed class CaptureTriggerScheduler : IDisposable
                         if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
                             || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                         {
+                            // 非后台触发器在真正执行前再次校验前台状态，缩短检查与输入之间的竞态窗口。
+                            // 游戏最小化时不执行任何触发器，保持原 Tick 的最小化处理语义。
+                            if (!CanRunTriggerNow(trigger))
+                            {
+                                continue;
+                            }
+
                             // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
                             var triggerStart = Stopwatch.GetTimestamp();
                             trigger.OnCapture(content);
@@ -286,6 +350,16 @@ internal sealed class CaptureTriggerScheduler : IDisposable
                 tickMetrics.Publish(_metricsService);
             }
         }
+    }
+
+    private static bool CanRunTriggerNow(ITaskTrigger trigger)
+    {
+        if (SystemControl.IsGenshinImpactMinimized())
+        {
+            return false;
+        }
+
+        return trigger.IsBackgroundRunning || SystemControl.IsGenshinImpactActive();
     }
 
     public void Dispose()
