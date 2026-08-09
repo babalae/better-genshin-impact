@@ -17,10 +17,14 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public string BattleEndProgressBarColorTolerance { get; set; } = "";
         public bool FastCheckEnabled = false;
         public string FastCheckParams = "";
+        public bool CheckAfterSwitchAvatar = false;
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
         public bool RotateFindEnemyEnabled = false;
         public bool SkipFightEndCheckWhenEnemyVisible = false;
+        public double BlockCheckBeforeBattleSeconds = 0;
+        public bool PaimonEndCheckEnabled = true;
+        public double PaimonEndCheckDelay = 0.075;
     }
 
     public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
@@ -35,9 +39,14 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
+        FinishDetectConfig.CheckAfterSwitchAvatar = autoFightConfig.FinishDetectConfig.CheckAfterSwitchAvatar;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
+        FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        FinishDetectConfig.BlockCheckBeforeBattleSeconds = autoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds;
+        FinishDetectConfig.PaimonEndCheckEnabled = autoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled;
+        FinishDetectConfig.PaimonEndCheckDelay = autoFightConfig.FinishDetectConfig.PaimonEndCheckDelay;
 
 
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
@@ -169,10 +178,14 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
+        FinishDetectConfig.CheckAfterSwitchAvatar = autoFightConfig.FinishDetectConfig.CheckAfterSwitchAvatar;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
         FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible = autoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible;
+        FinishDetectConfig.BlockCheckBeforeBattleSeconds = autoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds;
+        FinishDetectConfig.PaimonEndCheckEnabled = autoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled;
+        FinishDetectConfig.PaimonEndCheckDelay = autoFightConfig.FinishDetectConfig.PaimonEndCheckDelay;
 
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;

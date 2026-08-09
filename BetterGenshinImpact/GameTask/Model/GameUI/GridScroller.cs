@@ -71,7 +71,13 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     await TaskControl.Delay(60, ct);
                     using var ra4 = TaskControl.CaptureToRectArea();
                     using ImageRegion grid2 = ra4.DeriveCrop(this.roi);
-                    IEnumerable<Rect> gridItems2 = GetGridItems(grid2.SrcMat, this.columns);
+                    var gridItems2 = GetGridItems(grid2.SrcMat, this.columns).ToList();
+                    if (gridItems2.Count == 0)
+                    {
+                        this.logger.LogDebug("滚动过程中暂未检测到网格项，等待下一帧");
+                        continue;
+                    }
+
                     if (gridItems2.Min(i => i.Y) > (ra4.Width * this.s3Scale))  // 最后精细滚动，保证完整地显示最多行
                     {
                         input.Mouse.VerticalScroll(-1);
