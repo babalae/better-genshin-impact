@@ -751,6 +751,8 @@ public partial class PathExecutor
     {
         // 切人
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
+        // 切人完成时刻：切人后有约1秒CD，期间无法切换到其他角色（用于生存位）
+        var switchAvatarTime = DateTime.UtcNow;
 
         var screen = CaptureToRectArea();
         var (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
@@ -764,14 +766,14 @@ public partial class PathExecutor
         var fastModeColdTime = DateTime.MinValue;
         var prevNotTooFarPosition = position;
         int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
+        // 连续偏角>5°持续状态的起始时间（配合帧数下限使用，替代原纯帧计数）
+        DateTime beyondAngleStartTime = DateTime.MinValue;
         var hurryOnState = new HurryOnState();
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-        // 赶路帧间隔：仅当存在解析后的有效赶路角色（_hurryOnAvatar，队伍中确实有该角色）时使用配置值（1-150 钳制），否则使用默认 100
-        var hurryFrameInterval = !string.IsNullOrEmpty(_hurryOnAvatar)
-            ? Math.Clamp(PartyConfig.HurryOnFrameInterval, 1, 150)
-            : 100;
+        // 赶路帧间隔：始终使用配置值（5-150 钳制），不依赖是否配置赶路角色（空选也可用）
+        var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, 150);
         while (!ct.IsCancellationRequested)
         {
             if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
@@ -890,18 +892,26 @@ public partial class PathExecutor
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             //执行旋转
             var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
-            if (num > 20)
+            // 进入MoveTo超过2秒且至少5帧后才启用旋转纠正（绕过起步阶段的抖动）
+            if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 2 && num >= 5)
             {
                 if (Math.Abs(diff) > 5)
                 {
                     consecutiveRotationCountBeyondAngle++;
+                    if (beyondAngleStartTime == DateTime.MinValue)
+                    {
+                        beyondAngleStartTime = DateTime.UtcNow;
+                    }
                 }
                 else
                 {
                     consecutiveRotationCountBeyondAngle = 0;
+                    beyondAngleStartTime = DateTime.MinValue;
                 }
 
-                if (consecutiveRotationCountBeyondAngle > 10)
+                // 连续偏角>5°持续超过2秒（且至少3帧）时，说明边走边转不动，松W站定转向
+                if (consecutiveRotationCountBeyondAngle >= 3
+                    && (DateTime.UtcNow - beyondAngleStartTime).TotalSeconds > 2)
                 {
                     // 松W键，站定好转向，转完重新按下W继续走
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
@@ -987,8 +997,9 @@ public partial class PathExecutor
                     if ((DateTime.UtcNow - _elementalSkillLastUseTime).TotalMilliseconds > ms)
                     {
                         // 可能刚切过人在冷却时间内
-                        if (num <= 5 && (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex) &&
-                                         PartyConfig.GuardianAvatarIndex != PartyConfig.MainAvatarIndex))
+                        if ((DateTime.UtcNow - switchAvatarTime).TotalSeconds < 1 &&
+                            (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex) &&
+                             PartyConfig.GuardianAvatarIndex != PartyConfig.MainAvatarIndex))
                         {
                             await Delay(800, ct); // 总共1s
                         }
