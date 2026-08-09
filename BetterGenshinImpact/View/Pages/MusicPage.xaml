@@ -305,9 +305,9 @@
                                     <TextBlock FontWeight="SemiBold" Text="曲谱目录" />
                                     <TextBlock Margin="0,4,0,0"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Text="{Binding ViewModel.MusicFolderDisplayText}"
+                                               Text="{Binding ViewModel.MusicFolderDisplayText, StringFormat='当前已选：{0}'}"
                                                TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding ViewModel.MusicFolderDisplayText}" />
+                                               ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2"
                                             VerticalAlignment="Center"

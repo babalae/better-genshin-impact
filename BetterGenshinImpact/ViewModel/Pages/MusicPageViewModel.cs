@@ -62,7 +62,7 @@ public partial class MusicPageViewModel : ViewModel
         Config = configService.Get();
         MusicFolderDisplayText = string.IsNullOrWhiteSpace(Config.MusicConfig.MusicFolder)
             ? "尚未选择曲谱目录"
-            : Config.MusicConfig.MusicFolder;
+            : GetFolderDisplayName(Config.MusicConfig.MusicFolder);
         MusicFolderHistory = new ObservableCollection<MusicFolderHistoryItem>(
             _stateStore.State.MusicFolderHistory
                 .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -350,7 +350,7 @@ public partial class MusicPageViewModel : ViewModel
         AddMusicFolderToHistory(normalizedFolder);
         SelectedMusicFolder = normalizedFolder;
         Config.MusicConfig.MusicFolder = normalizedFolder;
-        MusicFolderDisplayText = normalizedFolder;
+        MusicFolderDisplayText = GetFolderDisplayName(normalizedFolder);
         _libraryService.Watch(normalizedFolder);
         await RefreshLibraryAsync();
     }
@@ -374,7 +374,7 @@ public partial class MusicPageViewModel : ViewModel
         SaveMusicFolderHistory();
         if (!string.Equals(
                 Config.MusicConfig.MusicFolder,
-                historyItem,
+                historyItem.FullPath,
                 StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -878,6 +878,13 @@ public partial class MusicPageViewModel : ViewModel
         return time.TotalHours >= 1
             ? time.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
             : time.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
+    }
+
+    private static string GetFolderDisplayName(string folder)
+    {
+        var trimmedPath = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var folderName = Path.GetFileName(trimmedPath);
+        return string.IsNullOrWhiteSpace(folderName) ? folder : folderName;
     }
 }
 
