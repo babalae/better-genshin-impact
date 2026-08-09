@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
@@ -130,6 +131,7 @@ public partial class MaskWindow : Window
 
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
         InitializeComponent();
+        this.DpiChanged += OnWindowDpiChanged;
         this.InitializeDpiAwareness();
 
         LogTextBox.TextChanged += LogTextBoxTextChanged;
@@ -172,6 +174,14 @@ public partial class MaskWindow : Window
         }
     }
 
+    private void OnWindowDpiChanged(object? sender, DpiChangedEventArgs e)
+    {
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.OnDpiChanged(e.NewDpi.DpiScaleY);
+        }
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _richTextBox = App.GetService<IRichTextBox>();
@@ -209,6 +219,7 @@ public partial class MaskWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        this.DpiChanged -= OnWindowDpiChanged;
         PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
         IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
         StateChanged -= MaskWindowOnStateChanged;
@@ -251,6 +262,8 @@ public partial class MaskWindow : Window
             e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
         {
             Dispatcher.Invoke(UpdateClickThroughState);
+            // 地图状态变化后重绘，立即移除/恢复准星，避免关闭穿透时旧准星画面残留拦截点击
+            Dispatcher.Invoke(InvalidateVisual);
         }
 
         if (e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
@@ -488,13 +501,13 @@ public partial class MaskWindow : Window
                 return;
             }
 
-            var displayRecognitionResults = TaskContext.Instance().Config.MaskWindowConfig.DisplayRecognitionResultsOnMask;
-            if (!displayRecognitionResults)
+            var maskConfig = TaskContext.Instance().Config.MaskWindowConfig;
+            if (!maskConfig.DisplayRecognitionResultsOnMask)
             {
                 return;
             }
 
-            if (displayRecognitionResults)
+            if (maskConfig.DisplayRecognitionResultsOnMask)
             {
                 foreach (var kv in VisionContext.Instance().DrawContent.RectList)
                 {
@@ -502,9 +515,13 @@ public partial class MaskWindow : Window
                     {
                         if (!drawable.IsEmpty)
                         {
+                            var pen = maskConfig.RecognitionUseDrawableStyle
+                                ? new Pen(OverlayStyleHelper.CreateBrush(maskConfig.RecognitionRectStrokeColor, Colors.Red), Math.Max(0, maskConfig.RecognitionRectStrokeThickness))
+                                : new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width);
+
                             drawingContext.DrawRectangle(
                                 Brushes.Transparent,
-                                new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
+                                pen,
                                 drawable.Rect);
                         }
                     }
@@ -514,7 +531,11 @@ public partial class MaskWindow : Window
                 {
                     foreach (var drawable in kv.Value)
                     {
-                        drawingContext.DrawLine(new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width), drawable.P1, drawable.P2);
+                        var pen = maskConfig.RecognitionUseDrawableStyle
+                            ? new Pen(OverlayStyleHelper.CreateBrush(maskConfig.RecognitionLineStrokeColor, Colors.Red), Math.Max(0, maskConfig.RecognitionLineStrokeThickness))
+                            : new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width);
+
+                        drawingContext.DrawLine(pen, drawable.P1, drawable.P2);
                     }
                 }
 
@@ -568,12 +589,14 @@ public partial class MaskWindow : Window
                             }
                             else
                             {
-                                double defaultFontSize = (36 * scaleTo1080) / pixelsPerDip;
+                                double defaultFontSize = (Math.Max(1, maskConfig.RecognitionTextFontSize) * scaleTo1080) / pixelsPerDip;
                                 drawingContext.DrawText(new FormattedText(drawable.Text,
                                     CultureInfo.GetCultureInfo("zh-cn"),
                                     FlowDirection.LeftToRight,
                                     _typeface,
-                                    defaultFontSize, Brushes.Black, pixelsPerDip), renderPoint);
+                                    defaultFontSize,
+                                    OverlayStyleHelper.CreateBrush(maskConfig.RecognitionTextColor, Colors.Black),
+                                    pixelsPerDip), renderPoint);
                             }
                         }
                     }
@@ -638,6 +661,11 @@ public partial class MaskWindow : Window
     {
         var config = _maskWindowConfig;
         if (config == null || !config.CrosshairEnabled) return;
+
+        // 窗口关闭点击穿透时（地图界面/遮罩布局编辑），WPF 分层窗口按像素 alpha 做命中测试，
+        // 准星非透明像素会拦截鼠标点击，故此时跳过准星绘制
+        var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
+        if (editEnabled || _viewModel?.IsInBigMapUi == true) return;
 
         var centerX = ActualWidth / 2;
         var centerY = ActualHeight / 2;

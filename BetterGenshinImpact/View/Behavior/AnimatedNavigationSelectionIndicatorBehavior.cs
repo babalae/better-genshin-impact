@@ -352,17 +352,17 @@ public sealed class AnimatedNavigationSelectionIndicatorBehavior : Behavior<Navi
         return null;
     }
 
-    private static DependencyObject? GetParent(DependencyObject child)
+    private static DependencyObject? GetParent(DependencyObject element)
     {
-        if (child is ContentElement contentElement)
+        if (element is ContentElement contentElement)
         {
             return ContentOperations.GetParent(contentElement)
                    ?? (contentElement as FrameworkContentElement)?.Parent;
         }
 
-        return child is Visual or Visual3D
-            ? VisualTreeHelper.GetParent(child)
-            : LogicalTreeHelper.GetParent(child);
+        return element is Visual or System.Windows.Media.Media3D.Visual3D
+            ? VisualTreeHelper.GetParent(element)
+            : LogicalTreeHelper.GetParent(element);
     }
 
     private static T? FindVisualDescendant<T>(

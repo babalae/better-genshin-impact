@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.62.2-alpha.2</Version>
+		<Version>0.63.0</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -43,7 +43,7 @@
 
 		
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.19" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.20" />
         <PackageReference Include="BetterGI.Assets.Model" Version="1.0.29" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.18" />
 		
@@ -134,6 +134,9 @@
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\CharacterDevelopment\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFishing\Assets\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -162,6 +165,9 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Job\SwitchCharacter\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\Common\Element\Assets\Json\**">
