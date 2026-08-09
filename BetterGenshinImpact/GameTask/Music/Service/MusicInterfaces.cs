@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
 
 namespace BetterGenshinImpact.GameTask.Music.Service;
 
@@ -21,6 +22,11 @@ public interface IMusicLibraryService : IDisposable
     Task<IReadOnlyList<PerformanceScore>> ScanAsync(string rootFolder, CancellationToken cancellationToken);
 
     void Watch(string rootFolder);
+}
+
+public interface IMusicCoverService
+{
+    Task<ImageSource?> GetCoverAsync(string songName, CancellationToken cancellationToken);
 }
 
 public interface IInstrumentProfileService

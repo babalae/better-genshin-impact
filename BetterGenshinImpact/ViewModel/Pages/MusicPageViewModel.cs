@@ -30,6 +30,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class MusicPageViewModel : ViewModel
 {
     private readonly IMusicLibraryService _libraryService;
+    private readonly IMusicCoverService _coverService;
     private readonly IMusicPlaybackService _playbackService;
     private readonly IInstrumentProfileService _profileService;
     private readonly IMusicTimelineBuilder _timelineBuilder;
@@ -37,6 +38,7 @@ public partial class MusicPageViewModel : ViewModel
     private readonly ISnackbarService _snackbarService;
     private readonly ILogger<MusicPageViewModel> _logger = App.GetLogger<MusicPageViewModel>();
     private CancellationTokenSource? _refreshCancellationTokenSource;
+    private CancellationTokenSource? _coverLoadCancellationTokenSource;
     private Task? _sessionTask;
     private bool _isLoading;
     private bool _isUpdatingSelection;
@@ -46,6 +48,7 @@ public partial class MusicPageViewModel : ViewModel
 
     public MusicPageViewModel(
         IMusicLibraryService libraryService,
+        IMusicCoverService coverService,
         IMusicPlaybackService playbackService,
         IInstrumentProfileService profileService,
         IMusicTimelineBuilder timelineBuilder,
@@ -54,6 +57,7 @@ public partial class MusicPageViewModel : ViewModel
         ISnackbarService snackbarService)
     {
         _libraryService = libraryService;
+        _coverService = coverService;
         _playbackService = playbackService;
         _profileService = profileService;
         _timelineBuilder = timelineBuilder;
@@ -504,6 +508,7 @@ public partial class MusicPageViewModel : ViewModel
 
     private async Task RefreshLibraryAsync()
     {
+        Volatile.Read(ref _coverLoadCancellationTokenSource)?.Cancel();
         var refreshCancellationTokenSource = new CancellationTokenSource();
         var previousRefresh = Interlocked.Exchange(
             ref _refreshCancellationTokenSource,
@@ -546,6 +551,7 @@ public partial class MusicPageViewModel : ViewModel
             }
 
             _isLoading = false;
+            StartCoverLoading();
 
             var playableCount = MusicItems.Count(x => x.IsValid);
             LibraryStatusText = Directory.Exists(Config.MusicConfig.MusicFolder)
@@ -580,6 +586,48 @@ public partial class MusicPageViewModel : ViewModel
 
             _isLoading = false;
             refreshCancellationTokenSource.Dispose();
+        }
+    }
+
+    private void StartCoverLoading()
+    {
+        var coverLoadCancellationTokenSource = new CancellationTokenSource();
+        var previous = Interlocked.Exchange(
+            ref _coverLoadCancellationTokenSource,
+            coverLoadCancellationTokenSource);
+        previous?.Cancel();
+        _ = LoadCoversAsync([.. MusicItems], coverLoadCancellationTokenSource);
+    }
+
+    private async Task LoadCoversAsync(
+        IReadOnlyList<PerformanceScore> scores,
+        CancellationTokenSource cancellationTokenSource)
+    {
+        try
+        {
+            foreach (var score in scores)
+            {
+                cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                score.Artwork = await _coverService.GetCoverAsync(
+                    score.DisplayTitle,
+                    cancellationTokenSource.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 新一轮封面加载已经接管
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "加载音乐封面失败");
+        }
+        finally
+        {
+            Interlocked.CompareExchange(
+                ref _coverLoadCancellationTokenSource,
+                null,
+                cancellationTokenSource);
+            cancellationTokenSource.Dispose();
         }
     }
 

@@ -173,8 +173,20 @@
                                                     VerticalAlignment="Center"
                                                     Background="{DynamicResource ControlFillColorSecondaryBrush}"
                                                     CornerRadius="9">
-                                                <ui:SymbolIcon x:Name="TrackIcon"
-                                                               Symbol="MusicNote224" />
+                                                <Grid>
+                                                    <Image x:Name="TrackArtwork"
+                                                           Source="{Binding Artwork}"
+                                                           Stretch="UniformToFill">
+                                                        <Image.Clip>
+                                                            <RectangleGeometry RadiusX="9"
+                                                                               RadiusY="9"
+                                                                               Rect="0,0,34,34" />
+                                                        </Image.Clip>
+                                                    </Image>
+                                                    <ui:SymbolIcon x:Name="TrackIcon"
+                                                                   Symbol="MusicNote224"
+                                                                   Visibility="Collapsed" />
+                                                </Grid>
                                             </Border>
                                             <StackPanel Grid.Column="1"
                                                         Margin="7,0,12,0"
@@ -211,6 +223,14 @@
                                         </Grid>
                                     </Border>
                                     <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Artwork}" Value="{x:Null}">
+                                            <Setter TargetName="TrackArtwork"
+                                                    Property="Visibility"
+                                                    Value="Collapsed" />
+                                            <Setter TargetName="TrackIcon"
+                                                    Property="Visibility"
+                                                    Value="Visible" />
+                                        </DataTrigger>
                                         <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsMouseOver}"
                                                      Value="True">
                                             <Setter TargetName="TrackCard"
