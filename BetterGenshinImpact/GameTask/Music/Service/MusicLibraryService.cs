@@ -37,6 +37,8 @@ public sealed class MusicLibraryService(
 
     public event EventHandler? FilesChanged;
 
+    public event EventHandler<MusicScoreParseFailedEventArgs>? ScoreParseFailed;
+
     public async Task<IReadOnlyList<PerformanceScore>> ScanAsync(
         string rootFolder,
         CancellationToken cancellationToken)
@@ -72,9 +74,30 @@ public sealed class MusicLibraryService(
                     continue;
                 }
 
-                scores.Add(await scoreParser
-                    .ParseAsync(path, rootFolder, cancellationToken)
-                    .ConfigureAwait(false));
+                try
+                {
+                    scores.Add(await scoreParser
+                        .ParseAsync(path, rootFolder, cancellationToken)
+                        .ConfigureAwait(false));
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "解析曲谱文件失败，已跳过：{Path}", path);
+                    try
+                    {
+                        ScoreParseFailed?.Invoke(
+                            this,
+                            new MusicScoreParseFailedEventArgs(path, e.Message));
+                    }
+                    catch (Exception notificationException)
+                    {
+                        _logger.LogDebug(notificationException, "通知曲谱解析失败事件时发生异常：{Path}", path);
+                    }
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();

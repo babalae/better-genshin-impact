@@ -19,9 +19,18 @@ public interface IMusicLibraryService : IDisposable
 {
     event EventHandler? FilesChanged;
 
+    event EventHandler<MusicScoreParseFailedEventArgs>? ScoreParseFailed;
+
     Task<IReadOnlyList<PerformanceScore>> ScanAsync(string rootFolder, CancellationToken cancellationToken);
 
     void Watch(string rootFolder);
+}
+
+public sealed class MusicScoreParseFailedEventArgs(string filePath, string errorMessage) : EventArgs
+{
+    public string FilePath { get; } = filePath;
+
+    public string ErrorMessage { get; } = errorMessage;
 }
 
 public interface IMusicCoverService

@@ -96,6 +96,7 @@ public partial class MusicPageViewModel : ViewModel
         };
 
         _libraryService.FilesChanged += OnLibraryFilesChanged;
+        _libraryService.ScoreParseFailed += OnScoreParseFailed;
         _playbackService.SnapshotChanged += OnPlaybackSnapshotChanged;
     }
 
@@ -963,6 +964,19 @@ public partial class MusicPageViewModel : ViewModel
     private void OnLibraryFilesChanged(object? sender, EventArgs e)
     {
         _ = Application.Current.Dispatcher.InvokeAsync(RefreshLibraryAsync).Task.Unwrap();
+    }
+
+    private void OnScoreParseFailed(object? sender, MusicScoreParseFailedEventArgs e)
+    {
+        _ = Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            _snackbarService.Show(
+                "曲谱解析失败",
+                $"已跳过 {Path.GetFileName(e.FilePath)}：{e.ErrorMessage}",
+                ControlAppearance.Caution,
+                null,
+                TimeSpan.FromSeconds(5));
+        });
     }
 
     private void OnPlaybackSnapshotChanged(object? sender, PlaybackSnapshot snapshot)
