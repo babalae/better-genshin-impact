@@ -39,7 +39,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
-		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		<PackageReference Include="CsTrees" Version="1.0.1" />
 
 

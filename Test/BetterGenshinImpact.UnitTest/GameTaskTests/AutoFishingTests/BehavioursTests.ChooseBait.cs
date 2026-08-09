@@ -28,7 +28,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
-            var blackboard = new Blackboard();
 
             //
             ChooseBait sut = new ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), this.session, this.prototypes);
