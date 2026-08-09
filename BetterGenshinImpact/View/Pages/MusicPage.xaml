@@ -44,6 +44,74 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="PlaybackTrackButtonStyle" TargetType="RepeatButton">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Height="4"
+                                VerticalAlignment="Center"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="2" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlaybackSliderThumbStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                BorderBrush="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderThickness="2"
+                                CornerRadius="7" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlaybackSliderStyle" TargetType="Slider">
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Background="{TemplateBinding Background}"
+                              SnapsToDevicePixels="True">
+                            <Track x:Name="PART_Track"
+                                   Height="14"
+                                   Margin="8,0"
+                                   VerticalAlignment="Center">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}"
+                                                  Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                  Style="{StaticResource PlaybackTrackButtonStyle}" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource PlaybackSliderThumbStyle}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}"
+                                                  Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                  Style="{StaticResource PlaybackTrackButtonStyle}" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -53,49 +121,104 @@
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0"
-              Margin="48,20,48,14">
+              Margin="24,10,24,10">
             <Border Padding="0"
                     Style="{StaticResource MusicCardStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid Margin="18,16,14,10">
+                    <Grid Margin="14,10,10,8">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Text="我的曲库" />
-                            <TextBlock Margin="0,3,0,0"
-                                        FontSize="12"
-                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                        Text="{Binding ViewModel.MusicFolderDisplayText, StringFormat=曲谱目录：{0}}"
-                                        ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}" />
-                        </StackPanel>
-                        <ui:Button Grid.Column="1"
-                                   Margin="8,0,7,0"
-                                   Command="{Binding ViewModel.OpenSettingsCommand}"
-                                   Content="设置"
-                                   Icon="{ui:SymbolIcon Settings24}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Text="我的曲库" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="14,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding ViewModel.MusicFolderDisplayText, StringFormat=曲谱目录：{0}}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}" />
                         <ui:Button Grid.Column="2"
+                                   Width="36"
+                                   Height="34"
+                                   Margin="0,0,7,0"
+                                   Command="{Binding ViewModel.OpenFolderCommand}"
+                                   Icon="{ui:SymbolIcon Open24}"
+                                   ToolTip="打开当前目录" />
+                        <ui:Button Grid.Column="3"
+                                   Height="34"
                                    Margin="0,0,7,0"
                                    Appearance="Primary"
                                    Command="{Binding ViewModel.ChooseFolderCommand}"
                                    Content="选择目录"
                                    Icon="{ui:SymbolIcon FolderOpen24}" />
-                        <ui:Button Grid.Column="3"
-                                   Width="40"
-                                   Height="36"
+                        <ui:Button Grid.Column="4"
+                                   Height="34"
+                                   Margin="0,0,7,0"
+                                   Command="{Binding ViewModel.DeleteMusicFolderCommand}"
+                                   CommandParameter="{Binding SelectedValue, ElementName=MusicFolderHistoryComboBox}"
+                                   Content="删除记录"
+                                   Icon="{ui:SymbolIcon Delete24}" />
+                        <ui:Button Grid.Column="5"
+                                   Height="34"
+                                   Command="{Binding ViewModel.OpenSettingsCommand}"
+                                   Content="设置"
+                                   Icon="{ui:SymbolIcon Settings24}" />
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="10,0,10,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="112" />
+                            <ColumnDefinition Width="112" />
+                            <ColumnDefinition Width="52" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="MusicFolderHistoryComboBox"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding ViewModel.MusicFolderHistory}"
+                                  SelectedValue="{Binding ViewModel.SelectedMusicFolder, Mode=OneWay}"
+                                  SelectedValuePath="FullPath"
+                                  ToolTip="历史目录：切换曲谱目录">
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="SelectionChanged">
+                                    <b:InvokeCommandAction Command="{Binding ViewModel.SelectMusicFolderCommand}"
+                                                           CommandParameter="{Binding SelectedValue, ElementName=MusicFolderHistoryComboBox}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </ComboBox>
+                        <ui:TextBox Grid.Column="2"
+                                    Margin="0,0,8,0"
+                                    PlaceholderText="搜索曲名、作者或路径"
+                                    Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <ComboBox Grid.Column="3"
+                                  Margin="0,0,8,0"
+                                  ItemsSource="{Binding ViewModel.FormatFilters}"
+                                  SelectedItem="{Binding ViewModel.SelectedFormatFilter}"
+                                  ToolTip="按格式筛选" />
+                        <ComboBox Grid.Column="4"
+                                  ItemsSource="{Binding ViewModel.InstrumentFilters}"
+                                  SelectedItem="{Binding ViewModel.SelectedInstrumentFilter}"
+                                  ToolTip="按乐器筛选" />
+                        <ui:Button Grid.Column="5"
+                                   Width="44"
+                                   Height="34"
+                                   Margin="8,0,0,0"
                                    Command="{Binding ViewModel.RefreshCommand}"
                                    IsEnabled="{Binding ViewModel.IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"
                                    ToolTip="重新扫描曲谱目录">
@@ -110,60 +233,9 @@
                         </ui:Button>
                     </Grid>
 
-                    <Grid Grid.Row="1" Margin="18,0,14,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Margin="0,0,10,0"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="历史目录" />
-                        <ComboBox x:Name="MusicFolderHistoryComboBox"
-                                  Grid.Column="1"
-                                  DisplayMemberPath="DisplayName"
-                                  ItemsSource="{Binding ViewModel.MusicFolderHistory}"
-                                  SelectedValue="{Binding ViewModel.SelectedMusicFolder, Mode=OneWay}"
-                                  SelectedValuePath="FullPath"
-                                  ToolTip="切换曲谱目录">
-                            <b:Interaction.Triggers>
-                                <b:EventTrigger EventName="SelectionChanged">
-                                    <b:InvokeCommandAction Command="{Binding ViewModel.SelectMusicFolderCommand}"
-                                                           CommandParameter="{Binding SelectedValue, ElementName=MusicFolderHistoryComboBox}" />
-                                </b:EventTrigger>
-                            </b:Interaction.Triggers>
-                        </ComboBox>
-                        <ui:Button Grid.Column="2"
-                                   Width="36"
-                                   Margin="7,0,0,0"
-                                   Command="{Binding ViewModel.OpenFolderCommand}"
-                                   Icon="{ui:SymbolIcon Open24}"
-                                   ToolTip="打开当前目录" />
-                    </Grid>
-
-                    <Grid Grid.Row="2" Margin="14,2,14,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="118" />
-                            <ColumnDefinition Width="118" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBox Margin="0,0,8,0"
-                                    PlaceholderText="搜索曲名、作者或路径"
-                                    Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
-                        <ComboBox Grid.Column="1"
-                                  Margin="0,0,8,0"
-                                  ItemsSource="{Binding ViewModel.FormatFilters}"
-                                  SelectedItem="{Binding ViewModel.SelectedFormatFilter}"
-                                  ToolTip="按格式筛选" />
-                        <ComboBox Grid.Column="2"
-                                  ItemsSource="{Binding ViewModel.InstrumentFilters}"
-                                  SelectedItem="{Binding ViewModel.SelectedInstrumentFilter}"
-                                  ToolTip="按乐器筛选" />
-                    </Grid>
-
-                    <Grid Grid.Row="3" Margin="8,0">
-                        <ListView Background="Transparent"
+                    <Grid Grid.Row="2" Margin="6,0,6,6">
+                        <ListView x:Name="MusicListView"
+                                  Background="Transparent"
                                   BorderThickness="0"
                                   ItemContainerStyle="{StaticResource MusicListItemStyle}"
                                   ItemsSource="{Binding ViewModel.MusicItemsView}"
@@ -171,14 +243,15 @@
                                   SelectedItem="{Binding ViewModel.SelectedMusicItem}">
                             <b:Interaction.Triggers>
                                 <b:EventTrigger EventName="MouseDoubleClick">
-                                    <b:InvokeCommandAction Command="{Binding ViewModel.PlayPauseCommand}" />
+                                    <b:InvokeCommandAction Command="{Binding ViewModel.PlaySelectedCommand}"
+                                                           CommandParameter="{Binding SelectedItem, ElementName=MusicListView}" />
                                 </b:EventTrigger>
                             </b:Interaction.Triggers>
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Border x:Name="TrackCard"
-                                            Margin="3,2"
-                                            Padding="12,10"
+                                            Margin="2,1"
+                                            Padding="10,6"
                                             Background="Transparent"
                                             BorderBrush="Transparent"
                                             BorderThickness="1"
@@ -213,13 +286,13 @@
                                                 </Grid>
                                             </Border>
                                             <StackPanel Grid.Column="1"
-                                                        Margin="7,0,12,0"
+                                                        Margin="6,0,10,0"
                                                         VerticalAlignment="Center">
                                                 <TextBlock FontSize="14"
                                                            FontWeight="SemiBold"
                                                            Text="{Binding DisplayTitle}"
                                                            TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Margin="0,4,0,0"
+                                                <TextBlock Margin="0,2,0,0"
                                                            FontSize="12"
                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                            TextTrimming="CharacterEllipsis">
@@ -238,7 +311,7 @@
                                                            FontWeight="SemiBold"
                                                            Text="{Binding DurationText}" />
                                                 <TextBlock x:Name="TrackStatusText"
-                                                           Margin="0,4,0,0"
+                                                           Margin="0,2,0,0"
                                                            HorizontalAlignment="Right"
                                                            FontSize="11"
                                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
@@ -320,10 +393,6 @@
                         </Border>
                     </Grid>
 
-                    <Grid Grid.Row="4" Margin="18,9,18,13">
-                        <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="{Binding ViewModel.MusicItems.Count, Mode=OneWay, StringFormat={}{0} 首曲目}" />
-                    </Grid>
                 </Grid>
             </Border>
         </Grid>
@@ -347,9 +416,11 @@
                         VerticalAlignment="Top"
                         Maximum="{Binding ViewModel.TotalDurationMilliseconds}"
                         Minimum="0"
+                        Style="{StaticResource PlaybackSliderStyle}"
                         Value="{Binding ViewModel.CurrentPositionMilliseconds, Mode=OneWay}">
                     <b:Interaction.Behaviors>
-                        <behavior:SliderSeekBehavior Command="{Binding ViewModel.SeekCommand}" />
+                        <behavior:SliderSeekBehavior BeginCommand="{Binding ViewModel.BeginSeekCommand}"
+                                                     Command="{Binding ViewModel.SeekCommand}" />
                     </b:Interaction.Behaviors>
                 </Slider>
 
@@ -386,8 +457,30 @@
                                 Margin="0,0,11,0"
                                 Background="{DynamicResource SystemAccentColorPrimaryBrush}"
                                 CornerRadius="12">
-                            <ui:SymbolIcon FontSize="23"
-                                           Symbol="MusicNote224" />
+                            <Grid>
+                                <Image Source="{Binding ViewModel.CurrentMusicItem.Artwork}"
+                                       Stretch="UniformToFill">
+                                    <Image.Clip>
+                                        <RectangleGeometry RadiusX="12"
+                                                           RadiusY="12"
+                                                           Rect="0,0,46,46" />
+                                    </Image.Clip>
+                                </Image>
+                                <ui:SymbolIcon FontSize="23"
+                                               Symbol="MusicNote224">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ViewModel.CurrentMusicItem.Artwork}"
+                                                             Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                            </Grid>
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock MaxWidth="260"
@@ -398,9 +491,9 @@
                             <TextBlock Margin="0,4,0,0"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                <Run Text="{Binding ViewModel.SelectedMusicItem.FormatName, Mode=OneWay, TargetNullValue=等待播放}" />
+                                <Run Text="{Binding ViewModel.CurrentMusicItem.FormatName, Mode=OneWay, TargetNullValue=等待播放}" />
                                 <Run Text=" · " />
-                                <Run Text="{Binding ViewModel.SelectedMusicItem.Instrument, Mode=OneWay, TargetNullValue=--}" />
+                                <Run Text="{Binding ViewModel.CurrentMusicItem.Instrument, Mode=OneWay, TargetNullValue=--}" />
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>

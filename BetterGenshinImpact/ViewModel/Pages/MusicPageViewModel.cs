@@ -43,6 +43,7 @@ public partial class MusicPageViewModel : ViewModel
     private Task? _sessionTask;
     private bool _isLoading;
     private bool _isUpdatingSelection;
+    private bool _isSeeking;
     private bool _isInitialized;
     private string _lastSavedPlaybackPath = string.Empty;
     private long _lastSavedPlaybackSecond = -1;
@@ -116,6 +117,9 @@ public partial class MusicPageViewModel : ViewModel
 
     [ObservableProperty]
     private PerformanceScore? _selectedMusicItem;
+
+    [ObservableProperty]
+    private PerformanceScore? _currentMusicItem;
 
     [ObservableProperty]
     private InstrumentProfile? _selectedInstrumentProfile;
@@ -243,6 +247,7 @@ public partial class MusicPageViewModel : ViewModel
         RefreshMapping();
         if (!_isLoading && _playbackService.Snapshot.State == MusicPlaybackState.Stopped)
         {
+            CurrentMusicItem = value;
             UpdateStoppedPlaybackDisplay(value, TimeSpan.Zero);
             SavePlaybackState(value, TimeSpan.Zero, true);
         }
@@ -471,6 +476,34 @@ public partial class MusicPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private async Task PlaySelectedAsync(PerformanceScore? musicItem)
+    {
+        if (musicItem is not { IsValid: true })
+        {
+            _snackbarService.Show(
+                "无法播放",
+                musicItem?.Error ?? "请选择一首有效曲谱。",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(4));
+            return;
+        }
+
+        var currentSession = _sessionTask;
+        if (_playbackService.Snapshot.State != MusicPlaybackState.Stopped)
+        {
+            _playbackService.Stop();
+            if (currentSession != null)
+            {
+                await ObserveSessionAsync(currentSession);
+            }
+        }
+
+        SelectedMusicItem = musicItem;
+        StartPlaybackSession(false);
+    }
+
+    [RelayCommand]
     private void Stop()
     {
         _playbackService.Stop();
@@ -494,10 +527,17 @@ public partial class MusicPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void BeginSeek()
+    {
+        _isSeeking = true;
+    }
+
+    [RelayCommand]
     private void Seek(double milliseconds)
     {
         _playbackService.Seek(TimeSpan.FromMilliseconds(
             Math.Clamp(milliseconds, 0, TotalDurationMilliseconds)));
+        _isSeeking = false;
     }
 
     [RelayCommand]
@@ -656,7 +696,7 @@ public partial class MusicPageViewModel : ViewModel
         }
     }
 
-    private void StartPlaybackSession()
+    private void StartPlaybackSession(bool restoreSavedPosition = true)
     {
         if (SelectedMusicItem is not { IsValid: true })
         {
@@ -681,7 +721,9 @@ public partial class MusicPageViewModel : ViewModel
         {
             InputMode = GetInputMode(),
             PlaybackMode = PlaybackMode,
-            StartPosition = GetSavedPlaybackPosition(SelectedMusicItem)
+            StartPosition = restoreSavedPosition
+                ? GetSavedPlaybackPosition(SelectedMusicItem)
+                : TimeSpan.Zero
         };
 
         _sessionTask = new TaskRunner().RunThreadAsync(
@@ -818,6 +860,7 @@ public partial class MusicPageViewModel : ViewModel
     {
         if (SelectedMusicItem == null)
         {
+            CurrentMusicItem = null;
             CurrentPositionMilliseconds = 0;
             TotalDurationMilliseconds = 1;
             CurrentTimeText = "00:00";
@@ -858,6 +901,7 @@ public partial class MusicPageViewModel : ViewModel
 
     private void UpdateStoppedPlaybackDisplay(PerformanceScore score, TimeSpan position)
     {
+        CurrentMusicItem = score;
         position = position > score.Duration ? score.Duration : position;
         CurrentPositionMilliseconds = position.TotalMilliseconds;
         TotalDurationMilliseconds = Math.Max(1, score.Duration.TotalMilliseconds);
@@ -900,7 +944,11 @@ public partial class MusicPageViewModel : ViewModel
     {
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            CurrentPositionMilliseconds = snapshot.Position.TotalMilliseconds;
+            if (!_isSeeking)
+            {
+                CurrentPositionMilliseconds = snapshot.Position.TotalMilliseconds;
+            }
+
             TotalDurationMilliseconds = Math.Max(1, snapshot.Duration.TotalMilliseconds);
             CurrentTimeText = FormatTime(snapshot.Position);
             TotalTimeText = FormatTime(snapshot.Duration);
@@ -913,6 +961,7 @@ public partial class MusicPageViewModel : ViewModel
                 && snapshot.QueueIndex < queue.Count)
             {
                 var currentItem = queue[snapshot.QueueIndex];
+                CurrentMusicItem = currentItem;
                 if (!ReferenceEquals(SelectedMusicItem, currentItem))
                 {
                     SelectedMusicItem = currentItem;
