@@ -58,7 +58,10 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private const int EmptyCardDetectionRetryCount = 3;
     private const int MaxRoleSwitchAttempts = 3;
     private const int RemoveConfirmationTimeoutMilliseconds = 3000;
-    private static readonly Rect CharacterGridRoi1080 = new(26, 97, 763, 546);
+    private const int FriendshipSortSearchAttemptCount = 3;
+    private static readonly Rect CharacterGridRoi1080 = new(24, 86, 766, 743);
+    private static readonly Rect SortTypeRoi1080 = new(116, 29, 245, 38);
+    private static readonly Rect SortOptionsRoi1080 = new(111, 80, 241, 372);
 
     private readonly ILogger<SwitchCharacterStateMachineTask> _logger = App.GetLogger<SwitchCharacterStateMachineTask>();
     private readonly ReturnMainUiTask _returnMainUiTask = new();
@@ -99,7 +102,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         string[] CandidateNames,
         string[] ConflictNames,
         bool SkipElementFilter,
-        string? ForcedWeaponType)
+        string? ForcedWeaponType,
+        bool UseFriendshipSort)
     {
         /// <summary>
         /// 用于读取角色配置的首选实际角色名。
@@ -824,7 +828,32 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
-        if (!await FindAndClickAvatar(_currentRole, Recognizer, _ct))
+        var avatarFound = false;
+        if (_currentRole.UseFriendshipSort)
+        {
+            await EnsureFriendshipSort(page);
+            for (var attempt = 1; attempt <= FriendshipSortSearchAttemptCount; attempt++)
+            {
+                ClickSortDirectionButton();
+                if (await FindAndClickAvatar(_currentRole, Recognizer, _ct))
+                {
+                    avatarFound = true;
+                    break;
+                }
+
+                _logger.LogDebug(
+                    "切换角色：好感排序第 {Attempt}/{AttemptCount} 次未找到 {Name}",
+                    attempt,
+                    FriendshipSortSearchAttemptCount,
+                    _currentRole.Name);
+            }
+        }
+        else
+        {
+            avatarFound = await FindAndClickAvatar(_currentRole, Recognizer, _ct);
+        }
+
+        if (!avatarFound)
         {
             throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
         }
@@ -930,7 +959,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 [PlayerBoyName, PlayerGirlName],
                 [PlayerBoyName, PlayerGirlName],
                 true,
-                SwordWeaponType);
+                SwordWeaponType,
+                true);
         }
 
         if (standardName is PlayerBoyName or PlayerGirlName)
@@ -941,7 +971,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 [standardName],
                 [PlayerBoyName, PlayerGirlName],
                 true,
-                SwordWeaponType);
+                SwordWeaponType,
+                true);
         }
 
         var skipElementFilter = standardName.StartsWith("奇偶", StringComparison.Ordinal);
@@ -951,7 +982,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             [standardName],
             [standardName],
             skipElementFilter,
-            null);
+            skipElementFilter ? SwordWeaponType : null,
+            skipElementFilter);
     }
 
     /// <summary>
@@ -1447,6 +1479,62 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
+    /// 确保特殊角色使用好感度排序。
+    /// </summary>
+    private async Task EnsureFriendshipSort(BvPage page)
+    {
+        var sortTypeRoi = Rect1080(
+            SortTypeRoi1080.X,
+            SortTypeRoi1080.Y,
+            SortTypeRoi1080.Width,
+            SortTypeRoi1080.Height);
+        using (var capture = CaptureToRectArea())
+        {
+            if (ContainsText(capture, "好感", sortTypeRoi))
+            {
+                return;
+            }
+        }
+
+        var sortOptionsRoi = Rect1080(
+            SortOptionsRoi1080.X,
+            SortOptionsRoi1080.Y,
+            SortOptionsRoi1080.Width,
+            SortOptionsRoi1080.Height);
+        try
+        {
+            await page.Flow()
+                .WithDefaultTimeout(2000)
+                .WithDefaultRetryInterval(200)
+                .WaitUntilText("顺序", sortTypeRoi)
+                .Click()
+                .WaitUntilText("好感", sortOptionsRoi)
+                .Click()
+                .WaitUntilText("好感", sortTypeRoi)
+                .Run();
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new PartySetupFailedException(
+                $"切换角色：设置好感排序失败，{ex.GetBaseException().Message}");
+        }
+    }
+
+    /// <summary>
+    /// 尽力点击排序方向按钮，不校验匹配或点击结果。
+    /// </summary>
+    private void ClickSortDirectionButton()
+    {
+        using var capture = CaptureToRectArea();
+        using var sortButton = capture.Find(
+            RecognitionAssets.Get(@"Common\Job\SwitchCharacter", "SortButton", capture));
+        if (sortButton.IsExist())
+        {
+            sortButton.Click();
+        }
+    }
+
+    /// <summary>
     /// 在当前筛选后的角色网格中查找目标角色头像并点击加入队伍。
     /// </summary>
     /// <param name="role">目标角色。</param>
@@ -1455,65 +1543,56 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <returns>找到并点击目标角色返回 true；遍历结束仍未找到返回 false。</returns>
     private async Task<bool> FindAndClickAvatar(TargetRole role, AvatarGridIconRecognizer recognizer, CancellationToken ct)
     {
-        var gridParams = GridParams.Templates[GridScreenName.PartySetupCharacters];
-        var scroller = new GridScroller(gridParams, _logger, Simulation.SendInput, ct);
         var gridRoi = Rect1080(
             CharacterGridRoi1080.X,
             CharacterGridRoi1080.Y,
             CharacterGridRoi1080.Width,
             CharacterGridRoi1080.Height);
 
-        while (true)
+        ct.ThrowIfCancellationRequested();
+        for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
         {
-            ct.ThrowIfCancellationRequested();
-            for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
+            using var capture = CaptureToRectArea(true);
+            using var gridRegion = capture.DeriveCrop(gridRoi);
+            var cards = DetectCharacterCards(
+                gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
+            LogCardDetection(cards, rejectedCount, connectedComponentCount, attempt);
+            if (cards.Count == 0)
             {
-                using var capture = CaptureToRectArea(true);
-                using var gridRegion = capture.DeriveCrop(gridRoi);
-                var cards = DetectCharacterCards(
-                    gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
-                LogCardDetection(cards, rejectedCount, connectedComponentCount, attempt);
-                if (cards.Count == 0)
+                if (attempt < EmptyCardDetectionRetryCount)
                 {
-                    if (attempt < EmptyCardDetectionRetryCount)
-                    {
-                        await Delay(200, ct);
-                        continue;
-                    }
-
-                    throw new PartySetupFailedException("切换角色：连续 3 次未检测到合法角色卡片");
+                    await Delay(200, ct);
+                    continue;
                 }
 
-                foreach (var card in cards.OrderBy(card => card.CardRect.Y).ThenBy(card => card.CardRect.X))
-                {
-                    using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
-                    var candidate = recognizer.Recognize(avatar);
-                    _logger.LogDebug(
-                        "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
-                        card.CardRect.X,
-                        card.CardRect.Y,
-                        card.CardRect.Width,
-                        card.CardRect.Height,
-                        candidate.CharacterName,
-                        candidate.Score);
-                    if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
-                    {
-                        using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
-                        cardRegion.Click();
-                        await Delay(300, ct);
-                        return true;
-                    }
-                }
-
-                break;
+                throw new PartySetupFailedException("切换角色：连续 3 次未检测到合法角色卡片");
             }
 
-            if (!await scroller.TryVerticalScollDown((src, _) =>
-                DetectCharacterCards(src, out _, out _).Select(card => card.CardRect)))
+            foreach (var card in cards.OrderBy(card => card.CardRect.Y).ThenBy(card => card.CardRect.X))
             {
-                return false;
+                using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
+                var candidate = recognizer.Recognize(avatar);
+                _logger.LogDebug(
+                    "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
+                    card.CardRect.X,
+                    card.CardRect.Y,
+                    card.CardRect.Width,
+                    card.CardRect.Height,
+                    candidate.CharacterName,
+                    candidate.Score);
+                if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
+                {
+                    using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
+                    cardRegion.Click();
+                    await Delay(300, ct);
+                    return true;
+                }
             }
+
+            break;
         }
+
+        return false;
     }
 
     private List<FixedSizeGridCard> DetectCharacterCards(
