@@ -1543,65 +1543,56 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <returns>找到并点击目标角色返回 true；遍历结束仍未找到返回 false。</returns>
     private async Task<bool> FindAndClickAvatar(TargetRole role, AvatarGridIconRecognizer recognizer, CancellationToken ct)
     {
-        var gridParams = GridParams.Templates[GridScreenName.PartySetupCharacters];
-        var scroller = new GridScroller(gridParams, _logger, Simulation.SendInput, ct);
         var gridRoi = Rect1080(
             CharacterGridRoi1080.X,
             CharacterGridRoi1080.Y,
             CharacterGridRoi1080.Width,
             CharacterGridRoi1080.Height);
 
-        while (true)
+        ct.ThrowIfCancellationRequested();
+        for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
         {
-            ct.ThrowIfCancellationRequested();
-            for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
+            using var capture = CaptureToRectArea(true);
+            using var gridRegion = capture.DeriveCrop(gridRoi);
+            var cards = DetectCharacterCards(
+                gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
+            LogCardDetection(cards, rejectedCount, connectedComponentCount, attempt);
+            if (cards.Count == 0)
             {
-                using var capture = CaptureToRectArea(true);
-                using var gridRegion = capture.DeriveCrop(gridRoi);
-                var cards = DetectCharacterCards(
-                    gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
-                LogCardDetection(cards, rejectedCount, connectedComponentCount, attempt);
-                if (cards.Count == 0)
+                if (attempt < EmptyCardDetectionRetryCount)
                 {
-                    if (attempt < EmptyCardDetectionRetryCount)
-                    {
-                        await Delay(200, ct);
-                        continue;
-                    }
-
-                    throw new PartySetupFailedException("切换角色：连续 3 次未检测到合法角色卡片");
+                    await Delay(200, ct);
+                    continue;
                 }
 
-                foreach (var card in cards.OrderBy(card => card.CardRect.Y).ThenBy(card => card.CardRect.X))
-                {
-                    using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
-                    var candidate = recognizer.Recognize(avatar);
-                    _logger.LogDebug(
-                        "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
-                        card.CardRect.X,
-                        card.CardRect.Y,
-                        card.CardRect.Width,
-                        card.CardRect.Height,
-                        candidate.CharacterName,
-                        candidate.Score);
-                    if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
-                    {
-                        using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
-                        cardRegion.Click();
-                        await Delay(300, ct);
-                        return true;
-                    }
-                }
-
-                break;
+                throw new PartySetupFailedException("切换角色：连续 3 次未检测到合法角色卡片");
             }
 
-            if (!await scroller.TryVerticalScollDown((src, _) =>
-                DetectCharacterCards(src, out _, out _).Select(card => card.CardRect)))
+            foreach (var card in cards.OrderBy(card => card.CardRect.Y).ThenBy(card => card.CardRect.X))
             {
-                return false;
+                using var avatar = gridRegion.SrcMat.SubMat(card.AvatarRect);
+                var candidate = recognizer.Recognize(avatar);
+                _logger.LogDebug(
+                    "切换角色：RECT({X},{Y},{Width},{Height})，角色={CharacterName}，score={Score:0.000}",
+                    card.CardRect.X,
+                    card.CardRect.Y,
+                    card.CardRect.Width,
+                    card.CardRect.Height,
+                    candidate.CharacterName,
+                    candidate.Score);
+                if (role.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
+                {
+                    using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
+                    cardRegion.Click();
+                    await Delay(300, ct);
+                    return true;
+                }
             }
+
+            break;
         }
+
+        return false;
     }
 
     private List<FixedSizeGridCard> DetectCharacterCards(
