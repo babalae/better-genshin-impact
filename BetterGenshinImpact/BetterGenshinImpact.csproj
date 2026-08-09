@@ -59,6 +59,7 @@
 		<PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
 		<PackageReference Include="MailKit" Version="4.16.0" />
 		<PackageReference Include="Markdig" Version="1.3.2" />
+		<PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
 		<PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
@@ -165,6 +166,9 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Job\SwitchCharacter\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\Common\Element\Assets\Json\**">
