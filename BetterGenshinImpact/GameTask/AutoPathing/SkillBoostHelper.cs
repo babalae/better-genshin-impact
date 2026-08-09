@@ -1,4 +1,4 @@
-using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -1456,25 +1456,7 @@ public partial class PathExecutor
             (int)(1686 * scale), (int)(948 * scale),
             Math.Max(1, (int)(11 * scale)), Math.Max(1, (int)(11 * scale)));
         // Threshold 内部先 BGR2RGB，Scalar 为 RGB 顺序：#00DCFA = R0,G220,B250
-        using var mask = OpenCvCommonHelper.Threshold(crop.SrcMat,
-            new Scalar(0, 210, 240), new Scalar(15, 235, 255));
-        using var labels = new Mat();
-        using var stats = new Mat();
-        using var centroids = new Mat();
-
-        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-
-        // 排除仅1像素的孤立噪点：要求存在面积≥5的连通域（CC_STAT_AREA = 4）
-        for (int i = 1; i < numLabels; i++)
-        {
-            if (stats.At<int>(i, 4) >= 5)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return HasColoredBlob(crop.SrcMat, new Scalar(0, 210, 240), new Scalar(15, 235, 255), 5);
     }
 
     private async Task SafeLanding(CancellationToken ct)
@@ -1510,22 +1492,68 @@ public partial class PathExecutor
         bool ownRegion = fullRegion != region;
         try
         {
-            using var regionMat = fullRegion.DeriveCrop(1819, 1028, 9, 7);
-            using var mask = OpenCvCommonHelper.Threshold(regionMat.SrcMat,
-                new Scalar(242, 223, 39), new Scalar(255, 233, 44));
-            using var labels = new Mat();
-            using var stats = new Mat();
-            using var centroids = new Mat();
-
-            var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-
-            return numLabels > 1;
+            return HasColoredBlob(fullRegion, 1819, 1028, 9, 7,
+                new Scalar(242, 223, 39), new Scalar(255, 233, 44), 4);
         }
         finally
         {
             if (ownRegion) fullRegion.Dispose();
         }
+    }
+
+    /// <summary>
+    /// 检测当前是否处于无法使用赶路的状态。
+    /// 枫丹水下：（1500,1031）的图标呈黄色，（1380,1031）无黄色图标（用于和希诺宁区分），据此判定角色当前处于水下；
+    /// 附身龙魂/阿夏：（832,1010）附近存在 #FFCC32 橙色连通域（面积大于4）。
+    /// 任一成立即认为无法使用赶路。
+    /// </summary>
+    private static bool CannotUseHurryConfirm(Region region)
+    {
+        var fullRegion = region.ToImageRegion();
+        bool ownRegion = fullRegion != region;
+        try
+        {
+            var underwater = HasColoredBlob(fullRegion, 1500, 1031, 9, 7, new Scalar(242, 223, 39), new Scalar(255, 233, 44), 4)
+                && !HasColoredBlob(fullRegion, 1380, 1031, 9, 7, new Scalar(242, 223, 39), new Scalar(255, 233, 44), 4);
+            var possessed = HasColoredBlob(fullRegion, 832, 1010, 9, 7, new Scalar(245, 194, 40), new Scalar(255, 214, 60), 5);
+            return underwater || possessed;
+        }
+        finally
+        {
+            if (ownRegion) fullRegion.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 指定起点坐标和尺寸的区域内是否存在面积 ≥ <paramref name="minArea"/> 的指定颜色连通域（便捷重载）。
+    /// <paramref name="lower"/>/<paramref name="upper"/> 为 RGB 顺序阈值（Threshold 内部先做 BGR2RGB）。
+    /// </summary>
+    private static bool HasColoredBlob(ImageRegion region, int x, int y, int w, int h, Scalar lower, Scalar upper, int minArea)
+    {
+        using var regionMat = region.DeriveCrop(x, y, w, h);
+        return HasColoredBlob(regionMat.SrcMat, lower, upper, minArea);
+    }
+
+    /// <summary>
+    /// 图像中是否存在面积 ≥ <paramref name="minArea"/> 的指定颜色连通域。
+    /// <paramref name="lower"/>/<paramref name="upper"/> 为 RGB 顺序阈值（Threshold 内部先做 BGR2RGB）。
+    /// </summary>
+    private static bool HasColoredBlob(Mat src, Scalar lower, Scalar upper, int minArea)
+    {
+        using var mask = OpenCvCommonHelper.Threshold(src, lower, upper);
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        // 排除小于 minArea 的孤立噪点（CC_STAT_AREA = 4）
+        for (int i = 1; i < numLabels; i++)
+        {
+            if (stats.At<int>(i, 4) >= minArea) return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -1564,6 +1592,12 @@ public partial class PathExecutor
     {
         try
         {
+            // 枫丹水下或附身龙魂/阿夏时无法使用赶路，跳过任何赶路逻辑，不进入角色分支
+            if (CannotUseHurryConfirm(screen))
+            {
+                return false;
+            }
+
             // 更新旋转稳定性计数
             if (Math.Abs(diff) <= 60)
             {
