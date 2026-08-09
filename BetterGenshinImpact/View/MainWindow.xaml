@@ -88,14 +88,6 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="演奏"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:MusicPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="MusicNote224" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-
                 <!--<ui:NavigationViewItemSeparator />-->
 
                 <ui:NavigationViewItem Content="一条龙"
@@ -155,6 +147,16 @@
                         <ui:SymbolIcon Symbol="XboxController24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem Content="自动演奏"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:MusicPage}"
+                                       Visibility="{Binding IsAlphaVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="MusicNote224" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
 
                 <ui:NavigationViewItem Content="快捷键"
                                        NavigationCacheMode="Enabled"
