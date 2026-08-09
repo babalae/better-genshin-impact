@@ -65,7 +65,12 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         if (_currentScrollViewer != scrollViewer)
         {
             _currentScrollViewer = scrollViewer;
-            scrollViewer.CanContentScroll = false;
+            if (scrollViewer.CanContentScroll)
+            {
+                scrollViewer.CanContentScroll = false;
+                scrollViewer.UpdateLayout();
+            }
+
             _targetOffset = scrollViewer.VerticalOffset;
         }
 
@@ -106,23 +111,45 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     private ScrollViewer? FindScrollViewerUnderMouse(MouseWheelEventArgs e)
     {
-        Point mousePos = e.GetPosition(this);
-        HitTestResult result = VisualTreeHelper.HitTest(this, mousePos);
-
-        if (result != null && result.VisualHit != null)
+        var current = e.OriginalSource as DependencyObject
+                      ?? Mouse.DirectlyOver as DependencyObject;
+        while (current != null)
         {
-            DependencyObject current = result.VisualHit;
-            while (current != null)
+            if (current is ScrollViewer scrollViewer && scrollViewer.ScrollableHeight > 0)
             {
-                if (current is ScrollViewer scrollViewer && scrollViewer.ScrollableHeight > 0)
-                {
-                    return scrollViewer;
-                }
-                current = VisualTreeHelper.GetParent(current);
+                return scrollViewer;
             }
+
+            if (current is System.Windows.Controls.ListViewItem listViewItem
+                && ItemsControl.ItemsControlFromItemContainer(listViewItem) is System.Windows.Controls.ListView listView)
+            {
+                var listScrollViewer = FindVisualChild<ScrollViewer>(listView);
+                if (listScrollViewer is { ScrollableHeight: > 0 })
+                {
+                    return listScrollViewer;
+                }
+            }
+
+            current = GetParent(current);
         }
 
-        return FindVisualChild<ScrollViewer>(RootNavigation);
+        return null;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject child)
+    {
+        if (child is ContentElement contentElement)
+        {
+            return ContentOperations.GetParent(contentElement)
+                   ?? (contentElement as FrameworkContentElement)?.Parent;
+        }
+
+        if (child is FrameworkElement { Parent: not null } frameworkElement)
+        {
+            return frameworkElement.Parent;
+        }
+
+        return VisualTreeHelper.GetParent(child);
     }
 
     private void OnCompositionTargetRendering(object? sender, EventArgs e)
