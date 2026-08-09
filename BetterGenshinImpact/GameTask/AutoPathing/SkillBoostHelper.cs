@@ -226,7 +226,7 @@ public partial class PathExecutor
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
                         await Delay(300, ct);
                         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(100, ct);
+                        await Delay(300, ct);
 
                         // E技能CD跟踪：仅续技能（状态1）触发更新，上车（状态2）不触发
                         // 冲刺跳飞计数同样仅续技能（状态1）时重置，上车（状态2）不重置
