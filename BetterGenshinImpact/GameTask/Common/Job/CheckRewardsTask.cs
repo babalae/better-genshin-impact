@@ -25,12 +25,16 @@ public class CheckRewardsTask
     private readonly ILogger<CheckRewardsTask> _logger = App.GetLogger<CheckRewardsTask>();
 
     private readonly string _dailyRewardsClaimedLocalizedString;
+    private readonly string _dailyCommissionRewardsString;
+    private readonly string _commissionsButtonString;
 
     public CheckRewardsTask()
     {
         IStringLocalizer<CheckRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<CheckRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "今日奖励已领取");
+        this._dailyCommissionRewardsString = stringLocalizer.WithCultureGet(cultureInfo, "每日委托奖励");
+        this._commissionsButtonString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
     }
 
     public string Name => "检查奖励并通知的任务";
@@ -54,13 +58,13 @@ public class CheckRewardsTask
             await new ReturnMainUiTask().Start(ct);
             
             _ = await NewRetry.WaitForElementAppear(
-                GetConfirmRa(true,"每日委托奖励"),
+                GetConfirmRa(true,_dailyCommissionRewardsString),
                 ()=>
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook); 
+                    Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
                     var screen = CaptureToRectArea();
                     var ra = screen.FindMulti(GetConfirmRa())
-                        .FirstOrDefault(btn => btn.Text == "委托");
+                        .FirstOrDefault(btn => Regex.IsMatch(btn.Text.Trim(), $"^(?:{_commissionsButtonString})$", RegexOptions.IgnoreCase));
                         ra?.Click();
                 },ct,4,1000);
             
