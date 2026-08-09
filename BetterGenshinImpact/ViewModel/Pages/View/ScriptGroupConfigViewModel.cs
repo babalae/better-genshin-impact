@@ -80,6 +80,9 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     // 跳飞启用距离：仅当角色为 自动/玛薇卡 且启用跳飞时显示
     public bool IsJumpFlyDistanceVisible => IsHurryOnMwkOrAuto && PathingConfig.MwkJumpFlyEnabled;
 
+    // 跳飞前额外冲刺次数：仅当角色为 自动/玛薇卡 且启用跳飞时显示
+    public bool IsJumpFlySprintCountVisible => IsHurryOnMwkOrAuto && PathingConfig.MwkJumpFlyEnabled;
+
     // 玛薇卡在车上禁用冲刺：仅当角色为 自动/玛薇卡 时显示
     public bool IsDisableSprintVisible => IsHurryOnMwkOrAuto;
 
@@ -97,6 +100,7 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
             OnPropertyChanged(nameof(IsHurryOnMwkOrAuto));
             OnPropertyChanged(nameof(IsHurryOnMwkOrAutoOrXianyun));
             OnPropertyChanged(nameof(IsJumpFlyDistanceVisible));
+            OnPropertyChanged(nameof(IsJumpFlySprintCountVisible));
             OnPropertyChanged(nameof(IsDisableSprintVisible));
             OnPropertyChanged(nameof(IsSwitchToWalkVisible));
             OnPropertyChanged(nameof(IsApproachStopDistanceVisible));
