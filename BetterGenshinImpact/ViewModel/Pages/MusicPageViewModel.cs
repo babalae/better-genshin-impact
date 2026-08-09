@@ -41,6 +41,8 @@ public partial class MusicPageViewModel : ViewModel
     private bool _isLoading;
     private bool _isUpdatingSelection;
     private bool _isInitialized;
+    private string _lastSavedPlaybackPath = string.Empty;
+    private long _lastSavedPlaybackSecond = -1;
 
     public MusicPageViewModel(
         IMusicLibraryService libraryService,
@@ -61,6 +63,16 @@ public partial class MusicPageViewModel : ViewModel
         MusicFolderDisplayText = string.IsNullOrWhiteSpace(Config.MusicConfig.MusicFolder)
             ? "尚未选择曲谱目录"
             : Config.MusicConfig.MusicFolder;
+        MusicFolderHistory = new ObservableCollection<MusicFolderHistoryItem>(
+            _stateStore.State.MusicFolderHistory
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(x => new MusicFolderHistoryItem(x)));
+        if (!string.IsNullOrWhiteSpace(Config.MusicConfig.MusicFolder))
+        {
+            AddMusicFolderToHistory(Config.MusicConfig.MusicFolder);
+            SelectedMusicFolder = Config.MusicConfig.MusicFolder;
+        }
 
         MusicItemsView = CollectionViewSource.GetDefaultView(MusicItems);
         MusicItemsView.Filter = FilterMusicItem;
@@ -91,6 +103,8 @@ public partial class MusicPageViewModel : ViewModel
 
     public ObservableCollection<InstrumentMappingMode> MappingModes { get; }
 
+    public ObservableCollection<MusicFolderHistoryItem> MusicFolderHistory { get; }
+
     public ObservableCollection<string> FormatFilters { get; } = ["全部格式"];
 
     public ObservableCollection<string> InstrumentFilters { get; } = ["全部乐器"];
@@ -109,6 +123,9 @@ public partial class MusicPageViewModel : ViewModel
 
     [ObservableProperty]
     private string _selectedInstrumentFilter = "全部乐器";
+
+    [ObservableProperty]
+    private string? _selectedMusicFolder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(InputModeDisplayText))]
@@ -219,6 +236,11 @@ public partial class MusicPageViewModel : ViewModel
         Transpose = value.Transpose;
         _isUpdatingSelection = false;
         RefreshMapping();
+        if (!_isLoading && _playbackService.Snapshot.State == MusicPlaybackState.Stopped)
+        {
+            UpdateStoppedPlaybackDisplay(value, TimeSpan.Zero);
+            SavePlaybackState(value, TimeSpan.Zero, true);
+        }
     }
 
     partial void OnSelectedInstrumentProfileChanged(InstrumentProfile? value)
@@ -299,9 +321,77 @@ public partial class MusicPageViewModel : ViewModel
             return;
         }
 
-        Config.MusicConfig.MusicFolder = dialog.SelectedPath;
-        MusicFolderDisplayText = dialog.SelectedPath;
-        _libraryService.Watch(dialog.SelectedPath);
+        await SelectMusicFolderAsync(dialog.SelectedPath);
+    }
+
+    [RelayCommand]
+    private async Task SelectMusicFolderAsync(string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            _snackbarService.Show(
+                "曲谱目录不可用",
+                "该历史目录不存在或当前无法访问。",
+                ControlAppearance.Caution,
+                null,
+                TimeSpan.FromSeconds(3));
+            return;
+        }
+
+        var normalizedFolder = Path.GetFullPath(folder);
+        if (!string.Equals(
+                Config.MusicConfig.MusicFolder,
+                normalizedFolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            _playbackService.Stop();
+        }
+
+        AddMusicFolderToHistory(normalizedFolder);
+        SelectedMusicFolder = normalizedFolder;
+        Config.MusicConfig.MusicFolder = normalizedFolder;
+        MusicFolderDisplayText = normalizedFolder;
+        _libraryService.Watch(normalizedFolder);
+        await RefreshLibraryAsync();
+    }
+
+    [RelayCommand]
+    private async Task DeleteMusicFolderAsync(string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return;
+        }
+
+        var historyItem = MusicFolderHistory.FirstOrDefault(x =>
+            string.Equals(x.FullPath, folder, StringComparison.OrdinalIgnoreCase));
+        if (historyItem == null)
+        {
+            return;
+        }
+
+        MusicFolderHistory.Remove(historyItem);
+        SaveMusicFolderHistory();
+        if (!string.Equals(
+                Config.MusicConfig.MusicFolder,
+                historyItem,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var nextFolder = MusicFolderHistory.FirstOrDefault(x => Directory.Exists(x.FullPath))?.FullPath;
+        if (nextFolder != null)
+        {
+            await SelectMusicFolderAsync(nextFolder);
+            return;
+        }
+
+        _playbackService.Stop();
+        SelectedMusicFolder = null;
+        Config.MusicConfig.MusicFolder = string.Empty;
+        MusicFolderDisplayText = "尚未选择曲谱目录";
+        _libraryService.Watch(string.Empty);
         await RefreshLibraryAsync();
     }
 
@@ -355,6 +445,11 @@ public partial class MusicPageViewModel : ViewModel
     private void Stop()
     {
         _playbackService.Stop();
+        if (SelectedMusicItem != null)
+        {
+            UpdateStoppedPlaybackDisplay(SelectedMusicItem, TimeSpan.Zero);
+            SavePlaybackState(SelectedMusicItem, TimeSpan.Zero, true);
+        }
     }
 
     [RelayCommand]
@@ -424,7 +519,12 @@ public partial class MusicPageViewModel : ViewModel
             cancellationToken.ThrowIfCancellationRequested();
 
             _isLoading = true;
-            var selectedPath = SelectedMusicItem?.RelativePath;
+            var selectedPath = SelectedMusicItem?.FullPath;
+            if (string.IsNullOrWhiteSpace(selectedPath))
+            {
+                selectedPath = _stateStore.State.CurrentTrackFullPath;
+            }
+
             MusicItems.Clear();
             foreach (var score in scores)
             {
@@ -437,11 +537,15 @@ public partial class MusicPageViewModel : ViewModel
             }
 
             SelectedMusicItem = MusicItems.FirstOrDefault(x =>
-                                    string.Equals(x.RelativePath, selectedPath, StringComparison.OrdinalIgnoreCase))
+                                    string.Equals(x.FullPath, selectedPath, StringComparison.OrdinalIgnoreCase))
                                 ?? MusicItems.FirstOrDefault();
             RebuildFilters();
+            if (_playbackService.Snapshot.State == MusicPlaybackState.Stopped)
+            {
+                RestorePlaybackState();
+            }
+
             _isLoading = false;
-            SavePlaylistOrder();
 
             var playableCount = MusicItems.Count(x => x.IsValid);
             LibraryStatusText = Directory.Exists(Config.MusicConfig.MusicFolder)
@@ -503,7 +607,8 @@ public partial class MusicPageViewModel : ViewModel
         var options = new MusicPlaybackOptions
         {
             InputMode = GetInputMode(),
-            PlaybackMode = PlaybackMode
+            PlaybackMode = PlaybackMode,
+            StartPosition = GetSavedPlaybackPosition(SelectedMusicItem)
         };
 
         _sessionTask = new TaskRunner().RunThreadAsync(
@@ -599,7 +704,7 @@ public partial class MusicPageViewModel : ViewModel
             SavePreference(item);
         }
 
-        SavePlaylistOrder();
+        _stateStore.Save();
     }
 
     private void SavePreference(PerformanceScore score)
@@ -612,27 +717,105 @@ public partial class MusicPageViewModel : ViewModel
         };
     }
 
-    private void SavePlaylistOrder()
+    private void AddMusicFolderToHistory(string folder)
     {
-        var playlistOrder = MusicItems.Select(x => x.RelativePath).ToList();
-        if (_stateStore.State.PlaylistOrder.SequenceEqual(
-                playlistOrder,
-                StringComparer.OrdinalIgnoreCase))
+        var existingItem = MusicFolderHistory.FirstOrDefault(x =>
+            string.Equals(x.FullPath, folder, StringComparison.OrdinalIgnoreCase));
+        if (existingItem != null)
+        {
+            if (MusicFolderHistory.IndexOf(existingItem) == 0)
+            {
+                return;
+            }
+
+            MusicFolderHistory.Remove(existingItem);
+        }
+
+        MusicFolderHistory.Insert(0, new MusicFolderHistoryItem(folder));
+        SaveMusicFolderHistory();
+    }
+
+    private void SaveMusicFolderHistory()
+    {
+        _stateStore.State.MusicFolderHistory = [.. MusicFolderHistory.Select(x => x.FullPath)];
+        _stateStore.Save();
+    }
+
+    private void RestorePlaybackState()
+    {
+        if (SelectedMusicItem == null)
+        {
+            CurrentPositionMilliseconds = 0;
+            TotalDurationMilliseconds = 1;
+            CurrentTimeText = "00:00";
+            TotalTimeText = "00:00";
+            CurrentTrackName = "未播放";
+            return;
+        }
+
+        var position = GetSavedPlaybackPosition(SelectedMusicItem);
+        UpdateStoppedPlaybackDisplay(SelectedMusicItem, position);
+        if (!string.Equals(
+                _stateStore.State.CurrentTrackFullPath,
+                SelectedMusicItem.FullPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            SavePlaybackState(SelectedMusicItem, TimeSpan.Zero, true);
+        }
+    }
+
+    private TimeSpan GetSavedPlaybackPosition(PerformanceScore score)
+    {
+        if (!string.Equals(
+                _stateStore.State.CurrentTrackFullPath,
+                score.FullPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return TimeSpan.Zero;
+        }
+
+        var milliseconds = _stateStore.State.CurrentPositionMilliseconds;
+        if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds) || milliseconds <= 0)
+        {
+            return TimeSpan.Zero;
+        }
+
+        return TimeSpan.FromMilliseconds(Math.Min(milliseconds, score.Duration.TotalMilliseconds));
+    }
+
+    private void UpdateStoppedPlaybackDisplay(PerformanceScore score, TimeSpan position)
+    {
+        position = position > score.Duration ? score.Duration : position;
+        CurrentPositionMilliseconds = position.TotalMilliseconds;
+        TotalDurationMilliseconds = Math.Max(1, score.Duration.TotalMilliseconds);
+        CurrentTimeText = FormatTime(position);
+        TotalTimeText = FormatTime(score.Duration);
+        CurrentTrackName = score.DisplayTitle;
+    }
+
+    private void SavePlaybackState(PerformanceScore score, TimeSpan position, bool force = false)
+    {
+        var pathChanged = !string.Equals(
+            _lastSavedPlaybackPath,
+            score.FullPath,
+            StringComparison.OrdinalIgnoreCase);
+        var playbackSecond = Math.Max(0, (long)position.TotalSeconds);
+
+        _stateStore.State.CurrentTrackFullPath = score.FullPath;
+        _stateStore.State.CurrentPositionMilliseconds = Math.Max(0, position.TotalMilliseconds);
+        if (!force && !pathChanged && playbackSecond == _lastSavedPlaybackSecond)
         {
             return;
         }
 
-        _stateStore.State.PlaylistOrder = playlistOrder;
+        _lastSavedPlaybackPath = score.FullPath;
+        _lastSavedPlaybackSecond = playbackSecond;
         _stateStore.Save();
     }
 
     private void OnMusicItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         HasMusicItems = MusicItems.Count > 0;
-        if (!_isLoading)
-        {
-            SavePlaylistOrder();
-        }
     }
 
     private void OnLibraryFilesChanged(object? sender, EventArgs e)
@@ -654,10 +837,21 @@ public partial class MusicPageViewModel : ViewModel
 
             var queue = MusicItems.Where(x => x.IsValid).ToList();
             if (snapshot.QueueIndex >= 0
-                && snapshot.QueueIndex < queue.Count
-                && !ReferenceEquals(SelectedMusicItem, queue[snapshot.QueueIndex]))
+                && snapshot.QueueIndex < queue.Count)
             {
-                SelectedMusicItem = queue[snapshot.QueueIndex];
+                var currentItem = queue[snapshot.QueueIndex];
+                if (!ReferenceEquals(SelectedMusicItem, currentItem))
+                {
+                    SelectedMusicItem = currentItem;
+                }
+
+                if (snapshot.State is MusicPlaybackState.Playing or MusicPlaybackState.Paused)
+                {
+                    SavePlaybackState(
+                        currentItem,
+                        snapshot.Position,
+                        snapshot.State == MusicPlaybackState.Paused);
+                }
             }
         });
     }
@@ -684,5 +878,20 @@ public partial class MusicPageViewModel : ViewModel
         return time.TotalHours >= 1
             ? time.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)
             : time.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
+    }
+}
+
+public sealed class MusicFolderHistoryItem(string fullPath)
+{
+    public string FullPath { get; } = fullPath;
+
+    public string DisplayName
+    {
+        get
+        {
+            var trimmedPath = FullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var folderName = Path.GetFileName(trimmedPath);
+            return string.IsNullOrWhiteSpace(folderName) ? FullPath : folderName;
+        }
     }
 }

@@ -74,6 +74,7 @@ public sealed class MusicPlaybackService(
         }
 
         var currentIndex = Math.Clamp(startIndex, 0, queue.Count - 1);
+        var isFirstTrack = true;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -81,7 +82,9 @@ public sealed class MusicPlaybackService(
                 var score = queue[currentIndex];
                 var profile = profileService.Find(score.OutputProfileName);
                 var timeline = timelineBuilder.Build(score, profile, score.Transpose);
-                PrepareTrack(timeline, score.DisplayTitle, currentIndex);
+                var startPosition = isFirstTrack ? options.StartPosition : TimeSpan.Zero;
+                isFirstTrack = false;
+                PrepareTrack(timeline, score.DisplayTitle, currentIndex, startPosition);
 
                 var result = await PlayTimelineAsync(cancellationToken);
                 _transport?.ReleaseAll();
@@ -379,18 +382,22 @@ public sealed class MusicPlaybackService(
         }
     }
 
-    private void PrepareTrack(PerformanceTimeline timeline, string trackName, int queueIndex)
+    private void PrepareTrack(
+        PerformanceTimeline timeline,
+        string trackName,
+        int queueIndex,
+        TimeSpan startPosition)
     {
         lock (_syncRoot)
         {
             _timeline = timeline;
             _trackName = trackName;
             _queueIndex = queueIndex;
-            _anchorPosition = TimeSpan.Zero;
+            _anchorPosition = Clamp(startPosition, TimeSpan.Zero, timeline.Duration);
             _anchorTimestamp = Stopwatch.GetTimestamp();
             _state = MusicPlaybackState.Playing;
             _skipDirection = 0;
-            _needsHeldKeyRebuild = true;
+            _needsHeldKeyRebuild = _anchorPosition > TimeSpan.Zero;
             _resumeSource = CreateCompletedSource();
             _snapshot = CreateSnapshotLocked();
         }

@@ -50,7 +50,7 @@ public sealed class MusicStateStore : IMusicStateStore
 
             var json = File.ReadAllText(_statePath, Utf8WithoutBom);
             var state = JsonConvert.DeserializeObject<MusicLibraryState>(json) ?? new MusicLibraryState();
-            state.PlaylistOrder ??= [];
+            state.MusicFolderHistory ??= [];
             state.Items = new System.Collections.Generic.Dictionary<string, MusicItemPreference>(
                 state.Items ?? [],
                 StringComparer.OrdinalIgnoreCase);

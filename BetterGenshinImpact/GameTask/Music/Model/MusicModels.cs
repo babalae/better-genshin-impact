@@ -323,4 +323,6 @@ public sealed class MusicPlaybackOptions
     public MusicPlaybackMode PlaybackMode { get; init; } = MusicPlaybackMode.Sequential;
 
     public double Speed { get; init; } = 1.0;
+
+    public TimeSpan StartPosition { get; init; }
 }

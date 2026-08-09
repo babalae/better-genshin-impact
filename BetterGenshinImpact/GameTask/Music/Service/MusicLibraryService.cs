@@ -59,8 +59,6 @@ public sealed class MusicLibraryService(
                 DisabledTrackIndexes = [.. x.Value.DisabledTrackIndexes ?? []]
             },
             StringComparer.OrdinalIgnoreCase);
-        var playlistOrderSnapshot = stateStore.State.PlaylistOrder.ToList();
-
         // 目录枚举和曲谱解析不能占用 WPF UI 线程。串行解析也能避免目录较大时
         // 一次创建大量解析任务和中间对象，页面进入时只需等待最终结果回到 UI。
         return await Task.Run<IReadOnlyList<PerformanceScore>>(async () =>
@@ -95,13 +93,8 @@ public sealed class MusicLibraryService(
                 }
             }
 
-            var order = playlistOrderSnapshot
-                .Select((path, index) => (path, index))
-                .GroupBy(x => x.path, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(x => x.Key, x => x.First().index, StringComparer.OrdinalIgnoreCase);
             return scores
-                .OrderBy(x => order.TryGetValue(x.RelativePath, out var index) ? index : int.MaxValue)
-                .ThenBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x.RelativePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }, cancellationToken).ConfigureAwait(false);
     }

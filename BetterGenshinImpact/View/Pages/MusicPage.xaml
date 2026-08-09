@@ -4,7 +4,6 @@
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DesignHeight="800"
@@ -14,6 +13,12 @@
              FontFamily="{StaticResource TextThemeFontFamily}"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding ViewModel.InitializeCommand}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+
     <UserControl.Resources>
         <Style x:Key="MusicCardStyle" TargetType="Border">
             <Setter Property="Padding" Value="18" />
@@ -85,10 +90,10 @@
                             <TextBlock FontSize="18"
                                        FontWeight="SemiBold"
                                        Text="我的曲库" />
-                            <TextBlock Margin="0,3,0,0"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       Text="双击播放 · 拖拽调整顺序" />
+                             <TextBlock Margin="0,3,0,0"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                        Text="展示当前目录内的全部支持曲谱" />
                         </StackPanel>
                         <ui:Button Grid.Column="1"
                                    Margin="8,0,7,0"
@@ -136,9 +141,6 @@
                     <Grid Grid.Row="2" Margin="8,0">
                         <ListView Background="Transparent"
                                   BorderThickness="0"
-                                  dd:DragDrop.IsDragSource="True"
-                                  dd:DragDrop.IsDropTarget="True"
-                                  dd:DragDrop.UseDefaultDragAdorner="True"
                                   ItemContainerStyle="{StaticResource MusicListItemStyle}"
                                   ItemsSource="{Binding ViewModel.MusicItemsView}"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -275,18 +277,8 @@
                     </Grid>
 
                     <Grid Grid.Row="3" Margin="18,9,18,13">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
                         <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="{Binding ViewModel.MusicItems.Count, Mode=OneWay, StringFormat={}{0} 首曲目}" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <ui:SymbolIcon Margin="0,0,6,0"
-                                           Symbol="ReOrder24" />
-                            <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       Text="播放顺序自动保存" />
-                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
@@ -295,6 +287,89 @@
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
                 <StackPanel>
+                    <Border Margin="0,0,0,10"
+                            Style="{StaticResource MusicCardStyle}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SectionIconStyle}">
+                                    <ui:SymbolIcon Symbol="FolderOpen24" />
+                                </Border>
+                                <StackPanel Grid.Column="1"
+                                            Margin="0,0,10,0"
+                                            VerticalAlignment="Center">
+                                    <TextBlock FontWeight="SemiBold" Text="曲谱目录" />
+                                    <TextBlock Margin="0,4,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding ViewModel.MusicFolderDisplayText}"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding ViewModel.MusicFolderDisplayText}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal">
+                                    <ui:Button Width="36"
+                                               Margin="0,0,6,0"
+                                               Command="{Binding ViewModel.OpenFolderCommand}"
+                                               Icon="{ui:SymbolIcon Open24}"
+                                               ToolTip="打开当前目录" />
+                                    <ui:Button Width="36"
+                                               Appearance="Primary"
+                                               Command="{Binding ViewModel.ChooseFolderCommand}"
+                                               Icon="{ui:SymbolIcon FolderAdd24}"
+                                               ToolTip="选择新目录" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Margin="0,14,0,7"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="历史目录" />
+                            <ItemsControl ItemsSource="{Binding ViewModel.MusicFolderHistory}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:Button HorizontalContentAlignment="Stretch"
+                                                       Appearance="Secondary"
+                                                       Command="{Binding DataContext.ViewModel.SelectMusicFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                       CommandParameter="{Binding FullPath}"
+                                                       ToolTip="{Binding FullPath}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:SymbolIcon Margin="0,0,8,0"
+                                                                   Symbol="Folder24" />
+                                                    <TextBlock Grid.Column="1"
+                                                               VerticalAlignment="Center"
+                                                               Text="{Binding DisplayName}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Grid>
+                                            </ui:Button>
+                                            <ui:Button Grid.Column="1"
+                                                       Width="34"
+                                                       Margin="6,0,0,0"
+                                                       Appearance="Transparent"
+                                                       Command="{Binding DataContext.ViewModel.DeleteMusicFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                       CommandParameter="{Binding FullPath}"
+                                                       Icon="{ui:SymbolIcon Delete24}"
+                                                       ToolTip="仅删除这条历史记录" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
                     <Border Margin="0,0,0,10"
                             Style="{StaticResource MusicCardStyle}">
                         <StackPanel>
