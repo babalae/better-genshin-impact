@@ -58,7 +58,10 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private const int EmptyCardDetectionRetryCount = 3;
     private const int MaxRoleSwitchAttempts = 3;
     private const int RemoveConfirmationTimeoutMilliseconds = 3000;
-    private static readonly Rect CharacterGridRoi1080 = new(26, 97, 763, 546);
+    private const int FriendshipSortSearchAttemptCount = 3;
+    private static readonly Rect CharacterGridRoi1080 = new(24, 86, 766, 743);
+    private static readonly Rect SortTypeRoi1080 = new(116, 29, 245, 38);
+    private static readonly Rect SortOptionsRoi1080 = new(111, 80, 241, 372);
 
     private readonly ILogger<SwitchCharacterStateMachineTask> _logger = App.GetLogger<SwitchCharacterStateMachineTask>();
     private readonly ReturnMainUiTask _returnMainUiTask = new();
@@ -99,7 +102,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         string[] CandidateNames,
         string[] ConflictNames,
         bool SkipElementFilter,
-        string? ForcedWeaponType)
+        string? ForcedWeaponType,
+        bool UseFriendshipSort)
     {
         /// <summary>
         /// 用于读取角色配置的首选实际角色名。
@@ -824,7 +828,32 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             throw new PartySetupFailedException("切换角色：当前角色状态为空");
         }
 
-        if (!await FindAndClickAvatar(_currentRole, Recognizer, _ct))
+        var avatarFound = false;
+        if (_currentRole.UseFriendshipSort)
+        {
+            await EnsureFriendshipSort(_ct);
+            for (var attempt = 1; attempt <= FriendshipSortSearchAttemptCount; attempt++)
+            {
+                ClickSortDirectionButton();
+                if (await FindAndClickAvatar(_currentRole, Recognizer, _ct))
+                {
+                    avatarFound = true;
+                    break;
+                }
+
+                _logger.LogDebug(
+                    "切换角色：好感排序第 {Attempt}/{AttemptCount} 次未找到 {Name}",
+                    attempt,
+                    FriendshipSortSearchAttemptCount,
+                    _currentRole.Name);
+            }
+        }
+        else
+        {
+            avatarFound = await FindAndClickAvatar(_currentRole, Recognizer, _ct);
+        }
+
+        if (!avatarFound)
         {
             throw new PartySetupFailedException($"切换角色：未找到目标角色 {_currentRole.Name}");
         }
@@ -930,7 +959,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 [PlayerBoyName, PlayerGirlName],
                 [PlayerBoyName, PlayerGirlName],
                 true,
-                SwordWeaponType);
+                SwordWeaponType,
+                true);
         }
 
         if (standardName is PlayerBoyName or PlayerGirlName)
@@ -941,7 +971,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 [standardName],
                 [PlayerBoyName, PlayerGirlName],
                 true,
-                SwordWeaponType);
+                SwordWeaponType,
+                true);
         }
 
         var skipElementFilter = standardName.StartsWith("奇偶", StringComparison.Ordinal);
@@ -951,7 +982,8 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             [standardName],
             [standardName],
             skipElementFilter,
-            null);
+            skipElementFilter ? SwordWeaponType : null,
+            skipElementFilter);
     }
 
     /// <summary>
@@ -1447,6 +1479,69 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     }
 
     /// <summary>
+    /// 确保特殊角色使用好感度排序。
+    /// </summary>
+    private async Task EnsureFriendshipSort(CancellationToken ct)
+    {
+        var sortTypeRoi = Rect1080(
+            SortTypeRoi1080.X,
+            SortTypeRoi1080.Y,
+            SortTypeRoi1080.Width,
+            SortTypeRoi1080.Height);
+        using (var capture = CaptureToRectArea())
+        {
+            if (ContainsText(capture, "好感", sortTypeRoi))
+            {
+                return;
+            }
+
+            if (!TryClickContainingText(capture, "顺序", sortTypeRoi))
+            {
+                throw new PartySetupFailedException("切换角色：未找到角色列表排序入口“顺序”");
+            }
+        }
+
+        var sortOptionsRoi = Rect1080(
+            SortOptionsRoi1080.X,
+            SortOptionsRoi1080.Y,
+            SortOptionsRoi1080.Width,
+            SortOptionsRoi1080.Height);
+        var friendshipClicked = await NewRetry.WaitForAction(() =>
+        {
+            using var capture = CaptureToRectArea();
+            return TryClickContainingText(capture, "好感", sortOptionsRoi);
+        }, ct, 10, 200);
+        if (!friendshipClicked)
+        {
+            throw new PartySetupFailedException("切换角色：排序菜单中未找到“好感”选项");
+        }
+
+        var friendshipSelected = await NewRetry.WaitForAction(() =>
+        {
+            using var capture = CaptureToRectArea();
+            return ContainsText(capture, "好感", sortTypeRoi);
+        }, ct, 10, 200);
+        if (!friendshipSelected)
+        {
+            throw new PartySetupFailedException("切换角色：选择“好感”后未确认排序切换成功");
+        }
+    }
+
+    /// <summary>
+    /// 尽力点击排序方向按钮，不校验匹配或点击结果。
+    /// </summary>
+    private void ClickSortDirectionButton()
+    {
+        using var capture = CaptureToRectArea();
+        using var sortButton = capture.Find(
+            RecognitionAssets.Get(@"Common\Job\SwitchCharacter", "SortButton", capture));
+        if (sortButton.IsExist())
+        {
+            sortButton.Click();
+        }
+    }
+
+    /// <summary>
     /// 在当前筛选后的角色网格中查找目标角色头像并点击加入队伍。
     /// </summary>
     /// <param name="role">目标角色。</param>
@@ -1588,6 +1683,36 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 点击 OCR 区域内第一项包含指定文本的结果。
+    /// </summary>
+    private static bool TryClickContainingText(ImageRegion capture, string text, Rect roi)
+    {
+        var regions = capture.FindMulti(RecognitionObject.Ocr(roi));
+        try
+        {
+            var region = regions
+                .Where(region => region.Text.Contains(text, StringComparison.Ordinal))
+                .OrderBy(region => region.Y)
+                .ThenBy(region => region.X)
+                .FirstOrDefault();
+            if (region == null)
+            {
+                return false;
+            }
+
+            region.Click();
+            return true;
+        }
+        finally
+        {
+            foreach (var region in regions)
+            {
+                region.Dispose();
+            }
+        }
     }
 
     /// <summary>
