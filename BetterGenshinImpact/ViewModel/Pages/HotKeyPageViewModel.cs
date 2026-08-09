@@ -628,7 +628,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinConfirmButtonHotkeyType,
             (_, _) =>
             {
-                if (Bv.ClickConfirmButton(TaskControl.CaptureToRectArea()))
+                using var capture = TaskControl.CaptureToRectArea();
+                if (Bv.ClickConfirmButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "确认");
                 }
@@ -647,7 +648,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinCancelButtonHotkeyType,
             (_, _) =>
             {
-                if (Bv.ClickCancelButton(TaskControl.CaptureToRectArea()))
+                using var capture = TaskControl.CaptureToRectArea();
+                if (Bv.ClickCancelButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "取消");
                 }

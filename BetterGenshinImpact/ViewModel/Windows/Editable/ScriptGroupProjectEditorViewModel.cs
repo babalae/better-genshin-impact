@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
@@ -11,10 +11,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Windows.Editable;
 
-public class ScriptGroupProjectEditorViewModel : ObservableObject
+public class ScriptGroupProjectEditorViewModel : ObservableObject, IDisposable
 {
     private readonly ScriptGroupProject _project;
     private readonly NotificationConfig _globalNotificationConfig;
+    private bool _disposed;
 
     public bool GlobalJsNotificationEnabled 
         => _globalNotificationConfig.JsNotificationEnabled;
@@ -122,7 +123,7 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
             }
         }
     }
-    public ScriptGroupProjectEditorViewModel(ScriptGroupProject project)
+    public ScriptGroupProjectEditorViewModel(ScriptGroupProject project, NotificationConfig? globalNotificationConfig = null)
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
 
@@ -139,18 +140,31 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
             }
         }
 
-        _globalNotificationConfig = TaskContext.Instance().Config.NotificationConfig;
+        _globalNotificationConfig = globalNotificationConfig ?? TaskContext.Instance().Config.NotificationConfig;
         // 监听全局配置变更
-        _project.PropertyChanged += (s, e) =>
+        _project.PropertyChanged += OnProjectPropertyChanged;
+    }
+
+    private void OnProjectPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ScriptGroupProject.AllowJsNotification))
         {
-            if (e.PropertyName == nameof(ScriptGroupProject.AllowJsNotification))
-            {
-                OnPropertyChanged(nameof(AllowJsNotification));
-            }
-            if (e.PropertyName == nameof(ScriptGroupProject.AllowJsHTTPHash))
-            {
-                OnPropertyChanged(nameof(AllowJsHTTP));
-            }
-        };
+            OnPropertyChanged(nameof(AllowJsNotification));
+        }
+        if (e.PropertyName == nameof(ScriptGroupProject.AllowJsHTTPHash))
+        {
+            OnPropertyChanged(nameof(AllowJsHTTP));
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _project.PropertyChanged -= OnProjectPropertyChanged;
     }
 }

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -175,7 +175,8 @@ public class Genshin
     public double GetBigMapZoomLevel()
     {
         TpTask tpTask = new(CancellationContext.Instance.Cts.Token);
-        return tpTask.GetBigMapZoomLevel(CaptureToRectArea());
+        using var capture = CaptureToRectArea();
+        return tpTask.GetBigMapZoomLevel(capture);
     }
 
     /// <summary>
@@ -242,7 +243,7 @@ public class Genshin
 
     public float GetCameraOrientation()
     {
-        var imageRegion = CaptureToRectArea();
+        using var imageRegion = CaptureToRectArea();
         return CameraOrientation.Compute(imageRegion.SrcMat);
     }
 
@@ -260,7 +261,7 @@ public class Genshin
     
     public Point2f? GetPositionFromMapWithMatchingMethod(string mapName, string matchingMethod, int cacheTimeMs = 900)
     {
-        var imageRegion = CaptureToRectArea();
+        using var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
@@ -279,7 +280,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromMap(string mapName, float x, float y)
     {
-        var imageRegion = CaptureToRectArea();
+        using var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");

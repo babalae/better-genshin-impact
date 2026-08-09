@@ -47,7 +47,8 @@ public class LowerHeadThenWalkToTask
 
     public async Task<bool> Start(CancellationToken ct)
     {
-        if (CaptureToRectArea().Find(_trackPoint).IsEmpty())
+        using var initialCapture = CaptureToRectArea();
+        if (initialCapture.Find(_trackPoint).IsEmpty())
         {
             Logger.LogInformation("未找到追踪点，停止任务");
             throw new Exception("未找到追踪点");
@@ -65,7 +66,7 @@ public class LowerHeadThenWalkToTask
             int prevMoveX = 0;
             while (!ct.IsCancellationRequested)
             {
-                var ra = CaptureToRectArea();
+                using var ra = CaptureToRectArea();
                 var trackPointRa = ra.Find(_trackPoint);
                 if (trackPointRa.IsExist())
                 {
