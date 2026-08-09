@@ -418,7 +418,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="选择赶路角色后自动启用，留空则关闭赶路"
+                                              Text="空选：不进行赶路动作。选择具体角色：使用对应角色。选择自动：优先选择行走位跑图，行走位不支持时尝试使用其他角色。支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
@@ -426,6 +426,35 @@
                                           MinWidth="120"
                                           ItemsSource="{Binding PathingConfig.HurryOnAvatarList}"
                                           SelectedItem="{Binding PathingConfig.HurryOnAvatar}" />
+                            </Grid>
+
+                            <!-- 覆写赶路帧间隔 -->
+                            <Grid Margin="16,0,16,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="覆写赶路帧间隔"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="启用赶路逻辑时移速较快，设备性能富余时可选择适当降低帧间隔以提高稳定性，默认值100（ms）"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.HurryOnFrameInterval}" />
                             </Grid>
 
                             <!-- 赶路模式 -->
@@ -486,7 +515,8 @@
                             </Grid>
 
                             <!-- 接近停车距离 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsApproachStopDistanceVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -515,7 +545,8 @@
                             </Grid>
 
                             <!-- 接近切人步行 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsSwitchToWalkVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -541,7 +572,8 @@
                             </Grid>
 
                             <!-- 启用跳飞 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAuto, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -566,8 +598,39 @@
                                                  IsChecked="{Binding PathingConfig.MwkJumpFlyEnabled, Mode=TwoWay}" />
                             </Grid>
 
+                            <!-- 跳飞启用距离 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsJumpFlyDistanceVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="跳飞启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="节点距离大于此值时启用跳飞，需大于赶路启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.MwkJumpFlyDistance}" />
+                            </Grid>
+
                             <!-- 跳飞间隔 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAutoOrXianyun, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -595,6 +658,33 @@
                                             Text="{Binding PathingConfig.MwkJumpFlyIntervalSeconds}" />
                             </Grid>
 
+                            <!-- 玛薇卡在车上禁用冲刺 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsDisableSprintVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="玛薇卡在车上禁用冲刺"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="0命玛薇卡酌情勾选，节约夜魂值"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,24,0"
+                                                 IsChecked="{Binding PathingConfig.MwkDisableSprintEnabled}" />
+                            </Grid>
 
                         </StackPanel>
                     </ui:CardExpander>
