@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Music.Model;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -331,7 +332,12 @@ public partial class MusicPageViewModel : ViewModel
     [RelayCommand]
     private async Task SelectMusicFolderAsync(string? folder)
     {
-        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return;
+        }
+
+        if (!Directory.Exists(folder))
         {
             _snackbarService.Show(
                 "曲谱目录不可用",
@@ -343,6 +349,15 @@ public partial class MusicPageViewModel : ViewModel
         }
 
         var normalizedFolder = Path.GetFullPath(folder);
+        if (string.Equals(
+                Config.MusicConfig.MusicFolder,
+                normalizedFolder,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedMusicFolder = normalizedFolder;
+            return;
+        }
+
         if (!string.Equals(
                 Config.MusicConfig.MusicFolder,
                 normalizedFolder,
@@ -424,6 +439,16 @@ public partial class MusicPageViewModel : ViewModel
     {
         _libraryService.Watch(Config.MusicConfig.MusicFolder);
         await RefreshLibraryAsync();
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        var window = new MusicSettingsWindow(this)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        window.ShowDialog();
     }
 
     [RelayCommand]
