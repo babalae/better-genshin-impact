@@ -1,7 +1,10 @@
 using Microsoft.Xaml.Behaviors;
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace BetterGenshinImpact.View.Behavior;
 
@@ -55,6 +58,16 @@ public sealed class SliderSeekBehavior : Behavior<Slider>
     {
         _isPointerSeeking = true;
         ExecuteBeginSeek();
+
+        if (FindVisualParent<Thumb>(e.OriginalSource as DependencyObject) != null)
+        {
+            return;
+        }
+
+        SeekToPointerPosition(e);
+        _isPointerSeeking = false;
+        ExecuteSeek();
+        e.Handled = true;
     }
 
     private void OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -110,6 +123,43 @@ public sealed class SliderSeekBehavior : Behavior<Slider>
         {
             Command.Execute(value);
         }
+    }
+
+    private void SeekToPointerPosition(MouseButtonEventArgs e)
+    {
+        var track = AssociatedObject.Template.FindName("PART_Track", AssociatedObject) as Track;
+        if (track == null || track.ActualWidth <= 0)
+        {
+            return;
+        }
+
+        var thumbWidth = track.Thumb?.ActualWidth ?? 0;
+        var availableWidth = Math.Max(1, track.ActualWidth - thumbWidth);
+        var pointerX = e.GetPosition(track).X - thumbWidth / 2;
+        var ratio = Math.Clamp(pointerX / availableWidth, 0, 1);
+        if (AssociatedObject.IsDirectionReversed)
+        {
+            ratio = 1 - ratio;
+        }
+
+        var value = AssociatedObject.Minimum
+                    + ratio * (AssociatedObject.Maximum - AssociatedObject.Minimum);
+        AssociatedObject.SetCurrentValue(RangeBase.ValueProperty, value);
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child != null)
+        {
+            if (child is T result)
+            {
+                return result;
+            }
+
+            child = VisualTreeHelper.GetParent(child);
+        }
+
+        return null;
     }
 
     private static bool IsSeekKey(Key key)

@@ -402,6 +402,7 @@ public sealed class MusicPlaybackService(
             _snapshot = CreateSnapshotLocked();
         }
 
+        _logger.LogInformation("正在播放：{TrackName}", trackName);
         PublishSnapshot();
     }
 

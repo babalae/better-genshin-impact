@@ -278,6 +278,17 @@ public partial class MusicPageViewModel : ViewModel
         RefreshMapping();
     }
 
+    partial void OnCurrentPositionMillisecondsChanged(double value)
+    {
+        if (!_isSeeking)
+        {
+            return;
+        }
+
+        var milliseconds = Math.Clamp(value, 0, TotalDurationMilliseconds);
+        CurrentTimeText = FormatTime(TimeSpan.FromMilliseconds(milliseconds));
+    }
+
     partial void OnSearchTextChanged(string value)
     {
         MusicItemsView.Refresh();
@@ -535,8 +546,22 @@ public partial class MusicPageViewModel : ViewModel
     [RelayCommand]
     private void Seek(double milliseconds)
     {
-        _playbackService.Seek(TimeSpan.FromMilliseconds(
-            Math.Clamp(milliseconds, 0, TotalDurationMilliseconds)));
+        var position = TimeSpan.FromMilliseconds(
+            Math.Clamp(milliseconds, 0, TotalDurationMilliseconds));
+        if (_playbackService.Snapshot.State == MusicPlaybackState.Stopped)
+        {
+            var score = CurrentMusicItem ?? SelectedMusicItem;
+            if (score != null)
+            {
+                UpdateStoppedPlaybackDisplay(score, position);
+                SavePlaybackState(score, position, true);
+            }
+        }
+        else
+        {
+            _playbackService.Seek(position);
+        }
+
         _isSeeking = false;
     }
 
@@ -942,15 +967,15 @@ public partial class MusicPageViewModel : ViewModel
 
     private void OnPlaybackSnapshotChanged(object? sender, PlaybackSnapshot snapshot)
     {
-        Application.Current.Dispatcher.BeginInvoke(() =>
+        Application.Current?.Dispatcher.BeginInvoke(() =>
         {
             if (!_isSeeking)
             {
                 CurrentPositionMilliseconds = snapshot.Position.TotalMilliseconds;
+                CurrentTimeText = FormatTime(snapshot.Position);
             }
 
             TotalDurationMilliseconds = Math.Max(1, snapshot.Duration.TotalMilliseconds);
-            CurrentTimeText = FormatTime(snapshot.Position);
             TotalTimeText = FormatTime(snapshot.Duration);
             CurrentTrackName = string.IsNullOrWhiteSpace(snapshot.TrackName) ? "未播放" : snapshot.TrackName;
             IsPlaying = snapshot.State == MusicPlaybackState.Playing;
