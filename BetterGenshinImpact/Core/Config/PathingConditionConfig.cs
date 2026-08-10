@@ -40,7 +40,7 @@ public partial class PathingConditionConfig : ObservableObject
             if (_recoverTiming is null)
             {
                 // 首次读取时从旧字段自动迁移
-                _recoverTiming = RecoverTimingMigration.Migrate(_onlyInTeleportRecover);
+                _recoverTiming = RecoverTimingMigration.Migrate(OnlyInTeleportRecover);
             }
             return _recoverTiming.Value;
         }
@@ -54,6 +54,14 @@ public partial class PathingConditionConfig : ObservableObject
     // 启用自动吃药功能
     [ObservableProperty]
     private bool _autoEatEnabled = false;
+
+    // 启用路线遥测记录
+    [ObservableProperty]
+    private bool _enableRouteTelemetry = false;
+
+    // 临时兼容开关：是否读取路线点中的异常识别参数
+    [ObservableProperty]
+    private bool _enableWaypointMisidentificationConfig = true;
 
     public static PathingConditionConfig Default => new()
     {

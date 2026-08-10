@@ -25,6 +25,12 @@ public partial class MapMaskConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _miniMapMaskEnabled = false;
+
+    /// <summary>
+    /// 是否在小地图遮罩中绘制当前路线
+    /// </summary>
+    [ObservableProperty]
+    private bool _miniMapRouteOverlayEnabled = true;
     
     /// <summary>
     /// 自动记录路径功能是否启用

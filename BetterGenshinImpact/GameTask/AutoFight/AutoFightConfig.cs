@@ -77,7 +77,7 @@ public partial class AutoFightConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private bool _checkAfterSwitchAvatar = false;
-        
+
         /// <summary>
         /// 触发战斗结束检查时，先等待该延时以确保角色动作后摇结束。也可为角色单独指定延时，格式如0.4或0.4;钟离,1.5
         /// </summary>

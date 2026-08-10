@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 

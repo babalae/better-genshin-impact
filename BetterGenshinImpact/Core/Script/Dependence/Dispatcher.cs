@@ -184,7 +184,12 @@ public class Dispatcher
                 return null;
 
             case "AutoFight":
-                await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);
+                if (_config is not PathingPartyConfig autoFightPartyConfig)
+                {
+                    throw new InvalidOperationException($"AutoFight 需要 {nameof(PathingPartyConfig)}，实际收到 {_config.GetType().Name}");
+                }
+
+                await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, autoFightPartyConfig);
                 return null;
 
             case "AutoDomain":

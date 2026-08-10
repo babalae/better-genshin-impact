@@ -1,5 +1,4 @@
 using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -40,7 +39,7 @@ public partial class OneDragonFlowPage
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
     }
     
-    private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ViewModel.ShouldShowAddTaskGroupPopup) && ViewModel.ShouldShowAddTaskGroupPopup)
         {
@@ -139,7 +138,7 @@ public partial class OneDragonFlowPage
     }
     
     // 辅助方法：查找子控件
-    private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
     {
         for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
         {
@@ -170,7 +169,7 @@ public partial class OneDragonFlowPage
         }
     }
     
-    private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
     {
         var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
         if (parent == null) return null;
@@ -178,7 +177,7 @@ public partial class OneDragonFlowPage
         return FindVisualParent<T>(parent);
     }
     
-    private async void SereniteaPotTpType_Clicked(object sender, RoutedEventArgs e)
+    private void SereniteaPotTpType_Clicked(object sender, RoutedEventArgs e)
     {
         if (ViewModel.SelectedConfig == null)
         {
@@ -189,7 +188,13 @@ public partial class OneDragonFlowPage
         
         else if (sender.Equals(PopupConfirmButton)) //确认选择
         {
-            var selectedObjects = new List<string>(SereniteaPotComboBox.SelectedItem.ToString().Split('/'))
+            var selectedSchedule = SereniteaPotComboBox.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(selectedSchedule))
+            {
+                return;
+            }
+
+            var selectedObjects = new List<string>(selectedSchedule.Split('/'))
                 .Concat(_checkBoxMappings.Where(pair => pair.Key.IsChecked == true).Select(pair => pair.Value)).ToList();
 
             ViewModel.SelectedConfig.SecretTreasureObjects = selectedObjects;

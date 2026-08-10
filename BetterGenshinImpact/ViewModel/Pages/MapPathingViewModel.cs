@@ -48,7 +48,7 @@ public partial class MapPathingViewModel : ViewModel
     [ObservableProperty]
     private bool _isRightClickSelection;
 
-    private MapPathingDevWindow? _mapPathingDevWindow;
+    private MapViewer? _mapViewer;
     private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
@@ -155,20 +155,35 @@ public partial class MapPathingViewModel : ViewModel
     [RelayCommand]
     public void OnOpenDevTools()
     {
-        if (_mapPathingDevWindow == null || !_mapPathingDevWindow.IsVisible)
+        if (_mapViewer == null || !_mapViewer.IsVisible)
         {
-            _mapPathingDevWindow = new MapPathingDevWindow();
-            _mapPathingDevWindow.Closed += (s, e) => _mapPathingDevWindow = null;
-            _mapPathingDevWindow.Show();
+            var mapName = string.IsNullOrWhiteSpace(Config.DevConfig.RecordMapName)
+                ? "Teyvat"
+                : Config.DevConfig.RecordMapName;
+            _mapViewer = new MapViewer(mapName)
+            {
+                Owner = GetCurrentOwnerWindow(),
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            _mapViewer.Closed += (s, e) => _mapViewer = null;
+            _mapViewer.Show();
         }
         else
         {
-            _mapPathingDevWindow.Activate();
+            _mapViewer.Activate();
         }
     }
 
+    private static Window? GetCurrentOwnerWindow()
+    {
+        return Application.Current.Windows
+                   .OfType<Window>()
+                   .FirstOrDefault(w => w.IsActive)
+               ?? Application.Current.MainWindow;
+    }
+
     [RelayCommand]
-    public async void OnOpenSettings()
+    private void OnOpenSettings()
     {
         // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         // {
@@ -179,9 +194,10 @@ public partial class MapPathingViewModel : ViewModel
         //
         // await uiMessageBox.ShowDialogAsync();
 
-        var vm = App.GetService<PathingConfigViewModel>();
+        var vm = App.GetService<PathingConfigViewModel>()
+                 ?? throw new InvalidOperationException("PathingConfigViewModel 尚未注册");
         var view = new PathingConfigView(vm);
-        view?.ShowDialog();
+        view.ShowDialog();
     }
 
     [RelayCommand]

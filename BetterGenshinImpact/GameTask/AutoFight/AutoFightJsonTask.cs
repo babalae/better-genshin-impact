@@ -30,6 +30,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 public class AutoFightJsonTask : ISoloTask
 {
+    private readonly bool _propagateRetryException;
     public string Name => "自动战斗(JSON策略)";
 
     private readonly AutoFightParam _taskParam;
@@ -71,8 +72,8 @@ public class AutoFightJsonTask : ISoloTask
     /// </summary>
     private class PrioritizedAction
     {
-        public JsonAction Action { get; set; }
-        public string Expression { get; set; }
+        public required JsonAction Action { get; set; }
+        public required string Expression { get; set; }
         public int Priority { get; set; }
     }
 
@@ -81,9 +82,10 @@ public class AutoFightJsonTask : ISoloTask
 
     private AutoFightTask.TaskFightFinishDetectConfig _finishDetectConfig;
 
-    public AutoFightJsonTask(AutoFightParam taskParam)
+    public AutoFightJsonTask(AutoFightParam taskParam, bool propagateRetryException = true)
     {
         _taskParam = taskParam;
+        _propagateRetryException = propagateRetryException;
         _strategy = JsonCombatStrategyParser.ParseFile(_taskParam.CombatStrategyPath);
 
         if (_taskParam.FightFinishDetectEnabled)
@@ -194,8 +196,6 @@ public class AutoFightJsonTask : ISoloTask
             Stopwatch timeoutStopwatch = Stopwatch.StartNew();
     
             AutoFightSeek.RotationCount = 0;
-            AutoFightTask.FightStatusFlag = true;
-    
             var fightEndFlag = false;
             var timeOutFlag = false;
             string lastFightName = "";
@@ -274,16 +274,16 @@ public class AutoFightJsonTask : ISoloTask
                     {
                         if (timeoutStopwatch.Elapsed > fightTimeout)
                         {
-                            Logger.LogInformation("战斗超时结束");
-                            fightEndFlag = true;
-                            timeOutFlag = true;
-                            break;
+                            Logger.LogWarning("战斗执行超时，本次战斗按失败结束");
+                            throw new CombatInterruptionException(
+                                CombatInterruptionReason.Timeout,
+                                "战斗执行超时");
                         }
     
                         // 每次循环开始：截图一次，供所有条件求值复用
                         using var capture = CaptureToRectArea();
                         evaluator.SetCachedCapture(capture);
-
+                        CombatStateDetector.ThrowIfInterrupted(capture, cts2.Token, AutoFightParam.SwimmingEnabled);
                         var anyExecuted = false;
 
                         // 记录本轮循环开始时的角色，用于检测是否发生换人
@@ -322,8 +322,7 @@ public class AutoFightJsonTask : ISoloTask
                                 {
                                     var avatar = combatScenes.SelectAvatar(action.Character);
                                     if (avatar == null) continue;
-
-                                    avatar.Switch();
+                                    CombatSwitchRecovery.Switch(avatar, cts2.Token);
                                     _currentAvatarName = action.Character;
                                 }
 
@@ -408,12 +407,8 @@ public class AutoFightJsonTask : ISoloTask
                 finally
                 {
                     Simulation.ReleaseAllKey();
-                    AutoFightTask.FightStatusFlag = false;
                 }
             }, cts2.Token);
-    
-            // 在持续索敌循环启动前标记战斗进行中，避免索敌循环因 FightStatusFlag 仍为 false 而立即退出
-            AutoFightTask.FightStatusFlag = true;
     
             // 启动持续索敌循环（异步后台运行，与战斗任务并发）
             // 使用独立的 CancellationTokenSource，以便在战后独立取消索敌循环，不影响 cts2 关联的其他组件（如 expDetector）
@@ -425,7 +420,7 @@ public class AutoFightJsonTask : ISoloTask
                 {
                     try
                     {
-                        await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
+                        await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token);
                     }
                     catch (OperationCanceledException) { }
                     catch (Exception e)
@@ -434,7 +429,7 @@ public class AutoFightJsonTask : ISoloTask
                     }
                 }, targetingCts.Token);
             }
-    
+
             try
             {
                 await fightTask;
@@ -448,9 +443,18 @@ public class AutoFightJsonTask : ISoloTask
                     await targetingCts.CancelAsync();
                     try { await targetingTask; } catch (OperationCanceledException) { }
                 }
-                AutoFightTask.FightStatusFlag = false;
+
+                // 战斗异常或取消会跳过后续战后处理；必须在异常离开前停止并释放经验检测器。
+                if (!fightTask.IsCompletedSuccessfully && expDetector != null)
+                {
+                    await expDetector.StopAsync();
+                    expDetector.Dispose();
+                    expDetector = null;
+                }
             }
-    
+
+            cts2.Token.ThrowIfCancellationRequested();
+
             try
             {
                 // 基于经验值检测结果的拾取判断
@@ -491,6 +495,10 @@ public class AutoFightJsonTask : ISoloTask
     
             // 战后拾取（完全参照 AutoFightTask）
             await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
+        }
+        catch (RetryException retryException) when (!_propagateRetryException)
+        {
+            Logger.LogError("自动战斗失败：{Reason}", retryException.Message);
         }
         finally
         {
@@ -539,6 +547,14 @@ public class AutoFightJsonTask : ISoloTask
 
             // 更新当前角色名，供后续无指定角色动作使用
             _currentAvatarName = character;
+        }
+        catch (RetryException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception e)
         {
@@ -594,7 +610,8 @@ public class AutoFightJsonTask : ISoloTask
             }
             catch (RetryException e)
             {
-                Logger.LogWarning("战斗前动作重试异常，跳过此动作继续：{Msg}", e.Message);
+                Logger.LogWarning("战斗前动作要求中断当前战斗：{Msg}", e.Message);
+                throw;
             }
             Logger.LogInformation("战斗前动作：{Action}", preAction);
             await Delay(300, _ct);
@@ -698,7 +715,8 @@ public class AutoFightJsonTask : ISoloTask
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
-                        var cs = await RunnerContext.Instance.GetCombatScenes(_ct);
+                        var cs = await RunnerContext.Instance.GetCombatScenes(_ct)
+                                 ?? throw new InvalidOperationException("切换拾取队伍后识别队伍失败");
                         picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
                     }
                 }
@@ -760,7 +778,7 @@ public class AutoFightJsonTask : ISoloTask
                                 foreach (var command in pickUpAction.CombatCommands)
                                 {
                                     command.Execute(combatScenes);
-                                    Task.Run(() =>
+                                    await Task.Run(() =>
                                     {
                                         if (Monitor.TryEnter(PickLock))
                                         {
@@ -782,7 +800,7 @@ public class AutoFightJsonTask : ISoloTask
                                                 Monitor.Exit(PickLock);
                                             }
                                         }
-                                    });
+                                    }, _ct);
                                 }
 
                                 if (!find)

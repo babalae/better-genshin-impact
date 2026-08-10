@@ -137,6 +137,24 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 // 其他场景不重试
                 break;
             }
+            catch (CombatInterruptionException combatInterruption)
+                when (combatInterruption.Reason == CombatInterruptionReason.Defeated)
+            {
+                if (string.IsNullOrEmpty(_taskParam.DomainName))
+                {
+                    throw;
+                }
+
+                if (!await new DefeatRecoveryTask().Start(ct))
+                {
+                    throw;
+                }
+
+                const string msg = "存在角色死亡，复活后重试秘境...";
+                Logger.LogWarning("自动秘境：{Text}", msg);
+                Notify.Event(NotificationEvent.DomainRetry).Error(msg);
+                continue;
+            }
             catch (RetryException e)
             {
                 // 只有选择了秘境的时候才会重试
@@ -607,7 +625,12 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
     {
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
+        var combatCommands = _combatScriptBag?.FindCombatScript(combatScenes.GetAvatars())
+                             ?? throw new InvalidOperationException("战斗脚本尚未初始化");
+        if (combatCommands.Count == 0)
+        {
+            throw new InvalidOperationException("没有可用战斗脚本");
+        }
         var avatar = combatScenes.SelectAvatar(combatCommands[0].Name);
         avatar?.SwitchWithoutCts();
         Sleep(200);
@@ -657,7 +680,10 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     if (DateTime.Now - startTime > TimeSpan.FromSeconds(60))
                     {
                         Logger.LogWarning("自动秘境：{Text}", "前往目标位置处超时，如果选择了秘境名称，将在传送后重试秘境！");
-                        Avatar.TpForRecover(_ct, new RetryException("前往目标位置处超时，先传送到七天神像，然后重试秘境"));
+                        RunnerContext.Instance.StopAutoPickRunTask(
+                            () => new TpTask(_ct).TpToStatueOfTheSeven(),
+                            5).GetAwaiter().GetResult();
+                        throw new RetryException("前往目标位置处超时，先传送到七天神像，然后重试秘境");
                     }
                 }
             }
@@ -683,13 +709,15 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             try
             {
-                AutoFightTask.FightStatusFlag = true;
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
                     foreach (var command in combatCommands)
                     {
-                        command.Execute(combatScenes);
+                        CombatStateDetector.ThrowIfInterrupted(cts.Token, AutoFightParam.SwimmingEnabled);
+                        command.Execute(
+                            combatScenes,
+                            switchAvatar: avatarToSwitch => CombatSwitchRecovery.Switch(avatarToSwitch, cts.Token));
                     }
                 }
             }
@@ -706,7 +734,6 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 Logger.LogInformation("自动战斗线程结束");
                 Simulation.ReleaseAllKey();
-                AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
 

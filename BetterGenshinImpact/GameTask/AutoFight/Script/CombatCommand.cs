@@ -1,5 +1,6 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,7 @@ public class CombatCommand
 
     public List<string>? Args { get; set; }
 
-    public List<int> ActivatingRound { get; set; }
+    public List<int> ActivatingRound { get; set; } = [];
 
     public CombatCommand(string name, string command)
     {
@@ -79,7 +80,10 @@ public class CombatCommand
         return $"<CombatCommand {Name}, {Method}({Args}) (rounds {ActivatingRound})>";
     }
 
-    public void Execute(CombatScenes combatScenes, CombatCommand? lastCommand = null)
+    public void Execute(
+        CombatScenes combatScenes,
+        CombatCommand? lastCommand = null,
+        Action<Avatar>? switchAvatar = null)
     {
         Avatar? avatar;
         if (Name == CombatScriptParser.CurrentAvatarName)
@@ -99,7 +103,7 @@ public class CombatCommand
             if (lastCommand != null && lastCommand.Name != Name)
             {
                 // 上一个命令和当前命令不是同一个角色，直接切换角色
-                avatar.Switch();
+                (switchAvatar ?? DefaultSwitch)(avatar);
             }
             else
             {
@@ -115,12 +119,17 @@ public class CombatCommand
                     && Method != Method.Scroll
                     && Method != Method.Ready)
                 {
-                    avatar.Switch();
+                    (switchAvatar ?? DefaultSwitch)(avatar);
                 }
             }
         }
-        Execute(avatar);
+        if (avatar != null)
+        {
+            Execute(avatar);
+        }
     }
+
+    private static void DefaultSwitch(Avatar avatar) => avatar.Switch();
 
     public void Execute(Avatar avatar)
     {

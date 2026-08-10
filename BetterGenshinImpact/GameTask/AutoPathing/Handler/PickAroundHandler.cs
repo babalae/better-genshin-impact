@@ -20,10 +20,10 @@ public class PickAroundHandler() : IActionHandler
 {
     private CancellationToken _ct;
 
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, PathingActionContext? context = null)
     {
         this._ct = ct;
-        Logger.LogInformation("执行 {Text}", "小范围内自动拾取");
+        Logger.LogInformation("执行动作: 【{Text}】", "小范围内自动拾取");
 
         double speed = 1.1;
         int turns = 1;

@@ -55,6 +55,12 @@ public class TaskControl
         var isSuspend = RunnerContext.Instance.IsSuspend;
         while (RunnerContext.Instance.IsSuspend)
         {
+            if (BetterGenshinImpact.Core.Script.CancellationContext.Instance.Cts.IsCancellationRequested)
+            {
+                RunnerContext.Instance.IsSuspend = false;
+                break;
+            }
+
             if (first)
             {
                 RunnerContext.Instance.StopAutoPick();
@@ -71,9 +77,9 @@ public class TaskControl
                 }
 
                 Logger.LogWarning("快捷键触发暂停，等待解除");
-                foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+                foreach (var suspendable in RunnerContext.Instance.GetSuspendablesSnapshot())
                 {
-                    item.Value.Suspend();
+                    suspendable.Suspend();
                 }
 
                 first = false;
@@ -87,9 +93,9 @@ public class TaskControl
         {
             Logger.LogWarning("暂停已经解除");
             RunnerContext.Instance.ResumeAutoPick();
-            foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+            foreach (var suspendable in RunnerContext.Instance.GetSuspendablesSnapshot())
             {
-                item.Value.Resume();
+                suspendable.Resume();
             }
         }
     }
@@ -102,7 +108,7 @@ public class TaskControl
             {
                 var name = SystemControl.GetActiveByProcess();
                 Logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
+                throw new GameWindowNotFocusedException("当前获取焦点的窗口不是原神");
             }
         }
 

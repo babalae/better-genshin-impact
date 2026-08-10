@@ -1,67 +1,84 @@
-﻿using System;
-using System.Collections.Generic;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using System;
+using System.Threading;
+using Microsoft.Extensions.Logging;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 
-//暂停逻辑相关实现,这里主要用来记录，用来恢复相应操作
-public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
+/// <summary>
+/// 路径执行器暂停机制实现 / Path executor suspend logic implementation.
+/// </summary>
+public class PathExecutorSuspend : ISuspendable, IPathingSuspendState
 {
+    private readonly PathExecutor _pathExecutor;
     private bool _isSuspended;
+    private DateTime _suspendTimeUtc = DateTime.MinValue;
+    private int _resumeRecoveryPending;
 
-    private bool _resuming = false;
-    //记录当前相关点位数组
-    private (int, List<WaypointForTrack>) _waypoints;
-
-    //记录当前点位
-    private (int, WaypointForTrack) _waypoint;
-
+    /// <inheritdoc/>
     public bool IsSuspended => _isSuspended;
 
+    /// <summary>
+    /// Gets whether the executor must explicitly recover UI and positioning after a resume.
+    /// 获取是否需要在恢复后由执行器显式恢复界面和定位。
+    /// </summary>
+    public bool IsResumeRecoveryPending => Volatile.Read(ref _resumeRecoveryPending) != 0;
+
+    /// <summary>
+    /// 构造函数 / Constructor.
+    /// </summary>
+    public PathExecutorSuspend(PathExecutor pathExecutor)
+    {
+        _pathExecutor = pathExecutor ?? throw new ArgumentNullException(nameof(pathExecutor));
+    }
+
+    /// <inheritdoc/>
     public void Suspend()
     {
-        _waypoints = pathExecutor.CurWaypoints;
-        _waypoint = pathExecutor.CurWaypoint;
+        _suspendTimeUtc = DateTime.UtcNow;
         _isSuspended = true;
-        _resuming = false;
-        //暂停时记录，获取点位的暂停标志
-        pathExecutor.GetPositionAndTimeSuspendFlag = true;
     }
 
-    //路径过远时，检查地图追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态
-    public bool CheckAndResetSuspendPoint()
+    /// <summary>
+    /// Marks the explicit resume recovery as completed.
+    /// 标记显式暂停恢复已经完成。
+    /// </summary>
+    public void CompleteResumeRecovery()
     {
-        if (_isSuspended || !_resuming)
-        {
-            return false;
-        }
-
-        if (pathExecutor.CurWaypoints == default || pathExecutor.CurWaypoint == default)
-        {
-            Reset();
-            return false;
-        }
-        if (pathExecutor.CurWaypoints == _waypoints && (pathExecutor.CurWaypoint == _waypoint || (pathExecutor.CurWaypoint.Item1 - 1) == _waypoint.Item1))
-        {
-            return true;
-        }
-
-        Reset();
-        return false;
+        Interlocked.Exchange(ref _resumeRecoveryPending, 0);
     }
 
+    /// <inheritdoc/>
     public void Resume()
     {
-        //暂定恢复时，重置移动时的时间，防止因暂停而导致超时
-        pathExecutor.moveToStartTime = DateTime.UtcNow;
+        if (!_isSuspended)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var suspendDuration = _suspendTimeUtc == DateTime.MinValue
+            ? TimeSpan.Zero
+            : now - _suspendTimeUtc;
+        if (suspendDuration < TimeSpan.Zero)
+        {
+            suspendDuration = TimeSpan.Zero;
+        }
+
+        Logger.LogInformation("路径恢复：暂停时长={SuspendSec:F1}s，等待执行器恢复界面和定位", suspendDuration.TotalSeconds);
+
+        // 恢复时重置移动超时，并通知 PathExecutor 中断当前点的后续动作后显式恢复。
+        _pathExecutor.MovementController.ResetMoveToStartTime(now);
         _isSuspended = false;
-        _resuming = true;
+        _suspendTimeUtc = DateTime.MinValue;
+        Interlocked.Exchange(ref _resumeRecoveryPending, 1);
     }
 
+    /// <inheritdoc/>
     public void Reset()
     {
-        _resuming = false;
-        _waypoints = default;
-        _waypoint = default;
+        _isSuspended = false;
+        _suspendTimeUtc = DateTime.MinValue;
+        Interlocked.Exchange(ref _resumeRecoveryPending, 0);
     }
 }

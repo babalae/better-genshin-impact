@@ -400,10 +400,7 @@ public static class AvatarRecognition
     /// 当 SkipSeek 为 true 时（如部分角色重击索敌期间）跳过本帧。
     /// </summary>
     /// <param name="ct">取消令牌</param>
-    /// <param name="isFightEnd">战斗是否已结束（外部标志，为 true 时退出循环）</param>
-    public static async Task ContinuousTargetingLoopAsync(
-        CancellationToken ct,
-        Func<bool>? isFightEnd = null)
+    public static async Task ContinuousTargetingLoopAsync(CancellationToken ct)
     {
         var dpi = TaskContext.Instance().DpiScale;
         var visConfig = GetVisualRecognitionConfig();
@@ -414,7 +411,7 @@ public static class AvatarRecognition
 
         try
         {
-            while (!ct.IsCancellationRequested && !(isFightEnd?.Invoke() ?? false))
+            while (!ct.IsCancellationRequested)
             {
                 // 快速路径：排他计数 > 0 时跳过本轮，避免不必要的截图开销
                 if (Volatile.Read(ref _skipSeekCount) > 0)

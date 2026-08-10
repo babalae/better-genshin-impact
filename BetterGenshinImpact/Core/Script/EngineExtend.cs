@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 using Microsoft.ClearScript;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +49,7 @@ public class EngineExtend
         engine.AddHostObject("notification", new Notification());
         
         // 任务调度器
-        engine.AddHostObject("dispatcher", new Dispatcher(config));
+        engine.AddHostObject("dispatcher", new Dispatcher(config ?? new object()));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
         engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
@@ -106,6 +107,11 @@ public class EngineExtend
 
         // HTML 遮罩
         engine.AddHostObject("htmlMask", new HtmlMask(workDir));
+
+        // 自动为当前 JS 环境注册生命周期管理与暂停状态读取
+        var jsSuspendHook = new JsScriptSuspendHook();
+        GameTask.RunnerContext.Instance.SetSuspendable("DefaultJsEnvironment", jsSuspendHook);
+        engine.AddHostObject("suspendState", jsSuspendHook);
 
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html

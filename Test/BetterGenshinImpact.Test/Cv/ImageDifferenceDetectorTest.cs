@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common.Party;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Test.Cv;

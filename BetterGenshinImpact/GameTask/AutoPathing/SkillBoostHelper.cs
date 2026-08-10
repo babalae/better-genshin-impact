@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common.Party;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -33,19 +34,13 @@ public partial class PathExecutor
 {
     private class HurryOnState
     {
-        public int MavikaFlyCount;
         public bool SprintMouseLogo = true;
-        public int RunCount;
-        public bool IsFlyingMwk;
         public bool PendingApproach = true;
         public bool? RunToDash = false;
-        public double DistanceHalf;
         public int MavikaSlopeCount;
         public int ClimbLogo;
         public int RotationStableCount;
-        public string? OriginalMoveMode;
         public bool FlyingState;
-        public int ChascaFlightCheckCount;
         public int WandererFlightCheckCount;
     }
     // 赶路切换角色黑名单，防止切人后触发夜魂传递
@@ -544,10 +539,7 @@ public partial class PathExecutor
                         {
                             var nextIdx = GetSwitchToWalkIndex();
                             Logger.LogInformation("自动赶路：希诺宁接近节点，切人步行 {t}", nextIdx);
-                            Task.Run(async () =>
-                            {
-                                await SwitchAvatar(nextIdx);
-                            }, ct);
+                            await SwitchAvatar(nextIdx);
                         }
                         else if (SpaceAtSecondPlaceExist(state))
                         {
@@ -712,8 +704,6 @@ public partial class PathExecutor
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     return false;
                 }
-
-                break;
 
             case "恰斯卡":
             case "伊法":
@@ -1296,9 +1286,9 @@ public partial class PathExecutor
                     || nextWaypoint?.Type == WaypointType.Teleport.Code)     // 或传送节点
                 || (nextWaypoint?.MoveMode != MoveModeEnum.Run.Code         // 下一个节点不是Run/Dash
                     && nextWaypoint?.MoveMode != MoveModeEnum.Dash.Code)
-                || waypoint?.Action == ActionEnum.Fight.Code                // 当前是战斗节点
+                || waypoint.Action == ActionEnum.Fight.Code                 // 当前是战斗节点
                 || waypoint.Type == WaypointType.Target.Code                // 当前是目标点
-                || waypoint?.Action == ActionEnum.CombatScript.Code         // 当前节点有简易策略脚本
+                || waypoint.Action == ActionEnum.CombatScript.Code          // 当前节点有简易策略脚本
                 || IsTurnTooSharp(waypoint, nextWaypoint, avatarName)))      // 路径转向角过大
         {
             // Logger.LogInformation("[赶路调试] ShouldApproach 连续赶路+特殊条件: dist={d}, stopDist={s}, nextDist={nd}, nextType={nt}, waypointType={wt}",
@@ -1562,10 +1552,10 @@ public partial class PathExecutor
     /// <paramref name="updateTracking"/> 为 true（默认）时同时更新冷却跟踪（Record + 兜底），
     /// 仅用于技能施放后刷新跟踪器；纯读取判断请传 false 避免副作用。
     /// </summary>
-    private async Task<double> ReadEskillCdAsync(string avatarName, bool updateTracking = true)
+    private Task<double> ReadEskillCdAsync(string avatarName, bool updateTracking = true)
     {
         using var cdRegion = CaptureToRectArea();
-        var eRa = cdRegion.DeriveCrop(AutoFightAssets.Get(cdRegion).ECooldownRect);
+        using var eRa = cdRegion.DeriveCrop(AutoFightAssets.Get(cdRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
@@ -1582,7 +1572,7 @@ public partial class PathExecutor
                 ESkillCdTracker.ApplyFallback(avatarName, log: false);
             }
         }
-        return cd;
+        return Task.FromResult(cd);
     }
 
     /// <summary>
