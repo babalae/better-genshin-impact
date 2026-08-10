@@ -27,6 +27,9 @@ public class PathingMovementActions
     public Func<string, Task<Avatar?>> SwitchAvatarAction { get; set; } = null!;
     public Func<Task> UseElementalSkillAction { get; set; } = null!;
     public Func<PathingPartyConfig> PartyConfigGetter { get; set; } = null!;
+    public Action ResetHurryOnStateAction { get; set; } = static () => { };
+    public Func<double, WaypointForTrack, double, ImageRegion, int, Task<bool>> TryHurryOnAction { get; set; }
+        = static (_, _, _, _, _) => Task.FromResult(false);
 }
 
 /// <summary>
@@ -37,7 +40,6 @@ public class PathingMovementController
 {
     private const int TIMEOUT_SECONDS = 240;
     private const double ARRIVE_DISTANCE_THRESHOLD = 4.0;
-    private const int MAX_PID_CONSECUTIVE_COUNT = 10;
     private const int MAX_STUCK_TRAP_COUNT = 2;
     private const int MAX_INERTIAL_RETRY_COUNT = 50;
     private const double MAX_CONTINUOUS_WAYPOINT_DISTANCE = 1000.0;
@@ -149,6 +151,8 @@ public class PathingMovementController
         ArgumentNullException.ThrowIfNull(waypoint);
         var partyConfig = _actions.PartyConfigGetter();
         await _actions.SwitchAvatarAction(partyConfig.MainAvatarIndex);
+        var switchAvatarTime = DateTime.UtcNow;
+        _actions.ResetHurryOnStateAction();
         if (_pathExecutorSuspend.IsResumeRecoveryPending)
         {
             return false;
@@ -184,6 +188,7 @@ public class PathingMovementController
         var moveContext = new PathingMovementContext
         {
             CancellationToken = _ct,
+            SwitchAvatarTime = switchAvatarTime,
             PartyConfigGetter = () => partyConfig,
             UseElementalSkillAction = _actions.UseElementalSkillAction,
             GetElementalSkillLastUseTime = () => _elementalSkillLastUseTime,
@@ -199,11 +204,14 @@ public class PathingMovementController
         _pidIntegral = 0f;
         _pidLastError = 0f;
         _pidLastTime = DateTime.UtcNow;
+        _beyondAngleStartTime = DateTime.MinValue;
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-        
-        using var ticker = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+
+        var hurryFrameInterval = Math.Clamp(partyConfig.HurryOnFrameInterval, 5, 150);
+        using var ticker = new PeriodicTimer(TimeSpan.FromMilliseconds(hurryFrameInterval));
         int consecutiveRotationCountBeyondAngle = 0;
+        float orientationDiff = 0;
         int additionalTimeInMs = 0;
         double distance = 0;
         bool isRouteCompleted = false;
@@ -340,11 +348,18 @@ public class PathingMovementController
                     // 姿态驱动与按键分发
                     new BTSequence(
                         new BTAction(async () => {
-                            consecutiveRotationCountBeyondAngle = await AlignOrientation(waypoint, position, moveContext.Screen, moveContext.Num, consecutiveRotationCountBeyondAngle, nextWaypoint);
+                            var orientation = await AlignOrientation(waypoint, position, moveContext.Screen, moveContext.Num, consecutiveRotationCountBeyondAngle, nextWaypoint);
+                            consecutiveRotationCountBeyondAngle = orientation.ConsecutiveCount;
+                            orientationDiff = orientation.Diff;
                             moveContext.Distance = distance;
                             return BTStatus.Success;
                         }),
                         new BTAction(async () => {
+                            if (await _actions.TryHurryOnAction(orientationDiff, waypoint, distance, moveContext.Screen, moveContext.Num))
+                            {
+                                return BTStatus.Running;
+                            }
+
                             var handlerStatus = await ApplyMoveModeHandlers(waypoint, moveContext);
                             if (handlerStatus == false)
                             {
@@ -549,8 +564,9 @@ public class PathingMovementController
     private float _pidIntegral = 0f;
     private float _pidLastError = 0f;
     private DateTime _pidLastTime = DateTime.MinValue;
+    private DateTime _beyondAngleStartTime = DateTime.MinValue;
 
-    private Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount, WaypointForTrack? nextWaypoint = null)
+    private Task<(int ConsecutiveCount, float Diff)> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount, WaypointForTrack? nextWaypoint = null)
     {
         int targetOrientation;
         var currentDistance = Navigation.GetDistance(waypoint, position);
@@ -591,7 +607,8 @@ public class PathingMovementController
         {
             consecutiveCount = 0;
             _pidIntegral = 0;
-            return Task.FromResult(consecutiveCount);
+            _beyondAngleStartTime = DateTime.MinValue;
+            return Task.FromResult((consecutiveCount, diff));
         }
         
         // 动态转角容差：距离近时容差变大以防打圈，平时要求5度内
@@ -605,9 +622,13 @@ public class PathingMovementController
 
         // 【平滑提升: 引入 PID 控制取代线程阻塞强行旋转】
         // 当偏差持续过大时，抛弃掉以往 await 一种固定帧率阻塞，而是叠加一抹带阻尼的高级鼠标偏移纠正
-        if (loopNum > 20 && Math.Abs(diff) > tolerance)
+        if ((now - _moveToStartTime).TotalSeconds > 2 && loopNum >= 5 && Math.Abs(diff) > tolerance)
         {
             consecutiveCount++;
+            if (_beyondAngleStartTime == DateTime.MinValue)
+            {
+                _beyondAngleStartTime = now;
+            }
 
             // 积分控制 (I): 如果多帧依然转不过来（比如鼠标卡住），累加动量
             _pidIntegral += diff * dt; // 采用真实的帧间差
@@ -619,7 +640,7 @@ public class PathingMovementController
             // PID 合成权重：这里补码作为额外动量输出，不抢占原初控制，只是在遇到强力折转/调头时增持辅助
             float pidCompensation = (0.5f * diff) + (0.2f * _pidIntegral) + (0.05f * derivative);
 
-            if (consecutiveCount > MAX_PID_CONSECUTIVE_COUNT)
+            if (consecutiveCount >= 3 && (now - _beyondAngleStartTime).TotalSeconds > 2)
             {
                 // 用 PID 算出应该补的像素。这种带有缓冲计算的动量比原本死锁等待的阻塞硬转柔和很多
                 // 注意：RotateToApproach 计算出差值为正时，说明实际需要向左转（即负坐标偏移），因此这里叠加动量时必须反号以同向发力！
@@ -638,10 +659,11 @@ public class PathingMovementController
             // 一旦追回，即刻抹除积分系历史，防止过调漂移回荡 (Overshoot)
             consecutiveCount = 0;
             _pidIntegral = 0;
+            _beyondAngleStartTime = DateTime.MinValue;
         }
 
         _pidLastError = diff;
-        return Task.FromResult(consecutiveCount);
+        return Task.FromResult((consecutiveCount, diff));
     }
 
     private async Task<bool?> ApplyMoveModeHandlers(WaypointForTrack waypoint, PathingMovementContext context)

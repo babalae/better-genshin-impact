@@ -50,6 +50,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    public bool IsAlphaVersion =>
+        Global.Version.Contains("alpha", StringComparison.OrdinalIgnoreCase);
+
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
 

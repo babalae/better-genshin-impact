@@ -664,6 +664,8 @@ public partial class MapViewer
     private void MapViewer_Closed(object? sender, EventArgs e)
     {
         ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        ViewModel.Dispose();
+        DataContext = null;
 
         if (!_isRecorderConnectionRegistered)
         {

@@ -20,12 +20,12 @@ public class AutoOpenChestTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
-        var ra = CaptureToRectArea();
+        using var initialCapture = CaptureToRectArea();
 
-        if (ra.Find(RecognitionAssets.Get("AutoOpenChest", "ChestFIcon", ra)).IsExist())
+        if (initialCapture.Find(RecognitionAssets.Get("AutoOpenChest", "ChestFIcon", initialCapture)).IsExist())
         {
-            CancellationTokenSource _ct = new();
-            ct.Register(_ct.Cancel);
+            using CancellationTokenSource _ct = new();
+            using var cancellationRegistration = ct.Register(_ct.Cancel);
             bool isFlower = false; // 是否是地脉花
             // 限制寻找宝箱的时间
             var timeLimit = 60;
@@ -35,7 +35,7 @@ public class AutoOpenChestTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    ra = CaptureToRectArea();
+                    using var ra = CaptureToRectArea();
                     Region chestIcon = ra.Find(RecognitionAssets.Get("AutoOpenChest", "ChestIcon", ra));
                     int limit = chestIcon.Width;
                     if (!chestIcon.IsExist())

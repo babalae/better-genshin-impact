@@ -83,7 +83,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     private void TrackMission()
     {
         // 确认在主界面才会执行跟随任务
-        var ra = CaptureToRectArea();
+        using var ra = CaptureToRectArea();
         var paimonMenuRa = ra.Find(ElementRecognition.Get("PaimonMenu", ra));
         if (!paimonMenuRa.IsExist())
         {
@@ -122,13 +122,13 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             Sleep(1500, _ct);
 
             // 寻找所有传送点
-            ra = CaptureToRectArea();
-            var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(ra.CacheGreyMat, QuickTeleportAssets.Get(ra).MapChooseIconGreyMatList);
+            using var mapCapture = CaptureToRectArea();
+            var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(mapCapture.CacheGreyMat, QuickTeleportAssets.Get(mapCapture).MapChooseIconGreyMatList);
             if (tpPointList.Count > 0)
             {
                 // 选中离中心点最近的传送点
-                var centerX = ra.Width / 2;
-                var centerY = ra.Height / 2;
+                var centerX = mapCapture.Width / 2;
+                var centerY = mapCapture.Height / 2;
                 var minDistance = double.MaxValue;
                 Rect nearestRect = default;
                 foreach (var tpPoint in tpPointList)
@@ -141,11 +141,12 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     }
                 }
 
-                ra.Derive(nearestRect).Click();
+                mapCapture.Derive(nearestRect).Click();
                 // 等待自动传送完成
                 Sleep(2000, _ct);
 
-                if (Bv.IsInBigMapUi(CaptureToRectArea()))
+                using var bigMapCapture = CaptureToRectArea();
+                if (Bv.IsInBigMapUi(bigMapCapture))
                 {
                     Logger.LogWarning("仍旧在大地图界面，传送失败");
                 }
@@ -154,7 +155,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     Sleep(500, _ct);
                     NewRetry.Do(() =>
                     {
-                        if (!Bv.IsInMainUi(CaptureToRectArea()))
+                        using var mainUiCapture = CaptureToRectArea();
+                        if (!Bv.IsInMainUi(mainUiCapture))
                         {
                             Logger.LogInformation("未进入到主界面，继续等待");
                             throw new RetryException("未进入到主界面");
@@ -180,7 +182,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         Simulation.SendInput.SimulateAction(GIActions.QuestNavigation);
         Sleep(3000, _ct);
 
-        var ra = CaptureToRectArea();
+        using var ra = CaptureToRectArea();
         var blueTrackPointRa = ra.Find(ElementRecognition.Get("BlueTrackPoint", ra));
         if (blueTrackPointRa.IsExist())
         {
@@ -203,7 +205,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         bool wDown = false;
         while (!_ct.IsCancellationRequested)
         {
-            var ra = CaptureToRectArea();
+            using var ra = CaptureToRectArea();
             var blueTrackPointRa = ra.Find(ElementRecognition.Get("BlueTrackPoint", ra));
             if (blueTrackPointRa.IsExist())
             {
@@ -253,7 +255,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                         wDown = false;
                     }
                     // 识别距离
-                    var text = OcrFactory.Paddle.OcrWithoutDetector(ra.CacheGreyMat[_missionDistanceRect]);
+                    using var distanceRegion = ra.CacheGreyMat[_missionDistanceRect];
+                    var text = OcrFactory.Paddle.OcrWithoutDetector(distanceRegion);
                     if (StringUtils.TryExtractPositiveInt(text) is > -1 and <= 3)
                     {
                         Logger.LogInformation("任务追踪：到达目标,识别结果[{Text}]", text);
@@ -297,7 +300,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
     private List<Region> OcrMissionTextRaList(Region paimonMenuRa)
     {
-        return CaptureToRectArea().FindMulti(new RecognitionObject
+        using var capture = CaptureToRectArea();
+        return capture.FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(paimonMenuRa.X, paimonMenuRa.Y - 15 + 210,

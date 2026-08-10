@@ -287,149 +287,20 @@ internal static class CharacterSelectionHelper
         out int rejectedCount,
         out int connectedComponentCount)
     {
-        const int minWhiteRectArea1080 = 2400;
-        const int maxWhiteRectArea1080 = 3000;
-
-        using var hsv = gridMat.CvtColor(ColorConversionCodes.BGR2HSV);
-        using var mask = new Mat();
-        Cv2.InRange(hsv, new Scalar(20, 12, 233), new Scalar(35, 16, 237), mask);
-        using var kernel = Cv2.GetStructuringElement(
-            MorphShapes.Rect,
-            new Size(5, 5));
-        using var closedMask = new Mat();
-        Cv2.MorphologyEx(mask, closedMask, MorphTypes.Close, kernel, iterations: 1);
-        using var labels = new Mat();
-        using var stats = new Mat();
-        using var centroids = new Mat();
-        var labelCount = Cv2.ConnectedComponentsWithStats(
-            closedMask,
-            labels,
-            stats,
-            centroids,
-            PixelConnectivity.Connectivity8,
-            MatType.CV_32S);
-        connectedComponentCount = Math.Max(0, labelCount - 1);
-
-        var minArea = minWhiteRectArea1080 * assetScale * assetScale;
-        var maxArea = maxWhiteRectArea1080 * assetScale * assetScale;
-        var whiteRects = new List<Rect>();
-        for (var label = 1; label < labelCount; label++)
-        {
-            var area = stats.At<int>(label, 4); // CC_STAT_AREA
-            if (area < minArea || area > maxArea)
-            {
-                continue;
-            }
-
-            whiteRects.Add(new Rect(
-                stats.At<int>(label, 0), // CC_STAT_LEFT
-                stats.At<int>(label, 1), // CC_STAT_TOP
-                stats.At<int>(label, 2), // CC_STAT_WIDTH
-                stats.At<int>(label, 3))); // CC_STAT_HEIGHT
-        }
-
-        return BuildCharacterCards(whiteRects, gridMat.Size(), assetScale, out rejectedCount);
-    }
-
-    /// <summary>
-    /// 根据白色底栏外接矩形的右下角反推固定尺寸角色卡片，并生成头像和元素裁剪区域。
-    /// </summary>
-    /// <remarks>
-    /// 同行、同列的右边界和下边界会先用中位数校正，以消除二值化轮廓的轻微抖动；
-    /// 反推后的卡片必须完整落在列表 ROI 内才会返回。
-    /// </remarks>
-    internal static List<CharacterCardRect> BuildCharacterCards(
-        IReadOnlyList<Rect> whiteRects,
-        Size gridSize,
-        double assetScale,
-        out int rejectedCount)
-    {
-        const int cardWidth1080 = 115;
-        const int cardHeight1080 = 140;
-        const int avatarSize1080 = 115;
         const int elementSize1080 = 48;
-
-        rejectedCount = 0;
-        if (whiteRects.Count == 0)
-        {
-            return [];
-        }
-
-        var cardWidth = Math.Max(1, (int)Math.Round(cardWidth1080 * assetScale));
-        var cardHeight = Math.Max(1, (int)Math.Round(cardHeight1080 * assetScale));
-        var avatarSize = Math.Max(1, (int)Math.Round(avatarSize1080 * assetScale));
         var elementSize = Math.Max(1, (int)Math.Round(elementSize1080 * assetScale));
-        var columnTolerance = Math.Max(3, cardWidth / 3);
-        var rowTolerance = Math.Max(3, cardHeight / 3);
-        var rightValues = whiteRects.Select(rect => rect.Right).ToArray();
-        var bottomValues = whiteRects.Select(rect => rect.Bottom).ToArray();
-        var correctedRights = CorrectByMedian(rightValues, columnTolerance);
-        var correctedBottoms = CorrectByMedian(bottomValues, rowTolerance);
-        var cards = new List<CharacterCardRect>();
-        var seen = new HashSet<(int Right, int Bottom)>();
-
-        for (int i = 0; i < whiteRects.Count; i++)
-        {
-            var right = correctedRights[i];
-            var bottom = correctedBottoms[i];
-            if (!seen.Add((right, bottom)))
-            {
-                continue;
-            }
-
-            var cardRect = new Rect(right - cardWidth, bottom - cardHeight, cardWidth, cardHeight);
-            if (cardRect.X < 0 || cardRect.Y < 0 || cardRect.Right > gridSize.Width || cardRect.Bottom > gridSize.Height)
-            {
-                rejectedCount++;
-                continue;
-            }
-
-            cards.Add(new CharacterCardRect(
-                cardRect,
-                new Rect(cardRect.X, cardRect.Y, avatarSize, avatarSize),
-                new Rect(cardRect.X, cardRect.Y, elementSize, elementSize)));
-        }
-
-        return cards;
-    }
-
-    /// <summary>
-    /// 将距离不超过容差的同行或同列坐标归组，并用组内中位数替换原始值。
-    /// </summary>
-    private static int[] CorrectByMedian(IReadOnlyList<int> values, int tolerance)
-    {
-        var indexed = values.Select((value, index) => (Value: value, Index: index)).OrderBy(item => item.Value).ToList();
-        var result = new int[values.Count];
-        var group = new List<(int Value, int Index)>();
-
-        void FlushGroup()
-        {
-            if (group.Count == 0)
-            {
-                return;
-            }
-
-            var ordered = group.Select(item => item.Value).OrderBy(value => value).ToArray();
-            var median = ordered.Length % 2 == 1
-                ? ordered[ordered.Length / 2]
-                : (int)Math.Round((ordered[ordered.Length / 2 - 1] + ordered[ordered.Length / 2]) / 2d);
-            foreach (var item in group)
-            {
-                result[item.Index] = median;
-            }
-            group.Clear();
-        }
-
-        foreach (var item in indexed)
-        {
-            if (group.Count > 0 && item.Value - group[^1].Value > tolerance)
-            {
-                FlushGroup();
-            }
-            group.Add(item);
-        }
-        FlushGroup();
-        return result;
+        return FixedSizeGridCardDetector
+            .Detect(
+                gridMat,
+                assetScale,
+                FixedSizeGridCardLayout.CharacterDevelopment,
+                out rejectedCount,
+                out connectedComponentCount)
+            .Select(card => new CharacterCardRect(
+                card.CardRect,
+                card.AvatarRect,
+                new Rect(card.CardRect.X, card.CardRect.Y, elementSize, elementSize)))
+            .ToList();
     }
 
     private static Rect Rect1080(double assetScale, int x, int y, int width, int height) =>

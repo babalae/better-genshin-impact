@@ -33,13 +33,13 @@ public static partial class Bv
             return string.Empty;
         }
 
-        var textMat = new Mat(region.SrcMat, textRect);
+        using var textMat = new Mat(region.SrcMat, textRect);
         var boundingRect = AutoPickTrigger.GetWhiteTextBoundingRect(textMat);
         // 如果找到有效区域
         if (boundingRect.Width > 5 && boundingRect.Height > 5)
         {
             // 截取只包含文字的区域
-            var textOnlyMat = new Mat(textMat, new Rect(0, 0,
+            using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
                 boundingRect.Right + 3 < textMat.Width ? boundingRect.Right + 3 : textMat.Width, textMat.Height));
             return OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
         }

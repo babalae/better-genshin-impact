@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
@@ -18,18 +18,19 @@ public class MapPuzzleOther
     {
         // 保存1024
         var img1024 = Put(1024);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\DeepSea_1024_1x2.png", img1024);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\MoonCanon_1024.png", img1024);
     }
 
     public static Mat Put(int block = 1024)
     {
-        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_最新"; // 图片文件夹路径
+        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\地图块素材\霜月"; // 图片文件夹路径
 
         // 层岩巨渊 UI_MapBack_TheChasm_
         // 渊下宫 UI_MapBack_AbyssalPalace_
         // UI_MapBack_DeepSea_
         // UI_Map_Volcano_
-        string pattern = @"UI_MapBack_DeepSea_([-+]?\d+)_([-+]?\d+)(.*)";
+        // UI_Map_MoonCanon
+        string pattern = @"UI_Map_MoonCanon_([-+]?\d+)_([-+]?\d+)(.*)";
         var images = Directory.GetFiles(folderPath, "*.png", SearchOption.TopDirectoryOnly); // 获取所有图片文件路径
 
         // 解析图片位置信息并存储到字典中
@@ -47,8 +48,8 @@ public class MapPuzzleOther
             //     &&!imagePath.Contains("UI_Map_Volcano_-1_-1.png"))
             // {
             //     continue;
-            // } 
-            
+            // }
+
             // 层岩巨渊 特殊逻辑
             // if (!imagePath.Contains("UI_MapBack_TheChasm_0_0.png") 
             //     &&!imagePath.Contains("UI_MapBack_TheChasm_0_1.png")
@@ -59,11 +60,11 @@ public class MapPuzzleOther
             // } 
             
             // 旧日之海
-            if (!imagePath.Contains("UI_MapBack_DeepSea_1_4.png") 
-                &&!imagePath.Contains("UI_MapBack_DeepSea_1_3.png"))
-            {
-                continue;
-            } 
+            // if (!imagePath.Contains("UI_MapBack_DeepSea_1_4.png")
+            //     &&!imagePath.Contains("UI_MapBack_DeepSea_1_3.png"))
+            // {
+            //     continue;
+            // }
 
             // 获取文件大小
             var fileInfo = new FileInfo(imagePath);
@@ -132,6 +133,11 @@ public class MapPuzzleOther
         // 确定大图的行数和列数
         int maxRow = imageLocations.Keys.Max(key => key.row);
         int maxCol = imageLocations.Keys.Max(key => key.col);
+
+        // 拼图的行列方向均发生了反转，(0, 0) 块相对最左上角块的偏移如下。
+        int zeroBlockOffsetX = maxCol;
+        int zeroBlockOffsetY = maxRow;
+        Debug.WriteLine($"(0, 0) 块的位置：X = {zeroBlockOffsetX}，Y = {zeroBlockOffsetY}；距离最左上角块：向右 {zeroBlockOffsetX} 块，向下 {zeroBlockOffsetY} 块；像素坐标：({zeroBlockOffsetX * block}, {zeroBlockOffsetY * block})");
 
         // 计算大图的总宽度和高度
         var lenCol = maxCol - minCol;

@@ -638,7 +638,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinConfirmButtonHotkeyType,
             (_, _) =>
             {
-                if (Bv.ClickConfirmButton(TaskControl.CaptureToRectArea()))
+                using var capture = TaskControl.CaptureToRectArea();
+                if (Bv.ClickConfirmButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "确认");
                 }
@@ -657,7 +658,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinCancelButtonHotkeyType,
             (_, _) =>
             {
-                if (Bv.ClickCancelButton(TaskControl.CaptureToRectArea()))
+                using var capture = TaskControl.CaptureToRectArea();
+                if (Bv.ClickCancelButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "取消");
                 }
@@ -713,7 +715,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.MoonCanon.ToString());
                 _logger.LogInformation("大地图位置：{Position}", p);
             }
         ));

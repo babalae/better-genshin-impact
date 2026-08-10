@@ -225,7 +225,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
             {
                 { ActionEnum.HydroCollect.Code, ElementalType.Hydro },
                 { ActionEnum.ElectroCollect.Code, ElementalType.Electro },
-                { ActionEnum.AnemoCollect.Code, ElementalType.Anemo }
+                { ActionEnum.AnemoCollect.Code, ElementalType.Anemo },
+                { ActionEnum.PyroCollect.Code, ElementalType.Pyro }
             };
 
             foreach (var (action, el) in map)

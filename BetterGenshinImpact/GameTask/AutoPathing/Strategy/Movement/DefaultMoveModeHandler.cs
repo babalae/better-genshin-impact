@@ -43,8 +43,9 @@ public class DefaultMoveModeHandler : IMoveModeHandler
             var ms = s * 1000;
             if ((DateTime.UtcNow - context.GetElementalSkillLastUseTime()).TotalMilliseconds > ms)
             {
-                if (context.Num <= 5 && (!string.IsNullOrEmpty(partyConfig.MainAvatarIndex) &&
-                                 partyConfig.GuardianAvatarIndex != partyConfig.MainAvatarIndex))
+                if ((DateTime.UtcNow - context.SwitchAvatarTime).TotalSeconds < 1 &&
+                    (!string.IsNullOrEmpty(partyConfig.MainAvatarIndex) &&
+                     partyConfig.GuardianAvatarIndex != partyConfig.MainAvatarIndex))
                 {
                     await Delay(800, context.CancellationToken);
                 }

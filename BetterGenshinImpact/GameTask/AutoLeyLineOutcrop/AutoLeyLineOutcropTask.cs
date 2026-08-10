@@ -867,7 +867,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<bool> LocateLeyLineOutcrop(string type)
     {
         await Delay(500, _ct);
-        var currentZoom = _tpTask.GetBigMapZoomLevel(CaptureToRectArea());
+        double currentZoom;
+        using (var zoomCapture = CaptureToRectArea())
+        {
+            currentZoom = _tpTask.GetBigMapZoomLevel(zoomCapture);
+        }
         await _tpTask.AdjustMapZoomLevel(currentZoom, 3.0);
 
         var iconPath = type == "启示之花"
@@ -884,7 +888,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         var flower = list[0];
         var center = _tpTask.GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
-        var mapZoomLevel = _tpTask.GetBigMapZoomLevel(CaptureToRectArea());
+        double mapZoomLevel;
+        using (var zoomCapture = CaptureToRectArea())
+        {
+            mapZoomLevel = _tpTask.GetBigMapZoomLevel(zoomCapture);
+        }
         var mapScaleFactor = TaskContext.Instance().Config.TpConfig.MapScaleFactor;
         _leyLineX = (960 - flower.X - 25) * mapZoomLevel / mapScaleFactor + center.X;
         _leyLineY = (540 - flower.Y - 25) * mapZoomLevel / mapScaleFactor + center.Y;

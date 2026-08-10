@@ -89,6 +89,7 @@ public partial class PathExecutor
         _partyManager = new PathingPartyManager(ct, _healthController, null);
         _anomalyResolver = new PathingAnomalyResolver(ct, () => CaptureToRectArea(), () => PartyConfig.AutoSkipEnabled);
         _navigator = new PathingNavigator(ct, imageRegion => _anomalyResolver.ResolveAnomalies(imageRegion));
+        var hurryOnState = new HurryOnState();
         MovementController = new PathingMovementController(
             ct,
             _navigator,
@@ -103,7 +104,10 @@ public partial class PathExecutor
                 WaitUntilRotatedToAction = WaitUntilRotatedTo,
                 SwitchAvatarAction = index => SwitchAvatar(index),
                 UseElementalSkillAction = UseElementalSkill,
-                PartyConfigGetter = () => PartyConfig
+                PartyConfigGetter = () => PartyConfig,
+                ResetHurryOnStateAction = () => hurryOnState = new HurryOnState(),
+                TryHurryOnAction = (diff, waypoint, distance, screen, num) =>
+                    TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState)
             });
             
         MovementController.OnRouteTraversed = (prev, target, actualTraj, duration) => {
@@ -495,6 +499,7 @@ public partial class PathExecutor
             // 不管咋样，松开所有按键
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
     }
 

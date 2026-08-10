@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
@@ -254,7 +254,7 @@ public class PathRecorder : Singleton<PathRecorder>
         }
 
         var waypoint = new Waypoint();
-        var screen = TaskControl.CaptureToRectArea();
+        using var screen = TaskControl.CaptureToRectArea();
         if (screen == null)
         {
             return CancelStart("路径点记录启动失败：无法获取游戏截图");
@@ -305,7 +305,7 @@ public class PathRecorder : Singleton<PathRecorder>
     public void AddWaypoint(string waypointType = "")
     {
         Waypoint waypoint = new();
-        var screen = TaskControl.CaptureToRectArea();
+        using var screen = TaskControl.CaptureToRectArea();
         if (screen == null) return;
 
         var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;

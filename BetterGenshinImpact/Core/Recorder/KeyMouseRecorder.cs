@@ -188,7 +188,8 @@ public class KeyMouseRecorder
             if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
             {
                 LastOrientationDetection = now;
-                cao = (int)Math.Round(CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcMat));
+                using var capture = TaskControl.CaptureToRectArea();
+                cao = (int)Math.Round(CameraOrientation.Compute(capture.SrcMat));
             }
         }
         

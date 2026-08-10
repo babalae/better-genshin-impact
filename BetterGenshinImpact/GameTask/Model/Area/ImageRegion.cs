@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
@@ -22,6 +22,7 @@ public class ImageRegion : Region
 {
     private Mat? _cacheGreyMat;
     private Image<Rgb24>? _cacheImage;
+    private bool _disposed;
 
     public Mat SrcMat { get; }
 
@@ -232,11 +233,10 @@ public class ImageRegion : Region
                 return new Region();
             }
 
-            var roi = SrcMat;
-            if (effectiveRegionOfInterest != default)
-            {
-                roi = new Mat(SrcMat, effectiveRegionOfInterest);
-            }
+            using var ownedRoi = effectiveRegionOfInterest != default
+                ? new Mat(SrcMat, effectiveRegionOfInterest)
+                : null;
+            var roi = ownedRoi ?? SrcMat;
 
             var result = OcrFactory.Paddle.OcrResult(roi);
             var text = StringUtils.RemoveAllSpace(result.Text);
@@ -309,16 +309,16 @@ public class ImageRegion : Region
                 return new Region();
             }
 
-            Mat roi;
-            if (RecognitionTypes.ColorRangeAndOcr.Equals(ro.RecognitionType))
+            using var ownedRoi = effectiveRegionOfInterest != default
+                ? new Mat(SrcMat, effectiveRegionOfInterest)
+                : null;
+            var roi = ownedRoi ?? SrcMat;
+            using var colorRoi = RecognitionTypes.ColorRangeAndOcr.Equals(ro.RecognitionType)
+                ? roi.Clone()
+                : null;
+            if (colorRoi != null)
             {
-                roi = SrcMat;
-                if (effectiveRegionOfInterest != default)
-                {
-                    roi = new Mat(SrcMat, effectiveRegionOfInterest);
-                }
-
-                roi = roi.Clone();
+                roi = colorRoi;
                 if (ro.ColorConversionCode != ColorConversionCodes.BGRA2BGR)
                 {
                     Cv2.CvtColor(roi, roi, ro.ColorConversionCode);
@@ -326,15 +326,6 @@ public class ImageRegion : Region
 
                 Cv2.InRange(roi, ro.LowerColor, ro.UpperColor, roi);
             }
-            else
-            {
-                roi = SrcMat;
-                if (effectiveRegionOfInterest != default)
-                {
-                    roi = new Mat(SrcMat, effectiveRegionOfInterest);
-                }
-            }
-
             var result = OcrFactory.Paddle.OcrResult(roi);
             var text = StringUtils.RemoveAllSpace(result.Text);
             text = ApplyTextReplacements(text, ro.ReplaceDictionary);
@@ -504,11 +495,10 @@ public class ImageRegion : Region
                 return [];
             }
 
-            var roi = SrcMat;
-            if (effectiveRegionOfInterest != default)
-            {
-                roi = new Mat(SrcMat, effectiveRegionOfInterest);
-            }
+            using var ownedRoi = effectiveRegionOfInterest != default
+                ? new Mat(SrcMat, effectiveRegionOfInterest)
+                : null;
+            var roi = ownedRoi ?? SrcMat;
 
             var result = OcrFactory.Paddle.OcrResult(roi);
 
@@ -582,10 +572,17 @@ public class ImageRegion : Region
         return text;
     }
 
-    public new void Dispose()
+    public override void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _cacheImage?.Dispose();
         _cacheGreyMat?.Dispose();
         SrcMat.Dispose();
+        base.Dispose();
     }
 }

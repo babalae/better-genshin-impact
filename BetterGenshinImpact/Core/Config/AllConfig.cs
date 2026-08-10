@@ -211,6 +211,11 @@ public partial class AllConfig : ObservableObject
     public RecordConfig RecordConfig { get; set; } = new();
 
     /// <summary>
+    /// 原琴演奏配置
+    /// </summary>
+    public MusicConfig MusicConfig { get; set; } = new();
+
+    /// <summary>
     /// 脚本配置
     /// </summary>
     public ScriptConfig ScriptConfig { get; set; } = new();
@@ -292,6 +297,7 @@ public partial class AllConfig : ObservableObject
         MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
+        MusicConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;

@@ -60,11 +60,6 @@ public class UseGadgetHandler : IActionHandler
             await Delay(waitTimeMs, ct);
             Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
         }
-        else
-        {
-            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-        }
-
         Logger.LogInformation("已完成小道具使用。");
         await Delay(300, ct);
     }

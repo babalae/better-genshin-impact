@@ -38,20 +38,67 @@ public sealed class MemoryFileCache
         Func<byte[], T?> deserialize,
         CancellationToken ct = default)
     {
+        return GetOrAddCoreAsync(
+            CacheRootDirectory,
+            cacheType,
+            cacheKey,
+            ttl,
+            factory,
+            serialize,
+            deserialize,
+            ct);
+    }
+
+    public Task<T?> GetOrAddInDirectoryAsync<T>(
+        string cacheRootDirectory,
+        string cacheType,
+        string cacheKey,
+        TimeSpan ttl,
+        Func<CancellationToken, Task<T?>> factory,
+        Func<T, byte[]> serialize,
+        Func<byte[], T?> deserialize,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(cacheRootDirectory))
+        {
+            throw new ArgumentException("cacheRootDirectory cannot be empty.", nameof(cacheRootDirectory));
+        }
+
+        return GetOrAddCoreAsync(
+            Path.GetFullPath(cacheRootDirectory),
+            cacheType,
+            cacheKey,
+            ttl,
+            factory,
+            serialize,
+            deserialize,
+            ct);
+    }
+
+    private Task<T?> GetOrAddCoreAsync<T>(
+        string cacheRootDirectory,
+        string cacheType,
+        string cacheKey,
+        TimeSpan ttl,
+        Func<CancellationToken, Task<T?>> factory,
+        Func<T, byte[]> serialize,
+        Func<byte[], T?> deserialize,
+        CancellationToken ct)
+    {
         if (string.IsNullOrWhiteSpace(cacheKey))
         {
             throw new ArgumentException("cacheKey cannot be empty.", nameof(cacheKey));
         }
 
         var normalizedCacheType = NormalizeCacheType(cacheType);
-        var memoryCacheKey = $"{normalizedCacheType}:{cacheKey}";
-        Directory.CreateDirectory(GetCacheTypeDirectory(normalizedCacheType));
+        var memoryCacheKey = $"{cacheRootDirectory}:{normalizedCacheType}:{cacheKey}";
+        Directory.CreateDirectory(GetCacheTypeDirectory(cacheRootDirectory, normalizedCacheType));
 
         return _memoryCache.GetOrAddAsync<T?>(
                 memoryCacheKey,
                 async entry =>
                 {
-                    if (TryReadPayload(normalizedCacheType, cacheKey, ttl, out var payload, out var remaining))
+                    if (TryReadPayload(cacheRootDirectory, normalizedCacheType, cacheKey, ttl, out var payload, out var remaining))
                     {
                         entry.AbsoluteExpirationRelativeToNow = remaining;
                         try
@@ -60,7 +107,7 @@ public sealed class MemoryFileCache
                         }
                         catch
                         {
-                            TryDeletePayload(normalizedCacheType, cacheKey);
+                            TryDeletePayload(cacheRootDirectory, normalizedCacheType, cacheKey);
                         }
                     }
 
@@ -83,7 +130,7 @@ public sealed class MemoryFileCache
 
                     if (bytes is { Length: > 0 })
                     {
-                        TryWritePayload(normalizedCacheType, cacheKey, bytes);
+                        TryWritePayload(cacheRootDirectory, normalizedCacheType, cacheKey, bytes);
                     }
 
                     return obj;
@@ -151,15 +198,15 @@ public sealed class MemoryFileCache
         return normalized;
     }
 
-    private static string GetCacheTypeDirectory(string cacheType)
+    private static string GetCacheTypeDirectory(string cacheRootDirectory, string cacheType)
     {
-        return Path.Combine(CacheRootDirectory, cacheType);
+        return Path.Combine(cacheRootDirectory, cacheType);
     }
 
     public void PurgeCacheTypeByCacheKeys(string cacheType, IReadOnlyCollection<string> keepCacheKeys)
     {
         var normalizedCacheType = NormalizeCacheType(cacheType);
-        var dir = GetCacheTypeDirectory(normalizedCacheType);
+        var dir = GetCacheTypeDirectory(CacheRootDirectory, normalizedCacheType);
         if (!Directory.Exists(dir))
         {
             return;
@@ -199,10 +246,10 @@ public sealed class MemoryFileCache
         }
     }
 
-    private string GetPayloadPath(string cacheType, string cacheKey)
+    private static string GetPayloadPath(string cacheRootDirectory, string cacheType, string cacheKey)
     {
         var hash = ComputeHash(cacheKey);
-        return Path.Combine(GetCacheTypeDirectory(cacheType), hash + ".bin");
+        return Path.Combine(GetCacheTypeDirectory(cacheRootDirectory, cacheType), hash + ".bin");
     }
 
     private static string ComputeHash(string cacheKey)
@@ -210,11 +257,17 @@ public sealed class MemoryFileCache
         return MD5Helper.ComputeMD5(cacheKey);
     }
 
-    private bool TryReadPayload(string cacheType, string cacheKey, TimeSpan ttl, out byte[] payload, out TimeSpan remaining)
+    private bool TryReadPayload(
+        string cacheRootDirectory,
+        string cacheType,
+        string cacheKey,
+        TimeSpan ttl,
+        out byte[] payload,
+        out TimeSpan remaining)
     {
         payload = [];
         remaining = default;
-        var path = GetPayloadPath(cacheType, cacheKey);
+        var path = GetPayloadPath(cacheRootDirectory, cacheType, cacheKey);
 
         try
         {
@@ -251,14 +304,19 @@ public sealed class MemoryFileCache
         }
     }
 
-    private void TryWritePayload(string cacheType, string cacheKey, byte[] payload)
+    private void TryWritePayload(string cacheRootDirectory, string cacheType, string cacheKey, byte[] payload)
     {
-        TryWritePayload(cacheType, cacheKey, payload, _timeProvider.GetUtcNow().UtcDateTime);
+        TryWritePayload(cacheRootDirectory, cacheType, cacheKey, payload, _timeProvider.GetUtcNow().UtcDateTime);
     }
 
-    private void TryWritePayload(string cacheType, string cacheKey, byte[] payload, DateTime nowUtc)
+    private void TryWritePayload(
+        string cacheRootDirectory,
+        string cacheType,
+        string cacheKey,
+        byte[] payload,
+        DateTime nowUtc)
     {
-        var path = GetPayloadPath(cacheType, cacheKey);
+        var path = GetPayloadPath(cacheRootDirectory, cacheType, cacheKey);
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(dir))
         {
@@ -285,9 +343,9 @@ public sealed class MemoryFileCache
         }
     }
 
-    private void TryDeletePayload(string cacheType, string cacheKey)
+    private void TryDeletePayload(string cacheRootDirectory, string cacheType, string cacheKey)
     {
-        TryDeleteFile(GetPayloadPath(cacheType, cacheKey));
+        TryDeleteFile(GetPayloadPath(cacheRootDirectory, cacheType, cacheKey));
     }
 
     private static unsafe byte[] ReadAllBytesByCopyTo(FileStream fs)

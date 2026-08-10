@@ -19,6 +19,9 @@ public class PathingMovementContext
     
     /// <summary>当前循环尝试次数/时间参考</summary>
     public int Num { get; set; }
+
+    /// <summary>进入当前移动节点前完成主角色切换的时间</summary>
+    public DateTime SwitchAvatarTime { get; set; }
     
     /// <summary>距离目标点的距离</summary>
     public double Distance { get; set; }

@@ -129,15 +129,16 @@ public class PathingAnomalyResolver
         
         while (!_ct.IsCancellationRequested)
         {
-            using var captureRegion = _captureAction();
+            var captureRegion = _captureAction();
             if (captureRegion == null) break;
+            using var captureContent = new CaptureContent(captureRegion);
 
             using var disabledUiButtonRegion = captureRegion.Find(
                 GetAutoSkipRecognitionObject("DisabledUiButton", captureRegion));
             
             if (disabledUiButtonRegion.IsExist())
             {
-                _autoSkipTrigger.OnCapture(new CaptureContent(captureRegion));
+                _autoSkipTrigger.OnCapture(captureContent);
                 missingUiTokenCount = 0; 
             }
             else

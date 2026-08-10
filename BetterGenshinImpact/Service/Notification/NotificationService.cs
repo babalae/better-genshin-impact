@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -13,6 +13,8 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -374,8 +376,16 @@ public class NotificationService : IHostedService, IDisposable
             }
 
             var testData = CreateTestNotificationData();
-            await notifier.SendAsync(testData);
-            return NotificationTestResult.Success();
+            try
+            {
+                await notifier.SendAsync(testData);
+                return NotificationTestResult.Success();
+            }
+            finally
+            {
+                testData.Screenshot?.Dispose();
+                testData.Screenshot = null;
+            }
         }
         catch (NotifierException ex)
         {
@@ -403,7 +413,8 @@ public class NotificationService : IHostedService, IDisposable
         {
             try
             {
-                testData.Screenshot = TaskControl.CaptureToRectArea().CacheImage;
+                using var capture = TaskControl.CaptureToRectArea();
+                testData.Screenshot = capture.CacheImage.Clone();
             }
             catch (Exception ex)
             {
@@ -423,14 +434,27 @@ public class NotificationService : IHostedService, IDisposable
 
         if (!ShouldSendNotification(notificationData.Event)) return;
 
+        Image<Rgb24>? ownedScreenshot = null;
         try
         {
-            await AddScreenshotIfNeededAsync(notificationData);
+            ownedScreenshot = AddScreenshotIfNeeded(notificationData);
             await _notifierManager.SendNotificationToAllAsync(notificationData);
         }
         catch (Exception ex)
         {
             TaskControl.Logger.LogError(ex, "发送通知时发生错误");
+        }
+        finally
+        {
+            if (ownedScreenshot != null)
+            {
+                if (ReferenceEquals(notificationData.Screenshot, ownedScreenshot))
+                {
+                    notificationData.Screenshot = null;
+                }
+
+                ownedScreenshot.Dispose();
+            }
         }
     }
 
@@ -447,11 +471,11 @@ public class NotificationService : IHostedService, IDisposable
     /// <summary>
     ///     如果需要，为通知添加截图
     /// </summary>
-    private async Task AddScreenshotIfNeededAsync(BaseNotificationData notificationData)
+    private Image<Rgb24>? AddScreenshotIfNeeded(BaseNotificationData notificationData)
     {
-        if (_notificationConfig?.IncludeScreenShot != true)
+        if (_notificationConfig?.IncludeScreenShot != true || notificationData.Screenshot != null)
         {
-            return;
+            return null;
         }
 
         try
@@ -459,8 +483,10 @@ public class NotificationService : IHostedService, IDisposable
             var mat = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
             if (mat != null)
             {
-                var imageRegion = new ImageRegion(mat, 0, 0);
-                notificationData.Screenshot = imageRegion.CacheImage;
+                using var imageRegion = new ImageRegion(mat, 0, 0);
+                var screenshot = imageRegion.CacheImage.Clone();
+                notificationData.Screenshot = screenshot;
+                return screenshot;
             }
         }
         catch (Exception ex)
@@ -468,7 +494,7 @@ public class NotificationService : IHostedService, IDisposable
             TaskControl.Logger.LogDebug(ex, "补充通知截图失败");
         }
 
-        await Task.CompletedTask;
+        return null;
     }
 
     /// <summary>

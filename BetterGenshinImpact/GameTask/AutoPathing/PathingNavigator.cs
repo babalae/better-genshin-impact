@@ -207,7 +207,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                 var tpTask = new TpTask(_ct);
                 try
                 {
-                    await tpTask.OpenBigMapUi().ConfigureAwait(false);
+                    await tpTask.OpenBigMapUi(mapName: waypoint.MapName).ConfigureAwait(false);
                     var gamePosition = tpTask.GetPositionFromBigMap(waypoint.MapName);
                     if (Telemetry.RouteNavigationCoordinateService.Instance.TryGameToImage(
                             waypoint.MapName,

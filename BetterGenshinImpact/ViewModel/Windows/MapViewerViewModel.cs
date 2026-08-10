@@ -53,7 +53,7 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 /// <summary>
 /// TODO 需要支持更多地图
 /// </summary>
-public partial class MapViewerViewModel : ObservableObject
+public partial class MapViewerViewModel : ObservableObject, IDisposable
 {
     private const int CoordinateStorageDecimals = 4;
     private const int CoordinateDisplayDecimals = 2;
@@ -687,6 +687,8 @@ public partial class MapViewerViewModel : ObservableObject
 
     private int _scale = 1;
 
+    private bool _disposed;
+
     private DateTime _lastMapBitmapRefreshUtc = DateTime.MinValue;
 
     private readonly TimeSpan _mapBitmapRefreshInterval = TimeSpan.FromMilliseconds(120);
@@ -776,9 +778,16 @@ public partial class MapViewerViewModel : ObservableObject
 
         MapName = mapName;
         MapDisplayName = GetMapDisplayName(mapName);
+        Init(mapName);
         DefaultRecordAuthorName = TaskContext.Instance().Config.DevConfig.RecordDefaultAuthorName;
         DefaultRecordAuthorLinks = TaskContext.Instance().Config.DevConfig.RecordDefaultAuthorLinks;
-        _mapBitmap = new WriteableBitmap(1, 1, 96, 96, PixelFormats.Bgra32, null);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var center = MapManager.GetMap(MapName, matchingMethod)
+            .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(512, 512));
+        using (var initialClip = ClipMat(new Point2f(center.X, center.Y)))
+        {
+            _mapBitmap = WriteableBitmapConverter.ToWriteableBitmap(initialClip);
+        }
         LoadCommonRecordAuthors();
         LoadRareActionCodes();
         RebuildActionOptions();
@@ -1758,6 +1767,10 @@ public partial class MapViewerViewModel : ObservableObject
         {
             _mapImage = new Mat(Global.Absolute(@"Assets/Map/TempleOfSpace/TempleOfSpace_0_1024.png"));
         }
+        else if (mapName == MapTypes.MoonCanon.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/MoonCanon/MoonCanon_0_1024.png"));
+        }
         else
         {
             throw new Exception("暂时不支持展示路径的地图类型:" + mapName);
@@ -1802,13 +1815,14 @@ public partial class MapViewerViewModel : ObservableObject
                 {
                     Debug.WriteLine("_currentPathingMap 未初始化");
                     var baseRect = new Rect(rect.X / _scale, rect.Y / _scale, rect.Width / _scale, rect.Height / _scale);
-                    var baseMat = new Mat(_mapImage, baseRect);
+                    using var baseView = new Mat(_mapImage, baseRect);
+                    var baseMat = baseView.Clone();
                     _lastClipPixelSize = new Size(baseMat.Width, baseMat.Height);
                     return baseMat;
                 }
 
-                Mat clipMat = new(_currentPathingMap, rect);
-                clipMat = clipMat.Clone();
+                using var clipView = new Mat(_currentPathingMap, rect);
+                var clipMat = clipView.Clone();
                 _lastClipPixelSize = new Size(clipMat.Width, clipMat.Height);
                 // 绘制中心点
                 Cv2.Circle(clipMat, new Point(len, len), 3, new Scalar(0, 255, 0), 2);
@@ -5186,7 +5200,8 @@ public partial class MapViewerViewModel : ObservableObject
             try
             {
                 MapBitmap.Lock();
-                WriteableBitmapConverter.ToWriteableBitmap(ClipMat(point), MapBitmap);
+                using var clip = ClipMat(point);
+                WriteableBitmapConverter.ToWriteableBitmap(clip, MapBitmap);
                 LastRefreshText = $"刷新：{DateTime.Now:HH:mm:ss}";
             }
             catch (Exception ex)
@@ -6927,8 +6942,10 @@ public partial class MapViewerViewModel : ObservableObject
         var offsetRectZoom = new Rect(offsetRect.X / _scale, offsetRect.Y / _scale, offsetRect.Width / _scale, offsetRect.Height / _scale);
 
         // 把 map 的局部转化为 实际展示图（提瓦特是256，其他的1024） 级别
-        Mat taskMat = new Mat(_mapImage, offsetRectZoom);
-        taskMat = ResizeHelper.Resize(taskMat, _scale);
+        using var taskMatView = new Mat(_mapImage, offsetRectZoom);
+        var taskMat = _scale == 1
+            ? taskMatView.Clone()
+            : ResizeHelper.Resize(taskMatView, _scale);
 
         // 设置线条粗细
         int thickness = 2;
@@ -7023,6 +7040,25 @@ public partial class MapViewerViewModel : ObservableObject
     private void DrawLine(Mat mat, Point startPoint, Point endPoint, Scalar color, int thickness)
     {
         Cv2.Line(mat, startPoint, endPoint, color, thickness);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _targetNavigationCts?.Cancel();
+        _targetNavigationCts?.Dispose();
+        _targetNavigationCts = null;
+        lock (_pathingMapLock)
+        {
+            _currentPathingMap.Dispose();
+            _mapImage.Dispose();
+        }
     }
 }
 
