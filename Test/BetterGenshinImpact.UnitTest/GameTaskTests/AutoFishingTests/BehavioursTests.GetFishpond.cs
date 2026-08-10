@@ -1,9 +1,10 @@
 using BetterGenshinImpact.GameTask.AutoFishing;
-using BehaviourTree;
+using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
+using CsTrees;
+using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
-using BetterGenshinImpact.GameTask.AutoFishing.Model;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -16,24 +17,34 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// 测试各种鱼的获取，结果为成功
         /// </summary>
-        public void GetFishpondTest_VariousFishExist_ShouldSuccess(string screenshot1080p, IEnumerable<string> fishNames)
+        public async Task GetFishpondTest_VariousFishExist_ShouldSuccess(string screenshot1080p, IEnumerable<string> fishNames)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
-            var blackboard = new Blackboard(Predictor, sleep: i => { });
+            CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
+            var access = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
+
+            var sut = TreeBuilder.Create()
+                .WithBlackboard(blackboard)
+                    .Sequence("用例")
+                        .SetSleep("设置sleep方法", _ => { })
+                        .ScreenshotQueue("用例", [imageRegion, imageRegion])
+                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
+                    .End()
+                .End()
+                .Build();
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
-            BehaviourStatus actualStatus = sut.Tick(imageRegion);
+            Status actual = await sut.TickOnce();
 
             //
-            Assert.Equal(BehaviourStatus.Succeeded, actualStatus);
+            Assert.Equal(Status.Success, actual);
             foreach (var g in fishNames.GroupBy(n => n))
             {
                 string fishName = g.Key;
-                var fish = blackboard.fishpond.Fishes.Where(f => f.FishType.Name == fishName);
+                var fish = access.Get().Fishes.Where(f => f.FishType.Name == fishName);
                 Assert.NotEmpty(fish);
             }
         }
@@ -42,23 +53,35 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [InlineData("20250225101257889_GetFishpond_Succeeded.png", new BaitType[] { BaitType.FruitPasteBait, BaitType.FruitPasteBait, BaitType.RedrotBait, BaitType.RedrotBait }, new BaitType[] { BaitType.FalseWormBait, BaitType.FalseWormBait, BaitType.FakeFlyBait, BaitType.FakeFlyBait })]
         /// 测试鱼的鱼饵均在失败列表中且被忽略，结果为运行中
         /// </summary>
-        public void GetFishpondTest_AllIgnored_ShouldBeRunning(string screenshot1080p, IEnumerable<BaitType> chooseBaitfailures, IEnumerable<BaitType> throwRodNoTargetFishfailures)
+        public async Task GetFishpondTest_AllIgnored_ShouldBeRunning(string screenshot1080p, IEnumerable<BaitType> chooseBaitfailures, IEnumerable<BaitType> throwRodNoTargetFishfailures)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
-            var blackboard = new Blackboard(Predictor, sleep: i => { });
-            blackboard.chooseBaitFailures = chooseBaitfailures.ToList();
-            blackboard.throwRodNoBaitFishFailures = throwRodNoTargetFishfailures.ToList();
+            CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
+            var chooseBaitFailuresAccess = blackboard.GrantWrite<List<BaitType>>(null!, "ChooseBaitFailures");
+            var throwRodNoBaitFishFailuresAccess = blackboard.GrantWrite<List<BaitType>>(null!, "ThrowRodNoBaitFishFailures");
+            chooseBaitFailuresAccess.Set(chooseBaitfailures.ToList());
+            throwRodNoBaitFishFailuresAccess.Set(throwRodNoTargetFishfailures.ToList());
+            var fishpondAccess = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
+
+            var sut = TreeBuilder.Create()
+                .WithBlackboard(blackboard)
+                    .Sequence("用例")
+                        .SetSleep("设置sleep方法", _ => { })
+                        .ScreenshotQueue("用例", [imageRegion])
+                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
+                    .End()
+                .End()
+                .Build();
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
-            BehaviourStatus actualStatus = sut.Tick(imageRegion);
+            Status actual = await sut.TickOnce();
 
             //
-            Assert.Equal(BehaviourStatus.Running, actualStatus);
-            Assert.NotEmpty(blackboard.fishpond.Fishes);
+            Assert.Equal(Status.Running, actual);
+            Assert.NotEmpty(fishpondAccess.Get().Fishes);
         }
 
         [Theory]
@@ -75,18 +98,28 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// 测试各种鱼的获取数量，数量应相符
         /// </summary>
-        public void GetFishpondTest_FishCount_ShouldSuccess(string screenshot1080p, string fishName, int count)
+        public async Task GetFishpondTest_FishCount_ShouldSuccess(string screenshot1080p, string fishName, int count)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
-            var blackboard = new Blackboard(Predictor, sleep: i => { });
+            CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
+            var fishpondAccess = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
+
+            var sut = TreeBuilder.Create()
+                .WithBlackboard(blackboard)
+                    .Sequence("用例")
+                        .SetSleep("设置sleep方法", _ => { })
+                        .ScreenshotQueue("用例", [imageRegion])
+                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
+                    .End()
+                .End()
+                .Build();
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
-            sut.Tick(imageRegion);
-            int actual = blackboard.fishpond?.Fishes?.Count(f => f.FishType.Name == fishName) ?? 0;
+            Status status = await sut.TickOnce();
+            int actual = fishpondAccess.Exists() ? (fishpondAccess.Get().Fishes?.Count(f => f.FishType.Name == fishName) ?? 0) : 0;
 
             //
             Assert.Equal(count, actual);
