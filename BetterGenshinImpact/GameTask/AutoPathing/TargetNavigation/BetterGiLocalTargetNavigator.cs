@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -22,21 +23,22 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.TargetNavigation;
 
 /// <summary>
 /// 在 TaskRunner 内运行可等待的多图标跟随，避免局部导航期间被其他独立任务抢占输入。
+/// 每次导航会话创建一次感知器：启动时扫描并解码模板，导航结束统一释放 Mat。
 /// </summary>
 public sealed class BetterGiLocalTargetNavigator : ILocalTargetNavigator
 {
-    private readonly MultiIconLocalNavigator _navigator;
+    private readonly IRouteCurrentPositionResolver _resolver;
+    private readonly IRouteCoordinateConverter _converter;
+    private readonly IReadOnlyList<string>? _templateRoots;
 
     public BetterGiLocalTargetNavigator(
         IRouteCurrentPositionResolver? positionResolver = null,
         IRouteCoordinateConverter? coordinateConverter = null,
         IReadOnlyList<string>? templateRoots = null)
     {
-        var resolver = positionResolver ?? RouteCurrentPositionResolver.Instance;
-        var converter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
-        _navigator = new MultiIconLocalNavigator(
-            new BetterGiLocalNavigationPerception(resolver, converter, templateRoots),
-            new BetterGiLocalNavigationMotion(resolver, converter));
+        _resolver = positionResolver ?? RouteCurrentPositionResolver.Instance;
+        _converter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
+        _templateRoots = templateRoots;
     }
 
     public async Task<LocalTargetNavigationResult> NavigateAsync(
@@ -50,7 +52,11 @@ public sealed class BetterGiLocalTargetNavigator : ILocalTargetNavigator
             started = true;
             using var registration = cancellationToken.Register(
                 () => CancellationContext.Instance.ManualCancel());
-            result = await _navigator.NavigateAsync(request, cancellationToken);
+            using var perception = new BetterGiLocalNavigationPerception(_resolver, _converter, _templateRoots);
+            var navigator = new MultiIconLocalNavigator(
+                perception,
+                new BetterGiLocalNavigationMotion(_resolver, _converter));
+            result = await navigator.NavigateAsync(request, cancellationToken);
         });
 
         return !started
@@ -61,13 +67,16 @@ public sealed class BetterGiLocalTargetNavigator : ILocalTargetNavigator
     }
 }
 
+/// <summary>
+/// 局部导航感知器。模板在构造时一次性扫描并解码缓存，ObserveAsync 只做画面匹配，不读磁盘。
+/// </summary>
 internal sealed class BetterGiLocalNavigationPerception(
     IRouteCurrentPositionResolver positionResolver,
     IRouteCoordinateConverter coordinateConverter,
-    IReadOnlyList<string>? templateRoots = null) : ILocalNavigationPerception
+    IReadOnlyList<string>? templateRoots = null) : ILocalNavigationPerception, IDisposable
 {
-    private readonly IReadOnlyList<string> _templateRoots =
-        templateRoots ?? LocalNavigationTemplateCatalog.FindDefaultRoots();
+    private readonly LocalNavigationTemplateCache _templates =
+        new(templateRoots ?? LocalNavigationTemplateCatalog.FindDefaultRoots());
 
     public Task<LocalNavigationObservation> ObserveAsync(
         LocalTargetNavigationRequest request,
@@ -85,13 +94,13 @@ internal sealed class BetterGiLocalNavigationPerception(
                 using var taskMarker = screen.Find(ElementRecognition.Get("BlueTrackPoint", screen));
                 if (taskMarker.IsExist())
                 {
-                    matches.Add(ToMatch(group, taskMarker, 1));
+                    matches.Add(ToMatch(group, taskMarker));
                 }
             }
 
-            foreach (var templatePath in LocalNavigationTemplateCatalog.FindTemplates(_templateRoots, group))
+            foreach (var template in _templates.GetByGroup(group))
             {
-                var match = TryMatchTemplate(screen, templatePath, group, request.Options.LocalTemplateThreshold);
+                var match = TryMatchTemplate(screen, template, request.Options.LocalTemplateThreshold);
                 if (match != null)
                 {
                     matches.Add(match);
@@ -107,11 +116,10 @@ internal sealed class BetterGiLocalNavigationPerception(
             Matches = matches,
             RemainingGameDistance = remainingDistance,
             Reached = remainingDistance <= request.Options.LocalArrivalGameDistance,
-            InTalk = LocalNavigationTemplateCatalog.FindTalkTemplates(_templateRoots)
-                .Any(path => TryMatchTemplate(
+            InTalk = _templates.TalkTemplates
+                .Any(template => TryMatchTemplate(
                     screen,
-                    path,
-                    LocalNavigationIconGroup.Task,
+                    template,
                     request.Options.LocalTemplateThreshold,
                     talkTemplate: true) != null)
         });
@@ -148,37 +156,23 @@ internal sealed class BetterGiLocalNavigationPerception(
 
     private static LocalNavigationIconMatch? TryMatchTemplate(
         ImageRegion screen,
-        string path,
-        LocalNavigationIconGroup group,
+        CachedLocalNavigationTemplate template,
         double threshold,
         bool talkTemplate = false)
     {
         try
         {
-            using var template = Cv2.ImRead(path, ImreadModes.Color);
-            if (template.Empty())
-            {
-                return null;
-            }
-
             var scale = screen.Width / 1920d;
-            var recognition = RecognitionObject.TemplateMatch(
-                template,
-                (talkTemplate ? 0 : 300) * scale,
-                (talkTemplate ? 0 : 100) * scale,
-                (talkTemplate ? 500 : 1300) * scale,
-                (talkTemplate ? 200 : 800) * scale);
+            var recognition = template.Recognition;
             recognition.Threshold = threshold;
-            try
-            {
-                using var region = screen.Find(recognition);
-                return region.IsExist() ? ToMatch(group, region, threshold) : null;
-            }
-            finally
-            {
-                recognition.TemplateImageGreyMat?.Dispose();
-                recognition.MaskMat?.Dispose();
-            }
+            recognition.RegionOfInterest = new OpenCvSharp.Rect(
+                (int)Math.Round((talkTemplate ? 0 : 300) * scale),
+                (int)Math.Round((talkTemplate ? 0 : 100) * scale),
+                (int)Math.Round((talkTemplate ? 500 : 1300) * scale),
+                (int)Math.Round((talkTemplate ? 200 : 800) * scale));
+
+            using var region = screen.Find(recognition);
+            return region.IsExist() ? ToMatch(template.Group, region) : null;
         }
         catch
         {
@@ -188,14 +182,14 @@ internal sealed class BetterGiLocalNavigationPerception(
 
     private static LocalNavigationIconMatch ToMatch(
         LocalNavigationIconGroup group,
-        Region region,
-        double confidence)
+        Region region)
     {
+        // 匹配成功即视为存在，置信度不参与决策，见 MultiIconLocalNavigator.SelectByPriority。
         return new LocalNavigationIconMatch(
             group,
             region.X + region.Width / 2d,
             region.Y + region.Height / 2d,
-            confidence);
+            1.0);
     }
 
     private static double Distance(RouteGamePoint from, RouteGamePoint to)
@@ -203,6 +197,11 @@ internal sealed class BetterGiLocalNavigationPerception(
         var dx = from.X - to.X;
         var dy = from.Y - to.Y;
         return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    public void Dispose()
+    {
+        _templates.Dispose();
     }
 }
 
@@ -337,81 +336,175 @@ internal sealed class BetterGiLocalNavigationMotion(
     }
 }
 
+/// <summary>
+/// 局部导航图标模板目录与显式清单。分组由清单直接声明，不依赖文件名猜测。
+/// </summary>
 internal static class LocalNavigationTemplateCatalog
 {
-    private static readonly string[] SupportedExtensions = [".png", ".jpg", ".jpeg", ".bmp"];
+    /// <summary>相对模板根目录的路径 → 图标分组。每个模板只属于一个分组。</summary>
+    internal static readonly (string RelativePath, LocalNavigationIconGroup Group, bool TalkTemplate)[] TemplateManifest =
+    [
+        ("Commission/IconBigmapCommission.jpg", LocalNavigationIconGroup.Bigmap, false),
+        ("Commission/IconQuestionCommission.png", LocalNavigationIconGroup.Question, false),
+        ("Commission/IconTaskCommission.png", LocalNavigationIconGroup.Task, false),
+        ("Icon/Branch_Enter_For_Into.png", LocalNavigationIconGroup.Into, false),
+        ("Icon/Branch_Finish.png", LocalNavigationIconGroup.Finish, false),
+        ("Icon/Branch_Proce_For_Bigmap.png", LocalNavigationIconGroup.Bigmap, false),
+        ("Icon/Branch_Start.png", LocalNavigationIconGroup.Start, false),
+        ("Icon/Common02_Enter.png", LocalNavigationIconGroup.Enter, false),
+        ("Icon/Common02_Finish.png", LocalNavigationIconGroup.Finish, false),
+        ("Icon/Common02_Proce_For_Bigmap.png", LocalNavigationIconGroup.Bigmap, false),
+        ("Icon/Common02_Start.png", LocalNavigationIconGroup.Start, false),
+        ("Icon/Common_Enter.png", LocalNavigationIconGroup.Enter, false),
+        ("Icon/Common_Finish.png", LocalNavigationIconGroup.Finish, false),
+        ("Icon/Common_Proce_For_Bigmap.png", LocalNavigationIconGroup.Bigmap, false),
+        ("Icon/Common_Start.png", LocalNavigationIconGroup.Start, false),
+        ("Icon/Main_Enter.png", LocalNavigationIconGroup.Enter, false),
+        ("Icon/Main_Finish.png", LocalNavigationIconGroup.Finish, false),
+        ("Icon/Main_Proce_For_Bigmap.png", LocalNavigationIconGroup.Bigmap, false),
+        ("Icon/Main_Start.png", LocalNavigationIconGroup.Start, false),
+        ("IconInTalk.png", LocalNavigationIconGroup.Task, true)
+    ];
 
     public static IReadOnlyList<string> FindDefaultRoots()
     {
-        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            Global.Absolute(Path.Combine("User", "AutoPathing", "LocalNavigationIcons"))
-        };
+        var root = Global.Absolute(Path.Combine("Assets", "AutoPathing", "LocalNavigationIcons"));
+        return Directory.Exists(root) ? [root] : [];
+    }
+}
 
-        for (var directory = new DirectoryInfo(Global.StartUpPath);
-             directory != null;
-             directory = directory.Parent)
+/// <summary>
+/// 一次导航会话内的模板缓存：启动时扫描清单并解码一次，导航结束统一释放 Mat。
+/// </summary>
+internal sealed class LocalNavigationTemplateCache : IDisposable
+{
+    private readonly Dictionary<LocalNavigationIconGroup, List<CachedLocalNavigationTemplate>> _byGroup = [];
+    private readonly List<CachedLocalNavigationTemplate> _talkTemplates = [];
+    private readonly List<CachedLocalNavigationTemplate> _all = [];
+
+    public LocalNavigationTemplateCache(IReadOnlyList<string> roots)
+    {
+        var existingRoots = roots.Where(Directory.Exists).ToList();
+        if (existingRoots.Count == 0)
         {
-            roots.Add(Path.Combine(
-                directory.FullName,
-                "BadGI-JsScript",
-                "自动剧情加载器",
-                "Data",
-                "RecognitionObject"));
+            TaskControl.Logger.LogWarning(
+                "局部导航图标模板目录不存在：{Roots}，本地图标识别将不可用",
+                string.Join("; ", roots));
         }
 
-        return roots.Where(Directory.Exists).ToList();
-    }
-
-    public static IEnumerable<string> FindTemplates(
-        IReadOnlyList<string> roots,
-        LocalNavigationIconGroup group)
-    {
-        return EnumerateImages(roots).Where(path => MatchesGroup(Path.GetFileNameWithoutExtension(path), group));
-    }
-
-    public static IEnumerable<string> FindTalkTemplates(IReadOnlyList<string> roots)
-    {
-        return EnumerateImages(roots).Where(path =>
-            Path.GetFileNameWithoutExtension(path).Contains("IconInTalk", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static IEnumerable<string> EnumerateImages(IReadOnlyList<string> roots)
-    {
-        foreach (var root in roots.Where(Directory.Exists))
+        foreach (var (relativePath, group, talkTemplate) in LocalNavigationTemplateCatalog.TemplateManifest)
         {
-            IEnumerable<string> files;
-            try
+            var fullPath = existingRoots
+                .Select(root => Path.Combine(root, relativePath))
+                .FirstOrDefault(File.Exists);
+            if (fullPath == null)
             {
-                files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories).ToList();
-            }
-            catch
-            {
+                TaskControl.Logger.LogWarning(
+                    "局部导航图标模板缺失：{RelativePath}（在 {Roots} 中均未找到）",
+                    relativePath,
+                    string.Join("; ", existingRoots));
                 continue;
             }
 
-            foreach (var file in files.Where(file =>
-                         SupportedExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)))
+            try
             {
-                yield return file;
+                var template = CachedLocalNavigationTemplate.Load(fullPath, relativePath, group, talkTemplate);
+                _all.Add(template);
+                if (talkTemplate)
+                {
+                    _talkTemplates.Add(template);
+                }
+                else
+                {
+                    if (!_byGroup.TryGetValue(group, out var list))
+                    {
+                        list = [];
+                        _byGroup[group] = list;
+                    }
+
+                    list.Add(template);
+                }
             }
+            catch (Exception ex)
+            {
+                TaskControl.Logger.LogWarning(
+                    "局部导航图标模板加载失败：{RelativePath}，{Reason}",
+                    relativePath,
+                    ex.Message);
+            }
+        }
+
+        if (_all.Count < LocalNavigationTemplateCatalog.TemplateManifest.Length)
+        {
+            TaskControl.Logger.LogWarning(
+                "局部导航图标模板加载不完整：{Loaded}/{Total} 个，缺失模板对应的图标分组将不参与识别",
+                _all.Count,
+                LocalNavigationTemplateCatalog.TemplateManifest.Length);
         }
     }
 
-    private static bool MatchesGroup(string name, LocalNavigationIconGroup group)
+    public IReadOnlyList<CachedLocalNavigationTemplate> GetByGroup(LocalNavigationIconGroup group)
     {
-        return group switch
+        return _byGroup.TryGetValue(group, out var list) ? list : [];
+    }
+
+    public IReadOnlyList<CachedLocalNavigationTemplate> TalkTemplates => _talkTemplates;
+
+    public void Dispose()
+    {
+        foreach (var template in _all)
         {
-            LocalNavigationIconGroup.Bigmap =>
-                name.Contains("Bigmap", StringComparison.OrdinalIgnoreCase) ||
-                name.Contains("Proce_For_Bigmap", StringComparison.OrdinalIgnoreCase),
-            LocalNavigationIconGroup.Into => name.Contains("Into", StringComparison.OrdinalIgnoreCase),
-            LocalNavigationIconGroup.Start => name.Contains("Start", StringComparison.OrdinalIgnoreCase),
-            LocalNavigationIconGroup.Finish => name.Contains("Finish", StringComparison.OrdinalIgnoreCase),
-            LocalNavigationIconGroup.Enter => name.Contains("Enter", StringComparison.OrdinalIgnoreCase),
-            LocalNavigationIconGroup.Question => name.Contains("Question", StringComparison.OrdinalIgnoreCase),
-            LocalNavigationIconGroup.Task => name.Contains("Task", StringComparison.OrdinalIgnoreCase),
-            _ => false
-        };
+            template.Dispose();
+        }
+
+        _all.Clear();
+        _byGroup.Clear();
+        _talkTemplates.Clear();
+    }
+}
+
+/// <summary>
+/// 单个已解码的局部导航模板。Mat 只解码一次，由缓存统一释放。
+/// </summary>
+internal sealed class CachedLocalNavigationTemplate : IDisposable
+{
+    public string RelativePath { get; }
+
+    public LocalNavigationIconGroup Group { get; }
+
+    public RecognitionObject Recognition { get; }
+
+    private CachedLocalNavigationTemplate(
+        string relativePath,
+        LocalNavigationIconGroup group,
+        RecognitionObject recognition)
+    {
+        RelativePath = relativePath;
+        Group = group;
+        Recognition = recognition;
+    }
+
+    public static CachedLocalNavigationTemplate Load(
+        string fullPath,
+        string relativePath,
+        LocalNavigationIconGroup group,
+        bool talkTemplate)
+    {
+        var mat = Cv2.ImRead(fullPath, ImreadModes.Color);
+        if (mat.Empty())
+        {
+            throw new InvalidDataException("图片为空或已损坏，无法解码");
+        }
+
+        var recognition = RecognitionObject.TemplateMatch(mat);
+        recognition.Name = relativePath;
+        return new CachedLocalNavigationTemplate(relativePath, group, recognition);
+    }
+
+    public void Dispose()
+    {
+        Recognition.TemplateImageMat?.Dispose();
+        Recognition.TemplateImageGreyMat?.Dispose();
+        Recognition.MaskMat?.Dispose();
     }
 }

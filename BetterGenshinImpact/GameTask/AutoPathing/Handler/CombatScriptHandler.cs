@@ -32,7 +32,7 @@ public class CombatScriptHandler : IActionHandler
         if (waypointForTrack?.CombatScript == null)
         {
             Logger.LogError("简易策略脚本缺失：action_params 内容为空");
-            return;
+            throw new WaypointActionFailedException("简易策略脚本缺失：action_params 内容为空");
         }
 
         Logger.LogInformation("执行动作: 【简易策略脚本】");
@@ -42,14 +42,14 @@ public class CombatScriptHandler : IActionHandler
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");
-            return;
+            throw new WaypointActionFailedException("队伍识别未初始化成功，无法执行简易策略脚本");
         }
 
         combatScenes.BeforeTask(ct);
 
         if (!ValidateRequiredAvatars(combatScript, combatScenes))
         {
-            return;
+            throw new WaypointActionFailedException("简易策略脚本要求的角色不在当前队伍中");
         }
 
         ExecuteCombatCommands(ct, combatScript, combatScenes);

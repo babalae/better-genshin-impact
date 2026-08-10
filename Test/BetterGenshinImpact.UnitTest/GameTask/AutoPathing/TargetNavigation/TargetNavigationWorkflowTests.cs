@@ -50,6 +50,7 @@ public class TargetNavigationWorkflowTests
             "wait-ready",
             "status:Executing",
             "execute",
+            "planning-position",
             "status:Completed",
             "release"
         ], events);
@@ -89,6 +90,7 @@ public class TargetNavigationWorkflowTests
         var runtime = new FakeRuntime
         {
             Preparation = TargetNavigationPreparationResult.Ready("Teyvat", current),
+            ArrivalPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(500, 600)),
             Execution = TargetNavigationExecutionResult.Completed()
         };
 
@@ -145,7 +147,6 @@ public class TargetNavigationWorkflowTests
     [Theory]
     [InlineData(TargetNavigationFailureCode.GraphFileMissing, TargetNavigationState.PlanFailed)]
     [InlineData(TargetNavigationFailureCode.GraphEmpty, TargetNavigationState.PlanFailed)]
-    [InlineData(TargetNavigationFailureCode.CurrentPositionUnrecognized, TargetNavigationState.PlanFailed)]
     [InlineData(TargetNavigationFailureCode.CaptureNotInitialized, TargetNavigationState.ExecutionFailed)]
     [InlineData(TargetNavigationFailureCode.TaskRunnerBusy, TargetNavigationState.ExecutionFailed)]
     public async Task RunAsync_PreparationFailureUsesTheCorrectState(
@@ -233,6 +234,7 @@ public class TargetNavigationWorkflowTests
         var runtime = new FakeRuntime
         {
             Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ArrivalPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(100, 0)),
             Execution = TargetNavigationExecutionResult.Completed()
         };
         var localNavigator = new FakeLocalNavigator();
@@ -305,8 +307,52 @@ public class TargetNavigationWorkflowTests
             .RunAsync(CreateRequest(lastKnownCurrent: new RouteGraphPoint(10, 20)));
 
         Assert.True(result.Succeeded);
-        Assert.Equal(0, runtime.PlanningPositionCallCount);
+        Assert.Equal(1, runtime.PlanningPositionCallCount);
         Assert.Equal(1, planner.CallCount);
+    }
+
+    [Fact]
+    public async Task RunAsync_PreviewsFromTeleportWhenCurrentPositionIsUnavailable()
+    {
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Failed(
+                TargetNavigationFailureCode.CurrentPositionUnrecognized)
+        };
+        var planner = new FakePlanner(new RouteNavigationPlan { Succeeded = true, Task = CreateTask() });
+
+        var result = await new TargetNavigationWorkflow(planner, runtime)
+            .RunAsync(CreateRequest(execute: false));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, planner.CallCount);
+        Assert.False(Assert.Single(planner.Requests).HasCurrentPosition);
+        Assert.Null(runtime.ExecutedTask);
+    }
+
+    [Fact]
+    public async Task RunAsync_ReplansFromActualPositionBeforeExecutingOfflinePreview()
+    {
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Failed(
+                TargetNavigationFailureCode.CurrentPositionUnrecognized),
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready(
+                "Teyvat",
+                new RouteGraphPoint(25, 35)),
+            Execution = TargetNavigationExecutionResult.Completed()
+        };
+        var planner = new FakePlanner(new RouteNavigationPlan { Succeeded = true, Task = CreateTask() });
+
+        var result = await new TargetNavigationWorkflow(planner, runtime)
+            .RunAsync(CreateRequest());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, planner.CallCount);
+        Assert.False(planner.Requests[0].HasCurrentPosition);
+        Assert.True(planner.Requests[1].HasCurrentPosition);
+        Assert.Equal(new RouteGraphPoint(25, 35), planner.Requests[1].CurrentImagePoint);
+        Assert.NotNull(runtime.ExecutedTask);
     }
 
     [Fact]
@@ -322,7 +368,8 @@ public class TargetNavigationWorkflowTests
         var runtime = new FakeRuntime
         {
             Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
-            ExecutionPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0))
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ArrivalPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(50, 0))
         };
         var localNavigator = new FakeLocalNavigator();
 
@@ -338,10 +385,171 @@ public class TargetNavigationWorkflowTests
         Assert.Equal(1, localNavigator.CallCount);
     }
 
+    [Fact]
+    public async Task RunAsync_TeleportLocalPlanExecutesTeleportTaskBeforeLocalNavigator()
+    {
+        var task = CreateTask();
+        var plan = new RouteNavigationPlan
+        {
+            Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.LocalOnly,
+            Task = task,
+            UsesTeleport = true,
+            FrontierNode = new RouteNavigationNode { NodeId = "spawn", MapName = "Teyvat", X = 50, Y = 0 },
+            TargetImagePoint = new RouteGraphPoint(100, 0)
+        };
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ArrivalPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(100, 0)),
+            Execution = TargetNavigationExecutionResult.Completed()
+        };
+        var localNavigator = new FakeLocalNavigator();
+
+        var result = await new TargetNavigationWorkflow(
+                new FakePlanner(plan),
+                runtime,
+                localNavigator,
+                new IdentityCoordinateConverter())
+            .RunAsync(CreateRequest(new RouteGraphPoint(100, 0)));
+
+        Assert.True(result.Succeeded);
+        Assert.Same(task, runtime.ExecutedTask);
+        Assert.Equal(1, localNavigator.CallCount);
+        Assert.Equal(50, localNavigator.Request!.RemainingGameDistance, precision: 2);
+    }
+
+    [Fact]
+    public async Task RunAsync_GraphRevisionChangeInvalidatesExistingPlan()
+    {
+        var request = CreateRequest(execute: false);
+        var current = new RouteGraphPoint(10, 20);
+        var planner = new FakePlanner(new RouteNavigationPlan
+        {
+            Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.Complete,
+            Task = CreateTask()
+        })
+        {
+            EffectiveGraphRevision = "revision-2"
+        };
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Ready("Teyvat", current)
+        };
+
+        var result = await new TargetNavigationWorkflow(planner, runtime)
+            .RunAsync(request, CreateReusablePlan(request, current, CreateTask()));
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.ReusedExistingPlan);
+        Assert.Equal(1, planner.CallCount);
+    }
+
+    [Fact]
+    public async Task RunAsync_LocalNavigationExecutesTargetActionAfterArrival()
+    {
+        var plan = new RouteNavigationPlan
+        {
+            Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.LocalOnly,
+            FrontierNode = new RouteNavigationNode { NodeId = "current", MapName = "Teyvat", X = 0, Y = 0 },
+            TargetImagePoint = new RouteGraphPoint(50, 0)
+        };
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ArrivalPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(50, 0)),
+            Execution = TargetNavigationExecutionResult.Completed()
+        };
+
+        var result = await new TargetNavigationWorkflow(
+                new FakePlanner(plan),
+                runtime,
+                new FakeLocalNavigator(),
+                new IdentityCoordinateConverter())
+            .RunAsync(CreateRequest(
+                new RouteGraphPoint(50, 0),
+                targetAction: ActionEnum.Mining.Code,
+                targetActionParams: "ore"));
+
+        Assert.True(result.Succeeded);
+        var actionTask = Assert.Single(runtime.ExecutedTasks);
+        var actionWaypoint = Assert.Single(actionTask.Positions);
+        Assert.Equal(ActionEnum.Mining.Code, actionWaypoint.Action);
+        Assert.Equal("ore", actionWaypoint.ActionParams);
+        Assert.Equal(WaypointType.Target.Code, actionWaypoint.Type);
+    }
+
+    [Fact]
+    public async Task RunAsync_LocalTargetActionFailureIsNotReportedAsCompleted()
+    {
+        var plan = new RouteNavigationPlan
+        {
+            Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.LocalOnly,
+            FrontierNode = new RouteNavigationNode { NodeId = "current", MapName = "Teyvat", X = 0, Y = 0 },
+            TargetImagePoint = new RouteGraphPoint(50, 0)
+        };
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ExecutionPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            Execution = TargetNavigationExecutionResult.Failed(
+                TargetNavigationFailureCode.ExecutionFailed,
+                "target action failed")
+        };
+
+        var result = await new TargetNavigationWorkflow(
+                new FakePlanner(plan),
+                runtime,
+                new FakeLocalNavigator(),
+                new IdentityCoordinateConverter())
+            .RunAsync(CreateRequest(new RouteGraphPoint(50, 0), targetAction: ActionEnum.Mining.Code));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(TargetNavigationState.ExecutionFailed, result.FinalState);
+        var actionTask = Assert.Single(runtime.ExecutedTasks);
+        Assert.Equal(ActionEnum.Mining.Code, Assert.Single(actionTask.Positions).Action);
+        Assert.Contains("target action failed", result.Failure?.Message);
+    }
+
+    [Fact]
+    public async Task RunAsync_DoesNotReportCompletedWhenFinalPositionIsOutsideArrivalThreshold()
+    {
+        var runtime = new FakeRuntime
+        {
+            Preparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            ArrivalPreparation = TargetNavigationPreparationResult.Ready("Teyvat", new RouteGraphPoint(0, 0)),
+            Execution = TargetNavigationExecutionResult.Completed()
+        };
+        var planner = new FakePlanner(new RouteNavigationPlan
+        {
+            Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.Complete,
+            Task = CreateTask()
+        });
+
+        var result = await new TargetNavigationWorkflow(
+                planner,
+                runtime,
+                coordinateConverter: new IdentityCoordinateConverter())
+            .RunAsync(CreateRequest(new RouteGraphPoint(100, 0)));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(TargetNavigationState.ExecutionFailed, result.FinalState);
+        Assert.Contains("距目标仍有", result.Failure?.Message);
+    }
+
     private static TargetNavigationRequest CreateRequest(
         RouteGraphPoint? target = null,
         bool allowTeleport = true,
-        RouteGraphPoint? lastKnownCurrent = null)
+        RouteGraphPoint? lastKnownCurrent = null,
+        bool execute = true,
+        string? targetAction = null,
+        string? targetActionParams = null)
     {
         return new TargetNavigationRequest
         {
@@ -349,7 +557,10 @@ public class TargetNavigationWorkflowTests
             MapMatchMethod = "TemplateMatch",
             TargetImagePoint = target ?? new RouteGraphPoint(100, 200),
             TaskName = "地图目标导航",
+            TargetAction = targetAction,
+            TargetActionParams = targetActionParams,
             LastKnownCurrentImagePoint = lastKnownCurrent,
+            Execute = execute,
             Options = new RouteNavigationPlanOptions
             {
                 AllowTeleport = allowTeleport,
@@ -365,9 +576,12 @@ public class TargetNavigationWorkflowTests
         return new RouteNavigationPlan
         {
             Succeeded = true,
+            CompletionMode = RoutePlanCompletionMode.Complete,
             Task = task,
             Request = planRequest,
-            Options = request.Options
+            Options = request.Options,
+            EffectiveGraphRevision = "revision-1",
+            PlanningOptionsFingerprint = RouteNavigationPlanningFingerprint.Compute(request.Options)
         };
     }
 
@@ -386,11 +600,16 @@ public class TargetNavigationWorkflowTests
 
     private sealed class FakePlanner(RouteNavigationPlan plan, List<string>? events = null) : IRouteNavigationPlanner
     {
+        public string EffectiveGraphRevision { get; init; } = "revision-1";
+
         public int CallCount { get; private set; }
+
+        public List<RouteNavigationPlanRequest> Requests { get; } = [];
 
         public bool TryPlan(RouteNavigationPlanRequest request, out RouteNavigationPlan result, RouteNavigationPlanOptions? options = null)
         {
             CallCount++;
+            Requests.Add(request);
             events?.Add("plan");
             result = plan;
             return plan.Succeeded;
@@ -399,6 +618,8 @@ public class TargetNavigationWorkflowTests
 
     private sealed class FakeRuntime(List<string>? events = null) : ITargetNavigationRuntime
     {
+        private bool _executionReady;
+
         public TargetNavigationPreparationResult Preparation { get; init; } =
             TargetNavigationPreparationResult.Failed(TargetNavigationFailureCode.CurrentPositionUnrecognized);
 
@@ -406,7 +627,11 @@ public class TargetNavigationWorkflowTests
 
         public TargetNavigationPreparationResult? ExecutionPreparation { get; init; }
 
+        public TargetNavigationPreparationResult? ArrivalPreparation { get; init; }
+
         public PathingTask? ExecutedTask { get; private set; }
+
+        public List<PathingTask> ExecutedTasks { get; } = [];
 
         public int ReleaseCount { get; private set; }
 
@@ -419,7 +644,11 @@ public class TargetNavigationWorkflowTests
         {
             PlanningPositionCallCount++;
             events?.Add("planning-position");
-            return Task.FromResult(Preparation);
+            return Task.FromResult(_executionReady
+                ? ArrivalPreparation ?? TargetNavigationPreparationResult.Ready(
+                    expectedMapName,
+                    new RouteGraphPoint(100, 200))
+                : Preparation);
         }
 
         public Task<TargetNavigationPreparationResult> WaitUntilReadyAsync(
@@ -429,12 +658,14 @@ public class TargetNavigationWorkflowTests
             CancellationToken cancellationToken)
         {
             events?.Add("wait-ready");
+            _executionReady = true;
             return Task.FromResult(ExecutionPreparation ?? Preparation);
         }
 
         public Task<TargetNavigationExecutionResult> ExecuteAsync(PathingTask task, CancellationToken cancellationToken)
         {
             ExecutedTask = task;
+            ExecutedTasks.Add(task);
             events?.Add("execute");
             return Task.FromResult(Execution);
         }

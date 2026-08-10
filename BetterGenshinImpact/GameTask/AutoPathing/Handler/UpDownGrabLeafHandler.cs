@@ -97,6 +97,7 @@ public class UpDownGrabLeafHandler : IActionHandler
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(300, ct);
         Logger.LogError("没有找到四叶印");
+        throw new WaypointActionFailedException("没有找到四叶印，路点动作执行失败");
     }
     
     private bool DetectLeaf()
@@ -132,10 +133,12 @@ public class UpDownGrabLeafHandler : IActionHandler
             }
             else
             {
-                break;
+                await Delay(200, ct);
+                return;
             }
         }
 
-        await Delay(200, ct);
+        ct.ThrowIfCancellationRequested();
+        throw new WaypointActionFailedException("已交互四叶印，但始终未进入飞行状态");
     }
 }

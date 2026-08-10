@@ -323,6 +323,52 @@ public sealed class PathingTaskRouteImporterTests : IDisposable
             result.Segments.Select(segment => segment.ActionParams).Order().ToArray());
     }
 
+    [Fact]
+    public void Import_TreatsHistoricalTargetAsOrdinaryPathPointForDeduplication()
+    {
+        var sourceDirectory = Directory.CreateDirectory(Path.Combine(_tempRoot, "target-normalization")).FullName;
+        WriteRoute(sourceDirectory, "target.json", TwoPointRouteJson(0, 0, 10, 0));
+        WriteRoute(sourceDirectory, "path.json", """
+            {
+              "info": { "map_name": "Teyvat", "map_match_method": "TemplateMatch" },
+              "positions": [
+                { "x": 0, "y": 0, "type": "path", "move_mode": "walk" },
+                { "x": 10, "y": 0, "type": "path", "move_mode": "walk" }
+              ]
+            }
+            """);
+        var importer = new PathingTaskRouteImporter(new OffsetCoordinateConverter());
+
+        var result = importer.Import([sourceDirectory]);
+
+        Assert.Single(result.Segments);
+        Assert.Equal(1, result.Report.DuplicateRouteFiles);
+        Assert.Equal(2, result.Segments[0].SourceCount);
+    }
+
+    [Fact]
+    public void Import_SkipsImpossibleLongStraightSegments()
+    {
+        var sourceDirectory = Directory.CreateDirectory(Path.Combine(_tempRoot, "long-edge")).FullName;
+        WriteRoute(sourceDirectory, "route.json", """
+            {
+              "info": { "map_name": "Teyvat", "map_match_method": "TemplateMatch" },
+              "positions": [
+                { "x": 0, "y": 0, "type": "path", "move_mode": "walk" },
+                { "x": 500, "y": 0, "type": "path", "move_mode": "walk" },
+                { "x": 510, "y": 0, "type": "target", "move_mode": "walk" }
+              ]
+            }
+            """);
+
+        var result = new PathingTaskRouteImporter(new OffsetCoordinateConverter()).Import([sourceDirectory]);
+
+        Assert.Equal(1, result.Report.SkippedExcessiveSegments);
+        Assert.Single(result.Segments);
+        Assert.Equal(new RouteGraphPoint(1500, 2000), result.Segments[0].Start);
+        Assert.Equal(new RouteGraphPoint(1510, 2000), result.Segments[0].End);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))

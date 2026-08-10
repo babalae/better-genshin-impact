@@ -34,6 +34,32 @@ public class RouteNavigationCostModelTests
     }
 
     [Fact]
+    public void EvaluateEdge_UsesMeasuredDurationWhenMixedSourcesContainTelemetry()
+    {
+        var model = new RouteNavigationCostModel(new IdentityCoordinateConverter());
+        var edge = CreateEdge(MoveModeEnum.Walk.Code, 0, 0, 450, 0);
+        edge.SourceKind = "mixed";
+        edge.AverageDurationMs = 30_000;
+        edge.Sources =
+        [
+            new RouteNavigationEdgeSource
+            {
+                Kind = "telemetry",
+                IsTelemetry = true
+            },
+            new RouteNavigationEdgeSource
+            {
+                Kind = "pathing_task"
+            }
+        ];
+
+        var cost = model.EvaluateEdge("Teyvat", "TemplateMatch", edge, new RouteNavigationCostOptions());
+
+        Assert.Equal(30, cost.Seconds, precision: 3);
+        Assert.Equal(RouteNavigationCostSource.Telemetry, cost.Source);
+    }
+
+    [Fact]
     public void EvaluateEdge_EstimatesSecondsFromGameDistanceAndConfiguredSpeed()
     {
         var model = new RouteNavigationCostModel(new IdentityCoordinateConverter());

@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 namespace BetterGenshinImpact.GameTask.AutoPathing.TargetNavigation;
 
 public sealed class BetterGiTargetNavigationRuntime(
-    IRouteNavigationGraphProvider graphProvider,
     IRouteCurrentPositionResolver? positionResolver = null) : ITargetNavigationRuntime
 {
     private readonly IRouteCurrentPositionResolver _positionResolver =
@@ -30,18 +29,13 @@ public sealed class BetterGiTargetNavigationRuntime(
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (_lastKnownPosition != null)
-        {
-            return TargetNavigationPreparationResult.Ready(
-                _lastKnownPosition.MapName,
-                _lastKnownPosition.ImagePoint);
-        }
-
         try
         {
             if (!TaskContext.Instance().IsInitialized)
             {
-                await ScriptService.StartGameTask(false);
+                return TargetNavigationPreparationResult.Failed(
+                    TargetNavigationFailureCode.CurrentPositionUnrecognized,
+                    "游戏尚未初始化，使用传送点预览规划");
             }
 
             using var screen = TaskControl.CaptureToRectArea(true);
@@ -59,12 +53,12 @@ public sealed class BetterGiTargetNavigationRuntime(
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "目标导航规划阶段无法刷新坐标，将使用最后有效坐标");
+            _logger.LogDebug(ex, "目标导航规划阶段无法刷新坐标，将使用传送点预览规划");
         }
 
         return TargetNavigationPreparationResult.Failed(
             TargetNavigationFailureCode.CurrentPositionUnrecognized,
-            "当前界面无法定位，且没有最后一次有效坐标");
+            "当前界面无法定位，使用传送点预览规划");
     }
 
     public async Task<TargetNavigationPreparationResult> WaitUntilReadyAsync(
@@ -78,11 +72,6 @@ public sealed class BetterGiTargetNavigationRuntime(
         if (TaskControl.TaskSemaphore.CurrentCount == 0)
         {
             return TargetNavigationPreparationResult.Failed(TargetNavigationFailureCode.TaskRunnerBusy);
-        }
-
-        if (!graphProvider.TryGetSnapshot(out _, out var graphStatus))
-        {
-            return TargetNavigationPreparationResult.Failed(MapGraphFailure(graphStatus));
         }
 
         try
@@ -361,14 +350,4 @@ public sealed class BetterGiTargetNavigationRuntime(
         }
     }
 
-    private static TargetNavigationFailureCode MapGraphFailure(RouteNavigationGraphLoadStatus status)
-    {
-        return status switch
-        {
-            RouteNavigationGraphLoadStatus.FileMissing => TargetNavigationFailureCode.GraphFileMissing,
-            RouteNavigationGraphLoadStatus.Empty => TargetNavigationFailureCode.GraphEmpty,
-            RouteNavigationGraphLoadStatus.Invalid => TargetNavigationFailureCode.GraphInvalid,
-            _ => TargetNavigationFailureCode.GraphNotLoaded
-        };
-    }
 }

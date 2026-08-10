@@ -1,6 +1,7 @@
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
@@ -25,9 +26,21 @@ public sealed class RouteNavigationCostOptions
 
     public double TeleportDurationSeconds { get; init; } = 18.0;
 
+    public double UnreviewedEdgeCostMultiplier { get; init; } = 1.35;
+
+    public double RiskyEdgeCostMultiplier { get; init; } = 2.0;
+
+    /// <summary>开启 AllowDisabledEdges 后，Disabled/Rejected 边使用的有限高成本倍数。</summary>
+    public double DisabledEdgeCostMultiplier { get; init; } = 10.0;
+
+    public double SyntheticReverseCostMultiplier { get; init; } = 2.0;
+
     public double MinimumTeleportSavingsSeconds { get; init; } = 8.0;
 
     public double LocalDirectMaxGameDistance { get; init; } = 80.0;
+
+    /// <summary>无路网直达需要承担地形不确定性，预计耗时按该倍率计入方案比较。</summary>
+    public double OffGraphDirectCostMultiplier { get; init; } = 1.5;
 
     public double ReplanDriftGameDistance { get; init; } = 20.0;
 
@@ -225,7 +238,8 @@ public sealed class RouteNavigationCostModel(IRouteCoordinateConverter coordinat
 
     private static bool IsTelemetry(RouteNavigationEdge edge)
     {
-        return edge.SourceKind.Contains("telemetry", StringComparison.OrdinalIgnoreCase);
+        return edge.SourceKind.Contains("telemetry", StringComparison.OrdinalIgnoreCase) ||
+               edge.Sources.Any(source => source.IsTelemetry);
     }
 
     private static double ResolveSpeed(string? moveMode, RouteNavigationCostOptions options)

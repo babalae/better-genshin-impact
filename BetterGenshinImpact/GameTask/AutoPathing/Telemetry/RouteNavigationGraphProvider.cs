@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
@@ -31,19 +33,35 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
 {
     private const double NodeBucketSize = 64.0;
     private readonly object _syncRoot = new();
-    private readonly string _graphFilePath;
-    private DateTime _loadedWriteTimeUtc;
+    private readonly string _generatedGraphFilePath;
+    private readonly string _legacyGraphFilePath;
+    private readonly RouteGraphOverrideStore _overrideStore;
+    private readonly RouteGraphSanitizationOptions _sanitizationOptions;
+    private string _loadedSignature = string.Empty;
     private RouteNavigationGraphSnapshot? _snapshot;
 
-    public RouteNavigationGraphProvider(string? saveDir = null)
+    public RouteNavigationGraphProvider(
+        string? saveDir = null,
+        RouteGraphSanitizationOptions? sanitizationOptions = null)
     {
         var resolvedSaveDir = string.IsNullOrWhiteSpace(saveDir)
             ? Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"))
             : saveDir;
-        _graphFilePath = Path.Combine(resolvedSaveDir, RouteNavigationGraphBuilder.GraphFileName);
+        _generatedGraphFilePath = Path.Combine(resolvedSaveDir, RouteNavigationGraphBuilder.GraphFileName);
+        _legacyGraphFilePath = Path.Combine(resolvedSaveDir, RouteNavigationGraphBuilder.LegacyGraphFileName);
+        _overrideStore = new RouteGraphOverrideStore(resolvedSaveDir);
+        _sanitizationOptions = sanitizationOptions ?? new RouteGraphSanitizationOptions();
     }
 
-    public string GraphFilePath => _graphFilePath;
+    public string GraphFilePath => _generatedGraphFilePath;
+
+    public string OverrideDirectoryPath => _overrideStore.DirectoryPath;
+
+    public RouteGraphOverrideApplyResult LastOverrideApplyResult { get; private set; } = new();
+
+    public int LastSanitizedEdgeCount { get; private set; }
+
+    public string LastLoadError { get; private set; } = string.Empty;
 
     public bool TryGetSnapshot(out RouteNavigationGraphSnapshot snapshot, bool forceReload = false)
     {
@@ -57,42 +75,88 @@ public sealed class RouteNavigationGraphProvider : IRouteNavigationGraphProvider
     {
         lock (_syncRoot)
         {
-            if (!File.Exists(_graphFilePath))
+            var graphFilePath = File.Exists(_generatedGraphFilePath)
+                ? _generatedGraphFilePath
+                : _legacyGraphFilePath;
+            if (!File.Exists(graphFilePath))
             {
+                LastLoadError = $"路网文件不存在：{graphFilePath}";
                 snapshot = _snapshot ?? RouteNavigationGraphSnapshot.Empty;
                 status = RouteNavigationGraphLoadStatus.FileMissing;
                 return false;
             }
 
-            var writeTimeUtc = File.GetLastWriteTimeUtc(_graphFilePath);
-            if (!forceReload && _snapshot != null && writeTimeUtc == _loadedWriteTimeUtc)
-            {
-                snapshot = _snapshot;
-                status = snapshot.IsEmpty
-                    ? RouteNavigationGraphLoadStatus.Empty
-                    : RouteNavigationGraphLoadStatus.Loaded;
-                return status == RouteNavigationGraphLoadStatus.Loaded;
-            }
-
             try
             {
-                var json = File.ReadAllText(_graphFilePath);
-                var graph = JsonSerializer.Deserialize<RouteNavigationGraph>(json) ?? new RouteNavigationGraph();
+                var signature = BuildLoadSignature(graphFilePath, _overrideStore.DirectoryPath);
+                if (!forceReload && _snapshot != null && string.Equals(signature, _loadedSignature, StringComparison.Ordinal))
+                {
+                    snapshot = _snapshot;
+                    status = snapshot.IsEmpty
+                        ? RouteNavigationGraphLoadStatus.Empty
+                        : RouteNavigationGraphLoadStatus.Loaded;
+                    return status == RouteNavigationGraphLoadStatus.Loaded;
+                }
+
+                var json = File.ReadAllText(graphFilePath);
+                var graph = JsonSerializer.Deserialize<RouteNavigationGraph>(json, CreateJsonOptions()) ?? new RouteNavigationGraph();
+                if (string.IsNullOrWhiteSpace(graph.GraphId))
+                {
+                    graph.GraphId = RouteNavigationGraphIdentity.Compute(graph);
+                }
+
+                var loadResult = _overrideStore.LoadAll();
+                var applyResult = new RouteGraphOverrideApplier().Apply(graph, loadResult.Patches);
+                applyResult.Errors.AddRange(loadResult.Errors);
+                LastOverrideApplyResult = applyResult;
+                LastSanitizedEdgeCount = RouteGraphSanitizer.RemoveImpossibleImportedEdges(
+                    graph,
+                    _sanitizationOptions);
                 snapshot = new RouteNavigationGraphSnapshot(graph, NodeBucketSize);
                 _snapshot = snapshot;
-                _loadedWriteTimeUtc = writeTimeUtc;
+                _loadedSignature = signature;
+                LastLoadError = string.Empty;
                 status = snapshot.IsEmpty
                     ? RouteNavigationGraphLoadStatus.Empty
                     : RouteNavigationGraphLoadStatus.Loaded;
                 return status == RouteNavigationGraphLoadStatus.Loaded;
             }
-            catch
+            catch (Exception ex)
             {
+                LastLoadError = ex is JsonException
+                    ? $"{Path.GetFileName(graphFilePath)} JSON 解析失败：{ex.Message}"
+                    : $"{Path.GetFileName(graphFilePath)} 加载失败：{ex.Message}";
                 snapshot = _snapshot ?? RouteNavigationGraphSnapshot.Empty;
                 status = RouteNavigationGraphLoadStatus.Invalid;
                 return false;
             }
         }
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
+    private static string BuildLoadSignature(string graphFilePath, string overrideDirectoryPath)
+    {
+        var graphInfo = new FileInfo(graphFilePath);
+        var signature = $"{graphInfo.FullName}|{graphInfo.Length}|{graphInfo.LastWriteTimeUtc.Ticks}";
+        if (!Directory.Exists(overrideDirectoryPath))
+        {
+            return signature;
+        }
+
+        return Directory.EnumerateFiles(overrideDirectoryPath, "*.json", SearchOption.TopDirectoryOnly)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Aggregate(signature, (current, path) =>
+            {
+                var info = new FileInfo(path);
+                var contentHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+                return $"{current}|{info.Name}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{contentHash}";
+            });
     }
 }
 
@@ -141,6 +205,7 @@ public sealed class RouteNavigationGraphSnapshot
         _nodeBucketsByMap = BuildNodeBuckets(Nodes, nodeBucketSize);
         _edgeBucketsByMap = BuildEdgeBuckets(Edges, nodeBucketSize, GetEdgePoints);
         Teleports = teleports ?? LoadTeleportEntries();
+        EffectiveGraphRevision = RouteNavigationGraphIdentity.ComputeEffective(graph, Teleports);
         _teleportsByMap = Teleports
             .GroupBy(t => RouteGraphGeometry.NormalizeMapName(t.MapName), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
@@ -156,6 +221,8 @@ public sealed class RouteNavigationGraphSnapshot
     public IReadOnlyList<RouteNavigationEdge> Edges { get; }
 
     public IReadOnlyList<RouteGraphTeleportEntry> Teleports { get; }
+
+    public string EffectiveGraphRevision { get; }
 
     public bool IsEmpty => Nodes.Count == 0 || Edges.Count == 0;
 
@@ -241,7 +308,9 @@ public sealed class RouteNavigationGraphSnapshot
         var candidates = teleports
             .Select(teleport => new RouteGraphTeleportCandidate(
                 teleport,
-                RouteGraphGeometry.Distance(point, teleport.SpawnImagePoint)))
+                // 与 TpTask.GetNearestNTpPoints 保持一致：最近传送点按地图图标坐标判断，
+                // 传送后的步行成本仍然从实际出生坐标计算。
+                RouteGraphGeometry.Distance(point, teleport.ImagePoint)))
             .Where(candidate => maxDistance <= 0 || candidate.Distance <= maxDistance)
             .OrderBy(candidate => candidate.Distance);
         return (limit == 0 ? candidates : candidates.Take(limit)).ToList();
@@ -320,7 +389,7 @@ public sealed class RouteNavigationGraphSnapshot
 
         return searchEdges
             .Select(edge => TryProjectToEdge(edge, point, out var projection) ? projection : null)
-            .Where(projection => projection != null && projection.Distance <= maxDistance)
+            .Where(projection => projection != null && (maxDistance <= 0 || projection.Distance <= maxDistance))
             .OrderBy(projection => projection!.Distance)
             .Take(limit)
             .Cast<RouteGraphEdgeProjection>()

@@ -34,7 +34,7 @@ public sealed class RouteNavigationGraphBuilderImportTests : IDisposable
         Assert.True(result.Success, result.ErrorMessage);
         Assert.Equal(3, result.Graph.Nodes.Count);
         Assert.Equal(4, result.Graph.Edges.Count);
-        Assert.Equal(2, result.Graph.SchemaVersion);
+        Assert.Equal(3, result.Graph.SchemaVersion);
         Assert.All(result.Graph.Edges, edge => Assert.Equal("pathing_task", edge.SourceKind));
         Assert.Equal(
             ["first.json", "second.json"],
@@ -165,7 +165,13 @@ public sealed class RouteNavigationGraphBuilderImportTests : IDisposable
                 CurrentAttachMaxDistance = 2,
                 TargetAttachMaxDistance = 2,
                 OutputPointMinDistance = 0,
-                TargetOutputMinDistance = 0
+                TargetOutputMinDistance = 0,
+                // 目标距起点 20 个单位，小于默认的 LocalDirectMaxGameDistance(80) 会触发
+                // 近距离本地导航短路并返回无 Task 的计划；调小后强制走图路径规划，验证导入路网可规划为 PathingTask。
+                CostOptions = new RouteNavigationCostOptions
+                {
+                    LocalDirectMaxGameDistance = 5
+                }
             });
 
         Assert.True(planned, plan.FailureReason);

@@ -200,9 +200,9 @@ public sealed class MultiIconLocalNavigator(
         IReadOnlyList<LocalNavigationIconMatch> matches,
         IReadOnlyList<LocalNavigationIconGroup> priority)
     {
+        // 置信度不参与决策：模板匹配只有命中/未命中，同一分组内多个模板不存在可信的分数排序。
         return matches
             .OrderBy(match => IndexOf(priority, match.Group))
-            .ThenByDescending(match => match.Confidence)
             .FirstOrDefault();
     }
 

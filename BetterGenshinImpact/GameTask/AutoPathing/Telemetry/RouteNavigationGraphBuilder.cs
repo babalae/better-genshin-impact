@@ -6,24 +6,21 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
 public sealed class RouteNavigationGraphBuilder
 {
-    public const string GraphFileName = "route_navigation_graph.json";
+    public const string GraphFileName = "route_navigation_graph.generated.json";
+    public const string LegacyGraphFileName = "route_navigation_graph.json";
     private static readonly Regex PointRegex = new(@"-?\d+(?:\.\d+)?", RegexOptions.Compiled);
 
-    private readonly object _syncRoot = new();
     private readonly string _saveDir;
     private readonly string _graphFilePath;
     private readonly IRouteCoordinateConverter _coordinateConverter;
-    private IReadOnlyCollection<RouteHealthEntry> _pendingHealthEntries = [];
-    private int _isBuilding;
-    private volatile bool _hasPendingBuild;
 
     public RouteNavigationGraphBuilder(
         string saveDir,
@@ -33,22 +30,6 @@ public sealed class RouteNavigationGraphBuilder
         Directory.CreateDirectory(_saveDir);
         _graphFilePath = Path.Combine(_saveDir, GraphFileName);
         _coordinateConverter = coordinateConverter ?? RouteNavigationCoordinateService.Instance;
-    }
-
-    public void ScheduleBuild(IReadOnlyCollection<RouteHealthEntry> healthEntries)
-    {
-        lock (_syncRoot)
-        {
-            _pendingHealthEntries = healthEntries.Select(e => e.Clone()).ToList();
-            _hasPendingBuild = true;
-        }
-
-        if (Interlocked.CompareExchange(ref _isBuilding, 1, 0) != 0)
-        {
-            return;
-        }
-
-        _ = Task.Run(BuildLoop);
     }
 
     public RouteNavigationBuildResult BuildNow(IReadOnlyCollection<RouteHealthEntry> healthEntries)
@@ -65,38 +46,6 @@ public sealed class RouteNavigationGraphBuilder
     {
         ArgumentNullException.ThrowIfNull(request);
         return BuildGraph(request);
-    }
-
-    private void BuildLoop()
-    {
-        try
-        {
-            do
-            {
-                IReadOnlyCollection<RouteHealthEntry> healthEntries;
-                lock (_syncRoot)
-                {
-                    _hasPendingBuild = false;
-                    healthEntries = _pendingHealthEntries;
-                }
-
-                BuildGraph(new RouteNavigationBuildRequest
-                {
-                    HealthEntries = healthEntries,
-                    IncludeTelemetry = true,
-                    NodeSnapDistance = 0
-                });
-            }
-            while (_hasPendingBuild);
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _isBuilding, 0);
-            if (_hasPendingBuild && Interlocked.CompareExchange(ref _isBuilding, 1, 0) == 0)
-            {
-                _ = Task.Run(BuildLoop);
-            }
-        }
     }
 
     private RouteNavigationBuildResult BuildGraph(RouteNavigationBuildRequest request)
@@ -169,7 +118,8 @@ public sealed class RouteNavigationGraphBuilder
             {
                 importResult = new PathingTaskRouteImporter(_coordinateConverter).Import(
                     request.PathingTaskDirectories,
-                    request.CancellationToken);
+                    request.CancellationToken,
+                    request.MaximumImportedStraightEdgeGameDistance);
                 foreach (var segment in importResult.Segments)
                 {
                     request.CancellationToken.ThrowIfCancellationRequested();
@@ -234,6 +184,7 @@ public sealed class RouteNavigationGraphBuilder
                     .ThenBy(e => e.EdgeId, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
+            graph.GraphId = RouteNavigationGraphIdentity.Compute(graph);
 
             WriteGraph(graph);
             return RouteNavigationBuildResult.Succeeded(
@@ -267,10 +218,18 @@ public sealed class RouteNavigationGraphBuilder
             .Select(group =>
             {
                 var representative = group
-                    .OrderBy(edge => edge.Cost)
+                    .OrderBy(edge => GetReviewPreference(edge.ReviewStatus))
+                    .ThenByDescending(edge => string.Equals(edge.SourceKind, "telemetry", StringComparison.OrdinalIgnoreCase))
+                    .ThenBy(edge => edge.Cost)
                     .ThenBy(edge => edge.EdgeId, StringComparer.OrdinalIgnoreCase)
                     .First();
                 representative.SourceCount = group.Sum(edge => Math.Max(1, edge.SourceCount));
+                representative.Sources = group
+                    .SelectMany(edge => edge.Sources)
+                    .GroupBy(source => string.Join('|', source.Repository, source.FileName, source.RouteName, source.Author,
+                        source.Kind, source.IsTelemetry, source.IsSyntheticReverse), StringComparer.OrdinalIgnoreCase)
+                    .Select(sourceGroup => sourceGroup.First())
+                    .ToList();
                 if (group.Select(edge => edge.SourceKind).Distinct(StringComparer.OrdinalIgnoreCase).Skip(1).Any())
                 {
                     representative.SourceKind = "mixed";
@@ -279,6 +238,19 @@ public sealed class RouteNavigationGraphBuilder
                 return representative;
             })
             .ToList();
+    }
+
+    private static int GetReviewPreference(GraphReviewStatus reviewStatus)
+    {
+        return reviewStatus switch
+        {
+            GraphReviewStatus.Verified => 0,
+            GraphReviewStatus.Unreviewed => 1,
+            GraphReviewStatus.Risky => 2,
+            GraphReviewStatus.Disabled => 3,
+            GraphReviewStatus.Rejected => 4,
+            _ => 5
+        };
     }
 
     private static string CreateImportedSegmentId(RouteNavigationSourceSegment segment)
@@ -410,9 +382,11 @@ public sealed class RouteNavigationBuildRequest
 
     public IReadOnlyList<string> PathingTaskDirectories { get; init; } = [];
 
-    public bool IncludeTelemetry { get; init; } = true;
+    public bool IncludeTelemetry { get; init; }
 
     public double NodeSnapDistance { get; init; } = 6;
+
+    public double MaximumImportedStraightEdgeGameDistance { get; init; } = 300;
 
     public CancellationToken CancellationToken { get; init; }
 }
@@ -588,7 +562,9 @@ internal sealed class RouteGraphNodeSnapIndex
 
 public sealed class RouteNavigationGraph
 {
-    public int SchemaVersion { get; set; } = 2;
+    public int SchemaVersion { get; set; } = 3;
+
+    public string GraphId { get; set; } = string.Empty;
 
     public DateTime GeneratedAtUtc { get; set; }
 
@@ -606,6 +582,21 @@ public sealed class RouteNavigationNode
     public double X { get; set; }
 
     public double Y { get; set; }
+
+    /// <summary>通用路网默认为 path；历史任务的 target 不会写入此字段。</summary>
+    public string NodeType { get; set; } = "path";
+
+    public string LayerId { get; set; } = "surface";
+
+    public int? Floor { get; set; }
+
+    public bool Underground { get; set; }
+
+    public double? HeightMin { get; set; }
+
+    public double? HeightMax { get; set; }
+
+    public string AreaTag { get; set; } = string.Empty;
 
     public HashSet<string> AnchorIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -648,6 +639,8 @@ public sealed class RouteNavigationEdge
 
     public bool IsSyntheticReverse { get; set; }
 
+    public GraphReviewStatus ReviewStatus { get; set; } = GraphReviewStatus.Unreviewed;
+
     public string HealthStatus { get; set; } = RouteHealthStatus.Unknown;
 
     public double SuccessRate { get; set; }
@@ -669,6 +662,16 @@ public sealed class RouteNavigationEdge
     public string SourceFileName { get; set; } = string.Empty;
 
     public string SourceKind { get; set; } = "telemetry";
+
+    public string SourceRepository { get; set; } = string.Empty;
+
+    public string SourceRouteName { get; set; } = string.Empty;
+
+    public string SourceAuthor { get; set; } = string.Empty;
+
+    public DateTime? LastVerifiedAtUtc { get; set; }
+
+    public List<RouteNavigationEdgeSource> Sources { get; set; } = [];
 
     public int SourceCount { get; set; } = 1;
 
@@ -717,6 +720,15 @@ public sealed class RouteNavigationEdge
             ActionParams = actionParams,
             IsBidirectionalCandidate = record.IsBidirectionalForAction(health?.Action),
             IsSyntheticReverse = isSyntheticReverse,
+            ReviewStatus = isSyntheticReverse
+                ? GraphReviewStatus.Risky
+                : healthStatus switch
+                {
+                    RouteHealthStatus.Verified => GraphReviewStatus.Verified,
+                    RouteHealthStatus.Risky => GraphReviewStatus.Risky,
+                    RouteHealthStatus.Disabled => GraphReviewStatus.Disabled,
+                    _ => GraphReviewStatus.Unreviewed
+                },
             HealthStatus = healthStatus,
             SuccessRate = health?.SuccessRate ?? 0,
             SuccessCount = health?.SuccessCount ?? 0,
@@ -728,6 +740,17 @@ public sealed class RouteNavigationEdge
             SourceRecordId = record.RecordId,
             SourceFileName = record.SourceFileName,
             SourceKind = "telemetry",
+            LastVerifiedAtUtc = healthStatus == RouteHealthStatus.Verified ? health?.LastSuccessUtc : null,
+            Sources =
+            [
+                new RouteNavigationEdgeSource
+                {
+                    FileName = record.SourceFileName,
+                    Kind = "telemetry",
+                    IsTelemetry = true,
+                    IsSyntheticReverse = isSyntheticReverse
+                }
+            ],
             SourceCount = 1,
             TargetResourceId = isSyntheticReverse ? string.Empty : record.TargetResourceId,
             TargetResourceLabelId = isSyntheticReverse ? string.Empty : record.TargetResourceLabelId,
@@ -777,12 +800,28 @@ public sealed class RouteNavigationEdge
             ActionParams = segment.ActionParams,
             IsBidirectionalCandidate = segment.IsBidirectionalCandidate,
             IsSyntheticReverse = isSyntheticReverse,
+            ReviewStatus = isSyntheticReverse ? GraphReviewStatus.Risky : GraphReviewStatus.Unreviewed,
             HealthStatus = RouteHealthStatus.Unknown,
             Cost = Math.Round(cost, 2),
             AverageDistance = Math.Round(distance, 2),
             SourceRecordId = segment.SourceId,
             SourceFileName = segment.SourceFileName,
             SourceKind = segment.SourceKind,
+            SourceRepository = segment.SourceRepository,
+            SourceRouteName = segment.SourceRouteName,
+            SourceAuthor = segment.SourceAuthor,
+            Sources =
+            [
+                new RouteNavigationEdgeSource
+                {
+                    FileName = segment.SourceFileName,
+                    Repository = segment.SourceRepository,
+                    RouteName = segment.SourceRouteName,
+                    Author = segment.SourceAuthor,
+                    Kind = segment.SourceKind,
+                    IsSyntheticReverse = isSyntheticReverse
+                }
+            ],
             SourceCount = Math.Max(1, segment.SourceCount),
             Points = points
         };
@@ -909,6 +948,33 @@ public sealed class RouteNavigationEdge
     }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum GraphReviewStatus
+{
+    Unreviewed,
+    Verified,
+    Risky,
+    Disabled,
+    Rejected
+}
+
+public sealed class RouteNavigationEdgeSource
+{
+    public string Repository { get; set; } = string.Empty;
+
+    public string FileName { get; set; } = string.Empty;
+
+    public string RouteName { get; set; } = string.Empty;
+
+    public string Author { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = string.Empty;
+
+    public bool IsTelemetry { get; set; }
+
+    public bool IsSyntheticReverse { get; set; }
+}
+
 internal static class RoutePolylineSimplifier
 {
     private const int MinPointCount = 20;
@@ -941,6 +1007,84 @@ internal static class RoutePolylineSimplifier
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 与 AutoTranscribePathing/optimization.js 相同的 RDP 抽稀：保留首尾点，
+    /// 并保留偏离首尾连线至少 tolerance 的关键点。
+    /// </summary>
+    public static List<RouteGraphPoint> Simplify(IReadOnlyList<RouteGraphPoint> points, double tolerance)
+    {
+        if (points.Count <= 2 || tolerance <= 0)
+        {
+            return points.ToList();
+        }
+
+        var keep = new bool[points.Count];
+        keep[0] = true;
+        keep[^1] = true;
+        SimplifyRouteSection(points, 0, points.Count - 1, tolerance, keep);
+        var result = new List<RouteGraphPoint>();
+        for (var index = 0; index < points.Count; index++)
+        {
+            if (keep[index])
+            {
+                result.Add(points[index]);
+            }
+        }
+
+        return result;
+    }
+
+    private static void SimplifyRouteSection(
+        IReadOnlyList<RouteGraphPoint> points,
+        int start,
+        int end,
+        double tolerance,
+        bool[] keep)
+    {
+        if (end <= start + 1)
+        {
+            return;
+        }
+
+        var maxDistance = 0.0;
+        var farthestIndex = -1;
+        for (var index = start + 1; index < end; index++)
+        {
+            var distance = PerpendicularLineDistance(points[index], points[start], points[end]);
+            if (distance > maxDistance)
+            {
+                maxDistance = distance;
+                farthestIndex = index;
+            }
+        }
+
+        if (farthestIndex < 0 || maxDistance < tolerance)
+        {
+            return;
+        }
+
+        keep[farthestIndex] = true;
+        SimplifyRouteSection(points, start, farthestIndex, tolerance, keep);
+        SimplifyRouteSection(points, farthestIndex, end, tolerance, keep);
+    }
+
+    private static double PerpendicularLineDistance(
+        RouteGraphPoint point,
+        RouteGraphPoint lineStart,
+        RouteGraphPoint lineEnd)
+    {
+        var dx = lineEnd.X - lineStart.X;
+        var dy = lineEnd.Y - lineStart.Y;
+        var length = Math.Sqrt((dx * dx) + (dy * dy));
+        if (length <= 0.000001)
+        {
+            return RouteGraphGeometry.Distance(point, lineStart);
+        }
+
+        return Math.Abs((dx * (lineStart.Y - point.Y)) -
+                        ((lineStart.X - point.X) * dy)) / length;
     }
 
     private static void SimplifySection(IReadOnlyList<TelemetryPoint2D> points, int start, int end, double toleranceSquared, bool[] keep)

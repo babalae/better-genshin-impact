@@ -665,6 +665,10 @@ public partial class MapViewerViewModel : ObservableObject
 
     public string RouteGraphFilePath => Path.Combine(_routeSaveDir, RouteNavigationGraphBuilder.GraphFileName);
 
+    private string ReadableRouteGraphFilePath => File.Exists(RouteGraphFilePath)
+        ? RouteGraphFilePath
+        : Path.Combine(_routeSaveDir, RouteNavigationGraphBuilder.LegacyGraphFileName);
+
     public string RouteHealthFilePath => Path.Combine(_routeSaveDir, "route_health.json");
 
     // private readonly Mat _all256Map = new(Global.Absolute(@"Assets/Map/mainMap256Block.png"));
@@ -690,6 +694,8 @@ public partial class MapViewerViewModel : ObservableObject
     private readonly object _mapBitmapRefreshLock = new();
 
     private Point2f? _lastPosition;
+
+    private DateTime _lastPositionUpdatedUtc = DateTime.MinValue;
 
     private string? _lastPositionMapName;
 
@@ -756,7 +762,7 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _graphProvider = new RouteNavigationGraphProvider(_routeSaveDir);
         _routeNavigationPlanner = new RouteNavigationPlanner(_graphProvider);
-        var targetNavigationRuntime = new BetterGiTargetNavigationRuntime(_graphProvider);
+        var targetNavigationRuntime = new BetterGiTargetNavigationRuntime();
         _targetNavigationWorkflow = new TargetNavigationWorkflow(
             _routeNavigationPlanner,
             targetNavigationRuntime,
@@ -807,6 +813,8 @@ public partial class MapViewerViewModel : ObservableObject
                     {
                         SynchronizeTrackingMap(positionMapName);
                         _lastPositionMapName = ResolvePositionMapName(positionMapName);
+                        _lastPosition = point;
+                        _lastPositionUpdatedUtc = DateTime.UtcNow;
                         if (FollowRoutePlanningCurrentPosition)
                         {
                             UpdateRoutePlanningCurrentPosition(point);
@@ -821,6 +829,7 @@ public partial class MapViewerViewModel : ObservableObject
                     SynchronizeTrackingMap(positionMapName);
                     _lastPositionMapName = ResolvePositionMapName(positionMapName);
                     _lastPosition = point;
+                    _lastPositionUpdatedUtc = DateTime.UtcNow;
                     CurrentPositionText = FormatCurrentPosition(point, _lastPositionMapName);
                     LastRefreshText = $"刷新：{DateTime.Now:HH:mm:ss}";
                     UpdateRoutePlanningCurrentPosition(point);
@@ -2285,7 +2294,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         IsRefreshingRouteDiagnostics = true;
-        GraphSummary = "正在重建路网...";
+        GraphSummary = "正在从运行遥测更新路网...";
         try
         {
             var result = await Task.Run(() =>
@@ -2305,12 +2314,25 @@ public partial class MapViewerViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            GraphSummary = $"重建失败：{ex.Message}";
+            GraphSummary = $"从运行遥测更新路网失败：{ex.Message}";
         }
         finally
         {
             IsRefreshingRouteDiagnostics = false;
         }
+    }
+
+    [RelayCommand]
+    private void OpenRouteGraphStudio()
+    {
+        var currentTarget = _selectedTargetPoint is { } target
+            ? new RouteGraphPoint(target.X, target.Y)
+            : (RouteGraphPoint?)null;
+        var window = new RouteGraphStudioWindow(_routeSaveDir, MapName, currentTarget)
+        {
+            Owner = DialogOwner
+        };
+        window.Show();
     }
 
     [RelayCommand]
@@ -2344,12 +2366,10 @@ public partial class MapViewerViewModel : ObservableObject
         {
             var result = await Task.Run(() =>
             {
-                var healthEntries = new RouteHealthStore(_routeSaveDir).GetSnapshot();
                 return new RouteNavigationGraphBuilder(_routeSaveDir).BuildNow(new RouteNavigationBuildRequest
                 {
-                    HealthEntries = healthEntries,
                     PathingTaskDirectories = sourceDirectories,
-                    IncludeTelemetry = true,
+                    IncludeTelemetry = false,
                     NodeSnapDistance = 6
                 });
             });
@@ -2418,8 +2438,9 @@ public partial class MapViewerViewModel : ObservableObject
 
     private RouteLiteDiagnosticsResult BuildRouteLiteDiagnostics(string mapName)
     {
-        var graphExists = File.Exists(RouteGraphFilePath);
-        var graphSizeMb = graphExists ? new FileInfo(RouteGraphFilePath).Length / 1024.0 / 1024.0 : 0;
+        var readableGraphPath = ReadableRouteGraphFilePath;
+        var graphExists = File.Exists(readableGraphPath);
+        var graphSizeMb = graphExists ? new FileInfo(readableGraphPath).Length / 1024.0 / 1024.0 : 0;
         var healthExists = File.Exists(RouteHealthFilePath);
         var telemetryCount = Directory.Exists(_routeSaveDir)
             ? Directory.EnumerateFiles(_routeSaveDir, "*_Telemetry.json", SearchOption.TopDirectoryOnly).Count()
@@ -2476,7 +2497,7 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 if (!_graphProvider.TryGetSnapshot(out var graph, forceReload: true) || graph.IsEmpty)
                 {
-                    return RouteGraphDiagnosticsResult.Empty(File.Exists(RouteGraphFilePath) ? "路网为空或读取失败" : "路网文件不存在");
+                    return RouteGraphDiagnosticsResult.Empty(File.Exists(ReadableRouteGraphFilePath) ? "路网为空或读取失败" : "路网文件不存在");
                 }
 
                 var normalizedMapName = RouteGraphGeometry.NormalizeMapName(MapName);
@@ -2983,12 +3004,12 @@ public partial class MapViewerViewModel : ObservableObject
             MapName = MapName,
             MapMatchMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod,
             TargetImagePoint = new RouteGraphPoint(selectedTarget.X, selectedTarget.Y),
-            LastKnownCurrentImagePoint = _lastPosition is { } lastPosition
-                ? new RouteGraphPoint(lastPosition.X, lastPosition.Y)
-                : null,
+            LastKnownCurrentImagePoint = TryGetFreshPlanningPosition(),
             TaskName = "地图目标导航",
             TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
-            TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim(),
+            TargetAction = string.IsNullOrWhiteSpace(TargetAction) || !IsTargetNavigationActionSelectable(TargetAction)
+                ? null
+                : TargetAction.Trim(),
             Options = new RouteNavigationPlanOptions
             {
                 AllowTeleport = AllowTeleport,
@@ -3065,7 +3086,9 @@ public partial class MapViewerViewModel : ObservableObject
             TargetNavigationState.WaitingToStart =>
                 $"目标 {TargetImageX:F1}, {TargetImageY:F1}，正在检查运行条件",
             TargetNavigationState.Planning =>
-                $"从实时坐标规划到 {TargetImageX:F1}, {TargetImageY:F1}",
+                TryGetFreshPlanningPosition().HasValue
+                    ? $"从最近坐标规划到 {TargetImageX:F1}, {TargetImageY:F1}"
+                    : $"当前坐标不可用，按传送点规划到 {TargetImageX:F1}, {TargetImageY:F1}",
             TargetNavigationState.PlanSucceeded when _currentExecutableTask != null =>
                 $"{_currentExecutableTask.Positions.Count} 个可执行点",
             TargetNavigationState.Executing when _executingTask != null =>
@@ -3098,6 +3121,21 @@ public partial class MapViewerViewModel : ObservableObject
         }
     }
 
+    private RouteGraphPoint? TryGetFreshPlanningPosition()
+    {
+        if (_lastPosition is not { } point ||
+            DateTime.UtcNow - _lastPositionUpdatedUtc > TimeSpan.FromSeconds(5) ||
+            !string.Equals(
+                RouteGraphGeometry.NormalizeMapName(_lastPositionMapName),
+                RouteGraphGeometry.NormalizeMapName(MapName),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return new RouteGraphPoint(point.X, point.Y);
+    }
+
     private void ApplyNavigationPlan(RouteNavigationPlan plan)
     {
         _currentPlan = plan;
@@ -3117,7 +3155,7 @@ public partial class MapViewerViewModel : ObservableObject
 
         _currentExecutableTask = plan.Task;
         HasPlan = true;
-        if (plan.Request != null)
+        if (plan.Request is { HasCurrentPosition: true })
         {
             CurrentImageX = Math.Round(plan.Request.CurrentImagePoint.X, 1);
             CurrentImageY = Math.Round(plan.Request.CurrentImagePoint.Y, 1);
@@ -6796,6 +6834,21 @@ public partial class MapViewerViewModel : ObservableObject
             "interact_teleport" => "按拾取/交互键触发场景内传送；通常不需要参数，可填 wait=秒数 追加等待。",
             _ => "动作参数。"
         };
+    }
+
+    /// <summary>
+    /// 目标导航暂未提供动作参数输入，必须携带参数才能执行的动作不允许作为目标动作选择。
+    /// </summary>
+    public static bool IsTargetNavigationActionSelectable(string? actionCode)
+    {
+        if (string.IsNullOrWhiteSpace(actionCode))
+        {
+            return true;
+        }
+
+        return !string.Equals(actionCode, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(actionCode, ActionEnum.LogOutput.Code, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(actionCode, ActionEnum.SetTime.Code, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetMapDisplayName(string mapName)
