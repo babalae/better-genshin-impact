@@ -247,6 +247,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (hWnd != IntPtr.Zero)
             {
                 _hWnd = hWnd;
+                // 手动选择的是已有窗口，非 BGI 联动启动，重置标志避免"仅BGI自启原神时执行"误判
+                TaskContext.Instance().GenshinStartedByLinkedStart = false;
                 Start(hWnd);
             }
             else

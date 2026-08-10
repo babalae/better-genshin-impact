@@ -42,21 +42,6 @@ public partial class GenshinStartConfig : ObservableObject
     private AutoEnterGameMode _autoEnterGameMode = AutoEnterGameMode.Always;
 
     /// <summary>
-    ///     兼容旧配置：旧版本 AutoEnterGameEnabled(bool) 自动迁移到 AutoEnterGameMode
-    /// </summary>
-    [JsonProperty("AutoEnterGameEnabled")]
-    private bool? AutoEnterGameEnabledLegacy
-    {
-        set
-        {
-            if (value != null)
-            {
-                AutoEnterGameMode = value.Value ? AutoEnterGameMode.Always : AutoEnterGameMode.Never;
-            }
-        }
-    }
-
-    /// <summary>
     ///     原神启动参数
     /// </summary>
     [ObservableProperty]

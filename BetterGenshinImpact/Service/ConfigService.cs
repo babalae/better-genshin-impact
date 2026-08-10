@@ -80,6 +80,20 @@ public class ConfigService : IConfigService
                 return new AllConfig();
             }
 
+            // 旧版本配置迁移：autoEnterGameEnabled(bool) → autoEnterGameMode
+            // 仅在 autoEnterGameMode 未显式设置（保持默认值 Always）时读取旧字段，避免覆盖新配置
+            if (config.GenshinStartConfig.AutoEnterGameMode == AutoEnterGameMode.Always)
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("genshinStartConfig", out var gsc)
+                    && gsc.TryGetProperty("autoEnterGameEnabled", out var legacy)
+                    && legacy.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    config.GenshinStartConfig.AutoEnterGameMode =
+                        legacy.GetBoolean() ? AutoEnterGameMode.Always : AutoEnterGameMode.Never;
+                }
+            }
+
             Config = config;
             return config;
         }
