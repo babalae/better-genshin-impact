@@ -13,6 +13,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Helpers;
@@ -516,28 +517,58 @@ public partial class OneDragonFlowViewModel : ViewModel
         if (cmdOptions.Action == CommandLineAction.StartOneDragon)
         {
             // 通过命令行参数启动一条龙。
-            if (cmdOptions.OneDragonConfigName != null)
-            {
-                // 从命令行参数中提取一条龙配置名称。
-                _logger.LogInformation($"参数指定的一条龙配置：{cmdOptions.OneDragonConfigName}");
-                var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
-                    string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
-                if (argsOneDragonConfig != null)
-                {
-                    // 设定配置，配置下拉框会选定。
-                    SelectedConfig = argsOneDragonConfig;
-                    // 调用选定更新函数。
-                    OnConfigDropDownChanged();
-                }
-                else
-                {
-                    _logger.LogWarning("未找到，请检查。");
-                }
-            }
-            // 异步执行一条龙
-            Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
-            OnOneKeyExecute();
+            _ = StartFromCommandLineAsync(cmdOptions.OneDragonConfigName);
         }
+    }
+
+    /// <summary>
+    /// 从命令行参数/热激活启动一条龙。
+    /// 若当前已有独立任务在运行，先请求终止并等待其完全结束，再启动新的一条龙。
+    /// </summary>
+    /// <param name="configName">一条龙配置名称，为空时使用当前选中配置。</param>
+    public async Task StartFromCommandLineAsync(string? configName)
+    {
+        // 任务锁被持有说明有独立任务正在运行（一条龙、调度组等），先终止并等待其完全结束，
+        // 避免与即将启动的一条龙抢占截图器、按键等资源。
+        if (TaskControl.TaskSemaphore.CurrentCount == 0)
+        {
+            _logger.LogInformation("检测到正在运行的任务，先终止后再启动一条龙");
+            CancellationContext.Instance.Cancel();
+            if (!await TaskControl.TaskSemaphore.WaitAsync(TimeSpan.FromSeconds(60)))
+            {
+                _logger.LogWarning("等待现有任务结束超时，放弃启动一条龙");
+                return;
+            }
+
+            // 仅用于确认任务已结束，随即释放，由下方启动流程自行抢锁。
+            TaskControl.TaskSemaphore.Release();
+        }
+
+        // 确保配置列表已加载（热激活时页面可能从未打开过）。
+        OnNavigatedTo();
+
+        // 从命令行参数中提取一条龙配置名称。
+        if (configName != null)
+        {
+            _logger.LogInformation($"参数指定的一条龙配置：{configName}");
+            var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
+                string.Equals(x.Name, configName, StringComparison.Ordinal));
+            if (argsOneDragonConfig != null)
+            {
+                // 设定配置，配置下拉框会选定。
+                SelectedConfig = argsOneDragonConfig;
+                // 调用选定更新函数。
+                OnConfigDropDownChanged();
+            }
+            else
+            {
+                _logger.LogWarning("未找到一条龙配置「{Config}」", configName);
+            }
+        }
+
+        // 异步执行一条龙
+        Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
+        await OnOneKeyExecute();
     }
 
     [RelayCommand]

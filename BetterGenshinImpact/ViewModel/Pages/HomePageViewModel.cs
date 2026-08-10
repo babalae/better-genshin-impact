@@ -170,6 +170,13 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         {
             _ = OnStartTriggerAsync();
         }
+        else if (commandLineOptions.Action == CommandLineAction.StartOneDragon)
+        {
+            // 热激活：不关闭 BGI 启动一条龙（若已有任务运行会先终止）。
+            // 冷启动时 OnLoaded 已走同一条路径，此处统一入口。
+            var oneDragonFlowViewModel = App.GetService<OneDragonFlowViewModel>();
+            _ = oneDragonFlowViewModel?.StartFromCommandLineAsync(commandLineOptions.OneDragonConfigName);
+        }
 
         // TODO: 多实例独立任务选择面板入口预留。
         // 后续在此判断可用子实例，并由选择面板决定 task.* 请求的目标实例。
