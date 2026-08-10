@@ -433,7 +433,9 @@ namespace BetterGenshinImpact.ViewModel
                 OverlayMetricsText = _overlayMetricsService.CurrentSnapshot.CombinedText;
             }
 
-            if (Config?.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true && !_fpsStarted)
+            if (Config?.MaskWindowConfig.ShowOverlayMetrics == true
+                && Config.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true
+                && !_fpsStarted)
             {
                 // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动一次，避免无意义后台采样。
                 _fpsStarted = true;
