@@ -1,14 +1,13 @@
-﻿using System.Windows.Controls;
-using BetterGenshinImpact.Core.Script.Group;
+using System.Windows.Controls;
 using BetterGenshinImpact.ViewModel.Windows.Editable;
 
 namespace BetterGenshinImpact.View.Windows.Editable;
 
 public partial class ScriptGroupProjectEditor : UserControl
 {
-    public ScriptGroupProjectEditor(ScriptGroupProject project)
+    public ScriptGroupProjectEditor(ScriptGroupProjectEditorViewModel viewModel)
     {
         InitializeComponent();
-        DataContext = new ScriptGroupProjectEditorViewModel(project);
+        DataContext = viewModel;
     }
 }

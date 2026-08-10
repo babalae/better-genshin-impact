@@ -15,8 +15,10 @@ using Timer = System.Timers.Timer;
 using BetterGenshinImpact.Platform.Wine;
 namespace BetterGenshinImpact.Core.Monitor;
 
-public partial class  MouseKeyMonitor
+public partial class MouseKeyMonitor : IDisposable
 {
+    private bool _isSubscribed;
+    private bool _disposed;
 
     /// <summary>
     ///     长按F变F连发
@@ -66,21 +68,16 @@ public partial class  MouseKeyMonitor
     }
     private nint _hWnd;
 
+    public MouseKeyMonitor()
+    {
+        _spaceTimer.Elapsed += OnSpaceTimerElapsed;
+        _fTimer.Elapsed += OnFTimerElapsed;
+    }
+
     public void Subscribe(nint gameHandle)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         _hWnd = gameHandle;
-        // Note: for the application hook, use the Hook.AppEvents() instead
-
-        if (!WinePlatformAddon.IsRunningOnWine) {        
-            GlobalHook.KeyDown += GlobalHookKeyDown;
-            GlobalHook.KeyUp += GlobalHookKeyUp;
-            GlobalHook.MouseDownExt += GlobalHookMouseDownExt;
-            GlobalHook.MouseUpExt += GlobalHookMouseUpExt;
-            GlobalHook.MouseMoveExt += GlobalHookMouseMoveExt;
-            GlobalHook.MouseWheelExt += GlobalHookMouseWheelExt;
-        }
-        TrySubscribeWinePolling();
-        //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
         _pickUpKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToVK();
@@ -90,11 +87,38 @@ public partial class  MouseKeyMonitor
         _firstSpaceKeyDownTime = DateTime.MaxValue;
         var si = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
         _spaceTimer.Interval = si;
-        _spaceTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(_releaseControlKeyCode); };
 
         var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
         _fTimer.Interval = fi;
-        _fTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(_pickUpKeyCode); };
+
+        if (_isSubscribed)
+        {
+            return;
+        }
+
+        // Note: for the application hook, use the Hook.AppEvents() instead
+        if (!WinePlatformAddon.IsRunningOnWine)
+        {
+            GlobalHook.KeyDown += GlobalHookKeyDown;
+            GlobalHook.KeyUp += GlobalHookKeyUp;
+            GlobalHook.MouseDownExt += GlobalHookMouseDownExt;
+            GlobalHook.MouseUpExt += GlobalHookMouseUpExt;
+            GlobalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+            GlobalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+        }
+        TrySubscribeWinePolling();
+        //_globalHook.KeyPress += GlobalHookKeyPress;
+        _isSubscribed = true;
+    }
+
+    private void OnSpaceTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        Simulation.PostMessage(_hWnd).KeyPress(_releaseControlKeyCode);
+    }
+
+    private void OnFTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        Simulation.PostMessage(_hWnd).KeyPress(_pickUpKeyCode);
     }
 
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
@@ -219,6 +243,16 @@ public partial class  MouseKeyMonitor
 
     public void Unsubscribe()
     {
+        _spaceTimer.Stop();
+        _fTimer.Stop();
+        _firstSpaceKeyDownTime = DateTime.MaxValue;
+        _firstFKeyDownTime = DateTime.MaxValue;
+
+        if (!_isSubscribed)
+        {
+            return;
+        }
+
         if (_globalHook != null && !WinePlatformAddon.IsRunningOnWine)
         {
             _globalHook.KeyDown -= GlobalHookKeyDown;
@@ -234,5 +268,22 @@ public partial class  MouseKeyMonitor
         if (WinePlatformAddon.IsRunningOnWine){
           DisposeWineAddon();
         }
+        _isSubscribed = false;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        Unsubscribe();
+        _disposed = true;
+        _spaceTimer.Elapsed -= OnSpaceTimerElapsed;
+        _fTimer.Elapsed -= OnFTimerElapsed;
+        _spaceTimer.Dispose();
+        _fTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

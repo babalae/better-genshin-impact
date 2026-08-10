@@ -28,7 +28,7 @@ public class QuickBuyTask
 
         try
         {
-            ImageRegion ra = TaskControl.CaptureToRectArea();
+            using ImageRegion ra = TaskControl.CaptureToRectArea();
             if (ra.Find(RecognitionAssets.Get("QuickBuy", "SereniteaPotCoin", ra)).IsExist())
             {
                 // _logger.LogInformation("触发尘歌壶快速购买逻辑");

@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -30,7 +30,7 @@ public class StopFlyingHandler : IActionHandler
         int i;
         for (i = 0; i < 50; i++)
         {
-            var screen = CaptureToRectArea();
+            using var screen = CaptureToRectArea();
             var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             if (isFlying)
             {

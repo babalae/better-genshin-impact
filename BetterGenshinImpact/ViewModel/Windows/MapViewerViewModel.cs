@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 /// <summary>
 /// TODO 需要支持更多地图
 /// </summary>
-public partial class MapViewerViewModel : ObservableObject
+public partial class MapViewerViewModel : ObservableObject, IDisposable
 {
     [ObservableProperty]
     private WriteableBitmap _mapBitmap;
@@ -40,6 +40,8 @@ public partial class MapViewerViewModel : ObservableObject
 
     private int _scale = 1;
 
+    private bool _disposed;
+
     public MapViewerViewModel(string mapName)
     {
         if (string.IsNullOrEmpty(mapName))
@@ -51,7 +53,10 @@ public partial class MapViewerViewModel : ObservableObject
         Init(mapName);
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         var center = MapManager.GetMap(_mapName, matchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(512, 512));
-        _mapBitmap = ClipMat(new Point2f(center.X, center.Y)).ToWriteableBitmap();
+        using (var initialClip = ClipMat(new Point2f(center.X, center.Y)))
+        {
+            _mapBitmap = initialClip.ToWriteableBitmap();
+        }
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "SendCurrentPosition")
@@ -62,7 +67,8 @@ public partial class MapViewerViewModel : ObservableObject
                     try
                     {
                         MapBitmap.Lock();
-                        WriteableBitmapConverter.ToWriteableBitmap(ClipMat((Point2f)msg.NewValue), MapBitmap);
+                        using var clip = ClipMat((Point2f)msg.NewValue);
+                        WriteableBitmapConverter.ToWriteableBitmap(clip, MapBitmap);
                     }
                     catch (Exception ex)
                     {
@@ -77,7 +83,10 @@ public partial class MapViewerViewModel : ObservableObject
             else if (msg.PropertyName == "UpdateCurrentPathing")
             {
                 Debug.WriteLine("更新当前追踪的路径图像");
-                _currentPathingMap = GenTaskMat((PathingTask)msg.NewValue);
+                var newPathingMap = GenTaskMat((PathingTask)msg.NewValue);
+                var oldPathingMap = _currentPathingMap;
+                _currentPathingMap = newPathingMap;
+                oldPathingMap.Dispose();
             }
         });
     }
@@ -152,8 +161,8 @@ public partial class MapViewerViewModel : ObservableObject
             }
             else
             {
-                Mat clipMat = new(_currentPathingMap, rect);
-                clipMat = clipMat.Clone();
+                using var clipView = new Mat(_currentPathingMap, rect);
+                var clipMat = clipView.Clone();
                 // 绘制中心点
                 Cv2.Circle(clipMat, new Point(len, len), 3, new Scalar(0, 255, 0), 2);
                 return clipMat;
@@ -182,8 +191,10 @@ public partial class MapViewerViewModel : ObservableObject
         var offsetRectZoom = new Rect(offsetRect.X / _scale, offsetRect.Y / _scale, offsetRect.Width / _scale, offsetRect.Height / _scale);
 
         // 把 map 的局部转化为 实际展示图（提瓦特是256，其他的1024） 级别
-        Mat taskMat = new Mat(_mapImage, offsetRectZoom);
-        taskMat = ResizeHelper.Resize(taskMat, _scale);
+        using var taskMatView = new Mat(_mapImage, offsetRectZoom);
+        var taskMat = _scale == 1
+            ? taskMatView.Clone()
+            : ResizeHelper.Resize(taskMatView, _scale);
 
         // 设置线条粗细
         int thickness = 2;
@@ -267,5 +278,18 @@ public partial class MapViewerViewModel : ObservableObject
     private void DrawLine(Mat mat, Point startPoint, Point endPoint, Scalar color, int thickness)
     {
         Cv2.Line(mat, startPoint, endPoint, color, thickness);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _currentPathingMap.Dispose();
+        _mapImage.Dispose();
     }
 }

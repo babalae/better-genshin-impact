@@ -28,6 +28,8 @@ namespace BetterGenshinImpact.View.Windows;
 [ObservableObject]
 public partial class ScriptRepoWindow
 {
+    private bool _subscriptionsDisposed;
+
     // 更新渠道类
     public class RepoChannel
     {
@@ -149,11 +151,18 @@ public partial class ScriptRepoWindow
             CredentialPersistence.LocalMachine);
     }
 
-    ~ScriptRepoWindow()
+    protected override void OnClosed(EventArgs e)
     {
-        Config.PropertyChanged -= OnConfigPropertyChanged;
-        PropertyChanged -= OnPropertyChanged;
-        ScriptRepoUpdater.Instance.AutoUpdateStateChanged -= OnAutoUpdateStateChanged;
+        if (!_subscriptionsDisposed)
+        {
+            _subscriptionsDisposed = true;
+            Config.PropertyChanged -= OnConfigPropertyChanged;
+            PropertyChanged -= OnPropertyChanged;
+            ScriptRepoUpdater.Instance.AutoUpdateStateChanged -= OnAutoUpdateStateChanged;
+        }
+
+        DataContext = null;
+        base.OnClosed(e);
     }
 
     /// <summary>
