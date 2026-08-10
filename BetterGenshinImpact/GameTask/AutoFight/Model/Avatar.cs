@@ -222,7 +222,7 @@ public class Avatar
     /// </summary>
     private static bool SwimmingConfirm(Region region)
     {
-        using var imageRegion = region.ToImageRegion();
+        var imageRegion = region.ToImageRegion();
         using var cropped = imageRegion.DeriveCrop(1819, 1025, 9, 11);
         using var mask = OpenCvCommonHelper.Threshold(cropped.SrcMat, new Scalar(242, 223, 39), new Scalar(255, 233, 44));
         using var labels = new Mat();
