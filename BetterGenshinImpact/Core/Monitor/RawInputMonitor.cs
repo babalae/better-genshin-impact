@@ -1,31 +1,121 @@
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Monitor;
 
-public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
-    : RelativeMouseInputMonitorBase(logger)
+/// <summary>
+/// 基于 Raw Input 的鼠标相对移动、键盘按键、鼠标按钮与滚轮监听。
+/// 相对鼠标移动订阅与键盘/按钮/滚轮订阅统一共享采集生命周期：
+/// 首个订阅启动采集线程，最后一个订阅释放后停止。
+/// </summary>
+public sealed class RawInputMonitor(
+    ILogger<RawInputMonitor> logger) : IRelativeMouseInputMonitor, IRawKeyboardInputMonitor, IDisposable
 {
     private static readonly TimeSpan InitializationTimeout = TimeSpan.FromSeconds(10);
     private const ushort GenericDesktopUsagePage = 0x01;
     private const ushort MouseUsage = 0x02;
+    private const ushort KeyboardUsage = 0x06;
     private const ushort KeyBreakFlag = 0x01;
     private const ushort InvalidVirtualKey = 0x00FF;
     private static readonly nint HwndMessage = new(-3);
 
-    // 键盘输入不再复用相对鼠标监听器的采集生命周期，避免覆盖 RDP ActiveX 的进程级注册。
+    // Raw Input 鼠标按钮/滚轮标志（RI_MOUSE_*）
+    private const ushort MouseButton1Down = 0x0001;
+    private const ushort MouseButton1Up = 0x0002;
+    private const ushort MouseButton2Down = 0x0004;
+    private const ushort MouseButton2Up = 0x0008;
+    private const ushort MouseButton3Down = 0x0010;
+    private const ushort MouseButton3Up = 0x0020;
+    private const ushort MouseButton4Down = 0x0040;
+    private const ushort MouseButton4Up = 0x0080;
+    private const ushort MouseButton5Down = 0x0100;
+    private const ushort MouseButton5Up = 0x0200;
+    private const ushort MouseWheel = 0x0400;
+
     private readonly object _sourceLock = new();
+    private readonly Dictionary<long, EventHandler<RelativeMouseMoveEventArgs>> _moveHandlers = [];
+    private readonly Dictionary<long, EventHandler<RawKeyboardInputEventArgs>> _keyboardHandlers = [];
+    private readonly Dictionary<long, EventHandler<RawMouseButtonEventArgs>> _mouseButtonHandlers = [];
+    private readonly Dictionary<long, EventHandler<RawMouseWheelEventArgs>> _mouseWheelHandlers = [];
+    private long _nextSubscriptionId;
+    private bool _isStarted;
+    private bool _isStopping;
+    private bool _isDisposed;
+
     private RawInputThreadContext? _context;
     private long _lifecycleVersion;
 
-    protected override void StartCore()
+    private ILogger Logger { get; } = logger;
+
+    public IDisposable Subscribe(EventHandler<RelativeMouseMoveEventArgs> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return AddSubscription(_moveHandlers, handler);
+    }
+
+    public IDisposable SubscribeKeyboard(EventHandler<RawKeyboardInputEventArgs> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return AddSubscription(_keyboardHandlers, handler);
+    }
+
+    public IDisposable SubscribeMouseButton(EventHandler<RawMouseButtonEventArgs> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return AddSubscription(_mouseButtonHandlers, handler);
+    }
+
+    public IDisposable SubscribeMouseWheel(EventHandler<RawMouseWheelEventArgs> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return AddSubscription(_mouseWheelHandlers, handler);
+    }
+
+    private IDisposable AddSubscription<TEventArgs>(Dictionary<long, EventHandler<TEventArgs>> handlers,
+        EventHandler<TEventArgs> handler)
+        where TEventArgs : EventArgs
+    {
+        long subscriptionId;
+        lock (_sourceLock)
+        {
+            while (_isStopping)
+            {
+                System.Threading.Monitor.Wait(_sourceLock);
+            }
+
+            ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+            subscriptionId = ++_nextSubscriptionId;
+            handlers.Add(subscriptionId, handler);
+
+            if (!_isStarted)
+            {
+                try
+                {
+                    StartCore();
+                    _isStarted = true;
+                }
+                catch
+                {
+                    handlers.Remove(subscriptionId);
+                    throw;
+                }
+            }
+        }
+
+        return new Subscription<TEventArgs>(this, subscriptionId, handlers);
+    }
+
+    private void StartCore()
     {
         RawInputThreadContext context;
         lock (_sourceLock)
@@ -76,7 +166,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
         throw new InvalidOperationException("Raw Input 初始化失败", context.InitializationException);
     }
 
-    protected override void StopCore()
+    private void StopCore()
     {
         RawInputThreadContext? context;
         long stopVersion;
@@ -218,6 +308,70 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
         return true;
     }
 
+    /// <summary>
+    /// 从 Raw Input 鼠标数据解析按钮与滚轮事件，按出现顺序发布到 out 集合。
+    /// </summary>
+    private static void ParseMouseButtons(
+        RawMouseData mouse,
+        List<(MouseButtons button, bool isDown)>? buttonEvents,
+        out int wheelDelta)
+    {
+        wheelDelta = 0;
+
+        if (buttonEvents != null)
+        {
+            if ((mouse.ButtonFlags & MouseButton1Down) != 0)
+            {
+                buttonEvents.Add((MouseButtons.Left, true));
+            }
+            else if ((mouse.ButtonFlags & MouseButton1Up) != 0)
+            {
+                buttonEvents.Add((MouseButtons.Left, false));
+            }
+
+            if ((mouse.ButtonFlags & MouseButton2Down) != 0)
+            {
+                buttonEvents.Add((MouseButtons.Right, true));
+            }
+            else if ((mouse.ButtonFlags & MouseButton2Up) != 0)
+            {
+                buttonEvents.Add((MouseButtons.Right, false));
+            }
+
+            if ((mouse.ButtonFlags & MouseButton3Down) != 0)
+            {
+                buttonEvents.Add((MouseButtons.Middle, true));
+            }
+            else if ((mouse.ButtonFlags & MouseButton3Up) != 0)
+            {
+                buttonEvents.Add((MouseButtons.Middle, false));
+            }
+
+            if ((mouse.ButtonFlags & MouseButton4Down) != 0)
+            {
+                buttonEvents.Add((MouseButtons.XButton1, true));
+            }
+            else if ((mouse.ButtonFlags & MouseButton4Up) != 0)
+            {
+                buttonEvents.Add((MouseButtons.XButton1, false));
+            }
+
+            if ((mouse.ButtonFlags & MouseButton5Down) != 0)
+            {
+                buttonEvents.Add((MouseButtons.XButton2, true));
+            }
+            else if ((mouse.ButtonFlags & MouseButton5Up) != 0)
+            {
+                buttonEvents.Add((MouseButtons.XButton2, false));
+            }
+        }
+
+        if ((mouse.ButtonFlags & MouseWheel) != 0)
+        {
+            wheelDelta = (short)mouse.ButtonData;
+        }
+    }
+
     private void RunMessageLoop(RawInputThreadContext context)
     {
         try
@@ -317,6 +471,13 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                 usUsage = MouseUsage,
                 dwFlags = User32.RIDEV.RIDEV_INPUTSINK,
                 hwndTarget = context.HwndSource!.Handle
+            },
+            new User32.RAWINPUTDEVICE
+            {
+                usUsagePage = GenericDesktopUsagePage,
+                usUsage = KeyboardUsage,
+                dwFlags = User32.RIDEV.RIDEV_INPUTSINK,
+                hwndTarget = context.HwndSource!.Handle
             }
         };
 
@@ -325,7 +486,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                 (uint)devices.Length,
                 (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 鼠标设备失败");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 设备失败");
         }
     }
 
@@ -341,6 +502,13 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                     usUsage = MouseUsage,
                     dwFlags = User32.RIDEV.RIDEV_REMOVE,
                     hwndTarget = HWND.NULL
+                },
+                new User32.RAWINPUTDEVICE
+                {
+                    usUsagePage = GenericDesktopUsagePage,
+                    usUsage = KeyboardUsage,
+                    dwFlags = User32.RIDEV.RIDEV_REMOVE,
+                    hwndTarget = HWND.NULL
                 }
             };
 
@@ -350,7 +518,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
                     (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
             {
                 Logger.LogWarning(
-                    "注销 Raw Input 鼠标设备失败，Win32Error: {Win32Error}",
+                    "注销 Raw Input 设备失败，Win32Error: {Win32Error}",
                     Marshal.GetLastWin32Error());
             }
 
@@ -383,7 +551,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "读取 Raw Input 鼠标数据失败");
+            Logger.LogError(ex, "读取 Raw Input 数据失败");
         }
 
         // 保持 handled = false，让默认窗口过程完成 WM_INPUT 的必要清理。
@@ -428,15 +596,181 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
             }
 
             var timestamp = DateTime.UtcNow;
-            if (TryGetRelativeMovementFromBuffer(buffer, readSize, out int deltaX, out int deltaY))
+            var header = Marshal.PtrToStructure<User32.RAWINPUTHEADER>(buffer);
+            if (header.dwType == User32.RIM_TYPE.RIM_TYPEMOUSE)
             {
-                Publish(new RelativeMouseMoveEventArgs(deltaX, deltaY, timestamp));
-                return;
+                ProcessMouseInput(buffer, readSize, timestamp);
+            }
+            else if (header.dwType == User32.RIM_TYPE.RIM_TYPEKEYBOARD)
+            {
+                ProcessKeyboardInput(buffer, readSize, timestamp);
             }
         }
         finally
         {
             Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    private void ProcessMouseInput(nint buffer, uint readSize, DateTime timestamp)
+    {
+        if (TryGetRelativeMovementFromBuffer(buffer, readSize, out int deltaX, out int deltaY))
+        {
+            Publish(_moveHandlers, new RelativeMouseMoveEventArgs(deltaX, deltaY, timestamp));
+        }
+
+        var headerSize = Marshal.SizeOf<User32.RAWINPUTHEADER>();
+        var mouse = Marshal.PtrToStructure<RawMouseData>(IntPtr.Add(buffer, headerSize));
+
+        var buttonEvents = new List<(MouseButtons button, bool isDown)>();
+        ParseMouseButtons(mouse, buttonEvents, out int wheelDelta);
+        foreach (var (button, isDown) in buttonEvents)
+        {
+            Publish(_mouseButtonHandlers, new RawMouseButtonEventArgs(button, isDown));
+        }
+
+        if (wheelDelta != 0)
+        {
+            Publish(_mouseWheelHandlers, new RawMouseWheelEventArgs(wheelDelta));
+        }
+    }
+
+    private void ProcessKeyboardInput(nint buffer, uint readSize, DateTime timestamp)
+    {
+        if (!TryGetKeyboardInputFromBuffer(buffer, readSize, out ushort virtualKey, out ushort scanCode,
+                out ushort flags, out bool isKeyDown))
+        {
+            return;
+        }
+
+        Publish(_keyboardHandlers, new RawKeyboardInputEventArgs(virtualKey, scanCode, flags, isKeyDown, timestamp));
+    }
+
+    private void Publish<TEventArgs>(Dictionary<long, EventHandler<TEventArgs>> handlers,
+        TEventArgs eventArgs)
+        where TEventArgs : EventArgs
+    {
+        EventHandler<TEventArgs>[] snapshot;
+        lock (_sourceLock)
+        {
+            if (_isDisposed || handlers.Count == 0)
+            {
+                return;
+            }
+
+            snapshot = [.. handlers.Values];
+        }
+
+        foreach (var handler in snapshot)
+        {
+            try
+            {
+                handler(this, eventArgs);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Raw Input 事件订阅方执行失败");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        bool shouldStop;
+        lock (_sourceLock)
+        {
+            while (_isStopping)
+            {
+                System.Threading.Monitor.Wait(_sourceLock);
+            }
+
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _isDisposed = true;
+            _moveHandlers.Clear();
+            _keyboardHandlers.Clear();
+            _mouseButtonHandlers.Clear();
+            _mouseWheelHandlers.Clear();
+            shouldStop = _isStarted;
+            _isStarted = false;
+            _isStopping = shouldStop;
+        }
+
+        if (shouldStop)
+        {
+            try
+            {
+                StopCore();
+            }
+            finally
+            {
+                CompleteStop();
+            }
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    private void Unsubscribe<TEventArgs>(long subscriptionId, Dictionary<long, EventHandler<TEventArgs>> handlers)
+        where TEventArgs : EventArgs
+    {
+        bool shouldStop;
+        lock (_sourceLock)
+        {
+            if (_isDisposed || !handlers.Remove(subscriptionId))
+            {
+                return;
+            }
+
+            shouldStop = handlers.Count == 0
+                         && _moveHandlers.Count == 0
+                         && _keyboardHandlers.Count == 0
+                         && _mouseButtonHandlers.Count == 0
+                         && _mouseWheelHandlers.Count == 0
+                         && _isStarted;
+            if (shouldStop)
+            {
+                _isStarted = false;
+                _isStopping = true;
+            }
+        }
+
+        if (shouldStop)
+        {
+            try
+            {
+                StopCore();
+            }
+            finally
+            {
+                CompleteStop();
+            }
+        }
+    }
+
+    private void CompleteStop()
+    {
+        lock (_sourceLock)
+        {
+            _isStopping = false;
+            System.Threading.Monitor.PulseAll(_sourceLock);
+        }
+    }
+
+    private sealed class Subscription<TEventArgs>(
+        RawInputMonitor owner,
+        long subscriptionId,
+        Dictionary<long, EventHandler<TEventArgs>> handlers) : IDisposable
+        where TEventArgs : EventArgs
+    {
+        private RawInputMonitor? _owner = owner;
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _owner, null)?.Unsubscribe(subscriptionId, handlers);
         }
     }
 
@@ -468,7 +802,7 @@ public sealed class RawInputMonitor(ILogger<RawInputMonitor> logger)
 
         public ushort ButtonFlags { get; init; }
 
-        public short ButtonData { get; init; }
+        public ushort ButtonData { get; init; }
 
         public uint RawButtons { get; init; }
 

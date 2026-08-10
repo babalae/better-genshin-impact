@@ -20,6 +20,36 @@ public class KeyMouseRecorder
 
     public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
+    public void MouseDown(MouseButtons button, DateTime time)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.MouseDown,
+            MouseButton = button.ToString(),
+            Time = (time - StartTime).TotalMilliseconds
+        });
+    }
+
+    public void MouseUp(MouseButtons button, DateTime time)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.MouseUp,
+            MouseButton = button.ToString(),
+            Time = (time - StartTime).TotalMilliseconds
+        });
+    }
+
+    public void MouseWheel(int delta, DateTime time)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.MouseWheel,
+            MouseY = delta,
+            Time = (time - StartTime).TotalMilliseconds
+        });
+    }
+
     public double MergedEventTimeMax { get; set; } = 20.0;
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -129,6 +159,26 @@ public class KeyMouseRecorder
         {
             Type = MacroEventType.KeyUp,
             KeyCode = e.KeyValue,
+            Time = (time - StartTime).TotalMilliseconds
+        });
+    }
+
+    public void KeyDown(Keys key, DateTime time)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.KeyDown,
+            KeyCode = (int)key,
+            Time = (time - StartTime).TotalMilliseconds
+        });
+    }
+
+    public void KeyUp(Keys key, DateTime time)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.KeyUp,
+            KeyCode = (int)key,
             Time = (time - StartTime).TotalMilliseconds
         });
     }

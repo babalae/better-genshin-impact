@@ -39,8 +39,14 @@ public partial class AllConfig : ObservableObject
     /// <summary>
     ///     窗口捕获的方式
     /// </summary>
-    [ObservableProperty]
-    private string _captureMode = CaptureModes.BitBlt.ToString();
+	[ObservableProperty]
+	private string _captureMode = CaptureModes.BitBlt.ToString();
+
+	/// <summary>
+	/// 使用 Raw Input 监听键鼠；关闭时使用官方全局 Hook。
+	/// </summary>
+	[ObservableProperty]
+	private bool _useRawInput;
 
     /// <summary>
     ///     详细的错误日志

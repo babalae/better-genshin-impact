@@ -56,6 +56,39 @@ public class MouseHook
         }
     }
 
+    public void MouseDown(object? sender, MouseButtons button, bool isDown)
+    {
+        if (!SystemControl.IsGenshinImpactActive() || button == MouseButtons.Left || button == MouseButtons.None || button != BindMouse)
+        {
+            return;
+        }
+
+        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        {
+            return;
+        }
+
+        if (isDown)
+        {
+            IsPressed = true;
+            MouseDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+            if (IsHold)
+            {
+                Task.Run(RunAction);
+            }
+            else
+            {
+                MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+                IsPressed = false;
+            }
+        }
+        else
+        {
+            IsPressed = false;
+            MouseUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+        }
+    }
+
     /// <summary>
     /// 长按持续执行
     /// </summary>
@@ -73,6 +106,35 @@ public class MouseHook
                 }
 
                 MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+            }
+        }
+    }
+
+    private void RunAction()
+    {
+        lock (this)
+        {
+            while (IsPressed)
+            {
+                if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+                {
+                    Thread.Sleep(10);
+                    continue;
+                }
+
+                MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+            }
+        }
+    }
+
+    public void MouseUp(object? sender, MouseButtons button, bool isDown)
+    {
+        if (!isDown && button == BindMouse)
+        {
+            IsPressed = false;
+            if (SystemControl.IsGenshinImpactActive() && !ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+            {
+                MouseUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             }
         }
     }

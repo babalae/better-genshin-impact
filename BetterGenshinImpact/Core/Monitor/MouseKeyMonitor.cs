@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System;
@@ -13,42 +14,14 @@ using Timer = System.Timers.Timer;
 
 // Wine 平台适配
 using BetterGenshinImpact.Platform.Wine;
+
 namespace BetterGenshinImpact.Core.Monitor;
 
 public partial class MouseKeyMonitor : IDisposable
 {
-    private bool _isSubscribed;
-    private bool _disposed;
-
-    /// <summary>
-    ///     长按F变F连发
-    /// </summary>
-    private readonly Timer _fTimer = new();
-
-    private Keys _pickUpKey = Keys.F;
-
-    private User32.VK _pickUpKeyCode = User32.VK.VK_F;
-
-    //private readonly Random _random = new();
-
-    /// <summary>
-    ///     长按空格变空格连发
-    /// </summary>
-    private readonly Timer _spaceTimer = new();
-
-    private Keys _releaseControlKey = Keys.Space;
-
-    private User32.VK _releaseControlKeyCode = User32.VK.VK_SPACE;
-
-    private DateTime _firstFKeyDownTime = DateTime.MaxValue;
-
-    /// <summary>
-    ///     DateTime.MaxValue 代表没有按下
-    /// </summary>
-    private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
-
     private static IKeyboardMouseEvents? _globalHook;
-    private static readonly object GlobalHookLock = new object();
+    private static readonly object GlobalHookLock = new();
+
     public static IKeyboardMouseEvents GlobalHook
     {
         get
@@ -57,16 +30,33 @@ public partial class MouseKeyMonitor : IDisposable
             {
                 lock (GlobalHookLock)
                 {
-                    if (_globalHook == null)
-                    {
-                        _globalHook = Hook.GlobalEvents();
-                    }
+                    _globalHook ??= Hook.GlobalEvents();
                 }
             }
+
             return _globalHook;
         }
     }
+
+    private readonly Timer _fTimer = new();
+    private readonly Timer _spaceTimer = new();
+    private readonly RawInputMonitor _rawInputMonitor =
+        App.GetService<RawInputMonitor>() ?? throw new InvalidOperationException("RawInputMonitor 服务未注册");
+
+    private IDisposable? _keyboardSubscription;
+    private IDisposable? _mouseButtonSubscription;
+    private IDisposable? _mouseWheelSubscription;
+    private bool _isSubscribed;
+    private bool _disposed;
+    private bool _usingRawInput;
     private nint _hWnd;
+
+    private Keys _pickUpKey = Keys.F;
+    private User32.VK _pickUpKeyCode = User32.VK.VK_F;
+    private Keys _releaseControlKey = Keys.Space;
+    private User32.VK _releaseControlKeyCode = User32.VK.VK_SPACE;
+    private DateTime _firstFKeyDownTime = DateTime.MaxValue;
+    private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
     public MouseKeyMonitor()
     {
@@ -83,32 +73,41 @@ public partial class MouseKeyMonitor : IDisposable
         _pickUpKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToVK();
         _releaseControlKey = TaskContext.Instance().Config.KeyBindingsConfig.Jump.ToWinFormKeys();
         _releaseControlKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.Jump.ToVK();
-
         _firstSpaceKeyDownTime = DateTime.MaxValue;
-        var si = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
-        _spaceTimer.Interval = si;
-
-        var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
-        _fTimer.Interval = fi;
+        _firstFKeyDownTime = DateTime.MaxValue;
+        _spaceTimer.Interval = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
+        _fTimer.Interval = TaskContext.Instance().Config.MacroConfig.FFireInterval;
 
         if (_isSubscribed)
         {
             return;
         }
 
-        // Note: for the application hook, use the Hook.AppEvents() instead
+        _usingRawInput = TaskContext.Instance().Config.UseRawInput;
+
         if (!WinePlatformAddon.IsRunningOnWine)
         {
-            GlobalHook.KeyDown += GlobalHookKeyDown;
-            GlobalHook.KeyUp += GlobalHookKeyUp;
-            GlobalHook.MouseDownExt += GlobalHookMouseDownExt;
-            GlobalHook.MouseUpExt += GlobalHookMouseUpExt;
-            GlobalHook.MouseMoveExt += GlobalHookMouseMoveExt;
-            GlobalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+            if (_usingRawInput)
+            {
+                _keyboardSubscription = _rawInputMonitor.SubscribeKeyboard(GlobalHookKeyDown);
+                _mouseButtonSubscription = _rawInputMonitor.SubscribeMouseButton(GlobalHookMouseButton);
+                _mouseWheelSubscription = _rawInputMonitor.SubscribeMouseWheel(GlobalHookMouseWheel);
+            }
+            else
+            {
+                _globalHook = GlobalHook;
+                _globalHook.KeyDown += GlobalHookKeyDown;
+                _globalHook.KeyUp += GlobalHookKeyUp;
+                _globalHook.MouseDownExt += GlobalHookMouseDownExt;
+                _globalHook.MouseUpExt += GlobalHookMouseUpExt;
+                _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+                _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+            }
         }
+
         TrySubscribeWinePolling();
-        //_globalHook.KeyPress += GlobalHookKeyPress;
         _isSubscribed = true;
+        Debug.WriteLine($"[Input] 后端={(_usingRawInput ? "RawInput" : "GlobalHook")}");
     }
 
     private void OnSpaceTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
@@ -121,123 +120,140 @@ public partial class MouseKeyMonitor : IDisposable
         Simulation.PostMessage(_hWnd).KeyPress(_pickUpKeyCode);
     }
 
+    private void GlobalHookKeyDown(object? sender, RawKeyboardInputEventArgs e)
+    {
+        if (e.IsKeyDown)
+        {
+            HandleKeyDown(sender, (Keys)e.VirtualKey, e.Timestamp);
+        }
+        else
+        {
+            HandleKeyUp(sender, (Keys)e.VirtualKey, e.Timestamp);
+        }
+    }
+
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
-        // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, DateTime.UtcNow);
+        HandleKeyDown(sender, e.KeyCode, DateTime.UtcNow);
+    }
 
+    private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
+    {
+        HandleKeyUp(sender, e.KeyCode, DateTime.UtcNow);
+    }
+
+    private void HandleKeyDown(object? sender, Keys key, DateTime timestamp)
+    {
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(key, timestamp);
         if (SystemControl.IsGenshinImpactActive())
         {
-            ChatUiHotkeyGuard.PrimeFromChatKey(e.KeyCode);
+            ChatUiHotkeyGuard.PrimeFromChatKey(key);
         }
 
-        // 热键按下事件
-        HotKeyDown(sender, e);
-
-        if (e.KeyCode == _releaseControlKey)
+        HotKeyDown(sender, key);
+        if (key == _releaseControlKey)
         {
             if (_firstSpaceKeyDownTime == DateTime.MaxValue)
             {
                 _firstSpaceKeyDownTime = DateTime.Now;
             }
-            else
+            else if ((DateTime.Now - _firstSpaceKeyDownTime).TotalMilliseconds > 300
+                     && TaskContext.Instance().Config.MacroConfig.SpacePressHoldToContinuationEnabled
+                     && !_spaceTimer.Enabled)
             {
-                var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
-                if (timeSpan.TotalMilliseconds > 300 && TaskContext.Instance().Config.MacroConfig.SpacePressHoldToContinuationEnabled)
-                    if (!_spaceTimer.Enabled)
-                        _spaceTimer.Start();
+                _spaceTimer.Start();
             }
         }
-        else if (e.KeyCode == _pickUpKey)
+        else if (key == _pickUpKey)
         {
             if (_firstFKeyDownTime == DateTime.MaxValue)
             {
                 _firstFKeyDownTime = DateTime.Now;
             }
-            else
+            else if ((DateTime.Now - _firstFKeyDownTime).TotalMilliseconds > 200
+                     && TaskContext.Instance().Config.MacroConfig.FPressHoldToContinuationEnabled
+                     && !_fTimer.Enabled)
             {
-                var timeSpan = DateTime.Now - _firstFKeyDownTime;
-                if (timeSpan.TotalMilliseconds > 200 && TaskContext.Instance().Config.MacroConfig.FPressHoldToContinuationEnabled)
-                    if (!_fTimer.Enabled)
-                        _fTimer.Start();
+                _fTimer.Start();
             }
         }
     }
 
-    private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
+    private void HandleKeyUp(object? sender, Keys key, DateTime timestamp)
     {
-        // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e, DateTime.UtcNow);
-
-        // 热键松开事件
-        HotKeyUp(sender, e);
-
-        if (e.KeyCode == _releaseControlKey)
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(key, timestamp);
+        HotKeyUp(sender, key);
+        if (key == _releaseControlKey)
         {
-            if (_firstSpaceKeyDownTime != DateTime.MaxValue)
-            {
-                var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
-                Debug.WriteLine($"Space按下时间：{timeSpan.TotalMilliseconds}ms");
-                _firstSpaceKeyDownTime = DateTime.MaxValue;
-                _spaceTimer.Stop();
-            }
+            _firstSpaceKeyDownTime = DateTime.MaxValue;
+            _spaceTimer.Stop();
         }
-        else if (e.KeyCode == _pickUpKey)
+        else if (key == _pickUpKey)
         {
-            if (_firstFKeyDownTime != DateTime.MaxValue)
-            {
-                var timeSpan = DateTime.Now - _firstFKeyDownTime;
-                Debug.WriteLine($"F按下时间：{timeSpan.TotalMilliseconds}ms");
-                _firstFKeyDownTime = DateTime.MaxValue;
-                _fTimer.Stop();
-            }
+            _firstFKeyDownTime = DateTime.MaxValue;
+            _fTimer.Stop();
         }
     }
 
-    private void HotKeyDown(object? sender, KeyEventArgs e)
+    private void HotKeyDown(object? sender, Keys key)
     {
-        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook)) hook.KeyDown(sender, e);
+        if (KeyboardHook.AllKeyboardHooks.TryGetValue(key, out var hook)) hook.KeyDown(sender, key);
     }
 
-    private void HotKeyUp(object? sender, KeyEventArgs e)
+    private void HotKeyUp(object? sender, Keys key)
     {
-        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook)) hook.KeyUp(sender, e);
+        if (KeyboardHook.AllKeyboardHooks.TryGetValue(key, out var hook)) hook.KeyUp(sender, key);
     }
 
-    //private void GlobalHookKeyPress(object? sender, KeyPressEventArgs e)
-    //{
-    //    Debug.WriteLine("KeyPress: \t{0}", e.KeyChar);
-    //}
+    private void GlobalHookMouseButton(object? sender, RawMouseButtonEventArgs e)
+    {
+        HandleMouseButton(sender, e.Button, e.IsDown, DateTime.UtcNow);
+    }
 
     private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
     {
-        // Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(e, DateTime.UtcNow);
-
-        if (e.Button != MouseButtons.Left)
-            if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
-                hook.MouseDown(sender, e);
+        var timestamp = DateTime.UtcNow;
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(e, timestamp);
+        HandleMouseButton(sender, e.Button, true, timestamp, record: false);
     }
 
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
     {
-        // Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseUp(e, DateTime.UtcNow);
+        var timestamp = DateTime.UtcNow;
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseUp(e, timestamp);
+        HandleMouseButton(sender, e.Button, false, timestamp, record: false);
+    }
 
-        if (e.Button != MouseButtons.Left)
-            if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
-                hook.MouseUp(sender, e);
+    private void HandleMouseButton(object? sender, MouseButtons button, bool isDown, DateTime timestamp, bool record = true)
+    {
+        if (record && isDown)
+        {
+            GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(button, timestamp);
+        }
+        else if (record)
+        {
+            GlobalKeyMouseRecord.Instance.GlobalHookMouseUp(button, timestamp);
+        }
+
+        if (button != MouseButtons.Left
+            && MouseHook.AllMouseHooks.TryGetValue(button, out var hook))
+        {
+            hook.MouseDown(sender, button, isDown);
+        }
     }
 
     private void GlobalHookMouseMoveExt(object? sender, MouseEventExtArgs e)
     {
-        // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e, DateTime.UtcNow);    
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e, DateTime.UtcNow);
     }
-    
+
+    private void GlobalHookMouseWheel(object? sender, RawMouseWheelEventArgs e)
+    {
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e.Delta, DateTime.UtcNow);
+    }
+
     private void GlobalHookMouseWheelExt(object? sender, MouseEventExtArgs e)
     {
-        // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t Delta: {2};\t System Timestamp: {3}", e.Button, e.Location, e.Delta, e.Timestamp);
         GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e, DateTime.UtcNow);
     }
 
@@ -248,12 +264,16 @@ public partial class MouseKeyMonitor : IDisposable
         _firstSpaceKeyDownTime = DateTime.MaxValue;
         _firstFKeyDownTime = DateTime.MaxValue;
 
-        if (!_isSubscribed)
+        if (_usingRawInput)
         {
-            return;
+            _keyboardSubscription?.Dispose();
+            _keyboardSubscription = null;
+            _mouseButtonSubscription?.Dispose();
+            _mouseButtonSubscription = null;
+            _mouseWheelSubscription?.Dispose();
+            _mouseWheelSubscription = null;
         }
-
-        if (_globalHook != null && !WinePlatformAddon.IsRunningOnWine)
+        else if (_globalHook != null)
         {
             _globalHook.KeyDown -= GlobalHookKeyDown;
             _globalHook.KeyUp -= GlobalHookKeyUp;
@@ -261,23 +281,21 @@ public partial class MouseKeyMonitor : IDisposable
             _globalHook.MouseUpExt -= GlobalHookMouseUpExt;
             _globalHook.MouseMoveExt -= GlobalHookMouseMoveExt;
             _globalHook.MouseWheelExt -= GlobalHookMouseWheelExt;
-            //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
             _globalHook = null;
         }
-        if (WinePlatformAddon.IsRunningOnWine){
-          DisposeWineAddon();
+
+        if (WinePlatformAddon.IsRunningOnWine)
+        {
+            DisposeWineAddon();
         }
+
         _isSubscribed = false;
     }
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
+        if (_disposed) return;
         Unsubscribe();
         _disposed = true;
         _spaceTimer.Elapsed -= OnSpaceTimerElapsed;
