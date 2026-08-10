@@ -77,6 +77,11 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         public DateTime LinkedStartGenshinTime { get; set; } = DateTime.MinValue;
 
+        /// <summary>
+        /// 本次截图器启动时原神是否由 BGI 联动启动（"自动进入游戏-仅BGI自启原神时执行"模式的判断依据）
+        /// </summary>
+        public bool GenshinStartedByLinkedStart { get; set; }
+
         public List<string> GetGenshinGameProcessNameList()
         {
             if (IsInitialized)

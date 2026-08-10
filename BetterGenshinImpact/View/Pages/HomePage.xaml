@@ -483,13 +483,17 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）"
+                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）；「仅BGI自启原神时执行」模式下，捕获已有原神将跳过该流程"
                                   TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.GenshinStartConfig.AutoEnterGameEnabled, Mode=TwoWay}" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="160"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding AutoEnterGameModes}"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding Config.GenshinStartConfig.AutoEnterGameMode, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -414,7 +414,7 @@ public partial class ScriptService : IScriptService
                                 Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
                                 if (autoconfig.RestartGameTogether
                                     && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled
-                                    && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
+                                    && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameMode != AutoEnterGameMode.Never)
                                 {
                                     SystemControl.CloseGame();
                                     Thread.Sleep(2000);

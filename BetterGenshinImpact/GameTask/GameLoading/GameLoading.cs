@@ -70,7 +70,7 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public void Init()
     {
-        if (!_config.AutoEnterGameEnabled)
+        if (_config.AutoEnterGameMode == AutoEnterGameMode.Never)
         {
             InnerSetEnabled(false);
         }
@@ -245,6 +245,13 @@ public class GameLoadingTrigger : ITaskTrigger
         if ((DateTime.Now - _triggerStartTime).TotalMinutes >= 5)
         {
             InnerSetEnabled(false);
+            return;
+        }
+
+        // 仅联动启动模式：捕获已有原神（非 BGI 启动）时跳过自动进入游戏流程
+        if (_config.AutoEnterGameMode == AutoEnterGameMode.OnlyWhenLinkedStart
+            && !TaskContext.Instance().GenshinStartedByLinkedStart)
+        {
             return;
         }
         

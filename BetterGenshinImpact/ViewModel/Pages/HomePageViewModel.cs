@@ -55,6 +55,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private bool _disposed;
     [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
+    [ObservableProperty] private IEnumerable<EnumItem<AutoEnterGameMode>> _autoEnterGameModes = EnumExtensions.ToEnumItems<AutoEnterGameMode>();
+
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
     [ObservableProperty] private bool _taskDispatcherEnabled = false;
@@ -285,6 +287,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 if (hWnd != IntPtr.Zero)
                 {
                     TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
+                    TaskContext.Instance().GenshinStartedByLinkedStart = true; // 标识本次原神由 BGI 联动启动
                 }
                 else
                 {
@@ -297,6 +300,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
                 return;
             }
+        }
+        else
+        {
+            // 捕获已有原神进程，非 BGI 联动启动
+            TaskContext.Instance().GenshinStartedByLinkedStart = false;
         }
 
         Start(hWnd);

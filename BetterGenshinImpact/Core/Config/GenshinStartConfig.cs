@@ -1,7 +1,27 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
 using System;
+using System.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
+
+/// <summary>
+///     自动进入游戏模式
+/// </summary>
+public enum AutoEnterGameMode
+{
+    /// <summary>始终执行：任何情况下都自动进入游戏（原"开启"行为）</summary>
+    [Description("始终执行")]
+    Always,
+
+    /// <summary>不执行：不自动进入游戏（原"关闭"行为）</summary>
+    [Description("不执行")]
+    Never,
+
+    /// <summary>仅联动启动时执行：只在 BGI 自己启动原神后自动进入游戏</summary>
+    [Description("仅BGI自启原神时执行")]
+    OnlyWhenLinkedStart,
+}
 
 /// <summary>
 ///     原神启动配置
@@ -16,10 +36,25 @@ public partial class GenshinStartConfig : ObservableObject
     // private bool _autoClickBlessingOfTheWelkinMoonEnabled;
 
     /// <summary>
-    ///     自动进入游戏（开门）
+    ///     自动进入游戏（开门）模式
     /// </summary>
     [ObservableProperty]
-    private bool _autoEnterGameEnabled = true;
+    private AutoEnterGameMode _autoEnterGameMode = AutoEnterGameMode.Always;
+
+    /// <summary>
+    ///     兼容旧配置：旧版本 AutoEnterGameEnabled(bool) 自动迁移到 AutoEnterGameMode
+    /// </summary>
+    [JsonProperty("AutoEnterGameEnabled")]
+    private bool? AutoEnterGameEnabledLegacy
+    {
+        set
+        {
+            if (value != null)
+            {
+                AutoEnterGameMode = value.Value ? AutoEnterGameMode.Always : AutoEnterGameMode.Never;
+            }
+        }
+    }
 
     /// <summary>
     ///     原神启动参数
