@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -150,7 +150,7 @@ public class ScanPickTask
     /// <returns>A tuple containing whether items were found and the list of pickable items</returns>
     private (bool hasItems, List<Rect> pickItems) DetectPickableItems()
     {
-        var ra = CaptureToRectArea();
+        using var ra = CaptureToRectArea();
         var resultDic = _predictor.Detect(ra);
         // 过滤出可拾取物品
         var pickItems = resultDic.Where(x => x.Key is "drops" or "ore")

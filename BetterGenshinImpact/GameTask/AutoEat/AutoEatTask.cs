@@ -164,7 +164,8 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             try
             {
                 // 检测当前角色是否红血
-                if (Bv.CurrentAvatarIsLowHp(CaptureToRectArea()))
+                using var capture = CaptureToRectArea();
+                if (Bv.CurrentAvatarIsLowHp(capture))
                 {
                     var now = DateTime.Now;
                     // 检查是否超过吃药间隔时间，避免重复吃药
