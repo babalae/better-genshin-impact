@@ -483,7 +483,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）；「仅BGI自启原神时执行」模式下，捕获已有原神将跳过该流程"
+                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
