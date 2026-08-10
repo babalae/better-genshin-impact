@@ -39,14 +39,14 @@
 
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
-		<PackageReference Include="BehaviourTree" Version="1.0.73" />
+		<PackageReference Include="CsTrees" Version="1.0.1" />
 
-		
+
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.20" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.29" />
+		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.29" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.18" />
-		
+
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
