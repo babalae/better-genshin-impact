@@ -13826,6 +13826,101 @@
           ]
         },
         {
+          "id": 1757,
+          "type": "Goddess",
+          "name": "七天神像-冰",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7607.96,
+            208.25,
+            7842.39
+          ],
+          "tranPosition": [
+            7592.5435,
+            208.81148,
+            7840.712
+          ]
+        },
+        {
+          "id": 1758,
+          "type": "Goddess",
+          "name": "七天神像-冰",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9480.659,
+            380.5598,
+            6755.051
+          ],
+          "tranPosition": [
+            9484.34,
+            380.5663,
+            6751.787
+          ]
+        },
+        {
+          "id": 1759,
+          "type": "Goddess",
+          "name": "七天神像-冰",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8323.37,
+            369.4373,
+            6655.25
+          ],
+          "tranPosition": [
+            8320.66,
+            369.184,
+            6650.75
+          ]
+        },
+        {
+          "id": 1760,
+          "type": "Goddess",
+          "name": "七天神像-冰",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            9286.47,
+            195.5972,
+            7897.01
+          ],
+          "tranPosition": [
+            9272.884,
+            192.7431,
+            7890.28
+          ]
+        },
+        {
+          "id": 1761,
+          "type": "Goddess",
+          "name": "七天神像-冰",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            9721.123,
+            378.6341,
+            5700.875
+          ],
+          "tranPosition": [
+            9718.483,
+            378.80057,
+            5697.8057
+          ]
+        },
+        {
           "id": 1770,
           "type": "TeleportWaypoint",
           "name": "传送锚点",
@@ -13881,6 +13976,25 @@
             5665.688,
             -150.169,
             8658.072
+          ]
+        },
+        {
+          "id": 1785,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            9401.072,
+            378.1149,
+            5869.346
+          ],
+          "tranPosition": [
+            9399.755,
+            378.7415,
+            5866.65
           ]
         },
         {
@@ -13980,6 +14094,82 @@
             5153.0776,
             237.16643,
             9554.542
+          ]
+        },
+        {
+          "id": 1833,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            10382.77,
+            564.5144,
+            5527.506
+          ],
+          "tranPosition": [
+            10387.274,
+            564.768,
+            5527.3213
+          ]
+        },
+        {
+          "id": 1834,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            10425.86,
+            644.1411,
+            5397.858
+          ],
+          "tranPosition": [
+            10426.551,
+            644.31915,
+            5400.2275
+          ]
+        },
+        {
+          "id": 1835,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            10316.67,
+            769.8664,
+            5477.81
+          ],
+          "tranPosition": [
+            10315.098,
+            770.5175,
+            5485.6206
+          ]
+        },
+        {
+          "id": 1842,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7023.16,
+            202.134,
+            8684.22
+          ],
+          "tranPosition": [
+            7027.2866,
+            202.03935,
+            8684.626
           ]
         },
         {
@@ -14098,6 +14288,101 @@
           ]
         },
         {
+          "id": 1914,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            9124.076,
+            123.7045,
+            8236.475
+          ],
+          "tranPosition": [
+            9125.066,
+            122.9,
+            8240.865
+          ]
+        },
+        {
+          "id": 1915,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            9116.161,
+            13.8832,
+            8408.255
+          ],
+          "tranPosition": [
+            9112.467,
+            13.63885,
+            8407.578
+          ]
+        },
+        {
+          "id": 1916,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            8785.744,
+            87.33034,
+            8498.223
+          ],
+          "tranPosition": [
+            8785.949,
+            87.26644,
+            8493.589
+          ]
+        },
+        {
+          "id": 1917,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            8758.3,
+            134.324,
+            8633.279
+          ],
+          "tranPosition": [
+            8754.279,
+            133.4983,
+            8632.59
+          ]
+        },
+        {
+          "id": 1918,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            8701.809,
+            124.868,
+            8823.034
+          ],
+          "tranPosition": [
+            8706.638,
+            124.7185,
+            8821.025
+          ]
+        },
+        {
           "id": 1919,
           "type": "TrounceDomain",
           "name": "赝月的研究所",
@@ -14200,6 +14485,139 @@
             3591.2407,
             236.71031,
             -245.17517
+          ]
+        },
+        {
+          "id": 1927,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8676.665,
+            262.8333,
+            6544.799
+          ],
+          "tranPosition": [
+            8672,
+            263,
+            6541
+          ]
+        },
+        {
+          "id": 1930,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8138.425,
+            467.2558,
+            6719.471
+          ],
+          "tranPosition": [
+            8141,
+            467.6,
+            6721
+          ]
+        },
+        {
+          "id": 1931,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8379.836,
+            496.6054,
+            6326.741
+          ],
+          "tranPosition": [
+            8384.702,
+            495.9999,
+            6322.085
+          ]
+        },
+        {
+          "id": 1932,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8243.422,
+            530.9639,
+            6213.676
+          ],
+          "tranPosition": [
+            8239.692,
+            529.971,
+            6205.309
+          ]
+        },
+        {
+          "id": 1933,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8186.803,
+            651.07,
+            6107.146
+          ],
+          "tranPosition": [
+            8186.12,
+            650.20917,
+            6100.882
+          ]
+        },
+        {
+          "id": 1934,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            7965,
+            1184.045,
+            6232
+          ],
+          "tranPosition": [
+            7967.333,
+            1183.8265,
+            6237.8794
+          ]
+        },
+        {
+          "id": 1939,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            10078.23,
+            429.274,
+            5538.903
+          ],
+          "tranPosition": [
+            10078.31,
+            429.59317,
+            5534.336
           ]
         },
         {
@@ -14322,6 +14740,82 @@
           ]
         },
         {
+          "id": 1963,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9291.603,
+            281.6779,
+            6915.151
+          ],
+          "tranPosition": [
+            9299.424,
+            281.6672,
+            6908.7036
+          ]
+        },
+        {
+          "id": 1969,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            10012.92,
+            390.3879,
+            6481.874
+          ],
+          "tranPosition": [
+            10020.49,
+            389.2664,
+            6488.673
+          ]
+        },
+        {
+          "id": 1970,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            9029.309,
+            60.4,
+            8510.335
+          ],
+          "tranPosition": [
+            9025.476,
+            59.53087,
+            8506.366
+          ]
+        },
+        {
+          "id": 1997,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            10006.61,
+            243.5205,
+            6776.716
+          ],
+          "tranPosition": [
+            10011.881,
+            243.7024,
+            6785.3833
+          ]
+        },
+        {
           "id": 2003,
           "type": "BlessDomain",
           "name": "山风的荆冕",
@@ -14345,6 +14839,25 @@
           ]
         },
         {
+          "id": 2004,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            9378.858,
+            390.5187,
+            5980.271
+          ],
+          "tranPosition": [
+            9377.791,
+            390.83237,
+            5977.5596
+          ]
+        },
+        {
           "id": 2009,
           "type": "TeleportWaypoint",
           "name": "传送锚点",
@@ -14361,6 +14874,44 @@
             2888.099,
             228.76279,
             -748.8444
+          ]
+        },
+        {
+          "id": 2014,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9529.721,
+            289.1208,
+            6939.133
+          ],
+          "tranPosition": [
+            9525.012,
+            289.4783,
+            6937.187
+          ]
+        },
+        {
+          "id": 2015,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9359.955,
+            377.3225,
+            6517.049
+          ],
+          "tranPosition": [
+            9356.417,
+            378.00113,
+            6513.739
           ]
         },
         {
@@ -14465,6 +15016,153 @@
           ]
         },
         {
+          "id": 2064,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9465.516,
+            251.6799,
+            7659.296
+          ],
+          "tranPosition": [
+            9477.357,
+            251.6754,
+            7648.06
+          ]
+        },
+        {
+          "id": 2071,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            8160.633,
+            209.925,
+            8245.112
+          ],
+          "tranPosition": [
+            8159.625,
+            210.877,
+            8250.61
+          ]
+        },
+        {
+          "id": 2074,
+          "type": "MasteryDomain",
+          "name": "荒坠的圣迹",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8384.9,
+            311.38,
+            6891.6
+          ],
+          "tranPosition": [
+            8389.495,
+            311.2613,
+            6894.088
+          ],
+          "rewards": [
+            "「慈爱」的哲学",
+            "「坚忍」的哲学",
+            "「荣光」的哲学"
+          ]
+        },
+        {
+          "id": 2075,
+          "type": "BlessDomain",
+          "name": "逆悬的冰河",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8919.8,
+            174.22,
+            7470.996
+          ],
+          "tranPosition": [
+            8914.916,
+            174,
+            7468
+          ],
+          "rewards": [
+            "血红之证",
+            "炉火融炼之心"
+          ]
+        },
+        {
+          "id": 2080,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            9031.03,
+            254.59,
+            6112.99
+          ],
+          "tranPosition": [
+            9033.588,
+            254.4,
+            6115.346
+          ]
+        },
+        {
+          "id": 2081,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9217.108,
+            203.6834,
+            7553.813
+          ],
+          "tranPosition": [
+            9220.383,
+            203.668,
+            7555.104
+          ]
+        },
+        {
+          "id": 2106,
+          "type": "ForgeryDomain",
+          "name": "妄念的创痕",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9053.24,
+            83.06,
+            6924.03
+          ],
+          "tranPosition": [
+            9055.321,
+            82.74394,
+            6930.534
+          ],
+          "rewards": [
+            "苍星军势的征服",
+            "藏窖灵浆的恣意",
+            "凛雪帝皇的辞决"
+          ]
+        },
+        {
           "id": 2119,
           "type": "Other",
           "name": "隐居处",
@@ -14481,6 +15179,386 @@
             2667.7,
             335.06516,
             4643.944
+          ]
+        },
+        {
+          "id": 2121,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7972.39,
+            197.96,
+            8112.94
+          ],
+          "tranPosition": [
+            7972.289,
+            197.452,
+            8106.089
+          ]
+        },
+        {
+          "id": 2122,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            7766.77,
+            200.11,
+            6646.71
+          ],
+          "tranPosition": [
+            7771,
+            200.1,
+            6647
+          ]
+        },
+        {
+          "id": 2123,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            10172.9,
+            200.087,
+            7340.398
+          ],
+          "tranPosition": [
+            10176.437,
+            200.06746,
+            7340.462
+          ]
+        },
+        {
+          "id": 2128,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            8526.15,
+            219.51,
+            7816.77
+          ],
+          "tranPosition": [
+            8520.603,
+            219.51001,
+            7813.76
+          ]
+        },
+        {
+          "id": 2130,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9313.96,
+            71.46281,
+            7156.7
+          ],
+          "tranPosition": [
+            9310.305,
+            69.94579,
+            7164.084
+          ]
+        },
+        {
+          "id": 2134,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7901.008,
+            198.6886,
+            7144.097
+          ],
+          "tranPosition": [
+            7900.7725,
+            198.81895,
+            7141.667
+          ]
+        },
+        {
+          "id": 2135,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7959.92,
+            197.736,
+            7461.41
+          ],
+          "tranPosition": [
+            7962.647,
+            197.62982,
+            7466.438
+          ]
+        },
+        {
+          "id": 2136,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8545.167,
+            95.171,
+            7556.558
+          ],
+          "tranPosition": [
+            8540.518,
+            94.994,
+            7562.398
+          ]
+        },
+        {
+          "id": 2137,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8521.69,
+            324.5914,
+            6798.677
+          ],
+          "tranPosition": [
+            8522.369,
+            324.641,
+            6796.293
+          ]
+        },
+        {
+          "id": 2138,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8236.681,
+            511.222,
+            6177.117
+          ],
+          "tranPosition": [
+            8233,
+            511,
+            6174
+          ]
+        },
+        {
+          "id": 2139,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8340.315,
+            487.361,
+            6252.873
+          ],
+          "tranPosition": [
+            8342,
+            487,
+            6247
+          ]
+        },
+        {
+          "id": 2140,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8255.716,
+            505.4232,
+            6115.118
+          ],
+          "tranPosition": [
+            8248.169,
+            505.348,
+            6128.001
+          ]
+        },
+        {
+          "id": 2141,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8323.679,
+            524.9395,
+            6220.577
+          ],
+          "tranPosition": [
+            8319.424,
+            525.0103,
+            6219.137
+          ]
+        },
+        {
+          "id": 2144,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9623.532,
+            397.318,
+            6693.813
+          ],
+          "tranPosition": [
+            9624.359,
+            397.28372,
+            6689.728
+          ]
+        },
+        {
+          "id": 2145,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9914.873,
+            411.636,
+            6682.366
+          ],
+          "tranPosition": [
+            9910.051,
+            411.76312,
+            6693.2163
+          ]
+        },
+        {
+          "id": 2146,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9569.85,
+            290.929,
+            6672.967
+          ],
+          "tranPosition": [
+            9569.976,
+            290.52704,
+            6680.4785
+          ]
+        },
+        {
+          "id": 2147,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9666.27,
+            310.099,
+            6863.132
+          ],
+          "tranPosition": [
+            9656.448,
+            309.97446,
+            6866.9644
+          ]
+        },
+        {
+          "id": 2148,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9571.431,
+            395.29,
+            6573.068
+          ],
+          "tranPosition": [
+            9580.595,
+            395.29,
+            6583.505
+          ]
+        },
+        {
+          "id": 2150,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "焰羽谷"
+          ],
+          "position": [
+            8901.16,
+            77.681,
+            8409.658
+          ],
+          "tranPosition": [
+            8901.473,
+            76.90004,
+            8414.474
+          ]
+        },
+        {
+          "id": 2152,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8727.032,
+            247.0683,
+            6940.968
+          ],
+          "tranPosition": [
+            8730.908,
+            247.36493,
+            6940.443
           ]
         },
         {
@@ -14501,6 +15579,234 @@
             5735.649,
             -81.79146,
             8378.32
+          ]
+        },
+        {
+          "id": 2164,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8963.289,
+            72.221,
+            7133.3
+          ],
+          "tranPosition": [
+            8965.654,
+            72.223,
+            7136.623
+          ]
+        },
+        {
+          "id": 2174,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8687.174,
+            72.966,
+            7329.471
+          ],
+          "tranPosition": [
+            8684.707,
+            73.075356,
+            7328.901
+          ]
+        },
+        {
+          "id": 2185,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7500.75,
+            268.773,
+            7981.56
+          ],
+          "tranPosition": [
+            7500.952,
+            268.9298,
+            7974.168
+          ]
+        },
+        {
+          "id": 2186,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8694.192,
+            159.1647,
+            8262.85
+          ],
+          "tranPosition": [
+            8693.731,
+            159.1647,
+            8265.318
+          ]
+        },
+        {
+          "id": 2187,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            10075.43,
+            201.7885,
+            6915.292
+          ],
+          "tranPosition": [
+            10074.396,
+            201.969,
+            6910.768
+          ]
+        },
+        {
+          "id": 2198,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            7721.667,
+            217,
+            7668.392
+          ],
+          "tranPosition": [
+            7726.9326,
+            216.99998,
+            7677.619
+          ]
+        },
+        {
+          "id": 2204,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            9658.71,
+            215.6033,
+            7574.98
+          ],
+          "tranPosition": [
+            9663.209,
+            215.3176,
+            7581.161
+          ]
+        },
+        {
+          "id": 2205,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8955.364,
+            184.7088,
+            7794.522
+          ],
+          "tranPosition": [
+            8955.393,
+            184.89275,
+            7798.7583
+          ]
+        },
+        {
+          "id": 2219,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "霜殛寒峰"
+          ],
+          "position": [
+            8670.113,
+            245.343,
+            6083.86
+          ],
+          "tranPosition": [
+            8675,
+            244,
+            6079
+          ]
+        },
+        {
+          "id": 2220,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "永凝冻土"
+          ],
+          "position": [
+            8672.722,
+            199.118,
+            6613.672
+          ],
+          "tranPosition": [
+            8675,
+            199,
+            6609
+          ]
+        },
+        {
+          "id": 2225,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "白桦雪葬地"
+          ],
+          "position": [
+            10496.84,
+            525.3665,
+            5535.032
+          ],
+          "tranPosition": [
+            10492.514,
+            525.6209,
+            5533.935
+          ]
+        },
+        {
+          "id": 2228,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "至冬",
+          "areas": [
+            "古兽冰原"
+          ],
+          "position": [
+            8337.123,
+            197,
+            7394.98
+          ],
+          "tranPosition": [
+            8341.697,
+            199.09085,
+            7387.796
           ]
         }
       ]
