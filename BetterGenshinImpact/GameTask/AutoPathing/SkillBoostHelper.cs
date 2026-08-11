@@ -73,6 +73,10 @@ public partial class PathExecutor
     private DateTime _lastJumpFlyTime = DateTime.MinValue;
     private bool _jumpFlySafetyPending;
     private DateTime _lastMavikaBoardTime = DateTime.MinValue;
+    /// <summary>
+    /// 本次上车后已执行的冲刺跳飞次数（玛薇卡），上车时重置
+    /// </summary>
+    private int _mavikaSprintJumpCount;
     private DateTime _lastSkillCheckTime = DateTime.MinValue;
     private DateTime _lastLandingTime = DateTime.MinValue;
     /// <summary>
@@ -207,19 +211,124 @@ public partial class PathExecutor
                     _lastWaypointIndex = CurWaypoint.Item1;
                 }
 
-                // 安全降落：跳飞后间隔已过仍可能在空中，先普攻落地再继续后续逻辑（空中无法执行下车/切人）
+                //满足条件时，尝试上车
+                if (distance > PartyConfig.Distance)
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    var boardIconState = GetMavikaESkillIconState(screen2);
+                    // 内置冷却：玛薇卡上/下车动作后有约1秒无法再次上/下车，与E技能冷却无关（放宽至2秒防抖）
+                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 2 && boardIconState is 1 or 2)
+                    {
+                        _lastMavikaBoardTime = DateTime.UtcNow;
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(200, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(300, ct);
+                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        await Delay(300, ct);
+
+                        // E技能CD跟踪：仅续技能（状态1）触发更新，上车（状态2）不触发
+                        // 冲刺跳飞计数同样仅续技能（状态1）时重置，上车（状态2）不重置
+                        if (boardIconState == 1)
+                        {
+                            await ReadEskillCdAsync("玛薇卡");
+                            _mavikaSprintJumpCount = 0;
+                        }
+
+                        // 上车后不跳出当前帧，继续执行跳飞判定
+                    }
+                }
+
+                // 刚上车后的2秒内跳过图标检测（上/下车动作期间图标不稳定），跳飞/骑行/禁用冲刺三处共用
+                var justBoarded = (DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds < 2;
+                // 本帧图标状态懒获取：首次用到才计算一次（screen2 未更新，重复调用结果相同），跳飞/骑行/禁用冲刺共用
+                int? iconState = null;
+                int GetMavikaIconState() => iconState ??= GetMavikaESkillIconState(screen2);
+
+                //满足条件时，尝试跳飞
+                if (PartyConfig.MwkJumpFlyEnabled
+                    && distance > PartyConfig.MwkJumpFlyDistance
+                    && state.RotationStableCount >= 1)
+                {
+                    // 非豁免期间仅下车图标（3）可跳飞；状态4（E可用）由刚上车豁免覆盖，无需额外OCR判断
+                    if (!justBoarded && GetMavikaIconState() != 3)
+                    {
+                        return false;
+                    }
+
+                    if ((DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds < interval)
+                    {
+                        return true;
+                    }
+
+                    Logger.LogInformation("自动赶路：玛薇卡跳飞赶路 距离下个节点距离 {d}", Math.Round(distance));
+                    // 冲刺跳飞：上车后前若干次跳飞（计数小于配置值）且距离足够远时，跳飞前点按冲刺加速
+                    if (_mavikaSprintJumpCount < PartyConfig.MwkJumpFlySprintCount
+                        && distance > PartyConfig.MwkJumpFlyDistance * 1.3)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                        await Delay(100, ct);
+                        _mavikaSprintJumpCount++;
+                    }
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(150, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(100, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(10, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(150, ct);
+                    _lastJumpFlyTime = DateTime.UtcNow;
+                    _jumpFlySafetyPending = true;
+
+                    using var jumpCheckRegion = CaptureToRectArea();
+                    if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                        await Delay(300, ct);
+                        for (int i = 0; i < 5; i++)
+                        {
+                            using var retryRegion = CaptureToRectArea();
+                            if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                await Delay(300, ct);
+                            }
+                            else break;
+                        }
+                        return false;
+                    }
+
+                    if (SpaceAtSecondPlaceExist(state))
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    }
+
+                    return true;
+                }
+
+                // 应该下车时尝试下车，下车成功后（PendingApproach=false）本航点内不再重复检测
+                var mwkShouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                // 安全降落：仅当本帧未执行跳飞（跳飞块已 return）时才到达此处
+                // 跳飞后间隔已过仍可能在空中，先普攻落地再继续后续逻辑（空中无法执行下车/切人）并防止摔伤
                 // 放在接近处理之前，确保跳飞后快速接近时也能先落地；已下车成功（PendingApproach=false）则不再普攻
+                // 已满足下车条件时（mwkShouldApproach），即使跳飞间隔未到也执行安全降落普攻，确保接近节点时先落地
                 if (_lastJumpFlyTime != DateTime.MinValue
                     && _jumpFlySafetyPending
                     && state.PendingApproach
-                    && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds > interval)
+                    && ((DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds > interval
+                        || (mwkShouldApproach && state.PendingApproach)))
                 {
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    Logger.LogInformation("自动赶路：玛薇卡安全降落 距离下个节点距离 {d}", Math.Round(distance));
+                    // 普攻后点按一次空格打断后摇
+                    await Delay(50, ct);
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
                     _jumpFlySafetyPending = false;
                 }
 
-                //应该下车时尝试下车，下车成功后（PendingApproach=false）本航点内不再重复检测
-                var mwkShouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
                 if (mwkShouldApproach && state.PendingApproach)
                 {
                     if (PartyConfig.SwitchToWalkEnabled)
@@ -259,94 +368,9 @@ public partial class PathExecutor
                     return false;
                 }
 
-                //满足条件时，尝试上车
-                if (distance > PartyConfig.Distance)
-                {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
-
-                    var boardIconState = GetMavikaESkillIconState(screen2);
-                    // 内置冷却：玛薇卡上/下车动作后有约1秒无法再次上/下车，与E技能冷却无关（放宽至2秒防抖）
-                    if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 2 && boardIconState is 1 or 2)
-                    {
-                        _lastMavikaBoardTime = DateTime.UtcNow;
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(200, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(300, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(700, ct);
-
-                        // E技能CD跟踪：仅续技能（状态1）触发更新，上车（状态2）不触发
-                        if (boardIconState == 1)
-                        {
-                            await ReadEskillCdAsync("玛薇卡");
-                        }
-
-                        // 上车后不跳出当前帧，继续执行跳飞判定
-                    }
-                }
-
-                // 刚上车后的2秒内跳过图标检测（上/下车动作期间图标不稳定），跳飞/骑行/禁用冲刺三处共用
-                var justBoarded = (DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds < 2;
-
-                //满足条件时，尝试跳飞
-                if (PartyConfig.MwkJumpFlyEnabled && distance > PartyConfig.MwkJumpFlyDistance && state.RotationStableCount >= 1)
-                {
-                    var jumpFlyIconState = GetMavikaESkillIconState(screen2);
-                    // 非豁免期间仅下车图标（3）可跳飞；状态4（E可用）由刚上车豁免覆盖，无需额外OCR判断
-                    if (!justBoarded && jumpFlyIconState != 3)
-                    {
-                        return false;
-                    }
-
-                    if ((DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds < interval)
-                    {
-                        return true;
-                    }
-
-                    Logger.LogInformation("自动赶路：玛薇卡跳飞赶路 距离下个节点距离 {d}", Math.Round(distance));
-                    await Delay(50, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
-                    await Delay(150, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
-                    await Delay(100, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
-                    await Delay(10, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
-                    await Delay(150, ct);
-                    _lastJumpFlyTime = DateTime.UtcNow;
-                    _jumpFlySafetyPending = true;
-
-                    using var jumpCheckRegion = CaptureToRectArea();
-                    if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                        await Delay(300, ct);
-                        for (int i = 0; i < 5; i++)
-                        {
-                            using var retryRegion = CaptureToRectArea();
-                            if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
-                            {
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                await Delay(300, ct);
-                            }
-                            else break;
-                        }
-                        return false;
-                    }
-
-                    if (SpaceAtSecondPlaceExist(state))
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.Jump);
-                    }
-
-                    return true;
-                }
-
-                var iconState = GetMavikaESkillIconState(screen2);
                 // 先判断距离满足骑行条件，避免无谓读取冷却；刚上车2秒内或下车图标（3）视为在车上
                 if (distance > PartyConfig.Distance
-                    && (justBoarded || iconState == 3))
+                    && (justBoarded || GetMavikaIconState() == 3))
                 {
                     if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
                     {
@@ -387,7 +411,7 @@ public partial class PathExecutor
 
                 // 玛薇卡逻辑最后：勾选了禁用冲刺时，在车上（刚上车2秒内或下车图标）跳过本帧通用移动逻辑以禁用冲刺
                 if (PartyConfig.MwkDisableSprintEnabled
-                    && (justBoarded || iconState == 3))
+                    && (justBoarded || GetMavikaIconState() == 3))
                 {
                     // 通用移动逻辑可能已在此前（Run 路段）将冲刺键置为 KeyDown，这里松开一次防止上车后持续冲刺消耗夜魂值
                     Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
@@ -1617,7 +1641,9 @@ public partial class PathExecutor
             double? nextDistance = null;
             var currentList = CurWaypoints.Item2;
             var currentIndex = CurWaypoint.Item1;
-            if (currentList != null && currentIndex >= 0 && currentIndex + 1 < currentList.Count)
+            if (currentList != null
+                && currentIndex >= 0
+                && currentIndex + 1 < currentList.Count)
             {
                 nextWaypoint = currentList[currentIndex + 1];
                 nextDistance = Navigation.GetDistance(waypoint, new Point2f((float)nextWaypoint.X, (float)nextWaypoint.Y));
