@@ -34,19 +34,24 @@ public partial class AutoPickTrigger : ITaskTrigger
     private AutoPickAssets _autoPickAssets = null!;
 
     /// <summary>
-    /// 拾取黑名单
+    /// 黑名单模式的不拾取列表
     /// </summary>
     private HashSet<string> _blackList = [];
 
     /// <summary>
-    /// 拾取黑名单(模糊匹配)
+    /// 黑名单模式的不拾取列表(模糊匹配)
     /// </summary>
     private List<string> _fuzzyBlackList = [];
 
     /// <summary>
-    /// 拾取白名单
+    /// 黑名单模式的拾取列表
     /// </summary>
     private HashSet<string> _whiteList = [];
+
+    /// <summary>
+    /// 白名单模式最终需要拾取的列表
+    /// </summary>
+    private HashSet<string> _whitelistModeFinalPickList = [];
 
     private RecognitionObject _pickRo = null!;
 
@@ -67,22 +72,40 @@ public partial class AutoPickTrigger : ITaskTrigger
         var config = TaskContext.Instance().Config.AutoPickConfig;
         IsEnabled = config.Enabled;
 
-        if (config.BlackListEnabled)
+        var blackList = new HashSet<string>();
+        var fuzzyBlackList = new List<string>();
+        var whiteList = new HashSet<string>();
+        var whitelistModeFinalPickList = new HashSet<string>();
+
+        if (config.Mode == AutoPickMode.Blacklist)
         {
-            _blackList = ReadJson(@"Assets\Config\Pick\default_pick_black_lists.json");
-            var userBlackList = ReadText(@"User\pick_black_lists.txt");
-            if (userBlackList.Count > 0)
+            if (config.BlacklistModeDoNotPickEnabled)
             {
-                _blackList.UnionWith(userBlackList);
+                blackList = ReadJson(@"Assets\Config\Pick\default_pick_black_lists.json");
+                blackList.UnionWith(ReadText(@"User\pick_black_lists.txt"));
+                fuzzyBlackList = ReadTextList(@"User\pick_fuzzy_black_lists.txt");
             }
 
-            _fuzzyBlackList = ReadTextList(@"User\pick_fuzzy_black_lists.txt");
+            if (config.BlacklistModePickEnabled)
+            {
+                whiteList = ReadText(@"User\pick_white_lists.txt");
+            }
+        }
+        else if (config.WhitelistModePickEnabled)
+        {
+            whitelistModeFinalPickList = ReadJson(@"Assets\Config\Pick\default_pick_white_lists.json");
+            whitelistModeFinalPickList.UnionWith(ReadText(@"User\pick_whitelist_mode_pick_lists.txt"));
+            if (config.WhitelistModeDoNotPickEnabled)
+            {
+                whitelistModeFinalPickList.ExceptWith(ReadText(@"User\pick_whitelist_mode_do_not_pick_lists.txt"));
+            }
         }
 
-        if (config.WhiteListEnabled)
-        {
-            _whiteList = ReadText(@"User\pick_white_lists.txt");
-        }
+        // 使用完整的新集合替换旧集合，防止关闭规则或切换模式后残留旧数据。
+        _blackList = blackList;
+        _fuzzyBlackList = fuzzyBlackList;
+        _whiteList = whiteList;
+        _whitelistModeFinalPickList = whitelistModeFinalPickList;
     }
 
     private HashSet<string> ReadJson(string jsonFilePath)
@@ -97,8 +120,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取黑/白名单失败");
-            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            _logger.LogError(e, "读取拾取名单配置失败");
+            ThemedMessageBox.Error("读取拾取名单配置失败，请确认修改后的名单内容格式是否正确！");
         }
 
         return [];
@@ -117,8 +140,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取黑/白名单失败");
-            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            _logger.LogError(e, "读取拾取名单配置失败");
+            ThemedMessageBox.Error("读取拾取名单配置失败，请确认修改后的名单内容格式是否正确！");
         }
 
         return [];
@@ -137,8 +160,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取黑/白名单失败");
-            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            _logger.LogError(e, "读取拾取名单配置失败");
+            ThemedMessageBox.Error("读取拾取名单配置失败，请确认修改后的名单内容格式是否正确！");
         }
 
         return [];
@@ -229,17 +252,28 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
         }
 
-        if (!config.WhiteListEnabled && isExcludeIcon)
+        if (config.Mode == AutoPickMode.Whitelist)
         {
-            // 默认不拾取且没有白名单直接放弃OCR
+            // 白名单模式下，安全图标排除优先于拾取列表；关闭拾取规则时不进行OCR。
+            if (isExcludeIcon || !config.WhitelistModePickEnabled)
+            {
+                return;
+            }
+        }
+        else if (!config.BlacklistModePickEnabled && isExcludeIcon)
+        {
+            // 默认不拾取且没有拾取规则直接放弃OCR
             return;
         }
 
-        if (!config.WhiteListEnabled && !config.BlackListEnabled && !isExcludeIcon)
+        if (config.Mode == AutoPickMode.Blacklist
+            && !config.BlacklistModePickEnabled
+            && !config.BlacklistModeDoNotPickEnabled
+            && !isExcludeIcon)
         {
-            // 没有黑白名单直接拾取
+            // 没有拾取/不拾取规则直接拾取
             Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
-            LogPick(content, "黑名单未启用，直接拾取");
+            LogPick(content, "黑名单模式规则未启用，直接拾取");
         }
 
         //if (config.FastModeEnabled && !isExcludeIcon)
@@ -334,7 +368,18 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (config.WhiteListEnabled && _whiteList.Contains(text))
+            if (config.Mode == AutoPickMode.Whitelist)
+            {
+                if (_whitelistModeFinalPickList.Contains(text))
+                {
+                    LogPick(content, text);
+                    Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
+                }
+
+                return;
+            }
+
+            if (config.BlacklistModePickEnabled && _whiteList.Contains(text))
             {
                 LogPick(content, text);
                 Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
@@ -349,7 +394,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (config.BlackListEnabled)
+            if (config.BlacklistModeDoNotPickEnabled)
             {
                 if (_blackList.Contains(text))
                 {
