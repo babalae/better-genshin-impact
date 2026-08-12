@@ -13,8 +13,6 @@ public partial class AutoPickBlacklistConfigViewModel : AutoPickConfigWindowView
 
     private readonly AutoPickConfig _config;
 
-    [ObservableProperty] private bool _doNotPickEnabled;
-
     [ObservableProperty] private bool _pickEnabled;
 
     [ObservableProperty] private string _doNotPickText;
@@ -26,7 +24,6 @@ public partial class AutoPickBlacklistConfigViewModel : AutoPickConfigWindowView
     public AutoPickBlacklistConfigViewModel(AutoPickConfig config)
     {
         _config = config;
-        _doNotPickEnabled = config.BlacklistModeDoNotPickEnabled;
         _pickEnabled = config.BlacklistModePickEnabled;
         _doNotPickText = Global.ReadAllTextIfExist(DoNotPickPath) ?? string.Empty;
         _fuzzyDoNotPickText = Global.ReadAllTextIfExist(FuzzyDoNotPickPath) ?? string.Empty;
@@ -41,7 +38,6 @@ public partial class AutoPickBlacklistConfigViewModel : AutoPickConfigWindowView
             Global.WriteAllText(DoNotPickPath, DoNotPickText);
             Global.WriteAllText(FuzzyDoNotPickPath, FuzzyDoNotPickText);
             Global.WriteAllText(PickPath, PickText);
-            _config.BlacklistModeDoNotPickEnabled = DoNotPickEnabled;
             _config.BlacklistModePickEnabled = PickEnabled;
         });
     }

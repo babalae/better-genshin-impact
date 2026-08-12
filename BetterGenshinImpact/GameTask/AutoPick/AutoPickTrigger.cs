@@ -79,19 +79,16 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         if (config.Mode == AutoPickMode.Blacklist)
         {
-            if (config.BlacklistModeDoNotPickEnabled)
-            {
-                blackList = ReadJson(@"Assets\Config\Pick\default_pick_black_lists.json");
-                blackList.UnionWith(ReadText(@"User\pick_black_lists.txt"));
-                fuzzyBlackList = ReadTextList(@"User\pick_fuzzy_black_lists.txt");
-            }
+            blackList = ReadJson(@"Assets\Config\Pick\default_pick_black_lists.json");
+            blackList.UnionWith(ReadText(@"User\pick_black_lists.txt"));
+            fuzzyBlackList = ReadTextList(@"User\pick_fuzzy_black_lists.txt");
 
             if (config.BlacklistModePickEnabled)
             {
                 whiteList = ReadText(@"User\pick_white_lists.txt");
             }
         }
-        else if (config.WhitelistModePickEnabled)
+        else
         {
             whitelistModeFinalPickList = ReadJson(@"Assets\Config\Pick\default_pick_white_lists.json");
             whitelistModeFinalPickList.UnionWith(ReadText(@"User\pick_whitelist_mode_pick_lists.txt"));
@@ -254,8 +251,8 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         if (config.Mode == AutoPickMode.Whitelist)
         {
-            // 白名单模式下，安全图标排除优先于拾取列表；关闭拾取规则时不进行OCR。
-            if (isExcludeIcon || !config.WhitelistModePickEnabled)
+            // 白名单模式下，安全图标排除优先于拾取列表。
+            if (isExcludeIcon)
             {
                 return;
             }
@@ -264,16 +261,6 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             // 默认不拾取且没有拾取规则直接放弃OCR
             return;
-        }
-
-        if (config.Mode == AutoPickMode.Blacklist
-            && !config.BlacklistModePickEnabled
-            && !config.BlacklistModeDoNotPickEnabled
-            && !isExcludeIcon)
-        {
-            // 没有拾取/不拾取规则直接拾取
-            Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
-            LogPick(content, "黑名单模式规则未启用，直接拾取");
         }
 
         //if (config.FastModeEnabled && !isExcludeIcon)
@@ -394,19 +381,16 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (config.BlacklistModeDoNotPickEnabled)
+            if (_blackList.Contains(text))
             {
-                if (_blackList.Contains(text))
+                return;
+            }
+
+            if (_fuzzyBlackList.Count > 0)
+            {
+                if (_fuzzyBlackList.Any(item => text.Contains(item)))
                 {
                     return;
-                }
-
-                if (_fuzzyBlackList.Count > 0)
-                {
-                    if (_fuzzyBlackList.Any(item => text.Contains(item)))
-                    {
-                        return;
-                    }
                 }
             }
 

@@ -53,22 +53,10 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock FontWeight="SemiBold" Text="启用不拾取规则" />
-                            <TextBlock Margin="0,3,12,0"
-                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                       Text="关闭后，默认不拾取列表、精确配置和模糊配置均不生效。"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         VerticalAlignment="Center"
-                                         IsChecked="{Binding DoNotPickEnabled, Mode=TwoWay}" />
-                    </Grid>
+                    <TextBlock Margin="0,0,0,12"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                               Text="黑名单模式启用期间，默认、精确和模糊不拾取规则始终生效。"
+                               TextWrapping="Wrap" />
 
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
@@ -84,11 +72,10 @@
                             <TextBlock Margin="0,0,0,6"
                                        FontWeight="SemiBold"
                                        Text="精确匹配" />
-                            <ui:TextBox Grid.Row="1"
-                                        AcceptsReturn="True"
-                                        AcceptsTab="False"
-                                        IsEnabled="{Binding DoNotPickEnabled}"
-                                        PlaceholderText="每行一条记录，例如：精致的宝箱"
+                             <ui:TextBox Grid.Row="1"
+                                         AcceptsReturn="True"
+                                         AcceptsTab="False"
+                                         PlaceholderText="每行一条记录，例如：精致的宝箱"
                                         Text="{Binding DoNotPickText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                         TextWrapping="NoWrap"
                                         VerticalContentAlignment="Top"
@@ -103,11 +90,10 @@
                             <TextBlock Margin="0,0,0,6"
                                        FontWeight="SemiBold"
                                        Text="模糊匹配" />
-                            <ui:TextBox Grid.Row="1"
-                                        AcceptsReturn="True"
-                                        AcceptsTab="False"
-                                        IsEnabled="{Binding DoNotPickEnabled}"
-                                        PlaceholderText="每行一个关键词，OCR 文本包含该关键词时不拾取"
+                             <ui:TextBox Grid.Row="1"
+                                         AcceptsReturn="True"
+                                         AcceptsTab="False"
+                                         PlaceholderText="每行一个关键词，OCR 文本包含该关键词时不拾取"
                                         Text="{Binding FuzzyDoNotPickText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                         TextWrapping="NoWrap"
                                         VerticalContentAlignment="Top"

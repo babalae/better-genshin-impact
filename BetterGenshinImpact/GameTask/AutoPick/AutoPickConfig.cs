@@ -63,28 +63,13 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         [property: JsonConverter(typeof(JsonStringEnumConverter<AutoPickMode>))]
         private AutoPickMode _mode = AutoPickMode.Blacklist;
 
-        // 黑名单模式的不拾取规则启用状态
-        [ObservableProperty]
-        private bool _blacklistModeDoNotPickEnabled = true;
-
         // 黑名单模式的拾取规则启用状态
         [ObservableProperty]
         private bool _blacklistModePickEnabled = false;
 
-        // 白名单模式的拾取规则启用状态
-        [ObservableProperty]
-        private bool _whitelistModePickEnabled = true;
-
         // 白名单模式的不拾取规则启用状态
         [ObservableProperty]
         private bool _whitelistModeDoNotPickEnabled = true;
-
-        /// <summary>
-        /// 兼容旧版黑名单开关，读取后迁移到黑名单模式的不拾取规则。
-        /// </summary>
-        [JsonPropertyName("blackListEnabled")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public bool? LegacyBlackListEnabled { get; set; }
 
         /// <summary>
         /// 兼容旧版白名单开关，读取后迁移到黑名单模式的拾取规则。
@@ -95,23 +80,13 @@ namespace BetterGenshinImpact.GameTask.AutoPick
 
         public void MigrateLegacyConfig()
         {
-            if (LegacyBlackListEnabled is null && LegacyWhiteListEnabled is null)
+            if (LegacyWhiteListEnabled is null)
             {
                 return;
             }
 
             Mode = AutoPickMode.Blacklist;
-            if (LegacyBlackListEnabled is not null)
-            {
-                BlacklistModeDoNotPickEnabled = LegacyBlackListEnabled.Value;
-            }
-
-            if (LegacyWhiteListEnabled is not null)
-            {
-                BlacklistModePickEnabled = LegacyWhiteListEnabled.Value;
-            }
-
-            LegacyBlackListEnabled = null;
+            BlacklistModePickEnabled = LegacyWhiteListEnabled.Value;
             LegacyWhiteListEnabled = null;
         }
     }

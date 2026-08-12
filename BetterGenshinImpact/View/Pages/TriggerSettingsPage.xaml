@@ -39,28 +39,18 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="8"
                                 SnapsToDevicePixels="True">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="3" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+                             <Grid>
+                                 <Grid.ColumnDefinitions>
+                                     <ColumnDefinition Width="*" />
+                                     <ColumnDefinition Width="Auto" />
+                                 </Grid.ColumnDefinitions>
 
-                                <Border x:Name="SelectionBar"
-                                        Grid.Column="0"
-                                        Width="3"
-                                        Margin="-9,4,0,4"
-                                        HorizontalAlignment="Left"
-                                        Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                        CornerRadius="2"
-                                        Visibility="Collapsed" />
-
-                                <ContentPresenter Grid.Column="1"
-                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                <ContentPresenter Grid.Column="0"
+                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
 
                                 <Border x:Name="SelectionRing"
-                                        Grid.Column="2"
+                                        Grid.Column="1"
                                         Width="20"
                                         Height="20"
                                         Margin="14,0,0,0"
@@ -95,15 +85,17 @@
                                 <Setter TargetName="ModeCard"
                                         Property="BorderBrush"
                                         Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ModeCard"
-                                        Property="Background"
-                                        Value="{DynamicResource AccentFillColorTertiaryBrush}" />
+                             </Trigger>
+                             <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ModeCard" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="{DynamicResource AccentFillColorDefault}"
+                                                         Opacity="0.08" />
+                                    </Setter.Value>
+                                </Setter>
                                 <Setter TargetName="ModeCard"
                                         Property="BorderBrush"
                                         Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                                <Setter TargetName="SelectionBar" Property="Visibility" Value="Visible" />
                                 <Setter TargetName="SelectionRing"
                                         Property="BorderBrush"
                                         Value="{DynamicResource AccentFillColorDefaultBrush}" />
@@ -213,7 +205,7 @@
                 </Grid>
                 <StackPanel Margin="16,16,16,8">
                     <ui:TextBlock FontTypography="BodyStrong"
-                                  Text="名单模式"
+                                  Text="黑白名单模式"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Margin="0,2,0,0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -242,7 +234,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="BodyStrong"
-                                                  Text="黑名单模式（默认拾取）"
+                                                  Text="黑名单模式"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Margin="0,4,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -279,11 +271,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="BodyStrong"
-                                                  Text="白名单模式（仅列表拾取）"
+                                                  Text="白名单模式"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Margin="0,4,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                  Text="只拾取最终列表中明确允许的内容，其他内容全部忽略"
+                                                  Text="只拾取列表中的文本，其他文本全部忽略"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
