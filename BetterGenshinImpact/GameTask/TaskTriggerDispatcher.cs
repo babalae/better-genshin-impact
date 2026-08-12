@@ -123,6 +123,7 @@ namespace BetterGenshinImpact.GameTask
 
         public void Stop()
         {
+            // 等待所有在途帧退出后，才能安全释放截图资源。
             _captureTriggerScheduler.Stop();
             _overlayWindowScheduler.StopTimer();
             ChatUiHotkeyGuard.Reset();
