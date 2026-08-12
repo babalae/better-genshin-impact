@@ -43,6 +43,7 @@ public class ClaimEncounterPointsRewardsTask
         {
             Logger.LogDebug(e, "领取长效历练点奖励异常");
             Logger.LogError("领取长效历练点奖励异常: {Msg}", e.Message);
+            throw;
         }
     }
 

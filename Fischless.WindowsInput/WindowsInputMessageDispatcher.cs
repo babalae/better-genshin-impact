@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Vanara.PInvoke;
 
 namespace Fischless.WindowsInput;
@@ -19,9 +21,31 @@ internal class WindowsInputMessageDispatcher : IInputMessageDispatcher
 
         uint num = User32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(User32.INPUT)));
 
-        if (num != (ulong)(long)inputs.Length)
+        if (num != inputs.Length)
         {
-            throw new Exception("模拟键鼠消息发送失败！常见原因：1.你未以管理员权限运行程序；2.存在安全软件拦截（比如360）");
+            var errorCode = Marshal.GetLastWin32Error();
+            using var process = Process.GetCurrentProcess();
+            throw new InvalidOperationException(CreateFailureMessage(
+                inputs.Length,
+                num,
+                errorCode,
+                new Win32Exception(errorCode).Message,
+                process.Id,
+                process.SessionId));
         }
+    }
+
+    internal static string CreateFailureMessage(
+        int requested,
+        uint sent,
+        int errorCode,
+        string errorMessage,
+        int processId,
+        int sessionId)
+    {
+        return $"模拟键鼠消息发送失败: requested={requested}, sent={sent}, "
+               + $"win32Error={errorCode} ({errorMessage}), pid={processId}, sessionId={sessionId}. "
+               + "常见原因包括权限级别不一致或安全软件拦截；UIPI 拦截时 SendInput 可能返回 0，"
+               + "但 GetLastError 不一定提供有效原因。";
     }
 }

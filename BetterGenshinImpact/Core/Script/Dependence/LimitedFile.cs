@@ -163,6 +163,17 @@ public class LimitedFile(string rootPath)
     }
 
     /// <summary>
+    /// Read all text from a file and preserve the original exception on failure.
+    /// </summary>
+    /// <param name="path">File path.</param>
+    /// <returns>Text read from file.</returns>
+    public string ReadTextSyncOrThrow(string path)
+    {
+        path = NormalizePath(path);
+        return File.ReadAllText(path);
+    }
+
+    /// <summary>
     /// Read all text from a file.
     /// </summary>
     /// <param name="path">File path.</param>
@@ -181,6 +192,17 @@ public class LimitedFile(string rootPath)
             TaskControl.Logger.LogError("ReadText 异常: {Message}", ex.Message);
             return string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Read all text from a file asynchronously and preserve the original exception on failure.
+    /// </summary>
+    /// <param name="path">File path.</param>
+    /// <returns>Text read from file.</returns>
+    public async Task<string> ReadTextOrThrow(string path)
+    {
+        path = NormalizePath(path);
+        return await File.ReadAllTextAsync(path);
     }
 
     /// <summary>

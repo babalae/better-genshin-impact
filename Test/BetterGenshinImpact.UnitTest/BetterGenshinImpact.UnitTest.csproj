@@ -25,6 +25,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\BetterGenshinImpact\BetterGenshinImpact.csproj"/>
+        <ProjectReference Include="..\..\Fischless.WindowsInput\Fischless.WindowsInput.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

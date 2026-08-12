@@ -77,6 +77,7 @@ public class CheckRewardsTask
             {
                 Logger.LogWarning("检查每日奖励结果：{Msg}，请手动检查！", "未领取");
                 Notify.Event(NotificationEvent.DailyReward).Error("检查到每日奖励未领取，请手动查看！");
+                throw new InvalidOperationException("检查到每日奖励未领取");
             }
             await Delay(200, ct);
             await new ReturnMainUiTask().Start(ct);
@@ -85,6 +86,7 @@ public class CheckRewardsTask
         {
             Logger.LogDebug(e, "检查奖励并通知的任务异常");
             Logger.LogError("检查奖励并通知的任务异常: {Msg}", e.Message);
+            throw;
         }
     }
 }

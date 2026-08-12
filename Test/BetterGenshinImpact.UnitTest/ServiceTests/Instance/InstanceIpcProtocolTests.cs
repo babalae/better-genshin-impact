@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.Instance.MessageHandlers;
 
 namespace BetterGenshinImpact.UnitTest.ServiceTests.Instance;
 
@@ -74,6 +75,30 @@ public class InstanceIpcProtocolTests
         Assert.Equal(BetterGiInstanceType.Primary, options.InstanceType);
         Assert.False(options.HasExplicitInstanceType);
         Assert.Equal(CommandLineAction.None, options.Action);
+    }
+
+    [Theory]
+    [InlineData("bettergi://startOneDragon")]
+    [InlineData("--startGroups")]
+    [InlineData("--TaskProgress")]
+    [InlineData("--instance", "childSession", "bettergi://startOneDragon")]
+    public void ActivationForwarding_ShouldRejectManagedAutomation(params string[] arguments)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ActivationForwardingPolicy.ThrowIfManagedAutomation(
+                ["BetterGI.exe", .. arguments]));
+
+        Assert.Contains("已有 BetterGI 实例", exception.Message);
+        Assert.Contains("无法转发托管自动化任务", exception.Message);
+    }
+
+    [Theory]
+    [InlineData()]
+    [InlineData("bettergi://start")]
+    public void ActivationForwarding_ShouldAllowWindowActivation(params string[] arguments)
+    {
+        ActivationForwardingPolicy.ThrowIfManagedAutomation(
+            ["BetterGI.exe", .. arguments]);
     }
 
     [Fact]

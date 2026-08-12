@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -121,6 +122,7 @@ internal sealed class InstanceRequestHandler
         var activation =
             request.Data?.ToObject<ActivationDispatchRequest>(InstanceIpcProtocol.Serializer)
             ?? throw new ArgumentException("激活请求缺少命令行参数。");
+        ActivationForwardingPolicy.ThrowIfManagedAutomation(activation.Arguments);
         _enqueueActivation(activation.Arguments);
         return CacheActivationResponse(
             request.RequestId,
@@ -202,6 +204,7 @@ internal sealed class InstanceRequestHandler
                 return cachedResponse;
             }
 
+            ActivationForwardingPolicy.ThrowIfManagedAutomation(open.Arguments);
             _enqueueActivation(open.Arguments);
             return CacheActivationResponse(
                 request.RequestId,
@@ -244,6 +247,7 @@ internal sealed class InstanceRequestHandler
                 return cachedResponse;
             }
 
+            ActivationForwardingPolicy.ThrowIfManagedAutomation(open.Arguments);
             try
             {
                 var activationResponse = await duplicate.Connection.SendRequestAsync(
@@ -456,5 +460,17 @@ internal sealed class InstanceRequestHandler
 
         throw new InvalidOperationException(
             response.ErrorMessage ?? response.ErrorCode ?? "实例 IPC 请求失败。");
+    }
+}
+
+internal static class ActivationForwardingPolicy
+{
+    internal static void ThrowIfManagedAutomation(string[] arguments)
+    {
+        if (CommandLineOptions.Parse(arguments).ShouldDeferGameStart)
+        {
+            throw new InvalidOperationException(
+                "已有 BetterGI 实例时无法转发托管自动化任务，请先退出现有实例后重试。");
+        }
     }
 }

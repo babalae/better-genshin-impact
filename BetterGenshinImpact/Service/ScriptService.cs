@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -117,7 +118,7 @@ public partial class ScriptService : IScriptService
     //优先执行的配置组，统计每个project执行次数
     private readonly Dictionary<string, int> _projectExecutionCount = new();
     
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
+    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null, TaskProgress? taskProgress = null, bool propagateExceptions = false)
     {
         groupName ??= "默认";
 
@@ -147,6 +148,9 @@ public partial class ScriptService : IScriptService
         if (CancellationContext.Instance.IsCancellationRequested)
         {
             _logger.LogInformation("配置组 {Name} 在启动阶段被取消", groupName);
+            TaskRunnerFailurePolicy.ThrowIfStartupCancelled(
+                CancellationContext.Instance.Cts.Token,
+                propagateExceptions);
             return;
         }
         
@@ -295,7 +299,10 @@ public partial class ScriptService : IScriptService
 
                         if (CancellationContext.Instance.Cts.IsCancellationRequested)
                         {
-                            // _logger.LogInformation("执行被取消");
+                            TaskRunnerFailurePolicy.ThrowIfStartupCancelled(
+                                CancellationContext.Instance.Cts.Token,
+                                propagateExceptions,
+                                RunnerContext.Instance.IsContinuousRunGroup);
                             break;
                         }
 
@@ -331,6 +338,7 @@ public partial class ScriptService : IScriptService
                         }
 
 
+                        Exception? executionException = null;
                         for (var i = 0; i < exeProject.RunNum; i++)
                         {
                             try
@@ -343,7 +351,12 @@ public partial class ScriptService : IScriptService
                                 stopwatch.Reset();
                                 stopwatch.Start();
 
+                                var projectCancellationToken = CancellationContext.Instance.Cts.Token;
                                 await ExecuteProject(exeProject);
+                                TaskRunnerFailurePolicy.ThrowIfTaskCancelled(
+                                    projectCancellationToken,
+                                    propagateExceptions,
+                                    RunnerContext.Instance.IsContinuousRunGroup);
 
                                 //多次执行时及时中断
                                 if (exeProject.RunNum > 1 && ShouldSkipTask(exeProject))
@@ -368,6 +381,10 @@ public partial class ScriptService : IScriptService
                                 {
                                     taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
                                 }
+                                if (propagateExceptions)
+                                {
+                                    executionException = e;
+                                }
                             }
                             finally
                             {
@@ -379,6 +396,11 @@ public partial class ScriptService : IScriptService
                                 _logger.LogInformation("------------------------------");
                             }
 
+                            if (executionException is not null)
+                            {
+                                break;
+                            }
+
                             await Task.Delay(1000);
                         }
 
@@ -386,23 +408,7 @@ public partial class ScriptService : IScriptService
                         {
                             if (taskProgress.CurrentScriptGroupProjectInfo != null)
                             {
-                                taskProgress.CurrentScriptGroupProjectInfo.TaskEnd = true;
-                                taskProgress.CurrentScriptGroupProjectInfo.EndTime = DateTime.Now;
-                                if (taskProgress.CurrentScriptGroupProjectInfo.Status == 1)
-                                {
-                                    taskProgress.ConsecutiveFailureCount = 0;
-                                    taskProgress.LastSuccessScriptGroupProjectInfo =
-                                        taskProgress.CurrentScriptGroupProjectInfo;
-                                    taskProgress.LastScriptGroupName = taskProgress.CurrentScriptGroupName;
-                                }
-
-                                //累计连续失败次数
-                                if (taskProgress.CurrentScriptGroupProjectInfo.Status == 2)
-                                {
-                                    taskProgress.ConsecutiveFailureCount++;
-                                }
-
-                                taskProgress?.History?.Add(taskProgress.CurrentScriptGroupProjectInfo);
+                                ScriptTaskProgressFinalizer.CompleteCurrentProject(taskProgress, DateTime.Now);
                                 TaskProgressManager.SaveTaskProgress(taskProgress);
                             }
 
@@ -423,9 +429,14 @@ public partial class ScriptService : IScriptService
                                 SystemControl.RestartApplication(["--TaskProgress", taskProgress.Name]);
                             }
                         }
+
+                        if (executionException is not null)
+                        {
+                            ExceptionDispatchInfo.Capture(executionException).Throw();
+                        }
                     }
                 }
-            });
+            }, propagateExceptions);
         
 
         // 还原定时器
@@ -678,5 +689,32 @@ public partial class ScriptService : IScriptService
             await pendingUpdate;
             ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask = null;
         }
+    }
+}
+
+internal static class ScriptTaskProgressFinalizer
+{
+    internal static void CompleteCurrentProject(TaskProgress taskProgress, DateTime endTime)
+    {
+        var projectInfo = taskProgress.CurrentScriptGroupProjectInfo;
+        if (projectInfo is null)
+        {
+            return;
+        }
+
+        projectInfo.TaskEnd = true;
+        projectInfo.EndTime = endTime;
+        if (projectInfo.Status == 1)
+        {
+            taskProgress.ConsecutiveFailureCount = 0;
+            taskProgress.LastSuccessScriptGroupProjectInfo = projectInfo;
+            taskProgress.LastScriptGroupName = taskProgress.CurrentScriptGroupName;
+        }
+        else if (projectInfo.Status == 2)
+        {
+            taskProgress.ConsecutiveFailureCount++;
+        }
+
+        taskProgress.History?.Add(projectInfo);
     }
 }

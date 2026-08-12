@@ -7,12 +7,15 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Helpers;
@@ -500,48 +503,45 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
     
-    private bool _autoRun = true;
-    
-    [RelayCommand]
-    private void OnLoaded()
+    internal async Task RunCommandLineAsync(string? configName)
     {
-        // 组件首次加载时运行一次。
-        if (!_autoRun)
+        if (SelectedConfig is null)
         {
-            return;
+            InitConfigList();
         }
-        _autoRun = false;
-        //
-        var cmdOptions = CommandLineOptions.Instance;
-        if (cmdOptions.Action == CommandLineAction.StartOneDragon)
+
+        if (configName != null)
         {
-            // 通过命令行参数启动一条龙。
-            if (cmdOptions.OneDragonConfigName != null)
+            _logger.LogInformation("参数指定的一条龙配置：{ConfigName}", configName);
+            var commandLineConfig = ConfigList.FirstOrDefault(x =>
+                string.Equals(x.Name, configName, StringComparison.Ordinal));
+            if (commandLineConfig != null)
             {
-                // 从命令行参数中提取一条龙配置名称。
-                _logger.LogInformation($"参数指定的一条龙配置：{cmdOptions.OneDragonConfigName}");
-                var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
-                    string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
-                if (argsOneDragonConfig != null)
-                {
-                    // 设定配置，配置下拉框会选定。
-                    SelectedConfig = argsOneDragonConfig;
-                    // 调用选定更新函数。
-                    OnConfigDropDownChanged();
-                }
-                else
-                {
-                    _logger.LogWarning("未找到，请检查。");
-                }
+                SelectedConfig = commandLineConfig;
+                OnConfigDropDownChanged();
             }
-            // 异步执行一条龙
-            Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
-            OnOneKeyExecute();
+            else
+            {
+                throw new InvalidOperationException($"未找到一条龙配置：{configName}");
+            }
         }
+
+        if (SelectedConfig is null)
+        {
+            throw new InvalidOperationException("没有可用的一条龙配置。");
+        }
+
+        Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
+        await RunOneDragonAsync(propagateExceptions: true);
     }
 
     [RelayCommand]
     public async Task OnOneKeyExecute()
+    {
+        await RunOneDragonAsync(propagateExceptions: false);
+    }
+
+    internal async Task RunOneDragonAsync(bool propagateExceptions)
     {
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
 
@@ -597,6 +597,9 @@ public partial class OneDragonFlowViewModel : ViewModel
         if (CancellationContext.Instance.IsCancellationRequested)
         {
             _logger.LogInformation("一条龙在启动阶段被取消");
+            TaskRunnerFailurePolicy.ThrowIfStartupCancelled(
+                CancellationContext.Instance.Cts.Token,
+                propagateExceptions);
             return;
         }
 
@@ -618,11 +621,16 @@ public partial class OneDragonFlowViewModel : ViewModel
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
+                    CancellationToken taskCancellationToken = default;
                     await new TaskRunner().RunThreadAsync(async () =>
                     {
+                        taskCancellationToken = CancellationContext.Instance.Cts.Token;
                         await task.Action();
                         await Task.Delay(1000);
-                    });
+                    }, propagateExceptions);
+                    TaskRunnerFailurePolicy.ThrowIfTaskCancelled(
+                        taskCancellationToken,
+                        propagateExceptions);
                 }
                 else
                 {
@@ -643,7 +651,10 @@ public partial class OneDragonFlowViewModel : ViewModel
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
                             IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
+                            await scriptService!.RunMulti(
+                                ScriptControlViewModel.GetNextProjects(group),
+                                group.Name,
+                                propagateExceptions: propagateExceptions);
                             await Task.Delay(1000);
                         }
                     }
@@ -651,6 +662,10 @@ public partial class OneDragonFlowViewModel : ViewModel
                     {
                         _logger.LogDebug(e, "执行配置组任务时失败");
                         Toast.Error("执行配置组任务时失败");
+                        if (propagateExceptions)
+                        {
+                            throw;
+                        }
                     }
                 }
                 // 如果任务已经被取消，中断所有任务
@@ -669,36 +684,48 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 检查和最终结束的任务
         await new TaskRunner().RunThreadAsync(async () =>
         {
-            await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
-            await Task.Delay(500);
-            if (CancellationContext.Instance.IsManualStop is false)
+            await OneDragonFinalizer.RunAsync(async () =>
             {
-                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
-            }
-            _logger.LogInformation("一条龙和配置组任务结束");
-
-            // 执行完成后操作
-            if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
-            {
-                switch (SelectedConfig.CompletionAction)
+                await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+                await Task.Delay(500);
+                if (CancellationContext.Instance.IsManualStop is false)
                 {
-                    case "关闭游戏":
-                        SystemControl.CloseGame();
-                        break;
-                    case "关闭软件":
-                        Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
-                        break;
-                    case "关闭游戏和软件":
-                        SystemControl.CloseGame();
-                        Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
-                        break;
-                    case "关机":
-                        SystemControl.CloseGame();
-                        SystemControl.Shutdown();
-                        break;
+                    Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
                 }
+                _logger.LogInformation("一条龙和配置组任务结束");
+            }, ExecuteCompletionAction, exception =>
+            {
+                _logger.LogError(exception, "一条龙收尾检查失败，将按配置执行完成动作");
+                if (propagateExceptions)
+                {
+                    CommandLineTaskFailurePolicy.MarkFailed(exitCode => Environment.ExitCode = exitCode);
+                }
+            });
+        }, propagateExceptions);
+    }
+
+    private void ExecuteCompletionAction()
+    {
+        if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
+        {
+            switch (SelectedConfig.CompletionAction)
+            {
+                case "关闭游戏":
+                    SystemControl.CloseGame();
+                    break;
+                case "关闭软件":
+                    Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                    break;
+                case "关闭游戏和软件":
+                    SystemControl.CloseGame();
+                    Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                    break;
+                case "关机":
+                    SystemControl.CloseGame();
+                    SystemControl.Shutdown();
+                    break;
             }
-        });
+        }
     }
 
     /// <summary>
@@ -974,6 +1001,40 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             _logger.LogError(e, "重命名配置时失败");
             Toast.Error("重命名配置时失败");
+        }
+    }
+}
+
+internal static class OneDragonFinalizer
+{
+    internal static async Task RunAsync(
+        Func<Task> finalCheck,
+        Action completionAction,
+        Action<Exception>? onFinalCheckFailure = null)
+    {
+        Exception? finalCheckException = null;
+        try
+        {
+            await finalCheck();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException and not NormalEndException)
+        {
+            finalCheckException = exception;
+            onFinalCheckFailure?.Invoke(exception);
+        }
+
+        try
+        {
+            completionAction();
+        }
+        catch (Exception completionException) when (finalCheckException is not null)
+        {
+            throw new AggregateException("一条龙收尾检查和完成动作均执行失败。", finalCheckException, completionException);
+        }
+
+        if (finalCheckException is not null)
+        {
+            ExceptionDispatchInfo.Capture(finalCheckException).Throw();
         }
     }
 }

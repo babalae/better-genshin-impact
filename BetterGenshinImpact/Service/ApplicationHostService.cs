@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -23,6 +25,7 @@ public class ApplicationHostService(
     InstanceService instanceService) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
+    private readonly ILogger<ApplicationHostService> _logger = App.GetLogger<ApplicationHostService>();
 
     /// <summary>
     /// Triggered when the application host is ready to start the service.
@@ -74,26 +77,36 @@ public class ApplicationHostService(
                     case CommandLineAction.StartOneDragon:
                         // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
                         _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
-                        // 后续代码在 OneDragonFlowViewModel / OnLoaded 中。
+                        var oneDragon = App.GetService<OneDragonFlowViewModel>();
+                        if (oneDragon != null)
+                        {
+                            _ = ObserveCommandLineTaskAsync(
+                                oneDragon.RunCommandLineAsync(cmdOptions.OneDragonConfigName),
+                                "一条龙");
+                        }
                         break;
 
                     case CommandLineAction.StartGroups:
                         // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
                         _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                        if (cmdOptions.GroupNames.Length > 0)
+                        var scriptGroupScheduler = App.GetService<ScriptControlViewModel>();
+                        if (scriptGroupScheduler != null)
                         {
-                            var scheduler = App.GetService<ScriptControlViewModel>();
-                            scheduler?.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                            _ = ObserveCommandLineTaskAsync(
+                                scriptGroupScheduler.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames),
+                                "配置组");
                         }
                         break;
 
                     case CommandLineAction.TaskProgress:
                         // 通过命令行参数启动「任务进度」 => 跳转到调度器配置页。
                         _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                        if (cmdOptions.GroupNames.Length > 0)
+                        var taskProgressScheduler = App.GetService<ScriptControlViewModel>();
+                        if (taskProgressScheduler != null)
                         {
-                            var scheduler = App.GetService<ScriptControlViewModel>();
-                            scheduler?.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                            _ = ObserveCommandLineTaskAsync(
+                                taskProgressScheduler.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames),
+                                "任务进度");
                         }
                         break;
 
@@ -112,5 +125,36 @@ public class ApplicationHostService(
         }
         //
         await Task.CompletedTask;
+    }
+
+    private async Task ObserveCommandLineTaskAsync(Task task, string taskName)
+    {
+        try
+        {
+            await task;
+        }
+        catch (OperationCanceledException exception)
+        {
+            _logger.LogInformation(exception, "命令行{TaskName}已取消", taskName);
+        }
+        catch (NormalEndException exception)
+        {
+            _logger.LogInformation(exception, "命令行{TaskName}已正常结束", taskName);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "命令行{TaskName}执行失败", taskName);
+            CommandLineTaskFailurePolicy.MarkFailed(exitCode => Environment.ExitCode = exitCode);
+        }
+    }
+}
+
+internal static class CommandLineTaskFailurePolicy
+{
+    internal const int FailureExitCode = 1;
+
+    internal static void MarkFailed(Action<int> setExitCode)
+    {
+        setExitCode(FailureExitCode);
     }
 }
