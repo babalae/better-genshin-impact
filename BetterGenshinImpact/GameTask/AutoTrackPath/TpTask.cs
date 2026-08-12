@@ -55,7 +55,8 @@ public class TpTask
     private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
     private const int DefaultBigMapOpenTimeoutMs = 2400;
     private const int MoonCanonBigMapOpenTimeoutMs = 7000;
-    private const int BigMapOpenCheckIntervalMs = 200;
+    private const int UiRecognitionPollIntervalMs = 40;
+    private const int BigMapOpenCheckIntervalMs = UiRecognitionPollIntervalMs;
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
@@ -69,35 +70,42 @@ public class TpTask
     private const double MapDragFastStepRatio = 0.42d;
     private const double MapDragFastDistanceRatio = 0.85d;
     private const double MapClickSafeMargin = 35d;
-    private const double NearbyMapIconDefaultSearchRadius = 170d;
-    private const double NearbyMapIconMinSearchRadius = 32d;
-    private const double NearbyMapIconNeighborDistanceSearchRatio = 0.45d;
     private const double NearbyMapIconPatternMinSearchRadius = 120d;
     private const double NearbyMapIconPatternMaxSearchRadius = 260d;
     private const double NearbyMapIconPatternNeighborDistanceRatio = 1.3d;
-    private const int RelativePatternMaxExpectedNeighborCount = 8;
-    private const double RelativePatternMaxAngleDegrees = 18d;
-    private const double RelativePatternAngleCostWeight = 0.6d;
-    private const double RelativePatternDistanceCostWeight = 1.8d;
-    private const double RelativePatternMaxNeighborScore = 100d;
-    private const double RelativePatternTargetTypeBonus = 8d;
-    private const double RelativePatternSelectionMinRawScoreGap = 12d;
-    private const int RelativePatternCostScale = 1000;
-    private const int RelativePatternDummyCost = 1_000_000;
-    private const int RelativePatternInvalidCost = 10_000_000;
+    private const double AbsoluteMapIconMaxCorrection = 60d;
+    private const double AbsoluteMapIconInlierRadius = 14d;
+    private const double AbsoluteMapIconOffsetBucketSize = 4d;
+    private const int AbsoluteMapIconMaxTranslationHypotheses = 64;
+    private const int AbsoluteMapIconCostScale = 1000;
+    private const int AbsoluteMapIconDummyCost = 1_000_000;
+    private const int AbsoluteMapIconInvalidCost = 10_000_000;
+    private const double AbsoluteMapClickBaseUncertainty = 16d;
+    private const double AbsoluteMapClickNeighborErrorRatio = 0.25d;
+    private const double AbsoluteMapClickZoomRecoveryStep = 0.7d;
+    private const int AbsoluteMapClickRetryCount = 3;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
-    private const int MapChooseCandidateMinClickDelayMs = 200;
+    private const int MapChooseCandidatePollIntervalMs = 40;
+    private const int MapChooseCandidateStableTimeoutMs = 800;
+    private const int MapChooseCandidateStableChecks = 2;
+    private const int MapChooseCandidatePositionTolerancePx = 4;
+    private const int MapChooseCandidateClickRetryCount = 2;
+    private const int MapChooseCandidateClickVerificationDelayMs = 600;
+    private const int MapChooseCandidateClickVerificationIntervalMs = 100;
     private const double TeleportFinalZoomMinNeighborScreenDistance = 96d;
     private const int TeleportClickableAreaRetryCount = 5;
     private const int TeleportClickableAreaRetryDelayMs = 80;
     private const int BigMapRectRetryIntervalMs = 150;
-    private const int MapLayerVerificationPollIntervalMs = 50;
-    private const int MapLayerAnimationDelayMs = 100;
+    private const int MapLayerVerificationPollIntervalMs = UiRecognitionPollIntervalMs;
     private const int MapGroundLayerSwitchTimeoutMs = 3000;
-    private const int SwitchAreaCandidateRetryCount = 4;
-    private const int SwitchAreaCandidateRetryIntervalMs = 120;
+    private const int TeleportPanelMinimumTimeoutMs = 900;
+    private const int TeleportConfirmTimeoutMs = 4000;
+    private const int SwitchAreaCandidateTimeoutMs = 1500;
+    private const int SwitchAreaSelectionTimeoutMs = 600;
+    private const int SwitchAreaSelectionMinimumWaitMs = 120;
+    private const int SwitchAreaSelectionStableChecks = 2;
     private const int TeleportTimeoutMs = 60_000;
-    private const int TeleportLoadingPollIntervalMs = 150;
+    private const int TeleportLoadingPollIntervalMs = 100;
     private const int TeleportMinimumCompletionMs = 1000;
     private const int TeleportLoadingStableNonUiChecks = 2;
     private const int TeleportCompletionStableMainUiChecks = 3;
@@ -123,36 +131,47 @@ public class TpTask
 
     private sealed class NearbyMapIcon
     {
-        public required string IconFileName { get; init; }
-        public required string IconType { get; init; }
+        public required HashSet<string> IconTypes { get; init; }
         public required Rect Rect { get; init; }
         public required double CenterX { get; init; }
         public required double CenterY { get; init; }
         public required double DistanceToTarget { get; init; }
-        public bool TypeMatchesTarget { get; set; }
     }
 
-    private sealed class ExpectedNearbyMapIcon
+    private sealed class ExpectedVisibleMapIcon
     {
         public required GiTpPosition Tp { get; init; }
-        public required double VectorX { get; init; }
-        public required double VectorY { get; init; }
-        public required double DistanceToTarget { get; init; }
-        public required List<string> IconTypes { get; init; }
+        public required double ScreenX { get; init; }
+        public required double ScreenY { get; init; }
+        public required HashSet<string> IconTypes { get; init; }
     }
 
-    private sealed class RelativePatternCandidate
+    private sealed class AbsoluteMapIconPair
     {
-        public required NearbyMapIcon Icon { get; init; }
-        public int MatchCount { get; set; }
-        public double Score { get; set; }
-        public double RawScore { get; set; }
-        public double MaxScore { get; set; }
+        public required ExpectedVisibleMapIcon Expected { get; init; }
+        public required NearbyMapIcon Observed { get; init; }
+        public required double Error { get; init; }
     }
 
-    private sealed class RelativePatternEdge
+    private readonly record struct MapProjectionTransform(
+        double ScaleX,
+        double ScaleY,
+        double OffsetX,
+        double OffsetY)
     {
-        public required double Cost { get; init; }
+        public static MapProjectionTransform Identity => new(1d, 1d, 0d, 0d);
+
+        public (double X, double Y) Apply(double x, double y)
+        {
+            return (x * ScaleX + OffsetX, y * ScaleY + OffsetY);
+        }
+    }
+
+    private sealed class AbsoluteMapIconAlignment
+    {
+        public required MapProjectionTransform Transform { get; init; }
+        public required List<AbsoluteMapIconPair> Pairs { get; init; }
+        public required double MeanError { get; init; }
     }
 
     private sealed class TeleportTargetContext
@@ -394,7 +413,7 @@ public class TpTask
         await SwitchToTeleportTargetMap(target);
 
         var clickView = await PrepareTeleportClickView(target);
-        ClickTeleportTargetMapPoint(target, clickView);
+        await ClickTeleportTargetMapPoint(target, clickView);
         await ClickTpPointAfterMapPointSelected(target);
         await WaitForTeleportCompletion();
 
@@ -561,7 +580,7 @@ public class TpTask
                 if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
-                    await Delay(GetTeleportOperationDelay(TeleportClickableAreaRetryDelayMs), ct);
+                    await Delay(TeleportClickableAreaRetryDelayMs, ct);
                     continue;
                 }
 
@@ -592,7 +611,7 @@ public class TpTask
             }
 
             await MoveMapToTeleportClickArea(targetX, targetY, mapName, evaluation.RequiredVisibleRadius);
-            await Delay(GetTeleportOperationDelay(TeleportClickableAreaRetryDelayMs), ct);
+            await Delay(TeleportClickableAreaRetryDelayMs, ct);
         }
 
         throw new Exception("目标传送点位于不可点击区域，传送失败");
@@ -819,42 +838,47 @@ public class TpTask
         return GetCurrentBigMapZoomLevel();
     }
 
-    private void ClickTeleportTargetMapPoint(
+    private async Task ClickTeleportTargetMapPoint(
         TeleportTargetContext target,
         TeleportClickView clickView)
     {
-        var clickCapture = CaptureToRectArea();
-        using (clickCapture)
+        var currentClickView = clickView;
+        string failureReason = "地图图标绝对坐标匹配失败";
+        for (var attempt = 0; attempt < AbsoluteMapClickRetryCount; attempt++)
         {
-            var nearbyMapIcons = GetNearbyMapIcons(
-                clickCapture,
-                clickView.ClickX,
-                clickView.ClickY,
-                target.TargetTp,
-                clickView.SearchRadius,
-                false);
+            using var clickCapture = CaptureToRectArea();
+            if (TryGetAbsoluteTeleportClickPosition(
+                    clickCapture,
+                    target,
+                    currentClickView,
+                    attempt + 1,
+                    out var clickX,
+                    out var clickY,
+                    out failureReason))
+            {
+                clickCapture.ClickTo(clickX, clickY);
+                return;
+            }
 
-            var matchedIcon = ChooseTargetNearbyMapIconByRelativePattern(
-                nearbyMapIcons,
-                target.TargetTp,
-                target.MapName,
-                clickView.BigMapInAllMapRect,
-                target.X,
-                target.Y,
-                clickView.ClickX,
-                clickView.ClickY,
-                clickView.SearchRadius);
+            if (attempt + 1 >= AbsoluteMapClickRetryCount)
+            {
+                break;
+            }
 
-            var shouldRequireTargetIcon = ShouldRequireMapIconForTarget(target.TargetTp);
-            var fallbackIcons = FilterNearbyMapIconsForFallback(
-                nearbyMapIcons,
-                clickView.NearestNeighborScreenDistance,
-                shouldRequireTargetIcon);
-            var fallbackIcon = matchedIcon == null ? ChooseTargetNearbyMapIcon(fallbackIcons) : null;
-            var selectedIcon = matchedIcon ?? fallbackIcon;
+            await MoveTeleportTargetTowardZoomCenter(currentClickView);
+            var currentZoomLevel = GetCurrentBigMapZoomLevel();
+            var recoveryZoomLevel = Math.Max(MinTeleportZoomLevel, currentZoomLevel - AbsoluteMapClickZoomRecoveryStep);
+            if (_tpConfig.MapZoomEnabled && !IsZoomCloseEnough(currentZoomLevel, recoveryZoomLevel))
+            {
+                await AdjustMapZoomLevel(currentZoomLevel, recoveryZoomLevel);
+            }
 
-            ClickSelectedNearbyMapIcon(clickCapture, selectedIcon, clickView.ClickX, clickView.ClickY);
+            await Delay(TeleportClickableAreaRetryDelayMs, ct);
+            currentClickView = await PrepareTeleportClickView(target);
         }
+
+        Logger.LogWarning("目标传送点绝对坐标定位失败：{Reason}", failureReason);
+        throw new TpPointNotActivate(failureReason);
     }
 
     private double GetTeleportFinalClickZoomLevel(double nearestTpDistance, string mapName)
@@ -896,7 +920,6 @@ public class TpTask
             if (pointAttempt > 0)
             {
                 await ClickTargetMapPoint(target);
-                await Delay(GetTeleportOperationDelay(300), ct);
             }
 
             if (await WaitForTeleportPanelAndConfirm(target.TargetTp))
@@ -910,15 +933,13 @@ public class TpTask
 
     private async Task<bool> WaitForTeleportPanelAndConfirm(GiTpPosition? targetTp)
     {
-        var baseRetryInterval = GetTeleportPanelRetryInterval();
-        var retryInterval = GetTeleportOperationDelay(baseRetryInterval);
-        var timeoutMilliseconds = baseRetryInterval * 18;
+        var timeoutMilliseconds = GetTeleportPanelTimeoutMilliseconds();
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
         {
             if (i > 0)
             {
-                await Delay(retryInterval, ct);
+                await Delay(UiRecognitionPollIntervalMs, ct);
             }
 
             using var teleportCapture = CaptureToRectArea();
@@ -938,7 +959,7 @@ public class TpTask
     private async Task ClickTargetMapPoint(TeleportTargetContext target)
     {
         var clickView = await PrepareTeleportClickView(target);
-        ClickTeleportTargetMapPoint(target, clickView);
+        await ClickTeleportTargetMapPoint(target, clickView);
     }
 
     private double GetNearestNeighborScreenDistance(
@@ -968,10 +989,11 @@ public class TpTask
         return GetDistance(targetClickX, targetClickY, nearClickX, nearClickY);
     }
 
-    private static int GetTeleportPanelRetryInterval()
+    private static int GetTeleportPanelTimeoutMilliseconds()
     {
         var delay = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
-        return Math.Clamp(delay <= 0 ? 50 : delay, 50, 300);
+        var configuredWait = Math.Clamp(delay <= 0 ? 50 : delay, 50, 300);
+        return Math.Max(TeleportPanelMinimumTimeoutMs, configuredWait * 18);
     }
 
     /// <summary>
@@ -1015,7 +1037,6 @@ public class TpTask
                     observedLoadingState = consecutiveNonUiChecks >= TeleportLoadingStableNonUiChecks;
                 }
             }
-
             await Delay(TeleportLoadingPollIntervalMs, ct);
 
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
@@ -1122,7 +1143,6 @@ public class TpTask
         if (!await TryToOpenBigMapUi(mapName))
         {
             await new ReturnMainUiTask().Start(ct);
-            await Delay(GetTeleportOperationDelay(500), ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
@@ -1141,7 +1161,7 @@ public class TpTask
         }
 
         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-        return await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName), BigMapOpenCheckIntervalMs);
+        return await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
     }
 
     private bool IsInBigMapUi()
@@ -1150,9 +1170,8 @@ public class TpTask
         return Bv.IsInBigMapUi(capture);
     }
 
-    private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds, int delayMs)
+    private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds)
     {
-        var retryInterval = GetTeleportOperationDelay(delayMs);
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
         {
@@ -1161,7 +1180,7 @@ public class TpTask
                 return true;
             }
 
-            await Delay(retryInterval, ct);
+            await Delay(BigMapOpenCheckIntervalMs, ct);
         }
 
         return false;
@@ -1195,7 +1214,7 @@ public class TpTask
                 // 未激活点位的详情面板会遮挡后续地图操作，重试前先关闭。
                 // 最后一次失败也需要执行清理，避免影响脚本组中的下一个任务。
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(GetTeleportOperationDelay(300), ct);
+                await Delay(300, ct);
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
             }
@@ -1496,7 +1515,6 @@ public class TpTask
         }
 
         var jumpedCenterPoint = await ForceJumpToTargetArea(x, y, mapName);
-        await Delay(GetTeleportOperationDelay(300), ct);
         if (jumpedCenterPoint != null)
         {
             return (GetMoveMapState(jumpedCenterPoint.Value, x, y, recoveredState.ZoomLevel), recoveredState.ZoomLevel);
@@ -1683,7 +1701,7 @@ public class TpTask
     private int GetMapZoomWheelDelay(int wheelNotches)
     {
         var delay = 90 + Math.Min(120, Math.Abs(wheelNotches) * 8);
-        return Math.Max(MapZoomWheelMeasureMinDelayMs, GetTeleportOperationDelay(delay));
+        return Math.Max(MapZoomWheelMeasureMinDelayMs, delay);
     }
 
     private int GetTeleportOperationDelay(int defaultDelayMilliseconds)
@@ -2089,7 +2107,7 @@ public class TpTask
             {
                 throw new RetryException("当前不在地图界面");
             }
-        }, TimeSpan.FromMilliseconds(GetTeleportOperationDelay(BigMapRectRetryIntervalMs)), 5);
+        }, TimeSpan.FromMilliseconds(BigMapRectRetryIntervalMs), 5);
 
         if (rect == default)
         {
@@ -2327,12 +2345,12 @@ public class TpTask
     private async Task<bool> TrySwitchArea(string areaName)
     {
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-        await Delay(GetTeleportOperationDelay(300), ct);
-
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
-        for (var attempt = 0; attempt < SwitchAreaCandidateRetryCount; attempt++)
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
         {
+            ct.ThrowIfCancellationRequested();
             using var ra = CaptureToRectArea();
             var list = FindSwitchAreaCandidates(ra);
             candidatesText = FormatSwitchAreaCandidateTexts(list);
@@ -2341,22 +2359,68 @@ public class TpTask
                 .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
             if (matchRect != null)
             {
+                var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
+                await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
-                await Delay(GetTeleportOperationDelay(500), ct);
                 return true;
             }
 
-            await Delay(GetTeleportOperationDelay(SwitchAreaCandidateRetryIntervalMs), ct);
+            await Delay(UiRecognitionPollIntervalMs, ct);
         }
 
         Logger.LogWarning(
             "切换区域失败：{Country}，OCR候选：{Candidates}",
             areaName,
             string.IsNullOrWhiteSpace(candidatesText) ? "无" : candidatesText);
-        await Delay(GetTeleportOperationDelay(500), ct);
         return false;
+    }
+
+    private async Task WaitForAreaSelectionApplied(
+        string areaName,
+        string localizedAreaName,
+        Rect clickedCandidateRect)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var consecutiveMissingChecks = 0;
+        while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
+        {
+            ct.ThrowIfCancellationRequested();
+            using var capture = CaptureToRectArea();
+            var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
+                IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
+                IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
+
+            if (!clickedCandidateStillVisible &&
+                stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
+            {
+                consecutiveMissingChecks++;
+                if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                consecutiveMissingChecks = 0;
+            }
+
+            await Delay(UiRecognitionPollIntervalMs, ct);
+        }
+
+        Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
+    }
+
+    private static bool IsSameSwitchAreaCandidatePosition(Rect clickedCandidateRect, Region candidate)
+    {
+        var tolerance = Math.Max(24d, clickedCandidateRect.Height * 1.5d);
+        var clickedCenterX = clickedCandidateRect.X + clickedCandidateRect.Width / 2d;
+        var clickedCenterY = clickedCandidateRect.Y + clickedCandidateRect.Height / 2d;
+        var candidateCenterX = candidate.X + candidate.Width / 2d;
+        var candidateCenterY = candidate.Y + candidate.Height / 2d;
+        return Math.Abs(clickedCenterX - candidateCenterX) <= tolerance &&
+               Math.Abs(clickedCenterY - candidateCenterY) <= tolerance;
     }
 
     private List<Region> FindSwitchAreaCandidates(ImageRegion imageRegion)
@@ -2424,7 +2488,7 @@ public class TpTask
                 groundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 groundLayerClicked = true;
-                await Delay(MapLayerAnimationDelayMs, ct);
+                await Delay(retryInterval, ct);
                 continue;
             }
 
@@ -2445,7 +2509,7 @@ public class TpTask
 
             if (!isUnderground)
             {
-                if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= MapLayerAnimationDelayMs)
+                if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= MapLayerVerificationPollIntervalMs * 2)
                 {
                     return;
                 }
@@ -2459,7 +2523,7 @@ public class TpTask
                 undergroundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 layerSwitchClicked = true;
-                await Delay(MapLayerAnimationDelayMs, ct);
+                await Delay(retryInterval, ct);
                 continue;
             }
 
@@ -2468,18 +2532,6 @@ public class TpTask
 
         Logger.LogWarning("切换到地表地图后校验超时");
         throw new TimeoutException("切换到地表地图后校验超时");
-    }
-
-    public async Task Tp(string name)
-    {
-        // 通过大地图传送到指定传送点
-        await Delay(GetTeleportOperationDelay(500), ct);
-    }
-
-    public async Task TpByF1(string name)
-    {
-        // 传送到指定传送点
-        await Delay(GetTeleportOperationDelay(500), ct);
     }
 
     public Task ClickTpPoint(
@@ -2524,27 +2576,51 @@ public class TpTask
             return TeleportPanelResult.Confirmed;
         }
 
-        var candidate = await CheckMapChooseIcon(imageRegion, targetTp);
+        var candidate = await CheckMapChooseIcon(imageRegion, targetTp, 1);
         if (candidate == null)
         {
             return TeleportPanelResult.Waiting;
         }
 
-        return await WaitAndPressTeleportConfirm()
-            ? TeleportPanelResult.Confirmed
-            : TeleportPanelResult.RetryPoint;
+        for (var clickAttempt = 1; clickAttempt <= MapChooseCandidateClickRetryCount; clickAttempt++)
+        {
+            var result = await WaitAndPressTeleportConfirm(targetTp);
+            if (result == TeleportPanelResult.Confirmed)
+            {
+                return result;
+            }
+
+            Logger.LogWarning(
+                "地图候选点击 #{Attempt} 未生效：type={IconType} text={Text}，候选列表仍然存在",
+                clickAttempt,
+                candidate.IconType,
+                string.IsNullOrWhiteSpace(candidate.Text) ? "未识别" : candidate.Text);
+            if (clickAttempt >= MapChooseCandidateClickRetryCount)
+            {
+                return TeleportPanelResult.RetryPoint;
+            }
+
+            using var retryCapture = CaptureToRectArea();
+            candidate = await CheckMapChooseIcon(retryCapture, targetTp, clickAttempt + 1);
+            if (candidate == null)
+            {
+                return TeleportPanelResult.RetryPoint;
+            }
+        }
+
+        return TeleportPanelResult.RetryPoint;
     }
 
-    private async Task<bool> WaitAndPressTeleportConfirm()
+    private async Task<TeleportPanelResult> WaitAndPressTeleportConfirm(GiTpPosition? targetTp)
     {
-        var retryInterval = GetTeleportOperationDelay(200);
-        var timeoutMilliseconds = 20 * 200;
         var stopwatch = Stopwatch.StartNew();
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
+        var candidateStillVisibleChecks = 0;
+        long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
+        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
             if (i > 0)
             {
-                await Delay(retryInterval, ct);
+                await Delay(UiRecognitionPollIntervalMs, ct);
             }
 
             var screen = CaptureToRectArea();
@@ -2553,7 +2629,7 @@ public class TpTask
 
             if (!isInBigMapUi)
             {
-                return true;
+                return TeleportPanelResult.Confirmed;
             }
 
             var teleportButton = screen.Find(GetQuickTeleportRecognitionObject("TeleportButton", screen));
@@ -2561,42 +2637,36 @@ public class TpTask
             if (!teleportButton.IsEmpty())
             {
                 PressTeleportConfirmKey();
-                return true;
+                return TeleportPanelResult.Confirmed;
+            }
+
+            if (stopwatch.ElapsedMilliseconds >= nextCandidateVerificationAt)
+            {
+                var candidate = GetPreferredMapChooseCandidate(screen, targetTp);
+                if (candidate != null)
+                {
+                    candidateStillVisibleChecks++;
+                    if (candidateStillVisibleChecks >= MapChooseCandidateStableChecks)
+                    {
+                        return TeleportPanelResult.RetryPoint;
+                    }
+                }
+                else
+                {
+                    candidateStillVisibleChecks = 0;
+                }
+
+                nextCandidateVerificationAt = stopwatch.ElapsedMilliseconds +
+                                              MapChooseCandidateClickVerificationIntervalMs;
             }
         }
 
-        return false;
+        return TeleportPanelResult.RetryPoint;
     }
 
     private void PressTeleportConfirmKey()
     {
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
-    }
-
-    private List<NearbyMapIcon> GetNearbyMapIcons(
-        ImageRegion imageRegion,
-        double targetX,
-        double targetY,
-        GiTpPosition? targetTp,
-        double searchRadius,
-        bool filterByTargetType = true)
-    {
-        if (!IsFinite(targetX) || !IsFinite(targetY))
-        {
-            return [];
-        }
-
-        var searchRect = new Rect(
-            (int)Math.Round(targetX - searchRadius),
-            (int)Math.Round(targetY - searchRadius),
-            (int)Math.Round(searchRadius * 2),
-            (int)Math.Round(searchRadius * 2)).ClampTo(imageRegion.SrcMat);
-        if (searchRect.Width <= 0 || searchRect.Height <= 0)
-        {
-            return [];
-        }
-
-        return GetMapIconsInRect(imageRegion, searchRect, targetX, targetY, searchRadius, targetTp, filterByTargetType);
     }
 
     private List<NearbyMapIcon> GetMapIconsInRect(
@@ -2605,16 +2675,9 @@ public class TpTask
         double targetX,
         double targetY,
         double maxDistance,
-        GiTpPosition? targetTp,
-        bool filterByTargetType)
+        IReadOnlySet<string>? allowedIconTypes = null)
     {
         var result = new List<NearbyMapIcon>();
-        var targetType = targetTp?.Type ?? string.Empty;
-        var targetIconTypes = GetMapIconTypesForTargetType(targetType);
-        var targetIconTypeSet = targetIconTypes.Count > 0
-            ? new HashSet<string>(targetIconTypes, StringComparer.Ordinal)
-            : null;
-        var shouldFilterByTargetType = filterByTargetType && targetIconTypeSet != null;
         using var searchGrey = new Mat(imageRegion.CacheGreyMat, searchRect);
         for (var i = 0; i < _assets.MapChooseIconGreyMatList.Count; i++)
         {
@@ -2626,8 +2689,7 @@ public class TpTask
 
             var iconFileName = GetMapChooseIconFileName(_assets.MapChooseIconRoList[i]);
             var iconType = GetMapChooseIconType(iconFileName);
-            var typeMatchesTarget = targetIconTypeSet?.Contains(iconType) ?? false;
-            if (shouldFilterByTargetType && !typeMatchesTarget)
+            if (allowedIconTypes is not null && !allowedIconTypes.Contains(iconType))
             {
                 continue;
             }
@@ -2651,13 +2713,11 @@ public class TpTask
 
                 AddNearbyMapIcon(result, new NearbyMapIcon
                 {
-                    IconFileName = iconFileName,
-                    IconType = iconType,
+                    IconTypes = new HashSet<string>(StringComparer.Ordinal) { iconType },
                     Rect = rect,
                     CenterX = centerX,
                     CenterY = centerY,
                     DistanceToTarget = distance,
-                    TypeMatchesTarget = typeMatchesTarget,
                 });
             }
         }
@@ -2675,17 +2735,6 @@ public class TpTask
         return IsScreenPointInMapIconSearchArea(imageRegion.SrcMat.Width, imageRegion.SrcMat.Height, x, y);
     }
 
-    private bool IsScreenPointInNearbyMapIconRecognitionArea(
-        double x,
-        double y,
-        double targetX,
-        double targetY,
-        double searchRadius)
-    {
-        return GetDistance(x, y, targetX, targetY) <= searchRadius &&
-               IsScreenPointInMapIconSearchArea(_captureRect.Width, _captureRect.Height, x, y);
-    }
-
     private bool IsScreenPointInMapIconSearchArea(int width, int height, double x, double y)
     {
         var safeMargin = MapClickSafeMargin * _zoomOutMax1080PRatio;
@@ -2698,19 +2747,6 @@ public class TpTask
         }
 
         return !(x < 360 * _zoomOutMax1080PRatio && y < 400 * _zoomOutMax1080PRatio);
-    }
-
-    private double GetNearbyMapIconSearchRadius(double nearestNeighborScreenDistance = double.NaN)
-    {
-        var defaultRadius = Math.Max(120, NearbyMapIconDefaultSearchRadius * _zoomOutMax1080PRatio);
-        if (!IsFinite(nearestNeighborScreenDistance) || nearestNeighborScreenDistance <= 0)
-        {
-            return defaultRadius;
-        }
-
-        var minRadius = NearbyMapIconMinSearchRadius * _zoomOutMax1080PRatio;
-        var neighborLimitedRadius = nearestNeighborScreenDistance * NearbyMapIconNeighborDistanceSearchRatio;
-        return Math.Min(defaultRadius, Math.Max(minRadius, neighborLimitedRadius));
     }
 
     private double GetNearbyMapIconPatternSearchRadius(double nearestNeighborScreenDistance = double.NaN)
@@ -2726,109 +2762,93 @@ public class TpTask
         return Math.Min(maxRadius, Math.Max(minRadius, neighborPatternRadius));
     }
 
-    private List<NearbyMapIcon> FilterNearbyMapIconsForFallback(
-        List<NearbyMapIcon> nearbyMapIcons,
-        double nearestNeighborScreenDistance,
-        bool requireTargetIcon)
+    private bool TryGetAbsoluteTeleportClickPosition(
+        ImageRegion imageRegion,
+        TeleportTargetContext target,
+        TeleportClickView clickView,
+        int attempt,
+        out double clickX,
+        out double clickY,
+        out string failureReason)
     {
-        var fallbackRadius = GetNearbyMapIconSearchRadius(nearestNeighborScreenDistance);
-        return nearbyMapIcons
-            .Where(icon => icon.DistanceToTarget <= fallbackRadius)
-            .Where(icon => !requireTargetIcon || icon.TypeMatchesTarget)
-            .ToList();
+        var stopwatch = Stopwatch.StartNew();
+        var expectedIcons = GetVisibleExpectedMapIcons(target.MapName, clickView.BigMapInAllMapRect);
+        var projectionElapsedMs = stopwatch.ElapsedMilliseconds;
+        var observedIcons = GetVisibleMapIcons(
+            imageRegion,
+            clickView.ClickX,
+            clickView.ClickY,
+            expectedIcons);
+        var recognitionElapsedMs = stopwatch.ElapsedMilliseconds - projectionElapsedMs;
+        var alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
+        var alignmentElapsedMs = stopwatch.ElapsedMilliseconds - projectionElapsedMs - recognitionElapsedMs;
+        (clickX, clickY) = alignment.Transform.Apply(clickView.ClickX, clickView.ClickY);
+
+        var uncertainty = GetAbsoluteMapClickUncertainty(alignment);
+        var targetCorrection = GetDistance(clickView.ClickX, clickView.ClickY, clickX, clickY);
+        var maxAllowedUncertainty = IsFinite(clickView.NearestNeighborScreenDistance) &&
+                                    clickView.NearestNeighborScreenDistance > 0
+            ? Math.Max(8d * _zoomOutMax1080PRatio,
+                clickView.NearestNeighborScreenDistance * AbsoluteMapClickNeighborErrorRatio)
+            : double.PositiveInfinity;
+
+        if (!IsGameRegionPointInClickableArea(clickX, clickY, clickView.RequiredVisibleRadius))
+        {
+            failureReason = "校正后的目标坐标不在可点击区域";
+        }
+        else if (uncertainty > maxAllowedUncertainty)
+        {
+            failureReason = $"地图定位精度不足：uncertainty={uncertainty:0.0}, allowed={maxAllowedUncertainty:0.0}";
+        }
+        else if (targetCorrection > maxAllowedUncertainty)
+        {
+            failureReason = $"地图校正量超过相邻点安全距离：correction={targetCorrection:0.0}, allowed={maxAllowedUncertainty:0.0}";
+        }
+        else
+        {
+            failureReason = string.Empty;
+        }
+
+        var success = failureReason.Length == 0;
+        Logger.LogInformation(
+            "大地图绝对坐标匹配 #{Attempt}：{Target}，预期点={ExpectedCount}，识别图标={ObservedCount}，有效锚点={MatchedCount}，理论点击=({RawX:0.0},{RawY:0.0})，校正点击=({ClickX:0.0},{ClickY:0.0})，偏移=({OffsetX:0.0},{OffsetY:0.0})，校正量={TargetCorrection:0.0}，缩放=({ScaleX:0.000},{ScaleY:0.000})，残差={Error:0.0}，不确定度={Uncertainty:0.0}/{AllowedUncertainty:0.0}，耗时={TotalElapsedMs}ms（投影={ProjectionElapsedMs}ms，模板识别={RecognitionElapsedMs}ms，全局配准={AlignmentElapsedMs}ms），结果={Result}",
+            attempt,
+            GetTeleportTargetLogText(target),
+            expectedIcons.Count,
+            observedIcons.Count,
+            alignment.Pairs.Count,
+            clickView.ClickX,
+            clickView.ClickY,
+            clickX,
+            clickY,
+            alignment.Transform.OffsetX,
+            alignment.Transform.OffsetY,
+            targetCorrection,
+            alignment.Transform.ScaleX,
+            alignment.Transform.ScaleY,
+            alignment.MeanError,
+            uncertainty,
+            maxAllowedUncertainty,
+            stopwatch.ElapsedMilliseconds,
+            projectionElapsedMs,
+            recognitionElapsedMs,
+            alignmentElapsedMs,
+            success ? "点击" : $"重试：{failureReason}");
+
+        return success;
     }
 
-    private NearbyMapIcon? ChooseTargetNearbyMapIconByRelativePattern(
-        List<NearbyMapIcon> nearbyMapIcons,
-        GiTpPosition? targetTp,
-        string mapName,
-        Rect bigMapInAllMapRect,
-        double targetX,
-        double targetY,
-        double targetClickX,
-        double targetClickY,
-        double searchRadius)
+    private List<ExpectedVisibleMapIcon> GetVisibleExpectedMapIcons(string mapName, Rect bigMapInAllMapRect)
     {
-        if (targetTp == null)
-        {
-            return null;
-        }
-
-        if (nearbyMapIcons.Count < 2)
-        {
-            return null;
-        }
-
-        var targetCoordinateOffset = GetDistance(targetX, targetY, targetTp.X, targetTp.Y);
-        if (targetCoordinateOffset > 3)
-        {
-            return null;
-        }
-
-        var targetIconTypes = GetMapIconTypesForTargetType(targetTp.Type ?? string.Empty);
-        var targetCandidates = targetIconTypes.Count > 0
-            ? nearbyMapIcons.Where(icon => icon.TypeMatchesTarget).ToList()
-            : nearbyMapIcons;
-        if (targetCandidates.Count == 0)
-        {
-            return null;
-        }
-
-        var expectedNeighbors = GetExpectedNearbyMapIcons(
-            mapName,
-            bigMapInAllMapRect,
-            targetTp,
-            targetClickX,
-            targetClickY,
-            searchRadius);
-        if (expectedNeighbors.Count == 0)
-        {
-            return null;
-        }
-
-        var scoredCandidates = targetCandidates
-            .Select(icon => ScoreRelativePatternCandidate(icon, nearbyMapIcons, expectedNeighbors))
-            .Where(candidate => candidate.MatchCount > 0)
-            .OrderByDescending(candidate => candidate.Score)
-            .ToList();
-        if (scoredCandidates.Count == 0)
-        {
-            return null;
-        }
-
-        var best = scoredCandidates[0];
-        if (scoredCandidates.Count == 1)
-        {
-            return best.Icon;
-        }
-
-        var second = scoredCandidates[1];
-        if (best.RawScore >= second.RawScore + RelativePatternSelectionMinRawScoreGap)
-        {
-            return best.Icon;
-        }
-
-        return null;
-    }
-
-    private List<ExpectedNearbyMapIcon> GetExpectedNearbyMapIcons(
-        string mapName,
-        Rect bigMapInAllMapRect,
-        GiTpPosition targetTp,
-        double targetClickX,
-        double targetClickY,
-        double searchRadius)
-    {
-        var result = new List<ExpectedNearbyMapIcon>();
         if (!MapLazyAssets.Get().ScenesDic.TryGetValue(mapName, out var scene))
         {
-            return result;
+            return [];
         }
 
-        var maxExpectedDistance = Math.Max(searchRadius * 1.8, searchRadius + 120 * _zoomOutMax1080PRatio);
+        var result = new List<ExpectedVisibleMapIcon>();
         foreach (var tp in scene.Points)
         {
-            if (string.Equals(tp.Id, targetTp.Id, StringComparison.Ordinal))
+            if (!bigMapInAllMapRect.Contains(tp.X, tp.Y))
             {
                 continue;
             }
@@ -2839,186 +2859,281 @@ public class TpTask
                 continue;
             }
 
-            var (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, tp.X, tp.Y);
-            var vectorX = clickX - targetClickX;
-            var vectorY = clickY - targetClickY;
-            var distance = GetDistance(0, 0, vectorX, vectorY);
-            if (distance < 6 || distance > maxExpectedDistance)
+            var (screenX, screenY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, tp.X, tp.Y);
+            if (!IsScreenPointInMapIconSearchArea(_captureRect.Width, _captureRect.Height, screenX, screenY))
             {
                 continue;
             }
 
-            if (!IsScreenPointInNearbyMapIconRecognitionArea(clickX, clickY, targetClickX, targetClickY, searchRadius))
-            {
-                continue;
-            }
-
-            result.Add(new ExpectedNearbyMapIcon
+            result.Add(new ExpectedVisibleMapIcon
             {
                 Tp = tp,
-                VectorX = vectorX,
-                VectorY = vectorY,
-                DistanceToTarget = distance,
-                IconTypes = iconTypes,
+                ScreenX = screenX,
+                ScreenY = screenY,
+                IconTypes = new HashSet<string>(iconTypes, StringComparer.Ordinal),
             });
         }
 
-        return result
-            .OrderBy(icon => icon.DistanceToTarget)
-            .Take(RelativePatternMaxExpectedNeighborCount)
+        return result;
+    }
+
+    private List<NearbyMapIcon> GetVisibleMapIcons(
+        ImageRegion imageRegion,
+        double targetX,
+        double targetY,
+        IReadOnlyCollection<ExpectedVisibleMapIcon> expectedIcons)
+    {
+        var allowedIconTypes = expectedIcons
+            .SelectMany(x => x.IconTypes)
+            .ToHashSet(StringComparer.Ordinal);
+        if (allowedIconTypes.Count == 0)
+        {
+            return [];
+        }
+
+        var searchRect = new Rect(0, 0, imageRegion.Width, imageRegion.Height);
+        return GetMapIconsInRect(
+            imageRegion,
+            searchRect,
+            targetX,
+            targetY,
+            double.PositiveInfinity,
+            allowedIconTypes);
+    }
+
+    private AbsoluteMapIconAlignment EstimateAbsoluteMapIconAlignment(
+        List<ExpectedVisibleMapIcon> expectedIcons,
+        List<NearbyMapIcon> observedIcons)
+    {
+        var identity = MapProjectionTransform.Identity;
+        var inlierRadius = AbsoluteMapIconInlierRadius * _zoomOutMax1080PRatio;
+        var identityPairs = AssignAbsoluteMapIcons(expectedIcons, observedIcons, identity, inlierRadius);
+        if (expectedIcons.Count == 0 || observedIcons.Count == 0)
+        {
+            return CreateAbsoluteMapIconAlignment(identity, identityPairs);
+        }
+
+        var hypotheses = BuildAbsoluteMapIconTranslationHypotheses(expectedIcons, observedIcons);
+        var bestTransform = identity;
+        var bestPairs = identityPairs;
+        foreach (var hypothesis in hypotheses)
+        {
+            var pairs = AssignAbsoluteMapIcons(expectedIcons, observedIcons, hypothesis, inlierRadius);
+            if (IsBetterAbsoluteMapIconAlignment(hypothesis, pairs, bestTransform, bestPairs))
+            {
+                bestTransform = hypothesis;
+                bestPairs = pairs;
+            }
+        }
+
+        var correctionDistance = GetDistance(0, 0, bestTransform.OffsetX, bestTransform.OffsetY);
+        var maxSinglePointCorrection = 8d * _zoomOutMax1080PRatio;
+        var maxTwoPointCorrection = 10d * _zoomOutMax1080PRatio;
+        if (bestPairs.Count == 0 ||
+            (bestPairs.Count == 1 && correctionDistance > maxSinglePointCorrection) ||
+            (bestPairs.Count == 2 && correctionDistance > maxTwoPointCorrection))
+        {
+            return CreateAbsoluteMapIconAlignment(identity, identityPairs);
+        }
+
+        var refinedTransform = RefineAbsoluteMapIconTransform(bestPairs);
+        var refinedPairs = AssignAbsoluteMapIcons(expectedIcons, observedIcons, refinedTransform, inlierRadius);
+        if (IsBetterAbsoluteMapIconAlignment(refinedTransform, refinedPairs, bestTransform, bestPairs))
+        {
+            bestTransform = refinedTransform;
+            bestPairs = refinedPairs;
+        }
+
+        return CreateAbsoluteMapIconAlignment(bestTransform, bestPairs);
+    }
+
+    private List<MapProjectionTransform> BuildAbsoluteMapIconTranslationHypotheses(
+        List<ExpectedVisibleMapIcon> expectedIcons,
+        List<NearbyMapIcon> observedIcons)
+    {
+        var maxCorrection = AbsoluteMapIconMaxCorrection * _zoomOutMax1080PRatio;
+        var bucketSize = Math.Max(1d, AbsoluteMapIconOffsetBucketSize * _zoomOutMax1080PRatio);
+        var buckets = new Dictionary<(int X, int Y), List<(double X, double Y)>>();
+        foreach (var expected in expectedIcons)
+        {
+            foreach (var observed in observedIcons)
+            {
+                if (!IsAbsoluteMapIconTypeCompatible(expected, observed))
+                {
+                    continue;
+                }
+
+                var offsetX = observed.CenterX - expected.ScreenX;
+                var offsetY = observed.CenterY - expected.ScreenY;
+                if (Math.Abs(offsetX) > maxCorrection || Math.Abs(offsetY) > maxCorrection)
+                {
+                    continue;
+                }
+
+                var key = (
+                    (int)Math.Round(offsetX / bucketSize),
+                    (int)Math.Round(offsetY / bucketSize));
+                if (!buckets.TryGetValue(key, out var offsets))
+                {
+                    offsets = [];
+                    buckets[key] = offsets;
+                }
+
+                offsets.Add((offsetX, offsetY));
+            }
+        }
+
+        return buckets.Values
+            .OrderByDescending(offsets => offsets.Count)
+            .ThenBy(offsets => offsets.Average(offset => GetDistance(0, 0, offset.X, offset.Y)))
+            .Take(AbsoluteMapIconMaxTranslationHypotheses)
+            .Select(offsets => new MapProjectionTransform(
+                1d,
+                1d,
+                offsets.Average(offset => offset.X),
+                offsets.Average(offset => offset.Y)))
+            .Prepend(MapProjectionTransform.Identity)
+            .Distinct()
             .ToList();
     }
 
-    private static RelativePatternCandidate ScoreRelativePatternCandidate(
-        NearbyMapIcon candidateIcon,
-        List<NearbyMapIcon> nearbyMapIcons,
-        List<ExpectedNearbyMapIcon> expectedNeighbors)
+    private List<AbsoluteMapIconPair> AssignAbsoluteMapIcons(
+        List<ExpectedVisibleMapIcon> expectedIcons,
+        List<NearbyMapIcon> observedIcons,
+        MapProjectionTransform transform,
+        double maxError)
     {
-        var result = new RelativePatternCandidate
+        if (expectedIcons.Count == 0 || observedIcons.Count == 0)
         {
-            Icon = candidateIcon,
-            MaxScore = GetRelativePatternMaxScore(expectedNeighbors.Count),
-        };
-
-        var observedIcons = nearbyMapIcons
-            .Where(icon => !ReferenceEquals(icon, candidateIcon))
-            .ToList();
-        if (expectedNeighbors.Count == 0 || observedIcons.Count == 0)
-        {
-            return result;
+            return [];
         }
 
-        var rowCount = expectedNeighbors.Count;
-        var realColumnCount = observedIcons.Count;
-        var columnCount = realColumnCount + rowCount;
+        var rowCount = expectedIcons.Count;
+        var observedColumnCount = observedIcons.Count;
+        var columnCount = observedColumnCount + rowCount;
         var costs = new int[rowCount, columnCount];
-        var edges = new RelativePatternEdge?[rowCount, realColumnCount];
-
         for (var row = 0; row < rowCount; row++)
         {
-            var expectedNeighbor = expectedNeighbors[row];
-            for (var column = 0; column < realColumnCount; column++)
+            var expected = expectedIcons[row];
+            var (expectedX, expectedY) = transform.Apply(expected.ScreenX, expected.ScreenY);
+            for (var column = 0; column < observedColumnCount; column++)
             {
-                var edge = BuildRelativePatternEdge(candidateIcon, expectedNeighbor, observedIcons[column]);
-                edges[row, column] = edge;
-                costs[row, column] = edge == null
-                    ? RelativePatternInvalidCost
-                    : ToRelativePatternCost(edge.Cost);
+                var observed = observedIcons[column];
+                if (!IsAbsoluteMapIconTypeCompatible(expected, observed))
+                {
+                    costs[row, column] = AbsoluteMapIconInvalidCost;
+                    continue;
+                }
+
+                var error = GetDistance(expectedX, expectedY, observed.CenterX, observed.CenterY);
+                costs[row, column] = error <= maxError
+                    ? Math.Min(AbsoluteMapIconDummyCost - 1, (int)Math.Round(error * AbsoluteMapIconCostScale))
+                    : AbsoluteMapIconInvalidCost;
             }
 
-            for (var column = realColumnCount; column < columnCount; column++)
+            for (var column = observedColumnCount; column < columnCount; column++)
             {
-                costs[row, column] = RelativePatternDummyCost;
+                costs[row, column] = AbsoluteMapIconDummyCost;
             }
         }
 
         var assignments = global::HungarianAlgorithm.HungarianAlgorithm.FindAssignments(costs);
+        var result = new List<AbsoluteMapIconPair>();
         for (var row = 0; row < assignments.Length && row < rowCount; row++)
         {
             var column = assignments[row];
-            if (column < 0 || column >= realColumnCount)
+            if (column < 0 || column >= observedColumnCount || costs[row, column] >= AbsoluteMapIconDummyCost)
             {
                 continue;
             }
 
-            var edge = edges[row, column];
-            if (edge == null)
+            var expected = expectedIcons[row];
+            var observed = observedIcons[column];
+            var (expectedX, expectedY) = transform.Apply(expected.ScreenX, expected.ScreenY);
+            result.Add(new AbsoluteMapIconPair
             {
-                continue;
-            }
-
-            var score = RelativePatternMaxNeighborScore - edge.Cost;
-            result.MatchCount++;
-            result.RawScore += score;
+                Expected = expected,
+                Observed = observed,
+                Error = GetDistance(expectedX, expectedY, observed.CenterX, observed.CenterY),
+            });
         }
 
-        result.RawScore += (candidateIcon.TypeMatchesTarget ? RelativePatternTargetTypeBonus : 0) - Math.Min(candidateIcon.DistanceToTarget, 80) * 0.05;
-        result.Score = NormalizeRelativePatternScore(result.RawScore, result.MaxScore);
         return result;
     }
 
-    private static double GetRelativePatternMaxScore(int expectedNeighborCount)
+    private static bool IsAbsoluteMapIconTypeCompatible(
+        ExpectedVisibleMapIcon expected,
+        NearbyMapIcon observed)
     {
-        return Math.Max(1, expectedNeighborCount * RelativePatternMaxNeighborScore + RelativePatternTargetTypeBonus);
+        return expected.IconTypes.Overlaps(observed.IconTypes);
     }
 
-    private static double NormalizeRelativePatternScore(double rawScore, double maxScore)
+    private static bool IsBetterAbsoluteMapIconAlignment(
+        MapProjectionTransform candidateTransform,
+        List<AbsoluteMapIconPair> candidatePairs,
+        MapProjectionTransform currentTransform,
+        List<AbsoluteMapIconPair> currentPairs)
     {
-        if (!IsFinite(rawScore) || !IsFinite(maxScore) || maxScore <= 0)
+        if (candidatePairs.Count != currentPairs.Count)
         {
-            return 0;
+            return candidatePairs.Count > currentPairs.Count;
         }
 
-        return Math.Clamp(rawScore / maxScore, 0, 1);
+        var candidateError = candidatePairs.Count == 0 ? double.MaxValue : candidatePairs.Average(pair => pair.Error);
+        var currentError = currentPairs.Count == 0 ? double.MaxValue : currentPairs.Average(pair => pair.Error);
+        if (Math.Abs(candidateError - currentError) > 0.25d)
+        {
+            return candidateError < currentError;
+        }
+
+        var candidateCorrection = GetDistance(0, 0, candidateTransform.OffsetX, candidateTransform.OffsetY);
+        var currentCorrection = GetDistance(0, 0, currentTransform.OffsetX, currentTransform.OffsetY);
+        return candidateCorrection < currentCorrection;
     }
 
-    private static RelativePatternEdge? BuildRelativePatternEdge(
-        NearbyMapIcon candidateIcon,
-        ExpectedNearbyMapIcon expectedNeighbor,
-        NearbyMapIcon nearbyIcon)
+    private static MapProjectionTransform RefineAbsoluteMapIconTransform(List<AbsoluteMapIconPair> pairs)
     {
-        if (!expectedNeighbor.IconTypes.Contains(nearbyIcon.IconType))
-        {
-            return null;
-        }
+        var offsetX = GetMedian(pairs.Select(pair => pair.Observed.CenterX - pair.Expected.ScreenX));
+        var offsetY = GetMedian(pairs.Select(pair => pair.Observed.CenterY - pair.Expected.ScreenY));
+        return new MapProjectionTransform(1d, 1d, offsetX, offsetY);
+    }
 
-        var vectorX = nearbyIcon.CenterX - candidateIcon.CenterX;
-        var vectorY = nearbyIcon.CenterY - candidateIcon.CenterY;
-        var distance = GetDistance(0, 0, vectorX, vectorY);
-        if (distance < 6)
+    private static AbsoluteMapIconAlignment CreateAbsoluteMapIconAlignment(
+        MapProjectionTransform transform,
+        List<AbsoluteMapIconPair> pairs)
+    {
+        return new AbsoluteMapIconAlignment
         {
-            return null;
-        }
-
-        var angleDiff = GetAngleDifferenceDegrees(
-            expectedNeighbor.VectorX,
-            expectedNeighbor.VectorY,
-            vectorX,
-            vectorY);
-        if (angleDiff > RelativePatternMaxAngleDegrees)
-        {
-            return null;
-        }
-
-        var distancePenalty = GetRelativePatternDistancePenalty(expectedNeighbor.DistanceToTarget, distance);
-        return new RelativePatternEdge
-        {
-            Cost = angleDiff * RelativePatternAngleCostWeight +
-                   distancePenalty * RelativePatternDistanceCostWeight,
+            Transform = transform,
+            Pairs = pairs,
+            MeanError = pairs.Count == 0 ? 0d : pairs.Average(pair => pair.Error),
         };
     }
 
-    private static int ToRelativePatternCost(double cost)
+    private double GetAbsoluteMapClickUncertainty(AbsoluteMapIconAlignment alignment)
     {
-        if (!IsFinite(cost) || cost < 0)
+        var scale = _zoomOutMax1080PRatio;
+        return alignment.Pairs.Count switch
         {
-            return RelativePatternInvalidCost;
-        }
-
-        return Math.Min(RelativePatternDummyCost - 1, (int)Math.Round(cost * RelativePatternCostScale));
+            0 => AbsoluteMapClickBaseUncertainty * scale,
+            1 => Math.Max(10d * scale, alignment.MeanError + 6d * scale),
+            2 => Math.Max(7d * scale, alignment.MeanError + 4d * scale),
+            _ => Math.Max(4d * scale, alignment.MeanError + 3d * scale),
+        };
     }
 
-    private static double GetAngleDifferenceDegrees(double ax, double ay, double bx, double by)
+    private static double GetMedian(IEnumerable<double> values)
     {
-        var lengthA = GetDistance(0, 0, ax, ay);
-        var lengthB = GetDistance(0, 0, bx, by);
-        if (lengthA <= 0 || lengthB <= 0)
+        var ordered = values.OrderBy(value => value).ToList();
+        if (ordered.Count == 0)
         {
-            return 180;
+            return 0d;
         }
 
-        var cos = Math.Clamp((ax * bx + ay * by) / (lengthA * lengthB), -1, 1);
-        return Math.Acos(cos) * 180d / Math.PI;
-    }
-
-    private static double GetRelativePatternDistancePenalty(double expectedDistance, double actualDistance)
-    {
-        if (!IsFinite(expectedDistance) || !IsFinite(actualDistance) || expectedDistance <= 0 || actualDistance <= 0)
-        {
-            return 0;
-        }
-
-        return Math.Min(Math.Abs(Math.Log(actualDistance / expectedDistance)) * 18, 25);
+        var middle = ordered.Count / 2;
+        return ordered.Count % 2 == 0
+            ? (ordered[middle - 1] + ordered[middle]) / 2d
+            : ordered[middle];
     }
 
     private List<string> GetMapIconTypesForTargetType(string targetType)
@@ -3035,16 +3150,6 @@ public class TpTask
             .ToList();
     }
 
-    private bool ShouldRequireMapIconForTarget(GiTpPosition? targetTp)
-    {
-        if (targetTp == null)
-        {
-            return false;
-        }
-
-        return GetMapIconTypesForTargetType(targetTp.Type ?? string.Empty).Count > 0;
-    }
-
     private static void AddNearbyMapIcon(List<NearbyMapIcon> icons, NearbyMapIcon newIcon)
     {
         const double sameIconMaxDistance = 18;
@@ -3055,49 +3160,14 @@ public class TpTask
             return;
         }
 
-        if ((!sameIcon.TypeMatchesTarget && newIcon.TypeMatchesTarget) ||
-            (sameIcon.TypeMatchesTarget == newIcon.TypeMatchesTarget && newIcon.DistanceToTarget < sameIcon.DistanceToTarget))
+        sameIcon.IconTypes.UnionWith(newIcon.IconTypes);
+
+        if (newIcon.DistanceToTarget < sameIcon.DistanceToTarget)
         {
+            newIcon.IconTypes.UnionWith(sameIcon.IconTypes);
             icons.Remove(sameIcon);
             icons.Add(newIcon);
         }
-    }
-
-    private void ClickSelectedNearbyMapIcon(
-        ImageRegion imageRegion,
-        NearbyMapIcon? selectedIcon,
-        double fallbackX,
-        double fallbackY)
-    {
-        if (selectedIcon == null)
-        {
-            imageRegion.ClickTo(fallbackX, fallbackY);
-            return;
-        }
-
-        imageRegion.ClickTo(selectedIcon.CenterX, selectedIcon.CenterY);
-    }
-
-    private static NearbyMapIcon? ChooseTargetNearbyMapIcon(List<NearbyMapIcon> nearbyMapIcons)
-    {
-        if (nearbyMapIcons.Count == 0)
-        {
-            return null;
-        }
-
-        var nearest = nearbyMapIcons.OrderBy(x => x.DistanceToTarget).First();
-        var nearestMatchedType = nearbyMapIcons
-            .Where(x => x.TypeMatchesTarget)
-            .OrderBy(x => x.DistanceToTarget)
-            .FirstOrDefault();
-        if (nearestMatchedType == null || nearest.TypeMatchesTarget)
-        {
-            return nearest;
-        }
-
-        return nearestMatchedType.DistanceToTarget <= nearest.DistanceToTarget + 35
-            ? nearestMatchedType
-            : nearest;
     }
 
     /// <summary>
@@ -3105,37 +3175,93 @@ public class TpTask
     /// </summary>
     private async Task<MapChooseCandidate?> CheckMapChooseIcon(
         ImageRegion imageRegion,
+        GiTpPosition? targetTp,
+        int clickAttempt)
+    {
+        var previousCandidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
+        if (previousCandidate == null)
+        {
+            return null;
+        }
+
+        var stableChecks = 1;
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.ElapsedMilliseconds < MapChooseCandidateStableTimeoutMs)
+        {
+            await Delay(MapChooseCandidatePollIntervalMs, ct);
+            using var stableImageRegion = CaptureToRectArea();
+            var currentCandidate = GetPreferredMapChooseCandidate(stableImageRegion, targetTp);
+            if (currentCandidate == null)
+            {
+                previousCandidate = null;
+                stableChecks = 0;
+                continue;
+            }
+
+            stableChecks = previousCandidate != null &&
+                           IsSameStableMapChooseCandidate(previousCandidate, currentCandidate)
+                ? stableChecks + 1
+                : 1;
+            previousCandidate = currentCandidate;
+            if (stableChecks < MapChooseCandidateStableChecks)
+            {
+                continue;
+            }
+
+            Logger.LogInformation(
+                "地图候选点击 #{Attempt}：type={IconType} text={Text} icon=({IconX},{IconY},{IconWidth},{IconHeight}) click=({ClickX},{ClickY}) stable={StableChecks}",
+                clickAttempt,
+                currentCandidate.IconType,
+                string.IsNullOrWhiteSpace(currentCandidate.Text) ? "未识别" : currentCandidate.Text,
+                currentCandidate.IconRect.X,
+                currentCandidate.IconRect.Y,
+                currentCandidate.IconRect.Width,
+                currentCandidate.IconRect.Height,
+                currentCandidate.ClickRect.X + currentCandidate.ClickRect.Width / 2,
+                currentCandidate.ClickRect.Y + currentCandidate.ClickRect.Height / 2,
+                stableChecks);
+            ClickMapChooseCandidate(stableImageRegion, currentCandidate);
+            return currentCandidate;
+        }
+
+        Logger.LogWarning("地图候选位置在 {Timeout}ms 内未稳定", MapChooseCandidateStableTimeoutMs);
+        return null;
+    }
+
+    private MapChooseCandidate? GetPreferredMapChooseCandidate(
+        ImageRegion imageRegion,
         GiTpPosition? targetTp)
     {
-        var requiresNameMatch = ShouldRequireMapChooseCandidateName(targetTp);
-        var initialCandidates = GetMapChooseCandidates(imageRegion);
-        if (initialCandidates.Count == 0 &&
-            (!requiresNameMatch || GetMapChooseCandidateByTargetText(imageRegion, targetTp) == null))
+        if (ShouldRequireMapChooseCandidateName(targetTp))
         {
-            return null;
+            return GetMapChooseCandidateByTargetText(imageRegion, targetTp);
         }
 
-        var clickDelay = Math.Max(
-            MapChooseCandidateMinClickDelayMs,
-            TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay);
-        await Delay(clickDelay, ct);
+        return ChooseMapCandidate(GetMapChooseCandidates(imageRegion), targetTp);
+    }
 
-        var stableImageRegion = CaptureToRectArea();
-        using var ownedStableImageRegion = stableImageRegion;
-        var stableCandidates = GetMapChooseCandidates(stableImageRegion);
-
-        var chosenCandidate = requiresNameMatch
-            ? GetMapChooseCandidateByTargetText(stableImageRegion, targetTp)
-            : ChooseMapCandidate(stableCandidates, targetTp);
-
-        if (chosenCandidate == null)
+    private static bool IsSameStableMapChooseCandidate(
+        MapChooseCandidate previousCandidate,
+        MapChooseCandidate currentCandidate)
+    {
+        if (!string.Equals(previousCandidate.IconType, currentCandidate.IconType, StringComparison.Ordinal))
         {
-            return null;
+            return false;
         }
 
-        ClickMapChooseCandidate(stableImageRegion, chosenCandidate);
+        var previousText = NormalizeCandidateText(previousCandidate.Text);
+        var currentText = NormalizeCandidateText(currentCandidate.Text);
+        if (!string.IsNullOrEmpty(previousText) &&
+            !string.IsNullOrEmpty(currentText) &&
+            !string.Equals(previousText, currentText, StringComparison.Ordinal))
+        {
+            return false;
+        }
 
-        return chosenCandidate;
+        return Math.Abs(previousCandidate.ClickRect.X - currentCandidate.ClickRect.X) <= MapChooseCandidatePositionTolerancePx &&
+               Math.Abs(previousCandidate.ClickRect.Y - currentCandidate.ClickRect.Y) <= MapChooseCandidatePositionTolerancePx &&
+               Math.Abs(previousCandidate.ClickRect.Width - currentCandidate.ClickRect.Width) <= MapChooseCandidatePositionTolerancePx &&
+               Math.Abs(previousCandidate.ClickRect.Height - currentCandidate.ClickRect.Height) <= MapChooseCandidatePositionTolerancePx;
     }
 
     private MapChooseCandidate? GetMapChooseCandidateByTargetText(
