@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -34,8 +34,11 @@ public class TrapEscaper(CancellationToken ct)
     {
         var startTime = DateTime.UtcNow;
         bool left = false;
-        var screen = CaptureToRectArea();
-        var position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
+        OpenCvSharp.Point2f position;
+        using (var initialScreen = CaptureToRectArea())
+        {
+            position = Navigation.GetPosition(initialScreen, waypoint.MapName, waypoint.MapMatchMethod);
+        }
         LastActionTime = DateTime.UtcNow;
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
@@ -55,7 +58,7 @@ public class TrapEscaper(CancellationToken ct)
                 break;
             }
 
-            screen = CaptureToRectArea();
+            using var screen = CaptureToRectArea();
             position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
 
             // 旋转视角

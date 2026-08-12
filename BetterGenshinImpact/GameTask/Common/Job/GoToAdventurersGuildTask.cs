@@ -93,12 +93,11 @@ public class GoToAdventurersGuildTask
             await Delay(800, ct);
             
             // 6.2 每日提示确认
-            var ra1 = CaptureToRectArea();
+            using var ra1 = CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra1))
             {
                 Logger.LogInformation("存在提示并确认");
             }
-            ra1.Dispose();
             
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
             await Bv.WaitUntilFound(ElementRecognition.Get("PaimonMenu"), ct);
@@ -108,7 +107,7 @@ public class GoToAdventurersGuildTask
 
             // 结束后重新打开
             await Delay(1200, ct);
-            var ra = CaptureToRectArea();
+            using var ra = CaptureToRectArea();
             if (!Bv.FindFAndPress(ra, text: this.catherineLocalizedString))
             {
                 throw new Exception("未找与凯瑟琳对话交互按钮");
@@ -140,7 +139,8 @@ public class GoToAdventurersGuildTask
         }
 
         // 如果最后还在对话界面，选择最后一个选项退出
-        if (Bv.IsInTalkUi(CaptureToRectArea()))
+        using var talkUiCapture = CaptureToRectArea();
+        if (Bv.IsInTalkUi(talkUiCapture))
         {
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct);
             Logger.LogInformation("退出当前对话");

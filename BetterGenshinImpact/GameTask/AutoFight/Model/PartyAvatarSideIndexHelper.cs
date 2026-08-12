@@ -45,39 +45,49 @@ public class PartyAvatarSideIndexHelper
         var status = new MultiGameStatus();
         // 判断当前联机人数
         var pRaList = imageRegion.FindMulti(RecognitionAssets.Get("AutoFight", "P", imageRegion));
-        if (pRaList.Count > 0)
+        try
         {
-            status.IsInMultiGame = true;
-            var num = pRaList.Count + 1;
-            if (num > 4)
+            if (pRaList.Count > 0)
             {
-                throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
-            }
+                status.IsInMultiGame = true;
+                var num = pRaList.Count + 1;
+                if (num > 4)
+                {
+                    throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
+                }
 
-            status.PlayerCount = num;
+                status.PlayerCount = num;
 
-            // 联机状态下判断
-            var onePRa = imageRegion.Find(RecognitionAssets.Get("AutoFight", "OneP", imageRegion));
-            if (onePRa.IsExist())
-            {
-                logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
-                status.IsHost = true;
+                // 联机状态下判断
+                using var onePRa = imageRegion.Find(RecognitionAssets.Get("AutoFight", "OneP", imageRegion));
+                if (onePRa.IsExist())
+                {
+                    logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
+                    status.IsHost = true;
+                }
+                else
+                {
+                    logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
+                }
             }
             else
             {
-                logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
+                // 没有其他联机玩家的情况下，也有可能是单人房主
+                using var onePRa = imageRegion.Find(RecognitionAssets.Get("AutoFight", "OneP", imageRegion));
+                if (onePRa.IsExist())
+                {
+                    logger.LogInformation("当前处于联机状态，但是没有其他玩家连入");
+                    status.IsInMultiGame = true;
+                    status.IsHost = true;
+                    status.PlayerCount = 1;
+                }
             }
         }
-        else
+        finally
         {
-            // 没有其他联机玩家的情况下，也有可能是单人房主
-            var onePRa = imageRegion.Find(RecognitionAssets.Get("AutoFight", "OneP", imageRegion));
-            if (onePRa.IsExist())
+            foreach (var region in pRaList)
             {
-                logger.LogInformation("当前处于联机状态，但是没有其他玩家连入");
-                status.IsInMultiGame = true;
-                status.IsHost = true;
-                status.PlayerCount = 1;
+                region.Dispose();
             }
         }
 

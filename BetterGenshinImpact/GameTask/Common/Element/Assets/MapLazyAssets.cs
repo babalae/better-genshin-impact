@@ -30,6 +30,7 @@ public sealed class MapLazyAssets
         { "枫丹", [4515, 3631] },
         { "纳塔", [8973.5, -1879.1] },
         { "挪德卡莱", [9542.25, 1661.84] },
+        { "至冬", [6755.051, 9480.659] }
     };
 
     public IReadOnlyDictionary<string, GiTpPosition> DomainPositionMap => _domainPositionMap;

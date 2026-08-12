@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
@@ -18,6 +19,7 @@ using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -35,6 +37,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -47,8 +50,9 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HomePageViewModel : ViewModel
+public partial class HomePageViewModel : ViewModel, IDisposable
 {
+    private bool _disposed;
     [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
@@ -70,6 +74,8 @@ public partial class HomePageViewModel : ViewModel
 
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
+    private readonly IBannerImageService _bannerImageService;
+    private CancellationTokenSource? _bannerDownloadCancellationTokenSource;
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
@@ -80,15 +86,19 @@ public partial class HomePageViewModel : ViewModel
 
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
+    [ObservableProperty]
+    private bool _isCustomNetworkBanner = false;
     private readonly ChildSessionService _childSessionService;
 
     public HomePageViewModel(
         IConfigService configService,
         TaskTriggerDispatcher taskTriggerDispatcher,
-        ChildSessionService childSessionService)
+        ChildSessionService childSessionService,
+        IBannerImageService bannerImageService)
     {
         _taskDispatcher = taskTriggerDispatcher;
         _childSessionService = childSessionService;
+        _bannerImageService = bannerImageService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
@@ -167,9 +177,26 @@ public partial class HomePageViewModel : ViewModel
 
     private void OnClosed()
     {
+        CancelBannerDownload();
         OnStopTrigger();
         // 等待任务结束
         _maskWindow?.Close();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        OnClosed();
+        _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+        _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _mouseKeyMonitor.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [RelayCommand]
@@ -315,6 +342,7 @@ public partial class HomePageViewModel : ViewModel
                 _maskWindow ??= new MaskWindow();
                 _maskWindow.Show();
                 MaskWindow.Instance().RefreshPosition();
+                App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
             }
@@ -565,6 +593,26 @@ public partial class HomePageViewModel : ViewModel
 
     private void InitializeBannerImage()
     {
+        LoadFallbackBannerImage();
+        try
+        {
+            // 检查url文件
+            var url = _bannerImageService.ReadConfiguredUrl();
+            // 判断是否有内容
+            if (!string.IsNullOrEmpty(url))
+            {
+                _ = DownloadAndApplyBannerImageAsync(url, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化背景图片失败，使用现有背景图片");
+        }
+    }
+
+    private void LoadFallbackBannerImage()
+    {
+        IsCustomNetworkBanner = false;
         try
         {
             // 检查是否存在自定义图片
@@ -590,6 +638,68 @@ public partial class HomePageViewModel : ViewModel
             _logger.LogError(ex, "初始化背景图片失败，使用默认图片");
             BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
         }
+    }
+
+    private async Task DownloadAndApplyBannerImageAsync(string url, bool showErrorToast)
+    {
+        CancelBannerDownload();
+        var cancellationTokenSource = new CancellationTokenSource();
+        _bannerDownloadCancellationTokenSource = cancellationTokenSource;
+
+        try
+        {
+            if (!await _bannerImageService.DownloadAndSaveAsync(url, cancellationTokenSource.Token))
+            {
+                return;
+            }
+
+            cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            RefreshBannerImage();
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+            // 新操作替代旧下载或恢复默认图片时无需提示。
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "下载自定义背景图片url失败，使用现有背景图片");
+            if (showErrorToast)
+            {
+                Toast.Error($"下载自定义背景图片url失败：{ex.Message}");
+            }
+
+            LoadFallbackBannerImage();
+        }
+        finally
+        {
+            if (ReferenceEquals(_bannerDownloadCancellationTokenSource, cancellationTokenSource))
+            {
+                _bannerDownloadCancellationTokenSource = null;
+            }
+
+            cancellationTokenSource.Dispose();
+        }
+    }
+
+    private void RefreshBannerImage()
+    {
+        IsCustomNetworkBanner = true;
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.UriSource = new Uri(Path.GetFullPath(_bannerImageService.NetworkImagePath));
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+        bitmap.EndInit();
+        BannerImageSource = bitmap;
+        _logger.LogInformation("已加载自定义背景图片url");
+    }
+
+    private void CancelBannerDownload()
+    {
+        var cancellationTokenSource = _bannerDownloadCancellationTokenSource;
+        _bannerDownloadCancellationTokenSource = null;
+        cancellationTokenSource?.Cancel();
+        _bannerImageService.InvalidatePendingDownloads();
     }
 
     [RelayCommand]
@@ -639,10 +749,63 @@ public partial class HomePageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void ChangeWebBannerImage()
+    {
+        try
+        {
+            CancelBannerDownload();
+            // 打开窗口
+            var vm = App.GetService<WebImageInputViewModel>();
+            var webImageInput = new WebImageInput(vm!);
+            webImageInput.Owner = Application.Current.MainWindow;
+            vm!.SubmitCompleted += RefreshBannerImage;
+            try
+            {
+                webImageInput.ShowDialog();
+            }
+            finally
+            {
+                vm.SubmitCompleted -= RefreshBannerImage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "更换背景图片失败");
+            Toast.Error($"更换背景图片失败: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshWebBannerImageAsync()
+    {
+        try
+        {
+            // 检查url文件
+            var url = _bannerImageService.ReadConfiguredUrl();
+            // 判断是否有内容
+            if (!string.IsNullOrEmpty(url))
+            {
+                await DownloadAndApplyBannerImageAsync(url, true);
+            }
+            else
+            {
+                CancelBannerDownload();
+                LoadFallbackBannerImage();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "刷新背景图片失败");
+            Toast.Error($"刷新背景图片失败: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
     private void ResetBannerImage()
     {
         try
         {
+            CancelBannerDownload();
             // 获取自定义图片的完整路径
             var customImageFullPath = Path.GetFullPath(_customBannerImagePath);
             _logger.LogInformation("尝试恢复默认背景图片，自定义图片路径: {CustomPath}", customImageFullPath);
@@ -659,8 +822,10 @@ public partial class HomePageViewModel : ViewModel
             if (File.Exists(customImageFullPath))
             {
                 File.Delete(customImageFullPath);
-                Toast.Success("已恢复为默认背景图片！");
             }
+            _bannerImageService.ResetNetworkImage();
+            IsCustomNetworkBanner = false;
+            Toast.Success("已恢复为默认背景图片！");
         }
         catch (Exception ex)
         {

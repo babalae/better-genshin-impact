@@ -1,6 +1,7 @@
-﻿using BehaviourTree;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
+using CsTrees;
+using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System;
@@ -21,38 +22,46 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// 测试获取钓鱼拉扯框，结果为运行中
         /// </summary>
-        public void Fishing_ShouldBeRunning(string screenshot1080pGetFishBoxArea, string screenshot1080p)
+        public async Task Fishing_ShouldBeRunning(string screenshot1080pGetFishBoxArea, string screenshot1080p)
         {
             //
-            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
             FakeDrawContent fakeDrawContent = new FakeDrawContent();
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
-
-            var blackboard = new Blackboard(null, sleep: i => { });
-
-            GetFishBoxArea getFishBoxArea = new GetFishBoxArea("-", blackboard, new FakeLogger(), false);
-            getFishBoxArea.Tick(imageRegion);
-
-            mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
-
+            Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawContent: fakeDrawContent);
+            var mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawContent: fakeDrawContent);
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
+            FakeLogger logger = new FakeLogger();
+
+            CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
+
+            var sut = TreeBuilder.Create()
+                .WithBlackboard(blackboard)
+                    .Sequence("用例")
+                        .ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2])
+                        .SequenceWithMemory("-")
+                            .GetFishBoxArea("-", logger, false)
+                            .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent)
+                        .End()
+                    .End()
+                .End()
+                .Build();
 
             //
-            Fishing sut = new Fishing("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent);
-            BehaviourStatus actual = sut.Tick(imageRegion);
+            await sut.TickOnce();
+            Status actual = await sut.TickOnce();
 
             //
-            Assert.Equal(BehaviourStatus.Running, actual);
+            Assert.Equal(Status.Running, actual);
 
             //
             fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
             //
-            actual = sut.Tick(imageRegion);
+            actual = await sut.TickOnce();
 
             //
-            Assert.Equal(BehaviourStatus.Running, actual);
+            Assert.Equal(Status.Running, actual);
         }
 
         [Theory]
@@ -60,38 +69,46 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// 测试获取钓鱼拉扯框，由于界面效果，拉扯框无法被识别或消失，结果为成功
         /// </summary>
-        public void Fishing_ShouldSuccess(string screenshot1080pGetFishBoxArea, string screenshot1080p)
+        public async Task Fishing_ShouldSuccess(string screenshot1080pGetFishBoxArea, string screenshot1080p)
         {
             //
-            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
             FakeDrawContent fakeDrawContent = new FakeDrawContent();
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
-
-            var blackboard = new Blackboard(null, sleep: i => { });
-
-            GetFishBoxArea getFishBoxArea = new GetFishBoxArea("-", blackboard, new FakeLogger(), false);
-            getFishBoxArea.Tick(imageRegion);
-
-            mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
-
+            Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawContent: fakeDrawContent);
+            var mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawContent: fakeDrawContent);
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
+            FakeLogger logger = new FakeLogger();
+
+            CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
+
+            var sut = TreeBuilder.Create()
+                .WithBlackboard(blackboard)
+                    .Sequence("用例")
+                        .ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2])
+                        .SequenceWithMemory("-")
+                            .GetFishBoxArea("-", logger, false)
+                            .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent)
+                        .End()
+                    .End()
+                .End()
+                .Build();
 
             //
-            Fishing sut = new Fishing("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent);
-            BehaviourStatus actual = sut.Tick(imageRegion);
+            await sut.TickOnce();
+            Status actual = await sut.TickOnce();
 
             //
-            Assert.Equal(BehaviourStatus.Running, actual);
+            Assert.Equal(Status.Running, actual);
 
             //
             fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
             //
-            actual = sut.Tick(imageRegion);
+            actual = await sut.TickOnce();
 
             //
-            Assert.Equal(BehaviourStatus.Succeeded, actual);
+            Assert.Equal(Status.Success, actual);
         }
     }
 }

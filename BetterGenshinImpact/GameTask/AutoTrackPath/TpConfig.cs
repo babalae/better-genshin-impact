@@ -47,12 +47,19 @@ public partial class TpConfig : ObservableValidator
     [NotifyDataErrorInfo] 
     [Range(MinTeleportOperationDelayMilliseconds, MaxTeleportOperationDelayMilliseconds, ErrorMessage = "恰当的传送操作间隔:2-100")]
     private int _teleportOperationDelayMilliseconds = DefaultTeleportOperationDelayMilliseconds; // 传送操作速度基准间隔，单位：ms
+
+    [JsonIgnore]
+    public int TeleportOperationDelayPercentage =>
+        TeleportOperationDelayMilliseconds * 100 / DefaultTeleportOperationDelayMilliseconds;
+
     partial void OnTeleportOperationDelayMillisecondsChanged(int value)
     {
         if (value is < MinTeleportOperationDelayMilliseconds or > MaxTeleportOperationDelayMilliseconds)
         {
             TeleportOperationDelayMilliseconds = DefaultTeleportOperationDelayMilliseconds;
         }
+
+        OnPropertyChanged(nameof(TeleportOperationDelayPercentage));
     }
 
     /// <summary>

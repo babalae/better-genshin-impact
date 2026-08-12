@@ -329,8 +329,7 @@
                         <ScrollViewer Grid.Row="1"
                                       HorizontalScrollBarVisibility="Disabled"
                                       VerticalScrollBarVisibility="Auto">
-                            <ItemsControl Padding="0,0,16,0"
-                                          ItemTemplate="{StaticResource FeedItemTemplate}"
+                            <ItemsControl ItemTemplate="{StaticResource FeedItemTemplate}"
                                           ItemsSource="{Binding CnFeedItems}" />
                         </ScrollViewer>
                     </Grid>
@@ -385,8 +384,7 @@
                         <ScrollViewer Grid.Row="1"
                                       HorizontalScrollBarVisibility="Disabled"
                                       VerticalScrollBarVisibility="Auto">
-                            <ItemsControl Padding="0,0,16,0"
-                                          ItemTemplate="{StaticResource FeedItemTemplate}"
+                            <ItemsControl ItemTemplate="{StaticResource FeedItemTemplate}"
                                           ItemsSource="{Binding GlobalFeedItems}" />
                         </ScrollViewer>
                     </Grid>

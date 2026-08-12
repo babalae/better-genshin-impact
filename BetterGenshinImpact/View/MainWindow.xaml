@@ -56,7 +56,6 @@
         <ui:NavigationView x:Name="RootNavigation"
                            Grid.Column="0"
                            Grid.Row="1"
-                           Margin="0,0,0,5"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            IsTopSeparatorVisible="False"
@@ -148,6 +147,16 @@
                         <ui:SymbolIcon Symbol="XboxController24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem Content="自动演奏"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:MusicPage}"
+                                       Visibility="{Binding IsAlphaVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="MusicNote224" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
 
                 <ui:NavigationViewItem Content="快捷键"
                                        NavigationCacheMode="Enabled"
