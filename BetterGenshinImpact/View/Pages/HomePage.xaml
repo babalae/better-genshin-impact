@@ -157,9 +157,8 @@
                                 <b:InvokeCommandAction Command="{Binding CaptureModeDropDownChangedCommand}" CommandParameter="GeniusInvocation" />
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
-                    </ComboBox>
-                </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                     </ComboBox>
+                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -339,6 +338,32 @@
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
                                Content="手动设置" />
                 </Grid>
+                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                 <Grid Margin="16">
+                     <Grid.RowDefinitions>
+                         <RowDefinition Height="Auto" />
+                         <RowDefinition Height="Auto" />
+                     </Grid.RowDefinitions>
+                     <Grid.ColumnDefinitions>
+                         <ColumnDefinition Width="*" />
+                         <ColumnDefinition Width="Auto" />
+                     </Grid.ColumnDefinitions>
+                     <ui:TextBlock Grid.Row="0"
+                                   Grid.Column="0"
+                                   FontTypography="Body"
+                                   Text="输入监听模式"
+                                   TextWrapping="Wrap" />
+                     <ui:TextBlock Grid.Row="1"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                   Text="切换官方全局 Hook 与 Raw Input；开启 Raw Input 可防止在使用 WinDbg 调试时鼠标键盘卡顿。默认关闭，修改后需重启 BGI。"
+                                   TextWrapping="Wrap" />
+                     <ui:ToggleSwitch Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Margin="0,0,36,0"
+                                      IsChecked="{Binding Config.UseRawInput, Mode=TwoWay}" />
+                 </Grid>
             </StackPanel>
         </ui:CardExpander>
 
