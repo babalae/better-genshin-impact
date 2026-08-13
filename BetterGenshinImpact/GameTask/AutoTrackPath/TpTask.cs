@@ -3389,9 +3389,8 @@ public class TpTask
 
                 if (text.Length <= 1)
                 {
-                    // 图标模板已经能够证明这是一个地图候选项。OCR 仅用于名称匹配，
-                    // 识别失败时仍保留候选，让类型、高亮和唯一候选逻辑继续兜底。
-                    text = string.Empty;
+                    // 地图候选项必须同时识别到有效文字，避免仅凭图标、高亮或列表顺序误选传送点。
+                    continue;
                 }
 
                 var clickRect = new Rect(textRect.X, textRect.Y, Math.Min(textRect.Width, 220), textRect.Height).ClampTo(imageRegion.SrcMat);

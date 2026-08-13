@@ -1,0 +1,129 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AutoPickWhitelistConfigWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 Width="500"
+                 Height="640"
+                 MinWidth="400"
+                 MinHeight="400"
+                 Title="白名单模式配置"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Auto"
+                 WindowStartupLocation="CenterOwner"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
+                 mc:Ignorable="d">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="白名单模式配置">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="CheckmarkCircle24" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <Border Grid.Row="1"
+                Margin="20,12,20,12"
+                Padding="14"
+                Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold"
+                           Text="仅拾取最终列表中的内容" />
+                <TextBlock Margin="0,5,0,0"
+                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                           Text="最终拾取列表 =（默认拾取列表 ∪ 用户拾取列表）− 用户不拾取列表。聊天/设置图标及安全排除规则仍然优先。"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <TabControl Grid.Row="2" Margin="20,0,20,0">
+            <TabItem Header="拾取（基础列表）">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Margin="0,0,0,12"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                               Text="白名单模式启用期间，默认拾取列表和用户拾取列表始终生效。"
+                               TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="1"
+                                AcceptsReturn="True"
+                                AcceptsTab="False"
+                                PlaceholderText="每行一条需要额外拾取的完整 OCR 文本"
+                                Text="{Binding PickText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                TextWrapping="NoWrap"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Auto" />
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="不拾取（排除项）">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold" Text="启用不拾取规则" />
+                            <TextBlock Margin="0,3,12,0"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="精确命中的内容会从默认和用户拾取列表中排除。"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="1"
+                                         VerticalAlignment="Center"
+                                         IsChecked="{Binding DoNotPickEnabled, Mode=TwoWay}" />
+                    </Grid>
+                    <ui:TextBox Grid.Row="1"
+                                AcceptsReturn="True"
+                                AcceptsTab="False"
+                                IsEnabled="{Binding DoNotPickEnabled}"
+                                PlaceholderText="每行一条需要从最终拾取列表排除的完整 OCR 文本"
+                                Text="{Binding DoNotPickText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                TextWrapping="NoWrap"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Auto" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="3" Margin="20,16,20,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                       Text="保存后立即刷新自动拾取规则。" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button MinWidth="88"
+                           Margin="0,0,10,0"
+                           Command="{Binding CancelCommand}"
+                           Content="取消"
+                           IsCancel="True" />
+                <ui:Button MinWidth="88"
+                           Appearance="Primary"
+                           Command="{Binding SaveCommand}"
+                           Content="保存"
+                           IsDefault="True" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
