@@ -63,6 +63,11 @@ public class KeyboardHook
         }
     }
 
+    public void KeyDown(object? sender, Keys key)
+    {
+        KeyDown(sender, new KeyEventArgs(key));
+    }
+
     /// <summary>
     /// 长按持续执行
     /// </summary>
@@ -94,6 +99,11 @@ public class KeyboardHook
                 KeyUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
             }
         }
+    }
+
+    public void KeyUp(object? sender, Keys key)
+    {
+        KeyUp(sender, new KeyEventArgs(key));
     }
 
     public void RegisterHotKey(Keys key)

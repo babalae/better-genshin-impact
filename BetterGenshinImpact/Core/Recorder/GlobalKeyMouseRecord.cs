@@ -194,16 +194,46 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
     }
 
+    public void GlobalHookKeyDown(Keys key, DateTime time)
+    {
+        if (_keyDownState.TryGetValue(key, out var state) && state)
+        {
+            return;
+        }
+
+        _keyDownState[key] = true;
+        _recorder?.KeyDown(key, time);
+    }
+
+    public void GlobalHookKeyUp(Keys key, DateTime time)
+    {
+        if (_keyDownState.TryGetValue(key, out var state) && state)
+        {
+            _keyDownState[key] = false;
+            _recorder?.KeyUp(key, time);
+        }
+    }
+
     public void GlobalHookMouseDown(MouseEventExtArgs e, DateTime time)
     {
         // Debug.WriteLine($"MouseDown: {e.Button}");
         _recorder?.MouseDown(e, time);
     }
 
+    public void GlobalHookMouseDown(MouseButtons button, DateTime time)
+    {
+        _recorder?.MouseDown(button, time);
+    }
+
     public void GlobalHookMouseUp(MouseEventExtArgs e, DateTime time)
     {
         // Debug.WriteLine($"MouseUp: {e.Button}");
         _recorder?.MouseUp(e, time);
+    }
+
+    public void GlobalHookMouseUp(MouseButtons button, DateTime time)
+    {
+        _recorder?.MouseUp(button, time);
     }
 
     public void GlobalHookMouseMoveTo(MouseEventExtArgs e, DateTime time)
@@ -220,6 +250,11 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     {
         // Debug.WriteLine($"MouseWheel: {e.Delta}");
         _recorder?.MouseWheel(e, time);
+    }
+
+    public void GlobalHookMouseWheel(int delta, DateTime time)
+    {
+        _recorder?.MouseWheel(delta, time);
     }
 
     private void RelativeMouseMoved(object? sender, RelativeMouseMoveEventArgs e)
