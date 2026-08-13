@@ -1413,27 +1413,36 @@ public partial class PathExecutor
 
             int noDisabledUiButtonTimes = 0;
 
-            while (true)
+            try
             {
-                using var captureContent = new CaptureContent(CaptureToRectArea());
-                var currentCapture = captureContent.CaptureRectArea;
-                disabledUiButtonRa = currentCapture.Find(GetAutoSkipRecognitionObject("DisabledUiButton", currentCapture));
-                if (disabledUiButtonRa.IsExist())
+                while (true)
                 {
-                    _autoSkipTrigger.OnCapture(captureContent);
-                    noDisabledUiButtonTimes = 0;
-                }
-                else
-                {
-                    noDisabledUiButtonTimes++;
-                    if (noDisabledUiButtonTimes > 10)
+                    using var captureContent = new CaptureContent(CaptureToRectArea());
+                    var currentCapture = captureContent.CaptureRectArea;
+                    disabledUiButtonRa = currentCapture.Find(GetAutoSkipRecognitionObject("DisabledUiButton", currentCapture));
+                    if (disabledUiButtonRa.IsExist())
                     {
-                        Logger.LogInformation("自动剧情结束");
-                        break;
+                        _autoSkipTrigger.OnCapture(captureContent);
+                        noDisabledUiButtonTimes = 0;
                     }
-                }
+                    else
+                    {
+                        noDisabledUiButtonTimes++;
+                        _autoSkipTrigger.HandlePopupClose(captureContent, allowAutomaticClose: true);
 
-                await Delay(210, ct);
+                        if (!_autoSkipTrigger.ShouldContinuePopupCloseTracking && noDisabledUiButtonTimes > 10)
+                        {
+                            Logger.LogInformation("自动剧情结束");
+                            break;
+                        }
+                    }
+
+                    await Delay(210, ct);
+                }
+            }
+            finally
+            {
+                _autoSkipTrigger.StopPopupCloseTracking();
             }
         }
     }

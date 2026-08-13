@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System;
@@ -214,9 +215,20 @@ public partial class MouseKeyMonitor : IDisposable
         // Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
         GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(e, DateTime.UtcNow);
 
-        if (e.Button != MouseButtons.Left)
-            if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
-                hook.MouseDown(sender, e);
+        if (e.Button == MouseButtons.Left)
+        {
+            if (SystemControl.IsGenshinImpactActive())
+            {
+                PopupClosePauseController.RecordLeftButtonDown(e.Location);
+            }
+
+            return;
+        }
+
+        if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
+        {
+            hook.MouseDown(sender, e);
+        }
     }
 
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
@@ -243,6 +255,7 @@ public partial class MouseKeyMonitor : IDisposable
 
     public void Unsubscribe()
     {
+        PopupClosePauseController.Reset();
         _spaceTimer.Stop();
         _fTimer.Stop();
         _firstSpaceKeyDownTime = DateTime.MaxValue;

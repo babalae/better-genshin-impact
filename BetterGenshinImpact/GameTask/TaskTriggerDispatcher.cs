@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
 using Fischless.GameCapture.Graphics;
@@ -99,6 +100,7 @@ namespace BetterGenshinImpact.GameTask
         {
             lock (_triggerListLocker)
             {
+                DisableRemovedAutoSkipTriggers([]);
                 GameTaskManager.ClearTriggers();
                 _triggers?.Clear();
             }
@@ -108,6 +110,7 @@ namespace BetterGenshinImpact.GameTask
         {
             lock (_triggerListLocker)
             {
+                DisableRemovedAutoSkipTriggers(list);
                 _triggers = list;
             }
         }
@@ -126,6 +129,22 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        private void DisableRemovedAutoSkipTriggers(IReadOnlyCollection<ITaskTrigger> nextTriggers)
+        {
+            if (_triggers == null)
+            {
+                return;
+            }
+
+            foreach (var trigger in _triggers.OfType<AutoSkipTrigger>())
+            {
+                if (!nextTriggers.Contains(trigger))
+                {
+                    trigger.IsEnabled = false;
+                }
+            }
+        }
+
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
@@ -138,7 +157,7 @@ namespace BetterGenshinImpact.GameTask
             TaskContext.Instance().Init(hWnd);
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadInitialTriggers();
+            SetTriggers(GameTaskManager.LoadInitialTriggers());
             GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
 
             // if (GraphicsCapture.IsHdrEnabled(hWnd))
@@ -172,6 +191,10 @@ namespace BetterGenshinImpact.GameTask
         public void Stop()
         {
             _timer.Stop();
+            lock (_triggerListLocker)
+            {
+                DisableRemovedAutoSkipTriggers([]);
+            }
             ChatUiHotkeyGuard.Reset();
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
@@ -204,6 +227,17 @@ namespace BetterGenshinImpact.GameTask
             if (_timer.Enabled)
             {
                 _timer.Stop();
+            }
+
+            lock (_triggerListLocker)
+            {
+                if (_triggers != null)
+                {
+                    foreach (var trigger in _triggers.OfType<AutoSkipTrigger>())
+                    {
+                        trigger.StopPopupCloseTracking();
+                    }
+                }
             }
 
             ChatUiHotkeyGuard.Reset();

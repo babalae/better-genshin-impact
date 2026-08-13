@@ -53,6 +53,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             if (!value)
             {
                 ReleaseChooseOptionWait("触发器关闭");
+                StopPopupCloseTracking();
             }
         }
     }
@@ -181,6 +182,32 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private DateTime _prevGetDailyRewardsTime = DateTime.MinValue;
 
     private DateTime _prevClickTime = DateTime.MinValue;
+    private bool _wasPopupClosePausedByUser;
+    internal bool ShouldContinuePopupCloseTracking => _wasPopupClosePausedByUser
+                                                     || PopupClosePauseController.IsPausedByUser(this)
+                                                     || PopupClosePauseController.HasPendingClick(this);
+
+    internal void StartPopupCloseTracking()
+    {
+        PopupClosePauseController.StartTracking(this);
+    }
+
+    internal void HandlePopupClose(CaptureContent content, bool allowAutomaticClose)
+    {
+        if (_config.ClosePopupPagedEnabled)
+        {
+            StartPopupCloseTracking();
+        }
+
+        ClosePopupPage(content, allowAutomaticClose);
+    }
+
+    internal void StopPopupCloseTracking()
+    {
+        PopupClosePauseController.StopTracking(this);
+        _wasPopupClosePausedByUser = false;
+    }
+
     private DateTime _prevBringToFrontTime = DateTime.MinValue;
     private DateTime _chooseOptionDelayUntil = DateTime.MinValue;
     private DateTime _chooseOptionWaitRecheckUntil = DateTime.MinValue;
@@ -188,6 +215,15 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        if (_config.ClosePopupPagedEnabled)
+        {
+            StartPopupCloseTracking();
+        }
+        else
+        {
+            StopPopupCloseTracking();
+        }
+
         RefreshOperationMode();
         if (!_config.AutoWaitDialogueOptionVoiceEnabled)
         {
@@ -244,6 +280,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 CloseItemPopup(content);
                 CloseCharacterPopup(content);
             }
+            else
+            {
+                ClearPopupClosePause();
+            }
 
             // 自动剧情点击3s内判断
             if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
@@ -259,6 +299,14 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     return;
                 }
             }
+        }
+        else if (ShouldContinuePopupCloseTracking)
+        {
+            HandlePopupClose(content, allowAutomaticClose: false);
+        }
+        else
+        {
+            ClearPopupClosePause();
         }
 
         if (isPlaying)
@@ -1004,23 +1052,86 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// 关闭弹出页
     /// </summary>
     /// <param name="content"></param>
-    private void ClosePopupPage(CaptureContent content)
+    private void ClosePopupPage(CaptureContent content, bool allowAutomaticClose = true)
     {
         if (!_config.ClosePopupPagedEnabled)
         {
+            ClearPopupClosePause();
             return;
         }
-        
+
         content.CaptureRectArea.Find(GetRecognitionObject("PageClose", content.CaptureRectArea), pageCloseRoRa =>
         {
-            if (!Bv.IsInBigMapUi(content.CaptureRectArea))
+            try
             {
-                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+                if (Bv.IsInBigMapUi(content.CaptureRectArea))
+                {
+                    ClearPopupClosePause();
+                    return;
+                }
 
+                var closeButtonRect = pageCloseRoRa.ConvertPositionToGameCaptureRegion(
+                    0,
+                    0,
+                    pageCloseRoRa.Width,
+                    pageCloseRoRa.Height);
+                var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+                var gameRect = new System.Drawing.Rectangle(
+                    captureAreaRect.X,
+                    captureAreaRect.Y,
+                    captureAreaRect.Width,
+                    captureAreaRect.Height);
+                var targetRect = new System.Drawing.Rectangle(
+                    gameRect.X + closeButtonRect.X,
+                    gameRect.Y + closeButtonRect.Y,
+                    closeButtonRect.Width,
+                    closeButtonRect.Height);
+
+                var pauseState = PopupClosePauseController.ObserveTarget(this, targetRect, gameRect);
+                if (!pauseState.IsOwner)
+                {
+                    return;
+                }
+
+                if (pauseState.IsPausedByUser)
+                {
+                    if (!_wasPopupClosePausedByUser)
+                    {
+                        AutoSkipLog("用户点击弹出页顶部区域，暂停自动关闭当前弹出页");
+                    }
+
+                    _wasPopupClosePausedByUser = true;
+                    return;
+                }
+
+                _wasPopupClosePausedByUser = false;
+                if (!allowAutomaticClose)
+                {
+                    return;
+                }
+
+                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
                 AutoSkipLog("关闭弹出页");
+            }
+            finally
+            {
                 pageCloseRoRa.Dispose();
             }
+        }, () =>
+        {
+            if (_wasPopupClosePausedByUser)
+            {
+                AutoSkipLog("弹出页关闭标志已丢失，恢复自动关闭");
+            }
+
+            ClearPopupClosePause();
         });
+    }
+
+    private void ClearPopupClosePause()
+    {
+        PopupClosePauseController.MarkTargetMissing(this);
+        _wasPopupClosePausedByUser = false;
     }
     
     private DateTime _prevCloseItemTime = DateTime.MinValue;
