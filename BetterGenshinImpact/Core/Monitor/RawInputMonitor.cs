@@ -110,6 +110,20 @@ public sealed class RawInputMonitor(
                     throw;
                 }
             }
+            else if (ReferenceEquals(handlers, _keyboardHandlers) && !_context!.KeyboardRegistered)
+            {
+                // 采集线程已运行（可能仅因鼠标订阅启动），补充注册键盘设备
+                try
+                {
+                    RegisterKeyboardRawInput(_context!);
+                    _context!.KeyboardRegistered = true;
+                }
+                catch
+                {
+                    handlers.Remove(subscriptionId);
+                    throw;
+                }
+            }
         }
 
         return new Subscription<TEventArgs>(this, subscriptionId, handlers);
@@ -133,6 +147,7 @@ public sealed class RawInputMonitor(
                 Name = "BetterGI RawInput Monitor"
             };
             context.Thread.SetApartmentState(ApartmentState.STA);
+            context.RequireKeyboard = _keyboardHandlers.Count > 0;
             _context = context;
         }
 
@@ -386,6 +401,12 @@ public sealed class RawInputMonitor(
 
             RegisterRawInput(context);
             context.Registered = true;
+            if (context.RequireKeyboard)
+            {
+                RegisterKeyboardRawInput(context);
+                context.KeyboardRegistered = true;
+            }
+
             if (Volatile.Read(ref context.StopRequested) != 0)
             {
                 throw new OperationCanceledException("Raw Input 初始化已取消。");
@@ -471,7 +492,22 @@ public sealed class RawInputMonitor(
                 usUsage = MouseUsage,
                 dwFlags = User32.RIDEV.RIDEV_INPUTSINK,
                 hwndTarget = context.HwndSource!.Handle
-            },
+            }
+        };
+
+        if (!User32.RegisterRawInputDevices(
+                devices,
+                (uint)devices.Length,
+                (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 鼠标设备失败");
+        }
+    }
+
+    private void RegisterKeyboardRawInput(RawInputThreadContext context)
+    {
+        var devices = new[]
+        {
             new User32.RAWINPUTDEVICE
             {
                 usUsagePage = GenericDesktopUsagePage,
@@ -486,7 +522,31 @@ public sealed class RawInputMonitor(
                 (uint)devices.Length,
                 (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 设备失败");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "注册 Raw Input 键盘设备失败");
+        }
+    }
+
+    private void UnregisterKeyboardRawInput()
+    {
+        var devices = new[]
+        {
+            new User32.RAWINPUTDEVICE
+            {
+                usUsagePage = GenericDesktopUsagePage,
+                usUsage = KeyboardUsage,
+                dwFlags = User32.RIDEV.RIDEV_REMOVE,
+                hwndTarget = HWND.NULL
+            }
+        };
+
+        if (!User32.RegisterRawInputDevices(
+                devices,
+                (uint)devices.Length,
+                (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
+        {
+            Logger.LogWarning(
+                "注销 Raw Input 键盘设备失败，Win32Error: {Win32Error}",
+                Marshal.GetLastWin32Error());
         }
     }
 
@@ -502,13 +562,6 @@ public sealed class RawInputMonitor(
                     usUsage = MouseUsage,
                     dwFlags = User32.RIDEV.RIDEV_REMOVE,
                     hwndTarget = HWND.NULL
-                },
-                new User32.RAWINPUTDEVICE
-                {
-                    usUsagePage = GenericDesktopUsagePage,
-                    usUsage = KeyboardUsage,
-                    dwFlags = User32.RIDEV.RIDEV_REMOVE,
-                    hwndTarget = HWND.NULL
                 }
             };
 
@@ -518,11 +571,17 @@ public sealed class RawInputMonitor(
                     (uint)Marshal.SizeOf<User32.RAWINPUTDEVICE>()))
             {
                 Logger.LogWarning(
-                    "注销 Raw Input 设备失败，Win32Error: {Win32Error}",
+                    "注销 Raw Input 鼠标设备失败，Win32Error: {Win32Error}",
                     Marshal.GetLastWin32Error());
             }
 
             context.Registered = false;
+        }
+
+        if (context.KeyboardRegistered)
+        {
+            UnregisterKeyboardRawInput();
+            context.KeyboardRegistered = false;
         }
 
         if (context.HwndSource != null)
@@ -614,12 +673,19 @@ public sealed class RawInputMonitor(
 
     private void ProcessMouseInput(nint buffer, uint readSize, DateTime timestamp)
     {
+        var headerSize = Marshal.SizeOf<User32.RAWINPUTHEADER>();
+        var mouseSize = Marshal.SizeOf<RawMouseData>();
+        if (readSize < headerSize + mouseSize)
+        {
+            // 缓冲区不足以容纳 RAWINPUTHEADER + RawMouseData，跳过本次解析。
+            return;
+        }
+
         if (TryGetRelativeMovementFromBuffer(buffer, readSize, out int deltaX, out int deltaY))
         {
             Publish(_moveHandlers, new RelativeMouseMoveEventArgs(deltaX, deltaY, timestamp));
         }
 
-        var headerSize = Marshal.SizeOf<User32.RAWINPUTHEADER>();
         var mouse = Marshal.PtrToStructure<RawMouseData>(IntPtr.Add(buffer, headerSize));
 
         var buttonEvents = new List<(MouseButtons button, bool isDown)>();
@@ -718,6 +784,7 @@ public sealed class RawInputMonitor(
         where TEventArgs : EventArgs
     {
         bool shouldStop;
+        bool shouldUnregisterKeyboard;
         lock (_sourceLock)
         {
             if (_isDisposed || !handlers.Remove(subscriptionId))
@@ -731,10 +798,32 @@ public sealed class RawInputMonitor(
                          && _mouseButtonHandlers.Count == 0
                          && _mouseWheelHandlers.Count == 0
                          && _isStarted;
+
+            // 键盘订阅全部释放但采集线程仍因鼠标订阅存活时，注销键盘设备，
+            // 避免覆盖 RDP ActiveX 等依赖进程级键盘 Raw Input 的目标。
+            shouldUnregisterKeyboard = !shouldStop
+                                       && ReferenceEquals(handlers, _keyboardHandlers)
+                                       && _keyboardHandlers.Count == 0
+                                       && _context?.KeyboardRegistered == true;
+
             if (shouldStop)
             {
                 _isStarted = false;
                 _isStopping = true;
+            }
+        }
+
+        if (shouldUnregisterKeyboard)
+        {
+            // 注销键盘设备并复位标志需在同一锁内完成，防止与并发的新键盘订阅竞态：
+            // 若先注销设备、后清标志，期间新的键盘订阅可能误判 KeyboardRegistered==true 而跳过注册。
+            lock (_sourceLock)
+            {
+                if (_keyboardHandlers.Count == 0 && _context?.KeyboardRegistered == true)
+                {
+                    UnregisterKeyboardRawInput();
+                    _context!.KeyboardRegistered = false;
+                }
             }
         }
 
@@ -789,6 +878,12 @@ public sealed class RawInputMonitor(
         public bool InitializationSucceeded { get; set; }
 
         public bool Registered { get; set; }
+
+        /// <summary>初始化时是否需要注册键盘设备（在锁内快照，消息线程只读，避免初始化路径拿锁）。</summary>
+        public bool RequireKeyboard { get; set; }
+
+        /// <summary>键盘 Raw Input 设备是否已注册（独立于整体生命周期，跟随键盘订阅）。</summary>
+        public bool KeyboardRegistered { get; set; }
 
         public int StopRequested;
     }
