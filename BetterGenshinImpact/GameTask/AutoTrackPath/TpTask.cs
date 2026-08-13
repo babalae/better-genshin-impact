@@ -2429,8 +2429,19 @@ public class TpTask
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(imageRegion.Width * 2 / 3, 0, imageRegion.Width / 3, imageRegion.Height),
+            OcrDetUnclipRatio = GetSwitchAreaOcrDetUnclipRatio(),
             ReplaceDictionary = GetSwitchAreaOcrReplaceDictionary(),
         });
+    }
+
+    /// <summary>
+    ///     仅地图地区识别使用 PP-OCRv6 时缩小检测框扩张范围。
+    /// </summary>
+    private static float? GetSwitchAreaOcrDetUnclipRatio()
+    {
+        return TaskContext.Instance().Config.OtherConfig.OcrConfig.PaddleOcrModelConfig == PaddleOcrModelConfig.V6
+            ? 1.0f
+            : null;
     }
 
     private static Dictionary<string, string[]> GetSwitchAreaOcrReplaceDictionary()

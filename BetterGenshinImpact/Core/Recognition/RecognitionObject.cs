@@ -193,6 +193,11 @@ public class RecognitionObject
     public OcrEngineTypes OcrEngine { get; set; } = OcrEngineTypes.Paddle;
 
     /// <summary>
+    ///     覆盖当前识别对象的检测框扩张比例。
+    /// </summary>
+    public float? OcrDetUnclipRatio { get; set; }
+
+    /// <summary>
     ///     部分文字识别结果不准确，进行替换。可选。
     /// </summary>
     public Dictionary<string, string[]> ReplaceDictionary { get; set; } = [];
@@ -300,6 +305,7 @@ public class RecognitionObject
             
             // OCR相关属性
             OcrEngine = this.OcrEngine,
+            OcrDetUnclipRatio = this.OcrDetUnclipRatio,
             ReplaceDictionary = this.ReplaceDictionary,  // 不克隆字典，因为字典通常是不可变的
             AllContainMatchText = this.AllContainMatchText, // 不克隆
             OneContainMatchText = this.OneContainMatchText, // 不克隆

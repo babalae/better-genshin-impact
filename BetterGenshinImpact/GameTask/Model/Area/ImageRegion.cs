@@ -238,7 +238,7 @@ public class ImageRegion : Region
                 : null;
             var roi = ownedRoi ?? SrcMat;
 
-            var result = OcrFactory.Paddle.OcrResult(roi);
+            var result = OcrFactory.Paddle.OcrResult(roi, GetOcrDetectionOptions(ro));
             var text = StringUtils.RemoveAllSpace(result.Text);
             text = ApplyTextReplacements(text, ro.ReplaceDictionary);
 
@@ -326,7 +326,7 @@ public class ImageRegion : Region
 
                 Cv2.InRange(roi, ro.LowerColor, ro.UpperColor, roi);
             }
-            var result = OcrFactory.Paddle.OcrResult(roi);
+            var result = OcrFactory.Paddle.OcrResult(roi, GetOcrDetectionOptions(ro));
             var text = StringUtils.RemoveAllSpace(result.Text);
             text = ApplyTextReplacements(text, ro.ReplaceDictionary);
 
@@ -500,7 +500,7 @@ public class ImageRegion : Region
                 : null;
             var roi = ownedRoi ?? SrcMat;
 
-            var result = OcrFactory.Paddle.OcrResult(roi);
+            var result = OcrFactory.Paddle.OcrResult(roi, GetOcrDetectionOptions(ro));
             var resRaList = new List<Region>();
             foreach (var ocrRegion in result.Regions)
             {
@@ -576,6 +576,13 @@ public class ImageRegion : Region
         }
 
         return text;
+    }
+
+    private static OcrDetectionOptions? GetOcrDetectionOptions(RecognitionObject ro)
+    {
+        return ro.OcrDetUnclipRatio is { } unclipRatio
+            ? new OcrDetectionOptions(unclipRatio)
+            : null;
     }
 
     public override void Dispose()

@@ -57,8 +57,9 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
         GC.SuppressFinalize(this);
     }
 
-    public RotatedRect[] Run(Mat src)
+    public RotatedRect[] Run(Mat src, float? unclipRatio = null)
     {
+        var effectiveUnclipRatio = unclipRatio ?? UnclipRatio;
         using var pred = RunRaw(src, out var resizedSize);
         using Mat cbuf = new();
         //OpenCvSharp.OpenCVException: 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols
@@ -95,8 +96,8 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
             {
                 var minEdge = Math.Min(rect.Size.Width, rect.Size.Height);
                 Size2f newSize = new(
-                    rect.Size.Width + UnclipRatio * minEdge,
-                    rect.Size.Height + UnclipRatio * minEdge);
+                    rect.Size.Width + effectiveUnclipRatio * minEdge,
+                    rect.Size.Height + effectiveUnclipRatio * minEdge);
                 RotatedRect largerRect = new(rect.Center, newSize, rect.Angle);
                 return largerRect;
             })

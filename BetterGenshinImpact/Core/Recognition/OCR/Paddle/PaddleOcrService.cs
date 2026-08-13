@@ -272,15 +272,15 @@ public class PaddleOcrService : IOcrService, IDisposable
     /// <summary>
     ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
-    public OcrResult OcrResult(Mat mat)
+    public OcrResult OcrResult(Mat mat, OcrDetectionOptions? detectionOptions = null)
     {
         if (mat.Channels() == 4)
         {
             using var mat3 = mat.CvtColor(ColorConversionCodes.BGRA2BGR);
-            return _OcrResult(mat3);
+            return _OcrResult(mat3, detectionOptions);
         }
 
-        return _OcrResult(mat);
+        return _OcrResult(mat, detectionOptions);
     }
 
     /// <summary>
@@ -295,10 +295,10 @@ public class PaddleOcrService : IOcrService, IDisposable
         return str;
     }
 
-    private OcrResult _OcrResult(Mat mat)
+    private OcrResult _OcrResult(Mat mat, OcrDetectionOptions? detectionOptions = null)
     {
         var startTime = Stopwatch.GetTimestamp();
-        var result = RunAll(mat);
+        var result = RunAll(mat, detectionOptions: detectionOptions);
         var time = Stopwatch.GetElapsedTime(startTime);
         // Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
         return result;
@@ -307,9 +307,12 @@ public class PaddleOcrService : IOcrService, IDisposable
     /// <summary>
     ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
-    private OcrResult RunAll(Mat src, int recognizeBatchSize = 0)
+    private OcrResult RunAll(
+        Mat src,
+        int recognizeBatchSize = 0,
+        OcrDetectionOptions? detectionOptions = null)
     {
-        var rects = _localDetModel.Run(src);
+        var rects = _localDetModel.Run(src, detectionOptions?.UnclipRatio);
         Mat[] mats =
             rects.Select(rect =>
                 {
