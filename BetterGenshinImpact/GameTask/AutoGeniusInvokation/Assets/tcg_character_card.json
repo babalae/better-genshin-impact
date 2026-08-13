@@ -3442,6 +3442,83 @@
         ]
     },
     {
+        "id": 1317,
+        "nameEn": "durin",
+        "type": "character",
+        "name": "杜林",
+        "hp": 10,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "radiant_wingslash",
+                "name": "芒焰之翼斩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "binary_form_convergence_and_division",
+                "name": "二元式·聚分熔炼",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "principle_of_purity_as_the_light_shifts",
+                "name": "白化法·如光流变",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "light_manifest_of_the_divine_calculus",
+                "name": "光灵遵神数显现",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1401,
         "nameEn": "fischl",
         "type": "character",
@@ -5771,7 +5848,7 @@
                         "id": 1105,
                         "nameEn": "anemo",
                         "type": "风元素",
-                        "count": 2
+                        "count": 3
                     }
                 ]
             },
@@ -5795,6 +5872,83 @@
                         "count": 2
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 1516,
+        "nameEn": "jahoda",
+        "type": "character",
+        "name": "雅珂达",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "弓",
+        "skills": [
+            {
+                "nameEn": "strike_while_the_arrows_hot",
+                "name": "见机行矢",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "savvy_strategy_splitting_the_spoils",
+                "name": "奇策·财富分配方案",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "hidden_aces_seven_tools_of_the_hunter",
+                "name": "秘器·猎人的七道具",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_rooftop_dash",
+                "name": "月兆祝赐·檐上趱行",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },
@@ -7379,6 +7533,83 @@
         ]
     },
     {
+        "id": 1712,
+        "nameEn": "nefer",
+        "type": "character",
+        "name": "奈芙尔",
+        "hp": 10,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "striking_serpent",
+                "name": "游虵吐信",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "senet_strategy_dance_of_a_thousand_nights",
+                "name": "弈术·千夜一舞",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "sacred_vow_true_eyes_phantasm",
+                "name": "圣约·真眸幻戏",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_dusklit_eaves",
+                "name": "月兆祝赐·廊下暮影",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 2101,
         "nameEn": "fatui_cryo_cicin_mage",
         "type": "character",
@@ -7671,6 +7902,83 @@
             {
                 "nameEn": "bloodbonded_shadow",
                 "name": "血契掠影",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2105,
+        "nameEn": "wayward_hermetic_spiritspeaker",
+        "type": "character",
+        "name": "灵觉隐修的迷者",
+        "hp": 10,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "spiritspeaking_frost_star",
+                "name": "灵觉·寒星",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "radiance_in_flux",
+                "name": "千变的浮彩",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "chilling_illustration",
+                "name": "沍寒的图绘",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "iridescent_silhouette",
+                "name": "斑斓的绚影",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -8201,6 +8509,83 @@
             {
                 "nameEn": "consecrated_senses",
                 "name": "圣骸感应",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2208,
+        "nameEn": "hydro_hypostasis",
+        "type": "character",
+        "name": "无相之水",
+        "hp": 8,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "droplet_diffusion",
+                "name": "水珠漫射",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "surging_tides",
+                "name": "涌动洪流",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "calamitous_tides",
+                "name": "危祸之潮",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "hydro_crystal_core",
+                "name": "水晶核心",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -9362,6 +9747,83 @@
             {
                 "nameEn": "immortal_remnants_anemo",
                 "name": "不朽亡骸·风",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2504,
+        "nameEn": "black_serpent_knight_windcutter",
+        "type": "character",
+        "name": "黑蛇骑士·斩风之剑",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "halfsword_technique",
+                "name": "半剑技术",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "rising_slash",
+                "name": "低位撩斩",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "guard_stance",
+                "name": "近卫姿态",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "vanguard_momentum",
+                "name": "前驱气势",
                 "skillTag": [
                     "被动技能"
                 ],
