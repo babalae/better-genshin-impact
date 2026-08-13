@@ -58,7 +58,24 @@ public class MouseHook
 
     public void MouseDown(object? sender, MouseButtons button, bool isDown)
     {
-        if (!SystemControl.IsGenshinImpactActive() || button == MouseButtons.Left || button == MouseButtons.None || button != BindMouse)
+        if (button == MouseButtons.Left || button == MouseButtons.None || button != BindMouse)
+        {
+            return;
+        }
+
+        if (!isDown)
+        {
+            // 抬起事件必须无条件复位 IsPressed（即使游戏已失焦），
+            // 否则长按热键的 RunAction 循环将永远无法退出。
+            IsPressed = false;
+            if (SystemControl.IsGenshinImpactActive() && !ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+            {
+                MouseUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+            }
+            return;
+        }
+
+        if (!SystemControl.IsGenshinImpactActive())
         {
             return;
         }
@@ -68,27 +85,16 @@ public class MouseHook
             return;
         }
 
-        if (isDown)
+        IsPressed = true;
+        MouseDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+        if (IsHold)
         {
-            IsPressed = true;
-            MouseDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
-            if (IsHold)
-            {
-                Task.Run(RunAction);
-            }
-            else
-            {
-                MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
-                IsPressed = false;
-            }
+            Task.Run(RunAction);
         }
         else
         {
+            MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             IsPressed = false;
-            if (SystemControl.IsGenshinImpactActive() && !ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
-            {
-                MouseUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
-            }
         }
     }
 

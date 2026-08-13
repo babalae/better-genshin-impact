@@ -22,9 +22,12 @@ public class KeyMouseRecorder
 
     public void MouseDown(MouseButtons button, DateTime time)
     {
+        var p = Cursor.Position;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseDown,
+            MouseX = p.X,
+            MouseY = p.Y,
             MouseButton = button.ToString(),
             Time = (time - StartTime).TotalMilliseconds
         });
@@ -32,9 +35,12 @@ public class KeyMouseRecorder
 
     public void MouseUp(MouseButtons button, DateTime time)
     {
+        var p = Cursor.Position;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseUp,
+            MouseX = p.X,
+            MouseY = p.Y,
             MouseButton = button.ToString(),
             Time = (time - StartTime).TotalMilliseconds
         });

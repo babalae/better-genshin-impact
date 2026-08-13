@@ -196,6 +196,12 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookKeyDown(Keys key, DateTime time)
     {
+        // 排除录制热键本身，防止热键被记录进宏
+        if (key.ToString() == TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey)
+        {
+            return;
+        }
+
         if (_keyDownState.TryGetValue(key, out var state) && state)
         {
             return;
