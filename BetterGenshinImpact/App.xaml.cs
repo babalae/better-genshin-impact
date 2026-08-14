@@ -395,6 +395,45 @@ public partial class App : Application
             e = e.InnerException;
         }
 
+        // log 最先执行，确保非 UI 线程场景下异常信息一定落盘。
+        GetLogger<App>().LogDebug(e, "UnHandle Exception");
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null
+            || dispatcher.HasShutdownStarted
+            || dispatcher.HasShutdownFinished)
+        {
+            // Dispatcher 不可用（如启动早期或已关闭）：仅日志，不弹窗。
+            return;
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            // 已在 UI 线程，直接弹窗。
+            ShowExceptionDialog(e);
+        }
+        else
+        {
+            // finalizer 线程、线程池线程等非 UI 线程绝不能弹模态框：
+            // 阻塞在 NtUserWaitMessage 会永久卡死 finalizer 线程，
+            // 全进程带 finalizer 的对象（Mat/WGC 纹理/COM RCW）无法终结，
+            // 内存只增不减。把弹窗投递到 UI 线程，当前线程立即返回。
+            _ = dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    ShowExceptionDialog(e);
+                }
+                catch
+                {
+                    // 弹窗失败不影响 UI 线程。
+                }
+            }));
+        }
+    }
+
+    private static void ShowExceptionDialog(Exception e)
+    {
         try
         {
             ExceptionReport.Show(e);
@@ -412,8 +451,5 @@ public partial class App : Application
                  """
             );
         }
-
-        // log
-        GetLogger<App>().LogDebug(e, "UnHandle Exception");
     }
 }
