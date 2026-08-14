@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -33,6 +34,7 @@ internal sealed record AvatarGridIconCandidate(string CharacterName, string Elem
 /// <remarks>
 /// 使用 <c>Assets\Model\AvatarGridIcon\avatar.onnx</c> 提取头像特征，
 /// 再与 <c>Assets\Model\AvatarGridIcon\avatar.csv</c> 中的角色原型向量做余弦相似度识别。
+/// 元素分类输出顺序由 ONNX 自定义元数据 <c>element_types</c> 定义。
 /// </remarks>
 internal sealed class AvatarGridIconRecognizer : IDisposable
 {
@@ -40,9 +42,11 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     private const int ElementRoiSize = 48;
     private const int ElementInputSize = 64;
     private const string PrototypePath = @"Assets\Model\AvatarGridIcon\avatar.csv";
+    private const string ElementTypesMetadataKey = "element_types";
 
     private readonly InferenceSession _session;
     private readonly List<AvatarPrototype> _prototypes;
+    private readonly string[] _elementTypes;
 
     private sealed record AvatarPrototype(string CharacterName, string ElementType, string WeaponType, float[] Embedding);
 
@@ -53,7 +57,16 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
     {
         _session = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>()
             .CreateInferenceSession(BgiOnnxModel.AvatarGridIcon);
-        _prototypes = LoadPrototypes();
+        try
+        {
+            _prototypes = LoadPrototypes();
+            _elementTypes = ParseElementTypes(_session.ModelMetadata.CustomMetadataMap);
+        }
+        catch
+        {
+            _session.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -116,20 +129,32 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
         }
 
         var logits = results.First(result => result.Name == "element_logits").AsEnumerable<float>().ToArray();
-        var elementTypes = _prototypes
-            .Select(prototype => prototype.ElementType)
-            .Where(elementType => !string.IsNullOrWhiteSpace(elementType))
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(elementType => elementType, StringComparer.Ordinal)
-            .ToArray();
-        if (logits.Length != elementTypes.Length || logits.Length == 0)
+        var predictedElementType = PredictElementType(logits, _elementTypes);
+        return candidate with { ElementType = predictedElementType };
+    }
+
+    internal static string[] ParseElementTypes(IReadOnlyDictionary<string, string> metadata)
+    {
+        return JsonSerializer.Deserialize<string[]>(metadata[ElementTypesMetadataKey])!;
+    }
+
+    internal static string PredictElementType(IReadOnlyList<float> logits, IReadOnlyList<string> elementTypes)
+    {
+        if (logits.Count == 0 || logits.Count != elementTypes.Count)
         {
             throw new InvalidOperationException(
-                $"角色头像模型元素输出数量异常：logits={logits.Length}, elements={elementTypes.Length}");
+                $"角色头像模型元素输出数量异常：logits={logits.Count}, elements={elementTypes.Count}");
         }
 
-        var predictedElementType = elementTypes[Array.IndexOf(logits, logits.Max())];
-        return candidate with { ElementType = predictedElementType };
+        int predictedIndex = 0;
+        for (int index = 1; index < logits.Count; index++)
+        {
+            if (logits[index] > logits[predictedIndex])
+            {
+                predictedIndex = index;
+            }
+        }
+        return elementTypes[predictedIndex];
     }
 
     /// <summary>
