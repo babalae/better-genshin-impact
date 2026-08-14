@@ -4,13 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -135,7 +135,37 @@ internal sealed class AvatarGridIconRecognizer : IDisposable
 
     internal static string[] ParseElementTypes(IReadOnlyDictionary<string, string> metadata)
     {
-        return JsonSerializer.Deserialize<string[]>(metadata[ElementTypesMetadataKey])!;
+        if (!metadata.TryGetValue(ElementTypesMetadataKey, out string? serializedElementTypes))
+        {
+            throw new InvalidOperationException(
+                $"角色头像模型缺少必需的元数据：{ElementTypesMetadataKey}");
+        }
+
+        string[]? elementTypes;
+        try
+        {
+            elementTypes = JsonConvert.DeserializeObject<string[]>(serializedElementTypes);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"角色头像模型元数据 {ElementTypesMetadataKey} 不是有效的 JSON 字符串数组。",
+                exception);
+        }
+
+        if (elementTypes is null || elementTypes.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"角色头像模型元数据 {ElementTypesMetadataKey} 必须是非空字符串数组。");
+        }
+
+        if (elementTypes.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new InvalidOperationException(
+                $"角色头像模型元数据 {ElementTypesMetadataKey} 不能包含空标签。");
+        }
+
+        return elementTypes;
     }
 
     internal static string PredictElementType(IReadOnlyList<float> logits, IReadOnlyList<string> elementTypes)
