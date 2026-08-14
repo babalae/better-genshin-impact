@@ -13,9 +13,8 @@ namespace BetterGenshinImpact.GameTask.CharacterDevelopment;
 /// </summary>
 /// <param name="Name">物品原型表中的标准武器名称。</param>
 /// <param name="Distance">OCR 文本与标准名称的 Levenshtein 编辑距离。</param>
-/// <param name="Similarity">按较长文本长度归一化后的相似度，范围为 0 到 1。</param>
 /// <param name="IsReliable">匹配是否满足自动纠错的可信度要求。</param>
-internal sealed record WeaponNameMatch(string Name, int Distance, double Similarity, bool IsReliable);
+internal sealed record WeaponNameMatch(string Name, int Distance, bool IsReliable);
 
 /// <summary>
 /// 使用物品图标 ONNX 配套表格修正武器名称 OCR。
@@ -27,69 +26,82 @@ internal sealed record WeaponNameMatch(string Name, int Distance, double Similar
 internal static class WeaponNameMatcher
 {
     private const int MaximumEditDistance = 1;
-    private const double MinimumSimilarity = 2d / 3d;
-    private const int MinimumDistanceMargin = 1;
     private const string WeaponPrototypePath = @"Assets\Model\ItemV2\item.csv";
-    private static readonly Lazy<IReadOnlyList<string>> WeaponNames = new(LoadWeaponNames);
+    private static readonly Lazy<IReadOnlyDictionary<string, IReadOnlyList<string>>> WeaponNamesByType =
+        new(LoadWeaponNames);
 
     /// <summary>
     /// 将 OCR 文本匹配为标准武器名称。名称表延迟加载且在进程内复用。
     /// </summary>
-    public static WeaponNameMatch Match(string ocrText)
+    public static WeaponNameMatch Match(string ocrText, string weaponType)
     {
-        return MatchClosest(ocrText, WeaponNames.Value);
+        return MatchClosest(ocrText, weaponType, WeaponNamesByType.Value);
     }
 
     /// <summary>
     /// 在给定名称表中选择编辑距离最小的名称，并判断该候选是否足够可信。
     /// </summary>
-    internal static WeaponNameMatch MatchClosest(string ocrText, IReadOnlyList<string> weaponNames)
+    internal static WeaponNameMatch MatchClosest(
+        string ocrText,
+        string weaponType,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> weaponNamesByType)
     {
-        var normalizedText = ocrText.Trim();
+        var normalizedText = NormalizeWeaponName(ocrText.Trim());
         if (string.IsNullOrWhiteSpace(normalizedText))
         {
             throw new InvalidOperationException("武器名称 OCR 结果为空。");
         }
 
+        if (string.IsNullOrWhiteSpace(weaponType)
+            || !weaponNamesByType.TryGetValue(weaponType, out var weaponNames))
+        {
+            throw new InvalidDataException($"武器名称表中没有类型为 {weaponType} 的武器。");
+        }
+
         if (weaponNames.Count == 0)
         {
-            throw new InvalidDataException("武器名称表中没有可用的武器。");
+            throw new InvalidDataException($"武器名称表中类型为 {weaponType} 的武器列表为空。");
         }
 
         var candidates = weaponNames
             .Select(name =>
             {
-                var distance = LevenshteinDistance(normalizedText, name);
-                var maximumLength = Math.Max(normalizedText.Length, name.Length);
-                var similarity = 1d - (double)distance / maximumLength;
-                return new WeaponNameMatch(name, distance, similarity, false);
+                var normalizedName = NormalizeWeaponName(name);
+                var distance = LevenshteinDistance(normalizedText, normalizedName);
+                return new
+                {
+                    Match = new WeaponNameMatch(name, distance, false),
+                    IsSameLength = normalizedName.Length == normalizedText.Length
+                };
             })
-            .OrderBy(match => match.Distance)
-            .ThenBy(match => match.Name, StringComparer.Ordinal)
-            .Take(2)
+            .OrderBy(candidate => candidate.Match.Distance)
+            .ThenBy(candidate => candidate.Match.Name, StringComparer.Ordinal)
             .ToArray();
 
-        var best = candidates[0];
-        var distanceMargin = candidates.Length == 1
-            ? int.MaxValue
-            : candidates[1].Distance - best.Distance;
-        var isReliable = best.Distance <= MaximumEditDistance
-                         && best.Similarity >= MinimumSimilarity
-                         && (best.Distance == 0 || distanceMargin >= MinimumDistanceMargin);
-        return best with { IsReliable = isReliable };
+        var bestSameLength = candidates.FirstOrDefault(candidate => candidate.IsSameLength);
+        if (bestSameLength == null)
+        {
+            return candidates[0].Match;
+        }
+
+        return bestSameLength.Match with
+        {
+            IsReliable = bestSameLength.Match.Distance <= MaximumEditDistance
+        };
     }
 
     /// <summary>
     /// 从物品原型表中提取并去重标准武器名称。
     /// </summary>
-    internal static IReadOnlyList<string> ExtractWeaponNames(
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> ExtractWeaponNames(
         IReadOnlyList<string> headers,
         IEnumerable<string[]> rows)
     {
         var itemClassIdIndex = FindRequiredColumn(headers, "item_class_id");
         var itemNameIndex = FindRequiredColumn(headers, "item_name");
-        var requiredColumnCount = Math.Max(itemClassIdIndex, itemNameIndex) + 1;
-        var names = new HashSet<string>(StringComparer.Ordinal);
+        var weaponTypeIndex = FindRequiredColumn(headers, "weapon_type");
+        var requiredColumnCount = Math.Max(itemClassIdIndex, Math.Max(itemNameIndex, weaponTypeIndex)) + 1;
+        var namesByType = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
 
         foreach (var columns in rows)
         {
@@ -98,24 +110,67 @@ internal static class WeaponNameMatcher
                 throw new InvalidDataException("物品原型表存在列数不足的记录。");
             }
 
-            if (!columns[itemClassIdIndex].Trim().StartsWith("weapon:", StringComparison.OrdinalIgnoreCase))
+            var itemClassId = columns[itemClassIdIndex].Trim();
+            if (!itemClassId.StartsWith("weapon:", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
+            }
+
+            var weaponType = columns[weaponTypeIndex].Trim();
+            if (string.IsNullOrWhiteSpace(weaponType))
+            {
+                throw new InvalidDataException("物品原型表中的武器记录缺少 weapon_type。");
             }
 
             var name = columns[itemNameIndex].Trim();
             if (!string.IsNullOrWhiteSpace(name))
             {
+                if (!namesByType.TryGetValue(weaponType, out var names))
+                {
+                    names = new HashSet<string>(StringComparer.Ordinal);
+                    namesByType.Add(weaponType, names);
+                }
+
                 names.Add(name);
             }
         }
 
-        if (names.Count == 0)
+        if (namesByType.Count == 0)
         {
             throw new InvalidDataException("物品原型表中没有 item_class_id 以 weapon: 开头的武器记录。");
         }
 
-        return names.OrderBy(name => name, StringComparer.Ordinal).ToArray();
+        return namesByType.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value.OrderBy(name => name, StringComparer.Ordinal).ToArray(),
+            StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// 将 OCR 中常见的繁体及日文异体字统一为武器表使用的简体字。
+    /// </summary>
+    internal static string NormalizeWeaponName(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        foreach (var character in text)
+        {
+            //因为对比的前提条件是相同武器类型，武器名称长度相同
+            //所以这几个映射足够覆盖当前版本所有武器
+            builder.Append(character switch
+            {
+                '鉄' or '鐵' => '铁',
+                '黒' => '黑',
+                '劍' or '剣' => '剑',
+                '蝕' => '蚀',
+                '鍾' or '鐘' => '钟',
+                '銀' => '银',
+                '彈' or '弾' => '弹',
+                '獵' or '猟' => '猎',
+                _ => character
+            });
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
@@ -163,7 +218,7 @@ internal static class WeaponNameMatcher
         return previous[source.Length];
     }
 
-    private static IReadOnlyList<string> LoadWeaponNames()
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> LoadWeaponNames()
     {
         var path = Global.Absolute(WeaponPrototypePath);
         if (!File.Exists(path))
