@@ -264,7 +264,9 @@ public partial class App : Application
 
             try
             {
-                HandleException(ex);
+                // 启动失败发生在 MainWindow 创建前，日志遮罩可能不可用；
+                // 视为致命异常，记录日志并尝试弹窗。
+                HandleException(ex, isTerminating: true);
             }
             catch (Exception ex2)
             {
@@ -272,10 +274,23 @@ public partial class App : Application
                 ConsoleHelper.WriteError($"应用程序启动失败打印日志时又失败了: {ex2.Message}");
             }
 
-            if (Debugger.IsAttached)
+            // 启动早期 WPF Dispatcher 可能尚未就绪，HandleException 可能因此不弹窗。
+            // 用不依赖 WPF 的 WinForms MessageBox 兜底，确保用户一定看到启动失败原因。
+            try
             {
-                Debugger.Break();
+                System.Windows.Forms.MessageBox.Show(
+                    $"应用程序启动失败：{ex.Message}",
+                    "BetterGI 启动失败",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
             }
+            catch
+            {
+                // 弹窗失败不影响退出。
+            }
+
+            // 启动失败 = 无可用的主界面，直接退出，避免留下无窗口的残留进程。
+            Shutdown();
         }
     }
 
@@ -413,17 +428,18 @@ public partial class App : Application
 
         // 终止性异常（如线程池未处理异常导致进程即将结束）：进程终止前同步弹窗兜底，
         // 确保用户能看到报告（阻塞无妨，进程反正要终止）。
-        // 提示日志在弹窗前打，确保进程终止前一定写入日志遮罩。
-        var popupShownMessage = TranslateText("发生致命异常，正在弹窗提示，同时已记录日志。");
-        GetLogger<App>().LogWarning(popupShownMessage);
-
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null
             || dispatcher.HasShutdownStarted
             || dispatcher.HasShutdownFinished)
         {
+            // Dispatcher 不可用（如启动早期或已关闭）：仅日志，不弹窗。
             return;
         }
+
+        // 确认 Dispatcher 可用后才记录"正在弹窗"，避免与实际行为不一致。
+        var popupShownMessage = TranslateText("发生致命异常，正在弹窗提示，同时已记录日志。");
+        GetLogger<App>().LogWarning(popupShownMessage);
 
         try
         {
@@ -433,7 +449,15 @@ public partial class App : Application
             }
             else
             {
-                dispatcher.Invoke(new Action(() => ShowExceptionDialog(e)));
+                // 带超时的同步调度：若 UI 线程正被模态窗口或同步操作阻塞，
+                // 无超时的 Invoke 会一直等待，导致进程既弹不了窗也无法终止。
+                var operation = dispatcher.InvokeAsync(new Action(() => ShowExceptionDialog(e)));
+                var status = operation.Wait(TimeSpan.FromSeconds(3));
+                if (status != DispatcherOperationStatus.Completed)
+                {
+                    GetLogger<App>().LogWarning(
+                        TranslateText("弹窗超时，异常已记录，进程即将退出。"));
+                }
             }
         }
         catch
