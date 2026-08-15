@@ -1,0 +1,67 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "https://github.com/ddaodan",
+        "name": "ddaodan"
+      }
+    ],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1786617932828,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "至冬3-彩冰镇-1",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 6940.2266,
+      "y": 8730.252
+    },
+    {
+      "action": "combat_script",
+      "action_params": "click(middle),wait(0.5),keypress(f)",
+      "id": 2,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 6920.4824,
+      "y": 8762.4141
+    },
+    {
+      "action": "combat_script",
+      "action_params": "click,wait(6),keydown(space),wait(1),keyup(space),wait(0.5),click",
+      "id": 3,
+      "move_mode": "walk",
+      "type": "orientation",
+      "x": 6918.1221,
+      "y": 8767.9131
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 4,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 6884.2656,
+      "y": 8835.4141
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 5,
+      "move_mode": "dash",
+      "type": "target",
+      "x": 6846.0078,
+      "y": 8858.8975
+    }
+  ]
+}
