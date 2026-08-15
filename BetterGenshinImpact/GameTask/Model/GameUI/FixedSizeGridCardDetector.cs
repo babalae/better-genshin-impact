@@ -28,7 +28,7 @@ internal static class FixedSizeGridCardDetector
     private static readonly IReadOnlyDictionary<FixedSizeGridCardLayout, FixedSizeGridCardDetectionParams> LayoutParams =
         new Dictionary<FixedSizeGridCardLayout, FixedSizeGridCardDetectionParams>
         {
-            [FixedSizeGridCardLayout.CharacterDevelopment] = new(115, 140, 115, 2400, 3000),
+            [FixedSizeGridCardLayout.CharacterDevelopment] = new(115, 140, 115, 2000, 3000),
             [FixedSizeGridCardLayout.PartySetupCharacters] = new(132, 161, 132, 2500, 4000)
         };
 
