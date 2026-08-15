@@ -457,20 +457,35 @@ public partial class App : Application
             }
             else
             {
-                // 只等待 UI 线程"开始执行"弹窗，不等待弹窗关闭：
+                // 双信号：startedSignal 表示 UI 线程开始执行弹窗（有限超时），
+                // completedSignal 表示弹窗已关闭（无超时等待）。
                 // ShowExceptionDialog 是模态的，用户读完并关闭才返回；
-                // 若把等待覆盖到关闭，进程会提前终止并强制关闭用户正在看的报告窗口。
+                // 若只在"开始"后立即返回，进程终止会强杀刚创建的弹窗。
                 using var startedSignal = new System.Threading.ManualResetEventSlim(false);
-                var operation = dispatcher.InvokeAsync(new Action(() =>
+                using var completedSignal = new System.Threading.ManualResetEventSlim(false);
+                dispatcher.InvokeAsync(new Action(() =>
                 {
-                    startedSignal.Set();
-                    ShowExceptionDialog(e);
+                    try
+                    {
+                        startedSignal.Set();
+                        ShowExceptionDialog(e);
+                    }
+                    finally
+                    {
+                        completedSignal.Set();
+                    }
                 }));
+
+                // 只为"UI 是否开始执行"设置超时：UI 线程被阻塞/死锁时避免无限等待。
                 if (!startedSignal.Wait(TimeSpan.FromSeconds(3)))
                 {
                     GetLogger<App>().LogWarning(
                         TranslateText("弹窗调度超时，异常已记录，进程即将退出。"));
+                    return false;
                 }
+
+                // 一旦确认开始执行，就等待弹窗关闭，确保用户能读完致命异常详情。
+                completedSignal.Wait();
             }
 
             return true;
