@@ -357,12 +357,13 @@ public partial class App : Application
         {
             if (e.ExceptionObject is Exception exception)
             {
-                HandleException(exception);
+                // 用官方的 IsTerminating 判断是否致命：致命异常进程将终止，需同步弹窗确保用户可见。
+                HandleException(exception, isTerminating: e.IsTerminating);
             }
         }
         catch (Exception ex)
         {
-            HandleException(ex);
+            HandleException(ex, isTerminating: e.IsTerminating);
         }
         finally
         {
@@ -388,47 +389,71 @@ public partial class App : Application
         }
     }
 
-    private static void HandleException(Exception e)
+    private static void HandleException(Exception e, bool isTerminating = false)
     {
         if (e.InnerException != null)
         {
             e = e.InnerException;
         }
 
-        // log 最先执行，确保非 UI 线程场景下异常信息一定落盘。
-        GetLogger<App>().LogDebug(e, "UnHandle Exception");
+        // 错误日志最先落盘并推送到日志遮罩（LogError ≥ Information 会进入遮罩 LogTextBox）。
+        // 文件日志：Debug 级别也写盘；遮罩：仅 Information 以上可见。
+        // 致命异常（IsTerminating）在日志末尾加 [FATAL] 标记，便于区分。
+        var logMessage = isTerminating ? "UnHandle Exception [FATAL]" : "UnHandle Exception";
+        GetLogger<App>().LogError(e, logMessage);
+
+        // 可恢复异常（默认）：仅日志，不弹模态窗，避免阻塞 UI 线程。
+        // 通过日志遮罩提示用户：非致命异常已记录。
+        if (!isTerminating)
+        {
+            var nonFatalMessage = TranslateText("发生非致命异常，已记录日志，请查看日志详情。");
+            GetLogger<App>().LogWarning(nonFatalMessage);
+            return;
+        }
+
+        // 终止性异常（如线程池未处理异常导致进程即将结束）：进程终止前同步弹窗兜底，
+        // 确保用户能看到报告（阻塞无妨，进程反正要终止）。
+        // 提示日志在弹窗前打，确保进程终止前一定写入日志遮罩。
+        var popupShownMessage = TranslateText("发生致命异常，正在弹窗提示，同时已记录日志。");
+        GetLogger<App>().LogWarning(popupShownMessage);
 
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null
             || dispatcher.HasShutdownStarted
             || dispatcher.HasShutdownFinished)
         {
-            // Dispatcher 不可用（如启动早期或已关闭）：仅日志，不弹窗。
             return;
         }
 
-        if (dispatcher.CheckAccess())
+        try
         {
-            // 已在 UI 线程，直接弹窗。
-            ShowExceptionDialog(e);
-        }
-        else
-        {
-            // finalizer 线程、线程池线程等非 UI 线程绝不能弹模态框：
-            // 阻塞在 NtUserWaitMessage 会永久卡死 finalizer 线程，
-            // 全进程带 finalizer 的对象（Mat/WGC 纹理/COM RCW）无法终结，
-            // 内存只增不减。把弹窗投递到 UI 线程，当前线程立即返回。
-            _ = dispatcher.BeginInvoke(new Action(() =>
+            if (dispatcher.CheckAccess())
             {
-                try
-                {
-                    ShowExceptionDialog(e);
-                }
-                catch
-                {
-                    // 弹窗失败不影响 UI 线程。
-                }
-            }));
+                ShowExceptionDialog(e);
+            }
+            else
+            {
+                dispatcher.Invoke(new Action(() => ShowExceptionDialog(e)));
+            }
+        }
+        catch
+        {
+            // 弹窗失败不影响进程退出。
+        }
+    }
+
+    /// <summary>
+    /// 翻译一条异常提示文本。翻译服务不可用时返回原文。
+    /// </summary>
+    private static string TranslateText(string text)
+    {
+        try
+        {
+            return ServiceProvider.GetService<ITranslationService>()?.Translate(text) ?? text;
+        }
+        catch
+        {
+            return text;
         }
     }
 
