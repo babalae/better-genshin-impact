@@ -262,11 +262,12 @@ public partial class App : Application
             Debug.WriteLine(ex);
             ConsoleHelper.WriteError($"应用程序启动失败: {ex.Message}");
 
+            var dialogShown = false;
             try
             {
                 // 启动失败发生在 MainWindow 创建前，日志遮罩可能不可用；
                 // 视为致命异常，记录日志并尝试弹窗。
-                HandleException(ex, isTerminating: true);
+                dialogShown = HandleException(ex, isTerminating: true);
             }
             catch (Exception ex2)
             {
@@ -275,18 +276,22 @@ public partial class App : Application
             }
 
             // 启动早期 WPF Dispatcher 可能尚未就绪，HandleException 可能因此不弹窗。
-            // 用不依赖 WPF 的 WinForms MessageBox 兜底，确保用户一定看到启动失败原因。
-            try
+            // 仅在未显示 WPF 弹窗时，用不依赖 WPF 的 WinForms MessageBox 兜底，
+            // 避免用户连续看到两个错误对话框。
+            if (!dialogShown)
             {
-                System.Windows.Forms.MessageBox.Show(
-                    $"应用程序启动失败：{ex.Message}",
-                    "BetterGI 启动失败",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
-            }
-            catch
-            {
-                // 弹窗失败不影响退出。
+                try
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        $"{TranslateText("应用程序启动失败：")}{ex.Message}",
+                        TranslateText("BetterGI 启动失败"),
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    // 弹窗失败不影响退出。
+                }
             }
 
             // 启动失败 = 无可用的主界面，直接退出，避免留下无窗口的残留进程。
@@ -404,7 +409,10 @@ public partial class App : Application
         }
     }
 
-    private static void HandleException(Exception e, bool isTerminating = false)
+    /// <summary>
+    /// 处理未处理异常。返回 true 表示已尝试显示弹窗（或已处理），false 表示未弹窗（Dispatcher 不可用）。
+    /// </summary>
+    private static bool HandleException(Exception e, bool isTerminating = false)
     {
         if (e.InnerException != null)
         {
@@ -423,7 +431,7 @@ public partial class App : Application
         {
             var nonFatalMessage = TranslateText("发生非致命异常，已记录日志，请查看日志详情。");
             GetLogger<App>().LogWarning(nonFatalMessage);
-            return;
+            return false;
         }
 
         // 终止性异常（如线程池未处理异常导致进程即将结束）：进程终止前同步弹窗兜底，
@@ -434,7 +442,7 @@ public partial class App : Application
             || dispatcher.HasShutdownFinished)
         {
             // Dispatcher 不可用（如启动早期或已关闭）：仅日志，不弹窗。
-            return;
+            return false;
         }
 
         // 确认 Dispatcher 可用后才记录"正在弹窗"，避免与实际行为不一致。
@@ -449,20 +457,28 @@ public partial class App : Application
             }
             else
             {
-                // 带超时的同步调度：若 UI 线程正被模态窗口或同步操作阻塞，
-                // 无超时的 Invoke 会一直等待，导致进程既弹不了窗也无法终止。
-                var operation = dispatcher.InvokeAsync(new Action(() => ShowExceptionDialog(e)));
-                var status = operation.Wait(TimeSpan.FromSeconds(3));
-                if (status != DispatcherOperationStatus.Completed)
+                // 只等待 UI 线程"开始执行"弹窗，不等待弹窗关闭：
+                // ShowExceptionDialog 是模态的，用户读完并关闭才返回；
+                // 若把等待覆盖到关闭，进程会提前终止并强制关闭用户正在看的报告窗口。
+                using var startedSignal = new System.Threading.ManualResetEventSlim(false);
+                var operation = dispatcher.InvokeAsync(new Action(() =>
+                {
+                    startedSignal.Set();
+                    ShowExceptionDialog(e);
+                }));
+                if (!startedSignal.Wait(TimeSpan.FromSeconds(3)))
                 {
                     GetLogger<App>().LogWarning(
-                        TranslateText("弹窗超时，异常已记录，进程即将退出。"));
+                        TranslateText("弹窗调度超时，异常已记录，进程即将退出。"));
                 }
             }
+
+            return true;
         }
         catch
         {
             // 弹窗失败不影响进程退出。
+            return false;
         }
     }
 
