@@ -262,9 +262,12 @@ public partial class App : Application
             Debug.WriteLine(ex);
             ConsoleHelper.WriteError($"应用程序启动失败: {ex.Message}");
 
+            var dialogShown = false;
             try
             {
-                HandleException(ex);
+                // 启动失败发生在 MainWindow 创建前，日志遮罩可能不可用；
+                // 视为致命异常，记录日志并尝试弹窗。
+                dialogShown = HandleException(ex, isTerminating: true);
             }
             catch (Exception ex2)
             {
@@ -272,10 +275,27 @@ public partial class App : Application
                 ConsoleHelper.WriteError($"应用程序启动失败打印日志时又失败了: {ex2.Message}");
             }
 
-            if (Debugger.IsAttached)
+            // 启动早期 WPF Dispatcher 可能尚未就绪，HandleException 可能因此不弹窗。
+            // 仅在未显示 WPF 弹窗时，用不依赖 WPF 的 WinForms MessageBox 兜底，
+            // 避免用户连续看到两个错误对话框。
+            if (!dialogShown)
             {
-                Debugger.Break();
+                try
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        $"{TranslateText("应用程序启动失败：")}{ex.Message}",
+                        TranslateText("BetterGI 启动失败"),
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    // 弹窗失败不影响退出。
+                }
             }
+
+            // 启动失败 = 无可用的主界面，直接退出，避免留下无窗口的残留进程。
+            Shutdown();
         }
     }
 
@@ -357,12 +377,13 @@ public partial class App : Application
         {
             if (e.ExceptionObject is Exception exception)
             {
-                HandleException(exception);
+                // 用官方的 IsTerminating 判断是否致命：致命异常进程将终止，需同步弹窗确保用户可见。
+                HandleException(exception, isTerminating: e.IsTerminating);
             }
         }
         catch (Exception ex)
         {
-            HandleException(ex);
+            HandleException(ex, isTerminating: e.IsTerminating);
         }
         finally
         {
@@ -388,47 +409,106 @@ public partial class App : Application
         }
     }
 
-    private static void HandleException(Exception e)
+    /// <summary>
+    /// 处理未处理异常。返回 true 表示已尝试显示弹窗（或已处理），false 表示未弹窗（Dispatcher 不可用）。
+    /// </summary>
+    private static bool HandleException(Exception e, bool isTerminating = false)
     {
         if (e.InnerException != null)
         {
             e = e.InnerException;
         }
 
-        // log 最先执行，确保非 UI 线程场景下异常信息一定落盘。
-        GetLogger<App>().LogDebug(e, "UnHandle Exception");
+        // 错误日志最先落盘并推送到日志遮罩（LogError ≥ Information 会进入遮罩 LogTextBox）。
+        // 文件日志：Debug 级别也写盘；遮罩：仅 Information 以上可见。
+        // 致命异常（IsTerminating）在日志末尾加 [FATAL] 标记，便于区分。
+        var logMessage = isTerminating ? "UnHandle Exception [FATAL]" : "UnHandle Exception";
+        GetLogger<App>().LogError(e, logMessage);
 
+        // 可恢复异常（默认）：仅日志，不弹模态窗，避免阻塞 UI 线程。
+        // 通过日志遮罩提示用户：非致命异常已记录。
+        if (!isTerminating)
+        {
+            var nonFatalMessage = TranslateText("发生非致命异常，已记录日志，请查看日志详情。");
+            GetLogger<App>().LogWarning(nonFatalMessage);
+            return false;
+        }
+
+        // 终止性异常（如线程池未处理异常导致进程即将结束）：进程终止前同步弹窗兜底，
+        // 确保用户能看到报告（阻塞无妨，进程反正要终止）。
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null
             || dispatcher.HasShutdownStarted
             || dispatcher.HasShutdownFinished)
         {
             // Dispatcher 不可用（如启动早期或已关闭）：仅日志，不弹窗。
-            return;
+            return false;
         }
 
-        if (dispatcher.CheckAccess())
+        // 确认 Dispatcher 可用后才记录"正在弹窗"，避免与实际行为不一致。
+        var popupShownMessage = TranslateText("发生致命异常，正在弹窗提示，同时已记录日志。");
+        GetLogger<App>().LogWarning(popupShownMessage);
+
+        try
         {
-            // 已在 UI 线程，直接弹窗。
-            ShowExceptionDialog(e);
-        }
-        else
-        {
-            // finalizer 线程、线程池线程等非 UI 线程绝不能弹模态框：
-            // 阻塞在 NtUserWaitMessage 会永久卡死 finalizer 线程，
-            // 全进程带 finalizer 的对象（Mat/WGC 纹理/COM RCW）无法终结，
-            // 内存只增不减。把弹窗投递到 UI 线程，当前线程立即返回。
-            _ = dispatcher.BeginInvoke(new Action(() =>
+            if (dispatcher.CheckAccess())
             {
-                try
+                ShowExceptionDialog(e);
+            }
+            else
+            {
+                // 双信号：startedSignal 表示 UI 线程开始执行弹窗（有限超时），
+                // completedSignal 表示弹窗已关闭（无超时等待）。
+                // ShowExceptionDialog 是模态的，用户读完并关闭才返回；
+                // 若只在"开始"后立即返回，进程终止会强杀刚创建的弹窗。
+                using var startedSignal = new System.Threading.ManualResetEventSlim(false);
+                using var completedSignal = new System.Threading.ManualResetEventSlim(false);
+                dispatcher.InvokeAsync(new Action(() =>
                 {
-                    ShowExceptionDialog(e);
-                }
-                catch
+                    try
+                    {
+                        startedSignal.Set();
+                        ShowExceptionDialog(e);
+                    }
+                    finally
+                    {
+                        completedSignal.Set();
+                    }
+                }));
+
+                // 只为"UI 是否开始执行"设置超时：UI 线程被阻塞/死锁时避免无限等待。
+                if (!startedSignal.Wait(TimeSpan.FromSeconds(3)))
                 {
-                    // 弹窗失败不影响 UI 线程。
+                    GetLogger<App>().LogWarning(
+                        TranslateText("弹窗调度超时，异常已记录，进程即将退出。"));
+                    return false;
                 }
-            }));
+
+                // 一旦确认开始执行，就等待弹窗关闭，确保用户能读完致命异常详情。
+                completedSignal.Wait();
+            }
+
+            return true;
+        }
+        catch
+        {
+            // 弹窗失败不影响进程退出。
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 翻译一条异常提示文本。翻译服务不可用时返回原文。
+    /// </summary>
+    private static string TranslateText(string text)
+    {
+        try
+        {
+            return ServiceProvider.GetService<ITranslationService>()?.Translate(text) ?? text;
+        }
+        catch
+        {
+            return text;
         }
     }
 
