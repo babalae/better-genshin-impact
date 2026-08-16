@@ -759,5 +759,10 @@
   "登记号： 2025SR0500752": "Registration number: 2025SR0500752",
   "版权信息": "Copyright Information",
   "🎁 有新的兑换码可用": "🎁 New redemption codes available",
-  "点击查看详情": "Click to view details"
+  "点击查看详情": "Click to view details",
+  "发生非致命异常，已记录日志，请查看日志详情。": "A non-fatal exception was caught and logged. Please check the log for details.",
+  "发生致命异常，正在弹窗提示，同时已记录日志。": "A fatal exception occurred; showing a popup notification and the exception has been logged.",
+  "弹窗调度超时，异常已记录，进程即将退出。": "Popup scheduling timed out; the exception has been logged and the process is about to exit.",
+  "应用程序启动失败：": "Application failed to start: ",
+  "BetterGI 启动失败": "BetterGI Failed to Start"
 }
