@@ -63,7 +63,7 @@ public partial class HtmlMaskWindow : Window
 
         if (Uri.TryCreate(url, UriKind.Absolute, out var pageUri) && pageUri.IsFile)
         {
-            _virtualHostName = $"hm-{scriptKey}.local.bettergi.com";
+            _virtualHostName = $"hm-{scriptKey}.bettergi.local";
             _pageUrl = CreateVirtualPageUrl(pageUri, _workDir, _virtualHostName);
         }
         else
