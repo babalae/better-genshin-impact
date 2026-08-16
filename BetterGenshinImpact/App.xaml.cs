@@ -177,6 +177,8 @@ public partial class App : Application
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<CustomHtmlMaskService>();
                 services.AddSingleton<TaskTriggerDispatcher>();
+                services.AddSingleton<RecognitionTemplateAssetService>();
+                services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();

@@ -25,6 +25,7 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
@@ -52,6 +53,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
+    private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -59,10 +61,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
-    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
+    public HotKeyPageViewModel(
+        IConfigService configService,
+        ILogger<HotKeyPageViewModel> logger,
+        TaskSettingsPageViewModel taskSettingsPageViewModel,
+        RecognitionTemplateEditorService recognitionTemplateEditorService)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
+        _recognitionTemplateEditorService = recognitionTemplateEditorService;
         // 获取配置
         Config = configService.Get();
 
@@ -696,6 +703,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     vm.OnStopRecord();
                 }
             }
+        ));
+
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "（开发）模板素材制作",
+            nameof(Config.HotKeyConfig.RecognitionTemplateEditorHotkey),
+            Config.HotKeyConfig.RecognitionTemplateEditorHotkey,
+            Config.HotKeyConfig.RecognitionTemplateEditorHotkeyType,
+            (_, _) => { _recognitionTemplateEditorService.OpenAsync().SafeForget(); }
         ));
 
         devDirectory.Children.Add(new HotKeySettingModel(
