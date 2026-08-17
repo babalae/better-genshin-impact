@@ -1,21 +1,38 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using TorchSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
     public class TorchFixture
     {
-        private readonly Lazy<TorchLoader> torch = new Lazy<TorchLoader>();
-        public bool UseTorch
+        private static readonly Lazy<TorchLoader> Torch = new();
+
+        internal static bool IsTorchAvailable
         {
             get
             {
-                return torch.Value.UseTorch;
+                return Torch.Value.UseTorch;
+            }
+        }
+    }
+
+    internal sealed class TorchFactAttribute : FactAttribute
+    {
+        public TorchFactAttribute()
+        {
+            if (!TorchFixture.IsTorchAvailable)
+            {
+                Skip = "当前环境未安装可用的 TorchSharp 后端";
+            }
+        }
+    }
+
+    internal sealed class TorchTheoryAttribute : TheoryAttribute
+    {
+        public TorchTheoryAttribute()
+        {
+            if (!TorchFixture.IsTorchAvailable)
+            {
+                Skip = "当前环境未安装可用的 TorchSharp 后端";
             }
         }
     }
@@ -24,19 +41,41 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
     {
         public TorchLoader()
         {
+            if (!HasNativeBackend())
+            {
+                return;
+            }
+
             try
             {
-                NativeLibrary.Load(@"C:\torch\lib\torch_cpu.dll");
-                if (torch.TryInitializeDeviceType(DeviceType.CUDA))
-                {
-                    torch.set_default_device(new torch.Device(DeviceType.CUDA));
-                }
+                torch.InitializeDeviceType(DeviceType.CPU);
                 UseTorch = true;
             }
-            catch (Exception e) when (e is DllNotFoundException || e is NotSupportedException)
+            catch (Exception e) when (e is BadImageFormatException or DllNotFoundException or NotSupportedException or TypeInitializationException)
             {
                 UseTorch = false;
             }
+        }
+
+        private static bool HasNativeBackend()
+        {
+            var backendFileName = OperatingSystem.IsWindows()
+                ? "torch_cpu.dll"
+                : OperatingSystem.IsMacOS() ? "libtorch_cpu.dylib" : "libtorch_cpu.so";
+            var runtimeFolder = OperatingSystem.IsWindows()
+                ? "win-x64"
+                : OperatingSystem.IsMacOS() ? "osx-x64" : "linux-x64";
+
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory, backendFileName)) ||
+                File.Exists(Path.Combine(AppContext.BaseDirectory, "runtimes", runtimeFolder, "native", backendFileName)))
+            {
+                return true;
+            }
+
+            var path = Environment.GetEnvironmentVariable("PATH");
+            return !string.IsNullOrWhiteSpace(path) && path
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(directory => File.Exists(Path.Combine(directory, backendFileName)));
         }
 
         public bool UseTorch { get; private set; }

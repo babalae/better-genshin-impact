@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// RodNetTorch验证，应在数据集上达到一定准确率
         /// </summary>
-        [Theory]
+        [TorchTheory]
         [InlineData(@"..\..\..\Assets\AutoFishing\data_selected.csv")]
         public void Training_AccuracyShouldBeOK(string dataLocation)
         {
@@ -39,7 +39,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// RodNetTorch必须粗略地支持训练
         /// </summary>
-        [Fact]
+        [TorchFact]
         public void Training_ShouldBeDifferentiable()
         {
             //

@@ -6,13 +6,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
     [Collection("Init Collection")]
     public partial class RodNetTests
     {
-        public RodNetTests(TorchFixture torch)
-        {
-            if (!torch.UseTorch)
-                throw new NotSupportedException("torch加载失败，请检查TorchFixture硬编码的dll地址配置");
-        }
-
-        [Theory]
+        [TorchTheory]
         [InlineData(517.6326F, 548.49023F, 255.25723F, 263.55743F, 256.57538F, 351.56964F, 274.65656F, 333.1523F, 5)]
         /// <summary>
         /// 测试计算给到后处理之前的浮点数输出，Torch推理的结果和直接用数学计算的结果，两者的数值应该在转换到单精度时相同
