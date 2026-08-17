@@ -987,6 +987,12 @@ public class AutoFightJsonTask : ISoloTask
                             await SimulateMouseLeftClickLoopAsync(6, _ct);
                             await Delay(1500, _ct);
                             picker.AfterUseSkill();
+                            if (AutoFightParam.ShouldRunKazuhaGatheredDropsScan(
+                                    _taskParam.KazuhaPickupEnabled,
+                                    _taskParam.PickDropsAfterFightEnabled))
+                            {
+                                await new ScanPickTask().Start(_ct, AutoFightParam.KazuhaGatheredDropsScanSeconds);
+                            }
                         }
                     }
                     else

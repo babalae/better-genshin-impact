@@ -52,6 +52,20 @@ public class CombatScriptResourceTests
     }
 
     [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public void ShouldRunKazuhaGatheredDropsScan_ShouldOnlySupplementDisabledFullScan(
+        bool kazuhaPickupEnabled,
+        bool fullScanEnabled,
+        bool expected)
+    {
+        Assert.Equal(expected, AutoFightParam.ShouldRunKazuhaGatheredDropsScan(
+            kazuhaPickupEnabled,
+            fullScanEnabled));
+    }
+
+    [Theory]
     [InlineData(false, true, 5, 5, true)]
     [InlineData(false, true, 4, 5, false)]
     [InlineData(true, true, 6, 5, false)]

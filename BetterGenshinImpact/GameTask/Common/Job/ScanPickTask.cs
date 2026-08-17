@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,7 +81,17 @@ public class ScanPickTask
             var toPickItem = pickItems[0];
             Logger.LogDebug("Fetching: {0}", toPickItem);
             Logger.LogDebug("Using coord: {0} {1}", toPickItem.X, toPickItem.Bottom);
-            MoveTowardsItem(toPickItem, frameSize.Width, frameSize.Height);
+            var movementDecision = GetMovementDecision(toPickItem, frameSize.Width, frameSize.Height);
+            if (movementDecision.Pickup)
+            {
+                Simulation.ReleaseAllKey();
+                AutoPickAssets.Get(frameSize.Width, frameSize.Height, TaskContext.Instance().Config.AutoPickConfig.PickKey)
+                    .PressPickKey();
+            }
+            else
+            {
+                MoveTowardsItem(toPickItem, frameSize.Width, frameSize.Height);
+            }
 
             await Delay(200, ct);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
@@ -163,7 +174,7 @@ public class ScanPickTask
         });
     }
 
-    internal readonly record struct MovementDecision(bool Left, bool Right, bool Forward, bool Backward);
+    internal readonly record struct MovementDecision(bool Left, bool Right, bool Forward, bool Backward, bool Pickup);
 
     internal static MovementDecision GetMovementDecision(Rect toPickItem, int frameWidth, int frameHeight)
     {
@@ -173,6 +184,16 @@ public class ScanPickTask
         var horizontalStartBottom = frameHeight * (560d / 1080d);
         var forwardThreshold = frameHeight * (770d / 1080d);
         var backwardThreshold = frameHeight * (900d / 1080d);
+        var pickupMaxBottom = frameHeight * (1020d / 1080d);
+
+        var pickup = itemCenterX >= leftThreshold
+                     && itemCenterX <= rightThreshold
+                     && toPickItem.Bottom >= forwardThreshold
+                     && toPickItem.Bottom <= pickupMaxBottom;
+        if (pickup)
+        {
+            return new MovementDecision(false, false, false, false, true);
+        }
 
         var left = false;
         var right = false;
@@ -184,7 +205,7 @@ public class ScanPickTask
 
         var forward = toPickItem.Bottom < forwardThreshold;
         var backward = toPickItem.Bottom > backwardThreshold;
-        return new MovementDecision(left, right, forward, backward);
+        return new MovementDecision(left, right, forward, backward, false);
     }
 
     private static async Task WalkByDirection(CancellationToken ct, GIActions act, int ms = 1000)

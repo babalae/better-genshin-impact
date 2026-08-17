@@ -803,6 +803,12 @@ public class AutoFightTask : ISoloTask
                             await Delay(1500, ct);
                             // 截图并更新技能最新冷却时间
                             picker.AfterUseSkill();
+                            if (AutoFightParam.ShouldRunKazuhaGatheredDropsScan(
+                                    _taskParam.KazuhaPickupEnabled,
+                                    _taskParam.PickDropsAfterFightEnabled))
+                            {
+                                await new ScanPickTask().Start(ct, AutoFightParam.KazuhaGatheredDropsScanSeconds);
+                            }
                         }
                     }
                     else

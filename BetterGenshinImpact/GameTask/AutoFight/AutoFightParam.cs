@@ -74,6 +74,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public bool FightFinishDetectEnabled { get; set; } = false;
     public bool PickDropsAfterFightEnabled { get; set; } = false;
     public int PickDropsAfterFightSeconds { get; set; } = 15;
+    public const int KazuhaGatheredDropsScanSeconds = 3;
     public int BattleThresholdForLoot { get; set; } = -1;
     public int Timeout { get; set; } = 120;
     public const int MaxSeekRotationCount = 6;
@@ -90,6 +91,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public static bool ShouldSkipPostFightPickupAfterForcedStop(bool fightTimeoutEnabled, TimeSpan elapsed, TimeSpan fightTimeout, int rotationCount)
     {
         return (fightTimeoutEnabled && elapsed > fightTimeout) || IsSeekRotationLimitReached(rotationCount);
+    }
+
+    public static bool ShouldRunKazuhaGatheredDropsScan(bool kazuhaPickupEnabled, bool fullScanEnabled)
+    {
+        return kazuhaPickupEnabled && !fullScanEnabled;
     }
 
     public static readonly TimeSpan RotateFindEnemyMinimumFinishCheckInterval = TimeSpan.FromSeconds(10);

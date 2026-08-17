@@ -24,9 +24,22 @@ public class ScanPickTaskTests
         var decision900P = ScanPickTask.GetMovementDecision(new Rect(936, 527, 36, 137), 1600, 900);
 
         Assert.Equal(decision1080P, decision900P);
+        Assert.False(decision1080P.Pickup);
         Assert.False(decision1080P.Left);
         Assert.True(decision1080P.Right);
         Assert.False(decision1080P.Forward);
         Assert.False(decision1080P.Backward);
+    }
+
+    [Fact]
+    public void GetMovementDecision_ShouldPickCenteredGroundDropInsteadOfWalkingPastIt()
+    {
+        var decision = ScanPickTask.GetMovementDecision(new Rect(934, 685, 38, 238), 1920, 1080);
+
+        Assert.True(decision.Pickup);
+        Assert.False(decision.Left);
+        Assert.False(decision.Right);
+        Assert.False(decision.Forward);
+        Assert.False(decision.Backward);
     }
 }
