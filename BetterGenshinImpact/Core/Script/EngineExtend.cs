@@ -71,10 +71,10 @@ public class EngineExtend
         engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));
         engine.AddHostType("ImageRegion", typeof(ImageRegion));
         engine.AddHostType("Region", typeof(Region));
-        
+
         engine.AddHostType("Pen", typeof(Pen));
         engine.AddHostType("Color", typeof(Color));
-        
+
         engine.AddHostType("CombatScenes", typeof(CombatScenes));
         engine.AddHostType("Avatar", typeof(Avatar));
         

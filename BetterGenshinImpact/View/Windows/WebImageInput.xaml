@@ -54,7 +54,7 @@
                            Margin="5"
                            Appearance="Primary"
                            Content="{Binding ButtonText}"
-                           IsDefault="True" 
+                           IsDefault="True"
                            IsEnabled="{Binding IsEnabled}"
                            Command="{Binding SubmitWebImageUrlCommand}"/>
             </StackPanel>

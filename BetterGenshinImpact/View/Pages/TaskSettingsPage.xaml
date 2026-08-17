@@ -934,10 +934,10 @@
                         </StackPanel>
                     </ui:CardExpander>
                 </Grid>
-                
+
                 <Separator Margin="-18,0"
                            BorderThickness="0,1,0,0" />
-                
+
                 <ui:CardExpander Margin="16,10,52,12"
                                  ContentPadding="0"
                                  IsExpanded="False">
