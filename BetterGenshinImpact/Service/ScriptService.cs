@@ -117,7 +117,7 @@ public partial class ScriptService : IScriptService
     //优先执行的配置组，统计每个project执行次数
     private readonly Dictionary<string, int> _projectExecutionCount = new();
     
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
+    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null, TaskProgress? taskProgress = null, bool propagateExceptions = false)
     {
         groupName ??= "默认";
 
@@ -368,6 +368,10 @@ public partial class ScriptService : IScriptService
                                 {
                                     taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
                                 }
+                                if (propagateExceptions)
+                                {
+                                    throw;
+                                }
                             }
                             finally
                             {
@@ -425,7 +429,7 @@ public partial class ScriptService : IScriptService
                         }
                     }
                 }
-            });
+            }, propagateExceptions);
         
 
         // 还原定时器

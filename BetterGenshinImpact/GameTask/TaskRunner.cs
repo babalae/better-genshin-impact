@@ -5,6 +5,7 @@ using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
@@ -44,8 +45,9 @@ public class TaskRunner
     /// <param name="action"></param>
     /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
     /// <param name="clearCancellationContextOnLockFailure">获取信号量锁失败时是否清理 CancellationContext。</param>
+    /// <param name="propagateExceptions">是否向调用方传播未预期的任务异常。</param>
     /// <returns></returns>
-    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false)
+    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false, bool propagateExceptions = false)
     {
         // 加锁
         var hasLock = await TaskSemaphore.WaitAsync(0);
@@ -56,6 +58,7 @@ public class TaskRunner
             {
                 CancellationContext.Instance.Clear();
             }
+            TaskRunnerFailurePolicy.ThrowIfLockUnavailable(propagateExceptions);
             return;
         }
         try
@@ -95,21 +98,31 @@ public class TaskRunner
         catch (Exception e)
         {
             Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
-            _logger.LogError(e.Message);
-            _logger.LogDebug(e.StackTrace);
+            _logger.LogError(e, "任务执行异常: {Message}", e.Message);
+            if (propagateExceptions)
+            {
+                throw;
+            }
         }
         finally
         {
-            End();
-            _logger.LogInformation("→ {Text}", _name + "任务结束");
-
-            CancellationContext.Instance.Clear();
-            RunnerContext.Instance.Clear();
-
-            // 释放锁
-            if (hasLock)
+            try
             {
-                TaskSemaphore.Release();
+                TaskRunnerCleanup.RunAll(
+                [
+                    ("任务资源", End),
+                    ("结束日志", () => _logger.LogInformation("→ {Text}", _name + "任务结束")),
+                    ("取消上下文", CancellationContext.Instance.Clear),
+                    ("运行上下文", RunnerContext.Instance.Clear)
+                ],
+                LogCleanupFailure);
+            }
+            finally
+            {
+                if (hasLock)
+                {
+                    TaskSemaphore.Release();
+                }
             }
         }
     }
@@ -119,9 +132,9 @@ public class TaskRunner
         Task.Run(() => RunCurrentAsync(action));
     }
 
-    public async Task RunThreadAsync(Func<Task> action)
+    public async Task RunThreadAsync(Func<Task> action, bool propagateExceptions = false)
     {
-        await Task.Run(() => RunCurrentAsync(action));
+        await Task.Run(() => RunCurrentAsync(action, propagateExceptions: propagateExceptions));
     }
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
@@ -183,14 +196,60 @@ public class TaskRunner
             return;
         }
 
-        Simulation.ReleaseAllKey();
-
-        // 还原实时任务触发器
-        TaskTriggerDispatcher.Instance().ClearTriggers();
-        TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
-
-        VisionContext.Instance().DrawContent.ClearAll();
-        HtmlMaskWindow.CloseAll();
+        TaskRunnerCleanup.RunAll(
+        [
+            ("释放模拟输入", Simulation.ReleaseAllKey),
+            ("还原实时任务触发器", () =>
+            {
+                TaskTriggerDispatcher.Instance().ClearTriggers();
+                TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
+            }),
+            ("清理绘制内容", VisionContext.Instance().DrawContent.ClearAll),
+            ("关闭 HTML 遮罩", HtmlMaskWindow.CloseAll)
+        ],
+        LogCleanupFailure);
     }
 
+    private void LogCleanupFailure(string step, Exception exception)
+    {
+        _logger.LogError(exception, "任务结束清理失败，步骤: {Step}", step);
+    }
+
+}
+
+internal static class TaskRunnerCleanup
+{
+    internal static void RunAll(
+        IEnumerable<(string Name, Action Action)> steps,
+        Action<string, Exception> onFailure)
+    {
+        foreach (var (name, action) in steps)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                try
+                {
+                    onFailure(name, exception);
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+}
+
+internal static class TaskRunnerFailurePolicy
+{
+    internal static void ThrowIfLockUnavailable(bool propagateExceptions)
+    {
+        if (propagateExceptions)
+        {
+            throw new InvalidOperationException("任务启动失败：当前存在正在运行中的独立任务。");
+        }
+    }
 }
