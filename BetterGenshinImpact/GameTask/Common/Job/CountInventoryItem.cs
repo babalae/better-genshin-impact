@@ -207,14 +207,14 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 
         private int ReadItemCount(ImageRegion itemRegion)
         {
-            string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
-            string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
-            if (int.TryParse(numStr, out int num))
+            using GridItemCountRecognitionResult result =
+                GridItemCountRecognizer.RecognizeCropped(itemRegion.SrcMat, OcrFactory.Paddle);
+            if (result.Count >= 0)
             {
-                return num;
+                return result.Count;
             }
 
-            logger.LogWarning("无法识别数量：{text}", numStr);
+            logger.LogWarning("无法识别数量，OCR 原文：{Text}，原因：{Reason}", result.RawText, result.Reason);
             return -2;
         }
 

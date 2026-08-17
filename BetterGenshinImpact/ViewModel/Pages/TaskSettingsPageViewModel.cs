@@ -218,6 +218,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchGridIconsAccuracyTestButtonText = "运行模型准确率测试";
 
+    /// <summary>数量 OCR 测试当前选择的分类或当前一页模式。</summary>
+    [ObservableProperty]
+    private InventoryCountComparisonTarget _inventoryCountComparisonTarget = InventoryCountComparisonTarget.CharacterDevelopmentItems;
+
+    /// <summary>数量 OCR 测试下拉框显示的四个目标选项。</summary>
+    public FrozenDictionary<Enum, string> InventoryCountComparisonTargetDict { get; } = Enum
+        .GetValues<InventoryCountComparisonTarget>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
     [ObservableProperty]
     private bool _switchAutoRedeemCodeEnabled;
 
@@ -809,6 +823,34 @@ public partial class TaskSettingsPageViewModel : ViewModel
         {
             SwitchGetGridIconsEnabled = false;
         }
+    }
+
+    /// <summary>启动当前选择目标的数量 OCR 对比任务。</summary>
+    [RelayCommand]
+    private async Task OnRunInventoryCountComparison()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new InventoryCountComparisonTask(InventoryCountComparisonTarget));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    /// <summary>创建并打开数量 OCR 对比结果根目录。</summary>
+    [RelayCommand]
+    private void OnGoToInventoryCountComparisonFolder()
+    {
+        var path = Global.Absolute(@"log\InventoryCountComparison\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
     }
 
     [RelayCommand]
