@@ -12,6 +12,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class NavigationInstance
 {
+    private const float PositionJumpThreshold = 150;
     private readonly Dictionary<string, PositionState> _states = new();
 
     private sealed class PositionState
@@ -19,6 +20,7 @@ public class NavigationInstance
         public float PrevX { get; set; } = -1;
         public float PrevY { get; set; } = -1;
         public DateTime CaptureTime { get; set; } = DateTime.MinValue;
+        public bool UseTemplateMatchFallback { get; set; }
     }
 
     public void Reset()
@@ -40,6 +42,7 @@ public class NavigationInstance
     {
         var state = GetState(selector);
         (state.PrevX, state.PrevY) = (x, y);
+        state.UseTemplateMatchFallback = false;
     }
 
     public Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
@@ -52,13 +55,53 @@ public class NavigationInstance
         var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
         var state = GetState(selector);
-        var sceneMap = MapManager.GetMap(mapName, mapMatchMethod, selector);
+        var primaryMap = MapManager.GetMap(mapName, mapMatchMethod, selector);
+        var primaryUsesTemplateMatch = primaryMap is SceneBaseMapByTemplateMatch;
+        var sceneMap = state.UseTemplateMatchFallback && !primaryUsesTemplateMatch
+            ? MapManager.GetMap(mapName, "TemplateMatch", selector)
+            : primaryMap;
         var p = sceneMap is SceneBaseMapByTemplateMatch templateMatchMap
             ? templateMatchMap.GetMiniMapPosition(colorMat, state.PrevX, state.PrevY, selector)
             : sceneMap.GetMiniMapPosition(colorMat, state.PrevX, state.PrevY);
 
+        if (!state.UseTemplateMatchFallback
+            && ShouldUseTemplateMatchFallback(
+                primaryUsesTemplateMatch,
+                p,
+                new Point2f(state.PrevX, state.PrevY),
+                selector))
+        {
+            var fallbackMap = MapManager.GetMap(mapName, "TemplateMatch", selector);
+            if (fallbackMap is SceneBaseMapByTemplateMatch templateMap)
+            {
+                state.UseTemplateMatchFallback = true;
+                p = templateMap.GetMiniMapPosition(colorMat, state.PrevX, state.PrevY, selector);
+            }
+        }
+
         UpdateStateAndNotify(state, p, captureTime);
         return p;
+    }
+
+    internal static bool ShouldUseTemplateMatchFallback(
+        bool primaryUsesTemplateMatch,
+        Point2f matchedPosition,
+        Point2f expectedPosition,
+        MapLayerSelector? selector)
+    {
+        if (primaryUsesTemplateMatch)
+        {
+            return false;
+        }
+
+        if (selector is { IsEmpty: false } || matchedPosition == default)
+        {
+            return true;
+        }
+
+        return expectedPosition.X > 0
+               && expectedPosition.Y > 0
+               && matchedPosition.DistanceTo(expectedPosition) > PositionJumpThreshold;
     }
 
     /// <summary>
