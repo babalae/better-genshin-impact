@@ -163,6 +163,17 @@ public class LimitedFile(string rootPath)
     }
 
     /// <summary>
+    /// Read all text from a file and preserve the original exception on failure.
+    /// </summary>
+    /// <param name="path">File path.</param>
+    /// <returns>Text read from file.</returns>
+    public string ReadTextSyncOrThrow(string path)
+    {
+        path = NormalizePath(path);
+        return File.ReadAllText(path);
+    }
+
+    /// <summary>
     /// Read all text from a file.
     /// </summary>
     /// <param name="path">File path.</param>

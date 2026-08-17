@@ -46,6 +46,7 @@ public class AutoPathingScript
         {
             TaskControl.Logger.LogDebug(e,"执行地图追踪时候发生错误");
             TaskControl.Logger.LogError("执行地图追踪时候发生错误: {Msg}",e.Message);
+            throw;
         }
     }
 
@@ -60,6 +61,7 @@ public class AutoPathingScript
         {
             TaskControl.Logger.LogDebug(e,"读取文件时发生错误");
             TaskControl.Logger.LogError("读取文件时发生错误: {Msg}",e.Message);
+            throw;
         }
     }
 
@@ -108,6 +110,13 @@ public class AutoPathingScript
     /// <param name="subPath">相对于 User\AutoPathing 的文件路径</param>
     /// <returns>文件文本内容，读取失败时返回空字符串</returns>
     public string ReadTextSync(string subPath) => AutoPathingFile.ReadTextSync(subPath);
+
+    /// <summary>
+    /// 读取 AutoPathing 目录下指定文件的文本内容，读取失败时保留原始异常。
+    /// </summary>
+    /// <param name="subPath">相对于 User\AutoPathing 的文件路径</param>
+    /// <returns>文件文本内容</returns>
+    public string ReadTextSyncOrThrow(string subPath) => AutoPathingFile.ReadTextSyncOrThrow(subPath);
 
     /// <summary>
     /// LimitedFile 实例，用于操作 AutoPathing 目录
