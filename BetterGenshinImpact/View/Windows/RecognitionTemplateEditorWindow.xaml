@@ -80,7 +80,7 @@
                                     Content="适应窗口" />
                             <TextBlock VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="拖拽框选；Ctrl + 滚轮缩放" />
+                                       Text="左键框选；滚轮缩放；右键拖动画布" />
                         </StackPanel>
                     </Grid>
 
@@ -160,7 +160,7 @@
                                     Content="浏览…" />
                         </Grid>
 
-                        <TextBlock Margin="0,10,0,4" Text="Assets 根目录" />
+                        <TextBlock Margin="0,10,0,4" Text="输出文件夹（同时设置 JSON 与图片）" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -175,12 +175,12 @@
                                     Margin="8,0,0,0"
                                     Padding="12,4"
                                     Command="{Binding BrowseAssetsRootCommand}"
-                                    Content="浏览…" />
+                                    Content="选择…" />
                         </Grid>
 
                         <TextBlock Margin="0,8,0,0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="图片固定写入 Assets\1920x1080" />
+                                   Text="Recognition.json 写入输出文件夹；图片写入 1920x1080 子目录" />
                         <TextBlock Margin="0,2,0,0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="{Binding OutputImageDisplayPath}"

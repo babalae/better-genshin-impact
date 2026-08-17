@@ -3,8 +3,10 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.Logging;
+using Ookii.Dialogs.Wpf;
 using OpenCvSharp;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -12,10 +14,12 @@ using System.Windows;
 namespace BetterGenshinImpact.Service;
 
 /// <summary>
-/// 协调开发者快捷键截图与 Recognition 模板编辑窗口的生命周期。
+/// 协调游戏截图、本地图片与 Recognition 模板编辑窗口的生命周期。
 /// </summary>
 public sealed class RecognitionTemplateEditorService
 {
+    private sealed record EditorSource(Mat Image, string InitialTemplateName);
+
     private readonly RecognitionTemplateAssetService _assetService;
     private readonly IConfigService _configService;
     private readonly ILogger<RecognitionTemplateEditorService> _logger;
@@ -32,14 +36,33 @@ public sealed class RecognitionTemplateEditorService
         _logger = logger;
     }
 
-    public async Task OpenAsync()
+    public Task OpenAsync()
+    {
+        return OpenCoreAsync(
+            () => Task.Run<EditorSource?>(() => new EditorSource(CaptureRecognitionCanvas(), "")),
+            "无法截取当前游戏画面并打开模板制作工具。",
+            "请先在启动页启动截图器，并确认游戏窗口未最小化。");
+    }
+
+    public Task OpenFromImageAsync()
+    {
+        return OpenCoreAsync(
+            SelectLocalImageAsync,
+            "无法读取所选图片并打开模板制作工具。",
+            "请选择有效的 PNG、JPEG、BMP 或 WebP 图片。");
+    }
+
+    private async Task OpenCoreAsync(
+        Func<Task<EditorSource?>> sourceFactory,
+        string failureMessage,
+        string guidance)
     {
         if (Interlocked.Exchange(ref _isOpening, 1) != 0)
         {
             return;
         }
 
-        Mat? screenshot = null;
+        Mat? sourceImage = null;
         try
         {
             var dispatcher = Application.Current?.Dispatcher
@@ -64,12 +87,27 @@ public sealed class RecognitionTemplateEditorService
                 return;
             }
 
-            screenshot = await Task.Run(CaptureRecognitionCanvas);
-            var capturedScreenshot = screenshot ?? throw new InvalidOperationException("未获取到有效的游戏截图。");
+            var source = await sourceFactory();
+            if (source == null)
+            {
+                return;
+            }
+
+            var editorImage = source.Image;
+            sourceImage = editorImage;
+            if (editorImage.Empty())
+            {
+                throw new InvalidOperationException("未获取到有效图片。");
+            }
+
             await dispatcher.InvokeAsync(() =>
             {
-                var viewModel = new RecognitionTemplateEditorViewModel(capturedScreenshot, _assetService, _configService);
-                screenshot = null; // 所有权已经转移给 ViewModel。
+                var viewModel = new RecognitionTemplateEditorViewModel(
+                    editorImage,
+                    _assetService,
+                    _configService,
+                    source.InitialTemplateName);
+                sourceImage = null; // 所有权已经转移给 ViewModel。
                 RecognitionTemplateEditorWindow? window = null;
                 try
                 {
@@ -104,13 +142,51 @@ public sealed class RecognitionTemplateEditorService
         catch (Exception ex)
         {
             _logger.LogError(ex, "打开 Recognition 模板素材制作窗口失败");
-            await ShowCaptureErrorAsync(ex.Message);
+            await ShowOpenErrorAsync(failureMessage, ex.Message, guidance);
         }
         finally
         {
-            screenshot?.Dispose();
+            sourceImage?.Dispose();
             Interlocked.Exchange(ref _isOpening, 0);
         }
+    }
+
+    private static async Task<EditorSource?> SelectLocalImageAsync()
+    {
+        var dispatcher = Application.Current?.Dispatcher
+                         ?? throw new InvalidOperationException("WPF Dispatcher 尚未初始化。");
+        var imagePath = await dispatcher.InvokeAsync(() =>
+        {
+            var dialog = new VistaOpenFileDialog
+            {
+                Title = "选择模板制作参考图片",
+                Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.webp|PNG 图片|*.png|所有文件|*.*",
+                CheckFileExists = true
+            };
+            return dialog.ShowDialog(Application.Current.MainWindow) == true
+                ? dialog.FileName
+                : null;
+        });
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return null;
+        }
+
+        var image = await Task.Run(() => LoadLocalImage(imagePath));
+        return new EditorSource(image, Path.GetFileNameWithoutExtension(imagePath));
+    }
+
+    private static Mat LoadLocalImage(string imagePath)
+    {
+        using var stream = File.OpenRead(imagePath);
+        var image = Mat.FromStream(stream, ImreadModes.Color);
+        if (image.Empty())
+        {
+            image.Dispose();
+            throw new InvalidOperationException("所选文件不是可读取的图片。");
+        }
+
+        return image;
     }
 
     private static Mat CaptureRecognitionCanvas()
@@ -136,7 +212,7 @@ public sealed class RecognitionTemplateEditorService
         }
     }
 
-    private static async Task ShowCaptureErrorAsync(string detail)
+    private static async Task ShowOpenErrorAsync(string failureMessage, string detail, string guidance)
     {
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher == null)
@@ -147,7 +223,7 @@ public sealed class RecognitionTemplateEditorService
         await dispatcher.InvokeAsync(() =>
         {
             ThemedMessageBox.Show(
-                $"无法截取当前游戏画面并打开模板制作工具。{Environment.NewLine}{Environment.NewLine}{detail}{Environment.NewLine}{Environment.NewLine}请先在启动页启动截图器，并确认游戏窗口未最小化。",
+                $"{failureMessage}{Environment.NewLine}{Environment.NewLine}{detail}{Environment.NewLine}{Environment.NewLine}{guidance}",
                 "模板素材制作",
                 MessageBoxButton.OK,
                 ThemedMessageBox.MessageBoxIcon.Warning,

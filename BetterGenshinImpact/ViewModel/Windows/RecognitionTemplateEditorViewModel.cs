@@ -124,7 +124,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     public RecognitionTemplateEditorViewModel(
         Mat screenshot,
         RecognitionTemplateAssetService assetService,
-        IConfigService configService)
+        IConfigService configService,
+        string initialTemplateName = "")
     {
         _screenshot = screenshot ?? throw new ArgumentNullException(nameof(screenshot));
         _assetService = assetService;
@@ -132,6 +133,10 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         _recognitionJsonPath = _devConfig.RecognitionJsonPath;
         _assetsRootPath = _devConfig.RecognitionAssetsRootPath;
         _screenshotImage = screenshot.ToWriteableBitmap();
+        if (!string.IsNullOrWhiteSpace(initialTemplateName))
+        {
+            TemplateFileName = initialTemplateName;
+        }
     }
 
     [RelayCommand]
@@ -165,7 +170,7 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     {
         var dialog = new VistaFolderBrowserDialog
         {
-            Description = "选择 Recognition Assets 根目录",
+            Description = "选择输出文件夹（Recognition.json 写入此目录，图片写入 1920x1080 子目录）",
             UseDescriptionForTitle = true,
             SelectedPath = Directory.Exists(AssetsRootPath) ? AssetsRootPath : ""
         };
@@ -175,10 +180,7 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         }
 
         AssetsRootPath = dialog.SelectedPath;
-        if (string.IsNullOrWhiteSpace(RecognitionJsonPath))
-        {
-            RecognitionJsonPath = Path.Combine(dialog.SelectedPath, "Recognition.json");
-        }
+        RecognitionJsonPath = Path.Combine(dialog.SelectedPath, "Recognition.json");
     }
 
     [RelayCommand]
