@@ -66,6 +66,10 @@ public class TpTask
     private const double MapDragPixelsPerStep = 48d;
     private const double MapDragFastStepRatio = 0.42d;
     private const double MapDragFastDistanceRatio = 0.85d;
+    private const double MaxMapDragDistance = 300d;
+    private const int MapDragSettlingDelayMs = 100;
+    private const double MapMoveFeedbackMinExpectedDistance = 24d;
+    private const double MapMoveFeedbackMinActualDistance = 8d;
     private const double MapClickSafeMargin = 35d;
     private const double NearbyMapIconDefaultSearchRadius = 170d;
     private const double NearbyMapIconMinSearchRadius = 32d;
@@ -1250,6 +1254,7 @@ public class TpTask
             }
         }
 
+        var moveCompleted = false;
         // 开始移动并放大地图
         for (var iteration = 0; iteration < _tpConfig.MaxIterations; iteration++)
         {
@@ -1272,6 +1277,7 @@ public class TpTask
                     }
                 }
 
+                moveCompleted = true;
                 break;
             }
 
@@ -1306,12 +1312,14 @@ public class TpTask
                         out moveState) ||
                     moveState.MouseDistance < 3)
                 {
+                    moveCompleted = true;
                     break;
                 }
             }
 
             int moveMouseX = (int)Math.Round(moveState.MouseDeltaX) * Math.Sign(moveState.XOffset);
             int moveMouseY = (int)Math.Round(moveState.MouseDeltaY) * Math.Sign(moveState.YOffset);
+            (moveMouseX, moveMouseY) = LimitMapDragDelta(moveMouseX, moveMouseY);
             // DpiScale 是 Windows 显示缩放倍率，实际拖动和预测必须使用同一口径。
             int effectiveMoveMouseX = GetDisplayScaleAdjustedMouseDelta(moveMouseX);
             int effectiveMoveMouseY = GetDisplayScaleAdjustedMouseDelta(moveMouseY);
@@ -1337,10 +1345,20 @@ public class TpTask
                 double actualMoveLen = Math.Sqrt(actualDeltaX * actualDeltaX + actualDeltaY * actualDeltaY);
                 double moveRatio = expectedMoveLen > 0 ? actualMoveLen / expectedMoveLen : 0;
                 double moveDirectionCos = GetMoveDirectionCos(predictedDeltaX, predictedDeltaY, actualDeltaX, actualDeltaY);
-                // 如果识别结果和本次拖动的距离/方向明显不一致，则判定为低特征区域误识别，进入盲走推算。
+                // 如果识别结果和本次拖动的距离/方向明显不一致，则使用全图识别重新校准，
+                // 并缩小下一次拖动，避免错误反馈导致反向来回或持续过冲。
                 if (IsMapMoveRecognitionAnomaly(expectedMoveLen, actualMoveLen, moveRatio, moveDirectionCos, jumpDistance))
                 {
-                    throw new MapPositionNotRecognizedException("中心点识别坐标异常跳跃");
+                    exceptionTimes++;
+                    if (exceptionTimes > 5)
+                    {
+                        throw new Exception("多次中心点识别无进展或方向异常，停止拖动地图并重新传送");
+                    }
+
+                    moveState = TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var recoveredState)
+                        ? recoveredState.ScaleMouseDelta(0.5d)
+                        : moveState.ScaleMouseDelta(0.5d);
+                    continue;
                 }
 
                 moveState = GetMoveMapState(newCenterPoint, x, y, currentZoomLevel);
@@ -1357,6 +1375,35 @@ public class TpTask
                 moveState = GetMoveMapState(predictedPoint, x, y, currentZoomLevel);
             }
         }
+
+        if (!moveCompleted)
+        {
+            moveCompleted = TryGetClickableTargetPosition(
+                mapName,
+                x,
+                y,
+                requiredVisibleRadius,
+                out _,
+                out _,
+                out _);
+        }
+
+        if (!moveCompleted)
+        {
+            throw new Exception($"地图拖动在 {_tpConfig.MaxIterations} 次内未收敛，停止本轮并重新传送");
+        }
+    }
+
+    internal static (int X, int Y) LimitMapDragDelta(int deltaX, int deltaY)
+    {
+        double distance = Math.Sqrt((double)deltaX * deltaX + (double)deltaY * deltaY);
+        if (distance <= MaxMapDragDistance || distance <= 0)
+        {
+            return (deltaX, deltaY);
+        }
+
+        double scale = MaxMapDragDistance / distance;
+        return ((int)Math.Round(deltaX * scale), (int)Math.Round(deltaY * scale));
     }
 
     private MapMoveState GetMoveMapState(
@@ -1860,26 +1907,33 @@ public class TpTask
         int[] stepX = GenerateSteps(sentDeltaX, steps);
         int[] stepY = GenerateSteps(sentDeltaY, steps);
         var startCursor = GetCursorDebugPosition();
-        Simulation.SendInput.Mouse.LeftButtonDown();
         int movedX = 0;
         int movedY = 0;
-        for (var i = 0; i < steps; i++)
+        Simulation.SendInput.Mouse.LeftButtonDown();
+        try
         {
-            var i1 = i;
-            await Delay(GetTeleportOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds), ct);
-            movedX += stepX[i1];
-            movedY += stepY[i1];
-            if (_tpConfig.MapDragUseRelativeMove)
+            for (var i = 0; i < steps; i++)
             {
-                GameCaptureRegion.GameRegionMoveBy((_, scale) => (stepX[i1] * scale, stepY[i1] * scale));
-            }
-            else
-            {
-                GameCaptureRegion.GameRegionMove((_, scale) => (startX + movedX * scale, startY + movedY * scale));
+                var i1 = i;
+                await Delay(GetTeleportOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds), ct);
+                movedX += stepX[i1];
+                movedY += stepY[i1];
+                if (_tpConfig.MapDragUseRelativeMove)
+                {
+                    GameCaptureRegion.GameRegionMoveBy((_, scale) => (stepX[i1] * scale, stepY[i1] * scale));
+                }
+                else
+                {
+                    GameCaptureRegion.GameRegionMove((_, scale) => (startX + movedX * scale, startY + movedY * scale));
+                }
             }
         }
+        finally
+        {
+            Simulation.SendInput.Mouse.LeftButtonUp();
+        }
 
-        Simulation.SendInput.Mouse.LeftButtonUp();
+        await Delay(GetTeleportOperationDelay(MapDragSettlingDelayMs), ct);
         var endCursor = GetCursorDebugPosition();
         return (sentDeltaX, sentDeltaY, steps, startX, startY, endX, endY, endCursor.CaptureX - startCursor.CaptureX, endCursor.CaptureY - startCursor.CaptureY);
     }
@@ -1973,7 +2027,7 @@ public class TpTask
         return (expectedDeltaX * actualDeltaX + expectedDeltaY * actualDeltaY) / (expectedLen * actualLen);
     }
 
-    private static bool IsMapMoveRecognitionAnomaly(
+    internal static bool IsMapMoveRecognitionAnomaly(
         double expectedMoveLen,
         double actualMoveLen,
         double moveRatio,
@@ -1983,6 +2037,25 @@ public class TpTask
         if (jumpDistance > Math.Max(200, expectedMoveLen * 2))
         {
             return true;
+        }
+
+        if (expectedMoveLen >= MapMoveFeedbackMinExpectedDistance)
+        {
+            double minimumProgress = Math.Max(MapMoveFeedbackMinActualDistance, expectedMoveLen * 0.08d);
+            if (actualMoveLen < minimumProgress)
+            {
+                return true;
+            }
+
+            if (actualMoveLen >= MapMoveFeedbackMinActualDistance && moveDirectionCos < 0.25d)
+            {
+                return true;
+            }
+
+            if (expectedMoveLen >= 60d && moveRatio > 2.25d)
+            {
+                return true;
+            }
         }
 
         if (expectedMoveLen > 1200 && (moveRatio < 0.55 || moveRatio > 1.85))
