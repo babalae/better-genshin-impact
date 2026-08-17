@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -63,7 +63,7 @@ public class ScanPickTask
             {
                 Simulation.ReleaseAllKey();
                 await ResetCamera(ct);
-                for (var i = 0; i < 10; i++)
+                for (var i = 0; i < 10 && timeoutStopwatch.Elapsed < finishTime; i++)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy(400, 0);
                     if (i > 5) //前期不考虑移动扫描
@@ -75,7 +75,14 @@ public class ScanPickTask
                 }
             }
 
-            if (!hasItems) break;
+            // 一整圈都没有发现物品时，不要提前结束扫描，继续按配置时长扫描
+            if (!hasItems)
+            {
+                continue;
+            }
+
+            // 扫圈中命中物品时相机已转到物品方向，保持当前视角直接移动；
+            // 检测坐标只在当前视角下有效，回正相机会让物品移出视野、坐标失效
 
             pickItems = SortPickItems(pickItems, frameSize.Width, frameSize.Height).ToList();
             var toPickItem = pickItems[0];
@@ -181,7 +188,6 @@ public class ScanPickTask
         var itemCenterX = toPickItem.X + toPickItem.Width / 2d;
         var leftThreshold = frameWidth * (760d / 1920d);
         var rightThreshold = frameWidth * (1040d / 1920d);
-        var horizontalStartBottom = frameHeight * (560d / 1080d);
         var forwardThreshold = frameHeight * (770d / 1080d);
         var backwardThreshold = frameHeight * (900d / 1080d);
         var pickupMaxBottom = frameHeight * (1020d / 1080d);
@@ -195,13 +201,8 @@ public class ScanPickTask
             return new MovementDecision(false, false, false, false, true);
         }
 
-        var left = false;
-        var right = false;
-        if (toPickItem.Bottom > horizontalStartBottom)
-        {
-            left = itemCenterX < leftThreshold;
-            right = itemCenterX > rightThreshold;
-        }
+        var left = itemCenterX < leftThreshold;
+        var right = itemCenterX > rightThreshold;
 
         var forward = toPickItem.Bottom < forwardThreshold;
         var backward = toPickItem.Bottom > backwardThreshold;

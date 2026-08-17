@@ -52,7 +52,7 @@ public class NavigationInstance
 
     public Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod, MapLayerSelector? selector)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
+        using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
         var state = GetState(selector);
         var primaryMap = MapManager.GetMap(mapName, mapMatchMethod, selector);
@@ -118,7 +118,7 @@ public class NavigationInstance
 
     public Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod, MapLayerSelector? selector)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
+        using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
         var state = GetState(selector);
 

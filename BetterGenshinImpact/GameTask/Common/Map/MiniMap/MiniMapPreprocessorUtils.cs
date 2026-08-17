@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.MiniMap;
@@ -49,8 +49,8 @@ public static class MiniMapPreprocessorUtils
 
     public static void RightShiftCv(Mat input, Mat output, int k)
     {
-        var part1 = input[0, input.Rows, input.Cols - k, input.Cols];  // 后k个元素
-        var part2 = input[0, input.Rows, 0, input.Cols - k];  // 前面的元素
+        using var part1 = input[0, input.Rows, input.Cols - k, input.Cols];  // 后k个元素
+        using var part2 = input[0, input.Rows, 0, input.Cols - k];  // 前面的元素
         Cv2.HConcat(part1, part2, output);
     }
 

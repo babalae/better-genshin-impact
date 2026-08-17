@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,10 @@ public class SystemControl
         "-popupwindow -screen-width 1920 -screen-height 1080";
     private static readonly TimeSpan GenshinWindowWaitTimeout = TimeSpan.FromSeconds(75);
     private static readonly ILogger<SystemControl> Logger = App.GetLogger<SystemControl>();
+
+    private static readonly Regex ChildSessionOverriddenArgumentRegex = new(
+        @"(?<!\S)(?:-popupwindow|-screen-(?:width|height)(?:\s*=\s*(?:""[^""]*""|\S+)|\s+(?:""[^""]*""|(?!-)\S+))?)(?=\s|$)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static nint FindGenshinImpactHandle()
     {
@@ -36,13 +41,9 @@ public class SystemControl
 
         var cfg = TaskContext.Instance().Config.GenshinStartConfig;
         var workdir = Path.GetDirectoryName(path) ?? "";
-        var arg = cfg.GenshinStartArgs.Trim();
-        if (InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession)
-        {
-            arg = string.IsNullOrEmpty(arg)
-                ? ChildSessionGenshinStartArgs
-                : $"{arg} {ChildSessionGenshinStartArgs}";
-        }
+        var arg = BuildGenshinStartArguments(
+            cfg.GenshinStartArgs,
+            InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession);
 
         StartLocalGame(path, workdir, arg, cfg.StartGameWithCmd);
         var handle = await WaitForGenshinWindowAsync(GenshinWindowWaitTimeout);
@@ -207,6 +208,20 @@ public class SystemControl
         }
 
         return false;
+    }
+
+    internal static string BuildGenshinStartArguments(string? configuredArguments, bool isChildSession)
+    {
+        var arguments = configuredArguments?.Trim() ?? string.Empty;
+        if (!isChildSession)
+        {
+            return arguments;
+        }
+
+        arguments = ChildSessionOverriddenArgumentRegex.Replace(arguments, string.Empty).Trim();
+        return string.IsNullOrEmpty(arguments)
+            ? ChildSessionGenshinStartArgs
+            : $"{arguments} {ChildSessionGenshinStartArgs}";
     }
 
     public static bool IsGenshinImpactActiveByProcess()

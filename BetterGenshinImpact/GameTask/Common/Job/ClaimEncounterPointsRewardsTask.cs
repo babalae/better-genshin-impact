@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -71,7 +71,8 @@ public class ClaimEncounterPointsRewardsTask
 
             if (wt != null)
             {
-                if (ClickClaimBtn(CaptureToRectArea()))
+                using var claimCapture = CaptureToRectArea();
+                if (ClickClaimBtn(claimCapture))
                 {
                     earlyClaim = true;
                     return true;
@@ -102,7 +103,8 @@ public class ClaimEncounterPointsRewardsTask
         await Delay(1000, ct);
 
         // 领取
-        if (ClickClaimBtn(CaptureToRectArea()))
+        using var claimCapture = CaptureToRectArea();
+        if (ClickClaimBtn(claimCapture))
         {
             await Delay(1000, ct);
 

@@ -50,8 +50,9 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HomePageViewModel : ViewModel
+public partial class HomePageViewModel : ViewModel, IDisposable
 {
+    private bool _disposed;
     [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
@@ -180,6 +181,22 @@ public partial class HomePageViewModel : ViewModel
         OnStopTrigger();
         // 等待任务结束
         _maskWindow?.Close();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        OnClosed();
+        _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+        _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _mouseKeyMonitor.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [RelayCommand]

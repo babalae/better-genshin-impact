@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
 using System;
@@ -276,7 +276,9 @@ public class RecognitionObject
                 : new SearchOptions
                 {
                     AnchorMode = this.SearchOptions.AnchorMode,
-                    ExpandSize = this.SearchOptions.ExpandSize
+                    ReferenceSearchBox = this.SearchOptions.ReferenceSearchBox,
+                    ExpandSize = this.SearchOptions.ExpandSize,
+                    ExpandPercent = this.SearchOptions.ExpandPercent
                 },
             
             // 模板匹配相关属性

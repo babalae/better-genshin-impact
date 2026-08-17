@@ -54,7 +54,7 @@
       "奇偶·男性"
     ],
     "id": "10000117",
-    "name": "奇偶(男)",
+    "name": "奇偶·男性",
     "nameEn": "MannequinBoy",
     "weapon": "1"
   },
@@ -65,7 +65,7 @@
       "奇偶·女性"
     ],
     "id": "10000118",
-    "name": "奇偶(女)",
+    "name": "奇偶·女性",
     "nameEn": "MannequinGirl",
     "weapon": "1"
   },
@@ -2062,7 +2062,8 @@
     "id": "10000128",
     "name": "法尔伽",
     "nameEn": "Varka",
-    "skillCD": 16,
+    "skillCD": 12,
+    "skillHoldCD": 8,
     "weapon": "10"
   },
   {

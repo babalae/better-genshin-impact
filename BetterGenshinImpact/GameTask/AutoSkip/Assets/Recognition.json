@@ -121,6 +121,39 @@
       "type": "TemplateMatch",
       "template": "hangout_skip.png",
       "roi": "rect(0, 0, cw / 5, ch / 8)"
+    },
+    "GuidingNotes": {
+      "type": "TemplateMatch",
+      "template": "guiding_notes.png",
+      "reference": {
+        "size": [
+          1920,
+          1080
+        ],
+        "bbox": "rect(53, 24, 54, 55)"
+      }
+    },
+    "ChatHistory": {
+      "type": "TemplateMatch",
+      "template": "chat_history.png",
+      "reference": {
+        "size": [
+          1920,
+          1080
+        ],
+        "bbox": "rect(46, 23, 60, 53)"
+      }
+    },
+    "ValiantChronicles": {
+      "type": "TemplateMatch",
+      "template": "valiant_chronicles.png",
+      "reference": {
+        "size": [
+          1920,
+          1080
+        ],
+        "bbox": "rect(42, 27, 64, 46)"
+      }
     }
   }
 }

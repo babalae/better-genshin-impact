@@ -1,8 +1,15 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.GameTask.AutoPick
 {
+    public enum AutoPickMode
+    {
+        Blacklist,
+        Whitelist
+    }
+
     /// <summary>
     /// 非16:9分辨率下可能无法正常工作
     /// </summary>
@@ -48,14 +55,39 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         /// 自定义按键拾取
         /// </summary>
         [ObservableProperty] private string _pickKey = "F";
-    
-        // 黑名单启用状态
-        [ObservableProperty]
-        private bool _blackListEnabled = true;
 
-    
-        // 白名单启用状态
+        /// <summary>
+        /// 自动拾取名单模式
+        /// </summary>
         [ObservableProperty]
-        private bool _whiteListEnabled= false;
+        [property: JsonConverter(typeof(JsonStringEnumConverter<AutoPickMode>))]
+        private AutoPickMode _mode = AutoPickMode.Blacklist;
+
+        // 黑名单模式的拾取规则启用状态
+        [ObservableProperty]
+        private bool _blacklistModePickEnabled = false;
+
+        // 白名单模式的不拾取规则启用状态
+        [ObservableProperty]
+        private bool _whitelistModeDoNotPickEnabled = true;
+
+        /// <summary>
+        /// 兼容旧版白名单开关，读取后迁移到黑名单模式的拾取规则。
+        /// </summary>
+        [JsonPropertyName("whiteListEnabled")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? LegacyWhiteListEnabled { get; set; }
+
+        public void MigrateLegacyConfig()
+        {
+            if (LegacyWhiteListEnabled is null)
+            {
+                return;
+            }
+
+            Mode = AutoPickMode.Blacklist;
+            BlacklistModePickEnabled = LegacyWhiteListEnabled.Value;
+            LegacyWhiteListEnabled = null;
+        }
     }
 }

@@ -21,7 +21,7 @@ public class CameraOrientation
     /// <returns>角度</returns>
     public static float Compute(Mat mat)
     {
-        var mimiMap = new Mat(mat, MapAssets.Get(mat.Width, mat.Height).MimiMapRect);
+        using var mimiMap = new Mat(mat, MapAssets.Get(mat.Width, mat.Height).MimiMapRect);
         return ComputeMiniMap(mimiMap);
     }
 

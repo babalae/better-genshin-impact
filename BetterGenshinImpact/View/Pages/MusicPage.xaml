@@ -1,0 +1,652 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.MusicPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:converter="clr-namespace:BetterGenshinImpact.View.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DesignHeight="800"
+             d:DesignWidth="1180"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding ViewModel.InitializeCommand}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+
+    <UserControl.Resources>
+        <converter:MillisecondsToTimeConverter x:Key="MillisecondsToTimeConverter" />
+
+        <Style x:Key="MusicCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+
+        <Style x:Key="MusicListItemStyle" TargetType="ListViewItem">
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlaybackTrackButtonStyle" TargetType="RepeatButton">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Grid Background="Transparent">
+                            <Border x:Name="Indicator"
+                                    Height="4"
+                                    VerticalAlignment="Center"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="3" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}"
+                                         Value="True">
+                                <Setter TargetName="Indicator" Property="Height" Value="6" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}"
+                                         Value="True">
+                                <Setter TargetName="Indicator" Property="Height" Value="6" />
+                            </DataTrigger>
+                            <Trigger Property="Tag" Value="Played">
+                                <Setter TargetName="Indicator" Property="Margin" Value="10,0,-10,0" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlaybackSliderThumbStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ToolTip"
+                    Value="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}, Converter={StaticResource MillisecondsToTimeConverter}}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <Ellipse x:Name="Halo"
+                                     Width="20"
+                                     Height="20"
+                                     Fill="Transparent"
+                                     Stroke="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                     StrokeThickness="2"
+                                     Opacity="0" />
+                            <Ellipse x:Name="ThumbSurface"
+                                     Width="12"
+                                     Height="12"
+                                     Fill="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                     Stroke="#FFF8FBFF"
+                                     StrokeThickness="1.5">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="4"
+                                                      Color="#000000"
+                                                      Opacity="0.2"
+                                                      ShadowDepth="1" />
+                                </Ellipse.Effect>
+                            </Ellipse>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}"
+                                         Value="True">
+                                <Setter TargetName="Halo" Property="Opacity" Value="0.14" />
+                                <Setter TargetName="ThumbSurface" Property="Width" Value="14" />
+                                <Setter TargetName="ThumbSurface" Property="Height" Value="14" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Halo" Property="Opacity" Value="0.22" />
+                                <Setter TargetName="ThumbSurface" Property="Width" Value="16" />
+                                <Setter TargetName="ThumbSurface" Property="Height" Value="16" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Halo" Property="Opacity" Value="0.36" />
+                                <Setter TargetName="ThumbSurface" Property="Width" Value="18" />
+                                <Setter TargetName="ThumbSurface" Property="Height" Value="18" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlaybackSliderStyle" TargetType="Slider">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
+            <Setter Property="ToolTipService.ShowDuration" Value="60000" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid x:Name="SliderRoot"
+                              Background="{TemplateBinding Background}"
+                              SnapsToDevicePixels="True">
+                            <Border x:Name="TrackBackground"
+                                    Height="4"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource ControlStrongFillColorDefaultBrush}"
+                                    CornerRadius="3"
+                                    Opacity="0.38" />
+                            <Track x:Name="PART_Track"
+                                   Height="20"
+                                   Margin="-10,0"
+                                   VerticalAlignment="Center">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}"
+                                                  Style="{StaticResource PlaybackTrackButtonStyle}"
+                                                  Tag="Played">
+                                        <RepeatButton.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Offset="0"
+                                                              Color="{DynamicResource SystemAccentColorSecondary}" />
+                                                <GradientStop Offset="1"
+                                                              Color="{DynamicResource SystemAccentColorPrimary}" />
+                                            </LinearGradientBrush>
+                                        </RepeatButton.Background>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource PlaybackSliderThumbStyle}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}"
+                                                  Background="Transparent"
+                                                  Style="{StaticResource PlaybackTrackButtonStyle}" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TrackBackground" Property="Height" Value="6" />
+                                <Setter TargetName="TrackBackground" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="TrackBackground" Property="Height" Value="6" />
+                                <Setter TargetName="TrackBackground" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="SliderRoot" Property="Opacity" Value="0.42" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0"
+              Margin="24,10,24,10">
+            <Border Padding="0"
+                    Style="{StaticResource MusicCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="14,10,10,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Text="我的曲库" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="14,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{Binding ViewModel.MusicFolderDisplayText, StringFormat=曲谱目录：{0}}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}" />
+                        <ui:Button Grid.Column="2"
+                                   Width="36"
+                                   Height="34"
+                                   Margin="0,0,7,0"
+                                   Command="{Binding ViewModel.OpenFolderCommand}"
+                                   Icon="{ui:SymbolIcon Open24}"
+                                   ToolTip="打开当前目录" />
+                        <ui:Button Grid.Column="3"
+                                   Height="34"
+                                   Margin="0,0,7,0"
+                                   Appearance="Primary"
+                                   Command="{Binding ViewModel.ChooseFolderCommand}"
+                                   Content="选择目录"
+                                   Icon="{ui:SymbolIcon FolderOpen24}" />
+                        <ui:Button Grid.Column="4"
+                                   Height="34"
+                                   Margin="0,0,7,0"
+                                   Command="{Binding ViewModel.DeleteMusicFolderCommand}"
+                                   CommandParameter="{Binding SelectedValue, ElementName=MusicFolderHistoryComboBox}"
+                                   Content="删除记录"
+                                   Icon="{ui:SymbolIcon Delete24}" />
+                        <ui:Button Grid.Column="5"
+                                   Height="34"
+                                   Command="{Binding ViewModel.OpenSettingsCommand}"
+                                   Content="设置"
+                                   Icon="{ui:SymbolIcon Settings24}" />
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="10,0,10,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="112" />
+                            <ColumnDefinition Width="112" />
+                            <ColumnDefinition Width="52" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="MusicFolderHistoryComboBox"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding ViewModel.MusicFolderHistory}"
+                                  SelectedValue="{Binding ViewModel.SelectedMusicFolder, Mode=OneWay}"
+                                  SelectedValuePath="FullPath"
+                                  ToolTip="历史目录：切换曲谱目录">
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="SelectionChanged">
+                                    <b:InvokeCommandAction Command="{Binding ViewModel.SelectMusicFolderCommand}"
+                                                           CommandParameter="{Binding SelectedValue, ElementName=MusicFolderHistoryComboBox}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </ComboBox>
+                        <ui:TextBox Grid.Column="2"
+                                    Margin="0,0,8,0"
+                                    PlaceholderText="搜索曲名、作者或路径"
+                                    Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <ComboBox Grid.Column="3"
+                                  Margin="0,0,8,0"
+                                  ItemsSource="{Binding ViewModel.FormatFilters}"
+                                  SelectedItem="{Binding ViewModel.SelectedFormatFilter}"
+                                  ToolTip="按格式筛选" />
+                        <ComboBox Grid.Column="4"
+                                  ItemsSource="{Binding ViewModel.InstrumentFilters}"
+                                  SelectedItem="{Binding ViewModel.SelectedInstrumentFilter}"
+                                  ToolTip="按乐器筛选" />
+                        <ui:Button Grid.Column="5"
+                                   Width="44"
+                                   Height="34"
+                                   Margin="8,0,0,0"
+                                   Command="{Binding ViewModel.RefreshCommand}"
+                                   IsEnabled="{Binding ViewModel.IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"
+                                   ToolTip="重新扫描曲谱目录">
+                            <Grid Width="18" Height="18">
+                                <ui:SymbolIcon Symbol="ArrowClockwise24"
+                                               Visibility="{Binding ViewModel.IsRefreshing, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:ProgressRing Width="18"
+                                                 Height="18"
+                                                 IsIndeterminate="True"
+                                                 Visibility="{Binding ViewModel.IsRefreshing, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </Grid>
+                        </ui:Button>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="6,0,6,6">
+                        <ListView x:Name="MusicListView"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  ItemContainerStyle="{StaticResource MusicListItemStyle}"
+                                  ItemsSource="{Binding ViewModel.MusicItemsView}"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  SelectedItem="{Binding ViewModel.SelectedMusicItem}">
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="MouseDoubleClick">
+                                    <b:InvokeCommandAction Command="{Binding ViewModel.PlaySelectedCommand}"
+                                                           CommandParameter="{Binding SelectedItem, ElementName=MusicListView}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="TrackCard"
+                                            Margin="2,1"
+                                            Padding="10,6"
+                                            Background="Transparent"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            CornerRadius="9"
+                                            ToolTip="{Binding Error}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="40" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="TrackIconBackground"
+                                                    Width="34"
+                                                    Height="34"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                    CornerRadius="9">
+                                                <Grid>
+                                                    <Image x:Name="TrackArtwork"
+                                                           Source="{Binding Artwork}"
+                                                           Stretch="UniformToFill">
+                                                        <Image.Clip>
+                                                            <RectangleGeometry RadiusX="9"
+                                                                               RadiusY="9"
+                                                                               Rect="0,0,34,34" />
+                                                        </Image.Clip>
+                                                    </Image>
+                                                    <ui:SymbolIcon x:Name="TrackIcon"
+                                                                   Symbol="MusicNote224"
+                                                                   Visibility="Collapsed" />
+                                                </Grid>
+                                            </Border>
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="6,0,10,0"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           Text="{Binding DisplayTitle}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Margin="0,2,0,0"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           TextTrimming="CharacterEllipsis">
+                                                    <Run Text="{Binding Author, Mode=OneWay}" />
+                                                    <Run Text="  ·  " />
+                                                    <Run Text="{Binding FormatName, Mode=OneWay}" />
+                                                    <Run Text="  ·  " />
+                                                    <Run Text="{Binding Instrument, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2"
+                                                        MinWidth="76"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock HorizontalAlignment="Right"
+                                                           FontWeight="SemiBold"
+                                                           Text="{Binding DurationText}" />
+                                                <TextBlock x:Name="TrackStatusText"
+                                                           Margin="0,2,0,0"
+                                                           HorizontalAlignment="Right"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           Text="{Binding PlayableRatioText, StringFormat=可演奏 {0}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Artwork}" Value="{x:Null}">
+                                            <Setter TargetName="TrackArtwork"
+                                                    Property="Visibility"
+                                                    Value="Collapsed" />
+                                            <Setter TargetName="TrackIcon"
+                                                    Property="Visibility"
+                                                    Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsMouseOver}"
+                                                     Value="True">
+                                            <Setter TargetName="TrackCard"
+                                                    Property="Background"
+                                                    Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=IsSelected}"
+                                                     Value="True">
+                                            <Setter TargetName="TrackCard"
+                                                    Property="Background"
+                                                    Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                            <Setter TargetName="TrackCard"
+                                                    Property="BorderBrush"
+                                                    Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                            <Setter TargetName="TrackStatusText"
+                                                    Property="Foreground"
+                                                    Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                            <Setter TargetName="TrackStatusText"
+                                                    Property="Text"
+                                                    Value="解析失败" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <Border Padding="30"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                IsHitTestVisible="False"
+                                Visibility="{Binding ViewModel.HasMusicItems, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Border Width="64"
+                                        Height="64"
+                                        HorizontalAlignment="Center"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        CornerRadius="20">
+                                    <Grid>
+                                        <ui:SymbolIcon FontSize="30"
+                                                       Symbol="MusicNote224"
+                                                       Visibility="{Binding ViewModel.IsRefreshing, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                        <ui:ProgressRing Width="30"
+                                                         Height="30"
+                                                         IsIndeterminate="True"
+                                                         Visibility="{Binding ViewModel.IsRefreshing, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock Margin="0,16,0,0"
+                                           HorizontalAlignment="Center"
+                                           FontSize="17"
+                                           FontWeight="SemiBold"
+                                           Text="曲库还是空的" />
+                                <TextBlock MaxWidth="300"
+                                           Margin="0,7,0,0"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding ViewModel.LibraryStatusText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1"
+                MinHeight="100"
+                Margin="0"
+                Padding="0"
+                BorderThickness="0,1,0,0"
+                CornerRadius="0"
+                Style="{StaticResource MusicCardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Slider Height="26"
+                        Margin="0,-13,0,0"
+                        Panel.ZIndex="2"
+                        VerticalAlignment="Top"
+                        Maximum="{Binding ViewModel.TotalDurationMilliseconds}"
+                        Minimum="0"
+                        Style="{StaticResource PlaybackSliderStyle}"
+                        Value="{Binding ViewModel.CurrentPositionMilliseconds, Mode=TwoWay}">
+                    <b:Interaction.Behaviors>
+                        <behavior:SliderSeekBehavior BeginCommand="{Binding ViewModel.BeginSeekCommand}"
+                                                     Command="{Binding ViewModel.SeekCommand}" />
+                    </b:Interaction.Behaviors>
+                </Slider>
+
+                <Grid Margin="20,7,20,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="46" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="54" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding ViewModel.CurrentTimeText}" />
+                    <TextBlock Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding ViewModel.TotalTimeText}" />
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="20,7,20,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel MinWidth="180"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <Border Width="46"
+                                Height="46"
+                                Margin="0,0,11,0"
+                                Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                CornerRadius="12">
+                            <Grid>
+                                <Image Source="{Binding ViewModel.CurrentMusicItem.Artwork}"
+                                       Stretch="UniformToFill">
+                                    <Image.Clip>
+                                        <RectangleGeometry RadiusX="12"
+                                                           RadiusY="12"
+                                                           Rect="0,0,46,46" />
+                                    </Image.Clip>
+                                </Image>
+                                <ui:SymbolIcon FontSize="23"
+                                               Symbol="MusicNote224">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ViewModel.CurrentMusicItem.Artwork}"
+                                                             Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                            </Grid>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock MaxWidth="260"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding ViewModel.CurrentTrackName}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Margin="0,4,0,0"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <Run Text="{Binding ViewModel.CurrentMusicItem.FormatName, Mode=OneWay, TargetNullValue=等待播放}" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding ViewModel.CurrentMusicItem.Instrument, Mode=OneWay, TargetNullValue=--}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <ui:Button Width="44"
+                                   Height="44"
+                                   Margin="3,0"
+                                   Appearance="Secondary"
+                                   Command="{Binding ViewModel.PreviousCommand}"
+                                   Icon="{ui:SymbolIcon Previous24}"
+                                   ToolTip="上一首" />
+                        <ui:Button Width="52"
+                                   Height="52"
+                                   Margin="4,0"
+                                   Appearance="Primary"
+                                   Command="{Binding ViewModel.PlayPauseCommand}"
+                                   ToolTip="播放/暂停">
+                            <ui:SymbolIcon FontSize="22"
+                                           Symbol="{Binding ViewModel.PlayPauseSymbol}" />
+                        </ui:Button>
+                        <ui:Button Width="44"
+                                   Height="44"
+                                   Margin="3,0"
+                                   Appearance="Secondary"
+                                   Command="{Binding ViewModel.NextCommand}"
+                                   Icon="{ui:SymbolIcon Next24}"
+                                   ToolTip="下一首" />
+                        <ui:Button Width="44"
+                                   Height="44"
+                                   Margin="3,0"
+                                   Appearance="Transparent"
+                                   Command="{Binding ViewModel.StopCommand}"
+                                   Icon="{ui:SymbolIcon Stop24}"
+                                   ToolTip="停止" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <ui:Button Width="48"
+                                   Height="40"
+                                   Appearance="Transparent"
+                                   Command="{Binding ViewModel.CyclePlaybackModeCommand}"
+                                   ToolTip="{Binding ViewModel.PlaybackModeToolTip}">
+                            <ui:SymbolIcon FontSize="20"
+                                           Symbol="{Binding ViewModel.PlaybackModeSymbol}" />
+                        </ui:Button>
+                        <TextBlock Margin="12,0,8,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="输入方式" />
+                        <TextBlock Width="28"
+                                   Margin="0,0,7,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Text="{Binding ViewModel.InputModeDisplayText}" />
+                        <ui:ToggleSwitch VerticalAlignment="Center"
+                                         IsChecked="{Binding ViewModel.UseBackgroundInput, Mode=TwoWay}"
+                                         ToolTip="{Binding ViewModel.InputModeToolTip}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

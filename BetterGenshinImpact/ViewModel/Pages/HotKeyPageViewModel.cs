@@ -25,6 +25,7 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
@@ -52,6 +53,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
+    private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -59,10 +61,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
-    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
+    public HotKeyPageViewModel(
+        IConfigService configService,
+        ILogger<HotKeyPageViewModel> logger,
+        TaskSettingsPageViewModel taskSettingsPageViewModel,
+        RecognitionTemplateEditorService recognitionTemplateEditorService)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
+        _recognitionTemplateEditorService = recognitionTemplateEditorService;
         // 获取配置
         Config = configService.Get();
 
@@ -628,7 +635,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinConfirmButtonHotkeyType,
             (_, _) =>
             {
-                if (Bv.ClickConfirmButton(TaskControl.CaptureToRectArea()))
+                using var capture = TaskControl.CaptureToRectArea();
+                if (Bv.ClickConfirmButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "确认");
                 }
@@ -647,7 +655,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinCancelButtonHotkeyType,
             (_, _) =>
             {
-                if (Bv.ClickCancelButton(TaskControl.CaptureToRectArea()))
+                using var capture = TaskControl.CaptureToRectArea();
+                if (Bv.ClickCancelButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "取消");
                 }
@@ -697,13 +706,21 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ));
 
         devDirectory.Children.Add(new HotKeySettingModel(
+            "（开发）模板素材制作",
+            nameof(Config.HotKeyConfig.RecognitionTemplateEditorHotkey),
+            Config.HotKeyConfig.RecognitionTemplateEditorHotkey,
+            Config.HotKeyConfig.RecognitionTemplateEditorHotkeyType,
+            (_, _) => { _recognitionTemplateEditorService.OpenAsync().SafeForget(); }
+        ));
+
+        devDirectory.Children.Add(new HotKeySettingModel(
             "（开发）获取当前大地图中心点位置",
             nameof(Config.HotKeyConfig.RecBigMapPosHotkey),
             Config.HotKeyConfig.RecBigMapPosHotkey,
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.MoonCanon.ToString());
                 _logger.LogInformation("大地图位置：{Position}", p);
             }
         ));

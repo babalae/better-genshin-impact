@@ -266,7 +266,7 @@ public sealed class RecognitionReferenceJsonConfig
 }
 
 /// <summary>
-/// 搜索扩展配置。
+/// 参考画布锚定搜索配置。
 /// </summary>
 public sealed class RecognitionSearchJsonConfig
 {
@@ -278,8 +278,26 @@ public sealed class RecognitionSearchJsonConfig
     public string? Anchor { get; set; }
 
     /// <summary>
+    /// 参考画布坐标系中的独立搜索框，值为返回 `Rect` 的表达式，也支持 `@区域别名`。
+    /// 未配置时使用 `reference.bbox` 作为基础搜索框。
+    /// </summary>
+    [JsonProperty("box")]
+    public string? Box { get; set; }
+
+    /// <summary>
     /// 在锚点附近额外扩展的搜索尺寸，格式为 `[width, height]`。
+    /// 当配置了 `expandPercent` 时，本字段不生效。
     /// </summary>
     [JsonProperty("expand")]
     public List<int>? Expand { get; set; }
+
+    /// <summary>
+    /// 按当前截图宽高计算的搜索扩展比例，小数直接表示比例，例如 `0.05` 表示 5%。
+    /// 参数数量支持 1、2、4，顺序遵循 XAML `Thickness`：
+    /// `[all]`、`[horizontal, vertical]`、`[left, top, right, bottom]`。
+    /// 比例允许大于 1，最终区域会裁剪到当前截图边界。
+    /// 本字段优先于像素 `expand`，显式 `[0]` 可关闭默认像素扩展。
+    /// </summary>
+    [JsonProperty("expandPercent")]
+    public List<double>? ExpandPercent { get; set; }
 }

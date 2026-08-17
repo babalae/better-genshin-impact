@@ -31,8 +31,7 @@ public class AutoPickTriggerTests
         var expectedDecision = Enum.Parse<AutoPickTrigger.PickListDecision>(expectedDecisionName);
         var config = new AutoPickConfig
         {
-            BlackListEnabled = true,
-            WhiteListEnabled = false
+            Mode = AutoPickMode.Blacklist
         };
 
         var decision = AutoPickTrigger.EvaluatePickLists(
@@ -53,8 +52,7 @@ public class AutoPickTriggerTests
     {
         var config = new AutoPickConfig
         {
-            BlackListEnabled = true,
-            WhiteListEnabled = false
+            Mode = AutoPickMode.Blacklist
         };
 
         var decision = AutoPickTrigger.EvaluatePickLists(
@@ -71,12 +69,11 @@ public class AutoPickTriggerTests
     }
 
     [Fact]
-    public void PickListDecisionDoesNotBackoff_WhenWhitelistAllowsExcludedPrompt()
+    public void PickListDecisionBacksOff_WhenWhitelistPromptIconIsExcluded()
     {
         var config = new AutoPickConfig
         {
-            BlackListEnabled = true,
-            WhiteListEnabled = true
+            Mode = AutoPickMode.Whitelist
         };
 
         var decision = AutoPickTrigger.EvaluatePickLists(
@@ -89,6 +86,28 @@ public class AutoPickTriggerTests
             out var normalizedText);
 
         Assert.Equal("凯瑟琳", normalizedText);
+        Assert.Equal(AutoPickTrigger.PickListDecision.ExcludeIcon, decision);
+        Assert.True(AutoPickTrigger.ShouldBackOffControllerYForPickListDecision(decision));
+    }
+
+    [Fact]
+    public void PickListDecisionAllowsConfiguredBlacklistModePickBeforeIconExclusion()
+    {
+        var config = new AutoPickConfig
+        {
+            Mode = AutoPickMode.Blacklist,
+            BlacklistModePickEnabled = true
+        };
+
+        var decision = AutoPickTrigger.EvaluatePickLists(
+            "凯瑟琳",
+            isExcludeIcon: true,
+            config,
+            new HashSet<string>(),
+            [],
+            new HashSet<string> { "凯瑟琳" },
+            out _);
+
         Assert.Equal(AutoPickTrigger.PickListDecision.Allow, decision);
         Assert.False(AutoPickTrigger.ShouldBackOffControllerYForPickListDecision(decision));
     }

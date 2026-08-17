@@ -1,0 +1,469 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.RecognitionTemplateEditorWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:viewModels="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 Title="Recognition 模板素材制作"
+                 Width="1440"
+                 Height="900"
+                 MinWidth="1100"
+                 MinHeight="720"
+                 WindowStartupLocation="CenterOwner"
+                 WindowBackdropType="Auto"
+                 ExtendsContentIntoTitleBar="True"
+                 mc:Ignorable="d">
+    <Grid DataContext="{Binding ViewModel}"
+          d:DataContext="{d:DesignInstance Type=viewModels:RecognitionTemplateEditorViewModel}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Recognition 模板素材制作">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="DeveloperBoard24" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <Grid Grid.Row="1" Margin="16,8,16,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="430" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="12,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Margin="0,0,10,0"
+                                   VerticalAlignment="Center"
+                                   Text="缩放" />
+                        <Slider Grid.Column="1"
+                                Minimum="0.1"
+                                Maximum="4"
+                                SmallChange="0.1"
+                                LargeChange="0.5"
+                                Value="{Binding ZoomScale, Mode=TwoWay}" />
+                        <TextBlock Grid.Column="2"
+                                   Width="64"
+                                   Margin="10,0"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding ZoomScale, StringFormat={}{0:P0}}" />
+                        <StackPanel Grid.Column="3" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <RadioButton Margin="0,0,10,0"
+                                         VerticalAlignment="Center"
+                                         GroupName="SelectionTarget"
+                                         IsChecked="{Binding IsEditingTemplateBox, Mode=TwoWay}"
+                                         Content="模板框" />
+                            <RadioButton Margin="0,0,16,0"
+                                         VerticalAlignment="Center"
+                                         GroupName="SelectionTarget"
+                                         IsChecked="{Binding IsEditingSearchBox, Mode=TwoWay}"
+                                         IsEnabled="{Binding UseCustomSearchBox}"
+                                         Content="搜索框" />
+                            <Button Margin="0,0,12,0"
+                                    Padding="14,5"
+                                    Command="{Binding FitImageCommand}"
+                                    Content="适应窗口" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="左键框选；滚轮缩放；右键拖动画布" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ScrollViewer x:Name="ImageViewport"
+                                  Grid.Row="1"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Background="#202020">
+                        <b:Interaction.Behaviors>
+                            <behavior:TemplateImageZoomBehavior ImageWidth="{Binding CanvasWidth}"
+                                                                  ImageHeight="{Binding CanvasHeight}"
+                                                                  ZoomScale="{Binding ZoomScale, Mode=TwoWay}"
+                                                                  FitRequestToken="{Binding FitRequestToken}" />
+                        </b:Interaction.Behaviors>
+                        <Grid Width="{Binding CanvasWidth}"
+                              Height="{Binding CanvasHeight}"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Top">
+                            <Grid.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}" />
+                            </Grid.LayoutTransform>
+                            <Image Width="{Binding CanvasWidth}"
+                                   Height="{Binding CanvasHeight}"
+                                   IsHitTestVisible="False"
+                                   Source="{Binding ScreenshotImage}"
+                                   Stretch="Fill" />
+                            <Canvas Width="{Binding CanvasWidth}"
+                                    Height="{Binding CanvasHeight}"
+                                    Background="Transparent"
+                                    ClipToBounds="True"
+                                    Cursor="Cross">
+                                <b:Interaction.Behaviors>
+                                    <behavior:TemplateImageSelectionBehavior SelectionX="{Binding SelectionX, Mode=TwoWay}"
+                                                                             SelectionY="{Binding SelectionY, Mode=TwoWay}"
+                                                                             SelectionWidth="{Binding SelectionWidth, Mode=TwoWay}"
+                                                                             SelectionHeight="{Binding SelectionHeight, Mode=TwoWay}"
+                                                                             SearchBoxX="{Binding SearchBoxX, Mode=TwoWay}"
+                                                                             SearchBoxY="{Binding SearchBoxY, Mode=TwoWay}"
+                                                                             SearchBoxWidth="{Binding SearchBoxWidth, Mode=TwoWay}"
+                                                                             SearchBoxHeight="{Binding SearchBoxHeight, Mode=TwoWay}"
+                                                                             SelectionTarget="{Binding SelectionTarget}"
+                                                                             IsSearchBoxEnabled="{Binding UseCustomSearchBox}" />
+                                </b:Interaction.Behaviors>
+                                <Rectangle Canvas.Left="{Binding EffectiveSearchX}"
+                                           Canvas.Top="{Binding EffectiveSearchY}"
+                                           Width="{Binding EffectiveSearchWidth}"
+                                           Height="{Binding EffectiveSearchHeight}"
+                                           IsHitTestVisible="False"
+                                           Stroke="#FF39D98A"
+                                           StrokeDashArray="6,4"
+                                           StrokeThickness="2"
+                                           Visibility="{Binding HasEffectiveSearchPreview, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Rectangle Canvas.Left="{Binding SearchBoxX}"
+                                           Canvas.Top="{Binding SearchBoxY}"
+                                           Width="{Binding SearchBoxWidth}"
+                                           Height="{Binding SearchBoxHeight}"
+                                           IsHitTestVisible="False"
+                                           Fill="#18FF9F43"
+                                           Stroke="#FFFF9F43"
+                                           StrokeThickness="2"
+                                           Visibility="{Binding UseCustomSearchBox, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Rectangle Canvas.Left="{Binding SelectionX}"
+                                           Canvas.Top="{Binding SelectionY}"
+                                           Width="{Binding SelectionWidth}"
+                                           Height="{Binding SelectionHeight}"
+                                           IsHitTestVisible="False"
+                                           Fill="#2538A8FF"
+                                           Stroke="#FF38A8FF"
+                                           StrokeThickness="2" />
+                            </Canvas>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Padding="14"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="输出位置" />
+
+                        <TextBlock Margin="0,12,0,4" Text="Recognition.json 文件" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0"
+                                      MinHeight="32"
+                                      VerticalContentAlignment="Center"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="True"
+                                      ItemsSource="{Binding RecentRecognitionJsonPaths}"
+                                      Text="{Binding RecognitionJsonPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{Binding RecognitionJsonPath}" />
+                            <Button Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Padding="12,4"
+                                    Command="{Binding BrowseRecognitionJsonCommand}"
+                                    Content="浏览…" />
+                        </Grid>
+
+                        <TextBlock Margin="0,10,0,4" Text="输出文件夹（同时设置 JSON 与图片）" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0"
+                                      MinHeight="32"
+                                      VerticalContentAlignment="Center"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="True"
+                                      ItemsSource="{Binding RecentAssetsRootPaths}"
+                                      Text="{Binding AssetsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{Binding AssetsRootPath}" />
+                            <Button Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Padding="12,4"
+                                    Command="{Binding BrowseAssetsRootCommand}"
+                                    Content="选择…" />
+                        </Grid>
+
+                        <TextBlock Margin="0,8,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Recognition.json 写入输出文件夹；图片写入 1920x1080 子目录" />
+                        <TextBlock Margin="0,2,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding OutputImageDisplayPath}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding OutputImagePath}" />
+
+                        <Separator Margin="0,14" />
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="模板信息" />
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="PNG 文件名" />
+                            <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding TemplateFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip="支持驼峰、空格和连字符，失去焦点后自动转换为小写下划线格式">
+                                    <b:Interaction.Triggers>
+                                        <b:EventTrigger EventName="LostFocus">
+                                            <b:InvokeCommandAction Command="{Binding NormalizeTemplateFileNameCommand}" />
+                                        </b:EventTrigger>
+                                    </b:Interaction.Triggers>
+                                </TextBox>
+                                <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text=".png" />
+                            </Grid>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="对象 Key" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Text="{Binding ObjectName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip="默认根据 PNG 文件名生成大驼峰名称，手动修改后不再自动覆盖" />
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="参考画布" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" VerticalAlignment="Center" Text="{Binding ReferenceSizeText}" />
+                        </Grid>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,6,8" VerticalAlignment="Center" Text="X" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,12,8" Text="{Binding SelectionX, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,0,6,8" VerticalAlignment="Center" Text="Y" />
+                            <TextBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="{Binding SelectionY, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center" Text="宽" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,12,0" Text="{Binding SelectionWidth, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Text="高" />
+                            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SelectionHeight, Mode=TwoWay}" />
+                        </Grid>
+
+                        <Border Height="120" Margin="0,12,0,0" CornerRadius="4">
+                            <Border.Background>
+                                <DrawingBrush TileMode="Tile"
+                                              Viewbox="0,0,16,16"
+                                              ViewboxUnits="Absolute"
+                                              Viewport="0,0,16,16"
+                                              ViewportUnits="Absolute">
+                                    <DrawingBrush.Drawing>
+                                        <DrawingGroup>
+                                            <GeometryDrawing Brush="#18000000">
+                                                <GeometryDrawing.Geometry>
+                                                    <RectangleGeometry Rect="0,0,16,16" />
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                            <GeometryDrawing Brush="#28FFFFFF">
+                                                <GeometryDrawing.Geometry>
+                                                    <GeometryGroup>
+                                                        <RectangleGeometry Rect="0,0,8,8" />
+                                                        <RectangleGeometry Rect="8,8,8,8" />
+                                                    </GeometryGroup>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                        </DrawingGroup>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Border.Background>
+                            <Image Margin="6" Source="{Binding CroppedPreviewImage}" Stretch="Uniform" />
+                        </Border>
+
+                        <Separator Margin="0,14" />
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="匹配参数" />
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="匹配阈值" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" Text="{Binding Threshold, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="匹配算法" />
+                            <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding TemplateMatchModeItems}" SelectedItem="{Binding TemplateMatchMode}" />
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="最大匹配数" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding MaxMatchCount, Mode=TwoWay}" />
+                        </Grid>
+
+                        <WrapPanel Margin="0,10,0,0">
+                            <CheckBox Margin="0,0,16,8" IsChecked="{Binding Use3Channels}" Content="三通道匹配" />
+                            <CheckBox Margin="0,0,16,8" IsChecked="{Binding DrawOnWindow}" Content="绘制调试框" />
+                            <CheckBox Margin="0,0,16,8" IsChecked="{Binding UseMask}" Content="启用遮罩" />
+                            <CheckBox Margin="0,0,16,8" IsChecked="{Binding UseBinaryMatch}" Content="二值化匹配" />
+                        </WrapPanel>
+
+                        <Grid Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="遮罩颜色" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" IsEnabled="{Binding UseMask}" Text="{Binding MaskColor, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="二值化阈值" />
+                            <TextBox Grid.Row="1" Grid.Column="1" IsEnabled="{Binding UseBinaryMatch}" Text="{Binding BinaryThreshold, Mode=TwoWay}" />
+                        </Grid>
+
+                        <Separator Margin="0,14" />
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="搜索参数" />
+
+                        <StackPanel Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="锚点" />
+                                <ComboBox Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding SearchAnchorModeItems}" SelectedItem="{Binding SearchAnchorMode}" />
+                            </Grid>
+
+                            <CheckBox Margin="0,2,0,8"
+                                      IsChecked="{Binding UseCustomSearchBox}"
+                                      Content="启用自定义搜索框" />
+
+                            <Grid Margin="0,0,0,10"
+                                  Visibility="{Binding UseCustomSearchBox, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,6,8" VerticalAlignment="Center" Text="X" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,12,8" Text="{Binding SearchBoxX, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,0,6,8" VerticalAlignment="Center" Text="Y" />
+                                <TextBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="{Binding SearchBoxY, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center" Text="宽" />
+                                <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,12,0" Text="{Binding SearchBoxWidth, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Text="高" />
+                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SearchBoxHeight, Mode=TwoWay}" />
+                            </Grid>
+
+                            <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                <TextBlock Width="140" VerticalAlignment="Center" Text="扩展方式" />
+                                <RadioButton Margin="0,0,16,0"
+                                             GroupName="SearchExpandMode"
+                                             IsChecked="{Binding UsePixelSearchExpand, Mode=TwoWay}"
+                                             Content="像素" />
+                                <RadioButton GroupName="SearchExpandMode"
+                                             IsChecked="{Binding UsePercentSearchExpand, Mode=TwoWay}"
+                                             Content="百分比" />
+                            </StackPanel>
+
+                            <Grid Visibility="{Binding UsePixelSearchExpand, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="横向扩展" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" Text="{Binding SearchExpandWidth, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="纵向扩展" />
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SearchExpandHeight, Mode=TwoWay}" />
+                            </Grid>
+
+                            <StackPanel Visibility="{Binding UsePercentSearchExpand, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Width="34" Margin="0,0,6,8" VerticalAlignment="Center" Text="左" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,12,8" Text="{Binding SearchExpandLeftPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Width="34" Margin="0,0,6,8" VerticalAlignment="Center" Text="上" />
+                                    <TextBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="{Binding SearchExpandTopPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Width="34" Margin="0,0,6,0" VerticalAlignment="Center" Text="右" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,12,0" Text="{Binding SearchExpandRightPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Width="34" Margin="0,0,6,0" VerticalAlignment="Center" Text="下" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SearchExpandBottomPercent, Mode=TwoWay}" />
+                                </Grid>
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Text="小数直接表示比例，例如 0.05 = 5%。JSON 顺序遵循 XAML Thickness：左右、上下；或左、上、右、下。" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="16,0,16,14">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button MinWidth="90"
+                        Margin="0,0,10,0"
+                        Padding="14,6"
+                        Command="{Binding CancelCommand}"
+                        Content="取消" />
+                <Button MinWidth="120"
+                        Padding="14,6"
+                        Command="{Binding SaveCommand}"
+                        Content="保存模板素材" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

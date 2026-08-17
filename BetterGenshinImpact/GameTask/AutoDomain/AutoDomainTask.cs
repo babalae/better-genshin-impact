@@ -110,7 +110,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private static RecognitionObject GetConfirmRa(params string[] targetText)
     {
-        var screenArea = CaptureToRectArea();
+        using var screenArea = CaptureToRectArea();
         var x = (int)(screenArea.Width * 0.5);
         var y = (int)(screenArea.Height * 0.5);
         var width = (int)(screenArea.Width * 0.5);
@@ -900,7 +900,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (Bv.CurrentAvatarIsLowHp(CaptureToRectArea()))
+                    using var capture = CaptureToRectArea();
+                    if (Bv.CurrentAvatarIsLowHp(capture))
                     {
                         // 模拟按键 "Z"
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
@@ -966,7 +967,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             var backwardsAndForwardsCount = 0;
             while (!_ct.IsCancellationRequested)
             {
-                var treeRect = DetectTree(CaptureToRectArea());
+                using var capture = CaptureToRectArea();
+                var treeRect = DetectTree(capture);
                 if (treeRect != default)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
@@ -1376,7 +1378,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     {
                         // 真没树脂了还有提示兜底
                         await Delay(900, _ct);
-                        var textListInNoResinPrompt = CaptureToRectArea().FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
+                        using var noResinPromptCapture = CaptureToRectArea();
+                        var textListInNoResinPrompt = noResinPromptCapture.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
                         if (textListInNoResinPrompt.Any(t => t.Text.Contains("是否仍要") && t.Text.Contains("挑战") && t.Text.Contains("秘境")))
                         {
                             var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => t.Text.Contains("取消"));

@@ -42,4 +42,16 @@ public class ScanPickTaskTests
         Assert.False(decision.Forward);
         Assert.False(decision.Backward);
     }
+
+    [Fact]
+    public void GetMovementDecision_ShouldSteerTowardsDistantDiagonalDrop()
+    {
+        var decision = ScanPickTask.GetMovementDecision(new Rect(1400, 300, 40, 100), 1920, 1080);
+
+        Assert.False(decision.Pickup);
+        Assert.False(decision.Left);
+        Assert.True(decision.Right);
+        Assert.True(decision.Forward);
+        Assert.False(decision.Backward);
+    }
 }

@@ -1,6 +1,8 @@
 <Page x:Class="BetterGenshinImpact.View.Pages.TriggerSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:autoPick="clr-namespace:BetterGenshinImpact.GameTask.AutoPick"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -13,8 +15,101 @@
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       FontFamily="{StaticResource TextThemeFontFamily}"
-      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      mc:Ignorable="d">
+       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+       mc:Ignorable="d">
+
+    <Page.Resources>
+        <Style x:Key="AutoPickModeCardStyle" TargetType="{x:Type RadioButton}">
+            <Setter Property="MinHeight" Value="112" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type RadioButton}">
+                        <Border x:Name="ModeCard"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                             <Grid>
+                                 <Grid.ColumnDefinitions>
+                                     <ColumnDefinition Width="*" />
+                                     <ColumnDefinition Width="Auto" />
+                                 </Grid.ColumnDefinitions>
+
+                                <ContentPresenter Grid.Column="0"
+                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+
+                                <Border x:Name="SelectionRing"
+                                        Grid.Column="1"
+                                        Width="20"
+                                        Height="20"
+                                        Margin="14,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1.5"
+                                        CornerRadius="10">
+                                    <Ellipse x:Name="SelectionDot"
+                                             Width="10"
+                                             Height="10"
+                                             Fill="{DynamicResource AccentFillColorDefaultBrush}"
+                                             Visibility="Collapsed" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ModeCard"
+                                        Property="Background"
+                                        Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter TargetName="SelectionRing"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ModeCard"
+                                        Property="Background"
+                                        Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ModeCard"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                             </Trigger>
+                             <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ModeCard" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="{DynamicResource AccentFillColorDefault}"
+                                                         Opacity="0.08" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="ModeCard"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                <Setter TargetName="SelectionRing"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                <Setter TargetName="SelectionDot" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ModeCard" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
 
     <StackPanel Margin="{StaticResource PagePadding}">
 
@@ -43,7 +138,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选项不是NPC对话且不在黑名单时，自动按下 F 拾取/交互"
+                                  Text="根据选择的名单模式，自动按下 F 拾取/交互"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -108,71 +203,151 @@
                               ItemsSource="{Binding PickOcrEngineNames}"
                               SelectedItem="{Binding Config.AutoPickConfig.OcrEngine, Mode=TwoWay}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="黑名单"
+                <StackPanel Margin="16,16,16,8">
+                    <ui:TextBlock FontTypography="BodyStrong"
+                                  Text="黑白名单模式"
                                   TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
+                    <ui:TextBlock Margin="0,2,0,0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="排除 NPC 对话、各类交互选项、不需要拾取的物品等"
+                                  Text="选择自动拾取的基础行为；两种模式互斥，切换后立即生效"
                                   TextWrapping="Wrap" />
-                    <StackPanel Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                Orientation="Horizontal"
-                                Margin="0,0,8,0">
-                        <ui:ToggleSwitch
-                            Margin="0,0,12,0"
-                            IsChecked="{Binding Config.AutoPickConfig.BlackListEnabled, Mode=TwoWay}" />
-                        <ui:Button
-                            Command="{Binding EditBlacklistCommand}"
-                            Content="前往设置" />
-                    </StackPanel>
+                </StackPanel>
 
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="白名单"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="需要主动按下 F 交互的内容，请配合黑名单使用"
-                                  TextWrapping="Wrap" />
-                    <StackPanel Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                Orientation="Horizontal"
-                                Margin="0,0,8,0">
-                        <ui:ToggleSwitch
-                            Margin="0,0,12,0"
-                            IsChecked="{Binding Config.AutoPickConfig.WhiteListEnabled, Mode=TwoWay}" />
-                        <ui:Button
-                            Command="{Binding EditWhitelistCommand}"
-                            Content="前往设置" />
-                    </StackPanel>
-                </Grid>
+                <UniformGrid Margin="16,0,16,8" Columns="2">
+                    <RadioButton Margin="0,0,6,0"
+                                 GroupName="AutoPickMode"
+                                 IsChecked="{Binding IsBlacklistAutoPickMode, Mode=OneWay}"
+                                 Style="{StaticResource AutoPickModeCardStyle}">
+                        <RadioButton.Content>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42"
+                                        Height="42"
+                                        Margin="0,0,12,0"
+                                        VerticalAlignment="Top"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        CornerRadius="8">
+                                    <ui:SymbolIcon FontSize="22" Symbol="Filter24" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="BodyStrong"
+                                                  Text="黑名单模式"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Margin="0,4,0,0"
+                                                  Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                  Text="除明确设置为“不拾取”的内容外，其余内容均会拾取"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </RadioButton.Content>
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding AutoPickModeChangedCommand}"
+                                                       CommandParameter="{x:Static autoPick:AutoPickMode.Blacklist}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </RadioButton>
+
+                    <RadioButton Margin="6,0,0,0"
+                                 GroupName="AutoPickMode"
+                                 IsChecked="{Binding IsWhitelistAutoPickMode, Mode=OneWay}"
+                                 Style="{StaticResource AutoPickModeCardStyle}">
+                        <RadioButton.Content>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42"
+                                        Height="42"
+                                        Margin="0,0,12,0"
+                                        VerticalAlignment="Top"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        CornerRadius="8">
+                                    <ui:SymbolIcon FontSize="22" Symbol="CheckmarkCircle24" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="BodyStrong"
+                                                  Text="白名单模式"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Margin="0,4,0,0"
+                                                  Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                  Text="只拾取列表中的文本，其他文本全部忽略"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </RadioButton.Content>
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding AutoPickModeChangedCommand}"
+                                                       CommandParameter="{x:Static autoPick:AutoPickMode.Whitelist}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </RadioButton>
+                </UniformGrid>
+
+                <StackPanel Visibility="{Binding IsBlacklistAutoPickMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="黑名单模式规则"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="在独立窗口中配置拾取、不拾取及模糊匹配规则"
+                                      TextWrapping="Wrap" />
+                        <ui:Button Grid.Row="0"
+                                   Grid.RowSpan="2"
+                                   Grid.Column="1"
+                                   Margin="0,0,8,0"
+                                   Command="{Binding OpenBlacklistModeConfigCommand}"
+                                   Content="配置规则"
+                                   Icon="{ui:SymbolIcon Settings24}" />
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding IsWhitelistAutoPickMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="白名单模式规则"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="在独立窗口中配置拾取列表和精确不拾取规则"
+                                      TextWrapping="Wrap" />
+                        <ui:Button Grid.Row="0"
+                                   Grid.RowSpan="2"
+                                   Grid.Column="1"
+                                   Margin="0,0,8,0"
+                                   Command="{Binding OpenWhitelistModeConfigCommand}"
+                                   Content="配置规则"
+                                   Icon="{ui:SymbolIcon Settings24}" />
+                    </Grid>
+                </StackPanel>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

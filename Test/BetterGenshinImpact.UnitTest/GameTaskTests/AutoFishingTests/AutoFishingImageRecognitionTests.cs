@@ -1,4 +1,3 @@
-﻿using BehaviourTree;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;

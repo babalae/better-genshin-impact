@@ -85,6 +85,7 @@ public static class MapManager
                 MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
                 MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
                 MapTypes.TempleOfSpace => new TempleOfSpaceMap(),
+                MapTypes.MoonCanon => new MoonCanonMap(),
                 _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))
             };
         }
@@ -98,6 +99,7 @@ public static class MapManager
                 MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
                 MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
                 MapTypes.TempleOfSpace => new TempleOfSpaceMap(),
+                MapTypes.MoonCanon => new MoonCanonMap(),
                 _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))
             };
         }
