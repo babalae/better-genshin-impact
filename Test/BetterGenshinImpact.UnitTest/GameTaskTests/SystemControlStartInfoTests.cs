@@ -21,8 +21,9 @@ public class SystemControlStartInfoTests
         Assert.False(startInfo.UseShellExecute);
         Assert.True(startInfo.CreateNoWindow);
         Assert.Equal(ProcessWindowStyle.Hidden, startInfo.WindowStyle);
-        Assert.Equal(["/d", "/c", $"call \"{path}\" -popupwindow"], startInfo.ArgumentList);
-        Assert.DoesNotContain("start ", startInfo.ArgumentList.Last());
+        Assert.Empty(startInfo.ArgumentList);
+        Assert.Equal($"/d /s /c \"\"{path}\" -popupwindow\"", startInfo.Arguments);
+        Assert.DoesNotContain("start ", startInfo.Arguments);
     }
 
     [Fact]
@@ -37,8 +38,9 @@ public class SystemControlStartInfoTests
             "-popupwindow",
             startGameWithCmd: true);
 
+        Assert.Empty(startInfo.ArgumentList);
         Assert.Equal(
-            $"start \"\" /d \"{workdir}\" \"{path}\" -popupwindow",
-            startInfo.ArgumentList.Last());
+            $"/d /s /c \"start \"\" /d \"{workdir}\" \"{path}\" -popupwindow\"",
+            startInfo.Arguments);
     }
 }
