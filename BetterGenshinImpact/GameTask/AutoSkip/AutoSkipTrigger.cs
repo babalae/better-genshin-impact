@@ -1042,7 +1042,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
                 using var guidingNotesRa = content.CaptureRectArea.Find(GetRecognitionObject("GuidingNotes", content.CaptureRectArea));
                 using var chatHistoryRa = content.CaptureRectArea.Find(GetRecognitionObject("ChatHistory", content.CaptureRectArea));
-                if (!guidingNotesRa.IsEmpty() || !chatHistoryRa.IsEmpty())
+                using var valiantChroniclesRa = content.CaptureRectArea.Find(GetRecognitionObject("ValiantChronicles", content.CaptureRectArea));
+                if (!guidingNotesRa.IsEmpty() || !chatHistoryRa.IsEmpty()|| !valiantChroniclesRa.IsEmpty())
                 {
                     return;
                 }

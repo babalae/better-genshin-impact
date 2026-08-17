@@ -143,6 +143,17 @@
         ],
         "bbox": "rect(46, 23, 60, 53)"
       }
+    },
+    "ValiantChronicles": {
+      "type": "TemplateMatch",
+      "template": "valiant_chronicles.png",
+      "reference": {
+        "size": [
+          1920,
+          1080
+        ],
+        "bbox": "rect(42, 27, 64, 46)"
+      }
     }
   }
 }
