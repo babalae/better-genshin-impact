@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Behavior;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,6 +12,7 @@ using Ookii.Dialogs.Wpf;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -22,6 +24,8 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 
 public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
 {
+    private const int MaxRecentOutputPathCount = 10;
+
     private readonly Mat _screenshot;
     private readonly RecognitionTemplateAssetService _assetService;
     private readonly DevConfig _devConfig;
@@ -34,6 +38,16 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     public IReadOnlyList<TemplateMatchModes> TemplateMatchModeItems { get; } = Enum.GetValues<TemplateMatchModes>();
 
     public IReadOnlyList<SearchAnchorMode> SearchAnchorModeItems { get; } = Enum.GetValues<SearchAnchorMode>();
+
+    /// <summary>
+    /// 最近使用的 Recognition.json 输出文件，按最近使用顺序排列，最多 10 条。
+    /// </summary>
+    public ObservableCollection<string> RecentRecognitionJsonPaths { get; } = [];
+
+    /// <summary>
+    /// 最近使用的 Assets 输出文件夹，按最近使用顺序排列，最多 10 条。
+    /// </summary>
+    public ObservableCollection<string> RecentAssetsRootPaths { get; } = [];
 
     public int CanvasWidth => _screenshot.Width;
 
@@ -109,17 +123,151 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     [ObservableProperty]
     private SearchAnchorMode _searchAnchorMode = RecognitionTemplateDraft.DefaultSearchAnchorMode;
 
+    /// <summary>
+    /// 是否输出独立的 search.box；关闭时基础搜索框回退为模板框。
+    /// </summary>
+    [ObservableProperty]
+    private bool _useCustomSearchBox;
+
+    /// <summary>
+    /// 当前由画布 Behavior 修改的矩形类型。
+    /// </summary>
+    [ObservableProperty]
+    private TemplateImageSelectionTarget _selectionTarget = TemplateImageSelectionTarget.Template;
+
+    /// <summary>
+    /// 独立搜索框在参考画布坐标系中的左上角 X 坐标。
+    /// </summary>
+    [ObservableProperty]
+    private int _searchBoxX;
+
+    /// <summary>
+    /// 独立搜索框在参考画布坐标系中的左上角 Y 坐标。
+    /// </summary>
+    [ObservableProperty]
+    private int _searchBoxY;
+
+    /// <summary>独立搜索框在参考画布坐标系中的宽度。</summary>
+    [ObservableProperty]
+    private int _searchBoxWidth;
+
+    /// <summary>独立搜索框在参考画布坐标系中的高度。</summary>
+    [ObservableProperty]
+    private int _searchBoxHeight;
+
     [ObservableProperty]
     private int _searchExpandWidth = RecognitionTemplateDraft.DefaultSearchExpand;
 
     [ObservableProperty]
     private int _searchExpandHeight = RecognitionTemplateDraft.DefaultSearchExpand;
 
+    /// <summary>
+    /// 是否输出 search.expandPercent；关闭时仅输出像素 expand 模式。
+    /// </summary>
+    [ObservableProperty]
+    private bool _usePercentSearchExpand;
+
+    /// <summary>
+    /// 左侧搜索扩展比例，直接使用小数表示，例如 0.05 表示当前截图宽度的 5%。
+    /// </summary>
+    [ObservableProperty]
+    private double _searchExpandLeftPercent;
+
+    /// <summary>
+    /// 上侧搜索扩展比例，直接使用小数表示，例如 0.05 表示当前截图高度的 5%。
+    /// </summary>
+    [ObservableProperty]
+    private double _searchExpandTopPercent;
+
+    /// <summary>
+    /// 右侧搜索扩展比例，直接使用小数表示，例如 0.05 表示当前截图宽度的 5%。
+    /// </summary>
+    [ObservableProperty]
+    private double _searchExpandRightPercent;
+
+    /// <summary>
+    /// 下侧搜索扩展比例，直接使用小数表示，例如 0.05 表示当前截图高度的 5%。
+    /// </summary>
+    [ObservableProperty]
+    private double _searchExpandBottomPercent;
+
+    private int _effectiveSearchX;
+    private int _effectiveSearchY;
+    private int _effectiveSearchWidth;
+    private int _effectiveSearchHeight;
+    private bool _hasEffectiveSearchPreview;
+
     [ObservableProperty]
     private double _zoomScale = 0.5;
 
     [ObservableProperty]
     private int _fitRequestToken;
+
+    public bool IsEditingTemplateBox
+    {
+        get => SelectionTarget == TemplateImageSelectionTarget.Template;
+        set
+        {
+            if (value)
+            {
+                SelectionTarget = TemplateImageSelectionTarget.Template;
+            }
+        }
+    }
+
+    public bool IsEditingSearchBox
+    {
+        get => SelectionTarget == TemplateImageSelectionTarget.SearchBox;
+        set
+        {
+            if (value && UseCustomSearchBox)
+            {
+                SelectionTarget = TemplateImageSelectionTarget.SearchBox;
+            }
+        }
+    }
+
+    public bool UsePixelSearchExpand
+    {
+        get => !UsePercentSearchExpand;
+        set
+        {
+            if (value)
+            {
+                UsePercentSearchExpand = false;
+            }
+        }
+    }
+
+    public int EffectiveSearchX
+    {
+        get => _effectiveSearchX;
+        private set => SetProperty(ref _effectiveSearchX, value);
+    }
+
+    public int EffectiveSearchY
+    {
+        get => _effectiveSearchY;
+        private set => SetProperty(ref _effectiveSearchY, value);
+    }
+
+    public int EffectiveSearchWidth
+    {
+        get => _effectiveSearchWidth;
+        private set => SetProperty(ref _effectiveSearchWidth, value);
+    }
+
+    public int EffectiveSearchHeight
+    {
+        get => _effectiveSearchHeight;
+        private set => SetProperty(ref _effectiveSearchHeight, value);
+    }
+
+    public bool HasEffectiveSearchPreview
+    {
+        get => _hasEffectiveSearchPreview;
+        private set => SetProperty(ref _hasEffectiveSearchPreview, value);
+    }
 
     public RecognitionTemplateEditorViewModel(
         Mat screenshot,
@@ -132,7 +280,14 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         _devConfig = configService.Get().DevConfig;
         _recognitionJsonPath = _devConfig.RecognitionJsonPath;
         _assetsRootPath = _devConfig.RecognitionAssetsRootPath;
+        LoadRecentPaths(RecentRecognitionJsonPaths, _recognitionJsonPath, _devConfig.RecognitionJsonPathHistory);
+        LoadRecentPaths(RecentAssetsRootPaths, _assetsRootPath, _devConfig.RecognitionAssetsRootPathHistory);
         _screenshotImage = screenshot.ToWriteableBitmap();
+        // 百分比模式默认保持与旧版 10px 扩展相同的参考画布预览效果，运行时再随截图宽高响应式缩放。
+        _searchExpandLeftPercent = RecognitionTemplateDraft.DefaultSearchExpand / (double)Math.Max(1, CanvasWidth);
+        _searchExpandRightPercent = _searchExpandLeftPercent;
+        _searchExpandTopPercent = RecognitionTemplateDraft.DefaultSearchExpand / (double)Math.Max(1, CanvasHeight);
+        _searchExpandBottomPercent = _searchExpandTopPercent;
         if (!string.IsNullOrWhiteSpace(initialTemplateName))
         {
             TemplateFileName = initialTemplateName;
@@ -159,9 +314,11 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         }
 
         RecognitionJsonPath = dialog.FileName;
+        RememberRecognitionJsonPath(dialog.FileName);
         if (string.IsNullOrWhiteSpace(AssetsRootPath))
         {
             AssetsRootPath = Path.GetDirectoryName(dialog.FileName) ?? "";
+            RememberAssetsRootPath(AssetsRootPath);
         }
     }
 
@@ -181,6 +338,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
 
         AssetsRootPath = dialog.SelectedPath;
         RecognitionJsonPath = Path.Combine(dialog.SelectedPath, "Recognition.json");
+        RememberAssetsRootPath(dialog.SelectedPath);
+        RememberRecognitionJsonPath(RecognitionJsonPath);
     }
 
     [RelayCommand]
@@ -214,8 +373,18 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
                 MaxMatchCount = MaxMatchCount,
                 DrawOnWindow = DrawOnWindow,
                 SearchAnchorMode = SearchAnchorMode,
+                ReferenceSearchBox = UseCustomSearchBox
+                    ? new CvRect(SearchBoxX, SearchBoxY, SearchBoxWidth, SearchBoxHeight)
+                    : null,
                 SearchExpandWidth = SearchExpandWidth,
-                SearchExpandHeight = SearchExpandHeight
+                SearchExpandHeight = SearchExpandHeight,
+                SearchExpandPercent = UsePercentSearchExpand
+                    ? new SearchExpandRatio(
+                        SearchExpandLeftPercent,
+                        SearchExpandTopPercent,
+                        SearchExpandRightPercent,
+                        SearchExpandBottomPercent)
+                    : null
             };
 
             var plan = _assetService.Prepare(draft);
@@ -236,8 +405,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
             }
 
             _assetService.Commit(plan, _screenshot);
-            _devConfig.RecognitionJsonPath = plan.JsonPath;
-            _devConfig.RecognitionAssetsRootPath = Path.GetFullPath(AssetsRootPath.Trim());
+            RememberRecognitionJsonPath(plan.JsonPath);
+            RememberAssetsRootPath(Path.GetFullPath(AssetsRootPath.Trim()));
 
             ThemedMessageBox.Show(
                 $"模板素材已保存。{Environment.NewLine}{Environment.NewLine}配置：{plan.JsonPath}{Environment.NewLine}图片：{plan.ImagePath}",
@@ -293,6 +462,97 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         OnPropertyChanged(nameof(OutputImageDisplayPath));
     }
 
+    /// <summary>
+    /// 加载持久化的最近路径，并将旧版单值配置放在首位完成向后兼容迁移。
+    /// 空路径会被忽略，Windows 路径按不区分大小写的方式去重。
+    /// </summary>
+    private static void LoadRecentPaths(
+        ObservableCollection<string> target,
+        string currentPath,
+        IEnumerable<string>? persistedPaths)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        IEnumerable<string> candidates = string.IsNullOrWhiteSpace(currentPath)
+            ? persistedPaths ?? []
+            : new[] { currentPath }.Concat(persistedPaths ?? []);
+
+        foreach (var candidate in candidates)
+        {
+            var path = candidate?.Trim();
+            if (string.IsNullOrWhiteSpace(path) || !seen.Add(path))
+            {
+                continue;
+            }
+
+            target.Add(path);
+            if (target.Count >= MaxRecentOutputPathCount)
+            {
+                break;
+            }
+        }
+    }
+
+    private void RememberRecognitionJsonPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        var normalizedPath = path.Trim();
+        _devConfig.RecognitionJsonPath = normalizedPath;
+        RememberRecentPath(
+            normalizedPath,
+            RecentRecognitionJsonPaths,
+            recentPaths => _devConfig.RecognitionJsonPathHistory = recentPaths);
+    }
+
+    private void RememberAssetsRootPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        var normalizedPath = path.Trim();
+        _devConfig.RecognitionAssetsRootPath = normalizedPath;
+        RememberRecentPath(
+            normalizedPath,
+            RecentAssetsRootPaths,
+            recentPaths => _devConfig.RecognitionAssetsRootPathHistory = recentPaths);
+    }
+
+    /// <summary>
+    /// 将路径移动到最近记录首位，按 Windows 路径规则去重并截断到 10 条。
+    /// 每次都向 DevConfig 赋新集合，以触发当前配置服务的 PropertyChanged 持久化机制。
+    /// </summary>
+    private static void RememberRecentPath(
+        string path,
+        ObservableCollection<string> target,
+        Action<List<string>> persist)
+    {
+        var normalizedPath = path.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+        {
+            return;
+        }
+
+        var existing = target.FirstOrDefault(item =>
+            string.Equals(item, normalizedPath, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+        {
+            target.Remove(existing);
+        }
+
+        target.Insert(0, normalizedPath);
+        while (target.Count > MaxRecentOutputPathCount)
+        {
+            target.RemoveAt(target.Count - 1);
+        }
+
+        persist([.. target]);
+    }
+
     partial void OnTemplateFileNameChanged(string value)
     {
         OnPropertyChanged(nameof(OutputImagePath));
@@ -300,13 +560,77 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         UpdateAutoGeneratedObjectName(value);
     }
 
-    partial void OnSelectionXChanged(int value) => UpdateCroppedPreview();
+    partial void OnSelectionXChanged(int value) => OnTemplateSelectionChanged();
 
-    partial void OnSelectionYChanged(int value) => UpdateCroppedPreview();
+    partial void OnSelectionYChanged(int value) => OnTemplateSelectionChanged();
 
-    partial void OnSelectionWidthChanged(int value) => UpdateCroppedPreview();
+    partial void OnSelectionWidthChanged(int value) => OnTemplateSelectionChanged();
 
-    partial void OnSelectionHeightChanged(int value) => UpdateCroppedPreview();
+    partial void OnSelectionHeightChanged(int value) => OnTemplateSelectionChanged();
+
+    partial void OnUseCustomSearchBoxChanged(bool value)
+    {
+        if (value)
+        {
+            if (HasValidTemplateSelection())
+            {
+                CopyTemplateSelectionToSearchBox();
+            }
+
+            SelectionTarget = TemplateImageSelectionTarget.SearchBox;
+        }
+        else
+        {
+            SelectionTarget = TemplateImageSelectionTarget.Template;
+        }
+
+        OnPropertyChanged(nameof(IsEditingSearchBox));
+        UpdateEffectiveSearchPreview();
+    }
+
+    partial void OnSelectionTargetChanged(TemplateImageSelectionTarget value)
+    {
+        if (value == TemplateImageSelectionTarget.SearchBox && !UseCustomSearchBox)
+        {
+            SelectionTarget = TemplateImageSelectionTarget.Template;
+            return;
+        }
+
+        OnPropertyChanged(nameof(IsEditingTemplateBox));
+        OnPropertyChanged(nameof(IsEditingSearchBox));
+    }
+
+    partial void OnSearchBoxXChanged(int value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchBoxYChanged(int value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchBoxWidthChanged(int value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchBoxHeightChanged(int value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchExpandWidthChanged(int value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchExpandHeightChanged(int value) => UpdateEffectiveSearchPreview();
+
+    partial void OnUsePercentSearchExpandChanged(bool value)
+    {
+        OnPropertyChanged(nameof(UsePixelSearchExpand));
+        UpdateEffectiveSearchPreview();
+    }
+
+    partial void OnSearchExpandLeftPercentChanged(double value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchExpandTopPercentChanged(double value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchExpandRightPercentChanged(double value) => UpdateEffectiveSearchPreview();
+
+    partial void OnSearchExpandBottomPercentChanged(double value) => UpdateEffectiveSearchPreview();
+
+    private void OnTemplateSelectionChanged()
+    {
+        UpdateCroppedPreview();
+        UpdateEffectiveSearchPreview();
+    }
 
     private void UpdateCroppedPreview()
     {
@@ -321,6 +645,74 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
 
         using var cropped = new Mat(_screenshot, selection);
         CroppedPreviewImage = cropped.ToWriteableBitmap();
+    }
+
+    private bool HasValidTemplateSelection()
+    {
+        return SelectionWidth > 0 && SelectionHeight > 0;
+    }
+
+    private void CopyTemplateSelectionToSearchBox()
+    {
+        SearchBoxX = SelectionX;
+        SearchBoxY = SelectionY;
+        SearchBoxWidth = SelectionWidth;
+        SearchBoxHeight = SelectionHeight;
+    }
+
+    /// <summary>
+    /// 在参考截图上预览最终生效的搜索范围。
+    /// 百分比模式按画布宽高计算四边并优先于像素模式，计算规则与运行时保持一致。
+    /// </summary>
+    private void UpdateEffectiveSearchPreview()
+    {
+        var baseRect = UseCustomSearchBox
+            ? new CvRect(SearchBoxX, SearchBoxY, SearchBoxWidth, SearchBoxHeight)
+            : new CvRect(SelectionX, SelectionY, SelectionWidth, SelectionHeight);
+        if (baseRect.Width <= 0 || baseRect.Height <= 0)
+        {
+            HasEffectiveSearchPreview = false;
+            EffectiveSearchX = EffectiveSearchY = EffectiveSearchWidth = EffectiveSearchHeight = 0;
+            return;
+        }
+
+        double left;
+        double top;
+        double right;
+        double bottom;
+        if (UsePercentSearchExpand)
+        {
+            var ratio = new SearchExpandRatio(
+                SearchExpandLeftPercent,
+                SearchExpandTopPercent,
+                SearchExpandRightPercent,
+                SearchExpandBottomPercent);
+            if (!ratio.IsValid)
+            {
+                HasEffectiveSearchPreview = false;
+                return;
+            }
+
+            left = CanvasWidth * ratio.Left;
+            top = CanvasHeight * ratio.Top;
+            right = CanvasWidth * ratio.Right;
+            bottom = CanvasHeight * ratio.Bottom;
+        }
+        else
+        {
+            left = right = Math.Max(0, SearchExpandWidth);
+            top = bottom = Math.Max(0, SearchExpandHeight);
+        }
+
+        var x1 = (int)Math.Round(Math.Clamp(baseRect.Left - left, 0d, CanvasWidth));
+        var y1 = (int)Math.Round(Math.Clamp(baseRect.Top - top, 0d, CanvasHeight));
+        var x2 = (int)Math.Round(Math.Clamp(baseRect.Right + right, 0d, CanvasWidth));
+        var y2 = (int)Math.Round(Math.Clamp(baseRect.Bottom + bottom, 0d, CanvasHeight));
+        EffectiveSearchX = x1;
+        EffectiveSearchY = y1;
+        EffectiveSearchWidth = Math.Max(0, x2 - x1);
+        EffectiveSearchHeight = Math.Max(0, y2 - y1);
+        HasEffectiveSearchPreview = EffectiveSearchWidth > 0 && EffectiveSearchHeight > 0;
     }
 
     private void UpdateAutoGeneratedObjectName(string templateFileName)

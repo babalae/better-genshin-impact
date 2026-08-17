@@ -74,6 +74,17 @@
                                    VerticalAlignment="Center"
                                    Text="{Binding ZoomScale, StringFormat={}{0:P0}}" />
                         <StackPanel Grid.Column="3" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <RadioButton Margin="0,0,10,0"
+                                         VerticalAlignment="Center"
+                                         GroupName="SelectionTarget"
+                                         IsChecked="{Binding IsEditingTemplateBox, Mode=TwoWay}"
+                                         Content="模板框" />
+                            <RadioButton Margin="0,0,16,0"
+                                         VerticalAlignment="Center"
+                                         GroupName="SelectionTarget"
+                                         IsChecked="{Binding IsEditingSearchBox, Mode=TwoWay}"
+                                         IsEnabled="{Binding UseCustomSearchBox}"
+                                         Content="搜索框" />
                             <Button Margin="0,0,12,0"
                                     Padding="14,5"
                                     Command="{Binding FitImageCommand}"
@@ -116,8 +127,32 @@
                                     <behavior:TemplateImageSelectionBehavior SelectionX="{Binding SelectionX, Mode=TwoWay}"
                                                                              SelectionY="{Binding SelectionY, Mode=TwoWay}"
                                                                              SelectionWidth="{Binding SelectionWidth, Mode=TwoWay}"
-                                                                             SelectionHeight="{Binding SelectionHeight, Mode=TwoWay}" />
+                                                                             SelectionHeight="{Binding SelectionHeight, Mode=TwoWay}"
+                                                                             SearchBoxX="{Binding SearchBoxX, Mode=TwoWay}"
+                                                                             SearchBoxY="{Binding SearchBoxY, Mode=TwoWay}"
+                                                                             SearchBoxWidth="{Binding SearchBoxWidth, Mode=TwoWay}"
+                                                                             SearchBoxHeight="{Binding SearchBoxHeight, Mode=TwoWay}"
+                                                                             SelectionTarget="{Binding SelectionTarget}"
+                                                                             IsSearchBoxEnabled="{Binding UseCustomSearchBox}" />
                                 </b:Interaction.Behaviors>
+                                <Rectangle Canvas.Left="{Binding EffectiveSearchX}"
+                                           Canvas.Top="{Binding EffectiveSearchY}"
+                                           Width="{Binding EffectiveSearchWidth}"
+                                           Height="{Binding EffectiveSearchHeight}"
+                                           IsHitTestVisible="False"
+                                           Stroke="#FF39D98A"
+                                           StrokeDashArray="6,4"
+                                           StrokeThickness="2"
+                                           Visibility="{Binding HasEffectiveSearchPreview, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Rectangle Canvas.Left="{Binding SearchBoxX}"
+                                           Canvas.Top="{Binding SearchBoxY}"
+                                           Width="{Binding SearchBoxWidth}"
+                                           Height="{Binding SearchBoxHeight}"
+                                           IsHitTestVisible="False"
+                                           Fill="#18FF9F43"
+                                           Stroke="#FFFF9F43"
+                                           StrokeThickness="2"
+                                           Visibility="{Binding UseCustomSearchBox, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <Rectangle Canvas.Left="{Binding SelectionX}"
                                            Canvas.Top="{Binding SelectionY}"
                                            Width="{Binding SelectionWidth}"
@@ -148,11 +183,14 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0"
-                                     MinHeight="32"
-                                     VerticalContentAlignment="Center"
-                                     Text="{Binding RecognitionJsonPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="{Binding RecognitionJsonPath}" />
+                            <ComboBox Grid.Column="0"
+                                      MinHeight="32"
+                                      VerticalContentAlignment="Center"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="True"
+                                      ItemsSource="{Binding RecentRecognitionJsonPaths}"
+                                      Text="{Binding RecognitionJsonPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{Binding RecognitionJsonPath}" />
                             <Button Grid.Column="1"
                                     Margin="8,0,0,0"
                                     Padding="12,4"
@@ -166,11 +204,14 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0"
-                                     MinHeight="32"
-                                     VerticalContentAlignment="Center"
-                                     Text="{Binding AssetsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="{Binding AssetsRootPath}" />
+                            <ComboBox Grid.Column="0"
+                                      MinHeight="32"
+                                      VerticalContentAlignment="Center"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="True"
+                                      ItemsSource="{Binding RecentAssetsRootPaths}"
+                                      Text="{Binding AssetsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{Binding AssetsRootPath}" />
                             <Button Grid.Column="1"
                                     Margin="8,0,0,0"
                                     Padding="12,4"
@@ -317,23 +358,95 @@
                         <Separator Margin="0,14" />
                         <TextBlock FontSize="18" FontWeight="SemiBold" Text="搜索参数" />
 
-                        <Grid Margin="0,10,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="140" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="锚点" />
-                            <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding SearchAnchorModeItems}" SelectedItem="{Binding SearchAnchorMode}" />
-                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="横向扩展" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Text="{Binding SearchExpandWidth, Mode=TwoWay}" />
-                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="纵向扩展" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SearchExpandHeight, Mode=TwoWay}" />
-                        </Grid>
+                        <StackPanel Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="锚点" />
+                                <ComboBox Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding SearchAnchorModeItems}" SelectedItem="{Binding SearchAnchorMode}" />
+                            </Grid>
+
+                            <CheckBox Margin="0,2,0,8"
+                                      IsChecked="{Binding UseCustomSearchBox}"
+                                      Content="启用自定义搜索框" />
+
+                            <Grid Margin="0,0,0,10"
+                                  Visibility="{Binding UseCustomSearchBox, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,6,8" VerticalAlignment="Center" Text="X" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,12,8" Text="{Binding SearchBoxX, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,0,6,8" VerticalAlignment="Center" Text="Y" />
+                                <TextBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="{Binding SearchBoxY, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center" Text="宽" />
+                                <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,12,0" Text="{Binding SearchBoxWidth, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Text="高" />
+                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SearchBoxHeight, Mode=TwoWay}" />
+                            </Grid>
+
+                            <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                <TextBlock Width="140" VerticalAlignment="Center" Text="扩展方式" />
+                                <RadioButton Margin="0,0,16,0"
+                                             GroupName="SearchExpandMode"
+                                             IsChecked="{Binding UsePixelSearchExpand, Mode=TwoWay}"
+                                             Content="像素" />
+                                <RadioButton GroupName="SearchExpandMode"
+                                             IsChecked="{Binding UsePercentSearchExpand, Mode=TwoWay}"
+                                             Content="百分比" />
+                            </StackPanel>
+
+                            <Grid Visibility="{Binding UsePixelSearchExpand, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="横向扩展" />
+                                <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" Text="{Binding SearchExpandWidth, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="纵向扩展" />
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SearchExpandHeight, Mode=TwoWay}" />
+                            </Grid>
+
+                            <StackPanel Visibility="{Binding UsePercentSearchExpand, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Width="34" Margin="0,0,6,8" VerticalAlignment="Center" Text="左" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,12,8" Text="{Binding SearchExpandLeftPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Width="34" Margin="0,0,6,8" VerticalAlignment="Center" Text="上" />
+                                    <TextBox Grid.Row="0" Grid.Column="3" Margin="0,0,0,8" Text="{Binding SearchExpandTopPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Width="34" Margin="0,0,6,0" VerticalAlignment="Center" Text="右" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,12,0" Text="{Binding SearchExpandRightPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Width="34" Margin="0,0,6,0" VerticalAlignment="Center" Text="下" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SearchExpandBottomPercent, Mode=TwoWay}" />
+                                </Grid>
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Text="小数直接表示比例，例如 0.05 = 5%。JSON 顺序遵循 XAML Thickness：左右、上下；或左、上、右、下。" />
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

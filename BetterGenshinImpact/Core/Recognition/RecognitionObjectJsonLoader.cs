@@ -47,7 +47,7 @@ public static class RecognitionObjectJsonLoader
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
+            Logger?.LogError(ex,
                 "Recognition 加载失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}, file={FilePath}",
                 objectName,
                 context.CaptureWidth,
@@ -74,7 +74,7 @@ public static class RecognitionObjectJsonLoader
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,
+            Logger?.LogError(ex,
                 "Recognition 构建失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}",
                 objectName,
                 context.CaptureWidth,
@@ -260,9 +260,20 @@ public static class RecognitionObjectJsonLoader
                     recognitionObject.SearchOptions.AnchorMode = ParseEnumExact<SearchAnchorMode>(config.Search.Anchor, nameof(config.Search.Anchor));
                 }
 
+                if (!string.IsNullOrWhiteSpace(config.Search.Box))
+                {
+                    recognitionObject.SearchOptions.ReferenceSearchBox = EvaluateRect(config.Search.Box);
+                }
+
                 if (config.Search.Expand is { Count: 2 })
                 {
                     recognitionObject.SearchOptions.ExpandSize = new OpenCvSharp.Size(config.Search.Expand[0], config.Search.Expand[1]);
+                }
+
+                // expandPercent 使用 XAML Thickness 的 1/2/4 参数顺序，且在运行时优先于像素 expand。
+                if (config.Search.ExpandPercent != null)
+                {
+                    recognitionObject.SearchOptions.ExpandPercent = ParseSearchExpandRatio(config.Search.ExpandPercent);
                 }
             }
 
@@ -489,6 +500,28 @@ public static class RecognitionObjectJsonLoader
                 4 => new Scalar(values[0], values[1], values[2], values[3]),
                 _ => throw new InvalidOperationException($"{fieldName} 必须是 1 到 4 个数字"),
             };
+        }
+
+        /// <summary>
+        /// 将 JSON 中的百分比扩展参数展开成四边比例。
+        /// 1 参数表示四边；2 参数依次表示左右、上下；4 参数依次表示左、上、右、下。
+        /// </summary>
+        private static SearchExpandRatio ParseSearchExpandRatio(IReadOnlyList<double> values)
+        {
+            var ratio = values.Count switch
+            {
+                1 => new SearchExpandRatio(values[0], values[0], values[0], values[0]),
+                2 => new SearchExpandRatio(values[0], values[1], values[0], values[1]),
+                4 => new SearchExpandRatio(values[0], values[1], values[2], values[3]),
+                _ => throw new InvalidOperationException("search.expandPercent 必须包含 1、2 或 4 个数字"),
+            };
+
+            if (!ratio.IsValid)
+            {
+                throw new InvalidOperationException("search.expandPercent 必须全部为有限且非负的小数比例");
+            }
+
+            return ratio;
         }
 
         private static TEnum ParseEnumExact<TEnum>(string? value, string fieldName) where TEnum : struct, Enum

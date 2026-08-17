@@ -55,9 +55,19 @@ public sealed record RecognitionTemplateDraft
 
     public SearchAnchorMode SearchAnchorMode { get; init; } = DefaultSearchAnchorMode;
 
+    /// <summary>
+    /// 参考画布坐标系中的独立搜索框；为空时使用模板选区作为基础搜索框。
+    /// </summary>
+    public Rect? ReferenceSearchBox { get; init; }
+
     public int SearchExpandWidth { get; init; } = DefaultSearchExpand;
 
     public int SearchExpandHeight { get; init; } = DefaultSearchExpand;
+
+    /// <summary>
+    /// 按当前截图宽高计算的四边扩展比例，0.05 表示 5%；有值时优先于像素扩展。
+    /// </summary>
+    public SearchExpandRatio? SearchExpandPercent { get; init; }
 }
 
 public sealed record RecognitionTemplateSavePlan(
@@ -354,8 +364,17 @@ public sealed class RecognitionTemplateAssetService
             search["anchor"] = draft.SearchAnchorMode.ToString();
         }
 
-        if (draft.SearchExpandWidth != RecognitionTemplateDraft.DefaultSearchExpand
-            || draft.SearchExpandHeight != RecognitionTemplateDraft.DefaultSearchExpand)
+        if (draft.ReferenceSearchBox is { } searchBox)
+        {
+            search["box"] = $"rect({searchBox.X}, {searchBox.Y}, {searchBox.Width}, {searchBox.Height})";
+        }
+
+        if (draft.SearchExpandPercent is { } expandPercent)
+        {
+            search["expandPercent"] = BuildExpandPercentArray(expandPercent);
+        }
+        else if (draft.SearchExpandWidth != RecognitionTemplateDraft.DefaultSearchExpand
+                 || draft.SearchExpandHeight != RecognitionTemplateDraft.DefaultSearchExpand)
         {
             search["expand"] = new JArray(draft.SearchExpandWidth, draft.SearchExpandHeight);
         }
@@ -366,6 +385,28 @@ public sealed class RecognitionTemplateAssetService
         }
 
         return config;
+    }
+
+    /// <summary>
+    /// 按 XAML Thickness 的顺序生成最短百分比扩展数组：
+    /// 四边相同输出 1 项，左右和上下分别相同输出 2 项，否则按左、上、右、下输出 4 项。
+    /// </summary>
+    private static JArray BuildExpandPercentArray(SearchExpandRatio ratio)
+    {
+        // 仅在数值确实相同时压缩参数，避免为了缩短 JSON 而丢失微小但明确配置的四边差异。
+        if (ratio.Left.Equals(ratio.Top)
+            && ratio.Left.Equals(ratio.Right)
+            && ratio.Left.Equals(ratio.Bottom))
+        {
+            return new JArray(ratio.Left);
+        }
+
+        if (ratio.Left.Equals(ratio.Right) && ratio.Top.Equals(ratio.Bottom))
+        {
+            return new JArray(ratio.Left, ratio.Top);
+        }
+
+        return new JArray(ratio.Left, ratio.Top, ratio.Right, ratio.Bottom);
     }
 
     private static string NormalizeJsonPath(string path)
@@ -423,15 +464,34 @@ public sealed class RecognitionTemplateAssetService
 
     private static void ValidateRecognitionParameters(RecognitionTemplateDraft draft)
     {
-        ValidateSelection(draft.Selection, draft.ReferenceWidth, draft.ReferenceHeight);
+        ValidateSelection(draft.Selection, draft.ReferenceWidth, draft.ReferenceHeight, "模板选区");
         if (draft.Threshold is < 0 or > 1)
         {
             throw new ArgumentException("模板匹配阈值必须在 0 到 1 之间。");
         }
 
-        if (draft.SearchExpandWidth < 0 || draft.SearchExpandHeight < 0)
+        if (draft.ReferenceSearchBox is { } searchBox)
+        {
+            ValidateSelection(searchBox, draft.ReferenceWidth, draft.ReferenceHeight, "自定义搜索框");
+        }
+
+        if (draft.SearchExpandPercent is { } expandPercent)
+        {
+            if (!expandPercent.IsValid)
+            {
+                throw new ArgumentException("搜索扩展比例必须全部为有限且非负的小数。");
+            }
+        }
+        else if (draft.SearchExpandWidth < 0 || draft.SearchExpandHeight < 0)
         {
             throw new ArgumentException("搜索扩展像素不能小于 0。");
+        }
+
+        var effectiveSearchRegion = GetEffectiveSearchRegion(draft);
+        if (effectiveSearchRegion.Width < draft.Selection.Width
+            || effectiveSearchRegion.Height < draft.Selection.Height)
+        {
+            throw new ArgumentException("搜索区域在应用扩展并裁剪后必须能够容纳模板选区。");
         }
 
         if (draft.MaxMatchCount != -1 && draft.MaxMatchCount < 1)
@@ -462,7 +522,7 @@ public sealed class RecognitionTemplateAssetService
         }
     }
 
-    private static void ValidateSelection(Rect selection, int imageWidth, int imageHeight)
+    private static void ValidateSelection(Rect selection, int imageWidth, int imageHeight, string displayName = "模板选区")
     {
         if (imageWidth <= 0 || imageHeight <= 0)
         {
@@ -471,14 +531,45 @@ public sealed class RecognitionTemplateAssetService
 
         if (selection.Width <= 0 || selection.Height <= 0)
         {
-            throw new ArgumentException("请先在截图中框选模板内容。");
+            throw new ArgumentException($"{displayName}的宽高必须大于 0。");
         }
 
         if (selection.X < 0 || selection.Y < 0
             || selection.Right > imageWidth || selection.Bottom > imageHeight)
         {
-            throw new ArgumentException("模板选区超出了截图范围。");
+            throw new ArgumentException($"{displayName}超出了截图范围。");
         }
+    }
+
+    /// <summary>
+    /// 在编辑器参考画布上计算最终搜索区域，用于保存前校验。
+    /// 百分比扩展优先于像素扩展，计算规则与运行时识别保持一致。
+    /// </summary>
+    private static Rect GetEffectiveSearchRegion(RecognitionTemplateDraft draft)
+    {
+        var baseRegion = draft.ReferenceSearchBox ?? draft.Selection;
+        double left;
+        double top;
+        double right;
+        double bottom;
+        if (draft.SearchExpandPercent is { } ratio)
+        {
+            left = draft.ReferenceWidth * ratio.Left;
+            top = draft.ReferenceHeight * ratio.Top;
+            right = draft.ReferenceWidth * ratio.Right;
+            bottom = draft.ReferenceHeight * ratio.Bottom;
+        }
+        else
+        {
+            left = right = draft.SearchExpandWidth;
+            top = bottom = draft.SearchExpandHeight;
+        }
+
+        var x1 = (int)Math.Round(Math.Clamp(baseRegion.Left - left, 0d, draft.ReferenceWidth));
+        var y1 = (int)Math.Round(Math.Clamp(baseRegion.Top - top, 0d, draft.ReferenceHeight));
+        var x2 = (int)Math.Round(Math.Clamp(baseRegion.Right + right, 0d, draft.ReferenceWidth));
+        var y2 = (int)Math.Round(Math.Clamp(baseRegion.Bottom + bottom, 0d, draft.ReferenceHeight));
+        return new Rect(x1, y1, Math.Max(0, x2 - x1), Math.Max(0, y2 - y1));
     }
 
     private static void EnsureChildPath(string directory, string childPath)
