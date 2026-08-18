@@ -857,6 +857,7 @@ public class TpTask
                     out failureReason))
             {
                 clickCapture.ClickTo(clickX, clickY);
+                Logger.LogInformation("点击[{Name}]", GetTeleportPointDisplayName(target.TargetTp));
                 return;
             }
 
