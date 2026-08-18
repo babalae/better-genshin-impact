@@ -1222,8 +1222,11 @@ public class TpTask
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.LogDebug(e, e.Message);
+                Logger.LogWarning("传送异常" + e.Message);
+                await Delay(300, ct);
             }
         }
 
