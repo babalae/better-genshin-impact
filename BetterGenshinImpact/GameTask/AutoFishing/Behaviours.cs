@@ -70,7 +70,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        public GetFishpond(string name, ILogger logger, BgiYoloPredictor predictor, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name)
+        private GetFishpond(string name, ILogger logger, BgiYoloPredictor predictor, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name)
         {
             this.logger = logger;
             this._predictor = predictor;
@@ -178,7 +178,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        public ChooseBait(string name, ILogger logger, ISystemInfo systemInfo, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null) : base(name)
+        private ChooseBait(string name, ILogger logger, ISystemInfo systemInfo, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.systemInfo = systemInfo;
@@ -346,7 +346,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<bool> Abort { get; private set; } = null!;
 
-        public LiftAndHold(string name, ILogger logger, IInputSimulator input) : base(name)
+        private LiftAndHold(string name, ILogger logger, IInputSimulator input) : base(name)
         {
             this.logger = logger;
             this.input = input;
@@ -447,7 +447,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        public ThrowRod(string name, ILogger logger, IInputSimulator input, BgiYoloPredictor predictor, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name)
+        private ThrowRod(string name, ILogger logger, IInputSimulator input, BgiYoloPredictor predictor, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name)
         {
             this.logger = logger;
             this.input = input;
@@ -744,7 +744,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public CheckThrowRod(string name, ILogger logger, TimeProvider? timeProvider = null) : base(name)
+        private CheckThrowRod(string name, ILogger logger, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.timeProvider = timeProvider ?? TimeProvider.System;
@@ -791,7 +791,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public FishBiteTimeout(string name, int seconds, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
+        private FishBiteTimeout(string name, int seconds, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.seconds = seconds;
@@ -848,7 +848,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 检查提竿结果
         /// 如果仍发现提竿按钮则失败
         /// </summary>
-        public CheckRaiseHook(string name, ILogger logger, TimeProvider? timeProvider = null) : base(name)
+        private CheckRaiseHook(string name, ILogger logger, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.timeProvider = timeProvider ?? TimeProvider.System;
@@ -897,7 +897,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public FishBite(string name, ILogger logger, IInputSimulator input, IOcrService ocrService, DrawContent? drawContent = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private FishBite(string name, ILogger logger, IInputSimulator input, IOcrService ocrService, DrawContent? drawContent = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
         {
             this.logger = logger;
             this.input = input;
@@ -983,7 +983,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<Rect> FishBoxRect { get; private set; } = null!;
 
-        public GetFishBoxArea(string name, ILogger logger, bool saveScreenshotOnError, TimeProvider? timeProvider = null) : base(name)
+        private GetFishBoxArea(string name, ILogger logger, bool saveScreenshotOnError, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.saveScreenshotOnError = saveScreenshotOnError;
@@ -1083,7 +1083,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Rect> FishBoxRect { get; private set; } = null!;
 
-        public Fishing(string name, ILogger logger, bool saveScreenshotOnError, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name)
+        private Fishing(string name, ILogger logger, bool saveScreenshotOnError, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name)
         {
             this.logger = logger;
             this.saveScreenshotOnError = saveScreenshotOnError;
@@ -1270,7 +1270,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        public MoveViewpointDown(string name, ILogger logger, IInputSimulator input) : base(name)
+        private MoveViewpointDown(string name, ILogger logger, IInputSimulator input) : base(name)
         {
             this.logger = logger;
             this.input = input;
@@ -1304,7 +1304,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public CheckInitalState(string name, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
+        private CheckInitalState(string name, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.input = input;

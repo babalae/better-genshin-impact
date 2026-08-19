@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [BlackboardKey(Access = Access.ExclusiveWrite)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public ScreenshotQueue(string name, IEnumerable<ImageRegion> screenshots) : base(name)
+        private ScreenshotQueue(string name, IEnumerable<ImageRegion> screenshots) : base(name)
         {
             _queue = new Queue<ImageRegion>(screenshots);
         }

@@ -7,7 +7,6 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using CsTrees;
 using CsTrees.Composites;
-using CsTrees.FluentBuilder;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -47,15 +46,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
             // @formatter:off
-            var root = TreeBuilder.Create()
+            var root = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("钓鱼并确保完成后退出钓鱼模式")
+                    .Sequence("钓鱼并确保完成后退出钓鱼模式", memory: false)
                         .OneShot(@"\")
                             .SetSleep("设置sleep方法", Sleep)
                         .End()
                         .TakeScreenshot("截图", _logger)
                         .Parallel("在整体超时时间内钓鱼", policy: new ParallelPolicy.SuccessOnOne())
-                            .SequenceWithMemory("调整视角并钓鱼")
+                            .Sequence("调整视角并钓鱼", memory: true)
                                 .MoveViewpointDown("调整视角至俯视", _logger, input)
                                 .Parallel("找鱼20秒", policy: new ParallelPolicy.SuccessOnOne())
                                     .TurnAround("转圈圈调整视角", _logger, input, _predictor)
@@ -63,13 +62,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                 .End()
                                 .EnterFishingMode("进入钓鱼模式", _logger, input, session, prototypes, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer)
                                 .SuccessIsRunning(@"\")
-                                    .Sequence("一直钓鱼直到没鱼")
+                                    .Sequence("一直钓鱼直到没鱼", memory: false)
                                         .FailureIsSuccess(@"\")
-                                            .SequenceWithMemory("从找鱼开始")
+                                            .Sequence("从找鱼开始", memory: true)
                                                 .MoveViewpointDown("调整视角至俯视", _logger, input)
                                                 .Parallel("找鱼10秒", policy: new ParallelPolicy.SuccessOnOne())
                                                     .FailureIsSuccess("找鱼 + 初始状态确认")
-                                                        .SequenceWithMemory("-")
+                                                        .Sequence("-", memory: true)
                                                             .CheckInitalState("初始状态确认", _logger, input)
                                                             .GetFishpond("检测鱼群", _logger, _predictor)
                                                         .End()
@@ -79,7 +78,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                 .ChooseBait("选择鱼饵", _logger, TaskContext.Instance().SystemInfo, input, session, prototypes)
                                                 .Parallel("抛竿直到成功或出错", policy: new ParallelPolicy.SuccessOnOne())
                                                     .FailureIsSuccess("重复抛竿")
-                                                        .SequenceWithMemory("-")
+                                                        .Sequence("-", memory: true)
                                                             .MoveViewpointDown("调整视角至俯视", _logger, input)
                                                                 //.Parallel("举起鱼竿并抛竿", policy: new ParallelPolicy.SuccessOnOne())
                                                                 //    .PushLeaf(() => new LiftAndHold("举起鱼竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
@@ -96,7 +95,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                 .End()
                                                 .Parallel("拉条中", policy: new ParallelPolicy.SuccessOnOne())
                                                     .CheckRaiseHook("检查提竿结果", _logger)
-                                                    .SequenceWithMemory("拉条序列")
+                                                    .Sequence("拉条序列", memory: true)
                                                         .GetFishBoxArea("等待拉条出现", _logger, param.SaveScreenshotOnKeyTick)
                                                         .Fishing("钓鱼拉条", _logger, param.SaveScreenshotOnKeyTick, input)
                                                     .End()
@@ -107,7 +106,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                     .End()
                                 .End()
                             .End()
-                            .Leaf(() => new WholeProcessTimeout("检查整体超时", _logger, param.WholeProcessTimeoutSeconds))
+                            .WholeProcessTimeout("检查整体超时", _logger, param.WholeProcessTimeoutSeconds)
                         .End()
                         .QuitFishingMode("退出钓鱼模式", _logger, input, param.GameCultureInfo, param.StringLocalizer)
                     .End()

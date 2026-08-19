@@ -3,7 +3,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using CsTrees;
 using CsTrees.Composites;
-using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 
@@ -27,10 +26,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
             //
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion])
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .FishBite("-", new FakeLogger(), new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -62,10 +61,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             FishBiteTimeout fishBiteTimeoutBehaviour = new FishBiteTimeout("-", 15, logger, input, blackboard, fakeTimeProvider);
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion1, imageRegion1, imageRegion2])
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion1, imageRegion2], bb!))
                         .Parallel("-", new ParallelPolicy.SuccessOnOne())
                             .FishBite("-", logger, input, OcrService, drawContent: new FakeDrawContent())
                             .Leaf(() => fishBiteTimeoutBehaviour)
@@ -114,10 +113,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
             //
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion])
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .FishBite("-", new FakeLogger(), new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer)
                     .End()
                 .End()
