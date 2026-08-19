@@ -2593,7 +2593,7 @@ public class TpTask
 
         // 传送按钮尚未出现，且没有与目标匹配的有效候选：继续等待，避免把地图 UI 误匹配当候选点。
         // 传统模板/OCR 对同一帧结果确定，识别一次即可，不必再做稳定复检。
-        var candidate = TryClickMapChooseCandidate(imageRegion, targetTp, 1);
+        var candidate = TryClickMapChooseCandidate(imageRegion, targetTp);
         if (candidate == null)
         {
             return TeleportPanelResult.Waiting;
@@ -2618,7 +2618,7 @@ public class TpTask
             }
 
             using var retryCapture = CaptureToRectArea();
-            candidate = TryClickMapChooseCandidate(retryCapture, targetTp, clickAttempt + 1);
+            candidate = TryClickMapChooseCandidate(retryCapture, targetTp);
             if (candidate == null)
             {
                 return TeleportPanelResult.RetryPoint;
@@ -3183,8 +3183,7 @@ public class TpTask
     /// </summary>
     private MapChooseCandidate? TryClickMapChooseCandidate(
         ImageRegion imageRegion,
-        GiTpPosition? targetTp,
-        int clickAttempt)
+        GiTpPosition? targetTp)
     {
         var candidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
         if (candidate == null)
