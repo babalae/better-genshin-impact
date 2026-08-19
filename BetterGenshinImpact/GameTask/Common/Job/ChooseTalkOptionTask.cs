@@ -136,6 +136,7 @@ public partial class ChooseTalkOptionTask
             {
                 chatExit.Click();
                 _logger.LogInformation("点击退出对话按钮");
+                await Delay(200, ct);
             }
             else if (Bv.IsInTalkUi(region))
             {
