@@ -40,7 +40,7 @@ public sealed class GotifyNotifier : INotifier
 
         try
         {
-            var endpoint = $"{_url}/message?token={Uri.EscapeDataString(_appToken)}";
+            var endpoint = $"{_url}/message";
             var body = new
             {
                 title = "BetterGI·更好的原神",
@@ -50,7 +50,13 @@ public sealed class GotifyNotifier : INotifier
 
             var json = JsonSerializer.Serialize(body);
             using var requestContent = new StringContent(json, Encoding.UTF8, "application/json");
-            using var response = await _httpClient.PostAsync(endpoint, requestContent);
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = requestContent
+            };
+            request.Headers.Add("X-Gotify-Key", _appToken);
+
+            using var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
                 throw new NotifierException($"Gotify 调用失败，状态码: {response.StatusCode}");
