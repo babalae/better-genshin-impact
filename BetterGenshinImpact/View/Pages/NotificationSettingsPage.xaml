@@ -2330,7 +2330,7 @@
                         <ColumnDefinition Width="3*" />
                         <ColumnDefinition Width="2*" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="通知优先级" />
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="Gotify 通知优先级" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" Text="Gotify 通知优先级" />
                     <TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="180" Margin="0,0,36,0" Text="{Binding Config.NotificationConfig.GotifyNotifyLevel, Mode=TwoWay}" />
                 </Grid>
