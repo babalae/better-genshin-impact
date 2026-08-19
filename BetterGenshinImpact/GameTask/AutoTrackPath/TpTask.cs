@@ -120,10 +120,14 @@ public class TpTask
 
     private sealed class MapChooseCandidate
     {
+        public int Index { get; set; }
+        public required string IconFileName { get; init; }
+        public required string IconType { get; init; }
         public required string Text { get; init; }
         public required Rect IconRect { get; init; }
+        public required Rect TextRect { get; init; }
         public required Rect ClickRect { get; init; }
-        public string IconTemplateName { get; init; } = string.Empty;
+        public int SelectedIndicatorScore { get; set; }
     }
 
     private sealed class NearbyMapIcon
@@ -2644,27 +2648,30 @@ public class TpTask
             return TeleportPanelResult.Confirmed;
         }
 
-        var preCheckCandidates = GetMapChooseCandidates(imageRegion);
+        var candidates = GetMapChooseCandidates(imageRegion);
+        var preferredCandidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
         Logger.LogDebug(
             "候选列表快照 stage={Stage} target={Target} count={Count} preferred={PreferredCandidate} items=[{Items}]",
             "进入候选流程前",
             targetText,
-            preCheckCandidates.Count,
-            FormatMapChooseCandidateSummary(preCheckCandidates.FirstOrDefault(), 0),
-            FormatMapChooseCandidateList(preCheckCandidates));
-        if (preCheckCandidates.Count == 0)
+            candidates.Count,
+            FormatMapChooseCandidateSummary(preferredCandidate, 0),
+            FormatMapChooseCandidateList(candidates));
+        if (preferredCandidate == null)
         {
-            // 传送按钮尚未出现，且没有带有效文字的候选行：继续等待，避免把地图 UI 误匹配当候选点。
+            // 传送按钮尚未出现，或暂无与目标匹配的有效候选：继续等待。
             Logger.LogDebug(
-                "传送面板检测：未找到传送按钮，也无有效候选列表，继续等待 target={Target}",
-                targetText);
+                "传送面板检测：未找到传送按钮，也无匹配的有效候选项，继续等待 target={Target} candidateCount={CandidateCount}",
+                targetText,
+                candidates.Count);
             return TeleportPanelResult.Waiting;
         }
 
         Logger.LogInformation(
-            "传送面板检测：未找到传送按钮，进入候选列表流程 target={Target} candidateCount={CandidateCount}",
+            "传送面板检测：未找到传送按钮，进入候选列表流程 target={Target} candidateCount={CandidateCount} preferred={PreferredCandidate}",
             targetText,
-            preCheckCandidates.Count);
+            candidates.Count,
+            FormatMapChooseCandidateSummary(preferredCandidate, 0));
         var candidate = await CheckMapChooseIcon(imageRegion, targetTp, 1);
         if (candidate == null)
         {
@@ -2681,10 +2688,10 @@ public class TpTask
             }
 
             Logger.LogWarning(
-                "地图候选点击 #{Attempt} 未生效：text={Text} template={Template}，候选列表仍然存在",
+                "地图候选点击 #{Attempt} 未生效：type={IconType} text={Text}，候选列表仍然存在",
                 clickAttempt,
-                string.IsNullOrWhiteSpace(candidate.Text) ? "未识别" : candidate.Text,
-                candidate.IconTemplateName);
+                candidate.IconType,
+                string.IsNullOrWhiteSpace(candidate.Text) ? "未识别" : candidate.Text);
             if (clickAttempt >= MapChooseCandidateClickRetryCount)
             {
                 return TeleportPanelResult.RetryPoint;
@@ -2746,7 +2753,7 @@ public class TpTask
             if (stopwatch.ElapsedMilliseconds >= nextCandidateVerificationAt)
             {
                 var candidates = GetMapChooseCandidates(screen);
-                var candidate = candidates.FirstOrDefault();
+                var candidate = GetPreferredMapChooseCandidate(screen, targetTp);
                 Logger.LogDebug(
                     "候选点击后确认 poll #{Poll} elapsed={ElapsedMs}ms：传送按钮仍不可见 target={Target} clickAttempt={ClickAttempt} candidateCount={CandidateCount} preferred={PreferredCandidate}",
                     i + 1,
@@ -3294,7 +3301,7 @@ public class TpTask
     }
 
     /// <summary>
-    /// 识别候选列表并点击首个有效候选项。
+    /// 识别候选列表，并尽量选择与目标坐标对应的实际传送点。
     /// </summary>
     private async Task<MapChooseCandidate?> CheckMapChooseIcon(
         ImageRegion imageRegion,
@@ -3302,18 +3309,18 @@ public class TpTask
         int clickAttempt)
     {
         var targetText = GetTeleportPointDebugText(targetTp);
-        var previousCandidate = GetPreferredMapChooseCandidate(imageRegion);
+        var previousCandidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
         if (previousCandidate == null)
         {
             Logger.LogDebug(
-                "候选列表检测 #{Attempt}：未识别到候选项 target={Target}",
+                "候选列表检测 #{Attempt}：未识别到匹配候选项 target={Target}",
                 clickAttempt,
                 targetText);
             return null;
         }
 
         Logger.LogDebug(
-            "候选列表检测 #{Attempt}：首项={PreferredCandidate} target={Target}",
+            "候选列表检测 #{Attempt}：preferred={PreferredCandidate} target={Target}",
             clickAttempt,
             FormatMapChooseCandidateSummary(previousCandidate, 0),
             targetText);
@@ -3324,7 +3331,7 @@ public class TpTask
         {
             await Delay(MapChooseCandidatePollIntervalMs, ct);
             using var stableImageRegion = CaptureToRectArea();
-            var currentCandidate = GetPreferredMapChooseCandidate(stableImageRegion);
+            var currentCandidate = GetPreferredMapChooseCandidate(stableImageRegion, targetTp);
             if (currentCandidate == null)
             {
                 Logger.LogDebug(
@@ -3357,11 +3364,11 @@ public class TpTask
             }
 
             Logger.LogInformation(
-                "地图候选点击 #{Attempt}：target={Target} text={Text} template={Template} icon=({IconX},{IconY},{IconWidth},{IconHeight}) click=({ClickX},{ClickY}) stable={StableChecks} elapsed={ElapsedMs}ms",
+                "地图候选点击 #{Attempt}：target={Target} type={IconType} text={Text} icon=({IconX},{IconY},{IconWidth},{IconHeight}) click=({ClickX},{ClickY}) stable={StableChecks} elapsed={ElapsedMs}ms",
                 clickAttempt,
                 targetText,
+                currentCandidate.IconType,
                 string.IsNullOrWhiteSpace(currentCandidate.Text) ? "未识别" : currentCandidate.Text,
-                currentCandidate.IconTemplateName,
                 currentCandidate.IconRect.X,
                 currentCandidate.IconRect.Y,
                 currentCandidate.IconRect.Width,
@@ -3382,17 +3389,27 @@ public class TpTask
         return null;
     }
 
-    private MapChooseCandidate? GetPreferredMapChooseCandidate(ImageRegion imageRegion)
+    private MapChooseCandidate? GetPreferredMapChooseCandidate(
+        ImageRegion imageRegion,
+        GiTpPosition? targetTp)
     {
-        // 地图上的目标点已经在前一步点击，游戏会将对应传送点放在候选列表首项。
-        // 不再使用 tp.json 名称或图标类型筛选。
-        return GetMapChooseCandidates(imageRegion).FirstOrDefault();
+        if (ShouldRequireMapChooseCandidateName(targetTp))
+        {
+            return GetMapChooseCandidateByTargetText(imageRegion, targetTp);
+        }
+
+        return ChooseMapCandidate(GetMapChooseCandidates(imageRegion), targetTp);
     }
 
     private static bool IsSameStableMapChooseCandidate(
         MapChooseCandidate previousCandidate,
         MapChooseCandidate currentCandidate)
     {
+        if (!string.Equals(previousCandidate.IconType, currentCandidate.IconType, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         var previousText = NormalizeCandidateText(previousCandidate.Text);
         var currentText = NormalizeCandidateText(currentCandidate.Text);
         if (!string.IsNullOrEmpty(previousText) &&
@@ -3408,6 +3425,80 @@ public class TpTask
                Math.Abs(previousCandidate.ClickRect.Height - currentCandidate.ClickRect.Height) <= MapChooseCandidatePositionTolerancePx;
     }
 
+    private MapChooseCandidate? GetMapChooseCandidateByTargetText(
+        ImageRegion imageRegion,
+        GiTpPosition? targetTp)
+    {
+        if (targetTp == null)
+        {
+            return null;
+        }
+
+        var targetName = NormalizeCandidateText(targetTp.Name ?? string.Empty);
+        if (string.IsNullOrEmpty(targetName))
+        {
+            return null;
+        }
+
+        var assetScale = imageRegion.Width / 1920d;
+        var textSearchRect = new Rect(
+            _assets.MapChooseIconRoi.Right - (int)Math.Round(12 * assetScale),
+            _assets.MapChooseIconRoi.Y,
+            (int)Math.Round(460 * assetScale),
+            _assets.MapChooseIconRoi.Height).ClampTo(imageRegion.SrcMat);
+        if (textSearchRect.Width <= 0 || textSearchRect.Height <= 0)
+        {
+            return null;
+        }
+
+        var textRegions = imageRegion.FindMulti(RecognitionObject.Ocr(textSearchRect));
+
+        try
+        {
+            var matchedRegions = textRegions
+                .Where(region =>
+                {
+                    var optionName = NormalizeCandidateText(region.Text);
+                    return !string.IsNullOrEmpty(optionName) &&
+                           (optionName == targetName || optionName.Contains(targetName) || targetName.Contains(optionName));
+                })
+                .ToList();
+            if (matchedRegions.Count != 1)
+            {
+                return null;
+            }
+
+            var matchedRegion = matchedRegions[0];
+            var horizontalPadding = (int)Math.Round(12 * assetScale);
+            var verticalPadding = (int)Math.Round(8 * assetScale);
+            var minClickWidth = (int)Math.Round(220 * assetScale);
+            var textRect = matchedRegion.ToRect().ClampTo(imageRegion.SrcMat);
+            var clickRect = new Rect(
+                textRect.X - horizontalPadding,
+                textRect.Y - verticalPadding,
+                Math.Max(minClickWidth, textRect.Width + horizontalPadding * 2),
+                textRect.Height + verticalPadding * 2).ClampTo(imageRegion.SrcMat);
+
+            return new MapChooseCandidate
+            {
+                IconFileName = string.Empty,
+                IconType = string.Empty,
+                Text = CleanCandidateText(matchedRegion.Text),
+                IconRect = new Rect(
+                    _assets.MapChooseIconRoi.X,
+                    clickRect.Y,
+                    _assets.MapChooseIconRoi.Width,
+                    clickRect.Height),
+                TextRect = textRect,
+                ClickRect = clickRect,
+            };
+        }
+        finally
+        {
+            textRegions.ForEach(region => region.Dispose());
+        }
+    }
+
     private List<MapChooseCandidate> GetMapChooseCandidates(ImageRegion imageRegion)
     {
         var candidates = new List<MapChooseCandidate>();
@@ -3419,6 +3510,7 @@ public class TpTask
         for (var i = 0; i < _assets.MapChooseIconGreyMatList.Count; i++)
         {
             var iconFileName = GetMapChooseIconFileName(_assets.MapChooseIconRoList[i]);
+            var iconType = GetMapChooseIconType(iconFileName);
             var iconRects = MatchTemplateHelper.MatchOnePicForOnePic(
                 mapChooseIconRoi,
                 _assets.MapChooseIconGreyMatList[i],
@@ -3437,7 +3529,7 @@ public class TpTask
                     continue;
                 }
 
-                var textRect = new Rect(iconRect.X + iconRect.Width, iconRect.Y - 8, 200, iconRect.Height + 16).ClampTo(imageRegion.SrcMat);
+                var textRect = new Rect(iconRect.X + iconRect.Width, iconRect.Y - 8, 320, iconRect.Height + 16).ClampTo(imageRegion.SrcMat);
                 if (textRect.Width <= 0 || textRect.Height <= 0)
                 {
                     continue;
@@ -3449,8 +3541,9 @@ public class TpTask
                     using var textRegion = textRa.Find(new RecognitionObject
                     {
                         RecognitionType = isHdrCapture ? RecognitionTypes.Ocr : RecognitionTypes.ColorRangeAndOcr,
-                        LowerColor = new Scalar(249, 249, 249),
-                        UpperColor = new Scalar(255, 255, 255),
+                        ColorConversionCode = ColorConversionCodes.BGR2HLS,
+                        LowerColor = new Scalar(0, 245, 0),
+                        UpperColor = new Scalar(180, 255, 15),
                     });
                     text = CleanCandidateText(textRegion.Text);
                 }
@@ -3472,15 +3565,23 @@ public class TpTask
                 var clickRect = new Rect(textRect.X, textRect.Y, Math.Min(textRect.Width, 220), textRect.Height).ClampTo(imageRegion.SrcMat);
                 candidates.Add(new MapChooseCandidate
                 {
+                    IconFileName = iconFileName,
+                    IconType = iconType,
                     Text = text,
                     IconRect = iconRect,
+                    TextRect = textRect,
                     ClickRect = clickRect,
-                    IconTemplateName = iconFileName,
                 });
             }
         }
 
         var orderedCandidates = candidates.OrderBy(x => x.IconRect.Y).ToList();
+        for (var i = 0; i < orderedCandidates.Count; i++)
+        {
+            orderedCandidates[i].Index = i + 1;
+            orderedCandidates[i].SelectedIndicatorScore = GetMapChooseSelectedIndicatorScore(imageRegion, orderedCandidates[i]);
+        }
+
         if (orderedCandidates.Count > 0)
         {
             Logger.LogDebug(
@@ -3496,6 +3597,137 @@ public class TpTask
         }
 
         return orderedCandidates;
+    }
+
+    private MapChooseCandidate? ChooseMapCandidate(
+        List<MapChooseCandidate> candidates,
+        GiTpPosition? targetTp)
+    {
+        var exactNameCandidate = ChooseMapCandidateByExactName(candidates, targetTp);
+        if (exactNameCandidate != null)
+        {
+            return exactNameCandidate;
+        }
+
+        if (ShouldRequireMapChooseCandidateName(targetTp))
+        {
+            return null;
+        }
+
+        var highlighted = ChooseMapCandidateByHighlight(candidates);
+        var compatibleCandidates = targetTp == null
+            ? new List<MapChooseCandidate>()
+            : candidates.Where(x => IsCandidateCompatibleWithTarget(x, targetTp)).ToList();
+
+        MapChooseCandidate? chosen = null;
+        if (highlighted != null && IsCandidateCompatibleWithTarget(highlighted, targetTp))
+        {
+            chosen = highlighted;
+        }
+
+        if (chosen == null && compatibleCandidates.Count == 1)
+        {
+            chosen = compatibleCandidates[0];
+        }
+
+        if (chosen == null && highlighted != null)
+        {
+            chosen = highlighted;
+        }
+
+        if (chosen == null)
+        {
+            chosen = ChooseUniqueCompatibleMapCandidate(candidates, targetTp);
+        }
+
+        if (chosen == null)
+        {
+            chosen = candidates.OrderBy(x => x.IconRect.Y).FirstOrDefault();
+        }
+
+        return chosen;
+    }
+
+    private bool ShouldRequireMapChooseCandidateName(GiTpPosition? targetTp)
+    {
+        return targetTp != null &&
+               !string.IsNullOrWhiteSpace(targetTp.Name) &&
+               GetMapIconTypesForTargetType(targetTp.Type ?? string.Empty).Count == 0;
+    }
+
+    private static MapChooseCandidate? ChooseMapCandidateByExactName(List<MapChooseCandidate> candidates, GiTpPosition? targetTp)
+    {
+        if (targetTp == null)
+        {
+            return null;
+        }
+
+        var targetName = NormalizeCandidateText(targetTp.Name ?? string.Empty);
+        if (string.IsNullOrEmpty(targetName))
+        {
+            return null;
+        }
+
+        var exactNameCandidates = candidates
+            .Where(x => NormalizeCandidateText(x.Text) == targetName)
+            .ToList();
+        return exactNameCandidates.Count == 1
+            ? exactNameCandidates[0]
+            : null;
+    }
+
+    private static MapChooseCandidate? ChooseMapCandidateByHighlight(List<MapChooseCandidate> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        const int minSelectedScore = 18;
+        const int minScoreGap = 10;
+        var ordered = candidates.OrderByDescending(x => x.SelectedIndicatorScore).ToList();
+        var best = ordered[0];
+        var secondScore = ordered.Count > 1 ? ordered[1].SelectedIndicatorScore : 0;
+        return best.SelectedIndicatorScore >= minSelectedScore &&
+               best.SelectedIndicatorScore >= secondScore + minScoreGap
+            ? best
+            : null;
+    }
+
+    private static MapChooseCandidate? ChooseUniqueCompatibleMapCandidate(List<MapChooseCandidate> candidates, GiTpPosition? targetTp)
+    {
+        if (targetTp == null)
+        {
+            return null;
+        }
+
+        var compatibleCandidates = candidates.Where(x => IsCandidateCompatibleWithTarget(x, targetTp)).ToList();
+        if (compatibleCandidates.Count == 1)
+        {
+            return compatibleCandidates[0];
+        }
+
+        return null;
+    }
+
+    private static bool IsCandidateCompatibleWithTarget(MapChooseCandidate candidate, GiTpPosition? targetTp)
+    {
+        if (targetTp == null)
+        {
+            return true;
+        }
+
+        var targetType = targetTp.Type ?? string.Empty;
+        if (!string.IsNullOrEmpty(targetType) && IsMapChooseIconTypeMatch(candidate.IconType, targetType))
+        {
+            return true;
+        }
+
+        var optionText = NormalizeCandidateText(candidate.Text);
+        var targetName = NormalizeCandidateText(targetTp.Name ?? string.Empty);
+        return !string.IsNullOrEmpty(optionText) &&
+               !string.IsNullOrEmpty(targetName) &&
+               (optionText == targetName || optionText.Contains(targetName) || targetName.Contains(optionText));
     }
 
     private static bool IsMapChooseIconTypeMatch(string iconType, string targetType)
@@ -3537,6 +3769,39 @@ public class TpTask
             Math.Abs(candidate.IconRect.Y - iconRect.Y) <= 6);
     }
 
+    private static int GetMapChooseSelectedIndicatorScore(ImageRegion imageRegion, MapChooseCandidate candidate)
+    {
+        var centerY = candidate.IconRect.Y + candidate.IconRect.Height / 2d;
+        var indicatorRect = new Rect(
+            candidate.IconRect.X - 70,
+            (int)Math.Round(centerY - 24),
+            60,
+            48).ClampTo(imageRegion.SrcMat);
+        if (indicatorRect.Width <= 0 || indicatorRect.Height <= 0)
+        {
+            return 0;
+        }
+
+        using var indicatorMat = new Mat(imageRegion.SrcMat, indicatorRect);
+        using var gray = new Mat();
+        switch (indicatorMat.Channels())
+        {
+            case 4:
+                Cv2.CvtColor(indicatorMat, gray, ColorConversionCodes.BGRA2GRAY);
+                break;
+            case 3:
+                Cv2.CvtColor(indicatorMat, gray, ColorConversionCodes.BGR2GRAY);
+                break;
+            default:
+                indicatorMat.CopyTo(gray);
+                break;
+        }
+
+        using var brightMask = new Mat();
+        Cv2.Threshold(gray, brightMask, 210, 255, ThresholdTypes.Binary);
+        return Cv2.CountNonZero(brightMask);
+    }
+
     private static void ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
@@ -3561,9 +3826,10 @@ public class TpTask
             return "无";
         }
 
+        var displayIndex = candidate.Index > 0 ? candidate.Index : index + 1;
         var text = string.IsNullOrWhiteSpace(candidate.Text) ? "未识别" : candidate.Text;
         return
-            $"#{index + 1} text={text} template={candidate.IconTemplateName} iconY={candidate.IconRect.Y} click=({candidate.ClickRect.X + candidate.ClickRect.Width / 2},{candidate.ClickRect.Y + candidate.ClickRect.Height / 2})";
+            $"#{displayIndex} type={candidate.IconType} text={text} template={candidate.IconFileName} score={candidate.SelectedIndicatorScore} iconY={candidate.IconRect.Y} click=({candidate.ClickRect.X + candidate.ClickRect.Width / 2},{candidate.ClickRect.Y + candidate.ClickRect.Height / 2})";
     }
 
     private static string FormatMapChooseCandidateList(IReadOnlyList<MapChooseCandidate> candidates)
