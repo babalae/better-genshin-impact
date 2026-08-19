@@ -857,12 +857,6 @@ public class TpTask
                     out var clickY,
                     out failureReason))
             {
-                Logger.LogInformation(
-                    "地图点选完成：{Target} screen=({ClickX:0.0},{ClickY:0.0}) attempt={Attempt}，等待传送面板",
-                    GetTeleportTargetLogText(target),
-                    clickX,
-                    clickY,
-                    attempt + 1);
                 clickCapture.ClickTo(clickX, clickY);
                 return;
             }
@@ -924,27 +918,15 @@ public class TpTask
     {
         for (var pointAttempt = 0; pointAttempt < 3; pointAttempt++)
         {
-            Logger.LogDebug(
-                "传送面板确认轮次 #{Attempt}/3：{Target}",
-                pointAttempt + 1,
-                GetTeleportTargetLogText(target));
-
             if (pointAttempt > 0)
             {
-                Logger.LogDebug("传送面板确认轮次 #{Attempt}：重新点选地图目标", pointAttempt + 1);
                 await ClickTargetMapPoint(target);
             }
 
             if (await WaitForTeleportPanelAndConfirm(target.TargetTp))
             {
-                Logger.LogDebug("传送面板确认轮次 #{Attempt}：确认成功", pointAttempt + 1);
                 return;
             }
-
-            Logger.LogWarning(
-                "传送面板确认轮次 #{Attempt}：未确认成功，{NextAction}",
-                pointAttempt + 1,
-                pointAttempt + 1 >= 3 ? "放弃重试" : "将重新点选地图目标");
         }
 
         throw new TpPointNotActivate("等待传送点交互面板超时");
@@ -954,11 +936,6 @@ public class TpTask
     {
         var timeoutMilliseconds = GetTeleportPanelTimeoutMilliseconds();
         var initialDelayMs = GetTeleportPanelInitialDelayMilliseconds();
-        Logger.LogDebug(
-            "等待传送面板：点选后先等待 {InitialDelayMs}ms 再检查按 F 页面，timeout={TimeoutMs}ms target={Target}",
-            initialDelayMs,
-            timeoutMilliseconds,
-            GetTeleportPointDebugText(targetTp));
         if (initialDelayMs > 0)
         {
             await Delay(initialDelayMs, ct);
@@ -974,14 +951,6 @@ public class TpTask
 
             using var teleportCapture = CaptureToRectArea();
             var result = await HandleTeleportPanel(teleportCapture, targetTp);
-            Logger.LogDebug(
-                "等待传送面板 poll #{Poll} elapsed={ElapsedMs}ms/{TimeoutMs}ms initialDelay={InitialDelayMs}ms target={Target} result={Result}",
-                i + 1,
-                stopwatch.ElapsedMilliseconds,
-                timeoutMilliseconds,
-                initialDelayMs,
-                GetTeleportPointDebugText(targetTp),
-                result);
             switch (result)
             {
                 case TeleportPanelResult.Confirmed:
@@ -991,11 +960,6 @@ public class TpTask
             }
         }
 
-        Logger.LogWarning(
-            "等待传送面板超时：elapsed={ElapsedMs}ms timeout={TimeoutMs}ms target={Target}",
-            stopwatch.ElapsedMilliseconds,
-            timeoutMilliseconds,
-            GetTeleportPointDebugText(targetTp));
         return false;
     }
 
@@ -2618,70 +2582,35 @@ public class TpTask
         ImageRegion imageRegion,
         GiTpPosition? targetTp)
     {
-        var targetText = GetTeleportPointDebugText(targetTp);
         var isInBigMapUi = Bv.IsInBigMapUi(imageRegion);
-        Logger.LogDebug(
-            "传送面板检测：target={Target} bigMapUi={InBigMapUi}",
-            targetText,
-            isInBigMapUi);
         if (!isInBigMapUi)
         {
-            Logger.LogDebug("传送面板检测：已离开大地图，视为传送确认完成");
             return TeleportPanelResult.Confirmed;
         }
 
         var teleportButton = imageRegion.Find(GetQuickTeleportRecognitionObject("TeleportButton", imageRegion));
         using var ownedTeleportButton = teleportButton;
-        var hasTeleportButton = !teleportButton.IsEmpty();
-        Logger.LogDebug(
-            "传送面板检测：target={Target} teleportButton={HasTeleportButton} buttonRect=({X},{Y},{Width},{Height})",
-            targetText,
-            hasTeleportButton,
-            teleportButton.X,
-            teleportButton.Y,
-            teleportButton.Width,
-            teleportButton.Height);
-        if (hasTeleportButton)
+        if (!teleportButton.IsEmpty())
         {
-            Logger.LogInformation("传送面板检测：找到传送按钮，按 F 确认 target={Target}", targetText);
             PressTeleportConfirmKey();
             return TeleportPanelResult.Confirmed;
         }
 
-        var candidates = GetMapChooseCandidates(imageRegion);
-        var preferredCandidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
-        Logger.LogDebug(
-            "候选列表快照 stage={Stage} target={Target} count={Count} preferred={PreferredCandidate} items=[{Items}]",
-            "进入候选流程前",
-            targetText,
-            candidates.Count,
-            FormatMapChooseCandidateSummary(preferredCandidate, 0),
-            FormatMapChooseCandidateList(candidates));
-        if (preferredCandidate == null)
+        // 传送按钮尚未出现，且没有与目标匹配的有效候选：继续等待，避免把地图 UI 误匹配当候选点。
+        if (GetPreferredMapChooseCandidate(imageRegion, targetTp) == null)
         {
-            // 传送按钮尚未出现，或暂无与目标匹配的有效候选：继续等待。
-            Logger.LogDebug(
-                "传送面板检测：未找到传送按钮，也无匹配的有效候选项，继续等待 target={Target} candidateCount={CandidateCount}",
-                targetText,
-                candidates.Count);
             return TeleportPanelResult.Waiting;
         }
 
-        Logger.LogInformation(
-            "传送面板检测：未找到传送按钮，进入候选列表流程 target={Target} candidateCount={CandidateCount} preferred={PreferredCandidate}",
-            targetText,
-            candidates.Count,
-            FormatMapChooseCandidateSummary(preferredCandidate, 0));
         var candidate = await CheckMapChooseIcon(imageRegion, targetTp, 1);
         if (candidate == null)
         {
-            Logger.LogDebug("传送面板检测：候选列表未就绪，继续等待 target={Target}", targetText);
             return TeleportPanelResult.Waiting;
         }
 
         for (var clickAttempt = 1; clickAttempt <= MapChooseCandidateClickRetryCount; clickAttempt++)
         {
-            var result = await WaitAndPressTeleportConfirm(targetTp, clickAttempt);
+            var result = await WaitAndPressTeleportConfirm(targetTp);
             if (result == TeleportPanelResult.Confirmed)
             {
                 return result;
@@ -2708,9 +2637,8 @@ public class TpTask
         return TeleportPanelResult.RetryPoint;
     }
 
-    private async Task<TeleportPanelResult> WaitAndPressTeleportConfirm(GiTpPosition? targetTp, int clickAttempt)
+    private async Task<TeleportPanelResult> WaitAndPressTeleportConfirm(GiTpPosition? targetTp)
     {
-        var targetText = GetTeleportPointDebugText(targetTp);
         var stopwatch = Stopwatch.StartNew();
         var candidateStillVisibleChecks = 0;
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
@@ -2727,12 +2655,6 @@ public class TpTask
 
             if (!isInBigMapUi)
             {
-                Logger.LogDebug(
-                    "候选点击后确认 poll #{Poll} elapsed={ElapsedMs}ms：已离开大地图 target={Target} clickAttempt={ClickAttempt}",
-                    i + 1,
-                    stopwatch.ElapsedMilliseconds,
-                    targetText,
-                    clickAttempt);
                 return TeleportPanelResult.Confirmed;
             }
 
@@ -2740,39 +2662,18 @@ public class TpTask
             using var ownedTeleportButton = teleportButton;
             if (!teleportButton.IsEmpty())
             {
-                Logger.LogInformation(
-                    "候选点击后确认 poll #{Poll} elapsed={ElapsedMs}ms：找到传送按钮，按 F target={Target} clickAttempt={ClickAttempt}",
-                    i + 1,
-                    stopwatch.ElapsedMilliseconds,
-                    targetText,
-                    clickAttempt);
                 PressTeleportConfirmKey();
                 return TeleportPanelResult.Confirmed;
             }
 
             if (stopwatch.ElapsedMilliseconds >= nextCandidateVerificationAt)
             {
-                var candidates = GetMapChooseCandidates(screen);
                 var candidate = GetPreferredMapChooseCandidate(screen, targetTp);
-                Logger.LogDebug(
-                    "候选点击后确认 poll #{Poll} elapsed={ElapsedMs}ms：传送按钮仍不可见 target={Target} clickAttempt={ClickAttempt} candidateCount={CandidateCount} preferred={PreferredCandidate}",
-                    i + 1,
-                    stopwatch.ElapsedMilliseconds,
-                    targetText,
-                    clickAttempt,
-                    candidates.Count,
-                    FormatMapChooseCandidateSummary(candidate, 0));
                 if (candidate != null)
                 {
                     candidateStillVisibleChecks++;
                     if (candidateStillVisibleChecks >= MapChooseCandidateStableChecks)
                     {
-                        Logger.LogWarning(
-                            "候选点击后确认：候选列表仍稳定可见 {StableChecks} 次，判定点击未生效 target={Target} clickAttempt={ClickAttempt} preferred={PreferredCandidate}",
-                            candidateStillVisibleChecks,
-                            targetText,
-                            clickAttempt,
-                            FormatMapChooseCandidateSummary(candidate, 0));
                         return TeleportPanelResult.RetryPoint;
                     }
                 }
@@ -2786,11 +2687,6 @@ public class TpTask
             }
         }
 
-        Logger.LogWarning(
-            "候选点击后确认超时：elapsed={ElapsedMs}ms target={Target} clickAttempt={ClickAttempt}",
-            stopwatch.ElapsedMilliseconds,
-            targetText,
-            clickAttempt);
         return TeleportPanelResult.RetryPoint;
     }
 
@@ -3308,22 +3204,11 @@ public class TpTask
         GiTpPosition? targetTp,
         int clickAttempt)
     {
-        var targetText = GetTeleportPointDebugText(targetTp);
         var previousCandidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
         if (previousCandidate == null)
         {
-            Logger.LogDebug(
-                "候选列表检测 #{Attempt}：未识别到匹配候选项 target={Target}",
-                clickAttempt,
-                targetText);
             return null;
         }
-
-        Logger.LogDebug(
-            "候选列表检测 #{Attempt}：preferred={PreferredCandidate} target={Target}",
-            clickAttempt,
-            FormatMapChooseCandidateSummary(previousCandidate, 0),
-            targetText);
 
         var stableChecks = 1;
         var stopwatch = Stopwatch.StartNew();
@@ -3334,29 +3219,15 @@ public class TpTask
             var currentCandidate = GetPreferredMapChooseCandidate(stableImageRegion, targetTp);
             if (currentCandidate == null)
             {
-                Logger.LogDebug(
-                    "候选列表稳定检测 #{Attempt} elapsed={ElapsedMs}ms：候选项消失 stableChecks={StableChecks} target={Target}",
-                    clickAttempt,
-                    stopwatch.ElapsedMilliseconds,
-                    stableChecks,
-                    targetText);
                 previousCandidate = null;
                 stableChecks = 0;
                 continue;
             }
 
-            var isSameCandidate = previousCandidate != null &&
-                                  IsSameStableMapChooseCandidate(previousCandidate, currentCandidate);
-            stableChecks = isSameCandidate ? stableChecks + 1 : 1;
-            Logger.LogDebug(
-                "候选列表稳定检测 #{Attempt} elapsed={ElapsedMs}ms stableChecks={StableChecks}/{RequiredStableChecks} sameAsPrevious={SameAsPrevious} current={CurrentCandidate} target={Target}",
-                clickAttempt,
-                stopwatch.ElapsedMilliseconds,
-                stableChecks,
-                MapChooseCandidateStableChecks,
-                isSameCandidate,
-                FormatMapChooseCandidateSummary(currentCandidate, 0),
-                targetText);
+            stableChecks = previousCandidate != null &&
+                           IsSameStableMapChooseCandidate(previousCandidate, currentCandidate)
+                ? stableChecks + 1
+                : 1;
             previousCandidate = currentCandidate;
             if (stableChecks < MapChooseCandidateStableChecks)
             {
@@ -3364,9 +3235,8 @@ public class TpTask
             }
 
             Logger.LogInformation(
-                "地图候选点击 #{Attempt}：target={Target} type={IconType} text={Text} icon=({IconX},{IconY},{IconWidth},{IconHeight}) click=({ClickX},{ClickY}) stable={StableChecks} elapsed={ElapsedMs}ms",
+                "地图候选点击 #{Attempt}：type={IconType} text={Text} icon=({IconX},{IconY},{IconWidth},{IconHeight}) click=({ClickX},{ClickY}) stable={StableChecks}",
                 clickAttempt,
-                targetText,
                 currentCandidate.IconType,
                 string.IsNullOrWhiteSpace(currentCandidate.Text) ? "未识别" : currentCandidate.Text,
                 currentCandidate.IconRect.X,
@@ -3375,17 +3245,12 @@ public class TpTask
                 currentCandidate.IconRect.Height,
                 currentCandidate.ClickRect.X + currentCandidate.ClickRect.Width / 2,
                 currentCandidate.ClickRect.Y + currentCandidate.ClickRect.Height / 2,
-                stableChecks,
-                stopwatch.ElapsedMilliseconds);
+                stableChecks);
             ClickMapChooseCandidate(stableImageRegion, currentCandidate);
             return currentCandidate;
         }
 
-        Logger.LogWarning(
-            "地图候选位置在 {Timeout}ms 内未稳定 target={Target} clickAttempt={ClickAttempt}",
-            MapChooseCandidateStableTimeoutMs,
-            targetText,
-            clickAttempt);
+        Logger.LogWarning("地图候选位置在 {Timeout}ms 内未稳定", MapChooseCandidateStableTimeoutMs);
         return null;
     }
 
@@ -3551,14 +3416,6 @@ public class TpTask
                 // 真实候选行一定有选项文字。无文字/单字匹配多半是地图 UI 误匹配（如 Domain.png），不能点。
                 if (text.Length <= 1)
                 {
-                    Logger.LogDebug(
-                        "候选列表丢弃无效匹配：template={Template} text={Text} icon=({IconX},{IconY},{IconWidth},{IconHeight})",
-                        iconFileName,
-                        string.IsNullOrWhiteSpace(text) ? "未识别" : text,
-                        iconRect.X,
-                        iconRect.Y,
-                        iconRect.Width,
-                        iconRect.Height);
                     continue;
                 }
 
@@ -3580,20 +3437,6 @@ public class TpTask
         {
             orderedCandidates[i].Index = i + 1;
             orderedCandidates[i].SelectedIndicatorScore = GetMapChooseSelectedIndicatorScore(imageRegion, orderedCandidates[i]);
-        }
-
-        if (orderedCandidates.Count > 0)
-        {
-            Logger.LogDebug(
-                "候选列表扫描：count={Count} threshold={Threshold:0.00} hdr={IsHdrCapture} roi=({RoiX},{RoiY},{RoiWidth},{RoiHeight}) items=[{Items}]",
-                orderedCandidates.Count,
-                threshold,
-                isHdrCapture,
-                _assets.MapChooseIconRoi.X,
-                _assets.MapChooseIconRoi.Y,
-                _assets.MapChooseIconRoi.Width,
-                _assets.MapChooseIconRoi.Height,
-                FormatMapChooseCandidateList(orderedCandidates));
         }
 
         return orderedCandidates;
@@ -3805,41 +3648,6 @@ public class TpTask
     private static void ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
-    }
-
-    private static string GetTeleportPointDebugText(GiTpPosition? targetTp)
-    {
-        if (targetTp == null)
-        {
-            return "未知目标";
-        }
-
-        var name = string.IsNullOrWhiteSpace(targetTp.Name) ? "未命名" : targetTp.Name.Trim();
-        var type = string.IsNullOrWhiteSpace(targetTp.Type) ? "未知类型" : targetTp.Type.Trim();
-        return $"id={targetTp.Id} type={type} name={name} pos=({targetTp.X:0.0},{targetTp.Y:0.0})";
-    }
-
-    private static string FormatMapChooseCandidateSummary(MapChooseCandidate? candidate, int index)
-    {
-        if (candidate == null)
-        {
-            return "无";
-        }
-
-        var displayIndex = candidate.Index > 0 ? candidate.Index : index + 1;
-        var text = string.IsNullOrWhiteSpace(candidate.Text) ? "未识别" : candidate.Text;
-        return
-            $"#{displayIndex} type={candidate.IconType} text={text} template={candidate.IconFileName} score={candidate.SelectedIndicatorScore} iconY={candidate.IconRect.Y} click=({candidate.ClickRect.X + candidate.ClickRect.Width / 2},{candidate.ClickRect.Y + candidate.ClickRect.Height / 2})";
-    }
-
-    private static string FormatMapChooseCandidateList(IReadOnlyList<MapChooseCandidate> candidates)
-    {
-        if (candidates.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        return string.Join("; ", candidates.Select((candidate, index) => FormatMapChooseCandidateSummary(candidate, index)));
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)
