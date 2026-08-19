@@ -85,10 +85,6 @@ public class TpTask
     private const double AbsoluteMapClickZoomRecoveryStep = 0.7d;
     private const int AbsoluteMapClickRetryCount = 3;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
-    private const int MapChooseCandidatePollIntervalMs = 40;
-    private const int MapChooseCandidateStableTimeoutMs = 800;
-    private const int MapChooseCandidateStableChecks = 2;
-    private const int MapChooseCandidatePositionTolerancePx = 4;
     private const int MapChooseCandidateClickRetryCount = 2;
     private const int MapChooseCandidateClickVerificationDelayMs = 600;
     private const int MapChooseCandidateClickVerificationIntervalMs = 100;
@@ -108,8 +104,8 @@ public class TpTask
     private const int TeleportTimeoutMs = 60_000;
     private const int TeleportLoadingPollIntervalMs = 100;
     private const int TeleportMinimumCompletionMs = 1000;
-    private const int TeleportLoadingStableNonUiChecks = 2;
-    private const int TeleportCompletionStableMainUiChecks = 3;
+    private const int TeleportLoadingStableNonUiChecks = 1;
+    private const int TeleportCompletionStableMainUiChecks = 1;
     private const int BlessingCheckIntervalMs = 1000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
@@ -127,7 +123,6 @@ public class TpTask
         public required Rect IconRect { get; init; }
         public required Rect TextRect { get; init; }
         public required Rect ClickRect { get; init; }
-        public int SelectedIndicatorScore { get; set; }
     }
 
     private sealed class NearbyMapIcon
@@ -2597,12 +2592,8 @@ public class TpTask
         }
 
         // 传送按钮尚未出现，且没有与目标匹配的有效候选：继续等待，避免把地图 UI 误匹配当候选点。
-        if (GetPreferredMapChooseCandidate(imageRegion, targetTp) == null)
-        {
-            return TeleportPanelResult.Waiting;
-        }
-
-        var candidate = await CheckMapChooseIcon(imageRegion, targetTp, 1);
+        // 传统模板/OCR 对同一帧结果确定，识别一次即可，不必再做稳定复检。
+        var candidate = TryClickMapChooseCandidate(imageRegion, targetTp, 1);
         if (candidate == null)
         {
             return TeleportPanelResult.Waiting;
@@ -2627,7 +2618,7 @@ public class TpTask
             }
 
             using var retryCapture = CaptureToRectArea();
-            candidate = await CheckMapChooseIcon(retryCapture, targetTp, clickAttempt + 1);
+            candidate = TryClickMapChooseCandidate(retryCapture, targetTp, clickAttempt + 1);
             if (candidate == null)
             {
                 return TeleportPanelResult.RetryPoint;
@@ -2640,7 +2631,6 @@ public class TpTask
     private async Task<TeleportPanelResult> WaitAndPressTeleportConfirm(GiTpPosition? targetTp)
     {
         var stopwatch = Stopwatch.StartNew();
-        var candidateStillVisibleChecks = 0;
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
@@ -2668,18 +2658,10 @@ public class TpTask
 
             if (stopwatch.ElapsedMilliseconds >= nextCandidateVerificationAt)
             {
-                var candidate = GetPreferredMapChooseCandidate(screen, targetTp);
-                if (candidate != null)
+                // 同一截图识别一次即可；列表仍在则视为点击未生效。
+                if (GetPreferredMapChooseCandidate(screen, targetTp) != null)
                 {
-                    candidateStillVisibleChecks++;
-                    if (candidateStillVisibleChecks >= MapChooseCandidateStableChecks)
-                    {
-                        return TeleportPanelResult.RetryPoint;
-                    }
-                }
-                else
-                {
-                    candidateStillVisibleChecks = 0;
+                    return TeleportPanelResult.RetryPoint;
                 }
 
                 nextCandidateVerificationAt = stopwatch.ElapsedMilliseconds +
@@ -3197,97 +3179,34 @@ public class TpTask
     }
 
     /// <summary>
-    /// 识别候选列表，并尽量选择与目标坐标对应的实际传送点。
+    /// 识别候选列表一次并点击；模板/OCR 对同一帧结果确定，不做稳定复检。
     /// </summary>
-    private async Task<MapChooseCandidate?> CheckMapChooseIcon(
+    private MapChooseCandidate? TryClickMapChooseCandidate(
         ImageRegion imageRegion,
         GiTpPosition? targetTp,
         int clickAttempt)
     {
-        var previousCandidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
-        if (previousCandidate == null)
+        var candidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
+        if (candidate == null)
         {
             return null;
         }
 
-        var stableChecks = 1;
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < MapChooseCandidateStableTimeoutMs)
-        {
-            await Delay(MapChooseCandidatePollIntervalMs, ct);
-            using var stableImageRegion = CaptureToRectArea();
-            var currentCandidate = GetPreferredMapChooseCandidate(stableImageRegion, targetTp);
-            if (currentCandidate == null)
-            {
-                previousCandidate = null;
-                stableChecks = 0;
-                continue;
-            }
-
-            stableChecks = previousCandidate != null &&
-                           IsSameStableMapChooseCandidate(previousCandidate, currentCandidate)
-                ? stableChecks + 1
-                : 1;
-            previousCandidate = currentCandidate;
-            if (stableChecks < MapChooseCandidateStableChecks)
-            {
-                continue;
-            }
-
-            Logger.LogInformation(
-                "地图候选点击 #{Attempt}：type={IconType} text={Text} icon=({IconX},{IconY},{IconWidth},{IconHeight}) click=({ClickX},{ClickY}) stable={StableChecks}",
-                clickAttempt,
-                currentCandidate.IconType,
-                string.IsNullOrWhiteSpace(currentCandidate.Text) ? "未识别" : currentCandidate.Text,
-                currentCandidate.IconRect.X,
-                currentCandidate.IconRect.Y,
-                currentCandidate.IconRect.Width,
-                currentCandidate.IconRect.Height,
-                currentCandidate.ClickRect.X + currentCandidate.ClickRect.Width / 2,
-                currentCandidate.ClickRect.Y + currentCandidate.ClickRect.Height / 2,
-                stableChecks);
-            ClickMapChooseCandidate(stableImageRegion, currentCandidate);
-            return currentCandidate;
-        }
-
-        Logger.LogWarning("地图候选位置在 {Timeout}ms 内未稳定", MapChooseCandidateStableTimeoutMs);
-        return null;
+        ClickMapChooseCandidate(imageRegion, candidate);
+        return candidate;
     }
 
     private MapChooseCandidate? GetPreferredMapChooseCandidate(
         ImageRegion imageRegion,
         GiTpPosition? targetTp)
     {
-        if (ShouldRequireMapChooseCandidateName(targetTp))
+        var candidates = GetMapChooseCandidates(imageRegion);
+        if (candidates.Count > 0)
         {
-            return GetMapChooseCandidateByTargetText(imageRegion, targetTp);
+            return ChooseMapCandidate(candidates, targetTp);
         }
 
-        return ChooseMapCandidate(GetMapChooseCandidates(imageRegion), targetTp);
-    }
-
-    private static bool IsSameStableMapChooseCandidate(
-        MapChooseCandidate previousCandidate,
-        MapChooseCandidate currentCandidate)
-    {
-        if (!string.Equals(previousCandidate.IconType, currentCandidate.IconType, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        var previousText = NormalizeCandidateText(previousCandidate.Text);
-        var currentText = NormalizeCandidateText(currentCandidate.Text);
-        if (!string.IsNullOrEmpty(previousText) &&
-            !string.IsNullOrEmpty(currentText) &&
-            !string.Equals(previousText, currentText, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        return Math.Abs(previousCandidate.ClickRect.X - currentCandidate.ClickRect.X) <= MapChooseCandidatePositionTolerancePx &&
-               Math.Abs(previousCandidate.ClickRect.Y - currentCandidate.ClickRect.Y) <= MapChooseCandidatePositionTolerancePx &&
-               Math.Abs(previousCandidate.ClickRect.Width - currentCandidate.ClickRect.Width) <= MapChooseCandidatePositionTolerancePx &&
-               Math.Abs(previousCandidate.ClickRect.Height - currentCandidate.ClickRect.Height) <= MapChooseCandidatePositionTolerancePx;
+        return GetMapChooseCandidateByTargetText(imageRegion, targetTp);
     }
 
     private MapChooseCandidate? GetMapChooseCandidateByTargetText(
@@ -3436,7 +3355,6 @@ public class TpTask
         for (var i = 0; i < orderedCandidates.Count; i++)
         {
             orderedCandidates[i].Index = i + 1;
-            orderedCandidates[i].SelectedIndicatorScore = GetMapChooseSelectedIndicatorScore(imageRegion, orderedCandidates[i]);
         }
 
         return orderedCandidates;
@@ -3446,131 +3364,50 @@ public class TpTask
         List<MapChooseCandidate> candidates,
         GiTpPosition? targetTp)
     {
-        var exactNameCandidate = ChooseMapCandidateByExactName(candidates, targetTp);
-        if (exactNameCandidate != null)
-        {
-            return exactNameCandidate;
-        }
-
-        if (ShouldRequireMapChooseCandidateName(targetTp))
-        {
-            return null;
-        }
-
-        var highlighted = ChooseMapCandidateByHighlight(candidates);
-        var compatibleCandidates = targetTp == null
-            ? new List<MapChooseCandidate>()
-            : candidates.Where(x => IsCandidateCompatibleWithTarget(x, targetTp)).ToList();
-
-        MapChooseCandidate? chosen = null;
-        if (highlighted != null && IsCandidateCompatibleWithTarget(highlighted, targetTp))
-        {
-            chosen = highlighted;
-        }
-
-        if (chosen == null && compatibleCandidates.Count == 1)
-        {
-            chosen = compatibleCandidates[0];
-        }
-
-        if (chosen == null && highlighted != null)
-        {
-            chosen = highlighted;
-        }
-
-        if (chosen == null)
-        {
-            chosen = ChooseUniqueCompatibleMapCandidate(candidates, targetTp);
-        }
-
-        if (chosen == null)
-        {
-            chosen = candidates.OrderBy(x => x.IconRect.Y).FirstOrDefault();
-        }
-
-        return chosen;
-    }
-
-    private bool ShouldRequireMapChooseCandidateName(GiTpPosition? targetTp)
-    {
-        return targetTp != null &&
-               !string.IsNullOrWhiteSpace(targetTp.Name) &&
-               GetMapIconTypesForTargetType(targetTp.Type ?? string.Empty).Count == 0;
-    }
-
-    private static MapChooseCandidate? ChooseMapCandidateByExactName(List<MapChooseCandidate> candidates, GiTpPosition? targetTp)
-    {
-        if (targetTp == null)
-        {
-            return null;
-        }
-
-        var targetName = NormalizeCandidateText(targetTp.Name ?? string.Empty);
-        if (string.IsNullOrEmpty(targetName))
-        {
-            return null;
-        }
-
-        var exactNameCandidates = candidates
-            .Where(x => NormalizeCandidateText(x.Text) == targetName)
-            .ToList();
-        return exactNameCandidates.Count == 1
-            ? exactNameCandidates[0]
-            : null;
-    }
-
-    private static MapChooseCandidate? ChooseMapCandidateByHighlight(List<MapChooseCandidate> candidates)
-    {
         if (candidates.Count == 0)
         {
             return null;
         }
 
-        const int minSelectedScore = 18;
-        const int minScoreGap = 10;
-        var ordered = candidates.OrderByDescending(x => x.SelectedIndicatorScore).ToList();
-        var best = ordered[0];
-        var secondScore = ordered.Count > 1 ? ordered[1].SelectedIndicatorScore : 0;
-        return best.SelectedIndicatorScore >= minSelectedScore &&
-               best.SelectedIndicatorScore >= secondScore + minScoreGap
-            ? best
-            : null;
+        var orderedByY = candidates.OrderBy(x => x.IconRect.Y).ToList();
+        var targetName = NormalizeCandidateText(targetTp?.Name?.Trim() ?? string.Empty);
+        if (string.IsNullOrEmpty(targetName))
+        {
+            return orderedByY[0];
+        }
+
+        MapChooseCandidate? best = null;
+        var bestScore = -1;
+        foreach (var candidate in orderedByY)
+        {
+            var score = GetCandidateNameOverlapScore(candidate.Text, targetName);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        if (bestScore <= 0 || best == null)
+        {
+            return orderedByY[0];
+        }
+
+        return best;
     }
 
-    private static MapChooseCandidate? ChooseUniqueCompatibleMapCandidate(List<MapChooseCandidate> candidates, GiTpPosition? targetTp)
+    /// <summary>
+    /// OCR 文字与 tp.json 名称的相似度：OCR 中与名称重复出现的字符个数（无下限）。
+    /// </summary>
+    private static int GetCandidateNameOverlapScore(string candidateText, string normalizedTargetName)
     {
-        if (targetTp == null)
+        var normalizedCandidate = NormalizeCandidateText(candidateText);
+        if (string.IsNullOrEmpty(normalizedCandidate) || string.IsNullOrEmpty(normalizedTargetName))
         {
-            return null;
+            return 0;
         }
 
-        var compatibleCandidates = candidates.Where(x => IsCandidateCompatibleWithTarget(x, targetTp)).ToList();
-        if (compatibleCandidates.Count == 1)
-        {
-            return compatibleCandidates[0];
-        }
-
-        return null;
-    }
-
-    private static bool IsCandidateCompatibleWithTarget(MapChooseCandidate candidate, GiTpPosition? targetTp)
-    {
-        if (targetTp == null)
-        {
-            return true;
-        }
-
-        var targetType = targetTp.Type ?? string.Empty;
-        if (!string.IsNullOrEmpty(targetType) && IsMapChooseIconTypeMatch(candidate.IconType, targetType))
-        {
-            return true;
-        }
-
-        var optionText = NormalizeCandidateText(candidate.Text);
-        var targetName = NormalizeCandidateText(targetTp.Name ?? string.Empty);
-        return !string.IsNullOrEmpty(optionText) &&
-               !string.IsNullOrEmpty(targetName) &&
-               (optionText == targetName || optionText.Contains(targetName) || targetName.Contains(optionText));
+        return normalizedCandidate.Count(ch => normalizedTargetName.Contains(ch));
     }
 
     private static bool IsMapChooseIconTypeMatch(string iconType, string targetType)
@@ -3610,39 +3447,6 @@ public class TpTask
         return candidates.Any(candidate =>
             Math.Abs(candidate.IconRect.X - iconRect.X) <= 6 &&
             Math.Abs(candidate.IconRect.Y - iconRect.Y) <= 6);
-    }
-
-    private static int GetMapChooseSelectedIndicatorScore(ImageRegion imageRegion, MapChooseCandidate candidate)
-    {
-        var centerY = candidate.IconRect.Y + candidate.IconRect.Height / 2d;
-        var indicatorRect = new Rect(
-            candidate.IconRect.X - 70,
-            (int)Math.Round(centerY - 24),
-            60,
-            48).ClampTo(imageRegion.SrcMat);
-        if (indicatorRect.Width <= 0 || indicatorRect.Height <= 0)
-        {
-            return 0;
-        }
-
-        using var indicatorMat = new Mat(imageRegion.SrcMat, indicatorRect);
-        using var gray = new Mat();
-        switch (indicatorMat.Channels())
-        {
-            case 4:
-                Cv2.CvtColor(indicatorMat, gray, ColorConversionCodes.BGRA2GRAY);
-                break;
-            case 3:
-                Cv2.CvtColor(indicatorMat, gray, ColorConversionCodes.BGR2GRAY);
-                break;
-            default:
-                indicatorMat.CopyTo(gray);
-                break;
-        }
-
-        using var brightMask = new Mat();
-        Cv2.Threshold(gray, brightMask, 210, 255, ThresholdTypes.Binary);
-        return Cv2.CountNonZero(brightMask);
     }
 
     private static void ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
