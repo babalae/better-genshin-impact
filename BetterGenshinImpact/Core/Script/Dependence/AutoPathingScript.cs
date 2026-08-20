@@ -29,9 +29,20 @@ public class AutoPathingScript
     /// <returns>执行结果（是否成功等）</returns>
     public async Task<PathingRunResult> Run(string json)
     {
+        PathingTask task;
         try
         {
-            var task = PathingTask.BuildFromJson(json);
+            task = PathingTask.BuildFromJson(json);
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "地图追踪 JSON 解析失败");
+            TaskControl.Logger.LogError("地图追踪 JSON 解析失败: {Msg}", e.Message);
+            return PathingRunResult.Fail($"地图追踪 JSON 解析失败: {e.Message}");
+        }
+
+        try
+        {
             var pathExecutor = new PathExecutor(CancellationContext.Instance.Cts.Token);
             if (_config != null && _config is PathingPartyConfig patyConfig)
             {
@@ -40,19 +51,31 @@ public class AutoPathingScript
 
             await pathExecutor.Pathing(task);
 
-            // 成功判定：完整走完所有路径
-            // 中途放弃（HandledException）时 EndByHandledException 为 true，不能视为成功
+            // 只有真正正常完整走完所有路径才算成功
             if (pathExecutor.SuccessEnd && !pathExecutor.EndByHandledException)
             {
                 return PathingRunResult.Ok();
             }
 
-            return PathingRunResult.Fail("地图追踪未完整走完");
+            // 与 Pathing 使用同一个取消令牌，独立运行时 Pathing 内部会静默吞掉取消异常，这里补判定
+            if (CancellationContext.Instance.Cts.IsCancellationRequested)
+            {
+                TaskControl.Logger.LogInformation("地图追踪被手动取消");
+                return PathingRunResult.Fail("地图追踪被手动取消");
+            }
+
+            // 中途放弃路径（HandledException）
+            if (pathExecutor.EndByHandledException)
+            {
+                return PathingRunResult.Fail("点位无法识别，放弃路线");
+            }
+
+            return PathingRunResult.Fail("此追踪脚本未正常走完！");
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException)
         {
-            TaskControl.Logger.LogInformation("地图追踪被取消: {Msg}", e.Message);
-            return PathingRunResult.Fail($"地图追踪被取消: {e.Message}", PathingRunStatus.Cancelled);
+            TaskControl.Logger.LogInformation("地图追踪被手动取消");
+            return PathingRunResult.Fail("地图追踪被手动取消");
         }
         catch (Exception e)
         {
@@ -69,17 +92,22 @@ public class AutoPathingScript
     /// <returns>执行结果（是否成功等）</returns>
     public async Task<PathingRunResult> RunFile(string path)
     {
-        try
+        var limitedFile = new LimitedFile(_rootPath);
+        if (!limitedFile.IsFile(path))
         {
-            var json = await new LimitedFile(_rootPath).ReadText(path);
-            return await Run(json);
+            TaskControl.Logger.LogError("地图追踪文件不存在: {Path}", path);
+            return PathingRunResult.Fail($"地图追踪文件不存在: {path}");
         }
-        catch (Exception e)
+
+        var json = await limitedFile.ReadText(path);
+        // ReadText 读取失败时返回空字符串，路径 JSON 内容非空，空串视为读取失败
+        if (string.IsNullOrEmpty(json))
         {
-            TaskControl.Logger.LogDebug(e, "读取文件时发生错误");
-            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}", e.Message);
-            return PathingRunResult.Fail($"读取路径文件失败: {e.Message}", PathingRunStatus.FileReadError);
+            TaskControl.Logger.LogError("地图追踪文件读取失败: {Path}", path);
+            return PathingRunResult.Fail($"地图追踪文件读取失败: {path}");
         }
+
+        return await Run(json);
     }
 
     /// <summary>
@@ -89,17 +117,21 @@ public class AutoPathingScript
     /// <returns>执行结果（是否成功等）</returns>
     public async Task<PathingRunResult> RunFileFromUser(string path)
     {
-        try
+        if (!AutoPathingFile.IsFile(path))
         {
-            var json = await AutoPathingFile.ReadText(path);
-            return await Run(json);
+            TaskControl.Logger.LogError("地图追踪文件不存在: {Path}", path);
+            return PathingRunResult.Fail($"地图追踪文件不存在: {path}");
         }
-        catch (Exception e)
+
+        var json = await AutoPathingFile.ReadText(path);
+        // ReadText 读取失败时返回空字符串，路径 JSON 内容非空，空串视为读取失败
+        if (string.IsNullOrEmpty(json))
         {
-            TaskControl.Logger.LogDebug(e, "读取文件时发生错误");
-            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}", e.Message);
-            return PathingRunResult.Fail($"读取路径文件失败: {e.Message}", PathingRunStatus.FileReadError);
+            TaskControl.Logger.LogError("地图追踪文件读取失败: {Path}", path);
+            return PathingRunResult.Fail($"地图追踪文件读取失败: {path}");
         }
+
+        return await Run(json);
     }
 
     /// <summary>
