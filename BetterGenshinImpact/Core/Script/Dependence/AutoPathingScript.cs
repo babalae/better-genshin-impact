@@ -40,8 +40,9 @@ public class AutoPathingScript
 
             await pathExecutor.Pathing(task);
 
-            // 与内置"地图追踪"任务的判定保持一致：未完整走完视为失败
-            if (pathExecutor.SuccessEnd)
+            // 成功判定：完整走完所有路径
+            // 中途放弃（HandledException）时 EndByHandledException 为 true，不能视为成功
+            if (pathExecutor.SuccessEnd && !pathExecutor.EndByHandledException)
             {
                 return PathingRunResult.Ok();
             }
