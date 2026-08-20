@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +22,12 @@ public class AutoPathingScript
         _autoPathingFile = new LimitedFile(Global.Absolute(@"User\AutoPathing"));
     }
 
-    public async Task Run(string json)
+    /// <summary>
+    /// 通过 JSON 字符串执行地图追踪，返回执行结果
+    /// </summary>
+    /// <param name="json">地图追踪路径的 JSON 内容</param>
+    /// <returns>执行结果（是否成功等）</returns>
+    public async Task<PathingRunResult> Run(string json)
     {
         try
         {
@@ -33,36 +39,66 @@ public class AutoPathingScript
             }
 
             await pathExecutor.Pathing(task);
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e,"执行地图追踪时候发生错误");
-            TaskControl.Logger.LogError("执行地图追踪时候发生错误: {Msg}",e.Message);
-        }
-    }
 
-    public async Task RunFile(string path)
-    {
-        try
+            // 与内置"地图追踪"任务的判定保持一致：未完整走完视为失败
+            if (pathExecutor.SuccessEnd)
+            {
+                return PathingRunResult.Ok();
+            }
+
+            return PathingRunResult.Fail("地图追踪未完整走完");
+        }
+        catch (OperationCanceledException e)
         {
-            var json = await new LimitedFile(_rootPath).ReadText(path);
-            await Run(json);
+            TaskControl.Logger.LogInformation("地图追踪被取消: {Msg}", e.Message);
+            return PathingRunResult.Fail($"地图追踪被取消: {e.Message}", PathingRunStatus.Cancelled);
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogDebug(e,"读取文件时发生错误");
-            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}",e.Message);
+            TaskControl.Logger.LogDebug(e, "执行地图追踪时候发生错误");
+            TaskControl.Logger.LogError("执行地图追踪时候发生错误: {Msg}", e.Message);
+            return PathingRunResult.Fail($"地图追踪执行失败: {e.Message}");
         }
     }
 
     /// <summary>
-    /// 从已订阅的内容中获取文件
+    /// 通过脚本目录下的路径文件执行地图追踪，返回执行结果
+    /// </summary>
+    /// <param name="path">相对于脚本根目录的路径文件路径</param>
+    /// <returns>执行结果（是否成功等）</returns>
+    public async Task<PathingRunResult> RunFile(string path)
+    {
+        try
+        {
+            var json = await new LimitedFile(_rootPath).ReadText(path);
+            return await Run(json);
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "读取文件时发生错误");
+            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}", e.Message);
+            return PathingRunResult.Fail($"读取路径文件失败: {e.Message}", PathingRunStatus.FileReadError);
+        }
+    }
+
+    /// <summary>
+    /// 从已订阅的内容中获取文件并执行地图追踪，返回执行结果
     /// </summary>
     /// <param name="path">在 `\User\AutoPathing` 目录下获取文件</param>
-    public async Task RunFileFromUser(string path)
+    /// <returns>执行结果（是否成功等）</returns>
+    public async Task<PathingRunResult> RunFileFromUser(string path)
     {
-        var json = await AutoPathingFile.ReadText(path);
-        await Run(json);
+        try
+        {
+            var json = await AutoPathingFile.ReadText(path);
+            return await Run(json);
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "读取文件时发生错误");
+            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}", e.Message);
+            return PathingRunResult.Fail($"读取路径文件失败: {e.Message}", PathingRunStatus.FileReadError);
+        }
     }
 
     /// <summary>
