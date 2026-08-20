@@ -15,6 +15,11 @@ public class PathingRunResult
     /// </summary>
     public string Message { get; set; } = "";
 
+    /// <summary>
+    /// 创建成功结果
+    /// </summary>
+    /// <param name="message">结果描述</param>
+    /// <returns>成功结果对象</returns>
     public static PathingRunResult Ok(string message = "地图追踪执行成功")
     {
         return new PathingRunResult
@@ -24,6 +29,11 @@ public class PathingRunResult
         };
     }
 
+    /// <summary>
+    /// 创建失败结果
+    /// </summary>
+    /// <param name="message">失败原因描述</param>
+    /// <returns>失败结果对象</returns>
     public static PathingRunResult Fail(string message)
     {
         return new PathingRunResult
