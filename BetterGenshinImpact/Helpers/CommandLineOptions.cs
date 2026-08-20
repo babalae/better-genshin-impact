@@ -12,6 +12,9 @@ public class CommandLineOptions
 {
     public const string InstanceArgument = "--instance";
     public const string RestartFromProcessIdArgument = "--restart-from-pid";
+    public const string McpArgument = "--mcp";
+    public const string McpPortArgument = "--mcp-port";
+    public const int DefaultMcpPort = 5042;
 
     private static CommandLineOptions? _instance;
 
@@ -33,6 +36,16 @@ public class CommandLineOptions
     /// 应用重启时被替换的旧进程 ID。
     /// </summary>
     public int? RestartFromProcessId { get; }
+
+    /// <summary>
+    /// 是否启动本机 MCP Streamable HTTP 服务。
+    /// </summary>
+    public bool McpEnabled { get; }
+
+    /// <summary>
+    /// MCP 服务监听端口，仅绑定到 127.0.0.1。
+    /// </summary>
+    public int McpPort { get; }
 
     /// <summary>
     /// startOneDragon 时可选的配置名称（第 3 个参数）
@@ -63,7 +76,9 @@ public class CommandLineOptions
         string[]? groupNames = null,
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
         bool hasExplicitInstanceType = false,
-        int? restartFromProcessId = null)
+        int? restartFromProcessId = null,
+        bool mcpEnabled = false,
+        int mcpPort = DefaultMcpPort)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
@@ -71,6 +86,9 @@ public class CommandLineOptions
         InstanceType = instanceType;
         HasExplicitInstanceType = hasExplicitInstanceType;
         RestartFromProcessId = restartFromProcessId;
+        // 主实例始终提供仅回环可见的 MCP，供外部客户端和内置 Agent 共用。
+        McpEnabled = mcpEnabled || instanceType == BetterGiInstanceType.Primary;
+        McpPort = mcpPort;
     }
 
     internal static CommandLineOptions Parse(string[] args)
@@ -79,6 +97,8 @@ public class CommandLineOptions
         var instanceType = BetterGiInstanceType.Primary;
         var hasExplicitInstanceType = false;
         int? restartFromProcessId = null;
+        var mcpEnabled = false;
+        var mcpPort = DefaultMcpPort;
         var commandArgs = new List<string>();
 
         for (var index = 0; index < launchArgs.Length; index++)
@@ -110,6 +130,24 @@ public class CommandLineOptions
                     && parsedProcessId > 0)
                 {
                     restartFromProcessId = parsedProcessId;
+                }
+                continue;
+            }
+
+            if (argument.Equals(McpArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                mcpEnabled = true;
+                continue;
+            }
+
+            if (argument.Equals(McpPortArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadNext(launchArgs, ref index, out var portValue)
+                    && int.TryParse(portValue, out var parsedPort)
+                    && parsedPort is > 0 and <= 65535)
+                {
+                    mcpPort = parsedPort;
+                    mcpEnabled = true;
                 }
                 continue;
             }
@@ -164,7 +202,9 @@ public class CommandLineOptions
                 groupNames,
                 instanceType,
                 hasExplicitInstanceType,
-                restartFromProcessId);
+                restartFromProcessId,
+                mcpEnabled,
+                mcpPort);
         }
     }
 

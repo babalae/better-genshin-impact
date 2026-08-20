@@ -1,0 +1,138 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AgentSettingsWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="Agent 设置"
+                 Width="680" Height="720" MinWidth="560" MinHeight="520"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{StaticResource TextThemeFontFamily}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner">
+    <ui:FluentWindow.Resources>
+        <Style x:Key="AgentSettingsCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="Agent 设置">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="Settings24" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <ScrollViewer Grid.Row="1" Margin="24,8,24,24"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource AgentSettingsCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="外部模型连接" />
+                        <TextBlock Margin="0,4,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="支持 OpenAI-compatible Chat Completions；模型可留空自动发现。" />
+                        <TextBlock Margin="1,0,0,5" Text="外部 URL" />
+                        <ui:TextBox PlaceholderText="例如 https://api.deepseek.com"
+                                    Text="{Binding ViewModel.Config.BaseUrl, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="1,12,0,5" Text="API Key" />
+                        <ui:TextBox PlaceholderText="外部模型服务 API Key"
+                                    Text="{Binding ViewModel.Config.ApiKey, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="1,12,0,5" Text="模型" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox IsEditable="True" ItemsSource="{Binding ViewModel.ModelOptions}"
+                                      Text="{Binding ViewModel.Config.Model, UpdateSourceTrigger=PropertyChanged}" />
+                            <ui:Button Grid.Column="1" Margin="8,0,0,0"
+                                       Command="{Binding ViewModel.RefreshModelsCommand}" Content="读取模型" />
+                        </Grid>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Margin="1,0,0,5" Text="最大工具轮数" />
+                                <ui:NumberBox Minimum="1" Maximum="30"
+                                              Value="{Binding ViewModel.Config.MaxToolRounds, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                <TextBlock Margin="1,0,0,5" Text="项目系统提示词" />
+                                <ui:Button HorizontalAlignment="Stretch"
+                                           Command="{Binding ViewModel.OpenSystemPromptCommand}"
+                                           Content="打开提示词文件" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource AgentSettingsCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="上下文压缩" />
+                        <TextBlock Margin="0,4,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="旧工具结果先折叠，再自动摘要；摘要失败或仍超限时硬截断。" TextWrapping="Wrap" />
+                        <UniformGrid Columns="2">
+                            <StackPanel Margin="0,0,10,12">
+                                <TextBlock Margin="1,0,0,5" Text="摘要触发消息数" />
+                                <ui:NumberBox Minimum="20" Maximum="500"
+                                              Value="{Binding ViewModel.Config.CompactionTriggerMessages, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Margin="10,0,0,12">
+                                <TextBlock Margin="1,0,0,5" Text="保留最近消息组" />
+                                <ui:NumberBox Minimum="4" Maximum="100"
+                                              Value="{Binding ViewModel.Config.CompactionPreserveRecentGroups, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Margin="1,0,0,5" Text="硬截断消息数" />
+                                <ui:NumberBox Minimum="30" Maximum="1000"
+                                              Value="{Binding ViewModel.Config.HardTruncationMessages, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Margin="10,0,0,0">
+                                <TextBlock Margin="1,0,0,5" Text="Session 最大字符" />
+                                <ui:NumberBox Minimum="50000" Maximum="5000000" SmallChange="50000"
+                                              Value="{Binding ViewModel.Config.MaxSerializedSessionCharacters, Mode=TwoWay}" />
+                            </StackPanel>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource AgentSettingsCardStyle}">
+                    <StackPanel>
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="可见对话缓存" />
+                        <TextBlock Margin="0,4,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="限制 conversation.json 的条数和字符量；超限时保留最近消息。" />
+                        <UniformGrid Columns="3">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Margin="1,0,0,5" Text="最多消息数" />
+                                <ui:NumberBox Minimum="10" Maximum="500"
+                                              Value="{Binding ViewModel.Config.MaxPersistedMessages, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Margin="8,0">
+                                <TextBlock Margin="1,0,0,5" Text="总字符数" />
+                                <ui:NumberBox Minimum="10000" Maximum="2000000" SmallChange="10000"
+                                              Value="{Binding ViewModel.Config.MaxPersistedCharacters, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Margin="1,0,0,5" Text="单条最大字符" />
+                                <ui:NumberBox Minimum="1000" Maximum="200000" SmallChange="1000"
+                                              Value="{Binding ViewModel.Config.MaxPersistedMessageCharacters, Mode=TwoWay}" />
+                            </StackPanel>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</ui:FluentWindow>

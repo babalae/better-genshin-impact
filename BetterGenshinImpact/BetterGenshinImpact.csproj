@@ -14,6 +14,9 @@
 		<ApplicationIcon>Resources\Images\logo.ico</ApplicationIcon>
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- 生成运行时设置说明索引；项目历史 XML 注释中的格式问题不影响文档文件读取。 -->
+		<NoWarn>$(NoWarn);1570;1572;1573;1587;1591</NoWarn>
 	</PropertyGroup>
 
 <!--	<ItemGroup>
@@ -61,11 +64,14 @@
 		<PackageReference Include="Markdig" Version="1.3.2" />
 		<PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
 		<PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
-		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
-		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.18.0" />
+		<PackageReference Include="Microsoft.Agents.AI.Anthropic" Version="1.18.0-preview.260818.1" />
+		<PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
 		<!--排除掉cpu的runtime dll-->
 		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none" />
