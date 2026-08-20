@@ -1375,7 +1375,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 Logger.LogWarning("自动秘境：本轮奖励识别结果为空");
             }
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception e) when (e is not OperationCanceledException and not NormalEndException)
         {
             Logger.LogWarning(e, "自动秘境：奖励识别失败，已跳过本轮奖励汇总");
         }
