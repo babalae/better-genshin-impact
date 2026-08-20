@@ -138,7 +138,48 @@ public abstract class SceneBaseMap : ISceneMap
 
     public virtual Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
+        return GetBigMapMatchResult(greyBigMapMat).ImageRect;
+    }
+
+    public virtual BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat)
+    {
+        var match = SiftMatcher.KnnMatchRectWithConfidence(
+            MainLayer.TrainKeyPoints,
+            MainLayer.TrainDescriptors,
+            greyBigMapMat);
+        var rect = match.Corners.Length == 4 ? Cv2.BoundingRect(match.Corners) : default;
+        return new BigMapMatchResult(
+            rect,
+            match.Confidence,
+            match.GoodMatchCount,
+            match.InlierCount,
+            match.MedianReprojectionError,
+            "SIFT");
+    }
+
+    public virtual BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat, Point2f expectedCenter)
+    {
+        var layer = MainLayer;
+        if (!IsValidPoint(expectedCenter) || layer.SplitBlocks.Length == 0 || layer.SplitBlocks[0].Length == 0)
+        {
+            return BigMapMatchResult.Failed("SIFT-local");
+        }
+
+        var searchRect = BuildLocalSearchRect(expectedCenter, greyBigMapMat.Size(), MapSize);
+        var match = SiftMatcher.KnnMatchLocalCornersWithConfidence(
+            layer.SplitBlocks,
+            layer.TrainDescriptors,
+            MapSize,
+            searchRect,
+            greyBigMapMat);
+        var rect = match.Corners.Length == 4 ? Cv2.BoundingRect(match.Corners) : default;
+        return new BigMapMatchResult(
+            rect,
+            match.Confidence,
+            match.GoodMatchCount,
+            match.InlierCount,
+            match.MedianReprojectionError,
+            "SIFT-local");
     }
 
     private static bool IsValidPoint(Point2f point)

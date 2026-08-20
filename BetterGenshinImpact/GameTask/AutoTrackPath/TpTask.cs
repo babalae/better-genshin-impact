@@ -60,7 +60,6 @@ public class TpTask
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
-    private const int MaxMapZoomWheelAttempts = 3;
     private const int MaxMapZoomWheelBatchNotches = 16;
     private const int MapZoomWheelSignForZoomLevelIncrease = -1;
     private const int MapZoomWheelBurstIntervalMs = 15;
@@ -82,8 +81,8 @@ public class TpTask
     private const int AbsoluteMapIconInvalidCost = 10_000_000;
     private const double AbsoluteMapClickBaseUncertainty = 16d;
     private const double AbsoluteMapClickNeighborErrorRatio = 0.25d;
-    private const double AbsoluteMapClickZoomRecoveryStep = 0.7d;
-    private const int AbsoluteMapClickRetryCount = 3;
+    private const int BigMapIconCorrectionMinimumPairs = 3;
+    private const double BigMapIconCorrectionMaxUncertainty = 12d;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
     private const int MapChooseCandidateClickRetryCount = 2;
     private const int MapChooseCandidateClickVerificationDelayMs = 600;
@@ -109,10 +108,13 @@ public class TpTask
     private const int BlessingCheckIntervalMs = 1000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
+    private static Point2f? s_lastSuccessfulTeleportPosition;
 
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
+    private Rect? _lastReliableBigMapRect;
+    private string? _lastReliableBigMapRectMapName;
 
     private sealed class MapChooseCandidate
     {
@@ -168,6 +170,20 @@ public class TpTask
         public required MapProjectionTransform Transform { get; init; }
         public required List<AbsoluteMapIconPair> Pairs { get; init; }
         public required double MeanError { get; init; }
+    }
+
+    private readonly record struct AbsoluteMapClickCandidate(double ClickX, double ClickY);
+
+    private enum AbsoluteMapClickFailure
+    {
+        None,
+        OutsideClickableArea,
+        InsufficientPrecision,
+        NeighborSafetyDistance,
+    }
+
+    private sealed class TeleportPanelNotOpenedException(string message) : TpPointNotActivate(message)
+    {
     }
 
     private sealed class TeleportTargetContext
@@ -364,21 +380,28 @@ public class TpTask
                 Simulation.ReleaseAllKey();
                 await Delay(GetTeleportOperationDelay(20), ct);
                 await CheckInBigMapUi(mapName);
+                DebugTiming.Mark("open_big_map_ok", $"attempt={i + 1};map={mapName}");
                 return;
             }
             catch (Exception e) when (IsTaskStopException(e))
             {
+                DebugTiming.Fail("open_big_map_cancelled", e.GetType().Name + ": " + e.Message);
                 throw;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                DebugTiming.Fail(
+                    "open_big_map_retry",
+                    $"attempt={i + 1}/{retryCount};{e.GetType().Name}: {e.Message}");
                 if (retryCount > 1)
                 {
+                    DebugTiming.Mark("open_big_map_blessing_check");
                     await _blessingOfTheWelkinMoonTask.Start(ct);
                 }
 
                 if (i + 1 >= retryCount)
                 {
+                    DebugTiming.Fail("open_big_map_exhausted", e.GetType().Name + ": " + e.Message);
                     throw;
                 }
             }
@@ -396,25 +419,47 @@ public class TpTask
         double tpX,
         double tpY,
         string mapName = "Teyvat",
-        bool force = false)
+        bool force = false,
+        int attempt = 1)
     {
         ClearRememberedAreaSwitchCenterPoint();
+        DebugTiming.Begin("tp", $"attempt={attempt}/3;map={mapName};req=({tpX:0.##},{tpY:0.##});force={force}");
 
-        // 1. 确认在地图界面，并在传送入口统一切回地表图层
-        await OpenBigMapUi(1, mapName);
-        await SwitchToGroundMapLayerIfNeeded();
+        try
+        {
+            // 1. 确认在地图界面，并在传送入口统一切回地表图层
+            await OpenBigMapUi(1, mapName);
+            DebugTiming.Mark("open_big_map");
+            await SwitchToGroundMapLayerIfNeeded();
+            DebugTiming.Mark("switch_ground_layer");
 
-        var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
-        LogTeleportTarget(target);
-        await SwitchToTeleportTargetMap(target);
+            var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
+            LogTeleportTarget(target);
+            DebugTiming.Mark("resolve_target", GetTeleportTargetLogText(target));
+            await SwitchToTeleportTargetMap(target);
+            DebugTiming.Mark("switch_target_map", target.Country ?? string.Empty);
 
-        var clickView = await PrepareTeleportClickView(target);
-        await ClickTeleportTargetMapPoint(target, clickView);
-        await ClickTpPointAfterMapPointSelected(target);
-        await WaitForTeleportCompletion();
+            var clickView = await PrepareTeleportClickView(target);
+            DebugTiming.Mark(
+                "prepare_click_view",
+                $"zoom={clickView.ZoomLevel:0.##};screen=({clickView.ClickX:0.#},{clickView.ClickY:0.#})");
+            var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
+            DebugTiming.Mark("map_point_clicked");
+            await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
+            DebugTiming.Mark("panel_confirmed");
+            await WaitForTeleportCompletion();
+            DebugTiming.Mark("teleport_completed");
 
-        s_lastSuccessfulTeleportMapName = target.MapName;
-        return (target.X, target.Y);
+            RememberSuccessfulTeleport(target.MapName, target.X, target.Y);
+            DebugTiming.End("ok");
+            return (target.X, target.Y);
+        }
+        catch (Exception ex)
+        {
+            DebugTiming.Fail("tp_once_exception", ex.GetType().Name + ": " + ex.Message);
+            DebugTiming.End("error");
+            throw;
+        }
     }
 
     private TeleportTargetContext ResolveTeleportTarget(double tpX, double tpY, string mapName, bool force)
@@ -508,15 +553,32 @@ public class TpTask
         {
             if (!string.IsNullOrWhiteSpace(target.Country) && ShouldForceSwitchFromIndependentMapToTeyvat())
             {
+                DebugTiming.Mark(
+                    "switch_map_force_teyvat",
+                    $"from={s_lastSuccessfulTeleportMapName};country={target.Country}");
                 await SwitchArea(target.Country);
                 return;
             }
 
-            await SwitchRecentlyCountryMap(target.X, target.Y, target.Country);
+            DebugTiming.Mark("switch_map_recent_country", target.Country ?? string.Empty);
+            var switched = await SwitchRecentlyCountryMap(target.X, target.Y, target.Country);
+            if (!switched)
+            {
+                DebugTiming.Mark("switch_map_recent_country_skip", "no country switch needed");
+            }
         }
         else
         {
-            await SwitchArea(MapTypesExtensions.ParseFromName(target.MapName).GetDescription());
+            var areaName = MapTypesExtensions.ParseFromName(target.MapName).GetDescription();
+            // 独立地图（远古圣山、层岩等）：上次成功传送已在该图时跳过，避免同图连续传送反复打开区域列表
+            if (string.Equals(s_lastSuccessfulTeleportMapName, target.MapName, StringComparison.Ordinal))
+            {
+                DebugTiming.Mark("switch_map_independent_skip", areaName);
+                return;
+            }
+
+            DebugTiming.Mark("switch_map_independent", areaName);
+            await SwitchArea(areaName);
         }
     }
 
@@ -544,8 +606,9 @@ public class TpTask
         double finalZoomLevel)
     {
         var moveZoomAdjusted = false;
-        var finalZoomAttempts = 0;
+        var stopAtDisplayZoomLevel = false;
         TeleportClickViewEvaluation? lastEvaluation = null;
+        DebugTiming.Mark("prepare_click_view_start", $"finalZoom={finalZoomLevel:0.##}");
         for (var retryCount = 0; retryCount <= TeleportClickableAreaRetryCount; retryCount++)
         {
             var evaluation = EvaluateTeleportClickView(mapName, targetTp, targetX, targetY);
@@ -553,37 +616,55 @@ public class TpTask
             if (evaluation.View != null)
             {
                 var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
-                if (!ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel))
+                if (stopAtDisplayZoomLevel || !ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel))
                 {
-                    return evaluation.View;
-                }
-
-                if (finalZoomAttempts >= MaxMapZoomWheelAttempts)
-                {
-                    if (!IsTeleportPointDisplayZoomLevelReached(evaluation.View.ZoomLevel, mapName))
-                    {
-                        var displayTpPointZoomLevel = GetDisplayTpPointZoomLevel(mapName);
-                        Logger.LogWarning(
-                            "地图缩放未到传送点显示级别，已跳过点击：zoom={ZoomLevel:0.00} required<={RequiredZoomLevel:0.00}",
-                            evaluation.View.ZoomLevel,
-                            displayTpPointZoomLevel);
-                        throw new TpPointNotActivate("地图缩放未到传送点显示级别");
-                    }
-
+                    DebugTiming.Mark(
+                        "prepare_click_view_ready",
+                        $"retry={retryCount};zoom={evaluation.View.ZoomLevel:0.##};screen=({evaluation.View.ClickX:0.#},{evaluation.View.ClickY:0.#})");
                     return evaluation.View;
                 }
 
                 if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
                 {
+                    DebugTiming.Mark(
+                        "prepare_click_view_move_to_zoom_center",
+                        $"retry={retryCount};targetZoom={targetFinalZoomLevel:0.##}");
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
                     await Delay(TeleportClickableAreaRetryDelayMs, ct);
                     continue;
                 }
 
-                await AdjustTeleportZoomLevelTo(targetFinalZoomLevel);
-                finalZoomAttempts++;
+                DebugTiming.Mark(
+                    "prepare_click_view_adjust_zoom",
+                    $"to={targetFinalZoomLevel:0.##}");
+                var adjustedZoomLevel = await AdjustTeleportZoomLevelTo(targetFinalZoomLevel);
+                if (!IsZoomCloseEnough(adjustedZoomLevel, targetFinalZoomLevel))
+                {
+                    if (!IsTeleportPointDisplayZoomLevelReached(adjustedZoomLevel, mapName))
+                    {
+                        var displayTpPointZoomLevel = GetDisplayTpPointZoomLevel(mapName);
+                        Logger.LogWarning(
+                            "地图缩放未到传送点显示级别，已跳过点击：zoom={ZoomLevel:0.00} required<={RequiredZoomLevel:0.00}",
+                            adjustedZoomLevel,
+                            displayTpPointZoomLevel);
+                        DebugTiming.Fail(
+                            "prepare_click_view_zoom_display_fail",
+                            $"zoom={adjustedZoomLevel:0.##};required<={displayTpPointZoomLevel:0.##}");
+                        throw new TpPointNotActivate("地图缩放未到传送点显示级别");
+                    }
+
+                    stopAtDisplayZoomLevel = true;
+                    DebugTiming.Mark(
+                        "prepare_click_view_zoom_display_reached",
+                        $"zoom={adjustedZoomLevel:0.##};target={targetFinalZoomLevel:0.##}");
+                }
+
                 continue;
             }
+
+            DebugTiming.Fail(
+                "prepare_click_view_not_clickable",
+                $"retry={retryCount};click=({evaluation.ClickX:0.#},{evaluation.ClickY:0.#});radius={evaluation.RequiredVisibleRadius:0.#};reason={evaluation.FailureReason}");
 
             if (retryCount >= TeleportClickableAreaRetryCount)
             {
@@ -594,22 +675,28 @@ public class TpTask
                     lastEvaluation?.RequiredVisibleRadius ?? 0,
                     lastEvaluation?.ZoomLevel ?? GetCurrentBigMapZoomLevel(),
                     lastEvaluation?.FailureReason ?? "未知");
+                DebugTiming.Fail("prepare_click_view_exhausted", lastEvaluation?.FailureReason ?? "未知");
                 throw new Exception("目标传送点位于不可点击区域，传送失败");
             }
 
             if (!moveZoomAdjusted)
             {
                 moveZoomAdjusted = true;
+                DebugTiming.Mark("prepare_click_view_initial_move_zoom");
                 if (await AdjustInitialTeleportMoveZoomLevel(mapName, targetX, targetY))
                 {
                     continue;
                 }
             }
 
+            DebugTiming.Mark(
+                "prepare_click_view_move_map",
+                $"retry={retryCount};radius={evaluation.RequiredVisibleRadius:0.#}");
             await MoveMapToTeleportClickArea(targetX, targetY, mapName, evaluation.RequiredVisibleRadius);
             await Delay(TeleportClickableAreaRetryDelayMs, ct);
         }
 
+        DebugTiming.Fail("prepare_click_view_loop_exit", lastEvaluation?.FailureReason ?? "未知");
         throw new Exception("目标传送点位于不可点击区域，传送失败");
     }
 
@@ -796,7 +883,13 @@ public class TpTask
         {
             moveState = GetMoveMapState(rememberedCenterPoint, targetX, targetY, currentZoomLevel);
         }
-        else if (!TryGetRecognizedMoveMapState(mapName, targetX, targetY, currentZoomLevel, out moveState))
+        else if (!TryGetRecognizedMoveMapState(
+                     mapName,
+                     targetX,
+                     targetY,
+                     currentZoomLevel,
+                     out moveState,
+                     TryGetLastSuccessfulTeleportPositionHint(mapName)))
         {
             return false;
         }
@@ -834,45 +927,44 @@ public class TpTask
         return GetCurrentBigMapZoomLevel();
     }
 
-    private async Task ClickTeleportTargetMapPoint(
+    private AbsoluteMapClickCandidate? ClickTeleportTargetMapPoint(
         TeleportTargetContext target,
         TeleportClickView clickView)
     {
-        var currentClickView = clickView;
-        string failureReason = "地图图标绝对坐标匹配失败";
-        for (var attempt = 0; attempt < AbsoluteMapClickRetryCount; attempt++)
+        DebugTiming.Mark(
+            "absolute_click_start",
+            $"screen=({clickView.ClickX:0.#},{clickView.ClickY:0.#});zoom={clickView.ZoomLevel:0.##}");
+
+        using var clickCapture = CaptureToRectArea();
+        if (TryGetAbsoluteTeleportClickPosition(
+                clickCapture,
+                target,
+                clickView,
+                1,
+                out var clickX,
+                out var clickY,
+                out var failureReason,
+                out var failure))
         {
-            using var clickCapture = CaptureToRectArea();
-            if (TryGetAbsoluteTeleportClickPosition(
-                    clickCapture,
-                    target,
-                    currentClickView,
-                    attempt + 1,
-                    out var clickX,
-                    out var clickY,
-                    out failureReason))
-            {
-                clickCapture.ClickTo(clickX, clickY);
-                return;
-            }
-
-            if (attempt + 1 >= AbsoluteMapClickRetryCount)
-            {
-                break;
-            }
-
-            await MoveTeleportTargetTowardZoomCenter(currentClickView);
-            var currentZoomLevel = GetCurrentBigMapZoomLevel();
-            var recoveryZoomLevel = Math.Max(MinTeleportZoomLevel, currentZoomLevel - AbsoluteMapClickZoomRecoveryStep);
-            if (_tpConfig.MapZoomEnabled && !IsZoomCloseEnough(currentZoomLevel, recoveryZoomLevel))
-            {
-                await AdjustMapZoomLevel(currentZoomLevel, recoveryZoomLevel);
-            }
-
-            await Delay(TeleportClickableAreaRetryDelayMs, ct);
-            currentClickView = await PrepareTeleportClickView(target);
+            clickCapture.ClickTo(clickX, clickY);
+            DebugTiming.Mark(
+                "absolute_click_ok",
+                $"attempt=1;screen=({clickX:0.#},{clickY:0.#})");
+            return null;
         }
 
+        // 校正点与邻近传送点的距离不足以安全区分时，先尝试未经校正的原始点。
+        // 若面板未出现，调用方会在不移动地图的前提下回退到本次已算出的候选校正点。
+        if (failure == AbsoluteMapClickFailure.NeighborSafetyDistance)
+        {
+            clickCapture.ClickTo(clickView.ClickX, clickView.ClickY);
+            DebugTiming.Mark(
+                "absolute_click_raw_first",
+                $"attempt=1;raw=({clickView.ClickX:0.#},{clickView.ClickY:0.#});candidate=({clickX:0.#},{clickY:0.#})");
+            return new AbsoluteMapClickCandidate(clickX, clickY);
+        }
+
+        DebugTiming.Fail("absolute_click_miss", $"attempt=1;reason={failureReason}");
         Logger.LogWarning("目标传送点绝对坐标定位失败：{Reason}", failureReason);
         throw new TpPointNotActivate(failureReason);
     }
@@ -909,31 +1001,42 @@ public class TpTask
         return GetBigMapZoomLevel(capture);
     }
 
-    private async Task ClickTpPointAfterMapPointSelected(TeleportTargetContext target)
+    private async Task ClickTpPointAfterMapPointSelected(
+        TeleportTargetContext target,
+        AbsoluteMapClickCandidate? fallbackCandidate)
     {
-        for (var pointAttempt = 0; pointAttempt < 3; pointAttempt++)
+        if (await WaitForTeleportPanelAndConfirm(target.TargetTp))
         {
-            if (pointAttempt > 0)
-            {
-                await ClickTargetMapPoint(target);
-            }
+            return;
+        }
 
+        DebugTiming.Mark("panel_attempt_failed", "attempt=1");
+        if (fallbackCandidate is { } candidate)
+        {
+            // 原始点和候选点不同，允许回退一次；不再重新计算并重复点击同一点。
+            ClickAbsoluteMapCandidate(candidate);
             if (await WaitForTeleportPanelAndConfirm(target.TargetTp))
             {
                 return;
             }
+
+            DebugTiming.Mark("panel_attempt_failed", "candidate_fallback");
         }
 
-        throw new TpPointNotActivate("等待传送点交互面板超时");
+        DebugTiming.Fail("panel_not_opened");
+        throw new TeleportPanelNotOpenedException("点击传送点后未出现交互面板");
     }
 
     private async Task<bool> WaitForTeleportPanelAndConfirm(GiTpPosition? targetTp)
     {
         var timeoutMilliseconds = GetTeleportPanelTimeoutMilliseconds();
         var initialDelayMs = GetTeleportPanelInitialDelayMilliseconds();
+        var waitingLogged = false;
+        DebugTiming.Mark("panel_wait_start", $"timeout={timeoutMilliseconds};initialDelay={initialDelayMs}");
         if (initialDelayMs > 0)
         {
             await Delay(initialDelayMs, ct);
+            DebugTiming.Mark("panel_initial_delay", $"ms={initialDelayMs}");
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -949,19 +1052,33 @@ public class TpTask
             switch (result)
             {
                 case TeleportPanelResult.Confirmed:
+                    DebugTiming.Mark("panel_result", $"Confirmed;poll={i + 1};elapsed={stopwatch.ElapsedMilliseconds}");
                     return true;
                 case TeleportPanelResult.RetryPoint:
+                    DebugTiming.Fail("panel_result", $"RetryPoint;poll={i + 1};elapsed={stopwatch.ElapsedMilliseconds}");
                     return false;
+                case TeleportPanelResult.Waiting:
+                    if (!waitingLogged)
+                    {
+                        waitingLogged = true;
+                        DebugTiming.Mark("panel_waiting_first", $"poll={i + 1}");
+                    }
+
+                    break;
             }
         }
 
+        DebugTiming.Fail("panel_result", $"timeout;elapsed={stopwatch.ElapsedMilliseconds}");
         return false;
     }
 
-    private async Task ClickTargetMapPoint(TeleportTargetContext target)
+    private void ClickAbsoluteMapCandidate(AbsoluteMapClickCandidate candidate)
     {
-        var clickView = await PrepareTeleportClickView(target);
-        await ClickTeleportTargetMapPoint(target, clickView);
+        using var clickCapture = CaptureToRectArea();
+        clickCapture.ClickTo(candidate.ClickX, candidate.ClickY);
+        DebugTiming.Mark(
+            "absolute_click_candidate_fallback",
+            $"screen=({candidate.ClickX:0.#},{candidate.ClickY:0.#})");
     }
 
     private double GetNearestNeighborScreenDistance(
@@ -1017,6 +1134,7 @@ public class TpTask
         var consecutiveNonUiChecks = 0;
         var consecutiveMainUiChecks = 0;
         long nextBlessingCheckAt = BlessingCheckIntervalMs;
+        DebugTiming.Mark("completion_wait_start");
         while (stopwatch.ElapsedMilliseconds < TeleportTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
@@ -1032,6 +1150,7 @@ public class TpTask
                     stopwatch.ElapsedMilliseconds >= TeleportMinimumCompletionMs &&
                     ++consecutiveMainUiChecks >= TeleportCompletionStableMainUiChecks)
                 {
+                    DebugTiming.Mark("completion_main_ui", $"elapsed={stopwatch.ElapsedMilliseconds}");
                     return;
                 }
             }
@@ -1046,6 +1165,10 @@ public class TpTask
                     // 必须先观察到这个中间态，避免把传送尚未开始时短暂出现的主界面误判为完成。
                     consecutiveNonUiChecks = isInBigMapUi ? 0 : consecutiveNonUiChecks + 1;
                     observedLoadingState = consecutiveNonUiChecks >= TeleportLoadingStableNonUiChecks;
+                    if (observedLoadingState)
+                    {
+                        DebugTiming.Mark("completion_loading_seen", $"elapsed={stopwatch.ElapsedMilliseconds}");
+                    }
                 }
             }
             await Delay(TeleportLoadingPollIntervalMs, ct);
@@ -1053,12 +1176,14 @@ public class TpTask
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
             if (observedLoadingState && !isInMainUi && stopwatch.ElapsedMilliseconds >= nextBlessingCheckAt)
             {
+                DebugTiming.Mark("completion_blessing_check", $"elapsed={stopwatch.ElapsedMilliseconds}");
                 await _blessingOfTheWelkinMoonTask.Start(ct);
                 ct.ThrowIfCancellationRequested();
                 nextBlessingCheckAt = stopwatch.ElapsedMilliseconds + BlessingCheckIntervalMs;
             }
         }
 
+        DebugTiming.Fail("completion_timeout", $"elapsed={stopwatch.ElapsedMilliseconds}");
         Logger.LogWarning("传送等待超时，换台电脑吧");
     }
 
@@ -1153,10 +1278,13 @@ public class TpTask
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi(mapName))
         {
+            DebugTiming.Fail("big_map_open_fail_return_main", mapName ?? string.Empty);
             await new ReturnMainUiTask().Start(ct);
             await Delay(500, ct);
+            DebugTiming.Mark("big_map_reopen_after_main_ui", mapName ?? string.Empty);
             if (!await TryToOpenBigMapUi(mapName))
             {
+                DebugTiming.Fail("big_map_open_fail_final", mapName ?? string.Empty);
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
             }
         }
@@ -1169,11 +1297,15 @@ public class TpTask
     {
         if (IsInBigMapUi())
         {
+            DebugTiming.Mark("big_map_already_open", mapName ?? string.Empty);
             return true;
         }
 
         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-        return await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
+        DebugTiming.Mark("big_map_key_pressed", mapName ?? string.Empty);
+        var opened = await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
+        DebugTiming.Mark(opened ? "big_map_opened" : "big_map_open_failed", mapName ?? string.Empty);
+        return opened;
     }
 
     private bool IsInBigMapUi()
@@ -1209,6 +1341,8 @@ public class TpTask
         }
         catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
         {
+            DebugTiming.Fail("tp_hard_timeout", $"{TeleportTimeoutMs}ms");
+            DebugTiming.End("timeout");
             throw new TimeoutException($"单次传送超过 {TeleportTimeoutMs / 1000} 秒", e);
         }
     }
@@ -1219,12 +1353,19 @@ public class TpTask
         {
             try
             {
-                return await TpOnce(tpX, tpY, mapName, force);
+                return await TpOnce(tpX, tpY, mapName, force, i + 1);
+            }
+            catch (TeleportPanelNotOpenedException e)
+            {
+                // 同一视野内点击后未出现面板，重试只会重复点击同一位置。
+                DebugTiming.Fail("tp_panel_not_opened", e.Message);
+                throw;
             }
             catch (TpPointNotActivate e)
             {
                 // 未激活点位的详情面板会遮挡后续地图操作，重试前先关闭。
                 // 最后一次失败也需要执行清理，避免影响脚本组中的下一个任务。
+                DebugTiming.Fail("tp_retry_not_activate", $"attempt={i + 1}/3;{e.Message}");
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(300, ct);
                 // throw; // 不抛出异常，继续重试
@@ -1232,16 +1373,20 @@ public class TpTask
             }
             catch (Exception e) when (IsTaskStopException(e))
             {
+                DebugTiming.Fail("tp_retry_cancelled", e.GetType().Name + ": " + e.Message);
                 throw;
             }
             catch (Exception e)
             {
+                DebugTiming.Fail("tp_retry_exception", $"attempt={i + 1}/3;{e.GetType().Name}: {e.Message}");
                 Logger.LogDebug(e, e.Message);
                 Logger.LogWarning("传送异常" + e.Message);
                 await Delay(300, ct);
             }
         }
 
+        DebugTiming.Fail("tp_retry_exhausted");
+        DebugTiming.End("error");
         throw new InvalidOperationException("传送失败");
     }
 
@@ -1492,11 +1637,14 @@ public class TpTask
         double x,
         double y,
         double currentZoomLevel,
-        out MapMoveState moveState)
+        out MapMoveState moveState,
+        Point2f? expectedCenterHint = null)
     {
         try
         {
-            var mapCenterPoint = GetPositionFromBigMap(mapName);
+            var mapCenterPoint = expectedCenterHint is { } hint
+                ? GetPositionFromBigMap(mapName, hint)
+                : GetPositionFromBigMap(mapName);
             moveState = GetMoveMapState(mapCenterPoint, x, y, currentZoomLevel);
             return true;
         }
@@ -1518,7 +1666,17 @@ public class TpTask
             return (GetMoveMapState(switchedCenterPoint, x, y, currentZoomLevel), currentZoomLevel);
         }
 
-        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var moveState))
+        // 仅用于「开图后视野仍在上次传送点附近」的低置信度位置预测（同图跳过切区域时）。
+        // SwitchArea 会清掉该提示，避免区域默认视野 + 旧坐标导致传送点校正偏离。
+        var localHint = TryGetLastSuccessfulTeleportPositionHint(mapName);
+        if (localHint is { } hint)
+        {
+            DebugTiming.Mark(
+                "big_map_position_hint",
+                $"map={mapName};hint=({hint.X:0.#},{hint.Y:0.#})");
+        }
+
+        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var moveState, localHint))
         {
             return (moveState, currentZoomLevel);
         }
@@ -1660,8 +1818,9 @@ public class TpTask
             return;
         }
 
+        ClearLastReliableBigMapRect();
         var noProgressTimes = 0;
-        for (var attempt = 0; attempt < MaxMapZoomWheelAttempts && !IsZoomCloseEnough(currentZoomLevel, targetZoomLevel); attempt++)
+        while (!IsZoomCloseEnough(currentZoomLevel, targetZoomLevel))
         {
             var diff = targetZoomLevel - currentZoomLevel;
             var desiredZoomDirection = Math.Sign(diff);
@@ -2106,7 +2265,10 @@ public class TpTask
             {
                 try
                 {
-                    rect = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapRect(ra.CacheGreyMat);
+                    if (!TryGetBigMapRectWithConfidence(ra, mapName, null, out rect, out var detail))
+                    {
+                        throw new RetryException($"大地图范围低置信度：{detail}");
+                    }
                 }
                 catch (Exception)
                 {
@@ -2129,14 +2291,7 @@ public class TpTask
             throw new InvalidOperationException("多次重试后，识别大地图位置失败");
         }
 
-        // 提瓦特大陆由于用的256的图，需要做特殊逻辑
-        if (mapName == MapTypes.Teyvat.ToString())
-        {
-            const int s = TeyvatMap.BigMap256ScaleTo2048; // 相对2048做8倍缩放
-            rect = new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s);
-        }
-
-        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect)!.Value;
+        return rect;
     }
 
     public Point2f GetBigMapCenterPoint(string mapName)
@@ -2151,14 +2306,12 @@ public class TpTask
         using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
         if (mapScaleButtonRa.IsExist())
         {
-            var p = RecognizeBigMapCenterPoint(mapName, ra.CacheGreyMat, expectedCenterPoint);
-
-            if (p.IsEmpty())
+            if (!TryGetBigMapRectWithConfidence(ra, mapName, expectedCenterPoint, out var rect, out var detail))
             {
-                throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
+                throw new MapPositionNotRecognizedException("大地图位置低置信度且传送点锚点不足：" + detail);
             }
 
-            return p;
+            return rect.GetCenterPoint();
         }
         else
         {
@@ -2166,34 +2319,224 @@ public class TpTask
         }
     }
 
-    private Point2f RecognizeBigMapCenterPoint(string mapName, Mat greyMat, Point2f? expectedCenterPoint = null)
+    private static void RememberSuccessfulTeleport(string mapName, double x, double y)
     {
-        Point2f p;
+        s_lastSuccessfulTeleportMapName = mapName;
+        s_lastSuccessfulTeleportPosition = new Point2f((float)x, (float)y);
+    }
+
+    private static void ClearLastSuccessfulTeleportPositionHint()
+    {
+        s_lastSuccessfulTeleportPosition = null;
+    }
+
+    /// <summary>
+    /// 同地图且未切过区域时，用上次成功传送坐标作为低置信度时的地图位置预测。
+    /// </summary>
+    private static Point2f? TryGetLastSuccessfulTeleportPositionHint(string mapName)
+    {
+        if (s_lastSuccessfulTeleportPosition is not { } position ||
+            !string.Equals(s_lastSuccessfulTeleportMapName, mapName, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return position;
+    }
+
+    private bool TryGetBigMapRectWithConfidence(
+        ImageRegion imageRegion,
+        string mapName,
+        Point2f? expectedCenterPoint,
+        out Rect bigMapInAllMapRect,
+        out string detail)
+    {
+        bigMapInAllMapRect = default;
+        detail = string.Empty;
         try
         {
             var map = MapManager.GetMap(mapName, _mapMatchingMethod);
-            p = expectedCenterPoint is Point2f expectedCenter
-                ? map.GetBigMapPosition(greyMat, map.ConvertGenshinMapCoordinatesToImageCoordinates(expectedCenter))
-                : map.GetBigMapPosition(greyMat);
+            BigMapMatchResult match;
+            if (expectedCenterPoint is { } expectedCenter)
+            {
+                var expectedImageCenter = map.ConvertGenshinMapCoordinatesToImageCoordinates(expectedCenter);
+                match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat, expectedImageCenter);
+                if (!match.HasResult)
+                {
+                    var localDetail = FormatBigMapMatchDetail(mapName, match);
+                    match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat);
+                    detail = localDetail + ";globalFallback=" + FormatBigMapMatchDetail(mapName, match);
+                }
+                else
+                {
+                    detail = FormatBigMapMatchDetail(mapName, match);
+                }
+            }
+            else
+            {
+                match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat);
+                detail = FormatBigMapMatchDetail(mapName, match);
+            }
+
+            if (!match.HasResult || !TryConvertBigMapImageRect(mapName, map, match.ImageRect, out var recognizedRect))
+            {
+                DebugTiming.Fail("big_map_match_missing", detail);
+                return false;
+            }
+
+            if (match.IsReliable)
+            {
+                bigMapInAllMapRect = recognizedRect;
+                RememberReliableBigMapRect(mapName, recognizedRect);
+                DebugTiming.Mark("big_map_match_confident", detail);
+                return true;
+            }
+
+            var predictedRect = recognizedRect;
+            if (expectedCenterPoint.HasValue)
+            {
+                var referenceRect = TryGetLastReliableBigMapRect(mapName) ?? recognizedRect;
+                predictedRect = MoveBigMapRectCenter(referenceRect, expectedCenterPoint.Value);
+            }
+            if (TryCorrectBigMapRectByTeleportIcons(imageRegion, mapName, predictedRect, out var correctedRect, out var correctionDetail))
+            {
+                bigMapInAllMapRect = correctedRect;
+                detail += ";" + correctionDetail;
+                DebugTiming.Mark("big_map_match_icon_corrected", detail);
+                return true;
+            }
+
+            detail += ";" + correctionDetail;
+            DebugTiming.Fail("big_map_match_low_confidence", detail);
+            return false;
         }
         catch (Exception ex)
         {
-            throw new MapPositionNotRecognizedException("大地图特征点匹配引发异常：" + ex.Message, ex);
+            detail = ex.GetType().Name + ": " + ex.Message;
+            DebugTiming.Fail("big_map_match_exception", detail);
+            return false;
         }
+    }
 
-        if (p.IsEmpty())
+    private static string FormatBigMapMatchDetail(string mapName, BigMapMatchResult match)
+    {
+        var error = double.IsFinite(match.FitError) ? match.FitError.ToString("0.##") : "inf";
+        return $"map={mapName};source={match.Source};confidence={match.Confidence:0.000};anchors={match.AnchorCount};inliers={match.InlierCount};error={error}";
+    }
+
+    private static bool TryConvertBigMapImageRect(
+        string mapName,
+        ISceneMap map,
+        Rect imageRect,
+        out Rect bigMapInAllMapRect)
+    {
+        bigMapInAllMapRect = default;
+        if (imageRect.Width <= 0 || imageRect.Height <= 0)
         {
-            throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
+            return false;
         }
 
-        // 提瓦特大陆由于用的256的图，需要做特殊逻辑
-        var (x, y) = (p.X, p.Y);
         if (mapName == MapTypes.Teyvat.ToString())
         {
-            (x, y) = (p.X * TeyvatMap.BigMap256ScaleTo2048, p.Y * TeyvatMap.BigMap256ScaleTo2048);
+            const int scale = TeyvatMap.BigMap256ScaleTo2048;
+            imageRect = new Rect(
+                imageRect.X * scale,
+                imageRect.Y * scale,
+                imageRect.Width * scale,
+                imageRect.Height * scale);
         }
 
-        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y))!.Value;
+        var converted = map.ConvertImageCoordinatesToGenshinMapCoordinates(imageRect);
+        if (converted is not { } rect || rect.Width <= 0 || rect.Height <= 0)
+        {
+            return false;
+        }
+
+        bigMapInAllMapRect = rect;
+        return true;
+    }
+
+    private static Rect MoveBigMapRectCenter(Rect rect, Point2f center)
+    {
+        return new Rect(
+            (int)Math.Round(center.X - rect.Width / 2d),
+            (int)Math.Round(center.Y - rect.Height / 2d),
+            rect.Width,
+            rect.Height);
+    }
+
+    private void RememberReliableBigMapRect(string mapName, Rect rect)
+    {
+        _lastReliableBigMapRectMapName = mapName;
+        _lastReliableBigMapRect = rect;
+    }
+
+    private Rect? TryGetLastReliableBigMapRect(string mapName)
+    {
+        return _lastReliableBigMapRect is { } rect &&
+               string.Equals(_lastReliableBigMapRectMapName, mapName, StringComparison.Ordinal)
+            ? rect
+            : null;
+    }
+
+    private void ClearLastReliableBigMapRect()
+    {
+        _lastReliableBigMapRect = null;
+        _lastReliableBigMapRectMapName = null;
+    }
+
+    private bool TryCorrectBigMapRectByTeleportIcons(
+        ImageRegion imageRegion,
+        string mapName,
+        Rect predictedRect,
+        out Rect correctedRect,
+        out string detail)
+    {
+        correctedRect = default;
+        var expectedIcons = GetVisibleExpectedMapIcons(mapName, predictedRect);
+        if (expectedIcons.Count < BigMapIconCorrectionMinimumPairs)
+        {
+            detail = $"iconPairs=0;expected={expectedIcons.Count};reason=expected_insufficient";
+            return false;
+        }
+
+        var observedIcons = GetVisibleMapIcons(
+            imageRegion,
+            imageRegion.Width / 2d,
+            imageRegion.Height / 2d,
+            expectedIcons);
+        var alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
+        var uncertainty = GetAbsoluteMapClickUncertainty(alignment);
+        if (alignment.Pairs.Count < BigMapIconCorrectionMinimumPairs ||
+            uncertainty > BigMapIconCorrectionMaxUncertainty * _zoomOutMax1080PRatio)
+        {
+            detail = $"iconPairs={alignment.Pairs.Count};expected={expectedIcons.Count};observed={observedIcons.Count};uncertainty={uncertainty:0.##};reason=alignment_insufficient";
+            return false;
+        }
+
+        var map = MapManager.GetMap(mapName, _mapMatchingMethod);
+        var imageRect = map.ConvertGenshinMapCoordinatesToImageCoordinates(predictedRect);
+        if (imageRect.Width <= 0 || imageRect.Height <= 0 || imageRegion.Width <= 0 || imageRegion.Height <= 0)
+        {
+            detail = "reason=invalid_map_rect";
+            return false;
+        }
+
+        var correctedImageRect = new Rect(
+            (int)Math.Round(imageRect.X - alignment.Transform.OffsetX * imageRect.Width / imageRegion.Width),
+            (int)Math.Round(imageRect.Y - alignment.Transform.OffsetY * imageRect.Height / imageRegion.Height),
+            imageRect.Width,
+            imageRect.Height);
+        var converted = map.ConvertImageCoordinatesToGenshinMapCoordinates(correctedImageRect);
+        if (converted is not { } rect || rect.Width <= 0 || rect.Height <= 0)
+        {
+            detail = "reason=coordinate_conversion_failed";
+            return false;
+        }
+
+        correctedRect = rect;
+        detail = $"iconPairs={alignment.Pairs.Count};expected={expectedIcons.Count};observed={observedIcons.Count};offset=({alignment.Transform.OffsetX:0.##},{alignment.Transform.OffsetY:0.##});error={alignment.MeanError:0.##};uncertainty={uncertainty:0.##}";
+        return true;
     }
 
     /// <summary>
@@ -2341,6 +2684,7 @@ public class TpTask
             }
 
             await SwitchArea(minCountry);
+            DebugTiming.Mark("area_switched", minCountry);
             return true;
         }
 
@@ -2354,11 +2698,15 @@ public class TpTask
             return;
         }
 
+        DebugTiming.Fail("area_switch_throw", areaName);
         throw new Exception($"切换区域[{areaName}]失败");
     }
 
     private async Task<bool> TrySwitchArea(string areaName)
     {
+        // 切区域后大地图会跳到区域默认中心，旧传送点不能再作位置预测
+        ClearLastSuccessfulTeleportPositionHint();
+        DebugTiming.Mark("area_switch_start", areaName);
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
@@ -2376,9 +2724,13 @@ public class TpTask
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
+                DebugTiming.Mark(
+                    "area_switch_candidate_click",
+                    $"area={areaName};text={matchRect.Text};elapsed={stopwatch.ElapsedMilliseconds}");
                 await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
+                DebugTiming.Mark("area_switch_ok", areaName);
                 return true;
             }
 
@@ -2389,6 +2741,9 @@ public class TpTask
             "切换区域失败：{Country}，OCR候选：{Candidates}",
             areaName,
             string.IsNullOrWhiteSpace(candidatesText) ? "无" : candidatesText);
+        DebugTiming.Fail(
+            "area_switch_fail",
+            $"area={areaName};candidates={candidatesText}");
         return false;
     }
 
@@ -2413,6 +2768,9 @@ public class TpTask
                 consecutiveMissingChecks++;
                 if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
                 {
+                    DebugTiming.Mark(
+                        "area_selection_applied",
+                        $"area={areaName};elapsed={stopwatch.ElapsedMilliseconds}");
                     return;
                 }
             }
@@ -2424,6 +2782,7 @@ public class TpTask
             await Delay(UiRecognitionPollIntervalMs, ct);
         }
 
+        DebugTiming.Mark("area_selection_wait_cap", $"area={areaName};elapsed={stopwatch.ElapsedMilliseconds}");
         Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
     }
 
@@ -2493,6 +2852,7 @@ public class TpTask
         // 图层按钮的出现、展开和选中都有固定时长的界面动画，不能随传送操作速度缩短。
         var retryInterval = MapLayerVerificationPollIntervalMs;
         var stopwatch = Stopwatch.StartNew();
+        DebugTiming.Mark("ground_layer_check_start");
         while (stopwatch.ElapsedMilliseconds < MapGroundLayerSwitchTimeoutMs)
         {
             using var capture = CaptureToRectArea();
@@ -2503,6 +2863,7 @@ public class TpTask
                 groundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 groundLayerClicked = true;
+                DebugTiming.Mark("ground_layer_click_ground", $"elapsed={stopwatch.ElapsedMilliseconds}");
                 await Delay(retryInterval, ct);
                 continue;
             }
@@ -2515,6 +2876,7 @@ public class TpTask
             {
                 if (!isUnderground)
                 {
+                    DebugTiming.Mark("ground_layer_ok", $"elapsed={stopwatch.ElapsedMilliseconds}");
                     return;
                 }
 
@@ -2526,6 +2888,7 @@ public class TpTask
             {
                 if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= MapLayerVerificationPollIntervalMs * 2)
                 {
+                    DebugTiming.Mark("ground_layer_already", $"elapsed={stopwatch.ElapsedMilliseconds}");
                     return;
                 }
 
@@ -2538,6 +2901,7 @@ public class TpTask
                 undergroundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 layerSwitchClicked = true;
+                DebugTiming.Mark("ground_layer_open_switch", $"elapsed={stopwatch.ElapsedMilliseconds}");
                 await Delay(retryInterval, ct);
                 continue;
             }
@@ -2546,6 +2910,7 @@ public class TpTask
         }
 
         Logger.LogWarning("切换到地表地图后校验超时");
+        DebugTiming.Fail("ground_layer_timeout", $"elapsed={stopwatch.ElapsedMilliseconds}");
         throw new TimeoutException("切换到地表地图后校验超时");
     }
 
@@ -2567,6 +2932,7 @@ public class TpTask
         var result = await HandleTeleportPanel(imageRegion, targetTp);
         if (result != TeleportPanelResult.Confirmed)
         {
+            DebugTiming.Fail("click_tp_point_panel_fail", result.ToString());
             throw result == TeleportPanelResult.RetryPoint
                 ? new TpPointNotActivate("传送点未激活或不存在")
                 : new TpPointNotActivate("选项列表不存在传送点");
@@ -2580,6 +2946,7 @@ public class TpTask
         var isInBigMapUi = Bv.IsInBigMapUi(imageRegion);
         if (!isInBigMapUi)
         {
+            DebugTiming.Mark("panel_left_big_map");
             return TeleportPanelResult.Confirmed;
         }
 
@@ -2588,6 +2955,7 @@ public class TpTask
         if (!teleportButton.IsEmpty())
         {
             PressTeleportConfirmKey();
+            DebugTiming.Mark("panel_press_f", "TeleportButton");
             return TeleportPanelResult.Confirmed;
         }
 
@@ -2599,11 +2967,16 @@ public class TpTask
             return TeleportPanelResult.Waiting;
         }
 
+        DebugTiming.Mark(
+            "panel_candidate_click",
+            $"type={candidate.IconType};text={candidate.Text}");
+
         for (var clickAttempt = 1; clickAttempt <= MapChooseCandidateClickRetryCount; clickAttempt++)
         {
             var result = await WaitAndPressTeleportConfirm(targetTp);
             if (result == TeleportPanelResult.Confirmed)
             {
+                DebugTiming.Mark("panel_candidate_confirm", $"attempt={clickAttempt}");
                 return result;
             }
 
@@ -2612,8 +2985,12 @@ public class TpTask
                 clickAttempt,
                 candidate.IconType,
                 string.IsNullOrWhiteSpace(candidate.Text) ? "未识别" : candidate.Text);
+            DebugTiming.Fail(
+                "panel_candidate_still_visible",
+                $"attempt={clickAttempt};type={candidate.IconType};text={candidate.Text}");
             if (clickAttempt >= MapChooseCandidateClickRetryCount)
             {
+                DebugTiming.Fail("panel_candidate_retry_exhausted");
                 return TeleportPanelResult.RetryPoint;
             }
 
@@ -2621,10 +2998,16 @@ public class TpTask
             candidate = TryClickMapChooseCandidate(retryCapture, targetTp);
             if (candidate == null)
             {
+                DebugTiming.Fail("panel_candidate_reclick_missing");
                 return TeleportPanelResult.RetryPoint;
             }
+
+            DebugTiming.Mark(
+                "panel_candidate_reclick",
+                $"attempt={clickAttempt + 1};type={candidate.IconType};text={candidate.Text}");
         }
 
+        DebugTiming.Fail("panel_candidate_loop_exit");
         return TeleportPanelResult.RetryPoint;
     }
 
@@ -2632,6 +3015,7 @@ public class TpTask
     {
         var stopwatch = Stopwatch.StartNew();
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
+        DebugTiming.Mark("confirm_wait_start");
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
             if (i > 0)
@@ -2645,6 +3029,7 @@ public class TpTask
 
             if (!isInBigMapUi)
             {
+                DebugTiming.Mark("confirm_left_big_map", $"elapsed={stopwatch.ElapsedMilliseconds}");
                 return TeleportPanelResult.Confirmed;
             }
 
@@ -2653,6 +3038,7 @@ public class TpTask
             if (!teleportButton.IsEmpty())
             {
                 PressTeleportConfirmKey();
+                DebugTiming.Mark("confirm_press_f", $"elapsed={stopwatch.ElapsedMilliseconds}");
                 return TeleportPanelResult.Confirmed;
             }
 
@@ -2661,6 +3047,9 @@ public class TpTask
                 // 同一截图识别一次即可；列表仍在则视为点击未生效。
                 if (GetPreferredMapChooseCandidate(screen, targetTp) != null)
                 {
+                    DebugTiming.Fail(
+                        "confirm_candidate_still_visible",
+                        $"elapsed={stopwatch.ElapsedMilliseconds}");
                     return TeleportPanelResult.RetryPoint;
                 }
 
@@ -2669,6 +3058,7 @@ public class TpTask
             }
         }
 
+        DebugTiming.Fail("confirm_timeout", $"elapsed={stopwatch.ElapsedMilliseconds}");
         return TeleportPanelResult.RetryPoint;
     }
 
@@ -2777,7 +3167,8 @@ public class TpTask
         int attempt,
         out double clickX,
         out double clickY,
-        out string failureReason)
+        out string failureReason,
+        out AbsoluteMapClickFailure failure)
     {
         var stopwatch = Stopwatch.StartNew();
         var expectedIcons = GetVisibleExpectedMapIcons(target.MapName, clickView.BigMapInAllMapRect);
@@ -2803,18 +3194,22 @@ public class TpTask
         if (!IsGameRegionPointInClickableArea(clickX, clickY, clickView.RequiredVisibleRadius))
         {
             failureReason = "校正后的目标坐标不在可点击区域";
+            failure = AbsoluteMapClickFailure.OutsideClickableArea;
         }
         else if (uncertainty > maxAllowedUncertainty)
         {
             failureReason = $"地图定位精度不足：uncertainty={uncertainty:0.0}, allowed={maxAllowedUncertainty:0.0}";
+            failure = AbsoluteMapClickFailure.InsufficientPrecision;
         }
         else if (targetCorrection > maxAllowedUncertainty)
         {
             failureReason = $"地图校正量超过相邻点安全距离：correction={targetCorrection:0.0}, allowed={maxAllowedUncertainty:0.0}";
+            failure = AbsoluteMapClickFailure.NeighborSafetyDistance;
         }
         else
         {
             failureReason = string.Empty;
+            failure = AbsoluteMapClickFailure.None;
         }
 
         var success = failureReason.Length == 0;

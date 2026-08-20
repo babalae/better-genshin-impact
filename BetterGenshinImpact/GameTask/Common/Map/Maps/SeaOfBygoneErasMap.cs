@@ -63,10 +63,10 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
     public override Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
-        var rect = GetBigMapRectByTeleports(greyBigMapMat);
-        if (rect != default)
+        var match = GetBigMapMatchResult(greyBigMapMat);
+        if (match.HasResult)
         {
-            return rect.GetCenterPoint();
+            return match.ImageRect.GetCenterPoint();
         }
 
         return base.GetBigMapPosition(greyBigMapMat);
@@ -74,16 +74,24 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
     public override Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        var rect = GetBigMapRectByTeleports(greyBigMapMat);
-        if (rect != default)
-        {
-            return rect;
-        }
-
-        return base.GetBigMapRect(greyBigMapMat);
+        return GetBigMapMatchResult(greyBigMapMat).ImageRect;
     }
 
-    private Rect GetBigMapRectByTeleports(Mat greyBigMapMat)
+    public override BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat)
+    {
+        var teleportMatch = GetBigMapMatchResultByTeleports(greyBigMapMat);
+        if (teleportMatch.IsReliable)
+        {
+            return teleportMatch;
+        }
+
+        var siftMatch = base.GetBigMapMatchResult(greyBigMapMat);
+        return siftMatch.Confidence >= teleportMatch.Confidence
+            ? siftMatch
+            : teleportMatch;
+    }
+
+    private BigMapMatchResult GetBigMapMatchResultByTeleports(Mat greyBigMapMat)
     {
         // It's fine to miss some, but definitely no false positive results.
         const double threshold = 0.99;
@@ -131,7 +139,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
         if (teleportPoints.Count < 2)
         {
-            return default;
+            return BigMapMatchResult.Failed("TeleportTemplate");
         }
         teleportPoints = teleportPoints.Select(i => new Point(i.X + 12, i.Y + 12)).
             OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
@@ -244,11 +252,20 @@ public class SeaOfBygoneErasMap : SceneBaseMap
             var pTopLeft = transformPoint(new Point(0, 0));
             var pBottomRight = transformPoint(new Point(greyBigMapMat.Width, greyBigMapMat.Height));
             // Logger.LogInformation("Rect: {a}, {b}", pTopLeft, pBottomRight);
-            return new Rect(pTopLeft.X, pTopLeft.Y, pBottomRight.X - pTopLeft.X, pBottomRight.Y - pTopLeft.Y);
+            var meanDeviation = minDeviation / teleportPoints.Count;
+            var anchorScore = Math.Clamp((teleportPoints.Count - 2d) / 2d, 0d, 1d);
+            var errorScore = Math.Exp(-meanDeviation / 30d);
+            return new BigMapMatchResult(
+                new Rect(pTopLeft.X, pTopLeft.Y, pBottomRight.X - pTopLeft.X, pBottomRight.Y - pTopLeft.Y),
+                0.5d * anchorScore + 0.5d * errorScore,
+                teleportPoints.Count,
+                teleportPoints.Count,
+                meanDeviation,
+                "TeleportTemplate");
         }
 
 
-        return default;
+        return BigMapMatchResult.Failed("TeleportTemplate");
     }
 
 }

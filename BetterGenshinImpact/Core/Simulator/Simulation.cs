@@ -1,6 +1,7 @@
 ﻿using Fischless.WindowsInput;
 using System;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
@@ -8,6 +9,13 @@ namespace BetterGenshinImpact.Core.Simulator;
 
 public class Simulation
 {
+    static Simulation()
+    {
+#if DEBUG
+        InputDebugHook.Handler = static (action, detail) => DebugInputTrace.RecordSendInput(action, detail);
+#endif
+    }
+
     public static InputSimulator SendInput { get; } = new();
 
     public static MouseEventSimulator MouseEvent { get; } = new();
