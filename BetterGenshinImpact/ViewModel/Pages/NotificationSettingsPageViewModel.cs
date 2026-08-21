@@ -66,6 +66,8 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _meowStatus = string.Empty;
 
+    [ObservableProperty] private string _gotifyStatus = string.Empty;
+
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
         Config = configService.Get();
@@ -476,6 +478,23 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
         MeowStatus = res.Message;
 
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnTestGotifyNotification()
+    {
+        IsLoading = true;
+        GotifyStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<GotifyNotifier>();
+
+        GotifyStatus = res.Message;
         if (res.IsSuccess)
             Toast.Success(res.Message);
         else

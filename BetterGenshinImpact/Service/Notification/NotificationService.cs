@@ -111,6 +111,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeDiscordWebhookNotifier();
         InitializeServerChanNotifier();
         InitializeMeowNotifier();
+        InitializeGotifyNotifier();
 
         // 添加新通知渠道时，在此处添加对应的初始化方法调用
     }
@@ -328,6 +329,21 @@ public class NotificationService : IHostedService, IDisposable
             _notifyHttpClient,
             _notificationConfig.MeowNickname,
             _notificationConfig.MeowTitle
+        ));
+    }
+
+    /// <summary>
+    /// 初始化 Gotify 通知器。
+    /// </summary>
+    private void InitializeGotifyNotifier()
+    {
+        if (_notificationConfig?.GotifyNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new GotifyNotifier(
+            _notifyHttpClient,
+            _notificationConfig.GotifyUrl,
+            _notificationConfig.GotifyAppToken,
+            _notificationConfig.GotifyNotifyLevel
         ));
     }
 

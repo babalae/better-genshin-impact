@@ -301,4 +301,24 @@ public partial class NotificationConfig : ObservableObject
     ///     MeoW消息标题（可选，路径参数）
     /// </summary>
     [ObservableProperty] private string _meowTitle = string.Empty;
+
+    /// <summary>
+    ///     Gotify通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _gotifyNotificationEnabled;
+
+    /// <summary>
+    ///     Gotify服务地址
+    /// </summary>
+    [ObservableProperty] private string _gotifyUrl = string.Empty;
+
+    /// <summary>
+    ///     Gotify服务APP Token
+    /// </summary>
+    [ObservableProperty] private string _gotifyAppToken = string.Empty;
+
+    /// <summary>
+    ///     Gotify通知优先级
+    /// </summary>
+    [ObservableProperty] private int _gotifyNotifyLevel = 3;
 }
