@@ -573,7 +573,7 @@ public partial class ScriptService : IScriptService
             }
 
             var file = Path.Combine(scriptGroupPath, $"{scriptGroup.Name}.json");
-            File.WriteAllText(file, scriptGroup.ToJson());
+            scriptGroup.WriteToFileAtomically(file);
         }
         catch (Exception ex)
         {
