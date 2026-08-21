@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -284,6 +285,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        WindowHelper.CenterOnVisibleOwner(messageBox);
 
         var result = await messageBox.ShowDialogAsync();
         var accepted = result == Wpf.Ui.Controls.MessageBoxResult.Primary;
