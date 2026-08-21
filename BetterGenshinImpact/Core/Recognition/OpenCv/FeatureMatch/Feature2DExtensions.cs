@@ -8,34 +8,6 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
-public readonly record struct FeatureMatchCornersResult(
-    Point2f[] Corners,
-    int QueryKeyPointCount,
-    int GoodMatchCount,
-    int InlierCount,
-    double MedianReprojectionError)
-{
-    public double InlierRatio => GoodMatchCount == 0 ? 0d : (double)InlierCount / GoodMatchCount;
-
-    public double Confidence
-    {
-        get
-        {
-            if (Corners.Length != 4 || InlierCount < 7)
-            {
-                return 0d;
-            }
-
-            var supportScore = Math.Clamp((InlierCount - 4d) / 12d, 0d, 1d);
-            var ratioScore = Math.Clamp((InlierRatio - 0.25d) / 0.5d, 0d, 1d);
-            var errorScore = double.IsFinite(MedianReprojectionError)
-                ? Math.Exp(-MedianReprojectionError / 3d)
-                : 0d;
-            return 0.4d * supportScore + 0.35d * ratioScore + 0.25d * errorScore;
-        }
-    }
-}
-
 public static class Feature2DExtensions
 {
     private static readonly Dictionary<DescriptorMatcherType, DescriptorMatcher> MatcherFactory = new()
@@ -271,25 +243,6 @@ public static class Feature2DExtensions
     public static Point2f[] KnnMatchCorners(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
         DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
-        return feature2D.KnnMatchCornersWithConfidence(
-            trainKeyPoints,
-            trainDescriptors,
-            queryMat,
-            queryMatMask,
-            matcherType).Corners;
-    }
-
-    /// <summary>
-    /// 返回大图匹配角点及可用于判断稳定性的 RANSAC 统计数据。
-    /// </summary>
-    public static FeatureMatchCornersResult KnnMatchCornersWithConfidence(
-        this Feature2D feature2D,
-        KeyPoint[] trainKeyPoints,
-        Mat trainDescriptors,
-        Mat queryMat,
-        Mat? queryMatMask = null,
-        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
-    {
         SpeedTimer speedTimer = new();
         using var queryDescriptors = new Mat();
 #pragma warning disable CS8604 // 引用类型参数可能为 null。
@@ -311,7 +264,7 @@ public static class Feature2DExtensions
 
         if (goodMatches.Count < 7)
         {
-            return new FeatureMatchCornersResult([], queryKeyPoints.Length, goodMatches.Count, 0, double.PositiveInfinity);
+            return [];
         }
 
         // 获取匹配点的坐标
@@ -321,28 +274,14 @@ public static class Feature2DExtensions
         speedTimer.Record("GetGoodMatchPoints");
 
         // 使用RANSAC找到变换矩阵
-        using var mask = new Mat();
-        using var hMat = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
+        var mask = new Mat();
+        var hMat = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
         if (hMat.Empty())
         {
-            return new FeatureMatchCornersResult([], queryKeyPoints.Length, goodMatches.Count, 0, double.PositiveInfinity);
+            return [];
         }
 
         speedTimer.Record("FindHomography");
-
-        var transformedMatchPoints = Cv2.PerspectiveTransform(srcPts, hMat);
-        var reprojectionErrors = new List<double>();
-        for (var i = 0; i < transformedMatchPoints.Length; i++)
-        {
-            if (mask.Rows <= i || mask.At<byte>(i, 0) == 0)
-            {
-                continue;
-            }
-
-            var dx = transformedMatchPoints[i].X - dstPts[i].X;
-            var dy = transformedMatchPoints[i].Y - dstPts[i].Y;
-            reprojectionErrors.Add(Math.Sqrt(dx * dx + dy * dy));
-        }
 
         // 返回四个角点
         var objCorners = new Point2f[4];
@@ -354,12 +293,7 @@ public static class Feature2DExtensions
         var sceneCorners = Cv2.PerspectiveTransform(objCorners, hMat);
         speedTimer.Record("PerspectiveTransform");
         speedTimer.DebugPrint();
-        return new FeatureMatchCornersResult(
-            sceneCorners,
-            queryKeyPoints.Length,
-            goodMatches.Count,
-            reprojectionErrors.Count,
-            GetMedian(reprojectionErrors));
+        return sceneCorners;
     }
 
     public static Rect KnnMatchRect(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null)
@@ -371,30 +305,6 @@ public static class Feature2DExtensions
         }
 
         return Cv2.BoundingRect(corners);
-    }
-
-    public static FeatureMatchCornersResult KnnMatchRectWithConfidence(
-        this Feature2D feature2D,
-        KeyPoint[] trainKeyPoints,
-        Mat trainDescriptors,
-        Mat queryMat,
-        Mat? queryMatMask = null)
-    {
-        return feature2D.KnnMatchCornersWithConfidence(trainKeyPoints, trainDescriptors, queryMat, queryMatMask);
-    }
-
-    private static double GetMedian(List<double> values)
-    {
-        if (values.Count == 0)
-        {
-            return double.PositiveInfinity;
-        }
-
-        values.Sort();
-        var middle = values.Count / 2;
-        return values.Count % 2 == 0
-            ? (values[middle - 1] + values[middle]) / 2d
-            : values[middle];
     }
 
     #endregion Knn匹配

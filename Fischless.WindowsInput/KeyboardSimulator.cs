@@ -55,54 +55,50 @@ public class KeyboardSimulator : IKeyboardSimulator
         }
     }
 
-    private void SendSimulatedInput(User32.INPUT[] inputList, string? action = null, string detail = "")
+    private void SendSimulatedInput(User32.INPUT[] inputList)
     {
         _messageDispatcher.DispatchInput(inputList);
-        if (action != null)
-        {
-            InputDebugHook.Record(action, detail);
-        }
     }
 
     public IKeyboardSimulator KeyDown(User32.VK keyCode)
     {
         User32.INPUT[] inputList = new InputBuilder().AddKeyDown(keyCode).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.KeyDown", keyCode.ToString());
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IKeyboardSimulator KeyDown(bool? isExtendedKey, User32.VK keyCode)
     {
         User32.INPUT[] inputList = new InputBuilder().AddKeyDown(keyCode, isExtendedKey).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.KeyDown", $"{keyCode};extended={isExtendedKey}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IKeyboardSimulator KeyUp(User32.VK keyCode)
     {
         User32.INPUT[] inputList = new InputBuilder().AddKeyUp(keyCode).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.KeyUp", keyCode.ToString());
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IKeyboardSimulator KeyUp(bool? isExtendedKey, User32.VK keyCode)
     {
         User32.INPUT[] inputList = new InputBuilder().AddKeyUp(keyCode, isExtendedKey).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.KeyUp", $"{keyCode};extended={isExtendedKey}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IKeyboardSimulator KeyPress(User32.VK keyCode)
     {
         User32.INPUT[] inputList = new InputBuilder().AddKeyPress(keyCode).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.KeyPress", keyCode.ToString());
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IKeyboardSimulator KeyPress(bool? isExtendedKey, User32.VK keyCode)
     {
         User32.INPUT[] inputList = new InputBuilder().AddKeyPress(keyCode, isExtendedKey).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.KeyPress", $"{keyCode};extended={isExtendedKey}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
@@ -110,7 +106,7 @@ public class KeyboardSimulator : IKeyboardSimulator
     {
         InputBuilder inputBuilder = new();
         KeysPress(inputBuilder, keyCodes);
-        SendSimulatedInput(inputBuilder.ToArray(), "Keyboard.KeyPress", string.Join("+", keyCodes));
+        SendSimulatedInput(inputBuilder.ToArray());
         return this;
     }
 
@@ -118,7 +114,7 @@ public class KeyboardSimulator : IKeyboardSimulator
     {
         InputBuilder inputBuilder = new();
         KeysPress(inputBuilder, keyCodes, isExtendedKey);
-        SendSimulatedInput(inputBuilder.ToArray(), "Keyboard.KeyPress", $"{string.Join("+", keyCodes)};extended={isExtendedKey}");
+        SendSimulatedInput(inputBuilder.ToArray());
         return this;
     }
 
@@ -158,10 +154,7 @@ public class KeyboardSimulator : IKeyboardSimulator
         ModifiersDown(inputBuilder, modifierKeyCodes);
         KeysPress(inputBuilder, keyCodes);
         ModifiersUp(inputBuilder, modifierKeyCodes);
-        SendSimulatedInput(
-            inputBuilder.ToArray(),
-            "Keyboard.ModifiedKeyStroke",
-            $"mod={string.Join("+", modifierKeyCodes ?? Array.Empty<User32.VK>())};keys={string.Join("+", keyCodes ?? Array.Empty<User32.VK>())}");
+        SendSimulatedInput(inputBuilder.ToArray());
         return this;
     }
 
@@ -172,14 +165,14 @@ public class KeyboardSimulator : IKeyboardSimulator
             throw new ArgumentException(string.Format("The text parameter is too long. It must be less than {0} characters.", 2147483647U), "text");
         }
         User32.INPUT[] inputList = new InputBuilder().AddCharacters(text).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.TextEntry", $"len={text?.Length ?? 0}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IKeyboardSimulator TextEntry(char character)
     {
         User32.INPUT[] inputList = new InputBuilder().AddCharacter(character).ToArray();
-        SendSimulatedInput(inputList, "Keyboard.TextEntry", $"char={character}");
+        SendSimulatedInput(inputList);
         return this;
     }
 

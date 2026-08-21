@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Simulator;
@@ -33,7 +32,6 @@ public class PostMessageSimulator
     /// <param name="y"></param>
     public PostMessageSimulator LeftButtonClick(int x, int y)
     {
-        DebugInputTrace.Record("PostMessage", "LeftClick", $"x={x};y={y}");
         IntPtr p = (y << 16) | x;
         User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero, p);
         Thread.Sleep(100);
@@ -48,7 +46,6 @@ public class PostMessageSimulator
     /// <param name="y"></param>
     public PostMessageSimulator LeftButtonClickBackground(int x, int y)
     {
-        DebugInputTrace.Record("PostMessage", "LeftClickBackground", $"x={x};y={y}");
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
         var p = MakeLParam(x, y);
         User32.PostMessage(_hWnd, WM_LBUTTONDOWN, 1, p);
@@ -61,7 +58,6 @@ public class PostMessageSimulator
 
     public PostMessageSimulator LeftButtonClick()
     {
-        DebugInputTrace.Record("PostMessage", "LeftClick", "default");
         IntPtr p = (16 << 16) | 16;
         User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero, p);
         Thread.Sleep(100);
@@ -71,7 +67,6 @@ public class PostMessageSimulator
 
     public PostMessageSimulator LeftButtonClickBackground()
     {
-        DebugInputTrace.Record("PostMessage", "LeftClickBackground", "default");
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
         IntPtr p = (16 << 16) | 16;
         User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero, p);
@@ -127,7 +122,6 @@ public class PostMessageSimulator
 
     public PostMessageSimulator KeyPress(User32.VK vk)
     {
-        DebugInputTrace.Record("PostMessage", "KeyPress", vk.ToString());
         //User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
@@ -137,7 +131,6 @@ public class PostMessageSimulator
 
     public PostMessageSimulator KeyPress(User32.VK vk, int ms)
     {
-        DebugInputTrace.Record("PostMessage", "KeyPress", $"{vk};ms={ms}");
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         Thread.Sleep(ms);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
@@ -147,7 +140,6 @@ public class PostMessageSimulator
 
     public PostMessageSimulator LongKeyPress(User32.VK vk)
     {
-        DebugInputTrace.Record("PostMessage", "LongKeyPress", vk.ToString());
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         Thread.Sleep(1000);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
@@ -157,21 +149,18 @@ public class PostMessageSimulator
 
     public PostMessageSimulator KeyDown(User32.VK vk)
     {
-        DebugInputTrace.Record("PostMessage", "KeyDown", vk.ToString());
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         return this;
     }
 
     public PostMessageSimulator KeyUp(User32.VK vk)
     {
-        DebugInputTrace.Record("PostMessage", "KeyUp", vk.ToString());
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 
     public PostMessageSimulator KeyPressBackground(User32.VK vk)
     {
-        DebugInputTrace.Record("PostMessage", "KeyPressBackground", vk.ToString());
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);

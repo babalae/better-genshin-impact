@@ -7,8 +7,6 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
-      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
-      xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
@@ -962,72 +960,6 @@
                                      IsEnabled="{Binding Config.CommonConfig.ScreenshotEnabled}"
                                      IsChecked="{Binding Config.CommonConfig.RewardRecognitionScreenshotEnabled, Mode=TwoWay}" />
                 </Grid>
-
-                <StackPanel Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebug},
-                                                           Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="记录分阶段计时"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            将任务关键步骤耗时写入
-                            <Hyperlink Command="{Binding GoToDebugTimingFolderCommand}"
-                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                                log/debug-timing
-                            </Hyperlink>
-                            （仅 Debug 构建有效）
-                        </ui:TextBlock>
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding Config.OtherConfig.EnableDebugTiming, Mode=TwoWay}" />
-                    </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="记录模拟键鼠"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            将模拟鼠标/键盘操作写入
-                            <Hyperlink Command="{Binding GoToDebugTimingFolderCommand}"
-                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                                log/debug-timing
-                            </Hyperlink>
-                            下的 input-*.csv（仅 Debug 构建有效）
-                        </ui:TextBlock>
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding Config.OtherConfig.EnableDebugInputTrace, Mode=TwoWay}" />
-                    </Grid>
-                </StackPanel>
 
             </StackPanel>
         </ui:CardExpander>

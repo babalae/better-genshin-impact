@@ -138,23 +138,7 @@ public abstract class SceneBaseMap : ISceneMap
 
     public virtual Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        return GetBigMapMatchResult(greyBigMapMat).ImageRect;
-    }
-
-    public virtual BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat)
-    {
-        var match = SiftMatcher.KnnMatchRectWithConfidence(
-            MainLayer.TrainKeyPoints,
-            MainLayer.TrainDescriptors,
-            greyBigMapMat);
-        var rect = match.Corners.Length == 4 ? Cv2.BoundingRect(match.Corners) : default;
-        return new BigMapMatchResult(
-            rect,
-            match.Confidence,
-            match.GoodMatchCount,
-            match.InlierCount,
-            match.MedianReprojectionError,
-            "SIFT");
+        return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
     }
 
     private static bool IsValidPoint(Point2f point)

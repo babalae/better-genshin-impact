@@ -63,10 +63,10 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
     public override Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
-        var teleportMatch = GetBigMapMatchResultByTeleports(greyBigMapMat);
-        if (teleportMatch.HasResult)
+        var rect = GetBigMapRectByTeleports(greyBigMapMat);
+        if (rect != default)
         {
-            return teleportMatch.ImageRect.GetCenterPoint();
+            return rect.GetCenterPoint();
         }
 
         return base.GetBigMapPosition(greyBigMapMat);
@@ -74,21 +74,16 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
     public override Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        return GetBigMapMatchResult(greyBigMapMat).ImageRect;
-    }
-
-    public override BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat)
-    {
-        var teleportMatch = GetBigMapMatchResultByTeleports(greyBigMapMat);
-        if (teleportMatch.HasResult)
+        var rect = GetBigMapRectByTeleports(greyBigMapMat);
+        if (rect != default)
         {
-            return teleportMatch;
+            return rect;
         }
 
-        return base.GetBigMapMatchResult(greyBigMapMat);
+        return base.GetBigMapRect(greyBigMapMat);
     }
 
-    private BigMapMatchResult GetBigMapMatchResultByTeleports(Mat greyBigMapMat)
+    private Rect GetBigMapRectByTeleports(Mat greyBigMapMat)
     {
         // It's fine to miss some, but definitely no false positive results.
         const double threshold = 0.99;
@@ -136,7 +131,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
         if (teleportPoints.Count < 2)
         {
-            return BigMapMatchResult.Failed("TeleportTemplate");
+            return default;
         }
         teleportPoints = teleportPoints.Select(i => new Point(i.X + 12, i.Y + 12)).
             OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
@@ -249,20 +244,11 @@ public class SeaOfBygoneErasMap : SceneBaseMap
             var pTopLeft = transformPoint(new Point(0, 0));
             var pBottomRight = transformPoint(new Point(greyBigMapMat.Width, greyBigMapMat.Height));
             // Logger.LogInformation("Rect: {a}, {b}", pTopLeft, pBottomRight);
-            var meanDeviation = minDeviation / teleportPoints.Count;
-            var anchorScore = Math.Clamp((teleportPoints.Count - 2d) / 2d, 0d, 1d);
-            var errorScore = Math.Exp(-meanDeviation / 30d);
-            return new BigMapMatchResult(
-                new Rect(pTopLeft.X, pTopLeft.Y, pBottomRight.X - pTopLeft.X, pBottomRight.Y - pTopLeft.Y),
-                0.5d * anchorScore + 0.5d * errorScore,
-                teleportPoints.Count,
-                teleportPoints.Count,
-                meanDeviation,
-                "TeleportTemplate");
+            return new Rect(pTopLeft.X, pTopLeft.Y, pBottomRight.X - pTopLeft.X, pBottomRight.Y - pTopLeft.Y);
         }
 
 
-        return BigMapMatchResult.Failed("TeleportTemplate");
+        return default;
     }
 
 }

@@ -55,24 +55,8 @@ public class BigMapTeyvat256Layer : BaseMapLayer
 
     public Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        return GetBigMapMatchResult(greyBigMapMat).ImageRect;
-    }
-
-    public BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat)
-    {
-        using var resizedGrey = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
-        var match = _siftMatcher.KnnMatchRectWithConfidence(
-            TrainKeyPoints,
-            TrainDescriptors,
-            resizedGrey);
-        var rect = match.Corners.Length == 4 ? Cv2.BoundingRect(match.Corners) : default;
-        return new BigMapMatchResult(
-            rect,
-            match.Confidence,
-            match.GoodMatchCount,
-            match.InlierCount,
-            match.MedianReprojectionError,
-            "SIFT-256");
+        greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
+        return _siftMatcher.KnnMatchRect(TrainKeyPoints, TrainDescriptors, greyBigMapMat);
     }
 
     public Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter)

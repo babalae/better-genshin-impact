@@ -18,157 +18,155 @@ public class MouseSimulator : IMouseSimulator
 
     public IKeyboardSimulator Keyboard => _inputSimulator.Keyboard;
 
-    private void SendSimulatedInput(User32.INPUT[] inputList, string action, string detail = "")
+    private void SendSimulatedInput(User32.INPUT[] inputList)
     {
-        // 先发输入再埋点，避免拖地图等热路径被同步 I/O 打断
         _messageDispatcher.DispatchInput(inputList);
-        InputDebugHook.Record(action, detail);
     }
 
     public IMouseSimulator MoveMouseBy(int pixelDeltaX, int pixelDeltaY)
     {
         User32.INPUT[] inputList = new InputBuilder().AddRelativeMouseMovement(pixelDeltaX, pixelDeltaY).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MoveBy", $"dx={pixelDeltaX};dy={pixelDeltaY}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator MoveMouseTo(double absoluteX, double absoluteY)
     {
         User32.INPUT[] inputList = new InputBuilder().AddAbsoluteMouseMovement((int)Math.Truncate(absoluteX), (int)Math.Truncate(absoluteY)).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MoveTo", $"x={absoluteX:0.##};y={absoluteY:0.##}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator MoveMouseToPositionOnVirtualDesktop(double absoluteX, double absoluteY)
     {
         User32.INPUT[] inputList = new InputBuilder().AddAbsoluteMouseMovementOnVirtualDesktop((int)Math.Truncate(absoluteX), (int)Math.Truncate(absoluteY)).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MoveToVirtualDesktop", $"x={absoluteX:0.##};y={absoluteY:0.##}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator LeftButtonDown()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDown(MouseButton.LeftButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.LeftDown");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator LeftButtonUp()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonUp(MouseButton.LeftButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.LeftUp");
+        this.SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator LeftButtonClick()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonClick(MouseButton.LeftButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.LeftClick");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator LeftButtonDoubleClick()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDoubleClick(MouseButton.LeftButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.LeftDoubleClick");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator MiddleButtonDown()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDown(MouseButton.MiddleButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MiddleDown");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator MiddleButtonUp()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonUp(MouseButton.MiddleButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MiddleUp");
+        this.SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator MiddleButtonClick()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonClick(MouseButton.MiddleButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MiddleClick");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator MiddleButtonDoubleClick()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDoubleClick(MouseButton.MiddleButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.MiddleDoubleClick");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator RightButtonDown()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDown(MouseButton.RightButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.RightDown");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator RightButtonUp()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonUp(MouseButton.RightButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.RightUp");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator RightButtonClick()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonClick(MouseButton.RightButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.RightClick");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator RightButtonDoubleClick()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDoubleClick(MouseButton.RightButton).ToArray();
-        SendSimulatedInput(inputList, "Mouse.RightDoubleClick");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator XButtonDown(int buttonId)
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseXButtonDown(buttonId).ToArray();
-        SendSimulatedInput(inputList, "Mouse.XDown", $"id={buttonId}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator XButtonUp(int buttonId)
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseXButtonUp(buttonId).ToArray();
-        SendSimulatedInput(inputList, "Mouse.XUp", $"id={buttonId}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator XButtonClick(int buttonId)
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseXButtonClick(buttonId).ToArray();
-        SendSimulatedInput(inputList, "Mouse.XClick", $"id={buttonId}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator XButtonDoubleClick(int buttonId)
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseXButtonDoubleClick(buttonId).ToArray();
-        SendSimulatedInput(inputList, "Mouse.XDoubleClick", $"id={buttonId}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator VerticalScroll(int scrollAmountInClicks)
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseVerticalWheelScroll(scrollAmountInClicks * 120).ToArray();
-        SendSimulatedInput(inputList, "Mouse.VerticalScroll", $"clicks={scrollAmountInClicks}");
+        SendSimulatedInput(inputList);
         return this;
     }
 
     public IMouseSimulator HorizontalScroll(int scrollAmountInClicks)
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseHorizontalWheelScroll(scrollAmountInClicks * 120).ToArray();
-        SendSimulatedInput(inputList, "Mouse.HorizontalScroll", $"clicks={scrollAmountInClicks}");
+        SendSimulatedInput(inputList);
         return this;
     }
 

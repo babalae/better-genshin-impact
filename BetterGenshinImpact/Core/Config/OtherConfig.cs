@@ -29,14 +29,6 @@ public partial class OtherConfig : ObservableObject
     //OCR配置
     [ObservableProperty]
     private Ocr _ocrConfig = new();
-
-    /// <summary>Debug 专用：记录分阶段计时到 log/debug-timing/</summary>
-    [ObservableProperty]
-    private bool _enableDebugTiming;
-
-    /// <summary>Debug 专用：记录模拟键鼠到 log/debug-timing/input-*.csv</summary>
-    [ObservableProperty]
-    private bool _enableDebugInputTrace;
     
 
     public partial class AutoRestart : ObservableObject

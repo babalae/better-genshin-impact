@@ -31,11 +31,6 @@ public interface ISceneMap
     Rect GetBigMapRect(Mat greyBigMapMat);
 
     /// <summary>
-    /// 获取大地图匹配结果及其可信度。
-    /// </summary>
-    BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat);
-
-    /// <summary>
     /// 获取小地图在整张地图上的位置
     /// </summary>
     /// <param name="greyMiniMapMat"></param>
