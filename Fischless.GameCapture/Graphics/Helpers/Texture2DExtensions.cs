@@ -45,4 +45,46 @@ public static class Texture2DExtensions
             return null;
         }
     }
+
+    /// <summary>
+    /// 映射（拷贝由调用方在锁内完成），使用阻塞式 MapFlags.None 与原版一致。
+    /// </summary>
+    public static Mat? CreateMat(this Texture2D staging, Device d3dDevice, out Mat? owner,
+        Func<int, int, Mat>? acquireBgr = null, Action<Mat>? releaseBgr = null)
+    {
+        owner = null;
+        var context = d3dDevice.ImmediateContext;
+        var dataBox = context.MapSubresource(staging, 0, MapMode.Read, MapFlags.None);
+        try
+        {
+            using Mat bgra = Mat.FromPixelData(staging.Description.Height, staging.Description.Width,
+                MatType.CV_8UC4, dataBox.DataPointer, dataBox.RowPitch);
+            if (acquireBgr != null)
+            {
+                var target = acquireBgr(staging.Description.Height, staging.Description.Width);
+                try
+                {
+                    Cv2.CvtColor(bgra, target, ColorConversionCodes.BGRA2BGR);
+                    owner = target;
+                    return WgcBgrMat.CreateFrom(target, releaseBgr!);
+                }
+                catch
+                {
+                    releaseBgr?.Invoke(target);
+                    throw;
+                }
+            }
+            return bgra.CvtColor(ColorConversionCodes.BGRA2BGR);
+        }
+        finally
+        {
+            context.UnmapSubresource(staging, 0);
+        }
+    }
+
+    public static Mat? CreateMat(this Texture2D staging, Device d3dDevice,
+        Func<int, int, Mat>? acquireBgr = null, Action<Mat>? releaseBgr = null)
+    {
+        return CreateMat(staging, d3dDevice, out _, acquireBgr, releaseBgr);
+    }
 }

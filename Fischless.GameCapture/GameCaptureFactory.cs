@@ -15,6 +15,7 @@ public class GameCaptureFactory
             CaptureModes.DwmGetDxSharedSurface => new DwmSharedSurface.SharedSurfaceCapture(),
             CaptureModes.WindowsGraphicsCapture => new Graphics.GraphicsCapture(),
             CaptureModes.WindowsGraphicsCaptureHdr => new Graphics.GraphicsCapture(true),
+            CaptureModes.WindowsGraphicsCaptureV3 => new Graphics.GraphicsCaptureV3(),
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
         };
     }
