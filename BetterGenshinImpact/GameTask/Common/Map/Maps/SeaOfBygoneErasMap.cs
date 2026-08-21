@@ -63,10 +63,10 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
     public override Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
-        var match = GetBigMapMatchResult(greyBigMapMat);
-        if (match.HasResult)
+        var teleportMatch = GetBigMapMatchResultByTeleports(greyBigMapMat);
+        if (teleportMatch.HasResult)
         {
-            return match.ImageRect.GetCenterPoint();
+            return teleportMatch.ImageRect.GetCenterPoint();
         }
 
         return base.GetBigMapPosition(greyBigMapMat);
@@ -80,15 +80,12 @@ public class SeaOfBygoneErasMap : SceneBaseMap
     public override BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat)
     {
         var teleportMatch = GetBigMapMatchResultByTeleports(greyBigMapMat);
-        if (teleportMatch.IsReliable)
+        if (teleportMatch.HasResult)
         {
             return teleportMatch;
         }
 
-        var siftMatch = base.GetBigMapMatchResult(greyBigMapMat);
-        return siftMatch.Confidence >= teleportMatch.Confidence
-            ? siftMatch
-            : teleportMatch;
+        return base.GetBigMapMatchResult(greyBigMapMat);
     }
 
     private BigMapMatchResult GetBigMapMatchResultByTeleports(Mat greyBigMapMat)

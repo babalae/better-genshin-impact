@@ -75,31 +75,6 @@ public class BigMapTeyvat256Layer : BaseMapLayer
             "SIFT-256");
     }
 
-    public BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat, Point2f expectedCenter)
-    {
-        if (!IsValidPoint(expectedCenter) || SplitBlocks.Length == 0 || SplitBlocks[0].Length == 0)
-        {
-            return BigMapMatchResult.Failed("SIFT-256-local");
-        }
-
-        using var resizedGrey = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
-        var searchRect = BuildLocalSearchRect(expectedCenter, resizedGrey.Size(), _mapSize256);
-        var match = _siftMatcher.KnnMatchLocalCornersWithConfidence(
-            SplitBlocks,
-            TrainDescriptors,
-            _mapSize256,
-            searchRect,
-            resizedGrey);
-        var rect = match.Corners.Length == 4 ? Cv2.BoundingRect(match.Corners) : default;
-        return new BigMapMatchResult(
-            rect,
-            match.Confidence,
-            match.GoodMatchCount,
-            match.InlierCount,
-            match.MedianReprojectionError,
-            "SIFT-256-local");
-    }
-
     public Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter)
     {
         using var resizedGrey = ResizeHelper.Resize(greyBigMapMat, 1d / 4);

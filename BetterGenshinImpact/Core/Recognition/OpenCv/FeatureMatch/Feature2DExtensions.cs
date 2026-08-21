@@ -268,60 +268,6 @@ public static class Feature2DExtensions
         }
     }
 
-    /// <summary>
-    /// 在预期区域附近匹配大图，并返回用于判断稳定性的 RANSAC 统计数据。
-    /// </summary>
-    public static FeatureMatchCornersResult KnnMatchLocalCornersWithConfidence(
-        this Feature2D feature2D,
-        KeyPointFeatureBlock[][] splitBlocks,
-        Mat trainDescriptors,
-        Size trainImageSize,
-        Rect searchRect,
-        Mat queryMat,
-        Mat? queryMatMask = null,
-        int expandCells = 2)
-    {
-        if (splitBlocks.Length == 0 || splitBlocks[0].Length == 0)
-        {
-            return new FeatureMatchCornersResult([], 0, 0, 0, double.PositiveInfinity);
-        }
-
-        try
-        {
-            var (rowStart, rowEnd, colStart, colEnd) = KeyPointFeatureBlockHelper.GetCellRange(
-                trainImageSize,
-                splitBlocks.Length,
-                splitBlocks[0].Length,
-                searchRect);
-            var mergedBlock = KeyPointFeatureBlockHelper.MergeFeaturesInRange(
-                splitBlocks,
-                trainDescriptors,
-                rowStart - expandCells,
-                rowEnd + expandCells,
-                colStart - expandCells,
-                colEnd + expandCells);
-            var descriptors = mergedBlock.Descriptor;
-            if (mergedBlock.KeyPointArray.Length == 0 || descriptors == null || descriptors.Empty())
-            {
-                descriptors?.Dispose();
-                return new FeatureMatchCornersResult([], 0, 0, 0, double.PositiveInfinity);
-            }
-
-            using (descriptors)
-            {
-                return feature2D.KnnMatchCornersWithConfidence(
-                    mergedBlock.KeyPointArray,
-                    descriptors,
-                    queryMat,
-                    queryMatMask);
-            }
-        }
-        catch
-        {
-            return new FeatureMatchCornersResult([], 0, 0, 0, double.PositiveInfinity);
-        }
-    }
-
     public static Point2f[] KnnMatchCorners(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
         DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {

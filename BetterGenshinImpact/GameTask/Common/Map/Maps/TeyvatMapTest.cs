@@ -58,11 +58,4 @@ public class TeyvatMapTest : SceneBaseMapByTemplateMatch
         return BigMapTeyvat256Layer.GetInstance(this).GetBigMapMatchResult(greyBigMapMat);
     }
 
-    public override BigMapMatchResult GetBigMapMatchResult(Mat greyBigMapMat, Point2f expectedCenter)
-    {
-        var expectedCenter256 = new Point2f(
-            expectedCenter.X / TeyvatMap.BigMap256ScaleTo2048,
-            expectedCenter.Y / TeyvatMap.BigMap256ScaleTo2048);
-        return BigMapTeyvat256Layer.GetInstance(this).GetBigMapMatchResult(greyBigMapMat, expectedCenter256);
-    }
 }

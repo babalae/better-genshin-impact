@@ -81,8 +81,6 @@ public class TpTask
     private const int AbsoluteMapIconInvalidCost = 10_000_000;
     private const double AbsoluteMapClickBaseUncertainty = 16d;
     private const double AbsoluteMapClickNeighborErrorRatio = 0.25d;
-    private const int BigMapIconCorrectionMinimumPairs = 3;
-    private const double BigMapIconCorrectionMaxUncertainty = 12d;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
     private const int MapChooseCandidateClickRetryCount = 2;
     private const int MapChooseCandidateClickVerificationDelayMs = 600;
@@ -108,13 +106,9 @@ public class TpTask
     private const int BlessingCheckIntervalMs = 1000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
-    private static Point2f? s_lastSuccessfulTeleportPosition;
-
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
-    private Rect? _lastReliableBigMapRect;
-    private string? _lastReliableBigMapRectMapName;
 
     private sealed class MapChooseCandidate
     {
@@ -450,7 +444,7 @@ public class TpTask
             await WaitForTeleportCompletion();
             DebugTiming.Mark("teleport_completed");
 
-            RememberSuccessfulTeleport(target.MapName, target.X, target.Y);
+            s_lastSuccessfulTeleportMapName = target.MapName;
             DebugTiming.End("ok");
             return (target.X, target.Y);
         }
@@ -888,8 +882,7 @@ public class TpTask
                      targetX,
                      targetY,
                      currentZoomLevel,
-                     out moveState,
-                     TryGetLastSuccessfulTeleportPositionHint(mapName)))
+                     out moveState))
         {
             return false;
         }
@@ -1637,14 +1630,11 @@ public class TpTask
         double x,
         double y,
         double currentZoomLevel,
-        out MapMoveState moveState,
-        Point2f? expectedCenterHint = null)
+        out MapMoveState moveState)
     {
         try
         {
-            var mapCenterPoint = expectedCenterHint is { } hint
-                ? GetPositionFromBigMap(mapName, hint)
-                : GetPositionFromBigMap(mapName);
+            var mapCenterPoint = GetPositionFromBigMap(mapName);
             moveState = GetMoveMapState(mapCenterPoint, x, y, currentZoomLevel);
             return true;
         }
@@ -1666,17 +1656,7 @@ public class TpTask
             return (GetMoveMapState(switchedCenterPoint, x, y, currentZoomLevel), currentZoomLevel);
         }
 
-        // 仅用于「开图后视野仍在上次传送点附近」的低置信度位置预测（同图跳过切区域时）。
-        // SwitchArea 会清掉该提示，避免区域默认视野 + 旧坐标导致传送点校正偏离。
-        var localHint = TryGetLastSuccessfulTeleportPositionHint(mapName);
-        if (localHint is { } hint)
-        {
-            DebugTiming.Mark(
-                "big_map_position_hint",
-                $"map={mapName};hint=({hint.X:0.#},{hint.Y:0.#})");
-        }
-
-        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var moveState, localHint))
+        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var moveState))
         {
             return (moveState, currentZoomLevel);
         }
@@ -1818,7 +1798,6 @@ public class TpTask
             return;
         }
 
-        ClearLastReliableBigMapRect();
         var noProgressTimes = 0;
         while (!IsZoomCloseEnough(currentZoomLevel, targetZoomLevel))
         {
@@ -2265,9 +2244,9 @@ public class TpTask
             {
                 try
                 {
-                    if (!TryGetBigMapRectWithConfidence(ra, mapName, null, out rect, out var detail))
+                    if (!TryGetBigMapRectWithStatistics(ra, mapName, out rect, out var detail))
                     {
-                        throw new RetryException($"大地图范围低置信度：{detail}");
+                        throw new RetryException($"大地图范围识别失败：{detail}");
                     }
                 }
                 catch (Exception)
@@ -2306,12 +2285,14 @@ public class TpTask
         using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
         if (mapScaleButtonRa.IsExist())
         {
-            if (!TryGetBigMapRectWithConfidence(ra, mapName, expectedCenterPoint, out var rect, out var detail))
+            var point = RecognizeBigMapCenterPoint(mapName, ra.CacheGreyMat, expectedCenterPoint);
+
+            if (point.IsEmpty())
             {
-                throw new MapPositionNotRecognizedException("大地图位置低置信度且传送点锚点不足：" + detail);
+                throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
             }
 
-            return rect.GetCenterPoint();
+            return point;
         }
         else
         {
@@ -2319,35 +2300,61 @@ public class TpTask
         }
     }
 
-    private static void RememberSuccessfulTeleport(string mapName, double x, double y)
+    private Point2f RecognizeBigMapCenterPoint(string mapName, Mat greyMat, Point2f? expectedCenterPoint = null)
     {
-        s_lastSuccessfulTeleportMapName = mapName;
-        s_lastSuccessfulTeleportPosition = new Point2f((float)x, (float)y);
-    }
-
-    private static void ClearLastSuccessfulTeleportPositionHint()
-    {
-        s_lastSuccessfulTeleportPosition = null;
-    }
-
-    /// <summary>
-    /// 同地图且未切过区域时，用上次成功传送坐标作为低置信度时的地图位置预测。
-    /// </summary>
-    private static Point2f? TryGetLastSuccessfulTeleportPositionHint(string mapName)
-    {
-        if (s_lastSuccessfulTeleportPosition is not { } position ||
-            !string.Equals(s_lastSuccessfulTeleportMapName, mapName, StringComparison.Ordinal))
+        var recognitionMode = expectedCenterPoint.HasValue ? "original-local-position" : "original-global-position";
+        var expectedCenter = expectedCenterPoint is { } expected
+            ? $"({expected.X:0.##},{expected.Y:0.##})"
+            : "none";
+        Point2f imagePoint;
+        try
         {
-            return null;
+            var map = MapManager.GetMap(mapName, _mapMatchingMethod);
+            imagePoint = expectedCenterPoint is Point2f expectedPoint
+                ? map.GetBigMapPosition(greyMat, map.ConvertGenshinMapCoordinatesToImageCoordinates(expectedPoint))
+                : map.GetBigMapPosition(greyMat);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogInformation(
+                "大地图中心识别判断：方式={Mode}，预期中心={ExpectedCenter}，决策=reject-exception，异常={Error}",
+                recognitionMode,
+                expectedCenter,
+                ex.Message);
+            throw new MapPositionNotRecognizedException("大地图特征点匹配引发异常：" + ex.Message, ex);
         }
 
-        return position;
+        if (imagePoint.IsEmpty())
+        {
+            Logger.LogInformation(
+                "大地图中心识别判断：方式={Mode}，预期中心={ExpectedCenter}，图像坐标=(0,0)，决策=reject-empty",
+                recognitionMode,
+                expectedCenter);
+            throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
+        }
+
+        var (x, y) = (imagePoint.X, imagePoint.Y);
+        if (mapName == MapTypes.Teyvat.ToString())
+        {
+            (x, y) = (imagePoint.X * TeyvatMap.BigMap256ScaleTo2048, imagePoint.Y * TeyvatMap.BigMap256ScaleTo2048);
+        }
+
+        var mapPoint = MapManager.GetMap(mapName, _mapMatchingMethod)
+            .ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y))!.Value;
+        Logger.LogInformation(
+            "大地图中心识别判断：方式={Mode}，预期中心={ExpectedCenter}，图像坐标=({ImageX:0.##},{ImageY:0.##})，地图坐标=({MapX:0.##},{MapY:0.##})，决策=accept",
+            recognitionMode,
+            expectedCenter,
+            imagePoint.X,
+            imagePoint.Y,
+            mapPoint.X,
+            mapPoint.Y);
+        return mapPoint;
     }
 
-    private bool TryGetBigMapRectWithConfidence(
+    private bool TryGetBigMapRectWithStatistics(
         ImageRegion imageRegion,
         string mapName,
-        Point2f? expectedCenterPoint,
         out Rect bigMapInAllMapRect,
         out string detail)
     {
@@ -2356,72 +2363,81 @@ public class TpTask
         try
         {
             var map = MapManager.GetMap(mapName, _mapMatchingMethod);
-            BigMapMatchResult match;
-            if (expectedCenterPoint is { } expectedCenter)
-            {
-                var expectedImageCenter = map.ConvertGenshinMapCoordinatesToImageCoordinates(expectedCenter);
-                match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat, expectedImageCenter);
-                if (!match.HasResult)
-                {
-                    var localDetail = FormatBigMapMatchDetail(mapName, match);
-                    match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat);
-                    detail = localDetail + ";globalFallback=" + FormatBigMapMatchDetail(mapName, match);
-                }
-                else
-                {
-                    detail = FormatBigMapMatchDetail(mapName, match);
-                }
-            }
-            else
-            {
-                match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat);
-                detail = FormatBigMapMatchDetail(mapName, match);
-            }
+            var match = map.GetBigMapMatchResult(imageRegion.CacheGreyMat);
+            detail = FormatBigMapMatchDetail(mapName, match) +
+                     ";searchScope=global;confidenceAffectsDecision=false";
+            LogBigMapMatchDecision("global", "observe-statistics", null, detail);
 
-            if (!match.HasResult || !TryConvertBigMapImageRect(mapName, map, match.ImageRect, out var recognizedRect))
+            if (!match.HasResult)
             {
                 DebugTiming.Fail("big_map_match_missing", detail);
+                LogBigMapMatchDecision("final", "reject-no-result", null, detail);
                 return false;
             }
 
-            if (match.IsReliable)
+            if (!TryConvertBigMapImageRect(mapName, map, match.ImageRect, out var recognizedRect))
             {
-                bigMapInAllMapRect = recognizedRect;
-                RememberReliableBigMapRect(mapName, recognizedRect);
-                DebugTiming.Mark("big_map_match_confident", detail);
-                return true;
+                detail += ";reason=coordinate_conversion_failed";
+                DebugTiming.Fail("big_map_match_missing", detail);
+                LogBigMapMatchDecision("final", "reject-coordinate-conversion", null, detail);
+                return false;
             }
 
-            var predictedRect = recognizedRect;
-            if (expectedCenterPoint.HasValue)
-            {
-                var referenceRect = TryGetLastReliableBigMapRect(mapName) ?? recognizedRect;
-                predictedRect = MoveBigMapRectCenter(referenceRect, expectedCenterPoint.Value);
-            }
-            if (TryCorrectBigMapRectByTeleportIcons(imageRegion, mapName, predictedRect, out var correctedRect, out var correctionDetail))
-            {
-                bigMapInAllMapRect = correctedRect;
-                detail += ";" + correctionDetail;
-                DebugTiming.Mark("big_map_match_icon_corrected", detail);
-                return true;
-            }
-
-            detail += ";" + correctionDetail;
-            DebugTiming.Fail("big_map_match_low_confidence", detail);
-            return false;
+            bigMapInAllMapRect = recognizedRect;
+            detail += $";recognizedRect={FormatRect(recognizedRect)}";
+            DebugTiming.Mark("big_map_match_accepted", detail);
+            LogBigMapMatchDecision("final", "accept-valid-rect", null, detail);
+            return true;
         }
         catch (Exception ex)
         {
             detail = ex.GetType().Name + ": " + ex.Message;
             DebugTiming.Fail("big_map_match_exception", detail);
+            LogBigMapMatchDecision("final", "reject-exception", null, detail);
             return false;
         }
+    }
+
+    private static void LogBigMapMatchDecision(
+        string phase,
+        string decision,
+        Point2f? expectedCenterPoint,
+        string detail)
+    {
+        var expectedCenter = expectedCenterPoint is { } point
+            ? $"({point.X:0.##},{point.Y:0.##})"
+            : "none";
+        Logger.LogInformation(
+            "大地图匹配判断：阶段={Phase}，决策={Decision}，预期中心={ExpectedCenter}，{Detail}",
+            phase,
+            decision,
+            expectedCenter,
+            detail);
     }
 
     private static string FormatBigMapMatchDetail(string mapName, BigMapMatchResult match)
     {
         var error = double.IsFinite(match.FitError) ? match.FitError.ToString("0.##") : "inf";
-        return $"map={mapName};source={match.Source};confidence={match.Confidence:0.000};anchors={match.AnchorCount};inliers={match.InlierCount};error={error}";
+        var inlierRatio = match.AnchorCount == 0 ? 0d : (double)match.InlierCount / match.AnchorCount;
+        var ransacScores = string.Empty;
+        if (match.Source.StartsWith("SIFT", StringComparison.Ordinal))
+        {
+            var supportScore = Math.Clamp((match.InlierCount - 4d) / 12d, 0d, 1d);
+            var ratioScore = Math.Clamp((inlierRatio - 0.25d) / 0.5d, 0d, 1d);
+            var errorScore = double.IsFinite(match.FitError) ? Math.Exp(-match.FitError / 3d) : 0d;
+            ransacScores = $";minInliersPassed={match.InlierCount >= 7};supportScore={supportScore:0.000};" +
+                           $"ratioScore={ratioScore:0.000};errorScore={errorScore:0.000}";
+        }
+
+        return $"map={mapName};source={match.Source};hasResult={match.HasResult};reliable={match.IsReliable};" +
+               $"confidence={match.Confidence:0.000};threshold={BigMapMatchResult.ReliableConfidenceThreshold:0.000};" +
+               $"anchors={match.AnchorCount};inliers={match.InlierCount};inlierRatio={inlierRatio:0.000};" +
+               $"error={error};imageRect={FormatRect(match.ImageRect)}{ransacScores}";
+    }
+
+    private static string FormatRect(Rect rect)
+    {
+        return $"({rect.X},{rect.Y},{rect.Width},{rect.Height})";
     }
 
     private static bool TryConvertBigMapImageRect(
@@ -2453,89 +2469,6 @@ public class TpTask
         }
 
         bigMapInAllMapRect = rect;
-        return true;
-    }
-
-    private static Rect MoveBigMapRectCenter(Rect rect, Point2f center)
-    {
-        return new Rect(
-            (int)Math.Round(center.X - rect.Width / 2d),
-            (int)Math.Round(center.Y - rect.Height / 2d),
-            rect.Width,
-            rect.Height);
-    }
-
-    private void RememberReliableBigMapRect(string mapName, Rect rect)
-    {
-        _lastReliableBigMapRectMapName = mapName;
-        _lastReliableBigMapRect = rect;
-    }
-
-    private Rect? TryGetLastReliableBigMapRect(string mapName)
-    {
-        return _lastReliableBigMapRect is { } rect &&
-               string.Equals(_lastReliableBigMapRectMapName, mapName, StringComparison.Ordinal)
-            ? rect
-            : null;
-    }
-
-    private void ClearLastReliableBigMapRect()
-    {
-        _lastReliableBigMapRect = null;
-        _lastReliableBigMapRectMapName = null;
-    }
-
-    private bool TryCorrectBigMapRectByTeleportIcons(
-        ImageRegion imageRegion,
-        string mapName,
-        Rect predictedRect,
-        out Rect correctedRect,
-        out string detail)
-    {
-        correctedRect = default;
-        var expectedIcons = GetVisibleExpectedMapIcons(mapName, predictedRect);
-        if (expectedIcons.Count < BigMapIconCorrectionMinimumPairs)
-        {
-            detail = $"iconPairs=0;expected={expectedIcons.Count};reason=expected_insufficient";
-            return false;
-        }
-
-        var observedIcons = GetVisibleMapIcons(
-            imageRegion,
-            imageRegion.Width / 2d,
-            imageRegion.Height / 2d,
-            expectedIcons);
-        var alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
-        var uncertainty = GetAbsoluteMapClickUncertainty(alignment);
-        if (alignment.Pairs.Count < BigMapIconCorrectionMinimumPairs ||
-            uncertainty > BigMapIconCorrectionMaxUncertainty * _zoomOutMax1080PRatio)
-        {
-            detail = $"iconPairs={alignment.Pairs.Count};expected={expectedIcons.Count};observed={observedIcons.Count};uncertainty={uncertainty:0.##};reason=alignment_insufficient";
-            return false;
-        }
-
-        var map = MapManager.GetMap(mapName, _mapMatchingMethod);
-        var imageRect = map.ConvertGenshinMapCoordinatesToImageCoordinates(predictedRect);
-        if (imageRect.Width <= 0 || imageRect.Height <= 0 || imageRegion.Width <= 0 || imageRegion.Height <= 0)
-        {
-            detail = "reason=invalid_map_rect";
-            return false;
-        }
-
-        var correctedImageRect = new Rect(
-            (int)Math.Round(imageRect.X - alignment.Transform.OffsetX * imageRect.Width / imageRegion.Width),
-            (int)Math.Round(imageRect.Y - alignment.Transform.OffsetY * imageRect.Height / imageRegion.Height),
-            imageRect.Width,
-            imageRect.Height);
-        var converted = map.ConvertImageCoordinatesToGenshinMapCoordinates(correctedImageRect);
-        if (converted is not { } rect || rect.Width <= 0 || rect.Height <= 0)
-        {
-            detail = "reason=coordinate_conversion_failed";
-            return false;
-        }
-
-        correctedRect = rect;
-        detail = $"iconPairs={alignment.Pairs.Count};expected={expectedIcons.Count};observed={observedIcons.Count};offset=({alignment.Transform.OffsetX:0.##},{alignment.Transform.OffsetY:0.##});error={alignment.MeanError:0.##};uncertainty={uncertainty:0.##}";
         return true;
     }
 
@@ -2704,8 +2637,6 @@ public class TpTask
 
     private async Task<bool> TrySwitchArea(string areaName)
     {
-        // 切区域后大地图会跳到区域默认中心，旧传送点不能再作位置预测
-        ClearLastSuccessfulTeleportPositionHint();
         DebugTiming.Mark("area_switch_start", areaName);
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
