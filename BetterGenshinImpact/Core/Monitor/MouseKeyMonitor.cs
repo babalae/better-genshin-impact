@@ -91,6 +91,13 @@ public partial class MouseKeyMonitor : IDisposable
         var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
         _fTimer.Interval = fi;
 
+        // 开关禁用时不装低级钩子
+        if (TaskContext.Instance().Config.DisableInputMonitor)
+        {
+            if (_isSubscribed) Unsubscribe();
+            return;
+        }
+
         if (_isSubscribed)
         {
             return;
