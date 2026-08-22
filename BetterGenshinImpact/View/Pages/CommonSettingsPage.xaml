@@ -1550,12 +1550,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="禁用键鼠监听（调试）"
+                                  Text="禁用键鼠监听"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="WinDbg 调试时避免低级钩子冻结系统输入，需重启生效"
+                                  Text="禁用后将暂停一键宏等键鼠触发的任务，需重启生效"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"

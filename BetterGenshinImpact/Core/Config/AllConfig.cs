@@ -84,7 +84,7 @@ public partial class AllConfig : ObservableObject
     private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
     
     /// <summary>
-    /// 禁用键鼠监听（WinDbg 调试时避免低级钩子冻结，需重启）
+    /// 禁用键鼠监听，需重启
     /// </summary>
     [ObservableProperty]
     private bool _disableInputMonitor = false;
