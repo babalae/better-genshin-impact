@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
             // @formatter:off
-            var root = new AutoFishingBuilder()
+            var builder = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
                     .Sequence("-", memory: false)
                         .OneShot(@"\")
@@ -57,72 +57,68 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             .Sequence("调整视角并钓鱼", memory: true)
                                 .Parallel("找鱼并且不超时", policy: new ParallelPolicy.SuccessOnAll())
                                     .Sequence("找鱼", memory: true)
-                                .MoveViewpointDown("调整视角至俯视", _logger, input)
-                                .Parallel("找鱼20秒", policy: new ParallelPolicy.SuccessOnOne())
-                                    .TurnAround("转圈圈调整视角", _logger, input, _predictor)
-                                    .FindFishTimeout("找到鱼", 20, _logger)
-                                .End()
+                                        .MoveViewpointDown("调整视角至俯视", _logger, input)
+                                        .Parallel("找鱼20秒", policy: new ParallelPolicy.SuccessOnOne())
+                                            .TurnAround("转圈圈调整视角", _logger, input, _predictor)
+                                            .FindFishTimeout("找到鱼", 20, _logger)
+                                        .End()
                                     .End()
                                     .BubbleAbortCheck("终止检查")
                                 .End()
                                 .EnterFishingMode("进入钓鱼模式", _logger, input, session, prototypes, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer)
                                 .FailureIsSuccess(@"总是成功")
-                                .SuccessIsRunning(@"\")
-                                    .Sequence("一直钓鱼直到没鱼", memory: false)
+                                    .SuccessIsRunning(@"\")
+                                        .Sequence("一直钓鱼直到没鱼", memory: false)
                                             .FailureIsSuccess(@"总是成功")
-                                            .Sequence("从找鱼开始", memory: true)
-                                                .MoveViewpointDown("调整视角至俯视", _logger, input)
-                                                .Parallel("找鱼10秒", policy: new ParallelPolicy.SuccessOnOne())
+                                                .Sequence("从找鱼开始", memory: true)
+                                                    .MoveViewpointDown("调整视角至俯视", _logger, input)
+                                                    .Parallel("找鱼10秒", policy: new ParallelPolicy.SuccessOnOne())
                                                         .Sequence("-", memory: true)
                                                             .CheckInitalState("初始状态确认", _logger, input)
                                                             .GetFishpond("检测鱼群", _logger, _predictor)
                                                         .End()
-                                                    .FindFishTimeout("确认初始状态和找到鱼", 10, _logger)
-                                                .End()
-                                                .ChooseBait("选择鱼饵", _logger, TaskContext.Instance().SystemInfo, input, session, prototypes)
-                                                .Parallel("抛竿直到成功或出错", policy: new ParallelPolicy.SuccessOnOne())
-                                                    .FailureIsSuccess("重复抛竿")
-                                                        .Sequence("-", memory: true)
-                                                            .MoveViewpointDown("调整视角至俯视", _logger, input)
-                                                                //.Parallel("举起鱼竿并抛竿", policy: new ParallelPolicy.SuccessOnOne())
-                                                                //    .PushLeaf(() => new LiftAndHold("举起鱼竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                                                                .ThrowRod("抛竿", _logger, input, _predictor)
-                                                        //.End()
-                                                        .End()
+                                                        .FindFishTimeout("确认初始状态和找到鱼", 10, _logger)
                                                     .End()
-                                                    .CheckThrowRodResult("抛竿检查")
-                                                .End()
-                                                .Parallel("下杆中", new ParallelPolicy.SuccessOnOne())
-                                                    .CheckThrowRod("检查抛竿结果", _logger)    // todo 后面串联一个召回率高的下杆中检测方法
-                                                    .FishBite("自动提竿", _logger, input, ocrService, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer)
-                                                    .FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, input)
-                                                .End()
-                                                .Parallel("拉条中", policy: new ParallelPolicy.SuccessOnOne())
-                                                    .CheckRaiseHook("检查提竿结果", _logger)
-                                                    .Sequence("拉条序列", memory: true)
-                                                        .GetFishBoxArea("等待拉条出现", _logger, param.SaveScreenshotOnKeyTick)
-                                                        .Fishing("钓鱼拉条", _logger, param.SaveScreenshotOnKeyTick, input)
+                                                    .ChooseBait("选择鱼饵", _logger, TaskContext.Instance().SystemInfo, input, session, prototypes)
+                                                    .Parallel("抛竿直到成功或出错", policy: new ParallelPolicy.SuccessOnOne())
+                                                        .FailureIsSuccess("重复抛竿")
+                                                            .Sequence("-", memory: true)
+                                                                .MoveViewpointDown("调整视角至俯视", _logger, input)
+                                                                    //.Parallel("举起鱼竿并抛竿", policy: new ParallelPolicy.SuccessOnOne())
+                                                                    //    .PushLeaf(() => new LiftAndHold("举起鱼竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                                    .ThrowRod("抛竿", _logger, input, _predictor)
+                                                            //.End()
+                                                            .End()
+                                                        .End()
+                                                        .CheckThrowRodResult("抛竿检查")
+                                                    .End()
+                                                    .Parallel("下杆中", new ParallelPolicy.SuccessOnOne())
+                                                        .CheckThrowRod("检查抛竿结果", _logger)    // todo 后面串联一个召回率高的下杆中检测方法
+                                                        .FishBite("自动提竿", _logger, input, ocrService, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer)
+                                                        .FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, input)
+                                                    .End()
+                                                    .Parallel("拉条中", policy: new ParallelPolicy.SuccessOnOne())
+                                                        .CheckRaiseHook("检查提竿结果", _logger)
+                                                        .Sequence("拉条序列", memory: true)
+                                                            .GetFishBoxArea("等待拉条出现", _logger, param.SaveScreenshotOnKeyTick)
+                                                            .Fishing("钓鱼拉条", _logger, param.SaveScreenshotOnKeyTick, input)
+                                                        .End()
                                                     .End()
                                                 .End()
                                             .End()
+                                            .BubbleAbortCheck("冒泡-终止检查")
                                         .End()
-                                        .BubbleAbortCheck("冒泡-终止检查")
                                     .End()
                                 .End()
+                                .QuitFishingMode("退出钓鱼模式", _logger, input, param.GameCultureInfo, param.StringLocalizer)
                             .End()
-                        .QuitFishingMode("退出钓鱼模式", _logger, input, param.GameCultureInfo, param.StringLocalizer)
-                    .End()
                             .WholeProcessTimeout("检查整体超时", _logger, param.WholeProcessTimeoutSeconds)
-                .End()
+                        .End()
                     .End()
                 .End();
             // @formatter:on
 
-            var behaviourTree = new CsTrees.BehaviourTree(root);
-            if (param.SaveScreenshotOnKeyTick)
-            {
-                behaviourTree.AddVisitor(new ScreenshotVisitor(_logger));
-            }
+            var behaviourTree = SetUpTree(builder);
 
             /*
             Blackboard blackboard = new Blackboard(_predictor, this.Sleep);
@@ -198,6 +194,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             async Task tickARound()
             {
                 blackboard.Clear();
+                behaviourTree = SetUpTree(builder);
 
                 var prevManualGc = DateTime.MinValue;
                 while (!ct.IsCancellationRequested)
@@ -258,6 +255,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public void Sleep(int millisecondsTimeout)
         {
             TaskControl.Sleep(millisecondsTimeout, _ct);
+        }
+
+        private BehaviourTree SetUpTree(AutoFishingBuilder builder)
+        {
+            var behaviourTree = new BehaviourTree(builder.Build());
+            if (param.SaveScreenshotOnKeyTick)
+            {
+                behaviourTree.AddVisitor(new ScreenshotVisitor(_logger));
+            }
+            return behaviourTree;
         }
     }
 }
