@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
@@ -62,14 +62,7 @@ public partial class ScriptGroup : ObservableObject
         try
         {
             File.WriteAllText(tempPath, json, Utf8WithoutBom);
-            if (File.Exists(fullPath))
-            {
-                File.Replace(tempPath, fullPath, null);
-            }
-            else
-            {
-                File.Move(tempPath, fullPath);
-            }
+            File.Move(tempPath, fullPath, overwrite: true);
         }
         finally
         {
