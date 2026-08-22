@@ -1047,6 +1047,29 @@
             <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
         </ui:CardControl>
 
+        <!--  启动时恢复窗口位置  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon ArrowSync24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启动时恢复上次窗口位置和大小"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="启用后启动时将恢复上次关闭时的窗口位置和大小，而不是屏幕正中央"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.RestoreWindowPositionAndSize, Mode=TwoWay}" />
+        </ui:CardControl>
+
 
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
