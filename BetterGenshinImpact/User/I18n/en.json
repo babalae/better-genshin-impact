@@ -98,6 +98,7 @@
   "黑名单模式（默认拾取）": "Blacklist mode (pick up by default)",
   "除明确设置为“不拾取”的内容外，其余内容均会拾取": "Pick up everything except content explicitly marked as do not pick up",
   "白名单模式（仅列表拾取）": "Whitelist mode (listed items only)",
+  "推荐": "Recommended",
   "只拾取最终列表中明确允许的内容，其他内容全部忽略": "Only pick up content explicitly allowed by the final list and ignore everything else",
   "拾取": "Pick up",
   "不拾取": "Do not pick up",
