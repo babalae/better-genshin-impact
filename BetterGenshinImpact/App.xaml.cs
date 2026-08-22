@@ -19,6 +19,8 @@ using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.Service.Mcp;
+using BetterGenshinImpact.Service.Agent;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -153,6 +155,7 @@ public partial class App : Application
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
+                services.AddView<AgentPage, AgentPageViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
                 services.AddSingleton<IBannerImageService, BannerImageService>();
                 services.AddTransient<WebImageInputViewModel>();
@@ -205,6 +208,11 @@ public partial class App : Application
 
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();
+                services.AddSingleton<McpAgentService>();
+                services.AddSingleton<AgentSettingsDialogService>();
+
+                // 本机 MCP / function calling 服务（仅在 --mcp 时监听）。
+                services.AddBetterGiMcp();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));

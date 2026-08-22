@@ -69,6 +69,7 @@ public class TaskRunner
                 CancellationContext.Instance.Set();
             }
             RunnerContext.Instance.Clear();
+            TaskExecutionSignalHub.SignalRunning();
 
             await action();
         }
@@ -178,7 +179,9 @@ public class TaskRunner
 
     public void End()
     {
-        if (!TaskContext.Instance().IsInitialized)
+        var taskContext = TaskContext.Instance();
+        taskContext.CurrentScriptProject = null;
+        if (!taskContext.IsInitialized)
         {
             return;
         }
