@@ -39,8 +39,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
-		<PackageReference Include="CsTrees" Version="1.0.1" />
-
+		<PackageReference Include="CsTrees" Version="1.0.3" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.21" />

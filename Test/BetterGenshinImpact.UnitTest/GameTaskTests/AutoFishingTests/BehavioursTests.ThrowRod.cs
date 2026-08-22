@@ -4,7 +4,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using CsTrees;
 using CsTrees.Composites;
-using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System.Threading.Tasks;
@@ -30,11 +29,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             selectedBaitAccess.Set(selectedBait);
             var throwRodNoBaitFishAccess = blackboard.GrantWrite<bool>(null!, "ThrowRodNoBaitFish");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -67,11 +66,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             selectedBaitAccess.Set(selectedBait);
             var throwRodNoBaitFishAccess = blackboard.GrantWrite<bool>(null!, "ThrowRodNoBaitFish");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -102,11 +101,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             selectedBaitAccess.Set(selectedBait);
             var throwRodNoBaitFishAccess = blackboard.GrantWrite<bool>(null!, "ThrowRodNoBaitFish");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 11))
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 11), bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -150,11 +149,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var fishpondAccess = blackboard.GrantWrite<Fishpond>(null!, "Fishpond");
 
             var sut = new ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, blackboard, new FakeTimeProvider(), drawContent: new FakeDrawContent());
-            var tree = TreeBuilder.Create()
+            var tree = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion1, imageRegion2])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2], bb!))
                         .Leaf(() => sut)
                     .End()
                 .End()
@@ -198,11 +197,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
             var throwRodNoTargetAccess = blackboard.GrantWrite<bool>(null!, "ThrowRodNoTarget");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion, imageRegion])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -246,14 +245,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var throwRodNoTargetTimesAccess = blackboard.GrantWrite<int>(null!, "ThrowRodNoTargetTimes");
             var abortAccess = blackboard.GrantWrite<bool>(null!, "Abort");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 9))
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 9), bb!))
                             .Parallel("抛竿直到成功或出错", policy: new ParallelPolicy.SuccessOnOne())
                                 .FailureIsSuccess("重复抛竿")
-                                    .SequenceWithMemory("-")
+                                    .Sequence("-", true)
                                         .MoveViewpointDown("调整视角至俯视", logger, input)
                                         .ThrowRod("抛竿", logger, input, Predictor, timeProvider, drawContent)
                                     .End()
