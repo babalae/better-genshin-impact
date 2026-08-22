@@ -21,6 +21,7 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Hutao;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
@@ -51,6 +52,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     private readonly INavigationService _navigationService;
     private readonly TaskTriggerDispatcher _taskDispatcher;
+    private readonly IHutaoCultivationService _hutaoCultivationService;
 
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
@@ -239,11 +241,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
-    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
+    [ObservableProperty]
+    private bool _switchHutaoCultivationEnabled;
+
+    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher, IHutaoCultivationService hutaoCultivationService)
     {
         Config = configService.Get();
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
+        _hutaoCultivationService = hutaoCultivationService;
         NormalizeLeyLineOutcropType();
         _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
@@ -362,6 +368,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoRedeemCodeEnabled = false;
         SwitchAutoStygianOnslaughtEnabled = false;
         SwitchGetGridIconsEnabled = false;
+        SwitchHutaoCultivationEnabled = false;
         await Task.Delay(800);
     }
 
@@ -676,6 +683,23 @@ public partial class TaskSettingsPageViewModel : ViewModel
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoFishingTask(param));
         SwitchAutoFishingEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchHutaoCultivation()
+    {
+        SwitchHutaoCultivationEnabled = true;
+        (bool started, string message) = await _hutaoCultivationService.FetchAndFarmAsync();
+        if (started)
+        {
+            Toast.Success(message);
+        }
+        else
+        {
+            Toast.Warning(message);
+        }
+
+        SwitchHutaoCultivationEnabled = false;
     }
 
     [RelayCommand]
