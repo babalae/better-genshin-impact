@@ -37,28 +37,27 @@ public class BgiOnnxFactory
         var config = GetConfig();
         if (config.AutoAppendCudaPath) AppendCudaPath();
 
-        if (string.IsNullOrWhiteSpace(config.AdditionalPath))
-            AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
+        if (!string.IsNullOrWhiteSpace(config.AdditionalPath))
+            AppendPath(config.AdditionalPath.Split(Path.PathSeparator,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
 
         OptimizedModel = config.OptimizedModel;
         CudaDeviceId = config.CudaDevice;
         DmlDeviceId = config.GpuDevice;
         TrtUseEmbedMode = config.EmbedTensorRtCache;
-        EnableCache = config.EnableTensorRtCache;
         CpuOcr = config.CpuOcr;
         OpenVinoDevice = config.OpenVinoDevice;
         OpenVinoCache = config.EnableOpenVinoCache;
         ProviderTypes = GetProviderType(config.InferenceDevice);
         _logger.LogDebug(
-            "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
+            "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, CpuOcr={CpuOcr}",
             string.Join(",", ProviderTypes.Select<ProviderType, string>(Enum.GetName!)),
             config.InferenceDevice,
             OptimizedModel,
             CudaDeviceId,
             DmlDeviceId,
             TrtUseEmbedMode,
-            EnableCache,
             CpuOcr);
     }
 
@@ -88,7 +87,6 @@ public class BgiOnnxFactory
     public bool OptimizedModel { get; }
     public bool TrtUseEmbedMode { get; }
     public string OpenVinoDevice { get; }
-    public bool EnableCache { get; }
     public bool CpuOcr { get; }
     public bool OpenVinoCache { get; }
 
@@ -114,7 +112,6 @@ public class BgiOnnxFactory
                 SessionOptions? testSession = null;
                 var hasGpu = false;
                 if (!hasGpu && CudaDeviceId >= 0)
-                    // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
                     try
                     {
                         testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
@@ -123,25 +120,23 @@ public class BgiOnnxFactory
                     }
                     catch (Exception e)
                     {
-                        _logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
+                        _logger.LogDebug("[init]无法加载TensorRT。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
                         testSession?.Dispose();
                     }
 
-                if (!hasGpu && DmlDeviceId >= 0)
-                    // dml效果不如tensorrt，但是比纯cuda稳定性强
+                // TensorRT 可能不支援全部的 ONNX 操作，保留 CUDA 作爲其下的層
+                if (hasGpu && list.Contains(ProviderType.TensorRt) && CudaDeviceId >= 0)
                     try
                     {
-                        testSession = new SessionOptions();
-                        testSession.AppendExecutionProvider_DML(DmlDeviceId);
-                        list.Add(ProviderType.Dml);
-                        hasGpu = true;
+                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
+                        list.Add(ProviderType.Cuda);
                     }
                     catch (Exception e)
                     {
-                        _logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
+                        _logger.LogDebug("[init]无法加载CUDA作为TensorRT的后备provider，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -149,7 +144,7 @@ public class BgiOnnxFactory
                     }
 
                 if (!hasGpu && CudaDeviceId >= 0)
-                    // cuda优先级比较低，因为跑起来并不太理想。
+                    // 僅 CUDA 优先级较低，因为跑起来并不太理想。
                     try
                     {
                         testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
@@ -158,7 +153,7 @@ public class BgiOnnxFactory
                     }
                     catch (Exception e)
                     {
-                        _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
+                        _logger.LogDebug("[init]无法加载CUDA。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -270,6 +265,8 @@ public class BgiOnnxFactory
                 }))
             //去重
             .Distinct();
+        foreach (var cudapath in validPaths)
+            _logger.LogDebug("[CUDA_PATH_DEBUG]PATH: {Path}", cudapath);
         AppendPath(validPaths.ToArray());
     }
 
@@ -303,9 +300,11 @@ public class BgiOnnxFactory
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
-        if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
 
-        var cached = GetCached(model);
+        if (!ProviderTypes.Contains(ProviderType.TensorRt))
+            return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
+
+        var cached = GetTrtCache(model);
         return cached == null
             ? new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, true))
             : new BgiYoloPredictor(model, cached, CreateSessionOptions(model, false));
@@ -322,70 +321,41 @@ public class BgiOnnxFactory
         _logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
-
-        if (!EnableCache)
+        if (!providerTypes.Contains(ProviderType.TensorRt))
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
 
-        var cached = GetCached(model, providerTypes);
+        var cached = GetTrtCache(model);
         return cached == null
             ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
             : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
 
     /// <summary>
-    ///     获取带有缓存的模型(目前只支持TensorRT)
+    ///     获取模型對應的 TensorRT 緩存
     /// </summary>
     /// <param name="model">模型</param>
-    /// <param name="forcedProvider">强制使用的 providerTypes</param>
     /// <returns>带有缓存的模型绝对路径，null表示尚未创建缓存</returns>
-    private string? GetCached(BgiOnnxModel model, ProviderType[]? forcedProvider = null)
+    private string? GetTrtCache(BgiOnnxModel model)
     {
-        var providerTypes = forcedProvider ?? ProviderTypes;
-        // 目前只支持TensorRT
-        if (!providerTypes.Contains(ProviderType.TensorRt)) return null;
-        var result = _cachedModelPaths.GetOrAdd(model, _GetCached);
-        if (result is null) return result;
-
-        // 判断文件是否存在
-        if (File.Exists(result)) return result;
-
-        _logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
-        return null;
-    }
-
-    private string? _GetCached(BgiOnnxModel model)
-    {
-        if (model.ModelRelativePath.StartsWith(BgiOnnxModel.ModelCacheRelativePath) &&
-            model.ModelRelativePath.EndsWith("_ctx.onnx"))
-            // 这已经是带有缓存的文件路径了
-            return model.ModalPath;
-
-        var ctxA = Path.Combine(model.CachePath, "trt", "_ctx.onnx");
-        if (File.Exists(ctxA))
+        var tensorrtCacheFile = Path.Combine(model.CachePath, $"{model.CacheIdentifier}_ctx.onnx");
+        if (File.Exists(tensorrtCacheFile))
         {
-            _logger.LogDebug("[ONNX]模型 {Model} 命中TRT匿名缓存文件: {Path}", model.Name, ctxA);
-            return ctxA;
+            _logger.LogDebug("[ONNX]模型 {Model} 缓存命中: {Path}", model.Name, tensorrtCacheFile);
+            return tensorrtCacheFile;
         }
-
-        var ctxB = Path.Combine(model.CachePath, "trt",
-            Path.GetFileNameWithoutExtension(model.ModalPath) + "_ctx.onnx");
-        if (File.Exists(ctxB))
+        else
         {
-            _logger.LogDebug("[ONNX]模型 {Model} 命中TRT命名缓存文件: {Path}", model.Name, ctxB);
-            return ctxB;
+            _logger.LogWarning("[ONNX]模型 {Model} 緩存未命中。正編譯並生成緩存，请等待。", model.Name);
+            return null;
         }
-
-        _logger.LogDebug("[ONNX]没有找到模型 {Model} 的模型缓存文件。", model.Name);
-        return null;
     }
-
 
     /// <summary>
     ///     通过模型路径生成SessionOptions <br />
     ///     如果加载的模型文件已经是带有缓存的模型，请将cacheFolder设为null避免重复生成。
     /// </summary>
     /// <param name="model">模型路径</param>
-    /// <param name="genCache">是否生成缓存。有几种情况下不生成缓存:1为用户主动关闭，即enableCache为false。2为即将加载的模型文件已经是带有缓存的模型文件。</param>
+    /// <param name="genCache">是否重新生成緩存，當要加載的模型文件存在緩存時此項爲否</param>
     /// <param name="forcedProvider">强制使用的Provider,为空或null则不强制</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
@@ -413,9 +383,6 @@ public class BgiOnnxFactory
                         //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）  
                         // }
                         break;
-                    case ProviderType.Dnnl:
-                        sessionOptions.AppendExecutionProvider_Dnnl();
-                        break;
                     case ProviderType.OpenVino:
                         sessionOptions.AppendExecutionProvider("OpenVINO",
                             GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
@@ -424,7 +391,7 @@ public class BgiOnnxFactory
                     case ProviderType.TensorRt:
                         using (var options = new OrtTensorRTProviderOptions())
                         {
-                            options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
+                            options.UpdateOptions(GetTrtProviderConfig(genCache ? Path.Combine(model.CachePath, $"{model.CacheIdentifier}_ctx.onnx") : null));
                             sessionOptions.AppendExecutionProvider_Tensorrt(options);
                         }
 
@@ -433,7 +400,7 @@ public class BgiOnnxFactory
                         using (var options = new OrtCUDAProviderOptions())
                         {
                             options.UpdateOptions(GetCudaProviderConfig());
-                            sessionOptions.AppendExecutionProvider_CUDA();
+                            sessionOptions.AppendExecutionProvider_CUDA(options);
                         }
 
                         break;
@@ -443,7 +410,7 @@ public class BgiOnnxFactory
             }
             catch (Exception e)
             {
-                _logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
+                _logger.LogError("无法加载 ONNX EP {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
                     e.Message);
             }
 
@@ -459,11 +426,11 @@ public class BgiOnnxFactory
     /// <summary>
     ///     获取TensorRT的配置
     /// </summary>
-    /// <param name="cacheFolder">缓存生成的目录</param>
+    /// <param name="cacheFilePath">缓存文件的生成路径</param>
     /// <returns>trt配置</returns>
-    private Dictionary<string, string> GetTrtProviderConfig(string? cacheFolder)
+    private Dictionary<string, string> GetTrtProviderConfig(string? cacheFilePath)
     {
-        if (cacheFolder is null)
+        if (cacheFilePath is null)
         {
             // 不使用缓存目录
             var r = new Dictionary<string, string>
@@ -477,12 +444,11 @@ public class BgiOnnxFactory
         {
             ["trt_engine_cache_enable"] = "1",
             ["trt_dump_ep_context_model"] = "1",
-            ["trt_ep_context_file_path"] = Path.Combine(cacheFolder, "trt"),
+            ["trt_ep_context_file_path"] = cacheFilePath,
             // ["trt_ep_context_embed_mode"] = "1", // 因为yoloSharp是把模型转为嵌入式运行，不这样会爆炸
             // ["trt_engine_cache_path"] = ".\\" // 没必要了
             ["trt_timing_cache_enable"] = "1",
-            ["trt_timing_cache_path"] =
-                Global.Absolute(Path.Combine(BgiOnnxModel.ModelCacheRelativePath, "trt_timing")),
+            ["trt_timing_cache_path"] = Global.Absolute(Path.Combine(BgiOnnxModel.ModelCacheRelativePath)),
             // ["trt_force_timing_cache"] = "1",
             ["device_id"] = CudaDeviceId.ToString()
         };
@@ -496,18 +462,19 @@ public class BgiOnnxFactory
             result["trt_engine_cache_path"] = ".\\";
         }
 
-        if (!Directory.Exists(result["trt_ep_context_file_path"]))
+        var contextDirectory = Path.GetDirectoryName(result["trt_ep_context_file_path"]);
+        if (!string.IsNullOrEmpty(contextDirectory) && !Directory.Exists(contextDirectory))
         {
             // 如果不存在就创建目录
-            _logger.LogDebug("[ONNX]TensorRT上下文文件路径不存在，创建目录: {Path}", result["trt_ep_context_file_path"]);
+            _logger.LogDebug("[ONNX]TensorRT上下文文件目录不存在，创建目录: {Path}", contextDirectory);
             try
             {
-                Directory.CreateDirectory(result["trt_ep_context_file_path"]);
+                Directory.CreateDirectory(contextDirectory);
             }
             catch (Exception e)
             {
-                _logger.LogError("无法创建TensorRT上下文文件路径: {Path}，请检查权限。({Err})",
-                    result["trt_ep_context_file_path"], e.Message);
+                _logger.LogError("无法创建TensorRT上下文文件目录: {Path}，请检查权限。({Err})",
+                    contextDirectory, e.Message);
                 // 如果无法创建目录，就不使用缓存
                 result.Remove("trt_ep_context_file_path");
             }
