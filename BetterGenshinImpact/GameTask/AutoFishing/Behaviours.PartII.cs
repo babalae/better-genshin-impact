@@ -29,7 +29,7 @@ using static Vanara.PInvoke.User32;
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     /// <summary>
-    /// 如果未超时返回运行中，超时返回成功
+    /// 如果超时就发布Abort
     /// </summary>
     public partial class WholeProcessTimeout : Behaviour
     {
@@ -38,7 +38,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private DateTimeOffset? _timeout;
         private readonly int _seconds;
 
-        public WholeProcessTimeout(string name, ILogger logger, int seconds, TimeProvider? timeProvider = null) : base(name)
+        /// <summary>
+        /// 不钓啦
+        /// </summary>
+        [BlackboardKey(Access = Access.Write)]
+        public BehaviourKeyAccess<bool> Abort { get; private set; } = null!;
+
+        private WholeProcessTimeout(string name, ILogger logger, int seconds, TimeProvider? timeProvider = null) : base(name)
         {
             _logger = logger;
             _seconds = seconds;
@@ -53,15 +59,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected async override Task<Status> Update()
         {
-            if (_timeProvider.GetLocalNow() >= _timeout)
+            if ((!Abort.Exists() || !Abort.Get()) &&  _timeProvider.GetLocalNow() >= _timeout)
             {
-                _logger.LogInformation($"{_seconds}秒超时已到，强制结束任务");
-                return Status.Success;
+                Abort.Set(true);
+                _logger.LogInformation($"{_seconds}秒超时已到，结束任务");
             }
-            else
-            {
-                return Status.Running;
-            }
+            return Status.Running;
         }
     }
 
@@ -98,7 +101,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (_timeProvider.GetLocalNow() >= _timeout)
             {
                 Abort.Set(true);
-                _logger.LogInformation($"{_seconds}秒没有{Name}，退出钓鱼界面");
+                _logger.LogInformation($"{_seconds}秒没有{Name}，结束任务");
                 return Status.Failure;
             }
             else

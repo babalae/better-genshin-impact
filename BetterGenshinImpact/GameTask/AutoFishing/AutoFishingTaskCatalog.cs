@@ -149,7 +149,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             string name,
             ILogger logger,
             int seconds,
-            TimeProvider? timeProvider = null) => new WholeProcessTimeout(name, logger, seconds, timeProvider);
+            Blackboard blackboard,
+            TimeProvider? timeProvider = null) => new WholeProcessTimeout(name, logger, seconds, blackboard, timeProvider);
 
         public QuitFishingMode QuitFishingMode(
             string name,
