@@ -1851,7 +1851,7 @@ public partial class ScriptControlViewModel : ViewModel
             }
 
             var file = Path.Combine(ScriptGroupPath, $"{scriptGroup.Name}.json");
-            File.WriteAllText(file, scriptGroup.ToJson());
+            scriptGroup.WriteToFileAtomically(file);
         }
         catch (Exception e)
         {
