@@ -154,6 +154,20 @@
         ],
         "bbox": "rect(42, 27, 64, 46)"
       }
+    },
+    "ChatExit": {
+      "type": "TemplateMatch",
+      "template": "chat_exit.png",
+      "reference": {
+        "size": [
+          1920,
+          1080
+        ],
+        "bbox": "rect(1284, 785, 31, 39)"
+      },
+      "search": {
+        "box": "rect(1182, 378, 345, 509)"
+      }
     }
   }
 }
