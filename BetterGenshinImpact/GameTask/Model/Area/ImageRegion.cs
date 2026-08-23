@@ -138,14 +138,14 @@ public class ImageRegion : Region
             {
                 var roi = GetTemplateMatchSource(ro, out ownedRoi);
 
-                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var referenceScale))
+                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var effectiveReferenceBoundingBoxSize))
                 {
                     failAction?.Invoke();
                     return new Region();
                 }
 
                 // 参考搜索会根据输入截图尺寸同步缩放模板和 mask，普通搜索则直接复用原始 Mat。
-                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, referenceScale, out var shouldDisposeTemplate);
+                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, effectiveReferenceBoundingBoxSize, out var shouldDisposeTemplate);
                 Mat? effectiveMask = null;
                 var shouldDisposeMask = false;
                 try
@@ -407,14 +407,14 @@ public class ImageRegion : Region
             {
                 var roi = GetTemplateMatchSource(ro, out ownedRoi);
 
-                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var referenceScale))
+                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var effectiveReferenceBoundingBoxSize))
                 {
                     failAction?.Invoke();
                     return [];
                 }
 
                 // 参考搜索会根据输入截图尺寸同步缩放模板和 mask，普通搜索则直接复用原始 Mat。
-                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, referenceScale, out var shouldDisposeTemplate);
+                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, effectiveReferenceBoundingBoxSize, out var shouldDisposeTemplate);
                 Mat? effectiveMask = null;
                 var shouldDisposeMask = false;
                 try

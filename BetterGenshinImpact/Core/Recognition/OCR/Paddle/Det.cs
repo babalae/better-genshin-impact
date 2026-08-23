@@ -22,23 +22,23 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
     /// <summary>Gets or sets the side length limit type. Supports max/min/resize_long.</summary>
     public string LimitType { get; set; } = "max";
 
-    /// <summary>Gets or sets the shortest side threshold used for tiny-image upscaling.</summary>
-    public int SmallImageLimitSideLen { get; set; } = 64;
-
-    /// <summary>Gets or sets the size for dilation during preprocessing.</summary>
-    public int? DilatedSize { get; set; } = 2;
+    /// <summary>Gets or sets whether the official 2x2 dilation is enabled during post-processing.</summary>
+    public bool UseDilation { get; set; }
 
     /// <summary>Gets or sets the score threshold for filtering out possible text boxes.</summary>
-    public float? BoxScoreThreshold { get; set; } = 0.7f;
+    public float BoxScoreThreshold { get; set; } = 0.6f;
 
     /// <summary>Gets or sets the threshold to binarize the text region.</summary>
-    public float? BoxThreshold { get; set; } = 0.3f;
+    public float BoxThreshold { get; set; } = 0.3f;
+
+    /// <summary>Gets or sets the maximum number of contours processed by DBPostProcess.</summary>
+    public int MaxCandidates { get; set; } = 1000;
 
     /// <summary>Gets or sets the minimum size of the text boxes to be considered as valid.</summary>
     public int MinSize { get; set; } = 3;
 
     /// <summary>Gets or sets the ratio for enlarging text boxes during post-processing.</summary>
-    public float UnclipRatio { get; set; } = 2.0f;
+    public float UnclipRatio { get; set; } = 1.5f;
 
     ~Det()
     {
@@ -59,80 +59,42 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
 
     public RotatedRect[] Run(Mat src)
     {
+        return RunBoxes(src).Select(box => box.Rect).ToArray();
+    }
+
+    internal PaddleOcrDetectionBox[] RunBoxes(Mat src)
+    {
         using var pred = RunRaw(src, out var resizedSize);
-        using Mat cbuf = new();
         //OpenCvSharp.OpenCVException: 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols
         using var roi = pred[0, resizedSize.Height, 0, resizedSize.Width];
-        roi.ConvertTo(cbuf, MatType.CV_8UC1, 255);
-        using Mat dilated = new();
-        using var binary = BoxThreshold != null
-            ? cbuf.Threshold((int)(BoxThreshold * 255), 255, ThresholdTypes.Binary)
-            : cbuf;
-        if (DilatedSize != null)
-        {
-            using var ones =
-                Cv2.GetStructuringElement(MorphShapes.Rect, new Size(DilatedSize.Value, DilatedSize.Value));
-            Cv2.Dilate(binary, dilated, ones);
-        }
-        else
-        {
-            Cv2.CopyTo(binary, dilated);
-        }
-
-        var contours = dilated.FindContoursAsArray(RetrievalModes.List, ContourApproximationModes.ApproxSimple);
-        // PaddleOCR Python keeps ratio_h/ratio_w separately. Because we align det resize to that behavior,
-        // map contour points back with independent X/Y scales before building rotated rects.
-        var scaleX = 1.0 * src.Width / resizedSize.Width;
-        var scaleY = 1.0 * src.Height / resizedSize.Height;
-
-        var rects = contours
-            .Where(x => BoxScoreThreshold == null || GetScore(x, pred) > BoxScoreThreshold)
-            .Select(contour =>
-                contour.Select(point => new Point2f((float)(point.X * scaleX), (float)(point.Y * scaleY))).ToArray())
-            .Select(Cv2.MinAreaRect)
-            .Where(x => x.Size.Width > MinSize && x.Size.Height > MinSize)
-            .Select(rect =>
-            {
-                var minEdge = Math.Min(rect.Size.Width, rect.Size.Height);
-                Size2f newSize = new(
-                    rect.Size.Width + UnclipRatio * minEdge,
-                    rect.Size.Height + UnclipRatio * minEdge);
-                RotatedRect largerRect = new(rect.Center, newSize, rect.Angle);
-                return largerRect;
-            })
-            .OrderBy(v => v.Center.Y)
-            .ThenBy(v => v.Center.X)
-            .ToArray();
-        //{
-        //	using Mat demo = dilated.CvtColor(ColorConversionCodes.GRAY2RGB);
-        //	demo.DrawContours(contours, -1, Scalar.Red);
-        //	Image(demo).Dump();
-        //}
-        return rects;
+        var postProcessor = new DbPostProcessor(
+            BoxThreshold,
+            BoxScoreThreshold,
+            MaxCandidates,
+            UnclipRatio,
+            MinSize,
+            UseDilation);
+        return postProcessor.Run(roi, src.Size());
     }
 
     public Mat RunRaw(Mat src, out Size resizedSize)
     {
-        var padded = src.Channels() switch
+        Mat? converted = null;
+        var input = src.Channels() switch
         {
-            4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
-            1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
+            4 => converted = src.CvtColor(ColorConversionCodes.BGRA2BGR),
+            1 => converted = src.CvtColor(ColorConversionCodes.GRAY2BGR),
             3 => src,
             var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
         };
-        // Align with PaddleOCR Python DetResizeForTest:
-        // 1. tiny image padding when h + w < 64
-        // 2. keep current max/960 behavior for normal images
-        // 3. switch to limit_type=min for very small crops so det can see the text
-        using (var resized = MatResizeForDetection(padded))
+        try
         {
+            // 与 PaddleOCR Python DetResizeForTest 保持一致：
+            // 1. h + w < 64 时先将图像补全到至少 32x32
+            // 2. 按 limit_type 规则缩放，并将宽高分别对齐到 32 的倍数
+            using var resized = MatResizeForDetection(input);
             resizedSize = new Size(resized.Width, resized.Height);
-            padded = resized.Clone();
-        }
-
-        using (var _ = padded)
-        {
-            var inputTensor = OcrUtils.NormalizeToTensorDnn(padded, config.NormalizeImage.Scale,
+            var inputTensor = OcrUtils.NormalizeToTensorDnn(resized, config.NormalizeImage.Scale,
                 config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
             using (owner)
             {
@@ -153,21 +115,15 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
                 }
             }
         }
-    }
-
-    private static Mat MatPadding32(Mat src)
-    {
-        var size = src.Size();
-        Size newSize = new(
-            32 * Math.Ceiling(1.0 * size.Width / 32),
-            32 * Math.Ceiling(1.0 * size.Height / 32));
-        return src.CopyMakeBorder(0, newSize.Height - size.Height, 0, newSize.Width - size.Width, BorderTypes.Constant,
-            Scalar.Black);
+        finally
+        {
+            converted?.Dispose();
+        }
     }
 
     /// <summary>
-    /// 按 PaddleOCR Python 的 DetResizeForTest 思路缩放图像：
-    /// 小图先补边，再按 max/min/resize_long 规则缩放，并对齐到 32 的倍数。
+    /// 按 PaddleOCR Python 的 DetResizeForTest 缩放图像：
+    /// 超小图先补边，再按 max/min/resize_long 规则缩放，并对齐到 32 的倍数。
     /// </summary>
     /// <param name="src"></param>
     /// <returns></returns>
@@ -179,16 +135,7 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
         var height = size.Height;
         var width = size.Width;
 
-        var limitSideLen = LimitSideLen;
-        var limitType = LimitType;
-
-        if (Math.Min(height, width) < SmallImageLimitSideLen)
-        {
-            limitSideLen = SmallImageLimitSideLen;
-            limitType = "min";
-        }
-
-        var ratio = CalculateResizeRatio(width, height, limitSideLen, limitType);
+        var ratio = CalculateResizeRatio(width, height, LimitSideLen, LimitType);
         var resizeHeight = (int)(height * ratio);
         var resizeWidth = (int)(width * ratio);
 
@@ -208,8 +155,7 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
                 $"Invalid det resize target size: {resizeWidth}x{resizeHeight}, src={width}x{height}");
         }
 
-        using var resized = preprocessed.Resize(new Size(resizeWidth, resizeHeight));
-        return MatPadding32(resized);
+        return preprocessed.Resize(new Size(resizeWidth, resizeHeight));
     }
 
     private static Mat PrepareTinyImage(Mat src)
@@ -222,7 +168,8 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
         var newHeight = Math.Max(32, src.Height);
         var newWidth = Math.Max(32, src.Width);
         var padded = new Mat(newHeight, newWidth, src.Type(), Scalar.Black);
-        src.CopyTo(padded[new Rect(0, 0, src.Width, src.Height)]);
+        using var roi = padded[new Rect(0, 0, src.Width, src.Height)];
+        src.CopyTo(roi);
         return padded;
     }
 
@@ -240,37 +187,6 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
             _ => throw new ArgumentOutOfRangeException(nameof(limitType), limitType,
                 "limitType only supports max/min/resize_long")
         };
-    }
-
-    private static float GetScore(Point[] contour, Mat pred)
-    {
-        var width = pred.Width;
-        var height = pred.Height;
-        var boxX = contour.Select(v => v.X).ToArray();
-        var boxY = contour.Select(v => v.Y).ToArray();
-
-        var xmin = Math.Clamp(boxX.Min(), 0, width - 1);
-        var xmax = Math.Clamp(boxX.Max(), 0, width - 1);
-        var ymin = Math.Clamp(boxY.Min(), 0, height - 1);
-        var ymax = Math.Clamp(boxY.Max(), 0, height - 1);
-
-        var rootPoints = contour
-            .Select(v => new Point(v.X - xmin, v.Y - ymin))
-            .ToArray();
-        using Mat mask = new(ymax - ymin + 1, xmax - xmin + 1, MatType.CV_8UC1, Scalar.Black);
-        mask.FillPoly(new[] { rootPoints }, new Scalar(1));
-
-        using var croppedMat = pred[ymin, ymax + 1, xmin, xmax + 1];
-        var score = (float)croppedMat.Mean(mask).Val0;
-
-        // Debug
-        //{
-        //	using Mat cu = new Mat();
-        //	croppedMat.ConvertTo(cu, MatType.CV_8UC1, 255);
-        //	Util.HorizontalRun(true, Image(cu), Image(mask), score).Dump();
-        //}
-
-        return score;
     }
 
     public string GetConfigName => config.Name;

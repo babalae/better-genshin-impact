@@ -12,6 +12,7 @@ namespace BetterGenshinImpact.GameTask.Music.Service;
 public sealed class MusicPlaybackService(
     IMusicTimelineBuilder timelineBuilder,
     IInstrumentProfileService profileService,
+    IMusicInstrumentSwitcher instrumentSwitcher,
     IEnumerable<IKeyInputTransport> transports) : IMusicPlaybackService
 {
     private readonly ILogger<MusicPlaybackService> _logger = App.GetLogger<MusicPlaybackService>();
@@ -68,13 +69,14 @@ public sealed class MusicPlaybackService(
 
             _transport = _transports[options.InputMode];
             _playbackMode = options.PlaybackMode;
-            _speed = Math.Clamp(options.Speed, 0.5, 2.0);
+            _speed = Math.Clamp(options.Speed, 0.1, 10.0);
             _stopRequested = false;
             _skipDirection = 0;
         }
 
         var currentIndex = Math.Clamp(startIndex, 0, queue.Count - 1);
         var isFirstTrack = true;
+        string? activeInstrumentName = null;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -82,9 +84,56 @@ public sealed class MusicPlaybackService(
                 var score = queue[currentIndex];
                 var profile = profileService.Find(score.OutputProfileName);
                 var timeline = timelineBuilder.Build(score, profile, score.Transpose);
+                lock (_syncRoot)
+                {
+                    _speed = GetTrackSpeed(options, score);
+                }
+
                 var startPosition = isFirstTrack ? options.StartPosition : TimeSpan.Zero;
                 isFirstTrack = false;
-                PrepareTrack(timeline, score.DisplayTitle, currentIndex, startPosition);
+                if (options.AutoSwitchInstrument
+                    && !string.Equals(activeInstrumentName, profile.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    // 自动换乐器可能持续数秒，先发布当前曲目，让停止、暂停和切歌按钮保持可用。
+                    PrepareTrack(timeline, score.DisplayTitle, currentIndex, startPosition);
+                    if (!await instrumentSwitcher.SwitchToAsync(profile.Name, cancellationToken))
+                    {
+                        break;
+                    }
+
+                    activeInstrumentName = profile.Name;
+                    var skipDirection = 0;
+                    var pauseRequested = false;
+                    lock (_syncRoot)
+                    {
+                        if (_stopRequested)
+                        {
+                            break;
+                        }
+
+                        skipDirection = _skipDirection;
+                        _skipDirection = 0;
+                        pauseRequested = _state == MusicPlaybackState.Paused;
+                    }
+
+                    if (skipDirection != 0)
+                    {
+                        currentIndex = skipDirection > 0
+                            ? (currentIndex == queue.Count - 1 ? 0 : currentIndex + 1)
+                            : (currentIndex == 0 ? queue.Count - 1 : currentIndex - 1);
+                        continue;
+                    }
+
+                    PrepareTrack(timeline, score.DisplayTitle, currentIndex, startPosition);
+                    if (pauseRequested)
+                    {
+                        Pause();
+                    }
+                }
+                else
+                {
+                    PrepareTrack(timeline, score.DisplayTitle, currentIndex, startPosition);
+                }
 
                 var result = await PlayTimelineAsync(cancellationToken);
                 _transport?.ReleaseAll();
@@ -238,7 +287,7 @@ public sealed class MusicPlaybackService(
     {
         lock (_syncRoot)
         {
-            speed = Math.Clamp(speed, 0.5, 2.0);
+            speed = Math.Clamp(speed, 0.1, 10.0);
             if (Math.Abs(_speed - speed) < 0.001)
             {
                 return;
@@ -516,6 +565,16 @@ public sealed class MusicPlaybackService(
     {
         var next = Random.Shared.Next(count - 1);
         return next >= currentIndex ? next + 1 : next;
+    }
+
+    private static double GetTrackSpeed(MusicPlaybackOptions options, PerformanceScore score)
+    {
+        if (options.CustomBpm is > 0 && score.Bpm > 0)
+        {
+            return Math.Clamp(options.CustomBpm.Value / score.Bpm, 0.1, 10.0);
+        }
+
+        return Math.Clamp(options.Speed, 0.1, 10.0);
     }
 
     private static TimeSpan Clamp(TimeSpan value, TimeSpan min, TimeSpan max)

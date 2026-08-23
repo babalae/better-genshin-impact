@@ -371,16 +371,38 @@ ElementRecognition.Get("PaimonMenu", region);
 
 ## 11. search 字段
 
-`search` 用于描述锚点和额外扩展区域。
+`search` 用于描述参考画布搜索框、响应式锚点和额外扩展区域。
+仅当对象同时配置了 `reference.size` 和 `reference.bbox`，且没有显式 `roi` 时，参考画布搜索才会生效。
 
 字段：
 
 - `anchor`
   - 对应 `SearchAnchorMode` 枚举名
+  - 可用值：`Auto`、`TopLeft`、`TopRight`、`BottomLeft`、`BottomRight`、`Center`
+  - `Auto` 根据 `reference.bbox` 所在区域模拟游戏 UI 的响应式布局
+
+- `box`
+  - 可选
+  - 返回 `Rect` 的表达式，也可写成 `@区域别名`
+  - 使用 `reference.size` 对应的参考画布坐标系
+  - 与 `reference.bbox` 使用完全相同的缩放和锚定转换
+  - 不填时使用 `reference.bbox` 作为基础搜索框
 
 - `expand`
   - 格式 `[width, height]`
-  - 表示搜索时向外扩展的尺寸
+  - 表示转换到当前截图后，左右扩展 `width` 像素、上下扩展 `height` 像素
+  - 不填时默认四周扩展 10px
+  - 配置了 `expandPercent` 时本字段和默认 10px 均不生效
+
+- `expandPercent`
+  - 可选，值为直接参与计算的小数比例，例如 `0.05` 表示 5%
+  - 左右以当前截图宽度为基准，上下以当前截图高度为基准
+  - 参数顺序遵循 XAML `Thickness`
+    - `[all]`：四边使用相同比例
+    - `[horizontal, vertical]`：左右、上下
+    - `[left, top, right, bottom]`：左、上、右、下
+  - 只允许 1、2、4 个有限且非负的数字，可以大于 `1`
+  - 优先于像素 `expand`；显式写 `[0]` 表示不扩展
 
 示例：
 
@@ -390,6 +412,22 @@ ElementRecognition.Get("PaimonMenu", region);
   "expand": [120, 80]
 }
 ```
+
+带独立搜索框和非对称百分比扩展的示例：
+
+```json
+"reference": {
+  "size": [1920, 1080],
+  "bbox": "rect(1680, 32, 48, 48)"
+},
+"search": {
+  "anchor": "TopRight",
+  "box": "rect(1540, 0, 380, 160)",
+  "expandPercent": [0.02, 0.01, 0.03, 0.01]
+}
+```
+
+上例的 `expandPercent` 按“左、上、右、下”解释：左侧扩展截图宽度的 2%，上侧扩展截图高度的 1%，右侧扩展截图宽度的 3%，下侧扩展截图高度的 1%。
 
 ## 12. 推荐写法
 

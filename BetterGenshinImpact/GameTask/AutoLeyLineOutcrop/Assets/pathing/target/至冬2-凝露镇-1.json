@@ -1,0 +1,29 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "https://github.com/ddaodan",
+        "name": "ddaodan"
+      }
+    ],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1786616246717,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "至冬2-凝露镇-1",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 7539.9902,
+      "y": 7683.8452,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

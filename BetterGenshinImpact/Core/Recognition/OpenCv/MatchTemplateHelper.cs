@@ -10,7 +10,10 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 /// </summary>
 public class MatchTemplateHelper
 {
-    private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
+    // 单元测试和离线工具没有 WPF App，不应仅为了记录异常而初始化完整应用宿主。
+    private static ILogger<MatchTemplateHelper>? Logger => System.Windows.Application.Current is App
+        ? App.GetLogger<MatchTemplateHelper>()
+        : null;
 
     /// <summary>
     ///  模板匹配
@@ -211,6 +214,22 @@ public class MatchTemplateHelper
             Cv2.Compare(result, new Scalar(scoreThreshold), candidateMask,
                 isLowerBetter ? CmpType.LE : CmpType.GE);
 
+            // 搜索区域与模板完全相同时，响应矩阵只有一个元素。
+            // 部分 OpenCV 版本对 1x1 掩码执行带 mask 的 MinMaxLoc 会发生原生异常，因此直接读取唯一分数。
+            if (result.Width == 1 && result.Height == 1)
+            {
+                var rawScore = result.At<float>(0, 0);
+                var passed = !float.IsNaN(rawScore)
+                             && (isLowerBetter ? rawScore <= scoreThreshold : rawScore >= scoreThreshold);
+                if (passed)
+                {
+                    var score = isLowerBetter ? 1 - rawScore : rawScore;
+                    matches.Add(new TemplateMatchResult(new Point(0, 0), score));
+                }
+
+                return matches;
+            }
+
             while (matches.Count < maxCount)
             {
                 // 仅在候选掩码非零的位置中，提取当前分数最优的匹配点。
@@ -243,8 +262,8 @@ public class MatchTemplateHelper
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex.Message);
-            _logger.LogDebug(ex, ex.Message);
+            Logger?.LogError(ex.Message);
+            Logger?.LogDebug(ex, ex.Message);
         }
 
         return matches;

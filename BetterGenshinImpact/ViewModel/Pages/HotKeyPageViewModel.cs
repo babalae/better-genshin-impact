@@ -1,3 +1,4 @@
+using System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -25,6 +26,7 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
@@ -52,6 +54,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
+    private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -59,10 +62,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
-    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
+    public HotKeyPageViewModel(
+        IConfigService configService,
+        ILogger<HotKeyPageViewModel> logger,
+        TaskSettingsPageViewModel taskSettingsPageViewModel,
+        RecognitionTemplateEditorService recognitionTemplateEditorService)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
+        _recognitionTemplateEditorService = recognitionTemplateEditorService;
         // 获取配置
         Config = configService.Get();
 
@@ -699,6 +707,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ));
 
         devDirectory.Children.Add(new HotKeySettingModel(
+            "（开发）模板素材制作",
+            nameof(Config.HotKeyConfig.RecognitionTemplateEditorHotkey),
+            Config.HotKeyConfig.RecognitionTemplateEditorHotkey,
+            Config.HotKeyConfig.RecognitionTemplateEditorHotkeyType,
+            (_, _) => { _recognitionTemplateEditorService.OpenAsync().SafeForget(); }
+        ));
+
+        devDirectory.Children.Add(new HotKeySettingModel(
             "（开发）获取当前大地图中心点位置",
             nameof(Config.HotKeyConfig.RecBigMapPosHotkey),
             Config.HotKeyConfig.RecBigMapPosHotkey,
@@ -793,7 +809,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    Task.Run(async () => { await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star: 4, null, null, null, null)).Start(new CancellationToken()); });
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await new TpTask(CancellationToken.None).Tp(7001.6416, -569.6846, nameof(MapTypes.Teyvat));
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e.Message);
+                        }
+                    });
 
                 }
             ));

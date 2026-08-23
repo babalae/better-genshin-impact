@@ -966,14 +966,16 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
             }
             else
             {
-                var match = WeaponNameMatcher.Match(lastOcrText);
+                var weaponType = _pendingWeaponType
+                                 ?? throw new InvalidOperationException("角色养成识别：当前角色武器类型尚未初始化。");
+                var match = WeaponNameMatcher.Match(lastOcrText, weaponType);
                 lastMatchedName = match.Name;
                 if (!match.IsReliable)
                 {
                     stableNames.Reset();
                     _logger.LogDebug(
-                        "角色养成识别：武器名称 OCR 第 {Attempt}/{MaxAttempts} 次匹配不可信，原文={OcrText}，候选={MatchedName}，编辑距离={Distance}，相似度={Similarity:F2}",
-                        attempt, MaxOcrAttempts, lastOcrText, match.Name, match.Distance, match.Similarity);
+                        "角色养成识别：武器名称 OCR 第 {Attempt}/{MaxAttempts} 次匹配不可信，原文={OcrText}，候选={MatchedName}，编辑距离={Distance}",
+                        attempt, MaxOcrAttempts, lastOcrText, match.Name, match.Distance);
                 }
                 else
                 {

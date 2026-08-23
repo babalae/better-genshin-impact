@@ -68,6 +68,11 @@ public interface IKeyInputTransport
     void ReleaseAll();
 }
 
+public interface IMusicInstrumentSwitcher
+{
+    Task<bool> SwitchToAsync(string instrumentName, CancellationToken cancellationToken);
+}
+
 public interface IMusicPlaybackService
 {
     event EventHandler<PlaybackSnapshot>? SnapshotChanged;

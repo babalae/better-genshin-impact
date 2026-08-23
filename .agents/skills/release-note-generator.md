@@ -70,6 +70,10 @@ description: "基于 BetterGI 本地 git 历史和实际 diff，按 GitHub 已�
 - 从 commit body 的 `Co-authored-by: name <email>` 提取共同作者，并按同样规则解析
 - 当作者为 `huiyadanli`（含邮箱 `huiyadanli@gmail.com`）时省略 `@author`（项目维护者，无需标注）
 - 不需要调用 GitHub API，纯本地解析
+- 如果存在下面箭头左侧的作者信息，请替换为右侧的作者名
+    - mno -> Bedrockx
+    - 秋云 -> physligl
+    - darkflamemaster -> 1004452714
 
 ## 内容提炼规则
 

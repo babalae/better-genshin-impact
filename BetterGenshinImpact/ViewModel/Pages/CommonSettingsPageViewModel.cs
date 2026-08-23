@@ -53,6 +53,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private readonly NotificationService _notificationService;
     private readonly CustomHtmlMaskService _customHtmlMaskService;
+    private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     private string _selectedArea = string.Empty;
@@ -69,7 +70,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
-        NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService)
+        NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
+        RecognitionTemplateEditorService recognitionTemplateEditorService)
     {
         Config = configService.Get();
         Config.MaskWindowConfig.EnsureOverlayMetricItems();
@@ -77,6 +79,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _navigationService = navigationService;
         _notificationService = notificationService;
         _customHtmlMaskService = customHtmlMaskService;
+        _recognitionTemplateEditorService = recognitionTemplateEditorService;
         // 设置页需要可绑定对象，避免把 Dictionary<string, bool> 直接暴露给 XAML 并丢失固定枚举顺序。
         OverlayMetricItems = new ObservableCollection<OverlayMetricSettingItem>(
             OverlayMetricItemDefaults.AllItems.Select(item => new OverlayMetricSettingItem(Config.MaskWindowConfig, item, OnRefreshMaskSettings)));
@@ -374,6 +377,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public void OnGoToHotKeyPage()
     {
         _navigationService.Navigate(typeof(HotKeyPage));
+    }
+
+    [RelayCommand]
+    private async Task OpenRecognitionTemplateEditorFromImageAsync()
+    {
+        await _recognitionTemplateEditorService.OpenFromImageAsync();
     }
 
     [RelayCommand]

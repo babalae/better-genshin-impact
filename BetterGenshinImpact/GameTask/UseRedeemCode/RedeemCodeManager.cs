@@ -14,6 +14,9 @@ public class RedeemCodeManager
 {
     public static HashSet<string> CancelClipboardHash { get; } = [];
 
+    private static readonly Regex UrlStripRegex =
+        new(@"https?://\S+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    
     public static void AddNotDetectClipboardText(string clipboardText)
     {
         var md5Hash = MD5Helper.ComputeMD5(clipboardText);
@@ -32,8 +35,9 @@ public class RedeemCodeManager
         {
             return;
         }
-        
-        var codes = ExtractAllCodes(clipboardText);
+
+        var cleanedText = UrlStripRegex.Replace(clipboardText, "");  
+        var codes = ExtractAllCodes(cleanedText);
         if (codes.Count == 0)
         {
             return;
