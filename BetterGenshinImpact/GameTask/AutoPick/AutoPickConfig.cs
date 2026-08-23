@@ -61,7 +61,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         /// </summary>
         [ObservableProperty]
         [property: JsonConverter(typeof(JsonStringEnumConverter<AutoPickMode>))]
-        private AutoPickMode _mode = AutoPickMode.Blacklist;
+        private AutoPickMode _mode = AutoPickMode.Whitelist;
 
         // 黑名单模式的拾取规则启用状态
         [ObservableProperty]

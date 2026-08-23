@@ -150,8 +150,7 @@
 
                 <ui:NavigationViewItem Content="自动演奏"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:MusicPage}"
-                                       Visibility="{Binding IsAlphaVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                       TargetPageType="{x:Type pages:MusicPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="MusicNote224" />
                     </ui:NavigationViewItem.Icon>

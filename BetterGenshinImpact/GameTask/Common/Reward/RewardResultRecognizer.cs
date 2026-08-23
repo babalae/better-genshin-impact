@@ -12,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Common.Reward;
@@ -387,29 +386,29 @@ public class RewardResultRecognizer
     /// <returns>识别到的数量；失败时返回 -1。</returns>
     private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx)
     {
-        int count = -1;
-        string? countOcrText = null;
         try
         {
-            countOcrText = cardMat.GetGridItemIconText(ocrService);
-            string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(countOcrText ?? string.Empty);
-            var digits = Regex.Replace(numStr, @"\D", string.Empty);
-            if (!string.IsNullOrEmpty(digits) && int.TryParse(digits, out var n))
+            using GridItemCountRecognitionResult result =
+                GridItemCountRecognizer.RecognizeCropped(cardMat, ocrService);
+            if (result.Count >= 0)
             {
-                count = n;
+                return result.Count;
             }
+
+            _logger.LogWarning(
+                "奖励识别：卡片 {CardIndex} 数量没有识别出来，OCR 原文：{RawText}，原因：{Reason}，有效连通域：{ComponentCount}，已按 1 个计入。",
+                cardIdx,
+                result.RawText,
+                result.Reason,
+                result.ComponentCount);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "奖励识别：卡片 {CardIndex} 数量OCR异常，数量保持 -1", cardIdx);
+            _logger.LogWarning("奖励识别：卡片 {CardIndex} 数量识别异常，已按 1 个计入。", cardIdx);
         }
 
-        if (count < 0)
-        {
-            _logger.LogWarning("奖励识别：有一个奖励数量没有识别出来，已按 1 个计入。");
-        }
-
-        return count;
+        return -1;
     }
 
     /// <summary>

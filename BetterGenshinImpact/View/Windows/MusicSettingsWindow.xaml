@@ -71,7 +71,7 @@
                                 <TextBlock Margin="0,3,0,0"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           Text="设置当前曲目的乐器档案与移调；请在游戏中手动装备对应乐器" />
+                                           Text="设置当前曲目的乐器档案与移调；可在下方启用自动换乐器" />
                             </StackPanel>
                         </Grid>
 
@@ -101,6 +101,60 @@
                                               Value="{Binding Transpose, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                         </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,0,0,12"
+                        Style="{StaticResource MusicSettingsCardStyle}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingsSectionIconStyle}">
+                                <ui:SymbolIcon Symbol="Timer24" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock FontWeight="SemiBold" Text="演奏控制" />
+                                <TextBlock Margin="0,3,0,0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="覆盖曲谱速度，并在每次需要时自动准备对应乐器" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="160" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <CheckBox Content="使用自定义 BPM"
+                                          IsChecked="{Binding Config.MusicConfig.UseCustomBpm, Mode=TwoWay}" />
+                                <TextBlock Margin="22,3,8,0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="按曲谱原 BPM 等比例调整整首曲目的播放速度" />
+                            </StackPanel>
+                            <ui:NumberBox Grid.Column="1"
+                                          IsEnabled="{Binding Config.MusicConfig.UseCustomBpm}"
+                                          Maximum="1000"
+                                          Minimum="1"
+                                          SmallChange="1"
+                                          SpinButtonPlacementMode="Inline"
+                                          ValidationMode="InvalidInputOverwritten"
+                                          Value="{Binding Config.MusicConfig.CustomBpm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+
+                        <Separator Margin="0,14" />
+
+                        <CheckBox Content="演奏前自动更换乐器"
+                                  IsChecked="{Binding Config.MusicConfig.AutoSwitchInstrument, Mode=TwoWay}" />
+                        <TextBlock Margin="22,3,0,0"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="自动打开背包、装备当前输出乐器并使用；支持内置的十种乐器档案" />
                     </StackPanel>
                 </Border>
 

@@ -84,6 +84,12 @@ public partial class AllConfig : ObservableObject
     private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
     
     /// <summary>
+    /// 禁用键鼠监听，需重启
+    /// </summary>
+    [ObservableProperty]
+    private bool _disableInputMonitor = false;
+
+    /// <summary>
     /// 连续执行任务时，从此任务开始执行
     /// </summary>
     [JsonIgnore]

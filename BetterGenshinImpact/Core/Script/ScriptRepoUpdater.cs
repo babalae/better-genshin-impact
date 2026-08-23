@@ -2133,6 +2133,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
                 uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
+                WindowHelper.CenterOnVisibleOwner(uiMessageBox);
 
                 var result = await uiMessageBox.ShowDialogAsync();
                 if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
