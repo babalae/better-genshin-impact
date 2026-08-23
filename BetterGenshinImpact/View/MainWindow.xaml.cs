@@ -120,10 +120,10 @@ public partial class MainWindow : FluentWindow, INavigationWindow
                 return scrollViewer;
             }
 
-            if (current is System.Windows.Controls.ListViewItem listViewItem
-                && ItemsControl.ItemsControlFromItemContainer(listViewItem) is System.Windows.Controls.ListView listView)
+            if ((current is System.Windows.Controls.ListBoxItem or System.Windows.Controls.ComboBoxItem)
+                && ItemsControl.ItemsControlFromItemContainer(current) is ItemsControl itemsControl)
             {
-                var listScrollViewer = FindVisualChild<ScrollViewer>(listView);
+                var listScrollViewer = FindVisualChild<ScrollViewer>(itemsControl);
                 if (listScrollViewer is { ScrollableHeight: > 0 })
                 {
                     return listScrollViewer;

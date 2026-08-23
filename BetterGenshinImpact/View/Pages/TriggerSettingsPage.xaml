@@ -945,6 +945,9 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Margin="0,0,8,0"
+                              MaxDropDownHeight="360"
+                              ScrollViewer.CanContentScroll="False"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                               ItemsSource="{Binding HangoutBranches, Mode=OneWay}"
                               SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}" />
                 </Grid>
