@@ -410,7 +410,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
                 }
 
-                // 目标分支只允许点击当前尚未选择的选项，避免重复点击已选项导致流程偏离。
+                // 历史已选状态不影响当前路线，目标分支仍需优先匹配全部选项。
                 if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose)
                     && HangoutConfig.Instance.HangoutOptions.TryGetValue(_config.AutoHangoutEndChoose, out var chooseList))
                 {
@@ -479,7 +479,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
         IEnumerable<string> keywords)
     {
         var normalizedOptions = options
-            .Where(option => !option.IsSelected)
             .Select(option => new
             {
                 Option = option,
