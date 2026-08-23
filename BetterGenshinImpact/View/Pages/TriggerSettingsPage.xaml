@@ -270,9 +270,20 @@
                                     <ui:SymbolIcon FontSize="22" Symbol="CheckmarkCircle24" />
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <ui:TextBlock FontTypography="BodyStrong"
-                                                  Text="白名单模式"
-                                                  TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:TextBlock FontTypography="BodyStrong"
+                                                      Text="白名单模式"
+                                                      TextWrapping="Wrap" />
+                                        <Border Margin="8,0,0,0"
+                                                Padding="6,2"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                                CornerRadius="4">
+                                            <ui:TextBlock FontSize="11"
+                                                          Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                                          Text="推荐" />
+                                        </Border>
+                                    </StackPanel>
                                     <ui:TextBlock Margin="0,4,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                                   Text="只拾取列表中的文本，其他文本全部忽略"
