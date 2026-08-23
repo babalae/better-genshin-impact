@@ -1,3 +1,4 @@
+using System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -808,7 +809,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    Task.Run(async () => { await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star: 4, null, null, null, null)).Start(new CancellationToken()); });
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await new TpTask(CancellationToken.None).Tp(7001.6416, -569.6846, nameof(MapTypes.Teyvat));
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e.Message);
+                        }
+                    });
 
                 }
             ));

@@ -939,7 +939,7 @@ public class TpTask
 
         }
 
-        throw new TeleportPanelNotOpenedException("点击传送点后未出现交互面板");
+        throw new TeleportPanelNotOpenedException("点击传送点后未出现交互面板，可能是传送点未激活");
     }
 
     private async Task<bool> WaitForTeleportPanelAndConfirm(GiTpPosition? targetTp)
@@ -1049,6 +1049,7 @@ public class TpTask
                     stopwatch.ElapsedMilliseconds >= TeleportMinimumCompletionMs &&
                     ++consecutiveMainUiChecks >= TeleportCompletionStableMainUiChecks)
                 {
+                    Logger.LogInformation("传送完成");
                     return;
                 }
             }
@@ -1239,7 +1240,7 @@ public class TpTask
             {
                 return await TpOnce(tpX, tpY, mapName, force);
             }
-            catch (TeleportPanelNotOpenedException)
+            catch (TeleportPanelNotOpenedException e)
             {
                 // 同一视野内点击后未出现面板，重试只会重复点击同一位置。
                 throw;
@@ -3293,7 +3294,7 @@ public class TpTask
                 .Where(region =>
                 {
                     var optionName = NormalizeCandidateText(region.Text);
-                    return !string.IsNullOrEmpty(optionName) &&
+                    return !string.IsNullOrEmpty(optionName) && region.Text.Length < 10 &&
                            (optionName == targetName || optionName.Contains(targetName) || targetName.Contains(optionName));
                 })
                 .ToList();
@@ -3501,6 +3502,7 @@ public class TpTask
 
     private static void ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
+        Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
     }
 
