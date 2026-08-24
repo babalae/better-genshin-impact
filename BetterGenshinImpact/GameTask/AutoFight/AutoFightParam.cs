@@ -80,7 +80,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public string CombatStrategyPath { get; set; }
 
     public bool FightFinishDetectEnabled { get; set; } = false;
-    public bool PickDropsAfterFightEnabled { get; set; } = false;
+    public bool PickDropsAfterFightEnabled { get; set; } = true;
     public int PickDropsAfterFightSeconds { get; set; } = 15;
     public int BattleThresholdForLoot { get; set; } = -1;
     public int Timeout { get; set; } = 120;
