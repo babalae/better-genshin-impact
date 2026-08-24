@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:autoPick="clr-namespace:BetterGenshinImpact.GameTask.AutoPick"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -945,8 +946,15 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Margin="0,0,8,0"
+                              MaxDropDownHeight="360"
+                              ScrollViewer.CanContentScroll="False"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                               ItemsSource="{Binding HangoutBranches, Mode=OneWay}"
-                              SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}">
+                        <b:Interaction.Behaviors>
+                            <behavior:ComboBoxPopupScrollBehavior />
+                        </b:Interaction.Behaviors>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

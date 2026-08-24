@@ -156,12 +156,13 @@ public partial class AutoFightConfig : ObservableObject
     private FightFinishDetectConfig _finishDetectConfig = new();
     
     /// <summary>
-    /// 检测战斗结束，默认为每轮脚本后检查
+    /// 战斗结束后光柱扫描掉落物
     /// </summary>
     [ObservableProperty]
-    private bool _pickDropsAfterFightEnabled = false;
+    private bool _pickDropsAfterFightEnabled = true;
+
     /// <summary>
-    /// 检测战斗结束，默认为每轮脚本后检查
+    /// 战斗结束后光柱扫描掉落物的持续秒数
     /// </summary>
     [ObservableProperty]
     private int _pickDropsAfterFightSeconds = 15;
@@ -171,6 +172,7 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int? _battleThresholdForLoot;
+
     /// <summary>
     /// 战斗结束后，如果存在枫原万叶，则使用该角色捡材料
     /// </summary>
