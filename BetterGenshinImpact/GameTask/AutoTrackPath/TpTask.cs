@@ -3375,7 +3375,7 @@ public class TpTask
                     using var textRa = imageRegion.DeriveCrop(textRect);
                     using var textRegion = textRa.Find(new RecognitionObject
                     {
-                        RecognitionType = isHdrCapture ? RecognitionTypes.Ocr : RecognitionTypes.ColorRangeAndOcr,
+                        RecognitionType = RecognitionTypes.ColorRangeAndOcr,
                         ColorConversionCode = ColorConversionCodes.BGR2HLS,
                         LowerColor = new Scalar(0, 245, 0),
                         UpperColor = new Scalar(180, 255, 15),
