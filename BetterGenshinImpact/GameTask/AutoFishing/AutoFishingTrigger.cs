@@ -6,7 +6,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
-using CsTrees.FluentBuilder;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -53,14 +52,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             this.blackboard = new CsTrees.Blackboard.Blackboard();
 
-            BehaviourTreeLaTiao = TreeBuilder.Create()
+            BehaviourTreeLaTiao = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("出现退出钓鱼按钮就开始钓鱼")
+                    .Sequence("出现退出钓鱼按钮就开始钓鱼", memory: false)
                         .TakeScreenshot("截图", _logger)
                         .Parallel("root", policy: new ParallelPolicy.SuccessOnOne())
-                            .CheckFishingUserInterfaceBehaviour("检查是否在钓鱼界面", this)
+                            .LeafWithBlackboard(bb => new CheckFishingUserInterfaceBehaviour("检查是否在钓鱼界面", this, bb!))
                             .FailureIsSuccess("拉条循环")
-                                .SequenceWithMemory("拉条")
+                                .Sequence("拉条", memory: true)
                                     .FishBite("自动提竿", _logger, input, ocrService, cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: autoFishingTaskParam.StringLocalizer)
                                     .GetFishBoxArea("等待拉条出现", _logger, false)
                                     .Fishing("钓鱼拉条", _logger, false, input)
@@ -298,13 +297,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             TaskControl.Sleep(millisecondsTimeout);
         }
-        
+
         /// <summary>
-         /// 检查是否在钓鱼界面
-         /// 方法是找右下角的退出钓鱼按钮
-         /// 进入钓鱼界面时该触发器进入独占模式
-         /// </summary>
-         /// <param name="imageRegion"></param>
+        /// 检查是否在钓鱼界面
+        /// 方法是找右下角的退出钓鱼按钮
+        /// 进入钓鱼界面时该触发器进入独占模式
+        /// </summary>
+        /// <param name="imageRegion"></param>
         internal static Status CheckFishingUserInterface(ImageRegion imageRegion, AutoFishingTrigger autoFishingTrigger)
         {
             var prevIsExclusive = autoFishingTrigger.IsExclusive;
@@ -359,7 +358,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public CheckFishingUserInterfaceBehaviour(string name, AutoFishingTrigger autoFishingTrigger) : base(name)
+        private CheckFishingUserInterfaceBehaviour(string name, AutoFishingTrigger autoFishingTrigger) : base(name)
         {
             _autoFishingTrigger = autoFishingTrigger;
         }

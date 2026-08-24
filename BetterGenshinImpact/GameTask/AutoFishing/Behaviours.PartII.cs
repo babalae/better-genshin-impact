@@ -29,7 +29,7 @@ using static Vanara.PInvoke.User32;
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     /// <summary>
-    /// 如果未超时返回运行中，超时返回成功
+    /// 如果超时就发布Abort
     /// </summary>
     public partial class WholeProcessTimeout : Behaviour
     {
@@ -38,7 +38,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private DateTimeOffset? _timeout;
         private readonly int _seconds;
 
-        public WholeProcessTimeout(string name, ILogger logger, int seconds, TimeProvider? timeProvider = null) : base(name)
+        /// <summary>
+        /// 不钓啦
+        /// </summary>
+        [BlackboardKey(Access = Access.Write)]
+        public BehaviourKeyAccess<bool> Abort { get; private set; } = null!;
+
+        private WholeProcessTimeout(string name, ILogger logger, int seconds, TimeProvider? timeProvider = null) : base(name)
         {
             _logger = logger;
             _seconds = seconds;
@@ -53,15 +59,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected async override Task<Status> Update()
         {
-            if (_timeProvider.GetLocalNow() >= _timeout)
+            if ((!Abort.Exists() || !Abort.Get()) &&  _timeProvider.GetLocalNow() >= _timeout)
             {
-                _logger.LogInformation($"{_seconds}秒超时已到，强制结束任务");
-                return Status.Success;
+                Abort.Set(true);
+                _logger.LogInformation($"{_seconds}秒超时已到，结束任务");
             }
-            else
-            {
-                return Status.Running;
-            }
+            return Status.Running;
         }
     }
 
@@ -81,7 +84,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<bool> Abort { get; private set; } = null!;
 
-        public FindFishTimeout(string name, int seconds, ILogger logger, TimeProvider? timeProvider = null) : base(name)
+        private FindFishTimeout(string name, int seconds, ILogger logger, TimeProvider? timeProvider = null) : base(name)
         {
             _logger = logger;
             _seconds = seconds;
@@ -98,7 +101,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (_timeProvider.GetLocalNow() >= _timeout)
             {
                 Abort.Set(true);
-                _logger.LogInformation($"{_seconds}秒没有{Name}，退出钓鱼界面");
+                _logger.LogInformation($"{_seconds}秒没有{Name}，结束任务");
                 return Status.Failure;
             }
             else
@@ -123,7 +126,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        public TurnAround(string name, ILogger logger, IInputSimulator input, BgiYoloPredictor bgiYoloPredictor) : base(name)
+        private TurnAround(string name, ILogger logger, IInputSimulator input, BgiYoloPredictor bgiYoloPredictor) : base(name)
         {
             _logger = logger;
             _input = input;
@@ -222,7 +225,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<bool> PitchReset { get; private set; } = null!;
 
-        public EnterFishingMode(string name, ILogger logger, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private EnterFishingMode(string name, ILogger logger, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
         {
             _logger = logger;
             _input = input;
@@ -312,7 +315,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        public QuitFishingMode(string name, ILogger logger, IInputSimulator input, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private QuitFishingMode(string name, ILogger logger, IInputSimulator input, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
         {
             _logger = logger;
             _input = input;
@@ -362,7 +365,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<bool> Abort { get; private set; } = null!;
 
-        public BubbleAbortCheck(string name) : base(name)
+        private BubbleAbortCheck(string name) : base(name)
         {
         }
 
@@ -396,7 +399,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<bool> ThrowRodNoBaitFish { get; private set; } = null!;
 
-        public CheckThrowRodResult(string name) : base(name)
+        private CheckThrowRodResult(string name) : base(name)
         {
         }
 
@@ -423,7 +426,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.ExclusiveWrite)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        public TakeScreenshot(string name, ILogger logger) : base(name)
+        private TakeScreenshot(string name, ILogger logger) : base(name)
         {
             _logger = logger;
         }
@@ -461,7 +464,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private readonly Action<int> _sleep;
 
-        public SetSleep(string name, Action<int> sleep) : base(name)
+        private SetSleep(string name, Action<int> sleep) : base(name)
         {
             this._sleep = sleep;
         }
