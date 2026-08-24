@@ -292,19 +292,20 @@ public sealed class QqNotifier : INotifier
     private readonly record struct UploadPrepareResult(string UploadId, int BlockSize, List<ChunkPart> Parts);
 
     /// <summary>
-    /// Executes the given action with up to <see cref="MaxRetry"/> attempts and exponential backoff.
+    /// Executes the given action with up to <see cref="MaxRetry"/> retries
+    /// (i.e. <c>MaxRetry + 1</c> total attempts) and exponential backoff.
     /// </summary>
     private async Task WithRetryAsync(Func<Task> action, CancellationToken ct)
     {
         System.Exception? lastException = null;
-        for (var attempt = 0; attempt < MaxRetry; attempt++)
+        for (var attempt = 0; attempt <= MaxRetry; attempt++)
         {
             try
             {
                 await action();
                 return;
             }
-            catch (System.Exception ex) when (attempt < MaxRetry - 1)
+            catch (System.Exception ex) when (attempt < MaxRetry)
             {
                 lastException = ex;
                 await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)), ct);
@@ -315,18 +316,19 @@ public sealed class QqNotifier : INotifier
     }
 
     /// <summary>
-    /// Executes the given function with up to <see cref="MaxRetry"/> attempts and exponential backoff.
+    /// Executes the given function with up to <see cref="MaxRetry"/> retries
+    /// (i.e. <c>MaxRetry + 1</c> total attempts) and exponential backoff.
     /// </summary>
     private async Task<T> WithRetryAsync<T>(Func<Task<T>> action, CancellationToken ct)
     {
         System.Exception? lastException = null;
-        for (var attempt = 0; attempt < MaxRetry; attempt++)
+        for (var attempt = 0; attempt <= MaxRetry; attempt++)
         {
             try
             {
                 return await action();
             }
-            catch (System.Exception ex) when (attempt < MaxRetry - 1)
+            catch (System.Exception ex) when (attempt < MaxRetry)
             {
                 lastException = ex;
                 await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)), ct);
