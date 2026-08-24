@@ -307,7 +307,7 @@ public sealed class QqNotifier : INotifier
             catch (System.Exception ex) when (attempt < MaxRetry - 1)
             {
                 lastException = ex;
-                await Task.Delay(TimeSpan.FromMilliseconds(1500 * (attempt + 1)));
+                await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)));
             }
         }
         if (lastException != null)
@@ -329,7 +329,7 @@ public sealed class QqNotifier : INotifier
             catch (System.Exception ex) when (attempt < MaxRetry - 1)
             {
                 lastException = ex;
-                await Task.Delay(TimeSpan.FromMilliseconds(1500 * (attempt + 1)));
+                await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)));
             }
         }
         throw lastException ?? new NotifierException("QQ request failed after retries");
