@@ -314,8 +314,6 @@ public class BaseMapLayer(SceneBaseMap baseMap)
             Mat? descriptors = null;
             try
             {
-                TaskControl.Logger.LogInformation("[SIFT] 正在动态加载分层地图：{Name}（group={GroupId}, floor={Floor}）",
-                    Name, LayerGroupId, Floor);
                 var keyPoints = FeatureStorageHelper.LoadKeyPointArray(KeyPointFilePath)
                                 ?? throw new FileNotFoundException("分层地图关键点文件不存在", KeyPointFilePath);
                 descriptors = FeatureStorageHelper.LoadDescriptorMat(DescriptorFilePath)
