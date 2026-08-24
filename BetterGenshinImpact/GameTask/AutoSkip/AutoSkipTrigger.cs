@@ -393,66 +393,63 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 .. selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)),
                 .. unselectedRects.Select(unselectedRect => new HangoutOption(unselectedRect, false)),
             ];
-            // 只有一个选项直接点击
-            // if (hangoutOptionList.Count == 1)
-            // {
-            //     hangoutOptionList[0].Click(clickOffset);
-            //     AutoHangoutSkipLog("点击唯一邀约选项");
-            //     return;
-            // }
-
-            hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != null).ToList();
-            if (hangoutOptionList.Count == 0)
+            var allHangoutOptions = hangoutOptionList;
+            try
             {
-                return;
-            }
+                // 文字区域不存在的识别结果不能参与选择。
+                hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != null).ToList();
+                if (hangoutOptionList.Count == 0)
+                {
+                    return;
+                }
 
-            // OCR识别选项文字
-            foreach (var hangoutOption in hangoutOptionList)
-            {
-                var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcMat);
-                hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
-            }
-
-            // 优先选择分支选项
-            if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose))
-            {
-                var chooseList = HangoutConfig.Instance.HangoutOptions[_config.AutoHangoutEndChoose];
+                // OCR识别选项文字
                 foreach (var hangoutOption in hangoutOptionList)
                 {
-                    foreach (var str in chooseList)
+                    var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcMat);
+                    hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
+                }
+
+                // 历史已选状态不影响当前路线，目标分支仍需优先匹配全部选项。
+                if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose)
+                    && HangoutConfig.Instance.HangoutOptions.TryGetValue(_config.AutoHangoutEndChoose, out var chooseList))
+                {
+                    var target = FindHangoutTargetOption(hangoutOptionList, chooseList);
+                    if (target != null)
                     {
-                        if (hangoutOption.OptionTextSrc.Contains(str))
-                        {
-                            HangoutOptionClick(hangoutOption);
-                            _logger.LogInformation("邀约分支[{Text}]关键词[{Str}]命中", _config.AutoHangoutEndChoose, str);
-                            AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
-                            VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-                            VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
-                            return;
-                        }
+                        HangoutOptionClick(target);
+                        _logger.LogInformation("邀约分支[{Text}]关键词命中，选择[{Option}]", _config.AutoHangoutEndChoose, target.OptionTextSrc);
+                        AutoHangoutSkipLog(target.OptionTextSrc);
+                        VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+                        VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                        return;
                     }
                 }
-            }
 
-            // 没有停留的选项 优先选择未点击的的选项
-            foreach (var hangoutOption in hangoutOptionList)
-            {
-                if (!hangoutOption.IsSelected)
+                // 没有命中目标分支时，优先选择未点击的选项。
+                var unselectedOption = hangoutOptionList.FirstOrDefault(hangoutOption => !hangoutOption.IsSelected);
+                if (unselectedOption != null)
                 {
-                    HangoutOptionClick(hangoutOption);
-                    AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
+                    HangoutOptionClick(unselectedOption);
+                    AutoHangoutSkipLog(unselectedOption.OptionTextSrc);
                     VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
                     VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
                     return;
                 }
-            }
 
-            // 没有未点击的选项 选择第一个已点击选项
-            HangoutOptionClick(hangoutOptionList[0]);
-            AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
-            VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-            VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                // 没有未点击的选项时选择第一个已点击选项，推进对话状态。
+                HangoutOptionClick(hangoutOptionList[0]);
+                AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
+                VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+                VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+            }
+            finally
+            {
+                foreach (var hangoutOption in allHangoutOptions)
+                {
+                    hangoutOption.Dispose();
+                }
+            }
         }
         else
         {
@@ -475,6 +472,49 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
             }
         }
+    }
+
+    private static HangoutOption? FindHangoutTargetOption(
+        IEnumerable<HangoutOption> options,
+        IEnumerable<string> keywords)
+    {
+        var normalizedOptions = options
+            .Select(option => new
+            {
+                Option = option,
+                Text = NormalizeHangoutText(option.OptionTextSrc)
+            })
+            .Where(item => !string.IsNullOrEmpty(item.Text))
+            .ToList();
+
+        return keywords
+            .Select(keyword => new
+            {
+                Keyword = keyword,
+                Text = NormalizeHangoutText(keyword)
+            })
+            .Where(item => !string.IsNullOrEmpty(item.Text))
+            .SelectMany(keyword => normalizedOptions
+                .Where(option => option.Text.Contains(keyword.Text, StringComparison.Ordinal))
+                .Select(option => new
+                {
+                    option.Option,
+                    option.Text,
+                    Keyword = keyword.Text,
+                    IsExact = string.Equals(option.Text, keyword.Text, StringComparison.Ordinal)
+                }))
+            .OrderByDescending(item => item.IsExact)
+            .ThenByDescending(item => item.Keyword.Length)
+            .ThenBy(item => item.Option.IconRect.Top)
+            .Select(item => item.Option)
+            .FirstOrDefault();
+    }
+
+    private static string NormalizeHangoutText(string text)
+    {
+        return new string(text
+            .Where(character => !char.IsWhiteSpace(character) && !char.IsPunctuation(character))
+            .ToArray());
     }
 
     private bool IsOrangeOption(Mat textMat)
