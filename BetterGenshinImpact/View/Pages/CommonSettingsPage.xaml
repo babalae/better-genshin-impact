@@ -1745,6 +1745,39 @@
                               SelectedValuePath="Item1"
                               DisplayMemberPath="Item2" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="切换队伍单次滑动距离"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="切换队伍时，在队伍列表中每次滑动向下移动的栏数，数值越大跨越队伍速度越快。"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="100"
+                                  Margin="0,0,36,0"
+                                  AcceptsExpression="False"
+                                  Maximum="5"
+                                  MaxDecimalPlaces="1"
+                                  Minimum="1"
+                                  SmallChange="0.5"
+                                  SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding Config.OtherConfig.SwitchPartyScrollDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
                 <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">

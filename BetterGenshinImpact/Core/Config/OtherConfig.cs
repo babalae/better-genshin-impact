@@ -30,6 +30,10 @@ public partial class OtherConfig : ObservableObject
     [ObservableProperty]
     private Ocr _ocrConfig = new();
     
+    //切换队伍时，单次滑动的距离（单位：栏）
+    [ObservableProperty]
+    private double _switchPartyScrollDistance = 3;
+    
 
     public partial class AutoRestart : ObservableObject
     {

@@ -170,6 +170,7 @@ public class SwitchPartyTask
             DrawOnWindowPen= System.Drawing.Pens.White
         };
         // 逐页查找
+        int bottomHitCount = 0;   // 连续判定到底的累计次数
         try
         {
             for (var i = 0; i < 16; i++)    // 6.0版本最多20个队伍
@@ -204,8 +205,18 @@ public class SwitchPartyTask
 
                 if (lowest.Y < 777 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
                 {
-                    Logger.LogInformation("已抵达最后一个队伍");
-                    break;
+                    // 需要累计 3 次连续判定到底才停止，避免识别抖动造成过早退出
+                    bottomHitCount++;
+                    if (bottomHitCount >= 3)
+                    {
+                        Logger.LogInformation("已连续 3 次判定到底，确认抵达最后一个队伍");
+                        break;
+                    }
+                    Logger.LogInformation("底部判定第 {Count}/3 次，继续向下滚动确认", bottomHitCount);
+                }
+                else
+                {
+                    bottomHitCount = 0;   // 未到底则清零，要求连续 3 次
                 }
 
                 // 点击下一页
@@ -216,8 +227,14 @@ public class SwitchPartyTask
                     await Task.Delay(300, ct); // 等待动画
                 }
 
-                page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移
-                await Delay(400, ct);
+                // 点击最下方队伍下移，单次滑动距离为配置的栏数（钳制到 1~5 之间，支持小数向上取整）
+                double scrollDistance = Math.Clamp(TaskContext.Instance().Config.OtherConfig.SwitchPartyScrollDistance, 1, 5);
+                int clickCount = Math.Max(1, (int)Math.Ceiling(scrollDistance));
+                for (int s = 0; s < clickCount; s++)
+                {
+                    page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom);
+                    await Delay(400, ct);
+                }
             }
         }
         finally
