@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -79,6 +80,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private const int MaxRecheckCount = 3;
     private const int MaxConsecutiveFailures = 5;
+    private const int MaxCountryScrollAttempts = 8;
+    private const int CountryScrollDelayMs = 250;
     private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
@@ -2295,15 +2298,30 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task FindAndClickCountry(string country)
     {
         var match = country == "挪德卡莱" ? "挪德卡" : country;
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        var target = list.FirstOrDefault(r => r.Text.Contains(match, StringComparison.Ordinal));
-        if (target == null)
+
+        for (var attempt = 0; attempt <= MaxCountryScrollAttempts; attempt++)
         {
-            throw new Exception($"冒险之证未找到国家: {country}");
+            using var capture = CaptureToRectArea();
+            var list = capture.FindMulti(_ocrRoThis);
+            var target = list.FirstOrDefault(r => r.Text.Contains(match, StringComparison.Ordinal));
+            if (target != null)
+            {
+                target.Click();
+                return;
+            }
+
+            if (attempt == MaxCountryScrollAttempts)
+            {
+                break;
+            }
+
+            GlobalMethod.MoveMouseTo(1300, 800);
+            Simulation.SendInput.Mouse.VerticalScroll(-1);
+            await Delay(CountryScrollDelayMs, _ct);
         }
 
-        target.Click();
+        _logger.LogWarning("冒险之证向下滚动{ScrollAttempts}次后仍未找到国家: {Country}", MaxCountryScrollAttempts, country);
+        throw new Exception($"冒险之证未找到国家: {country}");
     }
 
     private async Task<bool> TryOpenBigMapFromHandbook()

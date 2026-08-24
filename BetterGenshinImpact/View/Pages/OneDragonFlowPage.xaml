@@ -1623,7 +1623,8 @@
                                               Grid.Column="0"
                                               Grid.ColumnSpan="4"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="仅在勾选的星期执行；类型/国家留空时使用独立任务默认设置。"
+                                              Margin="0,0,0,12"
+                                              Text="仅在勾选的星期执行；若未勾选任何星期，则每天执行。类型/国家留空时使用独立任务默认设置。"
                                               TextWrapping="Wrap" />
 
                                 <ui:TextBlock Grid.Row="2"
@@ -1647,12 +1648,12 @@
                                 <ComboBox Grid.Row="3"
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineMondayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="3"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineMondayCountry, Mode=TwoWay}" />
 
                                 <CheckBox Grid.Row="4"
@@ -1663,12 +1664,12 @@
                                 <ComboBox Grid.Row="4"
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineTuesdayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="4"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineTuesdayCountry, Mode=TwoWay}" />
 
                                 <CheckBox Grid.Row="5"
@@ -1679,12 +1680,12 @@
                                 <ComboBox Grid.Row="5"
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineWednesdayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="5"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineWednesdayCountry, Mode=TwoWay}" />
 
                                 <CheckBox Grid.Row="6"
@@ -1695,12 +1696,12 @@
                                 <ComboBox Grid.Row="6"
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineThursdayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="6"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineThursdayCountry, Mode=TwoWay}" />
 
                                 <CheckBox Grid.Row="7"
@@ -1711,12 +1712,12 @@
                                 <ComboBox Grid.Row="7"
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineFridayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="7"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineFridayCountry, Mode=TwoWay}" />
 
                                 <CheckBox Grid.Row="8"
@@ -1727,12 +1728,12 @@
                                 <ComboBox Grid.Row="8"
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineSaturdayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="8"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineSaturdayCountry, Mode=TwoWay}" />
 
                                 <CheckBox Grid.Row="9"
@@ -1743,11 +1744,11 @@
                                 <ComboBox Grid.Row="9"
                                           Grid.Column="2"
                                           Margin="0,0,12,0"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineSundayType, Mode=TwoWay}" />
                                 <ComboBox Grid.Row="9"
                                           Grid.Column="3"
-                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryListWithEmpty}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineSundayCountry, Mode=TwoWay}" />
                             </Grid>
                         </StackPanel>
