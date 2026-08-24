@@ -11,6 +11,7 @@ using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -23,6 +24,8 @@ namespace BetterGenshinImpact.Service.Notifier;
 /// </summary>
 public sealed class QqNotifier : INotifier
 {
+    private static readonly ILogger<QqNotifier> Logger = App.GetLogger<QqNotifier>();
+
     public string Name { get; } = "QQ";
 
     private const string TokenUrl = "https://bots.qq.com/app/getAppAccessToken";
@@ -34,6 +37,13 @@ public sealed class QqNotifier : INotifier
     private readonly string _clientSecret;
     private readonly string _openId;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QqNotifier"/> class.
+    /// </summary>
+    /// <param name="httpClient">Shared HTTP client used to call the QQ Open Platform API.</param>
+    /// <param name="appId">QQ Open Platform AppID.</param>
+    /// <param name="clientSecret">QQ Open Platform AppSecret.</param>
+    /// <param name="openId">The target user's C2C OpenID.</param>
     public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId)
     {
         _httpClient = httpClient;
@@ -42,6 +52,13 @@ public sealed class QqNotifier : INotifier
         _openId = openId;
     }
 
+    /// <summary>
+    /// Sends the notification to the user's QQ private chat.
+    /// The text message is always sent first; if a screenshot is present, an image
+    /// message is sent afterwards. A screenshot failure is logged and swallowed so
+    /// that the already-delivered text notification is not reported as failed.
+    /// </summary>
+    /// <param name="content">The notification data to send.</param>
     public async Task SendAsync(BaseNotificationData content)
     {
         if (string.IsNullOrWhiteSpace(_appId))
@@ -55,11 +72,9 @@ public sealed class QqNotifier : INotifier
 
         try
         {
-            // 1. Send text message
             var text = GenerateMessage(content);
             await SendTextAsync(text);
 
-            // 2. Send image message if screenshot exists
             if (content.Screenshot != null)
             {
                 try
@@ -68,8 +83,7 @@ public sealed class QqNotifier : INotifier
                 }
                 catch (System.Exception ex)
                 {
-                    // Image failure should not block the whole notification (text already sent)
-                    throw new NotifierException($"QQ image send failed (text already sent): {ex.Message}");
+                    Logger.LogWarning("QQ image send failed, falling back to text-only: {ex}", ex.Message);
                 }
             }
         }
@@ -83,6 +97,9 @@ public sealed class QqNotifier : INotifier
         }
     }
 
+    /// <summary>
+    /// Builds the human-readable text message with a result mark and timestamp.
+    /// </summary>
     private static string GenerateMessage(BaseNotificationData data)
     {
         var sb = new StringBuilder();
@@ -100,8 +117,9 @@ public sealed class QqNotifier : INotifier
         return sb.ToString();
     }
 
-    // ==================== Auth ====================
-
+    /// <summary>
+    /// Obtains an access token from the QQ Open Platform.
+    /// </summary>
     private async Task<string> GetAccessTokenAsync()
     {
         var body = JsonSerializer.Serialize(new { appId = _appId, clientSecret = _clientSecret });
@@ -114,6 +132,9 @@ public sealed class QqNotifier : INotifier
         return doc.RootElement.GetProperty("access_token").GetString()!;
     }
 
+    /// <summary>
+    /// Builds an HTTP request with the QQ authorization header.
+    /// </summary>
     private async Task<HttpRequestMessage> BuildAuthedRequest(HttpMethod method, string url, HttpContent? body = null)
     {
         var token = await GetAccessTokenAsync();
@@ -122,8 +143,9 @@ public sealed class QqNotifier : INotifier
         return request;
     }
 
-    // ==================== Text message ====================
-
+    /// <summary>
+    /// Sends a plain text message (msg_type=0) with retry.
+    /// </summary>
     private async Task SendTextAsync(string text)
     {
         await WithRetryAsync(async () =>
@@ -136,11 +158,11 @@ public sealed class QqNotifier : INotifier
         });
     }
 
-    // ==================== Image message (chunked upload) ====================
-
+    /// <summary>
+    /// Uploads the screenshot and sends it as a rich media image message (msg_type=7).
+    /// </summary>
     private async Task SendImageAsync(Image<Rgb24> screenshot)
     {
-        // Convert to JPEG bytes
         byte[] imageBytes;
         using (var ms = new MemoryStream())
         {
@@ -148,10 +170,8 @@ public sealed class QqNotifier : INotifier
             imageBytes = ms.ToArray();
         }
 
-        // 1. Upload to get file_info
         var fileInfo = await UploadImageChunkedAsync(imageBytes);
 
-        // 2. Send rich media message msg_type=7
         await WithRetryAsync(async () =>
         {
             var body = JsonSerializer.Serialize(new
@@ -166,6 +186,10 @@ public sealed class QqNotifier : INotifier
         });
     }
 
+    /// <summary>
+    /// Uploads the image bytes via the QQ chunked upload flow and returns the file_info.
+    /// The flow is: upload_prepare -> chunk PUT + part_finish -> files merge.
+    /// </summary>
     private async Task<string> UploadImageChunkedAsync(byte[] imageBytes)
     {
         var baseUrl = ApiBase.Replace("{openid}", _openId);
@@ -174,83 +198,102 @@ public sealed class QqNotifier : INotifier
         var sha1 = Convert.ToHexString(SHA1.HashData(imageBytes)).ToLower();
         var md5First10m = Convert.ToHexString(MD5.HashData(imageBytes.AsSpan(0, Math.Min(imageBytes.Length, 10002432)))).ToLower();
 
-        // 1. upload_prepare
-        string uploadId;
-        int blockSize;
-        List<ChunkPart> parts;
-        using (var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_prepare", new StringContent(
+        var prepared = await WithRetryAsync(() => PrepareUploadAsync(baseUrl, fileName, imageBytes.Length, md5, sha1, md5First10m));
+
+        foreach (var part in prepared.Parts)
+        {
+            var start = (part.Index - 1) * prepared.BlockSize;
+            var end = Math.Min(start + prepared.BlockSize, imageBytes.Length);
+            var chunk = imageBytes[start..end];
+            var chunkMd5 = Convert.ToHexString(MD5.HashData(chunk)).ToLower();
+
+            await WithRetryAsync(() => UploadChunkAsync(part.PresignedUrl, chunk));
+            await WithRetryAsync(() => FinishChunkAsync(baseUrl, prepared.UploadId, part.Index, chunk.Length, chunkMd5));
+        }
+
+        return await WithRetryAsync(() => MergeUploadAsync(baseUrl, prepared.UploadId));
+    }
+
+    /// <summary>
+    /// Calls upload_prepare to obtain the upload id, block size and presigned chunk URLs.
+    /// </summary>
+    private async Task<UploadPrepareResult> PrepareUploadAsync(string baseUrl, string fileName, int fileSize, string md5, string sha1, string md5First10m)
+    {
+        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_prepare", new StringContent(
             JsonSerializer.Serialize(new
             {
                 file_type = 1,
-                file_size = imageBytes.Length.ToString(),
+                file_size = fileSize.ToString(),
                 file_name = fileName,
                 md5,
                 sha1,
                 md5_10m = md5First10m
-            }), Encoding.UTF8, "application/json")))
+            }), Encoding.UTF8, "application/json"));
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var uploadId = doc.RootElement.GetProperty("upload_id").GetString()!;
+        var blockSize = int.Parse(doc.RootElement.GetProperty("block_size").GetString()!);
+        var parts = new List<ChunkPart>();
+        foreach (var part in doc.RootElement.GetProperty("parts").EnumerateArray())
         {
-            using var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            uploadId = doc.RootElement.GetProperty("upload_id").GetString()!;
-            blockSize = int.Parse(doc.RootElement.GetProperty("block_size").GetString()!);
-            parts = new List<ChunkPart>();
-            foreach (var part in doc.RootElement.GetProperty("parts").EnumerateArray())
-            {
-                parts.Add(new ChunkPart(
-                    part.GetProperty("index").GetInt32(),
-                    part.GetProperty("presigned_url").GetString()!));
-            }
+            parts.Add(new ChunkPart(
+                part.GetProperty("index").GetInt32(),
+                part.GetProperty("presigned_url").GetString()!));
         }
+        return new UploadPrepareResult(uploadId, blockSize, parts);
+    }
 
-        // 2. Chunk PUT + part_finish (index starts from 1)
-        foreach (var part in parts)
-        {
-            var start = (part.Index - 1) * blockSize;
-            var end = Math.Min(start + blockSize, imageBytes.Length);
-            var chunk = imageBytes[start..end];
-            var chunkMd5 = Convert.ToHexString(MD5.HashData(chunk)).ToLower();
+    /// <summary>
+    /// Uploads a single chunk to its presigned URL.
+    /// </summary>
+    private async Task UploadChunkAsync(string presignedUrl, byte[] chunk)
+    {
+        using var putContent = new ByteArrayContent(chunk);
+        putContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        using var putResponse = await _httpClient.PutAsync(presignedUrl, putContent);
+        putResponse.EnsureSuccessStatusCode();
+    }
 
-            // PUT to presigned URL
-            using (var putContent = new ByteArrayContent(chunk))
+    /// <summary>
+    /// Notifies the QQ platform that a chunk has finished uploading.
+    /// </summary>
+    private async Task FinishChunkAsync(string baseUrl, string uploadId, int partIndex, int chunkLength, string chunkMd5)
+    {
+        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_part_finish", new StringContent(
+            JsonSerializer.Serialize(new
             {
-                putContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                using var putResponse = await _httpClient.PutAsync(part.PresignedUrl, putContent);
-                putResponse.EnsureSuccessStatusCode();
-            }
+                upload_id = uploadId,
+                part_index = partIndex,
+                block_size = chunkLength.ToString(),
+                md5 = chunkMd5
+            }), Encoding.UTF8, "application/json"));
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
 
-            // part_finish
-            using (var req = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_part_finish", new StringContent(
-                JsonSerializer.Serialize(new
-                {
-                    upload_id = uploadId,
-                    part_index = part.Index,
-                    block_size = chunk.Length.ToString(),
-                    md5 = chunkMd5
-                }), Encoding.UTF8, "application/json")))
-            {
-                using var response = await _httpClient.SendAsync(req);
-                response.EnsureSuccessStatusCode();
-            }
-        }
-
-        // 3. Merge to get file_info
-        using (var req = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/files", new StringContent(
-            JsonSerializer.Serialize(new { file_type = 1, upload_id = uploadId }), Encoding.UTF8, "application/json")))
-        {
-            using var response = await _httpClient.SendAsync(req);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.GetProperty("file_info").GetString()!;
-        }
+    /// <summary>
+    /// Merges the uploaded chunks and returns the file_info.
+    /// </summary>
+    private async Task<string> MergeUploadAsync(string baseUrl, string uploadId)
+    {
+        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/files", new StringContent(
+            JsonSerializer.Serialize(new { file_type = 1, upload_id = uploadId }), Encoding.UTF8, "application/json"));
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        return doc.RootElement.GetProperty("file_info").GetString()!;
     }
 
     private readonly record struct ChunkPart(int Index, string PresignedUrl);
 
-    // ==================== Retry helper ====================
+    private readonly record struct UploadPrepareResult(string UploadId, int BlockSize, List<ChunkPart> Parts);
 
+    /// <summary>
+    /// Executes the given action with up to <see cref="MaxRetry"/> attempts and exponential backoff.
+    /// </summary>
     private async Task WithRetryAsync(Func<Task> action)
     {
         System.Exception? lastException = null;
@@ -269,5 +312,26 @@ public sealed class QqNotifier : INotifier
         }
         if (lastException != null)
             throw lastException;
+    }
+
+    /// <summary>
+    /// Executes the given function with up to <see cref="MaxRetry"/> attempts and exponential backoff.
+    /// </summary>
+    private async Task<T> WithRetryAsync<T>(Func<Task<T>> action)
+    {
+        System.Exception? lastException = null;
+        for (var attempt = 0; attempt < MaxRetry; attempt++)
+        {
+            try
+            {
+                return await action();
+            }
+            catch (System.Exception ex) when (attempt < MaxRetry - 1)
+            {
+                lastException = ex;
+                await Task.Delay(TimeSpan.FromMilliseconds(1500 * (attempt + 1)));
+            }
+        }
+        throw lastException ?? new NotifierException("QQ request failed after retries");
     }
 }
