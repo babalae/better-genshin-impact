@@ -38,13 +38,10 @@ public sealed class QqNotifier : INotifier
     private readonly string _clientSecret;
     private readonly string _openId;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="QqNotifier"/> class.
-    /// </summary>
-    /// <param name="httpClient">Shared HTTP client used to call the QQ Open Platform API.</param>
-    /// <param name="appId">QQ Open Platform AppID.</param>
-    /// <param name="clientSecret">QQ Open Platform AppSecret.</param>
-    /// <param name="openId">The target user's C2C OpenID.</param>
+    private string? _cachedToken;
+    private DateTime _tokenExpiry = DateTime.MinValue;
+    private readonly SemaphoreSlim _tokenSemaphore = new(1, 1);
+
     public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId)
     {
         _httpClient = httpClient;
@@ -53,13 +50,6 @@ public sealed class QqNotifier : INotifier
         _openId = openId;
     }
 
-    /// <summary>
-    /// Sends the notification to the user's QQ private chat.
-    /// The text message is always sent first; if a screenshot is present, an image
-    /// message is sent afterwards. A screenshot failure is logged and swallowed so
-    /// that the already-delivered text notification is not reported as failed.
-    /// </summary>
-    /// <param name="content">The notification data to send.</param>
     public async Task SendAsync(BaseNotificationData content)
     {
         if (string.IsNullOrWhiteSpace(_appId))
@@ -99,9 +89,6 @@ public sealed class QqNotifier : INotifier
         }
     }
 
-    /// <summary>
-    /// Builds the human-readable text message with a result mark and timestamp.
-    /// </summary>
     private static string GenerateMessage(BaseNotificationData data)
     {
         var sb = new StringBuilder();
@@ -119,10 +106,25 @@ public sealed class QqNotifier : INotifier
         return sb.ToString();
     }
 
-    /// <summary>
-    /// Obtains an access token from the QQ Open Platform.
-    /// </summary>
     private async Task<string> GetAccessTokenAsync(CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiry)
+            return _cachedToken;
+
+        await _tokenSemaphore.WaitAsync(ct);
+        try
+        {
+            if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiry)
+                return _cachedToken;
+            return await RefreshTokenAsync(ct);
+        }
+        finally
+        {
+            _tokenSemaphore.Release();
+        }
+    }
+
+    private async Task<string> RefreshTokenAsync(CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(new { appId = _appId, clientSecret = _clientSecret });
         using var content = new StringContent(body, Encoding.UTF8, "application/json");
@@ -131,12 +133,14 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.GetProperty("access_token").GetString()!;
+        var root = doc.RootElement;
+        _cachedToken = root.GetProperty("access_token").GetString()!;
+        var expiresInStr = root.GetProperty("expires_in").GetString();
+        var expiresIn = int.TryParse(expiresInStr, out var parsed) ? parsed : 60;
+        _tokenExpiry = DateTime.UtcNow.AddSeconds(Math.Max(expiresIn - 60, 30));
+        return _cachedToken;
     }
 
-    /// <summary>
-    /// Builds an HTTP request with the QQ authorization header.
-    /// </summary>
     private async Task<HttpRequestMessage> BuildAuthedRequest(HttpMethod method, string url, HttpContent? body, CancellationToken ct)
     {
         var token = await GetAccessTokenAsync(ct);
@@ -145,11 +149,6 @@ public sealed class QqNotifier : INotifier
         return request;
     }
 
-    /// <summary>
-    /// Sends a plain text message (msg_type=0) exactly once.
-    /// Message creation is not retried: if the request times out after the server
-    /// already created the message, a retry would produce a duplicate notification.
-    /// </summary>
     private async Task SendTextAsync(string text, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(new { msg_type = 0, content = text });
@@ -159,11 +158,6 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
     }
 
-    /// <summary>
-    /// Uploads the screenshot and sends it as a rich media image message (msg_type=7).
-    /// The upload flow is retried as it is idempotent; the final message creation is
-    /// not retried to avoid duplicate notifications.
-    /// </summary>
     private async Task SendImageAsync(Image<Rgb24> screenshot, CancellationToken ct)
     {
         byte[] imageBytes;
@@ -186,10 +180,6 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
     }
 
-    /// <summary>
-    /// Uploads the image bytes via the QQ chunked upload flow and returns the file_info.
-    /// The flow is: upload_prepare -> chunk PUT + part_finish -> files merge.
-    /// </summary>
     private async Task<string> UploadImageChunkedAsync(byte[] imageBytes, CancellationToken ct)
     {
         var baseUrl = ApiBase.Replace("{openid}", _openId);
@@ -198,7 +188,7 @@ public sealed class QqNotifier : INotifier
         var sha1 = Convert.ToHexString(SHA1.HashData(imageBytes)).ToLower();
         var md5First10m = Convert.ToHexString(MD5.HashData(imageBytes.AsSpan(0, Math.Min(imageBytes.Length, 10002432)))).ToLower();
 
-        var prepared = await WithRetryAsync(() => PrepareUploadAsync(baseUrl, fileName, imageBytes.Length, md5, sha1, md5First10m, ct), ct);
+        var prepared = await PrepareUploadAsync(baseUrl, fileName, imageBytes.Length, md5, sha1, md5First10m, ct);
 
         foreach (var part in prepared.Parts)
         {
@@ -211,12 +201,9 @@ public sealed class QqNotifier : INotifier
             await WithRetryAsync(() => FinishChunkAsync(baseUrl, prepared.UploadId, part.Index, chunk.Length, chunkMd5, ct), ct);
         }
 
-        return await WithRetryAsync(() => MergeUploadAsync(baseUrl, prepared.UploadId, ct), ct);
+        return await MergeUploadAsync(baseUrl, prepared.UploadId, ct);
     }
 
-    /// <summary>
-    /// Calls upload_prepare to obtain the upload id, block size and presigned chunk URLs.
-    /// </summary>
     private async Task<UploadPrepareResult> PrepareUploadAsync(string baseUrl, string fileName, int fileSize, string md5, string sha1, string md5First10m, CancellationToken ct)
     {
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_prepare", new StringContent(
@@ -245,9 +232,36 @@ public sealed class QqNotifier : INotifier
         return new UploadPrepareResult(uploadId, blockSize, parts);
     }
 
-    /// <summary>
-    /// Uploads a single chunk to its presigned URL.
-    /// </summary>
+    private static bool IsRetryable(System.Exception ex)
+    {
+        if (ex is HttpRequestException hre)
+        {
+            var statusCode = hre.StatusCode;
+            if (statusCode.HasValue)
+            {
+                var code = (int)statusCode.Value;
+                if (code >= 500 && code <= 599)
+                    return true;
+                if (code == 429)
+                    return true;
+                if (code == 400)
+                {
+                    var msg = ex.Message;
+                    if (msg.Contains("40093001"))
+                        return true;
+                    if (msg.Contains("40093002"))
+                        return false;
+                }
+            }
+            return false;
+        }
+        if (ex is TaskCanceledException || ex is OperationCanceledException)
+            return false;
+        if (ex is JsonException || ex is InvalidOperationException)
+            return false;
+        return true;
+    }
+
     private async Task UploadChunkAsync(string presignedUrl, byte[] chunk, CancellationToken ct)
     {
         using var putContent = new ByteArrayContent(chunk);
@@ -256,9 +270,6 @@ public sealed class QqNotifier : INotifier
         putResponse.EnsureSuccessStatusCode();
     }
 
-    /// <summary>
-    /// Notifies the QQ platform that a chunk has finished uploading.
-    /// </summary>
     private async Task FinishChunkAsync(string baseUrl, string uploadId, int partIndex, int chunkLength, string chunkMd5, CancellationToken ct)
     {
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_part_finish", new StringContent(
@@ -273,9 +284,6 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
     }
 
-    /// <summary>
-    /// Merges the uploaded chunks and returns the file_info.
-    /// </summary>
     private async Task<string> MergeUploadAsync(string baseUrl, string uploadId, CancellationToken ct)
     {
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/files", new StringContent(
@@ -291,10 +299,6 @@ public sealed class QqNotifier : INotifier
 
     private readonly record struct UploadPrepareResult(string UploadId, int BlockSize, List<ChunkPart> Parts);
 
-    /// <summary>
-    /// Executes the given action with up to <see cref="MaxRetry"/> retries
-    /// (i.e. <c>MaxRetry + 1</c> total attempts) and exponential backoff.
-    /// </summary>
     private async Task WithRetryAsync(Func<Task> action, CancellationToken ct)
     {
         System.Exception? lastException = null;
@@ -305,7 +309,7 @@ public sealed class QqNotifier : INotifier
                 await action();
                 return;
             }
-            catch (System.Exception ex) when (attempt < MaxRetry)
+            catch (System.Exception ex) when (attempt < MaxRetry && IsRetryable(ex))
             {
                 lastException = ex;
                 await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)), ct);
@@ -315,10 +319,6 @@ public sealed class QqNotifier : INotifier
             throw lastException;
     }
 
-    /// <summary>
-    /// Executes the given function with up to <see cref="MaxRetry"/> retries
-    /// (i.e. <c>MaxRetry + 1</c> total attempts) and exponential backoff.
-    /// </summary>
     private async Task<T> WithRetryAsync<T>(Func<Task<T>> action, CancellationToken ct)
     {
         System.Exception? lastException = null;
@@ -328,7 +328,7 @@ public sealed class QqNotifier : INotifier
             {
                 return await action();
             }
-            catch (System.Exception ex) when (attempt < MaxRetry)
+            catch (System.Exception ex) when (attempt < MaxRetry && IsRetryable(ex))
             {
                 lastException = ex;
                 await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)), ct);
