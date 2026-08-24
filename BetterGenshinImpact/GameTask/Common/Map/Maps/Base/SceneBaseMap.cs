@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using Microsoft.Extensions.Logging;
@@ -63,9 +64,25 @@ public abstract class SceneBaseMap : ISceneMap
     /// <summary>
     /// 分层地图特征列表
     /// 0 是主地图
+    /// 此列表保留原有整图/旧楼层资源，继续用于全局匹配和大地图匹配。
     /// </summary>
     private List<BaseMapLayer> _layers = [];
+
+    /// <summary>
+    /// 保护原有整图/旧楼层资源的延迟加载。
+    /// </summary>
     private readonly object _layersLock = new();
+
+    /// <summary>
+    /// 分组分层地图列表。<see langword="null"/> 表示清单尚未读取，空集合表示清单不存在或不可用。
+    /// 列表元素只描述层的组织方式；当前 SIFT 实现按需填充其中的特征资源。
+    /// </summary>
+    private IReadOnlyList<BaseMapLayer>? _groupLayers;
+
+    /// <summary>
+    /// 保护分组分层地图清单的首次读取。
+    /// </summary>
+    private readonly object _groupLayersLock = new();
 
     public List<BaseMapLayer> Layers
     {
@@ -86,6 +103,24 @@ public abstract class SceneBaseMap : ISceneMap
             return _layers;
         }
         set => _layers = value ?? [];
+    }
+
+    /// <summary>
+    /// 获取所有分组分层地图。首次访问时只加载清单元数据，不读取各层的具体匹配资源。
+    /// </summary>
+    internal IReadOnlyList<BaseMapLayer> GroupLayers
+    {
+        get
+        {
+            if (_groupLayers == null)
+            {
+                lock (_groupLayersLock)
+                {
+                    _groupLayers ??= BaseMapLayer.LoadGroupLayers(this);
+                }
+            }
+            return _groupLayers;
+        }
     }
 
     protected BaseMapLayer MainLayer => Layers[0];
@@ -111,6 +146,8 @@ public abstract class SceneBaseMap : ISceneMap
     public virtual void WarmUp()
     {
         Console.WriteLine("提前加载地图，层数：" + Layers.Count);
+        // 预热阶段只读取分组分层清单，片段的匹配资源仍在进入 HighlightRect 后按需加载。
+        _ = GroupLayers.Count;
     }
 
     public virtual Point2f GetBigMapPosition(Mat greyBigMapMat)
@@ -160,15 +197,25 @@ public abstract class SceneBaseMap : ISceneMap
 
     public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat)
     {
+        return GetGlobalMiniMapMatchResult(greyMiniMapMat)?.Position ?? default;
+    }
+
+    /// <summary>
+    /// 不依赖上次状态，按原有整图/旧楼层顺序执行全局小地图匹配。
+    /// 分组分层片段不会在全局匹配阶段被批量加载。
+    /// </summary>
+    private MiniMapMatchState? GetGlobalMiniMapMatchResult(Mat greyMiniMapMat)
+    {
+        using var query = SiftMatcher.PrepareFeatureMatchQuery(greyMiniMapMat);
         // 从表到里逐层匹配
         foreach (var layer in Layers)
         {
             try
             {
-                var result = SiftMatcher.KnnMatch(layer.TrainKeyPoints, layer.TrainDescriptors, greyMiniMapMat);
+                var result = SiftMatcher.KnnMatch(layer.TrainKeyPoints, layer.TrainDescriptors, query);
                 if (result != default)
                 {
-                    return result;
+                    return CreateMiniMapMatchState(result, layer);
                 }
             }
             catch (Exception e)
@@ -177,7 +224,7 @@ public abstract class SceneBaseMap : ISceneMap
             }
         }
 
-        return default;
+        return null;
     }
 
     public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY)
@@ -187,20 +234,78 @@ public abstract class SceneBaseMap : ISceneMap
             return GetMiniMapPosition(greyMiniMapMat);
         }
 
-        foreach (var layer in Layers)
+        var previousMatch = new MiniMapMatchState(
+            new Point2f(prevX, prevY),
+            0,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            Type.ToString(),
+            false);
+        return GetMiniMapMatchResult(greyMiniMapMat, previousMatch)?.Position ?? default;
+    }
+
+    /// <summary>
+    /// 使用完整的上次匹配状态执行局部小地图匹配，并返回本次命中的楼层来源。
+    /// </summary>
+    /// <param name="greyMiniMapMat">待匹配的小地图图像。</param>
+    /// <param name="previousMatch">当前导航实例最近一次成功的匹配状态。</param>
+    /// <returns>成功时返回包含参考底图坐标和楼层来源的状态，否则返回 <see langword="null"/>。</returns>
+    internal MiniMapMatchState? GetMiniMapMatchResult(Mat greyMiniMapMat, MiniMapMatchState? previousMatch)
+    {
+        if (previousMatch == null ||
+            (previousMatch.Position.X <= 0 && previousMatch.Position.Y <= 0) ||
+            (!string.IsNullOrEmpty(previousMatch.MapName) &&
+             !previousMatch.MapName.Equals(Type.ToString(), StringComparison.OrdinalIgnoreCase)))
         {
+            return GetGlobalMiniMapMatchResult(greyMiniMapMat);
+        }
+
+        // Teyvat 使用 2048 级别底图坐标，因此对应 1024 级别的 100 像素范围需要扩张为 200。
+        var rangePadding = Type == MapTypes.Teyvat ? 200 : 100;
+        var groupLayerCandidates = GroupLayers
+            .Where(layer => ContainsExpanded(layer.HighlightRect, previousMatch.Position, rangePadding))
+            .ToList();
+        var loadedGroupLayerCandidates = new List<BaseMapLayer>(groupLayerCandidates.Count);
+
+        // 命中范围的片段全部尝试加载；已加载片段会直接复用，单个片段失败不会阻断其他候选。
+        foreach (var layer in groupLayerCandidates)
+        {
+            if (layer.EnsureFeatureLoaded())
+            {
+                loadedGroupLayerCandidates.Add(layer);
+            }
+        }
+
+        // 临时候选集合不修改原有 Layers 或 GroupLayers 的元素与持久顺序。
+        // 排序依次考虑楼层距离、上次命中层、上次命中分组、HighlightRect 距离和稳定层标识。
+        var candidates = Layers
+            .Concat(loadedGroupLayerCandidates)
+            .OrderBy(layer => Math.Abs(layer.Floor - previousMatch.Floor))
+            .ThenBy(layer => IsSameLayer(layer, previousMatch) ? 0 : 1)
+            .ThenBy(layer => IsSameGroup(layer, previousMatch) ? 0 : 1)
+            .ThenBy(layer => GetDistanceToHighlightRect(layer, previousMatch.Position))
+            .ThenBy(layer => layer.LayerId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // 当前小地图只提取一次查询特征，随后在所有候选层之间复用，避免每层重复 DetectAndCompute。
+        using var query = SiftMatcher.PrepareFeatureMatchQuery(greyMiniMapMat);
+        foreach (var layer in candidates)
+        {
+            Debug.WriteLine("尝试匹配" + string.Concat(candidates.Select(c => c.Name), ","));
             try
             {
                 var (keyPoints, descriptors) = (layer.TrainKeyPoints, layer.TrainDescriptors);
                 if (SplitRow > 0 || SplitCol > 0)
                 {
-                    (keyPoints, descriptors) = layer.ChooseBlocks(prevX, prevY);
+                    (keyPoints, descriptors) = layer.ChooseBlocks(previousMatch.Position.X, previousMatch.Position.Y);
                 }
 
-                var result = SiftMatcher.KnnMatch(keyPoints, descriptors, greyMiniMapMat, null, DescriptorMatcherType.BruteForce);
+                var result = SiftMatcher.KnnMatch(keyPoints, descriptors, query, DescriptorMatcherType.BruteForce);
                 if (result != default)
                 {
-                    return result;
+                    Debug.WriteLine(layer.Name + " - 匹配 -"  + result.ToString());
+                    return CreateMiniMapMatchState(result, layer);
                 }
             }
             catch (Exception e)
@@ -209,7 +314,66 @@ public abstract class SceneBaseMap : ISceneMap
             }
         }
 
-        return default;
+        return null;
+    }
+
+    /// <summary>
+    /// 将底层匹配坐标和命中层组合成导航实例可保存的状态。
+    /// </summary>
+    private MiniMapMatchState CreateMiniMapMatchState(Point2f position, BaseMapLayer layer)
+    {
+        return new MiniMapMatchState(
+            position,
+            layer.Floor,
+            layer.LayerId,
+            layer.LayerGroupId,
+            layer.Name,
+            Type.ToString(),
+            layer.IsGroupLayer);
+    }
+
+    /// <summary>
+    /// 判断坐标是否落在向四周扩张后的矩形内，矩形边界也视为命中。
+    /// </summary>
+    private static bool ContainsExpanded(Rect rect, Point2f point, int padding)
+    {
+        return point.X >= rect.X - padding && point.X <= rect.Right + padding &&
+               point.Y >= rect.Y - padding && point.Y <= rect.Bottom + padding;
+    }
+
+    /// <summary>
+    /// 判断候选是否与上次命中的是同一种来源下的同一地图层。
+    /// </summary>
+    private static bool IsSameLayer(BaseMapLayer layer, MiniMapMatchState previousMatch)
+    {
+        return !string.IsNullOrEmpty(previousMatch.LayerId) &&
+               layer.IsGroupLayer == previousMatch.IsGroupLayer &&
+               layer.LayerId.Equals(previousMatch.LayerId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 判断候选是否与上次命中的层属于同一分组。
+    /// </summary>
+    private static bool IsSameGroup(BaseMapLayer layer, MiniMapMatchState previousMatch)
+    {
+        return !string.IsNullOrEmpty(previousMatch.LayerGroupId) &&
+               layer.LayerGroupId.Equals(previousMatch.LayerGroupId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 计算上次位置到分组分层实际高亮范围的平方距离；普通层不参与此项排序优先级。
+    /// </summary>
+    private static double GetDistanceToHighlightRect(BaseMapLayer layer, Point2f point)
+    {
+        if (!layer.IsGroupLayer)
+        {
+            return double.MaxValue;
+        }
+
+        var rect = layer.HighlightRect;
+        var deltaX = Math.Max(rect.X - point.X, Math.Max(0, point.X - rect.Right));
+        var deltaY = Math.Max(rect.Y - point.Y, Math.Max(0, point.Y - rect.Bottom));
+        return deltaX * deltaX + deltaY * deltaY;
     }
 
     #region 坐标系转换
