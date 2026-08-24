@@ -197,18 +197,23 @@ public abstract class SceneBaseMap : ISceneMap
 
     public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat)
     {
-        return GetGlobalMiniMapMatchResult(greyMiniMapMat)?.Position ?? default;
+        return GetGlobalMiniMapMatchResult(greyMiniMapMat, null)?.Position ?? default;
     }
 
     /// <summary>
-    /// 不依赖上次状态，按原有整图/旧楼层顺序执行全局小地图匹配。
-    /// 分组分层片段不会在全局匹配阶段被批量加载。
+    /// 不使用上次点位执行全局小地图匹配。
+    /// 除原有整图/旧楼层外，也会匹配已经加载的分组分层片段，但不会在此阶段动态加载新片段。
+    /// 如果仍保留上次成功结果，则继续沿用相同的楼层、层、分组和高亮范围排序规则。
     /// </summary>
-    private MiniMapMatchState? GetGlobalMiniMapMatchResult(Mat greyMiniMapMat)
+    private MiniMapMatchState? GetGlobalMiniMapMatchResult(Mat greyMiniMapMat, MiniMapMatchState? orderingReference)
     {
+        var candidates = OrderMiniMapCandidates(
+            Layers.Concat(GetLoadedGroupLayers()),
+            orderingReference);
+
         using var query = SiftMatcher.PrepareFeatureMatchQuery(greyMiniMapMat);
         // 从表到里逐层匹配
-        foreach (var layer in Layers)
+        foreach (var layer in candidates)
         {
             try
             {
@@ -242,7 +247,7 @@ public abstract class SceneBaseMap : ISceneMap
             string.Empty,
             Type.ToString(),
             false);
-        return GetMiniMapMatchResult(greyMiniMapMat, previousMatch)?.Position ?? default;
+        return GetMiniMapMatchResult(greyMiniMapMat, previousMatch, previousMatch)?.Position ?? default;
     }
 
     /// <summary>
@@ -250,15 +255,19 @@ public abstract class SceneBaseMap : ISceneMap
     /// </summary>
     /// <param name="greyMiniMapMat">待匹配的小地图图像。</param>
     /// <param name="previousMatch">当前导航实例最近一次成功的匹配状态。</param>
+    /// <param name="orderingReference">没有上次点位时，用于延续候选顺序的最近成功匹配状态。</param>
     /// <returns>成功时返回包含参考底图坐标和楼层来源的状态，否则返回 <see langword="null"/>。</returns>
-    internal MiniMapMatchState? GetMiniMapMatchResult(Mat greyMiniMapMat, MiniMapMatchState? previousMatch)
+    internal MiniMapMatchState? GetMiniMapMatchResult(
+        Mat greyMiniMapMat,
+        MiniMapMatchState? previousMatch,
+        MiniMapMatchState? orderingReference)
     {
         if (previousMatch == null ||
             (previousMatch.Position.X <= 0 && previousMatch.Position.Y <= 0) ||
             (!string.IsNullOrEmpty(previousMatch.MapName) &&
              !previousMatch.MapName.Equals(Type.ToString(), StringComparison.OrdinalIgnoreCase)))
         {
-            return GetGlobalMiniMapMatchResult(greyMiniMapMat);
+            return GetGlobalMiniMapMatchResult(greyMiniMapMat, orderingReference);
         }
 
         // Teyvat 使用 2048 级别底图坐标，因此对应 1024 级别的 100 像素范围需要扩张为 200。
@@ -279,14 +288,9 @@ public abstract class SceneBaseMap : ISceneMap
 
         // 临时候选集合不修改原有 Layers 或 GroupLayers 的元素与持久顺序。
         // 排序依次考虑楼层距离、上次命中层、上次命中分组、HighlightRect 距离和稳定层标识。
-        var candidates = Layers
-            .Concat(loadedGroupLayerCandidates)
-            .OrderBy(layer => Math.Abs(layer.Floor - previousMatch.Floor))
-            .ThenBy(layer => IsSameLayer(layer, previousMatch) ? 0 : 1)
-            .ThenBy(layer => IsSameGroup(layer, previousMatch) ? 0 : 1)
-            .ThenBy(layer => GetDistanceToHighlightRect(layer, previousMatch.Position))
-            .ThenBy(layer => layer.LayerId, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var candidates = OrderMiniMapCandidates(
+            Layers.Concat(loadedGroupLayerCandidates),
+            previousMatch);
 
         // 当前小地图只提取一次查询特征，随后在所有候选层之间复用，避免每层重复 DetectAndCompute。
         using var query = SiftMatcher.PrepareFeatureMatchQuery(greyMiniMapMat);
@@ -315,6 +319,43 @@ public abstract class SceneBaseMap : ISceneMap
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 获取已经成功加载特征资源的分组分层地图快照。
+    /// 直接读取内部缓存，确保全局匹配不会仅为枚举候选而触发清单或特征文件加载。
+    /// </summary>
+    private IReadOnlyList<BaseMapLayer> GetLoadedGroupLayers()
+    {
+        lock (_groupLayersLock)
+        {
+            return _groupLayers?.Where(layer => layer.IsFeatureLoaded).ToList() ?? [];
+        }
+    }
+
+    /// <summary>
+    /// 使用统一规则排列普通层和分组分层候选。
+    /// 没有可用排序依据时保留输入顺序，即普通层在前、已加载分组分层片段随后。
+    /// </summary>
+    private List<BaseMapLayer> OrderMiniMapCandidates(
+        IEnumerable<BaseMapLayer> candidates,
+        MiniMapMatchState? orderingReference)
+    {
+        var candidateList = candidates.ToList();
+        if (orderingReference == null ||
+            (!string.IsNullOrEmpty(orderingReference.MapName) &&
+             !orderingReference.MapName.Equals(Type.ToString(), StringComparison.OrdinalIgnoreCase)))
+        {
+            return candidateList;
+        }
+
+        return candidateList
+            .OrderBy(layer => Math.Abs(layer.Floor - orderingReference.Floor))
+            .ThenBy(layer => IsSameLayer(layer, orderingReference) ? 0 : 1)
+            .ThenBy(layer => IsSameGroup(layer, orderingReference) ? 0 : 1)
+            .ThenBy(layer => GetDistanceToHighlightRect(layer, orderingReference.Position))
+            .ThenBy(layer => layer.LayerId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     /// <summary>

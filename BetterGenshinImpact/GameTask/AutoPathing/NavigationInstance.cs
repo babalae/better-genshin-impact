@@ -25,12 +25,18 @@ public class NavigationInstance
     private MiniMapMatchState? _previousMatch;
 
     /// <summary>
+    /// 最近一次成功结果保留下来的候选排序依据。
+    /// 即使主动清除上次点位，也继续用它排列已经加载的分组分层地图，但不会用它执行局部范围筛选。
+    /// </summary>
+    private MiniMapMatchState? _lastMatchForOrdering;
+
+    /// <summary>
     /// 最近一次写入匹配状态的截图时间；较旧截图的结果不能覆盖较新结果。
     /// </summary>
     private DateTime _captureTime = DateTime.MinValue;
 
     /// <summary>
-    /// 清除上次匹配坐标及其楼层来源。
+    /// 清除用于局部匹配的上次点位；最近一次楼层排序依据会继续保留。
     /// </summary>
     public void Reset()
     {
@@ -47,7 +53,7 @@ public class NavigationInstance
     {
         lock (_previousMatchLock)
         {
-            _previousMatch = new MiniMapMatchState(
+            var previousMatch = new MiniMapMatchState(
                 new Point2f(x, y),
                 0,
                 string.Empty,
@@ -55,6 +61,8 @@ public class NavigationInstance
                 string.Empty,
                 string.Empty,
                 false);
+            _previousMatch = previousMatch;
+            _lastMatchForOrdering = previousMatch;
         }
     }
 
@@ -64,7 +72,8 @@ public class NavigationInstance
         var captureTime = DateTime.UtcNow;
         var sceneMap = MapManager.GetMap(mapName, mapMatchMethod);
         var previousMatch = GetPreviousMatch(mapName);
-        var matchResult = MatchMiniMap(sceneMap, colorMat, previousMatch, mapName, 2);
+        var orderingReference = GetLayerOrderingReference(mapName);
+        var matchResult = MatchMiniMap(sceneMap, colorMat, previousMatch, orderingReference, mapName, 2);
         var p = matchResult?.Position ?? default;
         UpdatePreviousMatch(matchResult, captureTime, sceneMap is SceneBaseMap and not SceneBaseMapByTemplateMatch);
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
@@ -81,23 +90,43 @@ public class NavigationInstance
     /// <returns>当前位置坐标</returns>
     public Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
+        return GetPositionStable(imageRegion, mapName, mapMatchMethod, out _);
+    }
+
+    /// <summary>
+    /// 稳定获取当前位置坐标，并返回本次最终命中的地图层是否来自分组分层地图。
+    /// 分层来源信息供需要同步游戏地图缩放状态的调用方使用，不改变返回坐标所属的参考底图坐标系。
+    /// </summary>
+    /// <param name="imageRegion">图像区域。</param>
+    /// <param name="mapName">地图名字。</param>
+    /// <param name="mapMatchMethod">地图匹配方式。</param>
+    /// <param name="isGroupLayer">本次最终成功结果是否来自分组分层地图。</param>
+    /// <returns>当前位置坐标。</returns>
+    internal Point2f GetPositionStable(
+        ImageRegion imageRegion,
+        string mapName,
+        string mapMatchMethod,
+        out bool isGroupLayer)
+    {
         using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
 
         // 先尝试使用局部匹配
         var sceneMap = MapManager.GetMap(mapName, mapMatchMethod);
         var previousMatch = GetPreviousMatch(mapName);
+        var orderingReference = GetLayerOrderingReference(mapName);
         //提高局部匹配的阈值，以解决在沙漠录制点位时，移动过远不会触发全局匹配的情况
-        var matchResult = MatchMiniMap(sceneMap, colorMat, previousMatch, mapName, 0);
+        var matchResult = MatchMiniMap(sceneMap, colorMat, previousMatch, orderingReference, mapName, 0);
         var p = matchResult?.Position ?? default;
 
         // 如果局部匹配失败或者点位跳跃过大，再尝试全地图匹配
         if (p == default || previousMatch is { Position.X: > 0, Position.Y: > 0 } && p.DistanceTo(previousMatch.Position) > 150)
         {
             ResetForFallback(captureTime);
-            matchResult = MatchMiniMap(sceneMap, colorMat, null, mapName, 2);
+            matchResult = MatchMiniMap(sceneMap, colorMat, null, orderingReference, mapName, 2);
             p = matchResult?.Position ?? default;
         }
+        isGroupLayer = matchResult?.IsGroupLayer == true;
         UpdatePreviousMatch(matchResult, captureTime, sceneMap is SceneBaseMap and not SceneBaseMapByTemplateMatch);
 
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
@@ -139,6 +168,24 @@ public class NavigationInstance
     }
 
     /// <summary>
+    /// 获取指定地图最近一次成功匹配留下的排序依据，跨地图的排序状态不会被复用。
+    /// </summary>
+    private MiniMapMatchState? GetLayerOrderingReference(string mapName)
+    {
+        lock (_previousMatchLock)
+        {
+            if (_lastMatchForOrdering == null ||
+                (!string.IsNullOrEmpty(_lastMatchForOrdering.MapName) &&
+                 !_lastMatchForOrdering.MapName.Equals(mapName, StringComparison.OrdinalIgnoreCase)))
+            {
+                return null;
+            }
+
+            return _lastMatchForOrdering;
+        }
+    }
+
+    /// <summary>
     /// 为当前截图的全局回退清除旧状态。若已有更新截图写入结果，则不允许较旧截图清除它。
     /// </summary>
     private void ResetForFallback(DateTime captureTime)
@@ -159,6 +206,7 @@ public class NavigationInstance
         ISceneMap sceneMap,
         Mat colorMiniMapMat,
         MiniMapMatchState? previousMatch,
+        MiniMapMatchState? orderingReference,
         string mapName,
         int templateMatchRank)
     {
@@ -189,7 +237,7 @@ public class NavigationInstance
 
         if (sceneMap is SceneBaseMap sceneBaseMap)
         {
-            return sceneBaseMap.GetMiniMapMatchResult(colorMiniMapMat, previousMatch);
+            return sceneBaseMap.GetMiniMapMatchResult(colorMiniMapMat, previousMatch, orderingReference);
         }
 
         var point = previousMatch == null
@@ -227,6 +275,7 @@ public class NavigationInstance
             }
 
             _previousMatch = matchResult;
+            _lastMatchForOrdering = matchResult;
             _captureTime = captureTime;
         }
     }

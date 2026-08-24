@@ -133,6 +133,17 @@ public class MapMaskTrigger : ITaskTrigger
 
             if (inBigMapUi)
             {
+                if (Bv.BigMapIsUnderground(region))
+                {
+                    _stableCount = 0;
+                    QueueUiUpdate(new PendingUiUpdate
+                    {
+                        IsInBigMapUi = true,
+                        BigMapViewport = new Rect(0, 0, 0, 0)
+                    });
+                    return;
+                }
+
                 if (_detector.IsStable(region.CacheGreyMat))
                 {
                     _stableCount++;
@@ -358,17 +369,27 @@ public class MapMaskTrigger : ITaskTrigger
         using var imageRegion = new ImageRegion(workItem.Mat, 0, 0);
         workItem.Mat = null;
 
-        var miniPoint = _navigationInstance.GetPositionStable(imageRegion, nameof(MapTypes.Teyvat), workItem.MapMatchingMethod);
+        var miniPoint = _navigationInstance.GetPositionStable(
+            imageRegion,
+            nameof(MapTypes.Teyvat),
+            workItem.MapMatchingMethod,
+            out var isGroupLayer);
         if (miniPoint != default)
         {
             double viewportSize = MapAssets.MimiMapRect1080P.Width / 3.0 * 10;
+
+            // 原神进入分层地图后会把小地图内容放大 2 倍。
+            // MiniMapPointsCanvas 的实际控件尺寸由 XAML 决定且保持不变；这里只把可见地图坐标范围缩小一半，
+            // 使遮罩点位围绕当前坐标同步放大 2 倍。
+            const double groupLayerMapScale = 2.0;
+            var viewportCoordinateSize = isGroupLayer ? viewportSize / groupLayerMapScale : viewportSize;
             QueueUiUpdate(new PendingUiUpdate
             {
                 MiniMapViewport = new Rect(
-                    miniPoint.X - viewportSize / 2.0,
-                    miniPoint.Y - viewportSize / 2.0,
-                    viewportSize,
-                    viewportSize)
+                    miniPoint.X - viewportCoordinateSize / 2.0,
+                    miniPoint.Y - viewportCoordinateSize / 2.0,
+                    viewportCoordinateSize,
+                    viewportCoordinateSize)
             });
         }
         else
