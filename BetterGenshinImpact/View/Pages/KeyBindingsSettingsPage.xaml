@@ -36,6 +36,15 @@
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
+            <ui:TextBlock Margin="0,0,8,0"
+                          VerticalAlignment="Center"
+                          Text="配置来源" />
+            <ComboBox Width="110"
+                      Margin="0,0,8,0"
+                      VerticalContentAlignment="Center"
+                      DisplayMemberPath="DisplayName"
+                      ItemsSource="{Binding RegistrySourceOptions}"
+                      SelectedItem="{Binding SelectedRegistrySource, Mode=TwoWay}" />
             <ui:Button Command="{Binding FetchFromRegistryCommand}"
                        Content="从注册表读取"
                        Icon="{ui:SymbolIcon Notepad32}" />
