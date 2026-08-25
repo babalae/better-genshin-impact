@@ -534,7 +534,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp",
+            // 注意：不声明 *.webp —— WPF BitmapImage 原生不支持 WebP 解码，声明了会导致用户选中后加载失败
+            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
             Title = "选择主窗口背景图片"
         };
         if (dialog.ShowDialog() == true)

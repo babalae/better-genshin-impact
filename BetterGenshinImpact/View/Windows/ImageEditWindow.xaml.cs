@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Ui;
 using System;
 using System.IO;
@@ -384,29 +385,36 @@ public partial class ImageEditWindow
 
     /// <summary>
     /// 保存策略：优先存到源文件同目录（用户可见、方便管理）；
-    /// 目录不可写时降级到临时目录。始终另存副本，绝不覆盖用户原图。
+    /// 目录不可写时降级到程序 User\Background 目录（持久化，不会被系统临时清理删除）。
+    /// 文件名带时间戳：重复编辑同一图片时输出路径必然变化，
+    /// 从而保证配置 PropertyChanged 事件触发、主窗口重新加载新结果。
+    /// 始终另存副本，绝不覆盖用户原图。
     /// </summary>
     private string? TrySave(BitmapSource image)
     {
-        try
+        var dir = Path.GetDirectoryName(_sourcePath);
+        var baseName = Path.GetFileNameWithoutExtension(_sourcePath);
+        var fileName = $"{baseName}_bg_{DateTime.Now:yyyyMMddHHmmssfff}.png";
+
+        if (!string.IsNullOrEmpty(dir))
         {
-            var dir = Path.GetDirectoryName(_sourcePath);
-            var baseName = Path.GetFileNameWithoutExtension(_sourcePath);
-            if (!string.IsNullOrEmpty(dir))
+            try
             {
-                var path = Path.Combine(dir, $"{baseName}_bg_edited.png");
+                var path = Path.Combine(dir, fileName);
                 Encode(image, path);
                 return path;
             }
-        }
-        catch
-        {
-            // 源目录不可写，走降级路径
+            catch
+            {
+                // 源目录不可写，走降级路径
+            }
         }
 
         try
         {
-            var fallback = Path.Combine(Path.GetTempPath(), $"{Path.GetFileNameWithoutExtension(_sourcePath)}_bg_edited.png");
+            var fallbackDir = Global.Absolute("User\\Background");
+            Directory.CreateDirectory(fallbackDir);
+            var fallback = Path.Combine(fallbackDir, fileName);
             Encode(image, fallback);
             return fallback;
         }
