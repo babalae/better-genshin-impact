@@ -33,17 +33,24 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
 
             //
+            // 第一次 tick：按下左键后等待举竿画面渲染（Running）
             Status actual = await sut.TickOnce();
+            Assert.False(throwRodNoBaitFishAccess.Get());
+            Assert.Equal(Status.Running, actual);
 
             //
-            Assert.False(throwRodNoBaitFishAccess.Get());
+            // 越过举竿画面等待后，第二次 tick 确认举起并完成落点检测
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(500));
+            actual = await sut.TickOnce();
+
+            //
             Assert.Equal(Status.Success, actual);
         }
 
@@ -105,23 +112,25 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 11), bb!))
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 12), bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
             //
+            // 第一次 tick：按下左键后等待举竿画面渲染（Running）
             Status actual = await sut.TickOnce();
-
-            //
             Assert.False(throwRodNoBaitFishAccess.Get());
             Assert.Equal(Status.Running, actual);
 
             //
-            // Do nothing
+            // 越过举竿画面等待，后续 tick 才开始检测
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
             //
-            for (int i = 0; i < 10; i++)
+            // 循环第 1 次 tick 确认举起并完成第一次检测（noTargetFishTimes=1），
+            // 累计 11 次检测（noTargetFishTimes=11 > 10）触发 ThrowRodNoBaitFish
+            for (int i = 0; i < 11; i++)
             {
                 await sut.TickOnce();
             }
@@ -148,18 +157,23 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             selectedBaitAccess.Set(BaitType.FakeFlyBait);
             var fishpondAccess = blackboard.GrantWrite<Fishpond>(null!, "Fishpond");
 
-            var sut = new ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, blackboard, new FakeTimeProvider(), drawContent: new FakeDrawContent());
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
+            var sut = new ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, blackboard, fakeTimeProvider, drawContent: new FakeDrawContent());
             var tree = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2], bb!))
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2], bb!))
                         .Leaf(() => sut)
                     .End()
                 .End()
                 .Build();
 
             //
+            // 第一次 tick：按下左键后等待举竿画面渲染（Running）
+            await tree.TickOnce();
+            // 越过举竿画面等待后，第二次 tick 确认举起并完成首次检测
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(500));
             await tree.TickOnce();
             var actual = sut.currentFish;
 
