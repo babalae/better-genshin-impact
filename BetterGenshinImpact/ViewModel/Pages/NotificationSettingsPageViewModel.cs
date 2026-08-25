@@ -543,7 +543,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         }
 
         IsBinding = true;
-        QqStatus = "请用手机 QQ 私聊机器人，发送任意一条消息…";
+        QqStatus = "正在连接 QQ 网关…";
         _bindCts = new CancellationTokenSource();
 
         try
@@ -551,6 +551,14 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             var openId = await QqWebSocketHelper.BindAsync(
                 Config.NotificationConfig.QqAppId,
                 Config.NotificationConfig.QqClientSecret,
+                code =>
+                {
+                    // Must marshal to UI thread to update ObservableProperty.
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        QqStatus = $"请用手机 QQ 私聊机器人，发送验证码 [{code}]";
+                    });
+                },
                 _bindCts.Token);
 
             Config.NotificationConfig.QqOpenId = openId;

@@ -21,22 +21,35 @@ public class QqWebSocketHelper
     private static readonly ILogger Logger = App.GetLogger<QqWebSocketHelper>();
 
     private const string TokenUrl = "https://bots.qq.com/app/getAppAccessToken";
-    private const string GatewayUrl = "https://api.bot.qq.com/gateway";
-    private const int Intents = 33554432; // 1 &lt;&lt; 25, GROUP_AND_C2C_EVENT
+    private const string GatewayUrl = "https://api.sgroup.qq.com/gateway";
+    private const int Intents = 33554432; // 1 << 25, GROUP_AND_C2C_EVENT
     private const int BindTimeoutSeconds = 60;
+    private const int VerifyCodeLength = 4;
 
     /// <summary>
     /// Connects to the QQ gateway and waits until the user's C2C OpenID is
     /// observed. Returns the OpenID, or throws <see cref="NotifierException"/>
     /// on timeout / cancellation / protocol error.
     /// </summary>
-    public static async Task<string> BindAsync(string appId, string clientSecret, CancellationToken cancellationToken)
+    /// <param name="appId">QQ Open Platform AppID.</param>
+    /// <param name="clientSecret">QQ Open Platform AppSecret.</param>
+    /// <param name="onVerifyCode">Invoked with a one-time verification code that
+    /// the user must send to the bot to confirm their identity.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public static async Task<string> BindAsync(
+        string appId,
+        string clientSecret,
+        Action<string> onVerifyCode,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(appId))
             throw new NotifierException("QQ AppID is empty");
 
         if (string.IsNullOrWhiteSpace(clientSecret))
             throw new NotifierException("QQ AppSecret is empty");
+
+        var verifyCode = GenerateVerifyCode();
+        onVerifyCode(verifyCode);
 
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -54,11 +67,12 @@ public class QqWebSocketHelper
 
         // Heartbeat runs in the background for the lifetime of the connection.
         using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, heartbeatCts.Token);
+        var seq = 0L;
+        var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, () => Interlocked.Read(ref seq), heartbeatCts.Token);
 
         try
         {
-            return await ReceiveUntilOpenIdAsync(socket, ct);
+            return await ReceiveUntilOpenIdAsync(socket, verifyCode, (s) => { Interlocked.Exchange(ref seq, s); }, ct);
         }
         finally
         {
@@ -72,6 +86,15 @@ public class QqWebSocketHelper
                 // Expected when the bind flow finishes.
             }
         }
+    }
+
+    private static string GenerateVerifyCode()
+    {
+        var rng = new Random();
+        var code = new char[VerifyCodeLength];
+        for (var i = 0; i < VerifyCodeLength; i++)
+            code[i] = (char)('0' + rng.Next(10));
+        return new string(code);
     }
 
     private static async Task<string> GetAccessTokenAsync(HttpClient httpClient, string appId, string clientSecret, CancellationToken ct)
@@ -126,14 +149,19 @@ public class QqWebSocketHelper
         await SendMessageAsync(socket, payload, ct);
     }
 
-    private static async Task RunHeartbeatAsync(ClientWebSocket socket, int heartbeatInterval, CancellationToken ct)
+    private static async Task RunHeartbeatAsync(ClientWebSocket socket, int heartbeatInterval, Func<long> getSeq, CancellationToken ct)
     {
         try
         {
             while (!ct.IsCancellationRequested)
             {
                 await Task.Delay(heartbeatInterval, ct);
-                var payload = JsonSerializer.Serialize(new { op = 1, d = (int?)null });
+                var seq = getSeq();
+                string payload;
+                if (seq == 0)
+                    payload = JsonSerializer.Serialize(new { op = 1, d = (int?)null });
+                else
+                    payload = JsonSerializer.Serialize(new { op = 1, d = seq });
                 await SendMessageAsync(socket, payload, ct);
             }
         }
@@ -147,7 +175,7 @@ public class QqWebSocketHelper
         }
     }
 
-    private static async Task<string> ReceiveUntilOpenIdAsync(ClientWebSocket socket, CancellationToken ct)
+    private static async Task<string> ReceiveUntilOpenIdAsync(ClientWebSocket socket, string verifyCode, Action<long> setSeq, CancellationToken ct)
     {
         while (true)
         {
@@ -174,16 +202,35 @@ public class QqWebSocketHelper
             if (!root.TryGetProperty("d", out var d))
                 continue;
 
-            var openId = eventType switch
-            {
-                "C2C_MESSAGE_CREATE" => ExtractOpenId(d, "author", "user_openid"),
-                "FRIEND_ADD" => ExtractOpenId(d, "openid"),
-                _ => null
-            };
+            // Save the seq number for heartbeat.
+            if (root.TryGetProperty("s", out var sElement) && sElement.TryGetInt64(out var sVal))
+                setSeq(sVal);
 
-            if (!string.IsNullOrWhiteSpace(openId))
-                return openId;
+            if (eventType == "C2C_MESSAGE_CREATE")
+            {
+                var openId = ExtractOpenId(d, "author", "user_openid");
+                if (!string.IsNullOrWhiteSpace(openId))
+                {
+                    // Verify the message content matches the code.
+                    var content = ExtractString(d, "content");
+                    if (content != null && content.Contains(verifyCode))
+                        return openId;
+                }
+            }
+            else if (eventType == "FRIEND_ADD")
+            {
+                var openId = ExtractOpenId(d, "openid");
+                if (!string.IsNullOrWhiteSpace(openId))
+                    return openId;
+            }
         }
+    }
+
+    private static string? ExtractString(JsonElement d, string property)
+    {
+        if (d.TryGetProperty(property, out var element) && element.ValueKind == JsonValueKind.String)
+            return element.GetString();
+        return null;
     }
 
     private static string? ExtractOpenId(JsonElement d, params string[] path)

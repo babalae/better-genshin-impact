@@ -2453,7 +2453,7 @@
                     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="绑定 OpenID" TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="点击绑定后，请用手机 QQ 私聊机器人并发送任意消息，系统将自动获取你的 OpenID；绑定过程中可点击取消" TextWrapping="Wrap" />
+                                  Text="点击绑定后，请用手机 QQ 私聊机器人并发送显示的验证码，系统将自动获取你的 OpenID；绑定过程中可点击取消" TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right">
