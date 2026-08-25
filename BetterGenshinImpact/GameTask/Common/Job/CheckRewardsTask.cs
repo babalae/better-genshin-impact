@@ -126,12 +126,22 @@ public class CheckRewardsTask
             await new TpTask(ct).OpenBigMapUi();
             await Delay(300, ct);
             using var capture = CaptureToRectArea();
-            var resin = ResinRecognition.RecognizeInBigMapTopBar(capture, out var iconRect);
+            var resin = ResinRecognition.RecognizeInBigMapTopBar(capture);
             if (resin != null)
             {
-                resinOk = true;
-                resinText = $"原粹树脂 {resin.Value.Current}/{resin.Value.Max}";
-                resinStrip = capture.DeriveCrop(BuildResinStripRect(iconRect, assetScale)).SrcMat.Clone();
+                var result = resin.Value;
+                resinOk = result.Condensed.HasValue;
+                var condensedText = result.Condensed is int condensed
+                    ? $"浓缩树脂 {condensed}"
+                    : "浓缩树脂识别失败";
+                resinText = $"原粹树脂 {result.Current}/{result.Max}；{condensedText}";
+                using var resinStripRegion = capture.DeriveCrop(BuildResinStripRect(
+                    result.OriginalIconRect, result.CondensedIconRect, assetScale));
+                resinStrip = resinStripRegion.SrcMat.Clone();
+                if (!result.Condensed.HasValue)
+                {
+                    Logger.LogWarning("汇总通知：大地图浓缩树脂识别失败");
+                }
             }
             else
             {
@@ -233,14 +243,22 @@ public class CheckRewardsTask
     }
 
     /// <summary>
-    /// 以树脂图标为锚点向左覆盖"原粹树脂"标签、向右覆盖数字区域，构造截图条矩形。
+    /// 以两种树脂图标为锚点，构造覆盖浓缩树脂与原粹树脂的截图条矩形。
     /// </summary>
-    private static Rect BuildResinStripRect(Rect iconRect, double assetScale)
+    private static Rect BuildResinStripRect(Rect originalIconRect, Rect? condensedIconRect, double assetScale)
     {
-        var left = Math.Max(0, iconRect.Left - (int)(160 * assetScale));
-        var top = Math.Max(0, iconRect.Top - (int)(15 * assetScale));
-        var right = iconRect.Right + (int)(150 * assetScale);
-        var bottom = iconRect.Bottom + (int)(15 * assetScale);
+        var left = condensedIconRect is Rect condensed
+            ? Math.Max(0, condensed.Left - (int)(25 * assetScale))
+            : Math.Max(0, originalIconRect.Left - (int)(200 * assetScale));
+        var topIcon = condensedIconRect is Rect topCondensed
+            ? Math.Min(originalIconRect.Top, topCondensed.Top)
+            : originalIconRect.Top;
+        var bottomIcon = condensedIconRect is Rect bottomCondensed
+            ? Math.Max(originalIconRect.Bottom, bottomCondensed.Bottom)
+            : originalIconRect.Bottom;
+        var top = Math.Max(0, topIcon - (int)(15 * assetScale));
+        var right = originalIconRect.Right + (int)(150 * assetScale);
+        var bottom = bottomIcon + (int)(15 * assetScale);
         return new Rect(left, top, right - left, bottom - top);
     }
 

@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -14,18 +13,33 @@ using OpenCvSharp;
 namespace BetterGenshinImpact.GameTask.Common;
 
 /// <summary>
-/// 大地图顶栏原粹树脂识别。图标模板匹配与 OCR 区域参考 AutoBossTask 的实现。
+/// 大地图顶栏树脂识别结果。
+/// </summary>
+/// <param name="Current">当前原粹树脂数量</param>
+/// <param name="Max">原粹树脂上限</param>
+/// <param name="Condensed">浓缩树脂数量；图标或数量识别失败时为空</param>
+/// <param name="OriginalIconRect">原粹树脂图标矩形</param>
+/// <param name="CondensedIconRect">浓缩树脂图标矩形；图标未匹配时为空</param>
+public readonly record struct ResinRecognitionResult(
+    int Current,
+    int Max,
+    int? Condensed,
+    Rect OriginalIconRect,
+    Rect? CondensedIconRect);
+
+/// <summary>
+/// 大地图顶栏原粹树脂与浓缩树脂识别。
 /// </summary>
 public static class ResinRecognition
 {
+    private const int TextThreshold = 180;
+
     /// <summary>
-    /// 在大地图界面顶栏识别原粹树脂当前值与上限。
-    /// 不点击图标，直接解析顶栏 "当前/上限" 文本。
+    /// 在大地图界面顶栏识别原粹树脂当前值与上限，并以原粹树脂图标为锚点识别左侧的浓缩树脂数量。
     /// </summary>
     /// <param name="capture">大地图界面的截图区域</param>
-    /// <param name="resinIconRect">输出：树脂图标在截图中的矩形（绝对坐标），可用于裁剪截图条；识别失败时为 default</param>
-    /// <returns>(当前值, 上限)；识别失败返回 null</returns>
-    public static (int Current, int Max)? RecognizeInBigMapTopBar(ImageRegion capture, out Rect resinIconRect)
+    /// <returns>树脂识别结果；原粹树脂识别失败时返回 null</returns>
+    public static ResinRecognitionResult? RecognizeInBigMapTopBar(ImageRegion capture)
     {
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         var debugPrefix = DateTime.Now.ToString("yyyyMMdd_HHmmss_ffff", CultureInfo.InvariantCulture);
@@ -38,15 +52,16 @@ public static class ResinRecognition
         var iconRa = iconSearchRegion.Find(RecognitionAssets.Get("AutoBoss", "OriginalResinTopIcon", captureRect.Width, captureRect.Height));
         if (iconRa.IsEmpty())
         {
-            resinIconRect = default;
             return null;
         }
 
-        resinIconRect = new Rect(
+        var resinIconRect = new Rect(
             iconSearchRegion.X + iconRa.Left,
             iconSearchRegion.Y + iconRa.Top,
             iconRa.Width,
             iconRa.Height);
+        var (condensedResin, condensedIconRect) = RecognizeCondensedResin(
+            capture, resinIconRect, assetScale, debugPrefix);
 
         var countRect = new Rect(
             resinIconRect.Right + (int)(25 * assetScale),
@@ -56,15 +71,13 @@ public static class ResinRecognition
         using var countRegion = capture.DeriveCrop(countRect);
         SaveDebugImage(countRegion.SrcMat, $"{debugPrefix}_count-raw.png");
 
-        // 根据树脂数字实测 RGB 颜色生成暖灰色文字掩膜，仅用于调试，不参与当前识别流程。
-        // 样本：(236,229,216)、(227,222,216)、(191,191,184)。HSV 范围留出抗锯齿和亮度变化余量。
-        using var textColorMask = OpenCvCommonHelper.InRangeHsv(
-            countRegion.SrcMat,
-            new Scalar(8, 0, 175),
-            new Scalar(38, 40, 255));
-        SaveDebugImage(textColorMask, $"{debugPrefix}_count-text-color-mask.png");
+        using var threshold = countRegion.CacheGreyMat.Threshold(
+            TextThreshold, 255, ThresholdTypes.Binary);
+        using var inverted = new Mat();
+        Cv2.BitwiseNot(threshold, inverted);
+        SaveDebugImage(inverted, $"{debugPrefix}_count-threshold-inverted.png");
 
-        var countText = OcrFactory.Paddle.OcrWithoutDetector(countRegion.SrcMat);
+        var countText = OcrFactory.Paddle.OcrWithoutDetector(inverted);
 
         // 顶栏文本为 "当前/上限"，上限固定为三位数(200)；斜杠可能被 OCR 认成 7 或 1，
         // 因此删除全部非数字后按"后三位为上限、其余为当前值"切分
@@ -81,7 +94,80 @@ public static class ResinRecognition
             return null;
         }
 
-        return (current, max);
+        return new ResinRecognitionResult(
+            current, max, condensedResin, resinIconRect, condensedIconRect);
+    }
+
+    private static (int? Count, Rect? IconRect) RecognizeCondensedResin(
+        ImageRegion capture,
+        Rect originalResinIconRect,
+        double assetScale,
+        string debugPrefix)
+    {
+        // 复用秘境树脂识别中的相对关系：浓缩树脂图标位于原粹树脂图标左侧约 90～180 像素。
+        var desiredLeft = originalResinIconRect.Left - (int)(180 * assetScale);
+        var desiredTop = originalResinIconRect.Top - (int)(15 * assetScale);
+        var searchLeft = Math.Max(0, desiredLeft);
+        var searchTop = Math.Max(0, desiredTop);
+        var searchRight = Math.Min(capture.Width, originalResinIconRect.Left - (int)(90 * assetScale));
+        var searchBottom = Math.Min(capture.Height, desiredTop + (int)(50 * assetScale));
+        if (searchRight <= searchLeft || searchBottom <= searchTop)
+        {
+            return (null, null);
+        }
+
+        using var searchRegion = capture.DeriveCrop(new Rect(
+            searchLeft, searchTop, searchRight - searchLeft, searchBottom - searchTop));
+        SaveDebugImage(searchRegion.SrcMat, $"{debugPrefix}_condensed-search.png");
+
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var iconRa = searchRegion.Find(RecognitionAssets.Get(
+            "AutoFight", "CondensedResinTopIcon", captureRect.Width, captureRect.Height));
+        if (iconRa.IsEmpty())
+        {
+            TaskControl.Logger.LogDebug("大地图顶栏未匹配到浓缩树脂图标");
+            return (null, null);
+        }
+
+        var iconRect = new Rect(
+            searchRegion.X + iconRa.Left,
+            searchRegion.Y + iconRa.Top,
+            iconRa.Width,
+            iconRa.Height);
+        using (var iconRegion = capture.DeriveCrop(iconRect))
+        {
+            SaveDebugImage(iconRegion.SrcMat, $"{debugPrefix}_condensed-icon.png");
+        }
+
+        var countLeft = iconRect.Right + (int)(20 * assetScale);
+        var countRight = Math.Min(capture.Width, countLeft + (int)(30 * assetScale));
+        var countBottom = Math.Min(capture.Height, iconRect.Bottom);
+        if (countRight <= countLeft || countBottom <= iconRect.Top)
+        {
+            return (null, iconRect);
+        }
+
+        using var countRegion = capture.DeriveCrop(new Rect(
+            countLeft, iconRect.Top, countRight - countLeft, countBottom - iconRect.Top));
+        SaveDebugImage(countRegion.SrcMat, $"{debugPrefix}_condensed-count-raw.png");
+
+        using var threshold = countRegion.CacheGreyMat.Threshold(
+            TextThreshold, 255, ThresholdTypes.Binary);
+        using var inverted = new Mat();
+        Cv2.BitwiseNot(threshold, inverted);
+        SaveDebugImage(inverted, $"{debugPrefix}_condensed-count-threshold-inverted.png");
+
+        var countText = OcrFactory.Paddle.OcrWithoutDetector(inverted);
+        var digits = Regex.Replace(StringUtils.ConvertFullWidthNumToHalfWidth(countText), @"\D", "");
+        if (!int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var count)
+            || count is < 0 or > 5)
+        {
+            TaskControl.Logger.LogDebug("浓缩树脂数量 OCR 失败：{Text}", countText);
+            return (null, iconRect);
+        }
+
+        TaskControl.Logger.LogDebug("浓缩树脂数量 OCR：{Text} -> {Count}", countText, count);
+        return (count, iconRect);
     }
 
     private static void SaveDebugImage(Mat image, string fileName)
