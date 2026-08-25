@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
@@ -983,11 +984,12 @@ public class AutoFightTask : ISoloTask
 
             if (finishDetectConfig.PaimonEndCheckEnabled)
             {
-                // 派蒙辅助检测：按L后等待PaimonEndCheckDelayMs，检测(32,67)像素是否为派蒙头冠颜色
+                // 派蒙辅助检测：按L后等待PaimonEndCheckDelayMs，检测左上角派蒙头像是否可见
                 await Delay(finishDetectConfig.PaimonEndCheckDelayMs, ct);
                 using var paimonRa = CaptureToRectArea();
-                var paimonPixel = paimonRa.SrcMat.At<Vec3b>(32, 67);
-                var paimonVisible = IsPaimon(paimonPixel.Item2, paimonPixel.Item1, paimonPixel.Item0);
+                // 复用 Bv 的派蒙头像检测：左上四分之一 ROI 内模板匹配 PaimonMenu（派蒙头像），
+                // 命中即视为派蒙可见 → 按L未生效、编队界面未打开、战斗未结束
+                var paimonVisible = Bv.IsInMainUi(paimonRa);
                 if (paimonVisible)
                 {
                     // 派蒙头像可见 → 编队界面未打开（按L未生效），战斗未结束，按X取消后提前跳出战斗结束检查
@@ -1039,14 +1041,6 @@ public class AutoFightTask : ISoloTask
             _lastFightFlagTime = DateTime.Now;
             return false;
         }
-    }
-
-    static bool IsPaimon(int r, int g, int b)
-    {
-        // 派蒙头冠颜色：R高，G中，B低（BGR 143,196,233 转换后 R=233,G=196,B=143，容差±10）
-        return (r >= 223 && r <= 243) &&
-               (g >= 186 && g <= 206) &&
-               (b >= 133 && b <= 153);
     }
 
     static bool IsYellow(int r, int g, int b)
