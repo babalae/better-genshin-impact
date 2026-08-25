@@ -126,7 +126,7 @@ public sealed class QqNotifier : INotifier
         {
             if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiry)
                 return _cachedToken;
-            return await RefreshTokenAsync(ct);
+            return await WithRetryAsync(() => RefreshTokenAsync(ct), ct);
         }
         finally
         {
@@ -262,8 +262,9 @@ public sealed class QqNotifier : INotifier
     }
 
     /// <summary>
-    /// 判断异常是否可重试。5xx/429/40093001 可重试；40093002 等永久错误不重试；
-    /// 无状态码的网络故障（DNS/连接重置）可重试；取消/解析错误不重试。
+    /// 判断异常是否可重试。5xx/429/400 可重试（400 可能携带可重试业务码 40093001，
+    /// 且重试有界、仅作用于幂等上传操作，故默认重试）；无状态码的网络故障可重试；
+    /// 取消/解析错误不重试。
     /// </summary>
     private static bool IsRetryable(System.Exception ex)
     {
@@ -278,13 +279,7 @@ public sealed class QqNotifier : INotifier
                 if (code == 429)
                     return true;
                 if (code == 400)
-                {
-                    var msg = ex.Message;
-                    if (msg.Contains("40093001"))
-                        return true;
-                    if (msg.Contains("40093002"))
-                        return false;
-                }
+                    return true;
                 return false;
             }
             // 无状态码的网络级故障（DNS、连接重置、无响应）可重试
