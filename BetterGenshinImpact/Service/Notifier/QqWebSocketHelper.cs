@@ -15,6 +15,7 @@ namespace BetterGenshinImpact.Service.Notifier;
 /// The C2C OpenID cannot be queried via REST API; it is only delivered
 /// passively through the gateway when the user sends a private message
 /// (C2C_MESSAGE_CREATE) or adds the bot as a friend (FRIEND_ADD).
+/// This helper is used by the binding flow in the notification settings UI.
 /// </summary>
 public class QqWebSocketHelper
 {
