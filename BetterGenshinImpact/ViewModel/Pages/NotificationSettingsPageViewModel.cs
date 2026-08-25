@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
@@ -69,6 +70,10 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     [ObservableProperty] private string _gotifyStatus = string.Empty;
 
     [ObservableProperty] private string _qqStatus = string.Empty;
+
+    [ObservableProperty] private bool _isBinding;
+
+    private CancellationTokenSource? _bindCts;
 
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
@@ -520,6 +525,59 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             Toast.Error(res.Message);
 
         IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnBindQq()
+    {
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqAppId))
+        {
+            Toast.Error("请先填写 QQ AppID");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqClientSecret))
+        {
+            Toast.Error("请先填写 QQ AppSecret");
+            return;
+        }
+
+        IsBinding = true;
+        QqStatus = "请用手机 QQ 私聊机器人，发送任意一条消息…";
+        _bindCts = new CancellationTokenSource();
+
+        try
+        {
+            var openId = await QqWebSocketHelper.BindAsync(
+                Config.NotificationConfig.QqAppId,
+                Config.NotificationConfig.QqClientSecret,
+                _bindCts.Token);
+
+            Config.NotificationConfig.QqOpenId = openId;
+            QqStatus = "绑定成功";
+            Toast.Success("QQ 绑定成功");
+        }
+        catch (OperationCanceledException)
+        {
+            QqStatus = "已取消绑定";
+        }
+        catch (System.Exception ex)
+        {
+            QqStatus = $"绑定失败：{ex.Message}";
+            Toast.Error($"绑定失败：{ex.Message}");
+        }
+        finally
+        {
+            IsBinding = false;
+            _bindCts.Dispose();
+            _bindCts = null;
+        }
+    }
+
+    [RelayCommand]
+    private void OnCancelBindQq()
+    {
+        _bindCts?.Cancel();
     }
 
     [RelayCommand]
