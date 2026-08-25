@@ -124,6 +124,7 @@ public class CheckRewardsTask
         try
         {
             await new TpTask(ct).OpenBigMapUi();
+            await Delay(300, ct);
             using var capture = CaptureToRectArea();
             var resin = ResinRecognition.RecognizeInBigMapTopBar(capture, out var iconRect);
             if (resin != null)

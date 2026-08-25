@@ -1,10 +1,14 @@
 using System;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -24,6 +28,9 @@ public static class ResinRecognition
     public static (int Current, int Max)? RecognizeInBigMapTopBar(ImageRegion capture, out Rect resinIconRect)
     {
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var debugPrefix = DateTime.Now.ToString("yyyyMMdd_HHmmss_ffff", CultureInfo.InvariantCulture);
+        SaveDebugImage(capture.SrcMat, $"{debugPrefix}_full.png");
+
         using var iconSearchRegion = capture.DeriveCrop(new Rect(
             (int)(1200 * assetScale), (int)(25 * assetScale),
             (int)(580 * assetScale), (int)(50 * assetScale)));
@@ -43,10 +50,20 @@ public static class ResinRecognition
 
         var countRect = new Rect(
             resinIconRect.Right + (int)(25 * assetScale),
-            (int)(37 * assetScale),
-            (int)(120 * assetScale),
-            (int)(24 * assetScale));
+            (int)(33 * assetScale),
+            (int)(105 * assetScale),
+            (int)(25 * assetScale));
         using var countRegion = capture.DeriveCrop(countRect);
+        SaveDebugImage(countRegion.SrcMat, $"{debugPrefix}_count-raw.png");
+
+        // 根据树脂数字实测 RGB 颜色生成暖灰色文字掩膜，仅用于调试，不参与当前识别流程。
+        // 样本：(236,229,216)、(227,222,216)、(191,191,184)。HSV 范围留出抗锯齿和亮度变化余量。
+        using var textColorMask = OpenCvCommonHelper.InRangeHsv(
+            countRegion.SrcMat,
+            new Scalar(8, 0, 175),
+            new Scalar(38, 40, 255));
+        SaveDebugImage(textColorMask, $"{debugPrefix}_count-text-color-mask.png");
+
         var countText = OcrFactory.Paddle.OcrWithoutDetector(countRegion.SrcMat);
 
         // 顶栏文本为 "当前/上限"，上限固定为三位数(200)；斜杠可能被 OCR 认成 7 或 1，
@@ -65,5 +82,23 @@ public static class ResinRecognition
         }
 
         return (current, max);
+    }
+
+    private static void SaveDebugImage(Mat image, string fileName)
+    {
+        try
+        {
+            var directory = Global.Absolute(@"log\ResinRecognition");
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, fileName);
+            if (!Cv2.ImWrite(path, image))
+            {
+                TaskControl.Logger.LogWarning("树脂识别调试截图保存失败: {Path}", path);
+            }
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "树脂识别调试截图保存异常: {FileName}", fileName);
+        }
     }
 }
