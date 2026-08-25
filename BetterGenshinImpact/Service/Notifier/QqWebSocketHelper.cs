@@ -49,7 +49,6 @@ public class QqWebSocketHelper
             throw new NotifierException("QQ AppSecret is empty");
 
         var verifyCode = GenerateVerifyCode();
-        onVerifyCode(verifyCode);
 
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -65,6 +64,10 @@ public class QqWebSocketHelper
         var heartbeatInterval = await ReceiveHelloAsync(socket, ct);
         await SendIdentifyAsync(socket, accessToken, ct);
 
+        // Only show the verify code once the gateway subscription is active,
+        // so the user does not send the message before the bot is listening.
+        onVerifyCode(verifyCode);
+
         // Heartbeat runs in the background for the lifetime of the connection.
         using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var seq = 0L;
@@ -73,6 +76,11 @@ public class QqWebSocketHelper
         try
         {
             return await ReceiveUntilOpenIdAsync(socket, verifyCode, (s) => { Interlocked.Exchange(ref seq, s); }, ct);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The internal 60s timeout fired, not a user cancellation.
+            throw new NotifierException("Binding timed out. Please send the verify code within 60 seconds.");
         }
         finally
         {

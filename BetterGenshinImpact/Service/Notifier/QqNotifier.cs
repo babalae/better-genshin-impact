@@ -188,7 +188,7 @@ public sealed class QqNotifier : INotifier
         var sha1 = Convert.ToHexString(SHA1.HashData(imageBytes)).ToLower();
         var md5First10m = Convert.ToHexString(MD5.HashData(imageBytes.AsSpan(0, Math.Min(imageBytes.Length, 10002432)))).ToLower();
 
-        var prepared = await PrepareUploadAsync(baseUrl, fileName, imageBytes.Length, md5, sha1, md5First10m, ct);
+        var prepared = await WithRetryAsync(() => PrepareUploadAsync(baseUrl, fileName, imageBytes.Length, md5, sha1, md5First10m, ct), ct);
 
         foreach (var part in prepared.Parts)
         {
@@ -201,7 +201,7 @@ public sealed class QqNotifier : INotifier
             await WithRetryAsync(() => FinishChunkAsync(baseUrl, prepared.UploadId, part.Index, chunk.Length, chunkMd5, ct), ct);
         }
 
-        return await MergeUploadAsync(baseUrl, prepared.UploadId, ct);
+        return await WithRetryAsync(() => MergeUploadAsync(baseUrl, prepared.UploadId, ct), ct);
     }
 
     private async Task<UploadPrepareResult> PrepareUploadAsync(string baseUrl, string fileName, int fileSize, string md5, string sha1, string md5First10m, CancellationToken ct)
@@ -252,8 +252,10 @@ public sealed class QqNotifier : INotifier
                     if (msg.Contains("40093002"))
                         return false;
                 }
+                return false;
             }
-            return false;
+            // Network-level failures (DNS, connection reset, no response) are retryable.
+            return true;
         }
         if (ex is TaskCanceledException || ex is OperationCanceledException)
             return false;
