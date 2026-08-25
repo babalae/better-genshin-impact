@@ -53,6 +53,7 @@
             </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top"
+                            IsEnabled="{Binding IsSessionInteractionEnabled}"
                             Orientation="Horizontal">
                     <b:Interaction.Behaviors>
                         <behavior:ResponsiveTitleBarBehavior />
@@ -287,10 +288,23 @@
                                 Height="72"
                                 HorizontalAlignment="Center"
                                 Background="#262FA4E7"
-                                CornerRadius="36">
+                                CornerRadius="36"
+                                Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                             <ui:SymbolIcon FontSize="34"
                                            Foreground="#FF60B9F4"
                                            Symbol="DesktopCursor24" />
+                        </Border>
+
+                        <Border Width="72"
+                                Height="72"
+                                HorizontalAlignment="Center"
+                                Background="#26FFB900"
+                                CornerRadius="36"
+                                Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:ProgressRing Width="34"
+                                             Height="34"
+                                             Foreground="#FFFFC83D"
+                                             IsIndeterminate="True" />
                         </Border>
 
                         <StackPanel Margin="0,20,0,0"
@@ -337,7 +351,8 @@
 
                         <StackPanel Margin="0,24,0,0"
                                     HorizontalAlignment="Center"
-                                    Orientation="Horizontal">
+                                    Orientation="Horizontal"
+                                    Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                             <ui:Button MinWidth="132"
                                        Command="{Binding StartCommand}"
                                        Content="启动并连接"
@@ -349,7 +364,15 @@
                                                 Cursor="Hand" />
                         </StackPanel>
 
-                        <StackPanel Margin="0,18,0,0">
+                        <TextBlock Margin="0,24,0,0"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#CCFFFFFF"
+                                   Text="请稍候，关闭完成后窗口会自动隐藏。"
+                                   TextAlignment="Center"
+                                   Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <StackPanel Margin="0,18,0,0"
+                                    Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                             <TextBlock HorizontalAlignment="Center"
                                        Foreground="#80FFFFFF"
                                        FontSize="11"
@@ -362,6 +385,14 @@
                                        Text="游戏鼠标模式下，按住 Alt 可临时释放并显示本地鼠标。"
                                        TextAlignment="Center" />
                         </StackPanel>
+
+                        <TextBlock Margin="0,18,0,0"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#80FFFFFF"
+                                   FontSize="11"
+                                   Text="关闭期间已暂停所有桌面分身操作，以避免状态冲突。"
+                                   TextAlignment="Center"
+                                   Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
                 </Border>
             </Grid>

@@ -51,6 +51,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isConnectionPromptVisible = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSessionInteractionEnabled))]
+    private bool _isSessionClosing;
+
+    [ObservableProperty]
     private bool _isTopmost;
 
     [ObservableProperty]
@@ -130,6 +134,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     public bool HasChildSession => _childSessionService.ChildSessionId is not null;
 
+    public bool IsSessionInteractionEnabled => !IsSessionClosing;
+
     public ChildSessionWindowViewModel(ChildSessionService childSessionService)
     {
         _childSessionService = childSessionService;
@@ -153,9 +159,31 @@ public partial class ChildSessionWindowViewModel : ViewModel
         UpdateConnectionStatus();
     }
 
-    public Task LogoffAndHideAsync()
+    public async Task LogoffAndHideAsync()
     {
-        return ExecuteAsync(_childSessionService.LogoffAndHideAsync);
+        if (IsSessionClosing)
+        {
+            return;
+        }
+
+        IsSessionClosing = true;
+        UpdateConnectionStatus();
+
+        try
+        {
+            // 先让“正在关闭”状态完成渲染，再执行可能耗时的注销操作。
+            await Dispatcher.Yield(DispatcherPriority.Render);
+            await _childSessionService.LogoffAndHideAsync();
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+        finally
+        {
+            IsSessionClosing = false;
+            UpdateConnectionStatus();
+        }
     }
 
     partial void OnIsTopmostChanged(bool value)
@@ -545,7 +573,21 @@ public partial class ChildSessionWindowViewModel : ViewModel
         IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
         IsAudioMuted = _childSessionService.AudioMuted;
         IsRdpConnected = connectedState == 1;
-        IsConnectionPromptVisible = connectedState == 0 && !_startRequested;
+        IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !_startRequested;
+
+        if (IsSessionClosing)
+        {
+            ConnectionStatusBrush = Brushes.Orange;
+            ConnectionStatusTitle = "正在关闭桌面分身";
+            ConnectionStatusDescription = "正在断开 RDP 并注销桌面分身会话，此过程可能需要一些时间。";
+            RdpStatusText = connectedState == 0 ? "RDP 已断开" : "正在断开 RDP";
+            ChildSessionStatusText = childSessionId is null
+                ? "正在确认桌面分身会话已注销"
+                : $"正在注销桌面分身会话 {childSessionId.Value}";
+            ConnectionStatusToolTip = "关闭期间已暂停桌面分身操作，完成后窗口会自动隐藏。";
+            OnPropertyChanged(nameof(HasChildSession));
+            return;
+        }
 
         if (IsRdpConnected)
         {
