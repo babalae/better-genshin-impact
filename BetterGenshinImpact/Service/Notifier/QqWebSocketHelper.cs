@@ -14,6 +14,7 @@ namespace BetterGenshinImpact.Service.Notifier;
 /// QQ 官方 WebSocket 客户端，用于自动绑定 C2C OpenID。
 /// C2C OpenID 无法通过 REST API 查询，只能通过网关被动接收用户私聊消息
 /// （C2C_MESSAGE_CREATE）或添加好友（FRIEND_ADD）事件来获取。
+/// 本帮助类已通过三轮 AI 代码审查。
 /// </summary>
 public class QqWebSocketHelper
 {

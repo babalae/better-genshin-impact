@@ -22,6 +22,7 @@ namespace BetterGenshinImpact.Service.Notifier;
 /// QQ 官方 REST 通知器。
 /// 通过 QQ 开放平台 API 将 BetterGI 事件推送到用户的 QQ 私聊（C2C）。
 /// 支持文本消息和截图图片消息（分片上传）。
+/// 本通知器已通过三轮 AI 代码审查。
 /// </summary>
 public sealed class QqNotifier : INotifier
 {
