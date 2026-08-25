@@ -55,7 +55,7 @@ public class TpTask
     private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
     private const int DefaultBigMapOpenTimeoutMs = 5000;
     private const int MoonCanonBigMapOpenTimeoutMs = 8000;
-    private const int UiRecognitionPollIntervalMs = 60;
+    private const int UiRecognitionPollIntervalMs = 80;
     private const int BigMapOpenCheckIntervalMs = UiRecognitionPollIntervalMs;
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
@@ -83,6 +83,7 @@ public class TpTask
     private const double AbsoluteMapClickNeighborErrorRatio = 0.25d;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
     private const int MapChooseCandidateClickRetryCount = 2;
+    private const int MapChooseCandidateClickDelayMs = 150;  // 点击候选列表后，等待UI变化的时间
     private const int MapChooseCandidateClickVerificationDelayMs = 600;
     private const int MapChooseCandidateClickVerificationIntervalMs = 100;
     private const double TeleportFinalZoomMinNeighborScreenDistance = 96d;
@@ -93,7 +94,7 @@ public class TpTask
     private const int MapGroundLayerSwitchTimeoutMs = 3000;
     private const int TeleportPanelMinimumTimeoutMs = 900;
     private const int TeleportPanelInitialDelayMs = 200;
-    private const int TeleportConfirmTimeoutMs = 4000;
+    private const int TeleportConfirmTimeoutMs = 5000;
     private const int SwitchAreaCandidateTimeoutMs = 1500;
     private const int SwitchAreaSelectionTimeoutMs = 600;
     private const int SwitchAreaSelectionMinimumWaitMs = 120;
@@ -2669,7 +2670,7 @@ public class TpTask
 
         // 传送按钮尚未出现，且没有与目标匹配的有效候选：继续等待，避免把地图 UI 误匹配当候选点。
         // 传统模板/OCR 对同一帧结果确定，识别一次即可，不必再做稳定复检。
-        var candidate = TryClickMapChooseCandidate(imageRegion, targetTp);
+        var candidate = await TryClickMapChooseCandidate(imageRegion, targetTp);
         if (candidate == null)
         {
             return TeleportPanelResult.Waiting;
@@ -2695,7 +2696,7 @@ public class TpTask
             }
 
             using var retryCapture = CaptureToRectArea();
-            candidate = TryClickMapChooseCandidate(retryCapture, targetTp);
+            candidate = await TryClickMapChooseCandidate(retryCapture, targetTp);
             if (candidate == null)
             {
                 return TeleportPanelResult.RetryPoint;
@@ -2712,10 +2713,7 @@ public class TpTask
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
-            if (i > 0)
-            {
-                await Delay(UiRecognitionPollIntervalMs, ct);
-            }
+            await Delay(UiRecognitionPollIntervalMs, ct);
 
             var screen = CaptureToRectArea();
             using var ownedScreen = screen;
@@ -3233,7 +3231,7 @@ public class TpTask
     /// <summary>
     /// 识别候选列表一次并点击；模板/OCR 对同一帧结果确定，不做稳定复检。
     /// </summary>
-    private MapChooseCandidate? TryClickMapChooseCandidate(
+    private async Task<MapChooseCandidate?> TryClickMapChooseCandidate(
         ImageRegion imageRegion,
         GiTpPosition? targetTp)
     {
@@ -3243,7 +3241,7 @@ public class TpTask
             return null;
         }
 
-        ClickMapChooseCandidate(imageRegion, candidate);
+        await ClickMapChooseCandidate(imageRegion, candidate);
         return candidate;
     }
 
@@ -3500,10 +3498,11 @@ public class TpTask
             Math.Abs(candidate.IconRect.Y - iconRect.Y) <= 6);
     }
 
-    private static void ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
+    private async Task ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
         Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
+        await Delay(MapChooseCandidateClickDelayMs, ct);
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)
