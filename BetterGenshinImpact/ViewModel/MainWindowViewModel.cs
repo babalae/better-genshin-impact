@@ -142,6 +142,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 bitmap.UriSource = new Uri(path, UriKind.Absolute);
+                // 以虚拟屏幕（多显示器总范围）宽度为解码上限：
+                // 背景最多铺满屏幕，超过该宽度再高的分辨率也无处可显示，
+                // 限制解码尺寸可避免超大照片同步解码卡 UI 并占用数百 MB 内存；
+                // DecodePixelWidth 不会放大小图（小于该宽度的图片按原始尺寸解码）
+                bitmap.DecodePixelWidth = (int)SystemParameters.VirtualScreenWidth;
                 bitmap.EndInit();
                 bitmap.Freeze();
                 source = bitmap;

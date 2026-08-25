@@ -70,7 +70,7 @@ public partial class ImageEditWindow
             bmp.UriSource = new Uri(_sourcePath);
             bmp.EndInit();
             bmp.Freeze();
-            _originalImage = bmp;
+            _originalImage = NormalizeDpi(bmp);
         }
         catch (Exception e)
         {
@@ -82,6 +82,29 @@ public partial class ImageEditWindow
         _editImage = _originalImage;
         PreviewImage.Source = _editImage;
         UpdateInfoText();
+    }
+
+    /// <summary>
+    /// 将位图规范化为 96 DPI（像素数据不变，仅重写 DPI 元数据）。
+    /// WPF 的 Image 控件按设备无关尺寸（PixelWidth × 96 / DpiX）布局，
+    /// 若不规范化，非等轴 DPI 图片（如部分扫描件）的显示纵横比会与像素纵横比不一致，
+    /// 导致裁剪框与底图错位、保存结果与用户框选区域不符。
+    /// 规范化后 DIP 尺寸 == 像素尺寸，画布坐标映射逻辑保持简单正确。
+    /// </summary>
+    private static BitmapSource NormalizeDpi(BitmapSource source)
+    {
+        if (Math.Abs(source.DpiX - 96) < 0.5 && Math.Abs(source.DpiY - 96) < 0.5)
+        {
+            return source;
+        }
+
+        var format = source.Format;
+        var stride = (source.PixelWidth * format.BitsPerPixel + 7) / 8;
+        var buffer = new byte[stride * source.PixelHeight];
+        source.CopyPixels(buffer, stride, 0);
+        var normalized = BitmapSource.Create(source.PixelWidth, source.PixelHeight, 96, 96, format, source.Palette, buffer, stride);
+        normalized.Freeze();
+        return normalized;
     }
 
     private void UpdateInfoText()
