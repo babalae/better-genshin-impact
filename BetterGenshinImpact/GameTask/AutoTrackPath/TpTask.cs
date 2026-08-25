@@ -1192,6 +1192,7 @@ public class TpTask
         }
 
         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+        await Delay(100, ct);
         var opened = await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
         return opened;
     }
@@ -1407,6 +1408,7 @@ public class TpTask
             int effectiveMoveMouseY = GetDisplayScaleAdjustedMouseDelta(moveMouseY);
 
             var mouseMoveResult = await MouseMoveMap(effectiveMoveMouseX, effectiveMoveMouseY);
+            await Delay(30, ct);
 
             // 推算理论上的移动后坐标 (惯性预测)
             Point2f predictedPoint = moveState.CenterPoint + new Point2f(
@@ -2437,6 +2439,7 @@ public class TpTask
     private async Task<bool> TrySwitchArea(string areaName)
     {
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        await Delay(50, ct);
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
         var stopwatch = Stopwatch.StartNew();
@@ -2453,6 +2456,7 @@ public class TpTask
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
+                await Delay(50, ct);
                 await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
@@ -2664,7 +2668,7 @@ public class TpTask
         using var ownedTeleportButton = teleportButton;
         if (!teleportButton.IsEmpty())
         {
-            PressTeleportConfirmKey();
+            await PressTeleportConfirmKey();
             return TeleportPanelResult.Confirmed;
         }
 
@@ -2728,7 +2732,7 @@ public class TpTask
             using var ownedTeleportButton = teleportButton;
             if (!teleportButton.IsEmpty())
             {
-                PressTeleportConfirmKey();
+                await PressTeleportConfirmKey();
                 return TeleportPanelResult.Confirmed;
             }
 
@@ -2748,9 +2752,10 @@ public class TpTask
         return TeleportPanelResult.RetryPoint;
     }
 
-    private void PressTeleportConfirmKey()
+    private async Task PressTeleportConfirmKey()
     {
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
+        await Delay(30, ct);
     }
 
     private List<NearbyMapIcon> GetMapIconsInRect(
