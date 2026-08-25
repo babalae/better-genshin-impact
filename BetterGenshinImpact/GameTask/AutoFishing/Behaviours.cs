@@ -391,6 +391,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
 
+        // 举起鱼竿确认相关
+        private const int MAX_LEFT_BUTTON_RETRY = 3; // 左键按下重试次数上限
+        private const int RAISE_HOOK_WAIT_MS = 400; // 按下左键后等待举竿画面渲染的时间
+        private const int VIEWPOINT_SEARCH_STEP = 30; // 寻找落点时每次上下移动视角的像素步长
+
+        private DateTimeOffset? raiseHookWaitEndTime; // 举起鱼竿画面等待的结束时间
+        private bool raiseHookConfirmed; // 是否已确认鱼竿举起
+        private int leftButtonDownRetryTimes; // 左键按下重试次数
+
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
@@ -465,8 +474,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             ThrowRodNoTarget.Set(false);
             findTargetEndTime = timeProvider.GetLocalNow().AddSeconds(5);
             foundTarget = false;
-            mouseMoveI *= -1;
+            // 不再每次抛竿翻转视角移动方向，避免连续失败时视角来回甩动
             mouseMoveR = 0d;
+            raiseHookConfirmed = false;
+            leftButtonDownRetryTimes = 0;
+            raiseHookWaitEndTime = timeProvider.GetLocalNow().AddMilliseconds(RAISE_HOOK_WAIT_MS);
 
             input.Mouse.LeftButtonDown();
             PitchReset.Set(true);
@@ -484,13 +496,45 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         public OneFish? currentFish { get; private set; }
 
-        private int mouseMoveI = 1; // 上下移动视角的初始方向控制参数
         private double mouseMoveR; // 上下移动视角的切换频率控制参数
 
         protected async override Task<Status> Update()
         {
             var imageRegion = Screenshot.Get();
             Action<int> sleep = Sleep.Get();
+
+            // 举起鱼竿确认：确保左键真实按住，并等待游戏渲染出举竿画面，避免用"未举竿"的旧帧做首次落点检测
+            if (!raiseHookConfirmed)
+            {
+                // 校验左键是否真实按住（SendInput 注入可能因窗口失焦等原因未生效）
+                if (!Simulation.IsKeyDown(VK.VK_LBUTTON))
+                {
+                    leftButtonDownRetryTimes++;
+                    if (leftButtonDownRetryTimes > MAX_LEFT_BUTTON_RETRY)
+                    {
+                        logger.LogWarning("多次尝试后鼠标左键仍未按住，可能游戏窗口已失焦，退出抛竿");
+                        input.Mouse.LeftButtonUp();
+                        Abort.Set(true);
+                        return Status.Failure;
+                    }
+
+                    logger.LogWarning("检测到鼠标左键未按住，重新按下左键（第{Retry}次）", leftButtonDownRetryTimes);
+                    input.Mouse.LeftButtonDown();
+                    sleep(100);
+                    return Status.Running;
+                }
+
+                // 等待举竿画面渲染完成
+                if (raiseHookWaitEndTime != null && timeProvider.GetLocalNow() < raiseHookWaitEndTime)
+                {
+                    sleep(50);
+                    return Status.Running;
+                }
+
+                raiseHookConfirmed = true;
+                logger.LogInformation("鱼竿已举起，开始寻找落点");
+                return Status.Running;
+            }
 
             // 找 鱼饵落点
             var result = _predictor.Predictor.Detect(imageRegion.CacheImage);
@@ -504,14 +548,30 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     if (timeProvider.GetLocalNow() <= findTargetEndTime)
                     {
-                        // 上下移动视角方便看落点
+                        // 上下小幅移动视角方便看落点，避免大幅摆动把落点环甩出视野
                         mouseMoveR += Math.PI / 16d;
-                        input.Mouse.MoveMouseBy(0, mouseMoveI * 80 * Math.Sign(Math.Cos(mouseMoveR)));
+                        input.Mouse.MoveMouseBy(0, (int)(VIEWPOINT_SEARCH_STEP * Math.Sign(Math.Cos(mouseMoveR))));
                         sleep(100);
                         return Status.Running;
                     }
                     else
                     {
+                        // 找不到落点：若左键已松开说明鱼竿可能没真正举起，优先重新按下左键再找一轮，而不是直接判失败
+                        if (!Simulation.IsKeyDown(VK.VK_LBUTTON))
+                        {
+                            leftButtonDownRetryTimes++;
+                            if (leftButtonDownRetryTimes <= MAX_LEFT_BUTTON_RETRY)
+                            {
+                                logger.LogWarning("检测到鱼竿未举起，重新按下左键并继续寻找落点（第{Retry}次）", leftButtonDownRetryTimes);
+                                input.Mouse.LeftButtonDown();
+                                raiseHookConfirmed = false;
+                                raiseHookWaitEndTime = timeProvider.GetLocalNow().AddMilliseconds(RAISE_HOOK_WAIT_MS);
+                                findTargetEndTime = timeProvider.GetLocalNow().AddSeconds(5);
+                                sleep(300);
+                                return Status.Running;
+                            }
+                        }
+
                         logger.LogInformation("举起鱼竿失败，始终没有找到落点");
                         input.Mouse.LeftButtonUp();
                         sleep(2000);
@@ -941,6 +1001,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (!liftRodButtonRa.IsEmpty())
             {
                 return RaiseRod("图像识别");
+            }
+
+            // 拉条识别提竿判断：拉条（黄色进度条）只在鱼上钩后出现，为纯色检测，不受帧率/文字位置/模板匹配影响，
+            // 且拉条会持续整个拉扯过程，低帧率下也不易漏检。放在 OCR 之前，命中时可直接跳过最耗时的 OCR。
+            // 要求至少 2 个同水平线黄色矩形（进度条+游标/折线），避免把单个黄色物体误判为上钩。
+            using var fishBarTopMat = new Mat(imageRegion.SrcMat, new Rect(0, 0, imageRegion.Width, imageRegion.Height / 2));
+            var fishBarRects = AutoFishingImageRecognition.GetFishBarRect(fishBarTopMat);
+            if (fishBarRects is { Count: >= 2 })
+            {
+                return RaiseRod("拉条识别");
             }
 
             // OCR 提竿判断
