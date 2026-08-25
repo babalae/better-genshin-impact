@@ -114,6 +114,97 @@
         </ui:CardControl>
 
 
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Image24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="主窗口自定义背景"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="为软件主窗口设置一张自定义背景图片，透明度可调"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,12,0"
+                                     IsChecked="{Binding Config.CommonConfig.MainBackgroundEnabled, Mode=TwoWay}" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,12,0"
+                               Command="{Binding SelectMainBackgroundImageCommand}"
+                               Content="选择图片" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="3"
+                               Margin="0,0,36,0"
+                               Command="{Binding ClearMainBackgroundImageCommand}"
+                               Content="清除" />
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="4"
+                                  Margin="0,8,36,4"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding Config.CommonConfig.MainBackgroundImagePath, Mode=OneWay, FallbackValue='未设置背景图片'}"
+                                  TextTrimming="CharacterEllipsis"
+                                  ToolTip="{Binding Config.CommonConfig.MainBackgroundImagePath, Mode=OneWay}" />
+                    <TextBlock Grid.Row="3"
+                               Grid.Column="0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                               Text="背景不透明度" />
+                    <Slider Grid.Row="3"
+                            Grid.Column="1"
+                            Grid.ColumnSpan="2"
+                            Width="240"
+                            Margin="0,4,12,0"
+                            VerticalAlignment="Center"
+                            Maximum="1"
+                            Minimum="0.05"
+                            IsSnapToTickEnabled="True"
+                            TickFrequency="0.05"
+                            Value="{Binding Config.CommonConfig.MainBackgroundOpacity, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="4"
+                               Grid.Column="0"
+                               Margin="0,4,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                               Text="拉伸方式" />
+                    <ComboBox Grid.Row="4"
+                              Grid.Column="1"
+                              Width="120"
+                              Margin="0,4,12,0"
+                              VerticalAlignment="Center"
+                              SelectedValue="{Binding Config.CommonConfig.MainBackgroundStretch, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="填充" Tag="Fill" />
+                        <ComboBoxItem Content="等比填充" Tag="UniformToFill" />
+                        <ComboBoxItem Content="等比适应" Tag="Uniform" />
+                        <ComboBoxItem Content="原始尺寸" Tag="None" />
+                    </ComboBox>
+                </Grid>
+            </ui:CardControl.Header>
+        </ui:CardControl>
+
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon SquareHintSparkles24}">

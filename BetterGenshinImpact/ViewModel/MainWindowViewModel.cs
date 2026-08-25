@@ -31,6 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
@@ -73,6 +74,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
 
+    /// <summary>
+    /// 主窗口自定义背景图源，null 表示未加载或加载失败
+    /// </summary>
+    [ObservableProperty] private ImageSource? _mainBackgroundSource;
+
+    /// <summary>
+    /// 主窗口自定义背景图是否可见（开关开启且图片加载成功）
+    /// </summary>
+    [ObservableProperty] private bool _isMainBackgroundVisible;
+
     partial void OnIsRedeemCodeInfoBarOpenChanged(bool value)
     {
         if (!value)
@@ -98,6 +109,51 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         _childSessionService = childSessionService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
+        // 订阅通用配置变更：设置页修改背景图路径或开关后，主窗口背景实时刷新
+        Config.CommonConfig.PropertyChanged += OnCommonConfigPropertyChanged;
+        LoadMainBackground();
+    }
+
+    private void OnCommonConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // 仅在背景图相关配置变化时重新加载，避免无关配置变更触发图片 IO
+        if (e.PropertyName is nameof(CommonConfig.MainBackgroundImagePath)
+            or nameof(CommonConfig.MainBackgroundEnabled))
+        {
+            LoadMainBackground();
+        }
+    }
+
+    /// <summary>
+    /// 加载主窗口自定义背景图。
+    /// 使用 CacheOption.OnLoad 立即读入内存，不锁定图片文件，方便用户随时替换或删除图片。
+    /// 加载失败（文件被删/格式损坏）时静默降级为隐藏背景，不弹窗打断用户。
+    /// </summary>
+    private void LoadMainBackground()
+    {
+        ImageSource? source = null;
+        var path = Config.CommonConfig.MainBackgroundImagePath;
+        if (Config.CommonConfig.MainBackgroundEnabled && !string.IsNullOrWhiteSpace(path) && File.Exists(path))
+        {
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                bitmap.UriSource = new Uri(path, UriKind.Absolute);
+                bitmap.EndInit();
+                bitmap.Freeze();
+                source = bitmap;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"加载主窗口背景图失败：{path}，{ex.Message}");
+            }
+        }
+
+        MainBackgroundSource = source;
+        IsMainBackgroundVisible = source != null;
     }
 
     [RelayCommand]
