@@ -71,8 +71,14 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _qqStatus = string.Empty;
 
+    /// <summary>
+    /// 是否正在执行绑定流程（控制按钮显示为"绑定"或"取消"）
+    /// </summary>
     [ObservableProperty] private bool _isBinding;
 
+    /// <summary>
+    /// 绑定流程的取消令牌源，用于用户点击取消时中断 WebSocket 连接
+    /// </summary>
     private CancellationTokenSource? _bindCts;
 
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
@@ -527,6 +533,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         IsLoading = false;
     }
 
+    /// <summary>
+    /// 绑定 QQ 按钮。连接 QQ 网关，等待用户发送验证码，自动回填 OpenID。
+    /// 支持取消（用户点击取消时中断 WebSocket 连接）。
+    /// 超时（60 秒未收到消息）时提示用户重试。
+    /// </summary>
     [RelayCommand]
     private async Task OnBindQq()
     {
@@ -553,7 +564,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 Config.NotificationConfig.QqClientSecret,
                 code =>
                 {
-                    // Must marshal to UI thread to update ObservableProperty.
+                    // 回调在后台线程执行，需要编组回 UI 线程才能更新 ObservableProperty
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
                         QqStatus = $"请用手机 QQ 私聊机器人，发送验证码 [{code}]";
@@ -561,16 +572,19 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 },
                 _bindCts.Token);
 
+            // 绑定成功，自动回填 OpenID（配置自动保存 + 刷新通知器）
             Config.NotificationConfig.QqOpenId = openId;
             QqStatus = "绑定成功";
             Toast.Success("QQ 绑定成功");
         }
         catch (OperationCanceledException)
         {
+            // 用户主动点击取消
             QqStatus = "已取消绑定";
         }
         catch (System.Exception ex)
         {
+            // 超时或其他错误（超时已被 BindAsync 转为 NotifierException）
             QqStatus = $"绑定失败：{ex.Message}";
             Toast.Error($"绑定失败：{ex.Message}");
         }
@@ -582,6 +596,9 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         }
     }
 
+    /// <summary>
+    /// 取消绑定按钮：取消 WebSocket 连接，中断绑定流程。
+    /// </summary>
     [RelayCommand]
     private void OnCancelBindQq()
     {

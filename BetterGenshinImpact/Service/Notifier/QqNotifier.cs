@@ -19,9 +19,9 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
-/// QQ official REST notifier.
-/// Pushes BetterGI events to the user's QQ private chat (C2C) via QQ Open Platform API.
-/// Supports text messages and screenshot image messages (chunked upload).
+/// QQ 官方 REST 通知器。
+/// 通过 QQ 开放平台 API 将 BetterGI 事件推送到用户的 QQ 私聊（C2C）。
+/// 支持文本消息和截图图片消息（分片上传）。
 /// </summary>
 public sealed class QqNotifier : INotifier
 {
@@ -50,16 +50,19 @@ public sealed class QqNotifier : INotifier
         _openId = openId;
     }
 
+    /// <summary>
+    /// 发送通知：先发文本，再发截图（如有）。截图失败时降级为纯文本。
+    /// </summary>
     public async Task SendAsync(BaseNotificationData content)
     {
         if (string.IsNullOrWhiteSpace(_appId))
-            throw new NotifierException("QQ AppID is empty");
+            throw new NotifierException("QQ AppID 为空");
 
         if (string.IsNullOrWhiteSpace(_clientSecret))
-            throw new NotifierException("QQ AppSecret is empty");
+            throw new NotifierException("QQ AppSecret 为空");
 
         if (string.IsNullOrWhiteSpace(_openId))
-            throw new NotifierException("QQ OpenID is empty");
+            throw new NotifierException("QQ OpenID 为空");
 
         var ct = CancellationToken.None;
         try
@@ -75,7 +78,8 @@ public sealed class QqNotifier : INotifier
                 }
                 catch (System.Exception ex)
                 {
-                    Logger.LogWarning("QQ image send failed, falling back to text-only: {ex}", ex.Message);
+                    // 图片发送失败时降级为纯文本，不阻断通知
+                    Logger.LogWarning("QQ 图片发送失败，降级为纯文本: {ex}", ex.Message);
                 }
             }
         }
@@ -85,10 +89,13 @@ public sealed class QqNotifier : INotifier
         }
         catch (System.Exception ex)
         {
-            throw new NotifierException($"Error sending QQ message: {ex.Message}");
+            throw new NotifierException($"发送 QQ 消息失败: {ex.Message}");
         }
     }
 
+    /// <summary>
+    /// 生成通知文本，包含结果标记（成功/失败/警告）和时间戳。
+    /// </summary>
     private static string GenerateMessage(BaseNotificationData data)
     {
         var sb = new StringBuilder();
@@ -106,6 +113,9 @@ public sealed class QqNotifier : INotifier
         return sb.ToString();
     }
 
+    /// <summary>
+    /// 获取 access_token，带缓存和并发保护（双重检查 + 信号量）。
+    /// </summary>
     private async Task<string> GetAccessTokenAsync(CancellationToken ct)
     {
         if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiry)
@@ -124,6 +134,9 @@ public sealed class QqNotifier : INotifier
         }
     }
 
+    /// <summary>
+    /// 调用 getAppAccessToken 接口刷新 token，并缓存过期时间（提前 60 秒刷新）。
+    /// </summary>
     private async Task<string> RefreshTokenAsync(CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(new { appId = _appId, clientSecret = _clientSecret });
@@ -141,6 +154,9 @@ public sealed class QqNotifier : INotifier
         return _cachedToken;
     }
 
+    /// <summary>
+    /// 构建带 Authorization 请求头的 HTTP 请求。
+    /// </summary>
     private async Task<HttpRequestMessage> BuildAuthedRequest(HttpMethod method, string url, HttpContent? body, CancellationToken ct)
     {
         var token = await GetAccessTokenAsync(ct);
@@ -149,6 +165,9 @@ public sealed class QqNotifier : INotifier
         return request;
     }
 
+    /// <summary>
+    /// 发送纯文本消息（msg_type=0）。注意：此请求非幂等，不重试，避免重复消息。
+    /// </summary>
     private async Task SendTextAsync(string text, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(new { msg_type = 0, content = text });
@@ -158,6 +177,9 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// 发送截图图片消息（msg_type=7）：先分片上传图片拿到 file_info，再发富媒体消息。
+    /// </summary>
     private async Task SendImageAsync(Image<Rgb24> screenshot, CancellationToken ct)
     {
         byte[] imageBytes;
@@ -180,6 +202,10 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// 分片上传图片：prepare → 逐片 PUT → part_finish → 合并拿 file_info。
+    /// 上传阶段幂等，可重试。
+    /// </summary>
     private async Task<string> UploadImageChunkedAsync(byte[] imageBytes, CancellationToken ct)
     {
         var baseUrl = ApiBase.Replace("{openid}", _openId);
@@ -204,6 +230,9 @@ public sealed class QqNotifier : INotifier
         return await WithRetryAsync(() => MergeUploadAsync(baseUrl, prepared.UploadId, ct), ct);
     }
 
+    /// <summary>
+    /// 调用 upload_prepare 接口，获取上传 ID、分块大小和预签名 URL 列表。
+    /// </summary>
     private async Task<UploadPrepareResult> PrepareUploadAsync(string baseUrl, string fileName, int fileSize, string md5, string sha1, string md5First10m, CancellationToken ct)
     {
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_prepare", new StringContent(
@@ -232,6 +261,10 @@ public sealed class QqNotifier : INotifier
         return new UploadPrepareResult(uploadId, blockSize, parts);
     }
 
+    /// <summary>
+    /// 判断异常是否可重试。5xx/429/40093001 可重试；40093002 等永久错误不重试；
+    /// 无状态码的网络故障（DNS/连接重置）可重试；取消/解析错误不重试。
+    /// </summary>
     private static bool IsRetryable(System.Exception ex)
     {
         if (ex is HttpRequestException hre)
@@ -254,7 +287,7 @@ public sealed class QqNotifier : INotifier
                 }
                 return false;
             }
-            // Network-level failures (DNS, connection reset, no response) are retryable.
+            // 无状态码的网络级故障（DNS、连接重置、无响应）可重试
             return true;
         }
         if (ex is TaskCanceledException || ex is OperationCanceledException)
@@ -264,6 +297,9 @@ public sealed class QqNotifier : INotifier
         return true;
     }
 
+    /// <summary>
+    /// 将单个分片通过预签名 URL 以 PUT 方式上传。
+    /// </summary>
     private async Task UploadChunkAsync(string presignedUrl, byte[] chunk, CancellationToken ct)
     {
         using var putContent = new ByteArrayContent(chunk);
@@ -272,6 +308,9 @@ public sealed class QqNotifier : INotifier
         putResponse.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// 通知服务端某个分片上传完成（upload_part_finish）。
+    /// </summary>
     private async Task FinishChunkAsync(string baseUrl, string uploadId, int partIndex, int chunkLength, string chunkMd5, CancellationToken ct)
     {
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/upload_part_finish", new StringContent(
@@ -286,6 +325,9 @@ public sealed class QqNotifier : INotifier
         response.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// 合并所有分片，获取最终 file_info（files 接口）。
+    /// </summary>
     private async Task<string> MergeUploadAsync(string baseUrl, string uploadId, CancellationToken ct)
     {
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/files", new StringContent(
@@ -301,6 +343,9 @@ public sealed class QqNotifier : INotifier
 
     private readonly record struct UploadPrepareResult(string UploadId, int BlockSize, List<ChunkPart> Parts);
 
+    /// <summary>
+    /// 带指数退避的重试执行（无返回值版本）。
+    /// </summary>
     private async Task WithRetryAsync(Func<Task> action, CancellationToken ct)
     {
         System.Exception? lastException = null;
@@ -321,6 +366,9 @@ public sealed class QqNotifier : INotifier
             throw lastException;
     }
 
+    /// <summary>
+    /// 带指数退避的重试执行（有返回值版本）。
+    /// </summary>
     private async Task<T> WithRetryAsync<T>(Func<Task<T>> action, CancellationToken ct)
     {
         System.Exception? lastException = null;
@@ -336,6 +384,6 @@ public sealed class QqNotifier : INotifier
                 await Task.Delay(TimeSpan.FromMilliseconds(1500 * (1 << attempt)), ct);
             }
         }
-        throw lastException ?? new NotifierException("QQ request failed after retries");
+        throw lastException ?? new NotifierException("QQ 请求重试后仍失败");
     }
 }

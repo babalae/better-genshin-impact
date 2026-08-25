@@ -2362,7 +2362,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        <!--  QQ通知  -->
+        <!--  QQ 通知（官方 REST API + 自动绑定 OpenID）  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon ChatMultiple24}">
@@ -2441,6 +2441,7 @@
                                 Text="{Binding Config.NotificationConfig.QqOpenId, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
+                <!-- 绑定 OpenID 按钮行：连接 QQ 网关，用户发送验证码后自动回填 OpenID -->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -2454,6 +2455,7 @@
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="点击绑定后，请用手机 QQ 私聊机器人并发送显示的验证码，系统将自动获取你的 OpenID；绑定过程中可点击取消" TextWrapping="Wrap" />
+                    <!-- 绑定/取消按钮：绑定中（IsBinding=true）时切换为"取消"，通过 DataTrigger 切换 Command 和 Content -->
                     <ui:Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right">
