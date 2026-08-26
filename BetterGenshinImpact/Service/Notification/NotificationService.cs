@@ -405,9 +405,49 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public void RefreshNotifiers()
     {
+        // 批量提交期间抑制刷新，待提交完成后统一刷新一次，避免逐字段触发多次通知器重建
+        if (_suppressRefresh)
+        {
+            _refreshPending = true;
+            return;
+        }
+
         _notificationConfig = TaskContext.Instance().Config.NotificationConfig;
         _notifierManager.RemoveAllNotifiers();
         InitializeNotifiers();
+    }
+
+    /// <summary>
+    ///     是否处于批量提交抑制刷新状态
+    /// </summary>
+    private bool _suppressRefresh;
+
+    /// <summary>
+    ///     抑制期间是否有待刷新的标记
+    /// </summary>
+    private bool _refreshPending;
+
+    /// <summary>
+    ///     批量更新通知配置（如微信 Clawbot 绑定凭证）时抑制逐字段刷新，
+    ///     提交完成后统一刷新一次，保证通知器读到完整的配置集合。
+    /// </summary>
+    public IDisposable SuppressRefreshNotifiers()
+    {
+        _suppressRefresh = true;
+        return new RefreshSuppression(this);
+    }
+
+    private sealed class RefreshSuppression(NotificationService service) : IDisposable
+    {
+        public void Dispose()
+        {
+            service._suppressRefresh = false;
+            if (service._refreshPending)
+            {
+                service._refreshPending = false;
+                service.RefreshNotifiers();
+            }
+        }
     }
 
     /// <summary>

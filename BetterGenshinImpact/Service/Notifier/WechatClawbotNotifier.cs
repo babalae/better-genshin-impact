@@ -42,8 +42,11 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     {
         _httpClient = httpClient;
         _config = config;
-        _session = new WechatClawbotSession(config);
-        _session.Start();
+        _session = new WechatClawbotSession(
+            config.WechatClawbotBotToken,
+            config.WechatClawbotBaseUrl,
+            config.WechatClawbotToUserId);
+        _ = _session.StartAsync();
     }
 
     /// <summary>
@@ -206,10 +209,12 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
         using var doc = JsonDocument.Parse(text);
         var root = doc.RootElement;
         var ret = root.TryGetProperty("ret", out var retElement) ? retElement.GetInt32() : 0;
-        if (ret != 0)
+        var errcode = root.TryGetProperty("errcode", out var errcodeElement) ? errcodeElement.GetInt32() : 0;
+        // 与 getupdates 一致，ret / errcode 任一非零均视为业务失败
+        if (ret != 0 || errcode != 0)
         {
             var errmsg = root.TryGetProperty("errmsg", out var errElement) ? errElement.GetString() : null;
-            throw new NotifierException($"sendmessage 返回错误 ret={ret} errmsg={errmsg}");
+            throw new NotifierException($"sendmessage 返回错误 ret={ret} errcode={errcode} errmsg={errmsg}");
         }
     }
 

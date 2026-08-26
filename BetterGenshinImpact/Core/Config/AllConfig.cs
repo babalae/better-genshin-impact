@@ -320,13 +320,6 @@ public partial class AllConfig : ObservableObject
 
     public void OnNotificationPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        // 排除微信 Clawbot 内部轮询状态字段，避免后台长轮询每次刷新令牌/游标都触发通知器重建
-        if (args.PropertyName is nameof(NotificationConfig.WechatClawbotContextToken)
-            or nameof(NotificationConfig.WechatClawbotGetUpdatesBuf))
-        {
-            return;
-        }
-
         NotificationService.Instance().RefreshNotifiers();
     }
 }

@@ -687,12 +687,17 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 },
                 _wechatClawbotBindCts.Token);
 
-            // 全部成功后再一次性提交配置
-            Config.NotificationConfig.WechatClawbotBotToken = login.BotToken;
-            Config.NotificationConfig.WechatClawbotBaseUrl = login.BaseUrl;
-            Config.NotificationConfig.WechatClawbotToUserId = bind.ToUserId;
-            Config.NotificationConfig.WechatClawbotContextToken = bind.ContextToken;
-            Config.NotificationConfig.WechatClawbotGetUpdatesBuf = bind.GetUpdatesBuf;
+            // 把会话令牌/游标存入独立存储（不触发全局配置刷新）
+            await WechatClawbotSessionStore.SaveAsync(login.BotToken, bind.ContextToken, bind.GetUpdatesBuf);
+
+            // 全部成功后在抑制刷新的作用域内一次性提交绑定凭证，只触发一次通知器重建
+            using (_notificationService.SuppressRefreshNotifiers())
+            {
+                Config.NotificationConfig.WechatClawbotBotToken = login.BotToken;
+                Config.NotificationConfig.WechatClawbotBaseUrl = login.BaseUrl;
+                Config.NotificationConfig.WechatClawbotToUserId = bind.ToUserId;
+            }
+
             WechatClawbotStatus = "绑定成功";
             Toast.Success("微信 Clawbot 绑定成功");
         }
