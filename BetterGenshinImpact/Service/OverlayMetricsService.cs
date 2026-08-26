@@ -78,6 +78,14 @@ public sealed class OverlayMetricsService : IDisposable
         TryPublish();
     }
 
+    public void ClearGameFps()
+    {
+        lock (_locker)
+        {
+            _gameFps = null;
+        }
+    }
+
     public void RecordSkippedTick()
     {
         lock (_locker)
@@ -209,8 +217,16 @@ public sealed class OverlayMetricsService : IDisposable
         AddMetric(items, config, OverlayMetricItem.GpuUsage, _gpuUsage, value => $"{value:0}%");
         AddMetric(items, config, OverlayMetricItem.CpuUsage, _cpuUsage, value => $"{value:0}%");
         AddMetric(items, config, OverlayMetricItem.MemoryUsage, _memoryUsage, value => $"{value:0}%");
-        AddMetric(items, config, OverlayMetricItem.BgiMemoryUsage, GetBgiMemoryMb(), value => FormatMemory(value));
-        AddMetric(items, config, OverlayMetricItem.BgiCpuUsage, GetBgiCpuPercent(), value => $"{value:F1}%");
+        // BGI 自身占用是进程级查询，与硬件指标一致：仅在对应指标启用时才执行采样，避免空转。
+        if (config.IsOverlayMetricEnabled(OverlayMetricItem.BgiMemoryUsage))
+        {
+            AddMetric(items, config, OverlayMetricItem.BgiMemoryUsage, GetBgiMemoryMb(), value => FormatMemory(value));
+        }
+
+        if (config.IsOverlayMetricEnabled(OverlayMetricItem.BgiCpuUsage))
+        {
+            AddMetric(items, config, OverlayMetricItem.BgiCpuUsage, GetBgiCpuPercent(), value => $"{value:F1}%");
+        }
 
         return items.Count == 0 ? OverlayMetricsSnapshot.Empty : new OverlayMetricsSnapshot(items);
     }

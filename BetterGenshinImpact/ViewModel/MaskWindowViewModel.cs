@@ -150,6 +150,7 @@ namespace BetterGenshinImpact.ViewModel
         private bool _isRestoringMapMaskState;
         private bool _metricsSubscribed;
         private bool _fpsStarted;
+        private CancellationTokenSource? _fpsCts;
 
         public MaskWindowViewModel()
         {
@@ -434,24 +435,72 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             if (Config?.MaskWindowConfig.ShowOverlayMetrics == true
-                && Config.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true
-                && !_fpsStarted)
+                && Config.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true)
             {
-                // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动一次，避免无意义后台采样。
-                _fpsStarted = true;
-                nint targetHWnd = TaskContext.Instance().GameHandle;
-                _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
-                Task.Run(async () =>
-                {
-                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), result =>
-                    {
-                        Fps = $"{result.Fps:0}";
-                        _overlayMetricsService?.UpdateGameFps(result.Fps);
-                    });
-                });
+                StartGameFpsSampling();
+            }
+            else
+            {
+                StopGameFpsSampling();
             }
 
             _overlayMetricsService?.Refresh();
+        }
+
+        private void StartGameFpsSampling()
+        {
+            if (_fpsStarted)
+            {
+                return;
+            }
+
+            // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动一次，避免无意义后台采样。
+            _fpsStarted = true;
+            nint targetHWnd = TaskContext.Instance().GameHandle;
+            _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
+            _fpsCts = new CancellationTokenSource();
+            var token = _fpsCts.Token;
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), result =>
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            return;
+                        }
+
+                        Fps = $"{result.Fps:0}";
+                        _overlayMetricsService?.UpdateGameFps(result.Fps);
+                    }, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 用户取消勾选游戏帧率指标后正常退出采样循环
+                }
+            });
+        }
+
+        private void StopGameFpsSampling()
+        {
+            if (!_fpsStarted)
+            {
+                return;
+            }
+
+            _fpsStarted = false;
+            var cts = _fpsCts;
+            _fpsCts = null;
+            if (cts != null)
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+
+            Fps = "0";
+            // 立即清掉服务端缓存的帧率值，避免遮罩残留最后一次读数
+            _overlayMetricsService?.ClearGameFps();
         }
 
         private void OverlayMetricsServiceOnMetricsUpdated(object? sender, OverlayMetricsSnapshot snapshot)
