@@ -2,14 +2,16 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Notification;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
 /// 微信 Clawbot 会话维持器。
-/// 后台长轮询 getupdates，持续刷新 context_token（会过期）和 get_updates_buf（同步游标）。
-/// 轮询状态仅保存在会话内部，不回写 NotificationConfig，避免触发 AllConfig 保存与通知器刷新。
+/// 后台长轮询 getupdates，持续刷新 context_token（会过期）和 get_updates_buf（同步游标），
+/// 并回写 NotificationConfig 以便重启/重建后继续。这两个字段已被 AllConfig 排除，
+/// 更新不会触发通知器刷新，因此不会自我销毁。
 /// 类似 QQ 渠道的 WebSocket 心跳，但 iLink 协议用 HTTP 长轮询实现。
 /// </summary>
 public sealed class WechatClawbotSession : IDisposable
@@ -22,7 +24,8 @@ public sealed class WechatClawbotSession : IDisposable
     private const int RetryDelayMs = 2000;
 
     private readonly string _botToken;
-    private readonly string _toUserId;
+    private readonly string _baseUrl;
+    private readonly NotificationConfig _config;
     private readonly HttpClient _httpClient;
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _tokenSemaphore = new(1, 1);
@@ -32,12 +35,13 @@ public sealed class WechatClawbotSession : IDisposable
     private Task? _loopTask;
     private bool _disposed;
 
-    public WechatClawbotSession(string botToken, string toUserId, string contextToken, string getUpdatesBuf)
+    public WechatClawbotSession(NotificationConfig config)
     {
-        _botToken = botToken;
-        _toUserId = toUserId;
-        _contextToken = contextToken;
-        _getUpdatesBuf = getUpdatesBuf;
+        _config = config;
+        _botToken = config.WechatClawbotBotToken;
+        _baseUrl = WechatClawbotHelper.NormalizeBaseUrl(config.WechatClawbotBaseUrl);
+        _contextToken = config.WechatClawbotContextToken;
+        _getUpdatesBuf = config.WechatClawbotGetUpdatesBuf;
         // 长轮询专用 HttpClient：超时需大于服务端 hold 时间（35s），不能复用 30s 的共享客户端
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
     }
@@ -49,7 +53,7 @@ public sealed class WechatClawbotSession : IDisposable
     {
         if (_loopTask != null)
             return;
-        if (string.IsNullOrWhiteSpace(_botToken) || string.IsNullOrWhiteSpace(_toUserId))
+        if (string.IsNullOrWhiteSpace(_botToken) || string.IsNullOrWhiteSpace(_config.WechatClawbotToUserId))
             return;
         _loopTask = Task.Run(() => RunLoopAsync(_cts.Token));
     }
@@ -90,7 +94,8 @@ public sealed class WechatClawbotSession : IDisposable
         {
             try
             {
-                var resp = await WechatClawbotHelper.GetUpdatesAsync(_httpClient, _botToken, _getUpdatesBuf, timeoutMs, ct);
+                var resp = await WechatClawbotHelper.GetUpdatesAsync(
+                    _httpClient, _baseUrl, _botToken, _getUpdatesBuf, timeoutMs, ct);
 
                 if (resp.Ret != 0 || resp.ErrCode != 0)
                 {
@@ -110,20 +115,22 @@ public sealed class WechatClawbotSession : IDisposable
                 }
 
                 consecutiveFailures = 0;
-                // 轮询游标仅保存在会话内部，不回写 NotificationConfig——
-                // 该属性赋值会触发 AllConfig 保存及 RefreshNotifiers()，导致长轮询会话被反复销毁重建。
-                if (!string.IsNullOrWhiteSpace(resp.GetUpdatesBuf))
+                // 回写游标到配置（AllConfig 已排除该字段，不会触发通知器刷新）
+                if (!string.IsNullOrWhiteSpace(resp.GetUpdatesBuf) && resp.GetUpdatesBuf != _getUpdatesBuf)
+                {
                     _getUpdatesBuf = resp.GetUpdatesBuf;
+                    _config.WechatClawbotGetUpdatesBuf = resp.GetUpdatesBuf;
+                }
 
                 if (resp.LongPollingTimeoutMs is > 0)
                     timeoutMs = resp.LongPollingTimeoutMs.Value;
 
                 foreach (var msg in resp.Msgs ?? [])
                 {
-                    if (string.Equals(msg.FromUserId, _toUserId, StringComparison.Ordinal) &&
+                    if (string.Equals(msg.FromUserId, _config.WechatClawbotToUserId, StringComparison.Ordinal) &&
                         !string.IsNullOrWhiteSpace(msg.ContextToken))
                     {
-                        // context_token 同样仅保存在会话内部，避免触发配置刷新
+                        // 回写 context_token（AllConfig 已排除，不会触发通知器刷新）
                         await _tokenSemaphore.WaitAsync(ct);
                         try
                         {
@@ -133,6 +140,8 @@ public sealed class WechatClawbotSession : IDisposable
                         {
                             _tokenSemaphore.Release();
                         }
+
+                        _config.WechatClawbotContextToken = msg.ContextToken!;
                     }
                 }
             }

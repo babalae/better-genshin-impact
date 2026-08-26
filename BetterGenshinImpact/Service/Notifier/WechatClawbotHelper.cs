@@ -76,10 +76,13 @@ public static class WechatClawbotHelper
                 case "confirmed":
                     if (string.IsNullOrWhiteSpace(status.BotToken))
                         throw new NotifierException("登录确认但未返回 bot_token");
+                    // 身份校验依赖 ilink_user_id；缺失时拒绝继续，避免绑定到错误账号
+                    if (string.IsNullOrWhiteSpace(status.UserId))
+                        throw new NotifierException("登录确认但未返回用户 ID，无法完成身份校验，请重新扫码");
                     return new WechatClawbotLoginResult(
                         status.BotToken!,
                         status.BotId ?? string.Empty,
-                        status.UserId ?? string.Empty,
+                        status.UserId!,
                         status.BaseUrl ?? ApiBase);
                 case "expired":
                     throw new NotifierException("二维码已过期，请重新登录");
@@ -118,12 +121,14 @@ public static class WechatClawbotHelper
     /// 一次性验证码绑定：长轮询 getupdates，等待扫码用户发送验证码，返回 to_user_id 和 context_token。
     /// </summary>
     /// <param name="botToken">扫码登录获得的 bot_token</param>
-    /// <param name="expectedUserId">扫码登录返回的用户 ID（ilink_user_id），仅接受该用户发送的验证码，
-    /// 防止绑定窗口内其他用户误发导致绑错账号</param>
+    /// <param name="baseUrl">登录响应返回的 API 基础地址（为空回退默认主机）</param>
+    /// <param name="expectedUserId">扫码登录返回的用户 ID（ilink_user_id）。必须非空，
+    /// 仅接受该用户发送的验证码，防止绑定窗口内其他用户误发导致绑错账号。</param>
     /// <param name="onVerifyCode">生成验证码后的回调，用于 UI 提示用户发送该验证码</param>
     /// <param name="cancellationToken">取消令牌（用户点击取消时触发）</param>
     public static async Task<WechatClawbotBindResult> BindAsync(
         string botToken,
+        string baseUrl,
         string expectedUserId,
         Action<string> onVerifyCode,
         CancellationToken cancellationToken)
@@ -131,6 +136,11 @@ public static class WechatClawbotHelper
         if (string.IsNullOrWhiteSpace(botToken))
             throw new NotifierException("微信 Clawbot BotToken 为空");
 
+        // 必须校验扫码用户身份，否则绑定窗口内其他用户可凭验证码绑定到错误账号
+        if (string.IsNullOrWhiteSpace(expectedUserId))
+            throw new NotifierException("登录未返回用户 ID，无法校验绑定身份，请重新扫码登录");
+
+        var normalizeBaseUrl = NormalizeBaseUrl(baseUrl);
         var verifyCode = GenerateVerifyCode();
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -146,7 +156,7 @@ public static class WechatClawbotHelper
             WechatClawbotGetUpdatesResponse resp;
             try
             {
-                resp = await GetUpdatesAsync(httpClient, botToken, buf, timeoutMs, ct);
+                resp = await GetUpdatesAsync(httpClient, normalizeBaseUrl, botToken, buf, timeoutMs, ct);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -170,9 +180,7 @@ public static class WechatClawbotHelper
             {
                 var text = ExtractText(msg);
                 // 仅接受扫码用户发来的验证码消息，防止其他用户误绑
-                var isExpectedSender = !string.IsNullOrWhiteSpace(expectedUserId)
-                    ? string.Equals(msg.FromUserId, expectedUserId, StringComparison.Ordinal)
-                    : !string.IsNullOrWhiteSpace(msg.FromUserId);
+                var isExpectedSender = string.Equals(msg.FromUserId, expectedUserId, StringComparison.Ordinal);
                 if (text != null && text.Contains(verifyCode) && isExpectedSender)
                     return new WechatClawbotBindResult(msg.FromUserId!, msg.ContextToken ?? string.Empty, buf);
             }
@@ -206,6 +214,15 @@ public static class WechatClawbotHelper
     }
 
     /// <summary>
+    /// 规范化 API 基础地址：空值回退默认主机，并去除尾部斜杠。
+    /// </summary>
+    internal static string NormalizeBaseUrl(string? baseUrl)
+    {
+        var url = string.IsNullOrWhiteSpace(baseUrl) ? ApiBase : baseUrl.Trim();
+        return url.TrimEnd('/');
+    }
+
+    /// <summary>
     /// 为 POST 请求添加完整请求头（Content-Type / AuthorizationType / X-WECHAT-UIN / iLink 标识 / Authorization）。
     /// </summary>
     internal static void AddCommonHeaders(HttpRequestMessage request, string? botToken)
@@ -230,6 +247,7 @@ public static class WechatClawbotHelper
 
     internal static async Task<WechatClawbotGetUpdatesResponse> GetUpdatesAsync(
         HttpClient httpClient,
+        string baseUrl,
         string botToken,
         string getUpdatesBuf,
         int timeoutMs,
@@ -240,7 +258,7 @@ public static class WechatClawbotHelper
             get_updates_buf = getUpdatesBuf,
             base_info = BuildBaseInfo(),
         });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBase}/ilink/bot/getupdates")
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{NormalizeBaseUrl(baseUrl)}/ilink/bot/getupdates")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };

@@ -676,6 +676,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
             var bind = await WechatClawbotHelper.BindAsync(
                 login.BotToken,
+                login.BaseUrl,
                 login.UserId,
                 code =>
                 {
@@ -688,6 +689,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
             // 全部成功后再一次性提交配置
             Config.NotificationConfig.WechatClawbotBotToken = login.BotToken;
+            Config.NotificationConfig.WechatClawbotBaseUrl = login.BaseUrl;
             Config.NotificationConfig.WechatClawbotToUserId = bind.ToUserId;
             Config.NotificationConfig.WechatClawbotContextToken = bind.ContextToken;
             Config.NotificationConfig.WechatClawbotGetUpdatesBuf = bind.GetUpdatesBuf;

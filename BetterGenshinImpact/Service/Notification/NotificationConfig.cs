@@ -358,12 +358,19 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _wechatClawbotToUserId = string.Empty;
 
     /// <summary>
-    ///     微信 Clawbot 会话上下文令牌（后台长轮询持续刷新）
+    ///     微信 Clawbot API 基础地址（登录响应 baseurl；为空时使用默认 https://ilinkai.weixin.qq.com）
+    /// </summary>
+    [ObservableProperty] private string _wechatClawbotBaseUrl = string.Empty;
+
+    /// <summary>
+    ///     微信 Clawbot 会话上下文令牌（后台长轮询持续刷新）。
+    ///     注意：AllConfig.OnNotificationPropertyChanged 已排除该字段，更新不会触发 RefreshNotifiers。
     /// </summary>
     [ObservableProperty] private string _wechatClawbotContextToken = string.Empty;
 
     /// <summary>
-    ///     微信 Clawbot 长轮询同步游标（get_updates_buf，后台长轮询持续刷新）
+    ///     微信 Clawbot 长轮询同步游标（get_updates_buf，后台长轮询持续刷新）。
+    ///     注意：AllConfig.OnNotificationPropertyChanged 已排除该字段，更新不会触发 RefreshNotifiers。
     /// </summary>
     [ObservableProperty] private string _wechatClawbotGetUpdatesBuf = string.Empty;
 }

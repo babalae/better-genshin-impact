@@ -42,11 +42,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     {
         _httpClient = httpClient;
         _config = config;
-        _session = new WechatClawbotSession(
-            config.WechatClawbotBotToken,
-            config.WechatClawbotToUserId,
-            config.WechatClawbotContextToken,
-            config.WechatClawbotGetUpdatesBuf);
+        _session = new WechatClawbotSession(config);
         _session.Start();
     }
 
@@ -196,7 +192,8 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     /// </summary>
     private async Task SendMessageAsync(string body, CancellationToken ct)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{WechatClawbotHelper.ApiBase}/ilink/bot/sendmessage")
+        var baseUrl = WechatClawbotHelper.NormalizeBaseUrl(_config.WechatClawbotBaseUrl);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/ilink/bot/sendmessage")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
@@ -252,7 +249,8 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             aeskey = Convert.ToHexString(aeskey).ToLowerInvariant(),
             base_info = WechatClawbotHelper.BuildBaseInfo(),
         });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{WechatClawbotHelper.ApiBase}/ilink/bot/getuploadurl")
+        var baseUrl = WechatClawbotHelper.NormalizeBaseUrl(_config.WechatClawbotBaseUrl);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/ilink/bot/getuploadurl")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
