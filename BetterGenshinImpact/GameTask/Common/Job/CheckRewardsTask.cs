@@ -134,9 +134,17 @@ public class CheckRewardsTask
                 var condensedText = result.Condensed is int condensed
                     ? $"浓缩树脂 {condensed}"
                     : "浓缩树脂识别失败";
-                resinText = $"原粹树脂 {result.Current}/{result.Max}；{condensedText}";
+                resinText = $"{condensedText}；原粹树脂 {result.Current}/{result.Max}";
+                using var mapCloseButton = capture.Find(RecognitionAssets.Get(
+                    "QuickTeleport", "MapCloseButton", capture));
+                if (mapCloseButton.IsEmpty())
+                {
+                    Logger.LogWarning("汇总通知：大地图关闭按钮识别失败，树脂截图使用默认右边界");
+                }
+
                 using var resinStripRegion = capture.DeriveCrop(BuildResinStripRect(
-                    result.OriginalIconRect, result.CondensedIconRect, assetScale));
+                    result.OriginalIconRect, result.CondensedIconRect,
+                    mapCloseButton.IsEmpty() ? null : mapCloseButton.Left, assetScale));
                 resinStrip = resinStripRegion.SrcMat.Clone();
                 if (!result.Condensed.HasValue)
                 {
@@ -191,8 +199,8 @@ public class CheckRewardsTask
 
                 using var handbookCapture = CaptureToRectArea();
                 commissionStrip = handbookCapture.DeriveCrop(new Rect(
-                    (int)(10 * assetScale), (int)(100 * assetScale),
-                    (int)(400 * assetScale), (int)(850 * assetScale))).SrcMat.Clone();
+                    (int)(366 * assetScale), (int)(161 * assetScale),
+                    (int)(1260 * assetScale), (int)(749 * assetScale))).SrcMat.Clone();
             }
         }
         catch (Exception e)
@@ -245,7 +253,8 @@ public class CheckRewardsTask
     /// <summary>
     /// 以两种树脂图标为锚点，构造覆盖浓缩树脂与原粹树脂的截图条矩形。
     /// </summary>
-    private static Rect BuildResinStripRect(Rect originalIconRect, Rect? condensedIconRect, double assetScale)
+    private static Rect BuildResinStripRect(
+        Rect originalIconRect, Rect? condensedIconRect, int? mapCloseButtonLeft, double assetScale)
     {
         var left = condensedIconRect is Rect condensed
             ? Math.Max(0, condensed.Left - (int)(25 * assetScale))
@@ -257,7 +266,9 @@ public class CheckRewardsTask
             ? Math.Max(originalIconRect.Bottom, bottomCondensed.Bottom)
             : originalIconRect.Bottom;
         var top = Math.Max(0, topIcon - (int)(15 * assetScale));
-        var right = originalIconRect.Right + (int)(150 * assetScale);
+        var right = mapCloseButtonLeft is int closeButtonLeft
+            ? closeButtonLeft - (int)(10 * assetScale)
+            : originalIconRect.Right + (int)(165 * assetScale);
         var bottom = bottomIcon + (int)(15 * assetScale);
         return new Rect(left, top, right - left, bottom - top);
     }
