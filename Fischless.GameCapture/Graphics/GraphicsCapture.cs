@@ -53,6 +53,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     // Surface 大小
     private int _surfaceWidth;
     private int _surfaceHeight;
+    private bool _screenInfoRefreshPending;
 
     private long _lastFrameTime;
     private int _targetFrameIntervalMs = MinimumFrameIntervalMs;
@@ -77,6 +78,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             _hWnd = hWnd;
             (_region, _captureRect) = GetGameScreenInfo(hWnd);
+            _screenInfoRefreshPending = false;
             _targetFrameIntervalMs = ResolveTargetFrameInterval(settings);
 
             if (_captureHdrRequested)
@@ -311,6 +313,12 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 }
                 else
                 {
+                    if (_screenInfoRefreshPending && !TryRefreshGameScreenInfo())
+                    {
+                        // 帧池仍然有效，只跳过本帧并在下一帧继续查询窗口区域。
+                        return;
+                    }
+
                     try
                     {
                         // 从捕获的帧创建一个可以被访问的纹理
@@ -364,20 +372,26 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                         _pixelFormat,
                         2,
                         captureSize);
-                    _stagingTexture?.Dispose();
-                    _stagingTexture = null;
-                    _hdrOutputTexture?.Dispose();
-                    _hdrOutputTexture = null;
-                    _surfaceWidth = captureSize.Width;
-                    _surfaceHeight = captureSize.Height;
-                    (_region, _captureRect) = GetGameScreenInfo(_hWnd);
                 }
                 catch (Exception e)
                 {
                     Debug.WriteLine($"Failed to recreate capture frame pool: {e}");
                     // 当前回调持有写锁，不能同步 Stop；排队到回调退出后再安全释放当前会话。
                     ScheduleStopAfterFramePoolFailure(sender);
+                    return;
                 }
+
+                // Recreate 已成功，后续窗口查询失败不能再把健康帧池当作损坏会话停止。
+                _stagingTexture?.Dispose();
+                _stagingTexture = null;
+                _hdrOutputTexture?.Dispose();
+                _hdrOutputTexture = null;
+                // 旧帧尺寸/区域已失效；刷新成功前不向识别层暴露过期画面。
+                _latestFrame?.Dispose();
+                _latestFrame = null;
+                _surfaceWidth = captureSize.Width;
+                _surfaceHeight = captureSize.Height;
+                _screenInfoRefreshPending = !TryRefreshGameScreenInfo();
             }
         }
         finally
@@ -440,6 +454,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _latestFrame?.Dispose();
         _latestFrame = null;
         _captureRect = null;
+        _screenInfoRefreshPending = false;
         _stagingTexture?.Dispose();
         _stagingTexture = null;
         _hdrOutputTexture?.Dispose();
@@ -454,6 +469,21 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _d3dDevice = null;
         _sharpDxDevice?.Dispose();
         _sharpDxDevice = null;
+    }
+
+    private bool TryRefreshGameScreenInfo()
+    {
+        try
+        {
+            (_region, _captureRect) = GetGameScreenInfo(_hWnd);
+            _screenInfoRefreshPending = false;
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine($"Failed to refresh game screen info: {e}");
+            return false;
+        }
     }
 
     private void ScheduleStopAfterFramePoolFailure(Direct3D11CaptureFramePool failedFramePool)
