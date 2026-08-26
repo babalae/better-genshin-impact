@@ -18,6 +18,7 @@ public partial class SharedSurfaceCapture : IGameCapture
 
     // D3D 设备
     private Device? _d3dDevice;
+    private DeviceContext? _d3dContext;
 
     // 截图区域
     private ResourceRegion? _region;
@@ -31,6 +32,7 @@ public partial class SharedSurfaceCapture : IGameCapture
     private int _surfaceHeight;
 
     public bool IsCapturing { get; private set; }
+    public CaptureColorMode ColorMode => CaptureColorMode.Sdr;
 
     [LibraryImport("user32.dll", EntryPoint = "DwmGetDxSharedSurface", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -48,6 +50,7 @@ public partial class SharedSurfaceCapture : IGameCapture
         User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
         (_region, _captureRect) = GetGameScreenInfo(hWnd);
         _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
+        _d3dContext = _d3dDevice.ImmediateContext;
 
         IsCapturing = true;
     }
@@ -90,7 +93,7 @@ public partial class SharedSurfaceCapture : IGameCapture
     {
         lock (LockObject)
         {
-            if (_d3dDevice == null)
+            if (_d3dDevice == null || _d3dContext == null)
             {
                 Debug.WriteLine("D3Device is null.");
                 return null;
@@ -123,7 +126,7 @@ public partial class SharedSurfaceCapture : IGameCapture
                 }
 
                 _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
-                var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
+                var mat = _stagingTexture.CreateMat(_d3dContext, surfaceTexture, _region);
                 if (mat == null)
                 {
                     return null;
@@ -134,8 +137,14 @@ public partial class SharedSurfaceCapture : IGameCapture
             catch (SharpDXException e)
             {
                 Debug.WriteLine($"SharpDXException: {e.Descriptor}");
+                // staging texture 绑定旧设备；设备重建时必须一并丢弃，禁止跨设备 Copy/Map。
+                _stagingTexture?.Dispose();
+                _stagingTexture = null;
+                _d3dContext?.Dispose();
+                _d3dContext = null;
                 _d3dDevice?.Dispose();
                 _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport);
+                _d3dContext = _d3dDevice.ImmediateContext;
             }
 
             return null;
@@ -149,6 +158,8 @@ public partial class SharedSurfaceCapture : IGameCapture
             _stagingTexture?.Dispose();
             _stagingTexture = null;
             _captureRect = null;
+            _d3dContext?.Dispose();
+            _d3dContext = null;
             _d3dDevice?.Dispose();
             _d3dDevice = null;
             _hWnd = 0;

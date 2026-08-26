@@ -6,22 +6,26 @@ namespace Fischless.GameCapture.Graphics.Helpers;
 
 public static class Texture2DExtensions
 {
-    public static Mat? CreateMat(this Texture2D staging, Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null)
+    public static Mat? CreateMat(
+        this Texture2D staging,
+        DeviceContext context,
+        Texture2D surfaceTexture,
+        ResourceRegion? region = null)
     {
         try
         {
             // Copy data
             if (region != null)
             {
-                d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, region, staging, 0);
+                context.CopySubresourceRegion(surfaceTexture, 0, region, staging, 0);
             }
             else
             {
-                d3dDevice.ImmediateContext.CopyResource(surfaceTexture, staging);
+                context.CopyResource(surfaceTexture, staging);
             }
 
             // 映射纹理以便CPU读取
-            var dataBox = d3dDevice.ImmediateContext.MapSubresource(
+            var dataBox = context.MapSubresource(
                 staging,
                 0,
                 MapMode.Read,
@@ -35,7 +39,7 @@ public static class Texture2DExtensions
             }
             finally
             {
-                d3dDevice.ImmediateContext.UnmapSubresource(staging, 0);
+                context.UnmapSubresource(staging, 0);
             }
         }
         catch (Exception e)

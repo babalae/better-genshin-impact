@@ -639,7 +639,7 @@ public class Avatar
     private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
         using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).QRectForClassify);
-        var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
+        var result = QBurstClassifierLazy.Value.Run(predictor => predictor.Classify(qRa.CacheImage));
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
         // Logger.LogInformation("Q技能冷却分类：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);

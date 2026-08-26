@@ -7,34 +7,46 @@ using System.Linq;
 using System.Text.Json;
 using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
-using Microsoft.ML.OnnxRuntime;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
 public class BgiYoloPredictor : IDisposable
 {
     private readonly BgiOnnxModel _model;
-
-
     private readonly Lazy<YoloPredictor> _lazyPredictor;
+    private readonly object _lifecycleLock = new();
+    private bool _disposed;
 
     /// <summary>
     /// 使用 BgiOnnxFactory 创建这个类的实例
     /// </summary>
     /// <param name="onnxModel">模型</param>
-    /// <param name="modelPath">实际要加载的模型文件的绝对路径，在使用模型缓存的场景下可能有差别</param>
-    /// <param name="sessionOptions">sessionOptions</param>
-    protected internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions)
+    /// <param name="predictorFactory">延迟创建底层预测器，并在工厂内部处理 provider 回退。</param>
+    protected internal BgiYoloPredictor(BgiOnnxModel onnxModel, Func<YoloPredictor> predictorFactory)
     {
         _model = onnxModel;
-        _lazyPredictor = new Lazy<YoloPredictor>(() => new YoloPredictor(modelPath,
-            new YoloPredictorOptions
+        _lazyPredictor = new Lazy<YoloPredictor>(() =>
+        {
+            lock (_lifecycleLock)
             {
-                SessionOptions = sessionOptions
-            }));
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                return predictorFactory();
+            }
+        });
     }
 
-    public YoloPredictor Predictor => _lazyPredictor.Value;
+    /// <summary>
+    /// 在预测器生命周期锁内执行一次推理，确保 Dispose 不会释放仍在使用的原生会话。
+    /// </summary>
+    public TResult Run<TResult>(Func<YoloPredictor, TResult> inference)
+    {
+        ArgumentNullException.ThrowIfNull(inference);
+        lock (_lifecycleLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return inference(_lazyPredictor.Value);
+        }
+    }
 
     /// <summary>
     /// 检测
@@ -43,7 +55,7 @@ public class BgiYoloPredictor : IDisposable
     /// <returns>类别-矩形框</returns>
     public Dictionary<string, List<Rect>> Detect(ImageRegion region)
     {
-        var result = Predictor.Detect(region.CacheImage);
+        var result = Run(predictor => predictor.Detect(region.CacheImage));
 
 
         var dict = new Dictionary<string, List<Rect>>();
@@ -72,10 +84,21 @@ public class BgiYoloPredictor : IDisposable
 
     public void Dispose()
     {
-        if (_lazyPredictor.IsValueCreated)
+        lock (_lifecycleLock)
         {
-            Predictor.Dispose();
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            if (_lazyPredictor.IsValueCreated)
+            {
+                _lazyPredictor.Value.Dispose();
+            }
         }
+
+        GC.SuppressFinalize(this);
     }
 
     ~BgiYoloPredictor()

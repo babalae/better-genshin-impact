@@ -27,7 +27,8 @@ internal sealed class SileroVadDetector : IDisposable
             throw new FileNotFoundException("Silero VAD 模型文件不存在", modelPath);
         }
 
-        _session = new InferenceSession(modelPath, CreateSessionOptions());
+        using var sessionOptions = CreateSessionOptions();
+        _session = new InferenceSession(modelPath, sessionOptions);
     }
 
     public void Reset()

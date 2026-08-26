@@ -35,15 +35,31 @@ public static class Direct3D11Helper
         return CreateDevice(false);
     }
 
-    private static Device? d3dDevice;
-
     public static IDirect3DDevice CreateDevice(bool useWARP)
     {
-        d3dDevice ??= new Device(
+        using var sharpDxDevice = CreateSharpDxDevice(useWARP);
+        return CreateDirect3DDeviceFromSharpDXDevice(sharpDxDevice);
+    }
+
+    public static IDirect3DDevice CreateDevice(out Device sharpDxDevice, bool useWARP = false)
+    {
+        sharpDxDevice = CreateSharpDxDevice(useWARP);
+        try
+        {
+            return CreateDirect3DDeviceFromSharpDXDevice(sharpDxDevice);
+        }
+        catch
+        {
+            sharpDxDevice.Dispose();
+            throw;
+        }
+    }
+
+    private static Device CreateSharpDxDevice(bool useWARP)
+    {
+        return new Device(
             useWARP ? SharpDX.Direct3D.DriverType.Software : SharpDX.Direct3D.DriverType.Hardware,
             DeviceCreationFlags.BgraSupport);
-        var device = CreateDirect3DDeviceFromSharpDXDevice(d3dDevice);
-        return device;
     }
 
     public static IDirect3DDevice CreateDirect3DDeviceFromSharpDXDevice(Device d3dDevice)
@@ -74,7 +90,12 @@ public static class Direct3D11Helper
         return d3dSurface;
     }
 
-    public static Texture2D CreateStagingTexture(Device device, int width, int height, ResourceRegion? region)
+    public static Texture2D CreateStagingTexture(
+        Device device,
+        int width,
+        int height,
+        ResourceRegion? region,
+        Format format = Format.B8G8R8A8_UNorm)
     {
         return new Texture2D(device, new Texture2DDescription
         {
@@ -82,7 +103,7 @@ public static class Direct3D11Helper
             Height = region == null ? height : region.Value.Bottom - region.Value.Top,
             MipLevels = 1,
             ArraySize = 1,
-            Format = Format.B8G8R8A8_UNorm,
+            Format = format,
             Usage = ResourceUsage.Staging,
             SampleDescription = new SampleDescription(1, 0),
             BindFlags = BindFlags.None,
@@ -99,7 +120,8 @@ public static class Direct3D11Helper
             Height = height,
             MipLevels = 1,
             ArraySize = 1,
-            Format = Format.B8G8R8A8_UNorm,
+            // B8G8R8A8_UNorm 在 D3D11 FL11.0 上不保证支持 typed UAV store。
+            Format = Format.R8G8B8A8_UNorm,
             Usage = ResourceUsage.Default,
             SampleDescription = new SampleDescription(1, 0),
             BindFlags = BindFlags.UnorderedAccess | BindFlags.ShaderResource,

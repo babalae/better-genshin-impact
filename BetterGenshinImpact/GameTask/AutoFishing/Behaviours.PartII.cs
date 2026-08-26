@@ -137,7 +137,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             var imageRegion = Screenshot.Get();
             Action<int> sleep = Sleep.Get();
-            var result = _bgiYoloPredictor.Predictor.Detect(imageRegion.CacheImage);
+            var result = _bgiYoloPredictor.Run(predictor => predictor.Detect(imageRegion.CacheImage));
             if (result.Any())
             {
                 Fishpond fishpond = new Fishpond(result);

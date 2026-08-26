@@ -81,7 +81,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="选择推理使用的硬件设备类型 默认使用CPU" />
+                                      Text="默认使用 CPU；内置运行时的 Gpu 模式使用 DirectML → CPU，自定义 ORT 构建可扩展其他 provider" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"

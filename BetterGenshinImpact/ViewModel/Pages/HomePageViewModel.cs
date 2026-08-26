@@ -39,6 +39,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -79,6 +80,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
+    private IntPtr _hdrRestartRequiredWindow;
+    private uint _hdrRestartRequiredProcessId;
 
     [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
@@ -108,8 +111,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         // https://github.com/babalae/better-genshin-impact/issues/394
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
-            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture
-            _modeNames = _modeNames.Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()).ToList();
+            // 两种 Windows Graphics Capture 模式具有相同的最低系统版本要求。
+            _modeNames = _modeNames.Where(x =>
+                    x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString() &&
+                    x.EnumName != CaptureModes.WindowsGraphicsCaptureHdr.ToString())
+                .ToList();
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
@@ -226,8 +232,17 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (hWnd != IntPtr.Zero)
             {
                 var captureWindow = new CaptureTestWindow();
-                captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
-                captureWindow.Show();
+                try
+                {
+                    captureWindow.StartCapture(hWnd, GetCaptureMode());
+                    captureWindow.Show();
+                }
+                catch (Exception e)
+                {
+                    captureWindow.Close();
+                    _logger.LogError(e, "测试截图器启动失败");
+                    ThemedMessageBox.Error($"测试截图器启动失败：{e.GetBaseException().Message}");
+                }
             }
             else
             {
@@ -237,7 +252,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     }
 
     [RelayCommand]
-    private void OnManualPickWindow()
+    private async Task OnManualPickWindow()
     {
         var picker = new PickerWindow();
         if (picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle, out var hWnd))
@@ -245,7 +260,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (hWnd != IntPtr.Zero)
             {
                 _hWnd = hWnd;
-                Start(hWnd);
+                var captureMode = GetCaptureMode();
+                if (!await DisableGenshinHdrIfNeededAsync(captureMode, hWnd))
+                {
+                    return;
+                }
+                Start(hWnd, captureMode);
             }
             else
             {
@@ -268,9 +288,14 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
-        await DisableGenshinHdrIfNeededAsync();
-
+        // 先把字符串配置归一化为有效枚举，后续 HDR 策略与实际启动共用同一个结果。
+        var captureMode = GetCaptureMode();
         var hWnd = SystemControl.FindGenshinImpactHandle();
+        if (!await DisableGenshinHdrIfNeededAsync(captureMode, hWnd))
+        {
+            return;
+        }
+
         if (hWnd == IntPtr.Zero)
         {
             if (Config.GenshinStartConfig.LinkedStartEnabled)
@@ -299,28 +324,89 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             }
         }
 
-        Start(hWnd);
+        Start(hWnd, captureMode);
     }
 
-    private Task DisableGenshinHdrIfNeededAsync()
+    private async Task<bool> DisableGenshinHdrIfNeededAsync(CaptureModes captureMode, IntPtr runningGameHandle)
     {
+        if (captureMode == CaptureModes.WindowsGraphicsCaptureHdr)
+        {
+            return true;
+        }
+
+        if (IsSameGameProcessWaitingForHdrRestart(runningGameHandle))
+        {
+            await ShowHdrRestartRequiredAsync();
+            return false;
+        }
+
         if (!Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
         {
-            return Task.CompletedTask;
+            return true;
         }
 
         if (!GenshinHdrRegistryHelper.TryDisableHdr(out _))
         {
-            return Task.CompletedTask;
+            return true;
         }
 
-        // 这行日志可能看不到
         _logger.LogWarning(
             "检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
-        return Task.CompletedTask;
+        if (runningGameHandle != IntPtr.Zero)
+        {
+            // 注册表修改无法改变当前游戏进程；继续启动 SDR 捕获只会得到过曝/泛白画面。
+            MarkGameProcessWaitingForHdrRestart(runningGameHandle);
+            await ShowHdrRestartRequiredAsync();
+            return false;
+        }
+
+        return true;
     }
 
-    private void Start(IntPtr hWnd)
+    private bool IsSameGameProcessWaitingForHdrRestart(IntPtr runningGameHandle)
+    {
+        if (_hdrRestartRequiredWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        if (runningGameHandle == IntPtr.Zero)
+        {
+            ClearHdrRestartRequirement();
+            return false;
+        }
+
+        _ = User32.GetWindowThreadProcessId(runningGameHandle, out var processId);
+        var isSameProcess = _hdrRestartRequiredProcessId != 0 && processId != 0
+            ? processId == _hdrRestartRequiredProcessId
+            : runningGameHandle == _hdrRestartRequiredWindow;
+        if (!isSameProcess)
+        {
+            ClearHdrRestartRequirement();
+        }
+
+        return isSameProcess;
+    }
+
+    private void MarkGameProcessWaitingForHdrRestart(IntPtr runningGameHandle)
+    {
+        _hdrRestartRequiredWindow = runningGameHandle;
+        _ = User32.GetWindowThreadProcessId(runningGameHandle, out _hdrRestartRequiredProcessId);
+    }
+
+    private void ClearHdrRestartRequirement()
+    {
+        _hdrRestartRequiredWindow = IntPtr.Zero;
+        _hdrRestartRequiredProcessId = 0;
+    }
+
+    private static async Task ShowHdrRestartRequiredAsync()
+    {
+        await ThemedMessageBox.WarningAsync(
+            "已关闭原神 HDR 设置，但游戏正在运行。请重启游戏后再启动 BetterGI，以确保截图颜色正确。");
+    }
+
+    private void Start(IntPtr hWnd, CaptureModes? requestedCaptureMode = null)
     {
         Debug.WriteLine($"原神启动句柄{hWnd}");
         lock (this)
@@ -334,7 +420,20 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (!TaskDispatcherEnabled)
             {
                 _hWnd = hWnd;
-                _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
+                try
+                {
+                    _taskDispatcher.Start(
+                        hWnd,
+                        requestedCaptureMode ?? GetCaptureMode(),
+                        Config.TriggerInterval);
+                }
+                catch (Exception e)
+                {
+                    _taskDispatcher.Stop();
+                    _logger.LogError(e, "截图器启动失败");
+                    ThemedMessageBox.Error($"截图器启动失败：{e.GetBaseException().Message}");
+                    return;
+                }
                 _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
                 _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
                 _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
@@ -351,15 +450,18 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     private CaptureModes GetCaptureMode()
     {
-        try
+        if (Config.CaptureMode.TryToCaptureMode(out var mode))
         {
-            return Config.CaptureMode.ToCaptureMode();
+            // 持久化配置可能来自更高版本系统，启动前仍需再次验证能力而不只过滤下拉列表。
+            if (OsVersionHelper.IsWindows10_1903_OrGreater ||
+                mode is not (CaptureModes.WindowsGraphicsCapture or CaptureModes.WindowsGraphicsCaptureHdr))
+            {
+                return mode;
+            }
         }
-        catch (Exception e)
-        {
-            TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
-            return CaptureModes.BitBlt;
-        }
+
+        TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
+        return CaptureModes.BitBlt;
     }
 
     private bool CanStopTrigger() => StopButtonEnabled;

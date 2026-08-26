@@ -8,29 +8,37 @@ public static class HdrToSdrShader
 Texture2D<half4> hdrTexture : register(t0);
 RWTexture2D<unorm float4> sdrTexture : register(u0);
 
-// http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-float3 LinearToSRGB(float3 RGB)
+cbuffer HdrParameters : register(b0)
 {
-    float3 S1 = sqrt(RGB);
-    float3 S2 = sqrt(S1);
-    float3 S3 = sqrt(S2);
-    return 0.662002687f * S1 + 0.684122060f * S2 - 0.323583601f * S3 - 0.0225411470f * RGB;
+    float SdrWhiteScale;
+    float3 Padding;
+};
+
+float3 LinearToSrgb(float3 linearColor)
+{
+    linearColor = max(linearColor, 0.0f);
+    float3 low = linearColor * 12.92f;
+    float3 high = 1.055f * pow(linearColor, 1.0f / 2.4f) - 0.055f;
+    return lerp(low, high, step(0.0031308f, linearColor));
 }
 
 [numthreads(16, 16, 1)]
 void CS_HDRtoSDR(uint3 id : SV_DispatchThreadID)
 {
-    // Load color
+    uint width;
+    uint height;
+    hdrTexture.GetDimensions(width, height);
+    if (id.x >= width || id.y >= height)
+    {
+        return;
+    }
+
     half4 hdrColor = hdrTexture[id.xy];
+    float3 normalizedLinearColor = saturate((float3)hdrColor.rgb * SdrWhiteScale);
+    float3 srgbColor = LinearToSrgb(normalizedLinearColor);
 
-    // HDR -> SDR (exposure)
-    float4 exposedColor = saturate(float4(hdrColor.rgb * 0.25, hdrColor.a));
-
-    // Linear RGB -> sRGB
-    float4 srgbColor = float4(LinearToSRGB(exposedColor.rgb), exposedColor.a);
-
-    // Store color
-    sdrTexture[id.xy] = (unorm float4)saturate(srgbColor);
+    // The UAV is RGBA8. Swap R/B so the CPU can keep decoding its bytes as BGRA -> BGR.
+    sdrTexture[id.xy] = (unorm float4)saturate(float4(srgbColor.b, srgbColor.g, srgbColor.r, hdrColor.a));
 }
 """;
 }

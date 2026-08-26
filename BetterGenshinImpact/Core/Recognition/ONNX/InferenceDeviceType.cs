@@ -2,8 +2,8 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
 public enum InferenceDeviceType
 {
-    Cpu,
-    GpuDirectMl,
-    Gpu,
-    OpenVino
+    Cpu = 0,
+    GpuDirectMl = 1,
+    Gpu = 2,
+    OpenVino = 3
 }

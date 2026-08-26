@@ -14,7 +14,7 @@ public class Predictor
 
     public Predictor()
     {
-        var options = new SessionOptions();
+        using var options = new SessionOptions();
         var modelPath = Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx");
         if (!File.Exists(modelPath)) throw new FileNotFoundException("自动钓鱼模型文件不存在", modelPath);
 

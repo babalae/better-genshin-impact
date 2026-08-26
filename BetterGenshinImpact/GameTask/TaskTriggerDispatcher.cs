@@ -150,9 +150,16 @@ namespace BetterGenshinImpact.GameTask
             GameCapture.Start(hWnd,
                 new Dictionary<string, object>()
                 {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt },
+                    { GraphicsCapture.TargetFrameIntervalSettingName, interval }
                 }
             );
+            TaskContext.Instance().CaptureColorMode = GameCapture.ColorMode;
+            if (mode == CaptureModes.WindowsGraphicsCaptureHdr &&
+                GameCapture.ColorMode != CaptureColorMode.HdrToSdr)
+            {
+                _logger.LogWarning("WindowsGraphicsCapture（HDR）未激活 HDR 管线，当前已回退为 SDR 捕获");
+            }
 
             // 使用 SetWinEventHook 监听窗口移动和大小变化事件
             _winEventProc = WinEventCallback;
@@ -174,6 +181,7 @@ namespace BetterGenshinImpact.GameTask
             _timer.Stop();
             ChatUiHotkeyGuard.Reset();
             GameCapture?.Stop();
+            TaskContext.Instance().CaptureColorMode = CaptureColorMode.Sdr;
             _gameRect = RECT.Empty;
             _prevGameActive = false;
             PictureInPictureService.Hide(resetManual: true);
@@ -373,6 +381,8 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
+                TaskContext.Instance().CaptureColorMode = captureFrame!.ColorMode;
+
                 if (shouldShowPictureInPicture && !active)
                 {
                     PictureInPictureService.Update(bitmap);
@@ -383,7 +393,11 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                using var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+                using var content = new CaptureContent(
+                    bitmap,
+                    _frameIndex,
+                    _timer.Interval,
+                    captureFrame.ColorMode);
                 ChatUiHotkeyGuard.UpdateVisualState(Bv.DetectChatUi(content.CaptureRectArea));
 
                 if (!hasEnabledTriggers)
