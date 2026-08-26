@@ -56,11 +56,18 @@ public static class WechatClawbotHelper
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                // 用户主动取消
                 throw;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // 内部登录超时（timeoutCts 触发），转成明确错误而不是“已取消”
+                throw new NotifierException("登录超时，请重试");
             }
             catch (OperationCanceledException)
             {
-                // 长轮询超时，视为 wait 继续
+                // 单次长轮询超时，视为 wait 继续；退避 1 秒再查，避免空转
+                await Task.Delay(1000, CancellationToken.None);
                 continue;
             }
 
@@ -88,20 +95,36 @@ public static class WechatClawbotHelper
                     break;
             }
 
-            await Task.Delay(1000, ct);
+            try
+            {
+                await Task.Delay(1000, ct);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // 用户取消
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                // 登录超时（timeoutCts 在轮询间隔内触发）→ 转明确错误
+                throw new NotifierException("登录超时，请重试");
+            }
         }
 
         throw new NotifierException("登录超时，请重试");
     }
 
     /// <summary>
-    /// 一次性验证码绑定：长轮询 getupdates，等待用户发送验证码，返回 to_user_id 和 context_token。
+    /// 一次性验证码绑定：长轮询 getupdates，等待扫码用户发送验证码，返回 to_user_id 和 context_token。
     /// </summary>
     /// <param name="botToken">扫码登录获得的 bot_token</param>
+    /// <param name="expectedUserId">扫码登录返回的用户 ID（ilink_user_id），仅接受该用户发送的验证码，
+    /// 防止绑定窗口内其他用户误发导致绑错账号</param>
     /// <param name="onVerifyCode">生成验证码后的回调，用于 UI 提示用户发送该验证码</param>
     /// <param name="cancellationToken">取消令牌（用户点击取消时触发）</param>
     public static async Task<WechatClawbotBindResult> BindAsync(
         string botToken,
+        string expectedUserId,
         Action<string> onVerifyCode,
         CancellationToken cancellationToken)
     {
@@ -146,7 +169,11 @@ public static class WechatClawbotHelper
             foreach (var msg in resp.Msgs ?? [])
             {
                 var text = ExtractText(msg);
-                if (text != null && text.Contains(verifyCode) && !string.IsNullOrWhiteSpace(msg.FromUserId))
+                // 仅接受扫码用户发来的验证码消息，防止其他用户误绑
+                var isExpectedSender = !string.IsNullOrWhiteSpace(expectedUserId)
+                    ? string.Equals(msg.FromUserId, expectedUserId, StringComparison.Ordinal)
+                    : !string.IsNullOrWhiteSpace(msg.FromUserId);
+                if (text != null && text.Contains(verifyCode) && isExpectedSender)
                     return new WechatClawbotBindResult(msg.FromUserId!, msg.ContextToken ?? string.Empty, buf);
             }
         }

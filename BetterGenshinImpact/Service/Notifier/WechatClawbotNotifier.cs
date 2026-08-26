@@ -42,7 +42,11 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     {
         _httpClient = httpClient;
         _config = config;
-        _session = new WechatClawbotSession(config);
+        _session = new WechatClawbotSession(
+            config.WechatClawbotBotToken,
+            config.WechatClawbotToUserId,
+            config.WechatClawbotContextToken,
+            config.WechatClawbotGetUpdatesBuf);
         _session.Start();
     }
 
@@ -256,7 +260,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
         using var response = await _httpClient.SendAsync(request, ct);
         var text = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)
-            throw new NotifierException($"getuploadurl HTTP {(int)response.StatusCode}: {text}");
+            throw new WechatClawbotHttpException((int)response.StatusCode, $"getuploadurl HTTP {(int)response.StatusCode}: {text}");
 
         using var doc = JsonDocument.Parse(text);
         var root = doc.RootElement;
@@ -287,7 +291,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
         if (!response.IsSuccessStatusCode)
         {
             var errText = await response.Content.ReadAsStringAsync(ct);
-            throw new NotifierException($"CDN 上传失败 HTTP {(int)response.StatusCode}: {errText}");
+            throw new WechatClawbotHttpException((int)response.StatusCode, $"CDN 上传失败 HTTP {(int)response.StatusCode}: {errText}");
         }
 
         var downloadParam = response.Headers.TryGetValues("x-encrypted-param", out var values)
@@ -322,6 +326,8 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     /// </summary>
     private static bool IsRetryable(System.Exception ex)
     {
+        if (ex is WechatClawbotHttpException whe)
+            return (whe.StatusCode >= 500 && whe.StatusCode <= 599) || whe.StatusCode == 429 || whe.StatusCode == 400;
         if (ex is HttpRequestException hre)
         {
             var statusCode = hre.StatusCode;
@@ -363,4 +369,12 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     private sealed record WechatClawbotUploadUrl(string? UploadParam, string? UploadFullUrl);
 
     private sealed record WechatClawbotUploadedImage(string DownloadParam, byte[] AesKey, int CiphertextSize);
+
+    /// <summary>
+    /// 携带 HTTP 状态码的通知异常，供重试判定使用（避免把 401/403/404 等客户端错误当成可重试）。
+    /// </summary>
+    private sealed class WechatClawbotHttpException(int statusCode, string message) : NotifierException(message)
+    {
+        public int StatusCode { get; } = statusCode;
+    }
 }

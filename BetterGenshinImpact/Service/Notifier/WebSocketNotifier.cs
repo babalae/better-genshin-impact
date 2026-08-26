@@ -74,8 +74,10 @@ namespace BetterGenshinImpact.Service.Notifier
 
         public void Dispose()
         {
+            // 只释放自己拥有的 WebSocket；不取消共享的 _webSocketCts——
+            // 该令牌源由 NotificationService 拥有并在应用关闭时统一取消，
+            // 刷新通知器时若在此取消会导致重建后的 WebSocketNotifier 继续使用已取消令牌。
             _webSocket.Dispose();
-            _cts.Cancel();
         }
 
         public async Task SendNotificationAsync(BaseNotificationData notificationData)

@@ -651,6 +651,8 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
         try
         {
+            // 先完成整个登录 + 绑定流程，成功后一次性提交全部凭证，
+            // 避免中途取消/失败时遗留“新 BotToken + 旧 ToUserId”的混合状态。
             var login = await WechatClawbotHelper.LoginAsync(
                 qrCodeUrl =>
                 {
@@ -670,11 +672,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 },
                 _wechatClawbotBindCts.Token);
 
-            Config.NotificationConfig.WechatClawbotBotToken = login.BotToken;
             WechatClawbotStatus = "登录成功，正在等待绑定消息…";
 
             var bind = await WechatClawbotHelper.BindAsync(
                 login.BotToken,
+                login.UserId,
                 code =>
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -684,6 +686,8 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 },
                 _wechatClawbotBindCts.Token);
 
+            // 全部成功后再一次性提交配置
+            Config.NotificationConfig.WechatClawbotBotToken = login.BotToken;
             Config.NotificationConfig.WechatClawbotToUserId = bind.ToUserId;
             Config.NotificationConfig.WechatClawbotContextToken = bind.ContextToken;
             Config.NotificationConfig.WechatClawbotGetUpdatesBuf = bind.GetUpdatesBuf;
