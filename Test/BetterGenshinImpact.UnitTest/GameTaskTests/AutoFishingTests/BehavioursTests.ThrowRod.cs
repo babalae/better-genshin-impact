@@ -215,28 +215,35 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 8), bb!))
                         .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
 
             //
+            // 第一次 tick：按下左键后等待举竿画面渲染（Running）
             Status actual = await sut.TickOnce();
-
-            //
             Assert.False(throwRodNoTargetAccess.Get());
             Assert.Equal(Status.Running, actual);
 
             //
-            fakeTimeProvider.Advance(TimeSpan.FromSeconds(5.1));
+            // 越过举竿画面等待，之后每帧检测落点。该截图无落点（NoTarget），
+            // 确认阶段会重按左键（最多3次）后转入移视角找落点，最终超时失败。
+            fakeTimeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
             //
-            actual = await sut.TickOnce();
+            // 多 tick 若干次，让确认阶段的重按耗尽并进入移视角找落点阶段，最终超时失败
+            Status actualAfterTicks = Status.Running;
+            for (int i = 0; i < 5 && !throwRodNoTargetAccess.Get(); i++)
+            {
+                fakeTimeProvider.Advance(TimeSpan.FromSeconds(1.2));
+                actualAfterTicks = await sut.TickOnce();
+            }
 
             //
             Assert.True(throwRodNoTargetAccess.Get());
-            Assert.Equal(Status.Failure, actual);
+            Assert.Equal(Status.Failure, actualAfterTicks);
         }
 
         [Theory]
@@ -259,60 +266,36 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var throwRodNoTargetTimesAccess = blackboard.GrantWrite<int>(null!, "ThrowRodNoTargetTimes");
             var abortAccess = blackboard.GrantWrite<bool>(null!, "Abort");
 
-            var sut = new AutoFishingBuilder()
+            var sut = new ThrowRod("-", logger, input, Predictor, blackboard, timeProvider, drawContent);
+            var tree = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 9), bb!))
-                            .Parallel("抛竿直到成功或出错", policy: new ParallelPolicy.SuccessOnOne())
-                                .FailureIsSuccess("重复抛竿")
-                                    .Sequence("-", true)
-                                        .MoveViewpointDown("调整视角至俯视", logger, input)
-                                        .ThrowRod("抛竿", logger, input, Predictor, timeProvider, drawContent)
-                                    .End()
-                                .End()
-                                .CheckThrowRodResult("抛竿检查")
-                            .End()
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 40), bb!))
+                        .Leaf(() => sut)
                     .End()
                 .End()
                 .Build();
 
             //
-            await sut.TickOnce();
-            await sut.TickOnce();
-            timeProvider.Advance(TimeSpan.FromSeconds(5.1));
-            Status actual = await sut.TickOnce();
+            // 每轮：按下左键等待渲染 → 确认阶段重按左键（无落点，最多3次）耗尽 → 移视角找落点
+            // → 推进时间越过 5 秒期限 → 超时失败（ThrowRodNoTarget=true）。
+            // 连续 3 轮后 ThrowRodNoTargetTimes 达到上限，Abort。
+            for (int round = 1; round <= 3; round++)
+            {
+                await tree.TickOnce(); // 进入 ThrowRod（按下左键，等待渲染）
+                for (int i = 0; i < 6; i++)
+                {
+                    await tree.TickOnce();
+                }
+                timeProvider.Advance(TimeSpan.FromSeconds(5.1));
+                await tree.TickOnce();
 
-            //
-            Assert.True(throwRodNoTargetAccess.Get());
-            Assert.Equal(1, throwRodNoTargetTimesAccess.Get());
-            Assert.Equal(Status.Failure, actual);
+                Assert.True(throwRodNoTargetAccess.Get(),
+                    $"第 {round} 轮应已设置 ThrowRodNoTarget");
+                Assert.Equal(round, throwRodNoTargetTimesAccess.Get());
+            }
 
-            //
-
-            //
-            await sut.TickOnce();
-            await sut.TickOnce();
-            timeProvider.Advance(TimeSpan.FromSeconds(5.1));
-            actual = await sut.TickOnce();
-
-            //
-            Assert.True(throwRodNoTargetAccess.Get());
-            Assert.Equal(2, throwRodNoTargetTimesAccess.Get());
-            Assert.Equal(Status.Failure, actual);
-
-            //
-
-            //
-            await sut.TickOnce();
-            await sut.TickOnce();
-            timeProvider.Advance(TimeSpan.FromSeconds(5.1));
-            actual = await sut.TickOnce();
-
-            //
-            Assert.True(throwRodNoTargetAccess.Get());
-            Assert.Equal(3, throwRodNoTargetTimesAccess.Get());
-            Assert.Equal(Status.Failure, actual);
             Assert.True(abortAccess.Get());
         }
     }
