@@ -53,6 +53,17 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
+        <!-- 自定义背景图层：置于最底层（首个子元素），覆盖标题栏与内容区，不响应鼠标 -->
+        <Image Grid.Row="0"
+               Grid.RowSpan="2"
+               Grid.Column="0"
+               Grid.ColumnSpan="2"
+               IsHitTestVisible="False"
+               Opacity="{Binding Config.CommonConfig.MainBackgroundOpacity, FallbackValue=0.35}"
+               Source="{Binding MainBackgroundSource, TargetNullValue={x:Null}}"
+               Stretch="{Binding Config.CommonConfig.MainBackgroundStretch, FallbackValue=UniformToFill}"
+               Visibility="{Binding IsMainBackgroundVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
         <ui:NavigationView x:Name="RootNavigation"
                            Grid.Column="0"
                            Grid.Row="1"

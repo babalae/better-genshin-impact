@@ -528,6 +528,38 @@ public partial class CommonSettingsPageViewModel : ViewModel
             Config.MaskWindowConfig.CrosshairImagePath = dialog.FileName;
         }
     }
+
+    [RelayCommand]
+    private void SelectMainBackgroundImage()
+    {
+        var dialog = new OpenFileDialog
+        {
+            // 注意：不声明 *.webp —— WPF BitmapImage 原生不支持 WebP 解码，声明了会导致用户选中后加载失败
+            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
+            Title = "选择主窗口背景图片"
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            // 选图后弹出编辑器：可旋转/裁剪后保存副本使用，也可直接使用原图
+            var editor = new ImageEditWindow(dialog.FileName)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            if (editor.ShowDialog() == true && !string.IsNullOrEmpty(editor.ResultImagePath))
+            {
+                // 主窗口 ViewModel 通过订阅配置变更事件实时刷新背景
+                Config.CommonConfig.MainBackgroundImagePath = editor.ResultImagePath;
+                Config.CommonConfig.MainBackgroundEnabled = true;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void ClearMainBackgroundImage()
+    {
+        Config.CommonConfig.MainBackgroundImagePath = string.Empty;
+        Config.CommonConfig.MainBackgroundEnabled = false;
+    }
 }
 
 // 只服务于设置页：把遮罩显示开关、样式配置和辅助入口组织成折叠分组。

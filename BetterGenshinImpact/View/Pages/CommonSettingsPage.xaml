@@ -7,6 +7,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
+      xmlns:media="clr-namespace:System.Windows.Media;assembly=PresentationCore"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
@@ -113,6 +114,162 @@
             </ui:CardControl.Header>
         </ui:CardControl>
 
+
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Image24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="主窗口自定义背景"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="使用本地图片装饰软件主窗口，可调整透明度和填充方式"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.CommonConfig.MainBackgroundEnabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="背景图片"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="支持常见图像格式，选择后可裁剪或旋转"
+                                  TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Margin="16,0,36,0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <ui:Button Margin="0,0,8,0"
+                                   Appearance="Primary"
+                                   Command="{Binding SelectMainBackgroundImageCommand}"
+                                   Content="选择图片"
+                                   Icon="{ui:SymbolIcon FolderOpen24}" />
+                        <ui:Button Command="{Binding ClearMainBackgroundImageCommand}"
+                                   Content="清除"
+                                   Icon="{ui:SymbolIcon Delete24}" />
+                    </StackPanel>
+                    <ui:TextBox Grid.Row="2"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Margin="0,12,36,0"
+                                IsReadOnly="True"
+                                PlaceholderText="尚未选择背景图片"
+                                Text="{Binding Config.CommonConfig.MainBackgroundImagePath, Mode=OneWay}"
+                                ToolTip="{Binding Config.CommonConfig.MainBackgroundImagePath, Mode=OneWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="背景不透明度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="数值越低，背景越淡，界面文字越清晰"
+                                  TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Margin="16,0,36,0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <Slider Width="180"
+                                VerticalAlignment="Center"
+                                IsSnapToTickEnabled="True"
+                                Maximum="1"
+                                Minimum="0.05"
+                                TickFrequency="0.05"
+                                Value="{Binding Config.CommonConfig.MainBackgroundOpacity, Mode=TwoWay}" />
+                        <TextBlock MinWidth="44"
+                                   Margin="12,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                   FontSize="14"
+                                   Text="{Binding Config.CommonConfig.MainBackgroundOpacity, StringFormat={}{0:P0}}" />
+                    </StackPanel>
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="图片填充方式"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="控制图片在主窗口中的缩放和裁切方式"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              MinWidth="120"
+                              Margin="16,0,36,0"
+                              VerticalAlignment="Center"
+                              SelectedValue="{Binding Config.CommonConfig.MainBackgroundStretch, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <!-- Tag 必须是 Stretch 枚举值本身（而非字符串），SelectedValue 按对象相等匹配，
+                             与上方 CrosshairType 选择器写法保持一致，否则配置无法回显 -->
+                        <ComboBoxItem Content="填充" Tag="{x:Static media:Stretch.Fill}" />
+                        <ComboBoxItem Content="等比填充" Tag="{x:Static media:Stretch.UniformToFill}" />
+                        <ComboBoxItem Content="等比适应" Tag="{x:Static media:Stretch.Uniform}" />
+                        <ComboBoxItem Content="原始尺寸" Tag="{x:Static media:Stretch.None}" />
+                    </ComboBox>
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
