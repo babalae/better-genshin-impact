@@ -12,6 +12,7 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Windows.System;
 using Wpf.Ui.Violeta.Controls;
 
@@ -19,6 +20,9 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class NotificationSettingsPageViewModel : ObservableObject, IViewModel
 {
+    private static readonly Microsoft.Extensions.Logging.ILogger<NotificationSettingsPageViewModel> Logger =
+        App.GetLogger<NotificationSettingsPageViewModel>();
+
     private readonly NotificationService _notificationService;
     private readonly HashSet<string> _knownNotificationEventCodes;
     private bool _isSyncingNotificationEventSelection;
@@ -71,15 +75,27 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _qqStatus = string.Empty;
 
+    [ObservableProperty] private string _wechatClawbotStatus = string.Empty;
+
     /// <summary>
     /// 是否正在执行绑定流程（控制按钮显示为"绑定"或"取消"）
     /// </summary>
     [ObservableProperty] private bool _isBinding;
 
     /// <summary>
+    /// 是否正在执行微信 Clawbot 登录/绑定流程
+    /// </summary>
+    [ObservableProperty] private bool _isWechatClawbotBinding;
+
+    /// <summary>
     /// 绑定流程的取消令牌源，用于用户点击取消时中断 WebSocket 连接
     /// </summary>
     private CancellationTokenSource? _bindCts;
+
+    /// <summary>
+    /// 微信 Clawbot 登录/绑定流程的取消令牌源
+    /// </summary>
+    private CancellationTokenSource? _wechatClawbotBindCts;
 
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
@@ -533,6 +549,23 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         IsLoading = false;
     }
 
+    [RelayCommand]
+    private async Task OnTestWechatClawbotNotification()
+    {
+        IsLoading = true;
+        WechatClawbotStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<WechatClawbotNotifier>();
+
+        WechatClawbotStatus = res.Message;
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
     /// <summary>
     /// 绑定 QQ 按钮。连接 QQ 网关，等待用户发送验证码，自动回填 OpenID。
     /// 支持取消（用户点击取消时中断 WebSocket 连接）。
@@ -603,6 +636,84 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     private void OnCancelBindQq()
     {
         _bindCts?.Cancel();
+    }
+
+    /// <summary>
+    /// 微信 Clawbot 登录并绑定按钮。扫码登录获取 bot_token，再等待用户发送一次性验证码，
+    /// 自动回填 to_user_id 和 context_token。支持取消。
+    /// </summary>
+    [RelayCommand]
+    private async Task OnBindWechatClawbot()
+    {
+        IsWechatClawbotBinding = true;
+        WechatClawbotStatus = "正在获取登录二维码…";
+        _wechatClawbotBindCts = new CancellationTokenSource();
+
+        try
+        {
+            var login = await WechatClawbotHelper.LoginAsync(
+                qrCodeUrl =>
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        WechatClawbotStatus = "请用手机微信扫码登录 Clawbot";
+                        try
+                        {
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(qrCodeUrl) { UseShellExecute = true });
+                        }
+                        catch (System.Exception ex)
+                        {
+                            WechatClawbotStatus = $"请用手机微信扫码登录 Clawbot（二维码链接：{qrCodeUrl}）";
+                            Logger.LogWarning("打开微信 Clawbot 二维码链接失败: {Ex}", ex.Message);
+                        }
+                    });
+                },
+                _wechatClawbotBindCts.Token);
+
+            Config.NotificationConfig.WechatClawbotBotToken = login.BotToken;
+            WechatClawbotStatus = "登录成功，正在等待绑定消息…";
+
+            var bind = await WechatClawbotHelper.BindAsync(
+                login.BotToken,
+                code =>
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        WechatClawbotStatus = $"请给 Clawbot 发送验证码 [{code}] 完成绑定";
+                    });
+                },
+                _wechatClawbotBindCts.Token);
+
+            Config.NotificationConfig.WechatClawbotToUserId = bind.ToUserId;
+            Config.NotificationConfig.WechatClawbotContextToken = bind.ContextToken;
+            Config.NotificationConfig.WechatClawbotGetUpdatesBuf = bind.GetUpdatesBuf;
+            WechatClawbotStatus = "绑定成功";
+            Toast.Success("微信 Clawbot 绑定成功");
+        }
+        catch (OperationCanceledException)
+        {
+            WechatClawbotStatus = "已取消登录/绑定";
+        }
+        catch (System.Exception ex)
+        {
+            WechatClawbotStatus = $"登录/绑定失败：{ex.Message}";
+            Toast.Error($"登录/绑定失败：{ex.Message}");
+        }
+        finally
+        {
+            IsWechatClawbotBinding = false;
+            _wechatClawbotBindCts.Dispose();
+            _wechatClawbotBindCts = null;
+        }
+    }
+
+    /// <summary>
+    /// 取消微信 Clawbot 登录/绑定按钮。
+    /// </summary>
+    [RelayCommand]
+    private void OnCancelBindWechatClawbot()
+    {
+        _wechatClawbotBindCts?.Cancel();
     }
 
     [RelayCommand]

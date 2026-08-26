@@ -53,6 +53,8 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public void Dispose()
     {
+        // 先释放所有通知器（含微信 Clawbot 后台长轮询会话），再释放共享 HttpClient
+        _notifierManager.RemoveAllNotifiers();
         // _webSocketCts?.Cancel();
         _webSocketCts?.Dispose();
         _notifyHttpClient?.Dispose();
@@ -113,6 +115,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeMeowNotifier();
         InitializeGotifyNotifier();
         InitializeQqNotifier();
+        InitializeWechatClawbotNotifier();
 
         // 添加新通知渠道时，在此处添加对应的初始化方法调用
     }
@@ -360,6 +363,19 @@ public class NotificationService : IHostedService, IDisposable
             _notificationConfig.QqAppId,
             _notificationConfig.QqClientSecret,
             _notificationConfig.QqOpenId
+        ));
+    }
+
+    /// <summary>
+    ///     初始化微信 Clawbot 通知器
+    /// </summary>
+    private void InitializeWechatClawbotNotifier()
+    {
+        if (_notificationConfig?.WechatClawbotNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new WechatClawbotNotifier(
+            _notifyHttpClient,
+            _notificationConfig
         ));
     }
 

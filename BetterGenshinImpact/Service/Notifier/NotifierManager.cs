@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,6 +30,14 @@ public class NotifierManager
 
     public void RemoveAllNotifiers()
     {
+        foreach (var notifier in _notifiers)
+        {
+            if (notifier is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+
         _notifiers.Clear();
     }
 
