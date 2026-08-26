@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -44,13 +45,13 @@ public class CheckRewardsTask
 
     public string Name => "检查奖励并通知的任务";
 
-    private static RecognitionObject GetConfirmRa(bool isOcrMatch = false,params string[] targetText)
+    private static RecognitionObject GetConfirmRa(bool isOcrMatch = false, params string[] targetText)
     {
-        using var screenArea = CaptureToRectArea();
-        var x = (int)(screenArea.Width * 0.1);
-        var y = (int)(screenArea.Height * 0.1);
-        var width = (int)(screenArea.Width * 0.3);
-        var height = (int)(screenArea.Height * 0.7);
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var x = (int)(captureRect.Width * 0.1);
+        var y = (int)(captureRect.Height * 0.1);
+        var width = (int)(captureRect.Width * 0.3);
+        var height = (int)(captureRect.Height * 0.7);
 
         return isOcrMatch ? RecognitionObject.OcrMatch(x, y, width, height, targetText) :
             RecognitionObject.Ocr(x, y, width, height);
@@ -69,7 +70,7 @@ public class CheckRewardsTask
                 await StartOriginalAsync(ct);
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
         {
             Logger.LogDebug(e, "检查奖励并通知的任务异常");
             Logger.LogError("检查奖励并通知的任务异常: {Msg}", e.Message);
@@ -130,10 +131,14 @@ public class CheckRewardsTask
             if (resin != null)
             {
                 var result = resin.Value;
-                resinOk = result.Condensed.HasValue;
+                // 浓缩树脂为零时游戏顶栏不显示图标（图标缺失即视为 0）；
+                // 只有图标已匹配但数量 OCR 失败才算识别失败
+                resinOk = result.Condensed.HasValue || result.CondensedIconRect == null;
                 var condensedText = result.Condensed is int condensed
                     ? $"浓缩树脂 {condensed}"
-                    : "浓缩树脂识别失败";
+                    : result.CondensedIconRect == null
+                        ? "浓缩树脂 0"
+                        : "浓缩树脂识别失败";
                 resinText = $"{condensedText}；原粹树脂 {result.Current}/{result.Max}";
                 using var mapCloseButton = capture.Find(RecognitionAssets.Get(
                     "QuickTeleport", "MapCloseButton", capture));
@@ -146,9 +151,9 @@ public class CheckRewardsTask
                     result.OriginalIconRect, result.CondensedIconRect,
                     mapCloseButton.IsEmpty() ? null : mapCloseButton.Left, assetScale));
                 resinStrip = resinStripRegion.SrcMat.Clone();
-                if (!result.Condensed.HasValue)
+                if (!result.Condensed.HasValue && result.CondensedIconRect != null)
                 {
-                    Logger.LogWarning("汇总通知：大地图浓缩树脂识别失败");
+                    Logger.LogWarning("汇总通知：大地图浓缩树脂数量 OCR 失败");
                 }
             }
             else
@@ -156,7 +161,7 @@ public class CheckRewardsTask
                 Logger.LogWarning("汇总通知：大地图原粹树脂识别失败");
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
         {
             Logger.LogDebug(e, "汇总通知：读取体力异常");
             Logger.LogWarning("汇总通知：读取体力失败: {Msg}", e.Message);
@@ -203,7 +208,7 @@ public class CheckRewardsTask
                     (int)(1260 * assetScale), (int)(749 * assetScale))).SrcMat.Clone();
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
         {
             Logger.LogDebug(e, "汇总通知：读取委托状态异常");
             Logger.LogWarning("汇总通知：读取委托状态失败: {Msg}", e.Message);
@@ -315,7 +320,7 @@ public class CheckRewardsTask
         {
             await new ReturnMainUiTask().Start(ct);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
         {
             Logger.LogDebug(e, "汇总通知：回到主界面失败");
         }

@@ -73,17 +73,19 @@ public static class ResinRecognition
 
         var countText = OcrFactory.Paddle.OcrWithoutDetector(inverted);
 
-        // 顶栏文本为 "当前/上限"，上限固定为三位数(200)；斜杠可能被 OCR 认成 7 或 1，
-        // 因此删除全部非数字后按"后三位为上限、其余为当前值"切分
-        var digits = Regex.Replace(StringUtils.ConvertFullWidthNumToHalfWidth(countText), @"\D", "");
-        if (digits.Length < 4)
+        // 顶栏文本为 "当前/上限"，上限固定为三位数(200)；斜杠可能被 OCR 认成 1 或 7，
+        // 因此把 /、1、7 都作为分隔符处理。原粹树脂可在使用补充道具后暂时超过上限，
+        // 因此不校验 current <= max。
+        var match = Regex.Match(
+            StringUtils.ConvertFullWidthNumToHalfWidth(countText),
+            @"(\d{1,3})\s*[/17]\s*(2\d{2})");
+        if (!match.Success)
         {
             return null;
         }
 
-        if (!int.TryParse(digits[..^3], NumberStyles.None, CultureInfo.InvariantCulture, out var current)
-            || !int.TryParse(digits[^3..], NumberStyles.None, CultureInfo.InvariantCulture, out var max)
-            || current < 0 || max <= 0 || current > max)
+        if (!int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var current)
+            || !int.TryParse(match.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var max))
         {
             return null;
         }
