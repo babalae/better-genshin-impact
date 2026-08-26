@@ -373,10 +373,32 @@ public class NotificationService : IHostedService, IDisposable
     {
         if (_notificationConfig?.WechatClawbotNotificationEnabled != true) return;
 
+        // 微信会话状态（context_token / get_updates_buf）跨进程共享同一份 User/WechatClawbot 文件，
+        // 仅在主实例（Primary）维护长轮询会话，避免桌面分身等多实例用旧游标并发推进导致令牌互相覆盖。
+        if (!IsPrimaryInstance())
+            return;
+
         _notifierManager.RegisterNotifier(new WechatClawbotNotifier(
             _notifyHttpClient,
             _notificationConfig
         ));
+    }
+
+    /// <summary>
+    ///     是否为 BetterGI 主实例（Primary）。桌面分身 / WebView 等子实例不维护微信长轮询会话。
+    /// </summary>
+    private static bool IsPrimaryInstance()
+    {
+        try
+        {
+            var bootstrap = BetterGenshinImpact.Service.Instance.InstanceBootstrap.Current;
+            return bootstrap == null || bootstrap.Context.IsRoot;
+        }
+        catch (System.Exception)
+        {
+            // 无法判断时默认主实例行为，避免在单实例场景误禁用
+            return true;
+        }
     }
 
     /// <summary>
@@ -455,25 +477,12 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public async Task<NotificationTestResult> TestNotifierAsync<T>() where T : INotifier
     {
+        var testData = CreateTestNotificationData();
         try
         {
-            var notifier = _notifierManager.GetNotifier<T>();
-            if (notifier == null)
-            {
-                return NotificationTestResult.Error("通知类型未启用");
-            }
-
-            var testData = CreateTestNotificationData();
-            try
-            {
-                await notifier.SendAsync(testData);
-                return NotificationTestResult.Success();
-            }
-            finally
-            {
-                testData.Screenshot?.Dispose();
-                testData.Screenshot = null;
-            }
+            // 测试发送走管理器入口，纳入在途租约计数，避免发送期间释放通知器资源
+            var error = await _notifierManager.SendTestAsync<T>(testData);
+            return error == null ? NotificationTestResult.Success() : NotificationTestResult.Error(error);
         }
         catch (NotifierException ex)
         {
@@ -482,6 +491,11 @@ public class NotificationService : IHostedService, IDisposable
         catch (Exception ex)
         {
             return NotificationTestResult.Error($"测试通知时发生未知错误: {ex.Message}");
+        }
+        finally
+        {
+            testData.Screenshot?.Dispose();
+            testData.Screenshot = null;
         }
     }
 

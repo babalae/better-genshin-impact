@@ -2,7 +2,6 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Service.Notification;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service.Notifier;
@@ -32,6 +31,7 @@ public sealed class WechatClawbotSession : IDisposable
 
     private string _contextToken;
     private string _getUpdatesBuf;
+    private Task? _initTask;
     private Task? _loopTask;
     private bool _disposed;
 
@@ -47,28 +47,53 @@ public sealed class WechatClawbotSession : IDisposable
     }
 
     /// <summary>
-    /// 异步启动：先恢复上次的会话状态，再启动后台长轮询循环（幂等）。
+    /// 异步启动：恢复上次会话状态后启动后台长轮询循环（幂等）。
+    /// 返回的初始化任务仅负责恢复状态，在获取 context_token 前会被等待。
     /// </summary>
-    public async Task StartAsync()
+    public Task StartAsync()
     {
-        if (_loopTask != null)
-            return;
+        if (_initTask != null)
+            return _initTask;
         if (string.IsNullOrWhiteSpace(_botToken) || string.IsNullOrWhiteSpace(_toUserId))
-            return;
+            return Task.CompletedTask;
 
+        _initTask = InitAsync(_cts.Token);
+        return _initTask;
+    }
+
+    private async Task InitAsync(CancellationToken ct)
+    {
         // 从独立存储恢复上次会话状态
         var (token, buf) = await WechatClawbotSessionStore.LoadAsync(_botToken);
+        if (ct.IsCancellationRequested)
+            return;
         _contextToken = token;
         _getUpdatesBuf = buf;
 
-        _loopTask = Task.Run(() => RunLoopAsync(_cts.Token));
+        _loopTask = Task.Run(() => RunLoopAsync(ct));
     }
 
     /// <summary>
-    /// 获取当前缓存的 context_token（线程安全）。
+    /// 获取当前缓存的 context_token（线程安全）。在会话初始化完成前会等待。
     /// </summary>
     public async Task<string> GetContextTokenAsync(CancellationToken ct)
     {
+        if (_initTask != null && !_initTask.IsCompleted)
+        {
+            try
+            {
+                await _initTask.WaitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (System.Exception)
+            {
+                // 初始化失败时继续用空令牌，交由上层报错
+            }
+        }
+
         await _tokenSemaphore.WaitAsync(ct);
         try
         {
@@ -81,7 +106,7 @@ public sealed class WechatClawbotSession : IDisposable
     }
 
     /// <summary>
-    /// 停止会话。取消长轮询令牌，并等待后台任务退出后再释放依赖资源，
+    /// 停止会话。取消令牌，并等待初始化与长轮询任务退出后再释放依赖资源，
     /// 避免旧循环仍在访问已释放的信号量/HttpClient。
     /// </summary>
     public void Dispose()
@@ -92,12 +117,17 @@ public sealed class WechatClawbotSession : IDisposable
         _cts.Cancel();
         try
         {
-            _loopTask?.GetAwaiter().GetResult();
+            _initTask?.GetAwaiter().GetResult();
         }
         catch (OperationCanceledException)
         {
             // 取消导致的退出是预期行为
         }
+        catch (System.Exception ex)
+        {
+            Logger.LogWarning("微信 Clawbot 会话停止异常: {Ex}", ex.Message);
+        }
+
         _cts.Dispose();
         _tokenSemaphore.Dispose();
         _httpClient.Dispose();

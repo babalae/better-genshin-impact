@@ -9,14 +9,17 @@ using BetterGenshinImpact.Service.Notification.Model;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
+/// <summary>
+/// 通知器管理器。以「发送租约」协调通知器生命周期：
+/// 每个在途发送在锁内获取通知器租约；移除/释放通知器前先原子替换集合，
+/// 再等待所有租约归还，避免在发送中途释放通知器资源。
+/// </summary>
 public class NotifierManager
 {
     private readonly object _sync = new();
     private List<INotifier> _notifiers = [];
-
-    private int _inFlight;
-    private TaskCompletionSource? _drainTcs;
-    private readonly object _drainLock = new();
+    private readonly Dictionary<INotifier, int> _leases = new();
+    private readonly ManualResetEventSlim _idle = new(true);
 
     public static ILogger Logger { get; } = App.GetLogger<NotifierManager>();
 
@@ -34,14 +37,14 @@ public class NotifierManager
 
     public void RemoveNotifier<T>() where T : INotifier
     {
-        List<INotifier> removed;
+        INotifier[] removed;
         lock (_sync)
         {
-            removed = _notifiers.Where(o => o is T).ToList();
-            _notifiers.RemoveAll(o => o is T);
+            removed = _notifiers.Where(o => o is T).ToArray();
+            _notifiers = _notifiers.Where(o => o is not T).ToList();
         }
 
-        WaitForDrain(TimeSpan.FromSeconds(3));
+        WaitForLeasesReleased();
         foreach (var n in removed)
         {
             (n as IDisposable)?.Dispose();
@@ -50,19 +53,17 @@ public class NotifierManager
 
     public void RemoveAllNotifiers()
     {
-        List<INotifier> old;
+        INotifier[] old;
         lock (_sync)
         {
-            old = _notifiers;
+            old = _notifiers.ToArray();
             _notifiers = [];
         }
 
-        // 等待在途发送结束，避免释放仍在使用的通知器资源
-        WaitForDrain(TimeSpan.FromSeconds(3));
-
-        foreach (var notifier in old)
+        WaitForLeasesReleased();
+        foreach (var n in old)
         {
-            (notifier as IDisposable)?.Dispose();
+            (n as IDisposable)?.Dispose();
         }
     }
 
@@ -74,9 +75,15 @@ public class NotifierManager
         }
     }
 
+    /// <summary>
+    /// 以租约方式发送（在途计数，供普通通知与测试通知共用）。
+    /// </summary>
     public async Task SendNotificationAsync(INotifier notifier, BaseNotificationData content)
     {
-        Interlocked.Increment(ref _inFlight);
+        var lease = TryAcquireLease(notifier);
+        if (lease == null)
+            return;
+
         try
         {
             try
@@ -90,17 +97,7 @@ public class NotifierManager
         }
         finally
         {
-            if (Interlocked.Decrement(ref _inFlight) == 0)
-            {
-                TaskCompletionSource? tcs;
-                lock (_drainLock)
-                {
-                    tcs = _drainTcs;
-                    _drainTcs = null;
-                }
-
-                tcs?.TrySetResult();
-            }
+            ReleaseLease(lease);
         }
     }
 
@@ -121,21 +118,80 @@ public class NotifierManager
             snapshot = _notifiers.ToArray();
         }
 
-        await Task.WhenAll(snapshot.Select(notifier => SendNotificationAsync(notifier, content)));
+        await Task.WhenAll(snapshot.Select(n => SendNotificationAsync(n, content)));
     }
 
-    private void WaitForDrain(TimeSpan timeout)
+    /// <summary>
+    /// 测试指定通知器，返回异常信息供 UI 展示；测试发送同样持有租约，避免释放竞态。
+    /// </summary>
+    public async Task<string?> SendTestAsync<T>(BaseNotificationData content) where T : INotifier
     {
-        if (Volatile.Read(ref _inFlight) == 0)
-            return;
+        var notifier = GetNotifier<T>();
+        if (notifier == null)
+            return "通知类型未启用";
 
-        TaskCompletionSource tcs;
-        lock (_drainLock)
+        var lease = TryAcquireLease(notifier);
+        if (lease == null)
+            return "通知器正在被移除，请稍后重试";
+
+        try
         {
-            _drainTcs ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            tcs = _drainTcs;
+            await notifier.SendAsync(content);
+            return null;
         }
+        catch (System.Exception ex)
+        {
+            return ex.Message;
+        }
+        finally
+        {
+            ReleaseLease(lease);
+        }
+    }
 
-        tcs.Task.Wait(timeout);
+    private Lease? TryAcquireLease(INotifier notifier)
+    {
+        lock (_sync)
+        {
+            if (!_notifiers.Contains(notifier))
+                return null;
+
+            _leases[notifier] = _leases.TryGetValue(notifier, out var c) ? c + 1 : 1;
+            _idle.Reset();
+            return new Lease(this, notifier);
+        }
+    }
+
+    private void ReleaseLease(Lease lease)
+    {
+        lock (_sync)
+        {
+            if (!_leases.TryGetValue(lease.Notifier, out var count) || count <= 1)
+            {
+                _leases.Remove(lease.Notifier);
+            }
+            else
+            {
+                _leases[lease.Notifier] = count - 1;
+            }
+
+            if (_leases.Count == 0)
+            {
+                _idle.Set();
+            }
+        }
+    }
+
+    private void WaitForLeasesReleased()
+    {
+        if (_leases.Count == 0)
+            return;
+        _idle.Wait(TimeSpan.FromSeconds(3));
+    }
+
+    private sealed class Lease(NotifierManager owner, INotifier notifier)
+    {
+        public INotifier Notifier { get; } = notifier;
+        public NotifierManager Owner { get; } = owner;
     }
 }
