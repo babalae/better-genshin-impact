@@ -1,8 +1,6 @@
 using System;
 using System.Globalization;
-using System.IO;
 using System.Text.RegularExpressions;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -42,8 +40,6 @@ public static class ResinRecognition
     public static ResinRecognitionResult? RecognizeInBigMapTopBar(ImageRegion capture)
     {
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        var debugPrefix = DateTime.Now.ToString("yyyyMMdd_HHmmss_ffff", CultureInfo.InvariantCulture);
-        SaveDebugImage(capture.SrcMat, $"{debugPrefix}_full.png");
 
         using var iconSearchRegion = capture.DeriveCrop(new Rect(
             (int)(1200 * assetScale), (int)(25 * assetScale),
@@ -61,7 +57,7 @@ public static class ResinRecognition
             iconRa.Width,
             iconRa.Height);
         var (condensedResin, condensedIconRect) = RecognizeCondensedResin(
-            capture, resinIconRect, assetScale, debugPrefix);
+            capture, resinIconRect, assetScale);
 
         var countRect = new Rect(
             resinIconRect.Right + (int)(25 * assetScale),
@@ -69,13 +65,11 @@ public static class ResinRecognition
             (int)(105 * assetScale),
             (int)(25 * assetScale));
         using var countRegion = capture.DeriveCrop(countRect);
-        SaveDebugImage(countRegion.SrcMat, $"{debugPrefix}_count-raw.png");
 
         using var threshold = countRegion.CacheGreyMat.Threshold(
             TextThreshold, 255, ThresholdTypes.Binary);
         using var inverted = new Mat();
         Cv2.BitwiseNot(threshold, inverted);
-        SaveDebugImage(inverted, $"{debugPrefix}_count-threshold-inverted.png");
 
         var countText = OcrFactory.Paddle.OcrWithoutDetector(inverted);
 
@@ -101,8 +95,7 @@ public static class ResinRecognition
     private static (int? Count, Rect? IconRect) RecognizeCondensedResin(
         ImageRegion capture,
         Rect originalResinIconRect,
-        double assetScale,
-        string debugPrefix)
+        double assetScale)
     {
         // 复用秘境树脂识别中的相对关系：浓缩树脂图标位于原粹树脂图标左侧约 90～180 像素。
         var desiredLeft = originalResinIconRect.Left - (int)(180 * assetScale);
@@ -118,7 +111,6 @@ public static class ResinRecognition
 
         using var searchRegion = capture.DeriveCrop(new Rect(
             searchLeft, searchTop, searchRight - searchLeft, searchBottom - searchTop));
-        SaveDebugImage(searchRegion.SrcMat, $"{debugPrefix}_condensed-search.png");
 
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         var iconRa = searchRegion.Find(RecognitionAssets.Get(
@@ -134,10 +126,6 @@ public static class ResinRecognition
             searchRegion.Y + iconRa.Top,
             iconRa.Width,
             iconRa.Height);
-        using (var iconRegion = capture.DeriveCrop(iconRect))
-        {
-            SaveDebugImage(iconRegion.SrcMat, $"{debugPrefix}_condensed-icon.png");
-        }
 
         var countLeft = iconRect.Right + (int)(20 * assetScale);
         var countRight = Math.Min(capture.Width, countLeft + (int)(30 * assetScale));
@@ -149,13 +137,11 @@ public static class ResinRecognition
 
         using var countRegion = capture.DeriveCrop(new Rect(
             countLeft, iconRect.Top, countRight - countLeft, countBottom - iconRect.Top));
-        SaveDebugImage(countRegion.SrcMat, $"{debugPrefix}_condensed-count-raw.png");
 
         using var threshold = countRegion.CacheGreyMat.Threshold(
             TextThreshold, 255, ThresholdTypes.Binary);
         using var inverted = new Mat();
         Cv2.BitwiseNot(threshold, inverted);
-        SaveDebugImage(inverted, $"{debugPrefix}_condensed-count-threshold-inverted.png");
 
         var countText = OcrFactory.Paddle.OcrWithoutDetector(inverted);
         var digits = Regex.Replace(StringUtils.ConvertFullWidthNumToHalfWidth(countText), @"\D", "");
@@ -168,23 +154,5 @@ public static class ResinRecognition
 
         TaskControl.Logger.LogDebug("浓缩树脂数量 OCR：{Text} -> {Count}", countText, count);
         return (count, iconRect);
-    }
-
-    private static void SaveDebugImage(Mat image, string fileName)
-    {
-        try
-        {
-            var directory = Global.Absolute(@"log\ResinRecognition");
-            Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory, fileName);
-            if (!Cv2.ImWrite(path, image))
-            {
-                TaskControl.Logger.LogWarning("树脂识别调试截图保存失败: {Path}", path);
-            }
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e, "树脂识别调试截图保存异常: {FileName}", fileName);
-        }
     }
 }
