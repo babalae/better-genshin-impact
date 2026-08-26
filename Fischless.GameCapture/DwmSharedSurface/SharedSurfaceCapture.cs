@@ -164,6 +164,8 @@ public partial class SharedSurfaceCapture : IGameCapture
                 catch (Exception rebuildException)
                 {
                     Debug.WriteLine($"Failed to rebuild D3D device: {rebuildException}");
+                    // 设备与 context 均不可用时同步停止，避免 IsCapturing=true 却永久返回空帧。
+                    Stop();
                 }
             }
 
