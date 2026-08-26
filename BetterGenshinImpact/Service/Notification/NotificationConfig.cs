@@ -321,4 +321,24 @@ public partial class NotificationConfig : ObservableObject
     ///     Gotify通知优先级
     /// </summary>
     [ObservableProperty] private int _gotifyNotifyLevel = 3;
+
+    /// <summary>
+    ///     QQ通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _qqNotificationEnabled;
+
+    /// <summary>
+    ///     QQ开放平台 AppID
+    /// </summary>
+    [ObservableProperty] private string _qqAppId = string.Empty;
+
+    /// <summary>
+    ///     QQ开放平台 AppSecret
+    /// </summary>
+    [ObservableProperty] private string _qqClientSecret = string.Empty;
+
+    /// <summary>
+    ///     用户的 C2C OpenID（单聊场景）
+    /// </summary>
+    [ObservableProperty] private string _qqOpenId = string.Empty;
 }

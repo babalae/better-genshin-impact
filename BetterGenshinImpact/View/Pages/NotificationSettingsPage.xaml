@@ -2362,5 +2362,140 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+        <!--  QQ 通知（官方 REST API + 自动绑定 OpenID）  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon ChatMultiple24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body"
+                                  Text="启用 QQ 通知" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="QQ 官方推送，支持文字和截图" TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.QqNotificationEnabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="AppID" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="QQ 开放平台的 AppID" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                MinWidth="180" MaxWidth="800" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.QqAppId, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="AppSecret" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="QQ 开放平台的 AppSecret" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                MinWidth="180" MaxWidth="800" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.QqClientSecret, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="用户OpenID" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="添加机器人好友后发消息获取，可点击下方「绑定」自动获取" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                MinWidth="180" MaxWidth="800" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.QqOpenId, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <!-- 绑定 OpenID 按钮行：连接 QQ 网关，用户发送验证码后自动回填 OpenID -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="绑定 OpenID" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="点击绑定后，请用手机 QQ 私聊机器人并发送显示的验证码，系统将自动获取你的 OpenID；绑定过程中可点击取消" TextWrapping="Wrap" />
+                    <!-- 绑定/取消按钮：绑定中（IsBinding=true）时切换为"取消"，通过 DataTrigger 切换 Command 和 Content -->
+                    <ui:Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                               Margin="0,0,36,0"
+                               HorizontalAlignment="Right">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Command" Value="{Binding BindQqCommand}" />
+                                <Setter Property="Content" Value="绑定" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBinding}" Value="True">
+                                        <Setter Property="Command" Value="{Binding CancelBindQqCommand}" />
+                                        <Setter Property="Content" Value="取消" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </Grid>
+                <ui:TextBlock Margin="16,0,16,0"
+                              Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                              Text="{Binding QqStatus}"
+                              TextWrapping="Wrap" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="测试 QQ 通知" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="发送测试通知" TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding TestQqNotificationCommand}"
+                               Content="发送" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
     </StackPanel>
 </Page>

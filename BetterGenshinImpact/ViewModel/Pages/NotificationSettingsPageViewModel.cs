@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
@@ -67,6 +68,18 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     [ObservableProperty] private string _meowStatus = string.Empty;
 
     [ObservableProperty] private string _gotifyStatus = string.Empty;
+
+    [ObservableProperty] private string _qqStatus = string.Empty;
+
+    /// <summary>
+    /// 是否正在执行绑定流程（控制按钮显示为"绑定"或"取消"）
+    /// </summary>
+    [ObservableProperty] private bool _isBinding;
+
+    /// <summary>
+    /// 绑定流程的取消令牌源，用于用户点击取消时中断 WebSocket 连接
+    /// </summary>
+    private CancellationTokenSource? _bindCts;
 
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
@@ -501,6 +514,95 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             Toast.Error(res.Message);
 
         IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnTestQqNotification()
+    {
+        IsLoading = true;
+        QqStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<QqNotifier>();
+
+        QqStatus = res.Message;
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
+    /// <summary>
+    /// 绑定 QQ 按钮。连接 QQ 网关，等待用户发送验证码，自动回填 OpenID。
+    /// 支持取消（用户点击取消时中断 WebSocket 连接）。
+    /// 超时（60 秒未收到消息）时提示用户重试。
+    /// </summary>
+    [RelayCommand]
+    private async Task OnBindQq()
+    {
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqAppId))
+        {
+            Toast.Error("请先填写 QQ AppID");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqClientSecret))
+        {
+            Toast.Error("请先填写 QQ AppSecret");
+            return;
+        }
+
+        IsBinding = true;
+        QqStatus = "正在连接 QQ 网关…";
+        _bindCts = new CancellationTokenSource();
+
+        try
+        {
+            var openId = await QqWebSocketHelper.BindAsync(
+                Config.NotificationConfig.QqAppId,
+                Config.NotificationConfig.QqClientSecret,
+                code =>
+                {
+                    // 回调在后台线程执行，需要编组回 UI 线程才能更新 ObservableProperty
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        QqStatus = $"请用手机 QQ 私聊机器人，发送验证码 [{code}]";
+                    });
+                },
+                _bindCts.Token);
+
+            // 绑定成功，自动回填 OpenID（配置自动保存 + 刷新通知器）
+            Config.NotificationConfig.QqOpenId = openId;
+            QqStatus = "绑定成功";
+            Toast.Success("QQ 绑定成功");
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户主动点击取消
+            QqStatus = "已取消绑定";
+        }
+        catch (System.Exception ex)
+        {
+            // 超时或其他错误（超时已被 BindAsync 转为 NotifierException）
+            QqStatus = $"绑定失败：{ex.Message}";
+            Toast.Error($"绑定失败：{ex.Message}");
+        }
+        finally
+        {
+            IsBinding = false;
+            _bindCts.Dispose();
+            _bindCts = null;
+        }
+    }
+
+    /// <summary>
+    /// 取消绑定按钮：取消 WebSocket 连接，中断绑定流程。
+    /// </summary>
+    [RelayCommand]
+    private void OnCancelBindQq()
+    {
+        _bindCts?.Cancel();
     }
 
     [RelayCommand]

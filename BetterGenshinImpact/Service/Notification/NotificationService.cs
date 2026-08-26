@@ -112,6 +112,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeServerChanNotifier();
         InitializeMeowNotifier();
         InitializeGotifyNotifier();
+        InitializeQqNotifier();
 
         // 添加新通知渠道时，在此处添加对应的初始化方法调用
     }
@@ -344,6 +345,21 @@ public class NotificationService : IHostedService, IDisposable
             _notificationConfig.GotifyUrl,
             _notificationConfig.GotifyAppToken,
             _notificationConfig.GotifyNotifyLevel
+        ));
+    }
+
+    /// <summary>
+    ///     初始化QQ通知器
+    /// </summary>
+    private void InitializeQqNotifier()
+    {
+        if (_notificationConfig?.QqNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new QqNotifier(
+            _notifyHttpClient,
+            _notificationConfig.QqAppId,
+            _notificationConfig.QqClientSecret,
+            _notificationConfig.QqOpenId
         ));
     }
 
