@@ -143,8 +143,28 @@ public partial class SharedSurfaceCapture : IGameCapture
                 _d3dContext?.Dispose();
                 _d3dContext = null;
                 _d3dDevice?.Dispose();
-                _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-                _d3dContext = _d3dDevice.ImmediateContext;
+                _d3dDevice = null;
+                try
+                {
+                    var replacementDevice = new Device(
+                        SharpDX.Direct3D.DriverType.Hardware,
+                        DeviceCreationFlags.BgraSupport);
+                    try
+                    {
+                        var replacementContext = replacementDevice.ImmediateContext;
+                        _d3dDevice = replacementDevice;
+                        _d3dContext = replacementContext;
+                    }
+                    catch
+                    {
+                        replacementDevice.Dispose();
+                        throw;
+                    }
+                }
+                catch (Exception rebuildException)
+                {
+                    Debug.WriteLine($"Failed to rebuild D3D device: {rebuildException}");
+                }
             }
 
             return null;

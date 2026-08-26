@@ -8,7 +8,7 @@ namespace Fischless.GameCapture.Graphics.Helpers;
 /// </summary>
 internal static class HdrDisplayInformation
 {
-    // 保留旧版固定曝光作为显示拓扑查询失败时的兼容回退，避免突然改变未知环境的识别输入。
+    // 已确认 HDR 但白电平值异常时，保留旧版固定曝光作为兼容回退。
     internal const float FallbackSdrWhiteScale = 0.25f;
     private const float SceneReferredSdrWhiteNits = 80f;
 
@@ -78,7 +78,7 @@ internal static class HdrDisplayInformation
         }
         catch
         {
-            // 显示拓扑可能在窗口跨屏或显示设置变化时失效，使用既有曝光值安全回退。
+            // 显示状态未知时 fail closed 到 SDR，避免把 SDR 输入错误地按 HDR 曝光处理。
         }
 
         return HdrDisplayState.Fallback;
@@ -99,5 +99,5 @@ internal static class HdrDisplayInformation
 internal readonly record struct HdrDisplayState(bool IsHdrEnabled, float SdrWhiteScale)
 {
     public static HdrDisplayState Fallback =>
-        new(true, HdrDisplayInformation.FallbackSdrWhiteScale);
+        new(false, 1f);
 }

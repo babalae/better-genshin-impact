@@ -100,9 +100,4 @@ public class BgiYoloPredictor : IDisposable
 
         GC.SuppressFinalize(this);
     }
-
-    ~BgiYoloPredictor()
-    {
-        Dispose();
-    }
 }

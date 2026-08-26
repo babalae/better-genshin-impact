@@ -349,18 +349,35 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             // 必须先释放并归还当前 frame，再重建帧池。
             if (shouldRecreateFramePool)
             {
-                _captureFramePool!.Recreate(
-                    _d3dDevice,
-                    _pixelFormat,
-                    2,
-                    captureSize);
-                _stagingTexture?.Dispose();
-                _stagingTexture = null;
-                _hdrOutputTexture?.Dispose();
-                _hdrOutputTexture = null;
-                _surfaceWidth = captureSize.Width;
-                _surfaceHeight = captureSize.Height;
-                (_region, _captureRect) = GetGameScreenInfo(_hWnd);
+                if (!ReferenceEquals(sender, _captureFramePool) ||
+                    captureSize.Width <= 0 || captureSize.Height <= 0)
+                {
+                    Debug.WriteLine("Capture frame pool received an invalid resize request.");
+                    ScheduleStopAfterFramePoolFailure(sender);
+                    return;
+                }
+
+                try
+                {
+                    sender.Recreate(
+                        _d3dDevice,
+                        _pixelFormat,
+                        2,
+                        captureSize);
+                    _stagingTexture?.Dispose();
+                    _stagingTexture = null;
+                    _hdrOutputTexture?.Dispose();
+                    _hdrOutputTexture = null;
+                    _surfaceWidth = captureSize.Width;
+                    _surfaceHeight = captureSize.Height;
+                    (_region, _captureRect) = GetGameScreenInfo(_hWnd);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine($"Failed to recreate capture frame pool: {e}");
+                    // 当前回调持有写锁，不能同步 Stop；排队到回调退出后再安全释放当前会话。
+                    ScheduleStopAfterFramePoolFailure(sender);
+                }
             }
         }
         finally
@@ -437,6 +454,35 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _d3dDevice = null;
         _sharpDxDevice?.Dispose();
         _sharpDxDevice = null;
+    }
+
+    private void ScheduleStopAfterFramePoolFailure(Direct3D11CaptureFramePool failedFramePool)
+    {
+        _ = Task.Run(() =>
+        {
+            var lockTaken = false;
+            try
+            {
+                _frameAccessLock.EnterWriteLock();
+                lockTaken = true;
+                // 重启期间可能已有新会话，只清理实际失败的旧帧池。
+                if (ReferenceEquals(failedFramePool, _captureFramePool))
+                {
+                    StopCore();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine($"Failed to stop broken capture session: {e}");
+            }
+            finally
+            {
+                if (lockTaken)
+                {
+                    _frameAccessLock.ExitWriteLock();
+                }
+            }
+        });
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)

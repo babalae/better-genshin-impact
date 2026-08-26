@@ -9,6 +9,15 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.CaptureTests;
 public class HdrDisplayInformationTests
 {
     [Fact]
+    public void DisplayQueryFallback_UsesSdrPipeline()
+    {
+        var fallback = HdrDisplayState.Fallback;
+
+        Assert.False(fallback.IsHdrEnabled);
+        Assert.Equal(1f, fallback.SdrWhiteScale);
+    }
+
+    [Fact]
     public void HdrToSdrShader_CompilesForShaderModel5()
     {
         using var shader = ShaderBytecode.Compile(

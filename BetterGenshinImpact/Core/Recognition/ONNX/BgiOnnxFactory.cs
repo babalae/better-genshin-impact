@@ -514,66 +514,81 @@ public class BgiOnnxFactory
         ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
-        foreach (var type in
-                 forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider)
-            try
+        var providerTypes = forcedProvider is null || forcedProvider.Length == 0
+            ? ProviderTypes
+            : forcedProvider;
+        try
+        {
+            for (var providerIndex = 0; providerIndex < providerTypes.Length; providerIndex++)
             {
-                switch (type)
+                var type = providerTypes[providerIndex];
+                try
                 {
-                    case ProviderType.Dml:
-                        // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
-                        sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
-                        sessionOptions.EnableMemoryPattern = false;
-                        sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-                        break;
-                    case ProviderType.Cpu:
-                        sessionOptions.AppendExecutionProvider_CPU();
-                        // if (model.Name.Contains("PpOcr") || model.Name.Contains("Yap"))
-                        // {
-                        //     sessionOptions.IntraOpNumThreads = 2;  // 限制算子内部并行线程数
-                        //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）  
-                        // }
-                        break;
-                    case ProviderType.Dnnl:
-                        sessionOptions.AppendExecutionProvider_Dnnl();
-                        break;
-                    case ProviderType.OpenVino:
-                        sessionOptions.AppendExecutionProvider("OpenVINO",
-                            GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
-                        sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
-                        break;
-                    case ProviderType.TensorRt:
-                        using (var options = new OrtTensorRTProviderOptions())
-                        {
-                            options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
-                            sessionOptions.AppendExecutionProvider_Tensorrt(options);
-                        }
+                    switch (type)
+                    {
+                        case ProviderType.Dml:
+                            // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
+                            sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
+                            sessionOptions.EnableMemoryPattern = false;
+                            sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                            break;
+                        case ProviderType.Cpu:
+                            sessionOptions.AppendExecutionProvider_CPU();
+                            break;
+                        case ProviderType.Dnnl:
+                            sessionOptions.AppendExecutionProvider_Dnnl();
+                            break;
+                        case ProviderType.OpenVino:
+                            sessionOptions.AppendExecutionProvider("OpenVINO",
+                                GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
+                            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
+                            break;
+                        case ProviderType.TensorRt:
+                            using (var options = new OrtTensorRTProviderOptions())
+                            {
+                                options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
+                                sessionOptions.AppendExecutionProvider_Tensorrt(options);
+                            }
 
-                        break;
-                    case ProviderType.Cuda:
-                        using (var options = new OrtCUDAProviderOptions())
-                        {
-                            options.UpdateOptions(GetCudaProviderConfig());
-                            sessionOptions.AppendExecutionProvider_CUDA(options);
-                        }
+                            break;
+                        case ProviderType.Cuda:
+                            using (var options = new OrtCUDAProviderOptions())
+                            {
+                                options.UpdateOptions(GetCudaProviderConfig());
+                                sessionOptions.AppendExecutionProvider_CUDA(options);
+                            }
 
-                        break;
-                    default:
-                        throw new InvalidEnumArgumentException("无效的推理设备");
+                            break;
+                        default:
+                            throw new InvalidEnumArgumentException("无效的推理设备");
+                    }
+                }
+                catch (Exception e) when (providerIndex > 0)
+                {
+                    // 后续 EP 只是当前首选 EP 的补充回退；注册失败时保留已成功注册的首选 EP。
+                    _logger.LogWarning(
+                        "无法加载后备 ONNX provider {Provider}，跳过。({Err})",
+                        Enum.GetName(type),
+                        e.Message);
                 }
             }
-            catch (Exception e)
+
+            if (!OptimizedModel || !genCache)
             {
-                _logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
-                    e.Message);
+                return sessionOptions;
             }
 
-        if (!OptimizedModel) return sessionOptions;
-        if (!genCache) return sessionOptions;
-        var optPath = Path.Combine(model.CachePath, "optimized");
-        if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
-        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
-        return sessionOptions;
+            var optPath = Path.Combine(model.CachePath, "optimized");
+            if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
+            sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
+            return sessionOptions;
+        }
+        catch
+        {
+            // CreateSessionOptions 尚未把所有权交给调用方，异常时必须在此释放 native handle。
+            sessionOptions.Dispose();
+            throw;
+        }
     }
 
 
