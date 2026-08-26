@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -65,6 +66,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     [ObservableProperty]
     private bool _keepAspectRatio = true;
+
+    [ObservableProperty]
+    private WindowPositionConfig? _normalWindowPosition;
+
+    [ObservableProperty]
+    private WindowPositionConfig? _smallWindowPosition;
 
     [ObservableProperty]
     private int _smallWindowResizeRequest;
@@ -143,6 +150,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _isAdaptive = _childSessionService.SmartSizingEnabled;
         _isOneToOne = !_isAdaptive;
         _keepAspectRatio = _childSessionService.KeepAspectRatio;
+        _normalWindowPosition = _childSessionService.NormalWindowPosition;
+        _smallWindowPosition = _childSessionService.SmallWindowPosition;
         _sendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
         _isGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
         _isAudioMuted = _childSessionService.AudioMuted;
@@ -157,6 +166,16 @@ public partial class ChildSessionWindowViewModel : ViewModel
             OnSystemShortcutsReconnectCompleted;
         _childSessionService.AudioReconnectCompleted += OnAudioReconnectCompleted;
         UpdateConnectionStatus();
+    }
+
+    partial void OnNormalWindowPositionChanged(WindowPositionConfig? value)
+    {
+        _childSessionService.NormalWindowPosition = value;
+    }
+
+    partial void OnSmallWindowPositionChanged(WindowPositionConfig? value)
+    {
+        _childSessionService.SmallWindowPosition = value;
     }
 
     public async Task LogoffAndHideAsync()

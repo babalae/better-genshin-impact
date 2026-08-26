@@ -245,7 +245,10 @@
               Background="Black">
             <b:Interaction.Behaviors>
                 <behavior:WindowResizeBehavior AspectRatio="1.7777777777777777"
+                                               IsSmallWindowMode="{Binding IsSmallWindowMode}"
+                                               NormalWindowPosition="{Binding NormalWindowPosition, Mode=TwoWay}"
                                                ResizeRequest="{Binding SmallWindowResizeRequest}"
+                                               SmallWindowPosition="{Binding SmallWindowPosition, Mode=TwoWay}"
                                                TargetWidth="{Binding WindowResizeTargetWidth}" />
             </b:Interaction.Behaviors>
             <wfi:WindowsFormsHost x:Name="RdpFormsHost"
