@@ -80,6 +80,7 @@ public sealed class OverlayMetricsService : IDisposable
 
     public void ClearGameFps()
     {
+        // 仅清缓存值不主动发布：调用方停止帧率采样后会 Refresh(force) 统一发布，避免双发。
         lock (_locker)
         {
             _gameFps = null;
@@ -217,16 +218,8 @@ public sealed class OverlayMetricsService : IDisposable
         AddMetric(items, config, OverlayMetricItem.GpuUsage, _gpuUsage, value => $"{value:0}%");
         AddMetric(items, config, OverlayMetricItem.CpuUsage, _cpuUsage, value => $"{value:0}%");
         AddMetric(items, config, OverlayMetricItem.MemoryUsage, _memoryUsage, value => $"{value:0}%");
-        // BGI 自身占用是进程级查询，与硬件指标一致：仅在对应指标启用时才执行采样，避免空转。
-        if (config.IsOverlayMetricEnabled(OverlayMetricItem.BgiMemoryUsage))
-        {
-            AddMetric(items, config, OverlayMetricItem.BgiMemoryUsage, GetBgiMemoryMb(), value => FormatMemory(value));
-        }
-
-        if (config.IsOverlayMetricEnabled(OverlayMetricItem.BgiCpuUsage))
-        {
-            AddMetric(items, config, OverlayMetricItem.BgiCpuUsage, GetBgiCpuPercent(), value => $"{value:F1}%");
-        }
+        AddMetric(items, config, OverlayMetricItem.BgiMemoryUsage, GetBgiMemoryMb, FormatMemory);
+        AddMetric(items, config, OverlayMetricItem.BgiCpuUsage, GetBgiCpuPercent, value => $"{value:F1}%");
 
         return items.Count == 0 ? OverlayMetricsSnapshot.Empty : new OverlayMetricsSnapshot(items);
     }
@@ -240,6 +233,17 @@ public sealed class OverlayMetricsService : IDisposable
         }
 
         items.Add(new OverlayMetricDisplayItem(OverlayMetricItemDefaults.GetDisplayName(item), formatter(value.Value)));
+    }
+
+    // 进程级查询等昂贵采样必须走本惰性重载：未勾选对应指标时不执行取值，与硬件指标的门控语义保持一致。
+    private static void AddMetric(List<OverlayMetricDisplayItem> items, MaskWindowConfig config, OverlayMetricItem item, Func<double?> valueProvider, Func<double, string> formatter)
+    {
+        if (!config.IsOverlayMetricEnabled(item))
+        {
+            return;
+        }
+
+        AddMetric(items, config, item, valueProvider(), formatter);
     }
 
     private void RecordPeakProcessingCost(double processingCostMs, DateTime now)
