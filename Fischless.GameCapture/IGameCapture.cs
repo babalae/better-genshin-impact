@@ -9,6 +9,11 @@ public interface IGameCapture : IDisposable
     /// </summary>
     public CaptureColorMode ColorMode { get; }
 
+    /// <summary>
+    /// 最近一次异步捕获失败；没有可诊断异常时为 null。
+    /// </summary>
+    public Exception? LastError => null;
+
     public void Start(nint hWnd, Dictionary<string, object>? settings = null);
 
     public GameCaptureFrame? Capture();

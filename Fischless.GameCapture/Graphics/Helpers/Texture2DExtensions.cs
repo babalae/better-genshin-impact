@@ -10,7 +10,8 @@ public static class Texture2DExtensions
         this Texture2D staging,
         DeviceContext context,
         Texture2D surfaceTexture,
-        ResourceRegion? region = null)
+        ResourceRegion? region = null,
+        Action<Exception>? onError = null)
     {
         try
         {
@@ -44,6 +45,7 @@ public static class Texture2DExtensions
         }
         catch (Exception e)
         {
+            onError?.Invoke(e);
             Debug.WriteLine("Failed to copy texture to mat.");
             Debug.WriteLine(e.StackTrace);
             return null;

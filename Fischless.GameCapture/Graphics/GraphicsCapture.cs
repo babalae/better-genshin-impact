@@ -46,6 +46,9 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     // 最新帧的存储
     private Mat? _latestFrame;
     private readonly ReaderWriterLockSlim _frameAccessLock = new();
+    private Exception? _lastError;
+
+    public Exception? LastError => Volatile.Read(ref _lastError);
 
     // 用于获取帧数据的临时纹理和暂存资源
     private Texture2D? _stagingTexture;
@@ -337,7 +340,11 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                             frame.ContentSize.Height,
                             _region,
                             sourceTexture.Description.Format);
-                        var newFrame = _stagingTexture.CreateMat(d3dContext, sourceTexture, _region);
+                        var newFrame = _stagingTexture.CreateMat(
+                            d3dContext,
+                            sourceTexture,
+                            _region,
+                            RecordCaptureFailure);
 
                         // 新帧构造成功后再替换，异常时保留上一帧
                         if (newFrame is not null)
@@ -345,11 +352,12 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                             var oldFrame = _latestFrame;
                             _latestFrame = newFrame;
                             oldFrame?.Dispose();
+                            Volatile.Write(ref _lastError, null);
                         }
                     }
-                    catch (SharpDXException e)
+                    catch (Exception e)
                     {
-                        Debug.WriteLine($"SharpDXException: {e.Descriptor}");
+                        RecordCaptureFailure(e);
                     }
                 }
             }
@@ -360,7 +368,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 if (!ReferenceEquals(sender, _captureFramePool) ||
                     captureSize.Width <= 0 || captureSize.Height <= 0)
                 {
-                    Debug.WriteLine("Capture frame pool received an invalid resize request.");
+                    RecordCaptureFailure(new InvalidOperationException(
+                        $"Capture frame pool received an invalid resize request: {captureSize.Width}x{captureSize.Height}."));
                     ScheduleStopAfterFramePoolFailure(sender);
                     return;
                 }
@@ -375,7 +384,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine($"Failed to recreate capture frame pool: {e}");
+                    RecordCaptureFailure(e);
                     // 当前回调持有写锁，不能同步 Stop；排队到回调退出后再安全释放当前会话。
                     ScheduleStopAfterFramePoolFailure(sender);
                     return;
@@ -392,6 +401,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 _surfaceWidth = captureSize.Width;
                 _surfaceHeight = captureSize.Height;
                 _screenInfoRefreshPending = !TryRefreshGameScreenInfo();
+                // 尺寸变化帧已经消耗了本轮节流配额；回退时间戳，让新尺寸的下一帧立即恢复截图。
+                _lastFrameTime = _frameTimer.ElapsedMilliseconds - _targetFrameIntervalMs;
             }
         }
         finally
@@ -406,6 +417,12 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _frameAccessLock.EnterReadLock();
         try
         {
+            // GPU/readback 出错后不能继续向识别层返回冻结的旧画面；成功产出新帧时会清除 LastError。
+            if (_lastError is not null)
+            {
+                return null;
+            }
+
             // 返回最新帧的副本（这里我们必须克隆，因为Mat是不线程安全的）
             var frame = _latestFrame?.Clone();
             return frame == null
@@ -431,7 +448,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         }
     }
 
-    private void StopCore()
+    private void StopCore(bool preserveLastError = false)
     {
         IsCapturing = false;
         _hWnd = 0;
@@ -453,6 +470,10 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _captureItem = null;
         _latestFrame?.Dispose();
         _latestFrame = null;
+        if (!preserveLastError)
+        {
+            Volatile.Write(ref _lastError, null);
+        }
         _captureRect = null;
         _screenInfoRefreshPending = false;
         _stagingTexture?.Dispose();
@@ -481,9 +502,16 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         }
         catch (Exception e)
         {
-            Debug.WriteLine($"Failed to refresh game screen info: {e}");
+            RecordCaptureFailure(e);
             return false;
         }
+    }
+
+    private void RecordCaptureFailure(Exception exception)
+    {
+        Volatile.Write(ref _lastError, exception);
+        // Release 日志由上层统一限流输出，避免在帧回调持锁期间逐帧格式化完整异常。
+        Debug.WriteLine($"Graphics capture failed: {exception}");
     }
 
     private void ScheduleStopAfterFramePoolFailure(Direct3D11CaptureFramePool failedFramePool)
@@ -498,12 +526,13 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 // 重启期间可能已有新会话，只清理实际失败的旧帧池。
                 if (ReferenceEquals(failedFramePool, _captureFramePool))
                 {
-                    StopCore();
+                    // 保留触发停止的 D3D/帧池异常，供上层日志准确说明会话为何失效。
+                    StopCore(preserveLastError: true);
                 }
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"Failed to stop broken capture session: {e}");
+                RecordCaptureFailure(e);
             }
             finally
             {

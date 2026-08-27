@@ -43,6 +43,13 @@ namespace BetterGenshinImpact.GameTask
         private bool _prevGameActive;
 
         private DateTime _prevManualGc = DateTime.MinValue;
+        private DateTime _captureUnavailableSinceUtc = DateTime.MinValue;
+        private DateTime _lastCaptureFailureLogUtc = DateTime.MinValue;
+        private string? _lastCaptureFailureFingerprint;
+
+        // 首帧和帧池重建允许出现短暂空档；持久故障仍会告警，并限制重复日志频率。
+        private static readonly TimeSpan CaptureUnavailableWarningDelay = TimeSpan.FromMilliseconds(500);
+        private static readonly TimeSpan CaptureFailureLogInterval = TimeSpan.FromSeconds(5);
 
         private static readonly object _triggerListLocker = new();
 
@@ -130,6 +137,7 @@ namespace BetterGenshinImpact.GameTask
         {
             // 初始化截图器
             ChatUiHotkeyGuard.Reset();
+            ResetCaptureFailureTracking();
             GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
             SystemControl.ActivateWindow(hWnd);
@@ -180,6 +188,7 @@ namespace BetterGenshinImpact.GameTask
         {
             _timer.Stop();
             ChatUiHotkeyGuard.Reset();
+            ResetCaptureFailureTracking();
             GameCapture?.Stop();
             TaskContext.Instance().CaptureColorMode = CaptureColorMode.Sdr;
             _gameRect = RECT.Empty;
@@ -244,7 +253,14 @@ namespace BetterGenshinImpact.GameTask
                     ChatUiHotkeyGuard.Reset();
                     if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
                     {
-                        _logger.LogError("截图器未初始化!");
+                        if (GameCapture?.LastError is not null)
+                        {
+                            LogCaptureUnavailable(GameCapture, logImmediately: true);
+                        }
+                        else
+                        {
+                            _logger.LogError("截图器未初始化!");
+                        }
                     }
                     else
                     {
@@ -377,9 +393,11 @@ namespace BetterGenshinImpact.GameTask
 
                 if (bitmap == null)
                 {
-                    _logger.LogWarning("截图失败!");
+                    LogCaptureUnavailable(GameCapture);
                     return;
                 }
+
+                MarkCaptureAvailable();
 
                 TaskContext.Instance().CaptureColorMode = captureFrame!.ColorMode;
 
@@ -474,6 +492,59 @@ namespace BetterGenshinImpact.GameTask
                     tickMetrics.Publish(_metricsService);
                 }
             }
+        }
+
+        private void LogCaptureUnavailable(IGameCapture capture, bool logImmediately = false)
+        {
+            var now = DateTime.UtcNow;
+            if (_captureUnavailableSinceUtc == DateTime.MinValue)
+            {
+                _captureUnavailableSinceUtc = now;
+                _logger.LogDebug("截图暂不可用，正在等待首帧或帧池恢复");
+            }
+
+            var captureError = capture.LastError;
+            if (!logImmediately && captureError is null &&
+                now - _captureUnavailableSinceUtc < CaptureUnavailableWarningDelay)
+            {
+                return;
+            }
+
+            var fingerprint = captureError is null
+                ? "no-exception"
+                : $"{captureError.GetType().FullName}:{captureError.HResult}:{captureError.Message}";
+            var isNewError = captureError is not null &&
+                             !string.Equals(fingerprint, _lastCaptureFailureFingerprint, StringComparison.Ordinal);
+            if (!isNewError && now - _lastCaptureFailureLogUtc < CaptureFailureLogInterval)
+            {
+                return;
+            }
+
+            if (captureError is not null)
+            {
+                _logger.LogWarning(captureError, "截图失败，捕获管线返回异常");
+            }
+            else
+            {
+                _logger.LogWarning("截图持续不可用，已等待 {ElapsedMilliseconds:F0} ms",
+                    (now - _captureUnavailableSinceUtc).TotalMilliseconds);
+            }
+
+            _lastCaptureFailureLogUtc = now;
+            _lastCaptureFailureFingerprint = fingerprint;
+        }
+
+        private void ResetCaptureFailureTracking()
+        {
+            _captureUnavailableSinceUtc = DateTime.MinValue;
+            _lastCaptureFailureLogUtc = DateTime.MinValue;
+            _lastCaptureFailureFingerprint = null;
+        }
+
+        private void MarkCaptureAvailable()
+        {
+            // 保留最近异常的日志指纹和时间戳，避免“失败一帧、成功一帧”时绕过五秒限流。
+            _captureUnavailableSinceUtc = DateTime.MinValue;
         }
 
         /// <summary>
