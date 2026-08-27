@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask;
+using Microsoft.Win32;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests;
 
@@ -77,5 +78,122 @@ public class GenshinHdrRegistryHelperTests
             GenshinHdrRegistryHelper.GlobalHdrRegistryParentKeyPath,
             GenshinHdrRegistryHelper.GetHdrRegistryParentKeyPath(GenshinGameEdition.Global));
         Assert.Null(GenshinHdrRegistryHelper.GetHdrRegistryParentKeyPath(GenshinGameEdition.Unknown));
+    }
+
+    [Fact]
+    public void FullRegistryTarget_IsEditionSpecific()
+    {
+        Assert.Equal(
+            @"HKEY_CURRENT_USER\Software\miHoYo\原神\WINDOWS_HDR_ON_h3132281285",
+            GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(GenshinGameEdition.Cn));
+        Assert.Equal(
+            @"HKEY_CURRENT_USER\Software\miHoYo\Genshin Impact\WINDOWS_HDR_ON_h3132281285",
+            GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(GenshinGameEdition.Global));
+        Assert.Null(GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(GenshinGameEdition.Unknown));
+    }
+
+    [Fact]
+    public void TryDisableHdr_Enabled_PersistsMarkerBeforeRegistryWrite()
+    {
+        var operations = new List<string>();
+
+        var result = GenshinHdrRegistryHelper.TryDisableHdr(
+            GenshinGameEdition.Cn,
+            _ =>
+            {
+                operations.Add("marker");
+                return true;
+            },
+            _ => new GenshinHdrRegistryReadResult(
+                GenshinHdrRegistryValueState.Enabled,
+                RegistryValueKind.DWord),
+            (_, _) =>
+            {
+                operations.Add("registry");
+                return new GenshinHdrRegistryWriteResult(true);
+            });
+
+        Assert.Equal(GenshinHdrDisableStatus.Disabled, result.Status);
+        Assert.Equal(["marker", "registry"], operations);
+    }
+
+    [Fact]
+    public void TryDisableHdr_MarkerPersistenceFails_DoesNotWriteRegistry()
+    {
+        var registryWriteCalled = false;
+
+        var result = GenshinHdrRegistryHelper.TryDisableHdr(
+            GenshinGameEdition.Cn,
+            _ => false,
+            _ => new GenshinHdrRegistryReadResult(
+                GenshinHdrRegistryValueState.Enabled,
+                RegistryValueKind.DWord),
+            (_, _) =>
+            {
+                registryWriteCalled = true;
+                return new GenshinHdrRegistryWriteResult(true);
+            });
+
+        Assert.Equal(GenshinHdrDisableStatus.PreparationFailed, result.Status);
+        Assert.False(registryWriteCalled);
+    }
+
+    [Fact]
+    public void TryDisableHdr_AlreadyDisabled_DoesNotPersistOrWrite()
+    {
+        var markerCalled = false;
+        var registryWriteCalled = false;
+
+        var result = GenshinHdrRegistryHelper.TryDisableHdr(
+            GenshinGameEdition.Global,
+            _ =>
+            {
+                markerCalled = true;
+                return true;
+            },
+            _ => new GenshinHdrRegistryReadResult(GenshinHdrRegistryValueState.Disabled),
+            (_, _) =>
+            {
+                registryWriteCalled = true;
+                return new GenshinHdrRegistryWriteResult(true);
+            });
+
+        Assert.Equal(GenshinHdrDisableStatus.AlreadyDisabled, result.Status);
+        Assert.False(markerCalled);
+        Assert.False(registryWriteCalled);
+    }
+
+    [Fact]
+    public void TryDisableHdr_RegistryReadFails_ReturnsExplicitFailure()
+    {
+        var expected = new UnauthorizedAccessException("denied");
+
+        var result = GenshinHdrRegistryHelper.TryDisableHdr(
+            GenshinGameEdition.Cn,
+            prepareBeforeWrite: null,
+            _ => new GenshinHdrRegistryReadResult(
+                GenshinHdrRegistryValueState.ReadFailed,
+                Error: expected),
+            (_, _) => new GenshinHdrRegistryWriteResult(true));
+
+        Assert.Equal(GenshinHdrDisableStatus.ReadFailed, result.Status);
+        Assert.Same(expected, result.Error);
+    }
+
+    [Fact]
+    public void TryDisableHdr_RegistryWriteFails_ReturnsExplicitFailure()
+    {
+        var expected = new UnauthorizedAccessException("denied");
+
+        var result = GenshinHdrRegistryHelper.TryDisableHdr(
+            GenshinGameEdition.Cn,
+            prepareBeforeWrite: null,
+            _ => new GenshinHdrRegistryReadResult(
+                GenshinHdrRegistryValueState.Enabled,
+                RegistryValueKind.DWord),
+            (_, _) => new GenshinHdrRegistryWriteResult(false, expected));
+
+        Assert.Equal(GenshinHdrDisableStatus.WriteFailed, result.Status);
+        Assert.Same(expected, result.Error);
     }
 }

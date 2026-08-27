@@ -80,8 +80,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
-    private readonly Dictionary<uint, HdrRestartRequirement> _hdrRestartRequirementsByProcess = [];
-    private readonly Dictionary<IntPtr, GenshinGameEdition> _hdrRestartRequirementsByWindow = [];
+    private readonly GenshinHdrRestartStateStore _hdrRestartStateStore = new();
 
     [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
@@ -261,12 +260,21 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             {
                 _hWnd = hWnd;
                 var captureMode = GetCaptureMode();
-                // 手动选择器允许任意窗口；只有本地国服/国际服客户端才可触碰原神 HDR 注册表。
-                if (TryGetDesktopGenshinEdition(hWnd, out var edition) &&
-                    !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, edition))
+                var target = ClassifyCaptureTarget(hWnd);
+                if (target.Status == GenshinCaptureTargetStatus.Unavailable)
+                {
+                    _logger.LogError(target.Error, "无法读取手动选择窗口的进程身份");
+                    await ShowGenshinEditionUnknownAsync();
+                    return;
+                }
+
+                // 手动选择器允许任意已确认的非桌面目标；只有国服/国际服客户端才触碰 HDR 注册表。
+                if (target.Status == GenshinCaptureTargetStatus.Desktop &&
+                    !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, target.Edition))
                 {
                     return;
                 }
+
                 Start(hWnd, captureMode);
             }
             else
@@ -293,8 +301,22 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         // 先把字符串配置归一化为有效枚举，后续 HDR 策略与实际启动共用同一个结果。
         var captureMode = GetCaptureMode();
         var hWnd = SystemControl.FindGenshinImpactHandle();
-        var edition = ResolveGenshinEdition(hWnd);
-        if (!await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, edition))
+        var configuredEdition = ResolveConfiguredGenshinEdition();
+        var initialTarget = hWnd != IntPtr.Zero
+            ? ClassifyCaptureTarget(hWnd)
+            : configuredEdition == GenshinGameEdition.Unknown
+                ? GenshinCaptureTargetClassification.NonRegistry()
+                : GenshinCaptureTargetClassification.Desktop(configuredEdition);
+        if (initialTarget.Status == GenshinCaptureTargetStatus.Unavailable)
+        {
+            _logger.LogError(initialTarget.Error, "无法读取自动选择游戏窗口的进程身份");
+            await ShowGenshinEditionUnknownAsync();
+            return;
+        }
+
+        var edition = initialTarget.Edition;
+        if (initialTarget.Status == GenshinCaptureTargetStatus.Desktop &&
+            !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, edition))
         {
             return;
         }
@@ -313,6 +335,21 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 if (hWnd != IntPtr.Zero)
                 {
                     TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
+                    // StartFromLocalAsync 可能返回启动前已存在但当时尚无主窗口的旧进程；必须按最终 PID 再检查一次。
+                    var finalTarget = ClassifyCaptureTarget(hWnd);
+                    if (finalTarget.Status == GenshinCaptureTargetStatus.Unavailable)
+                    {
+                        _logger.LogError(finalTarget.Error, "无法读取关联启动后游戏窗口的进程身份");
+                        await ShowGenshinEditionUnknownAsync();
+                        return;
+                    }
+
+                    edition = finalTarget.Edition;
+                    if (finalTarget.Status == GenshinCaptureTargetStatus.Desktop &&
+                        !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, edition))
+                    {
+                        return;
+                    }
                 }
                 else
                 {
@@ -340,9 +377,93 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             return true;
         }
 
-        if (IsSameGameProcessWaitingForHdrRestart(runningGameHandle, edition))
+        var registryTarget = GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(edition);
+        if (registryTarget is null)
         {
-            await ShowHdrRestartRequiredAsync();
+            _logger.LogError("无法确定 {Edition} 对应的原神 HDR 注册表目标", edition);
+            await ShowHdrRegistryFailureAsync("无法确定当前游戏版本对应的 HDR 注册表项。");
+            return false;
+        }
+
+        var policyLockResult = _hdrRestartStateStore.TryAcquirePolicyLock();
+        if (!policyLockResult.Success)
+        {
+            _logger.LogError(policyLockResult.Error, "获取原神 HDR 跨进程策略锁失败");
+            await ShowHdrRestartStateFailureAsync();
+            return false;
+        }
+
+        using var policyLock = policyLockResult.LockHandle!;
+
+        var processId = GetProcessId(runningGameHandle);
+        var restartCheck = _hdrRestartStateStore.CheckAndPrune(
+            processId,
+            edition,
+            registryTarget);
+        if (restartCheck.Status == GenshinHdrRestartCheckStatus.StateUnavailable)
+        {
+            _logger.LogError(restartCheck.Error, "读取或清理原神 HDR 待重启状态失败");
+            policyLock.Dispose();
+            await ShowHdrRestartStateFailureAsync();
+            return false;
+        }
+
+        if (restartCheck.Status == GenshinHdrRestartCheckStatus.RestartRequired)
+        {
+            var registryRequiresManualAction = false;
+            if (Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
+            {
+                // marker 可能在注册表写入前因 BetterGI 异常退出而留下；重试写 0，但旧游戏仍必须重启。
+                var retryPreparationResult = default(GenshinHdrRestartStateWriteResult);
+                var retryResult = GenshinHdrRegistryHelper.TryDisableHdr(
+                    edition,
+                    target =>
+                    {
+                        // 即使当前拦截来自旧 Applied 屏障，再次从 1 写 0 也必须建立新代次。
+                        retryPreparationResult = _hdrRestartStateStore.TryPrepareRegistryChange(edition, target);
+                        return retryPreparationResult.Success;
+                    });
+                registryRequiresManualAction = IsHdrRegistryFailure(retryResult.Status);
+                if (registryRequiresManualAction)
+                {
+                    _logger.LogError(
+                        retryResult.Error ?? retryPreparationResult.Error,
+                        "重试关闭原神 HDR 注册表失败，目标：{RegistryTarget}",
+                        registryTarget);
+                }
+                else if (!TryCompleteHdrRegistryChange(edition, registryTarget))
+                {
+                    policyLock.Dispose();
+                    await ShowHdrRestartStateFailureAsync();
+                    return false;
+                }
+            }
+            else
+            {
+                var readResult = GenshinHdrRegistryHelper.GetHdrState(edition);
+                if (readResult.State is
+                    GenshinHdrRegistryValueState.Disabled or GenshinHdrRegistryValueState.NotConfigured)
+                {
+                    // 用户已手动关闭时提交 Pending 代次；当前旧进程仍需重启，后续新进程才能放行。
+                    if (!TryCompleteHdrRegistryChange(edition, registryTarget))
+                    {
+                        policyLock.Dispose();
+                        await ShowHdrRestartStateFailureAsync();
+                        return false;
+                    }
+                }
+                else
+                {
+                    registryRequiresManualAction = true;
+                    if (readResult.Error is not null)
+                    {
+                        _logger.LogError(readResult.Error, "读取原神 HDR 注册表状态失败");
+                    }
+                }
+            }
+
+            policyLock.Dispose();
+            await ShowHdrRestartRequiredAsync(registryRequiresManualAction);
             return false;
         }
 
@@ -351,34 +472,108 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             return true;
         }
 
-        // 只修改当前运行或即将关联启动的版本，不能让另一版本的 HDR 状态触发无关重启。
-        if (!GenshinHdrRegistryHelper.TryDisableHdr(edition, out _))
+        var processIdentityResult = _hdrRestartStateStore.ReadProcessIdentity(processId);
+        var markerWriteResult = default(GenshinHdrRestartStateWriteResult);
+        Func<string, bool> prepareBeforeWrite = target =>
         {
-            return true;
-        }
+            if (runningGameHandle == IntPtr.Zero)
+            {
+                // 即使尚无可见窗口，也要先写版本级 Pending 代次，覆盖隐藏窗口和同版本多进程。
+                markerWriteResult = _hdrRestartStateStore.TryPrepareRegistryChange(edition, target);
+                return markerWriteResult.Success;
+            }
 
-        _logger.LogWarning(
-            "检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
-        if (runningGameHandle != IntPtr.Zero)
+            if (processIdentityResult.Status != GenshinProcessIdentityReadStatus.Found)
+            {
+                return false;
+            }
+
+            // 注册表写 0 前必须先同步落盘；失败时 helper 不会执行注册表写入。
+            markerWriteResult = _hdrRestartStateStore.TryMarkRestartRequired(
+                processIdentityResult.Identity,
+                edition,
+                target);
+            return markerWriteResult.Success;
+        };
+
+        // 只查询并修改当前运行或即将关联启动的版本，不能触碰另一版本的 HDR 状态。
+        var disableResult = GenshinHdrRegistryHelper.TryDisableHdr(edition, prepareBeforeWrite);
+        switch (disableResult.Status)
         {
-            // 注册表修改无法改变当前游戏进程；继续启动 SDR 捕获只会得到过曝/泛白画面。
-            MarkGameProcessWaitingForHdrRestart(runningGameHandle, edition);
-            await ShowHdrRestartRequiredAsync();
-            return false;
-        }
+            case GenshinHdrDisableStatus.NotConfigured:
+            case GenshinHdrDisableStatus.AlreadyDisabled:
+                if (!TryCompleteHdrRegistryChange(edition, registryTarget))
+                {
+                    policyLock.Dispose();
+                    await ShowHdrRestartStateFailureAsync();
+                    return false;
+                }
 
-        return true;
+                // 防御并发实例在本次初查后提交新屏障；策略锁内复核后才可放行。
+                var finalCheck = _hdrRestartStateStore.CheckAndPrune(processId, edition, registryTarget);
+                if (finalCheck.Status == GenshinHdrRestartCheckStatus.StateUnavailable)
+                {
+                    _logger.LogError(finalCheck.Error, "最终复核原神 HDR 待重启状态失败");
+                    policyLock.Dispose();
+                    await ShowHdrRestartStateFailureAsync();
+                    return false;
+                }
+
+                if (finalCheck.Status == GenshinHdrRestartCheckStatus.RestartRequired)
+                {
+                    policyLock.Dispose();
+                    await ShowHdrRestartRequiredAsync(registryRequiresManualAction: false);
+                    return false;
+                }
+
+                return true;
+            case GenshinHdrDisableStatus.Disabled:
+                if (!TryCompleteHdrRegistryChange(edition, registryTarget))
+                {
+                    policyLock.Dispose();
+                    await ShowHdrRestartStateFailureAsync();
+                    return false;
+                }
+
+                _logger.LogWarning(
+                    "检测到原神 HDR 已开启并已自动关闭，注册表目标：{RegistryTarget}",
+                    disableResult.RegistryTarget);
+                if (runningGameHandle != IntPtr.Zero)
+                {
+                    // 注册表修改无法改变当前进程；持久化 marker 会跨 BetterGI 重启继续拦截。
+                    policyLock.Dispose();
+                    await ShowHdrRestartRequiredAsync(registryRequiresManualAction: false);
+                    return false;
+                }
+
+                return true;
+            case GenshinHdrDisableStatus.PreparationFailed:
+                var preparationError = markerWriteResult.Error ??
+                                       processIdentityResult.Error ??
+                                       disableResult.Error;
+                _logger.LogError(
+                    preparationError,
+                    "保存原神 HDR 待重启状态失败；为避免状态丢失，未修改注册表");
+                policyLock.Dispose();
+                await ShowHdrRestartStateFailureAsync();
+                return false;
+            case GenshinHdrDisableStatus.ReadFailed:
+            case GenshinHdrDisableStatus.WriteFailed:
+            case GenshinHdrDisableStatus.UnsupportedEdition:
+            default:
+                _logger.LogError(
+                    disableResult.Error,
+                    "读取或关闭原神 HDR 注册表失败，目标：{RegistryTarget}",
+                    registryTarget);
+                policyLock.Dispose();
+                await ShowHdrRegistryFailureAsync(
+                    disableResult.Error?.GetBaseException().Message ?? "未知错误");
+                return false;
+        }
     }
 
-    private GenshinGameEdition ResolveGenshinEdition(IntPtr runningGameHandle)
+    private GenshinGameEdition ResolveConfiguredGenshinEdition()
     {
-        if (runningGameHandle != IntPtr.Zero)
-        {
-            return TryGetDesktopGenshinEdition(runningGameHandle, out var runningEdition)
-                ? runningEdition
-                : GenshinGameEdition.Unknown;
-        }
-
         var installPath = Config.GenshinStartConfig.InstallPath;
         return Config.GenshinStartConfig.LinkedStartEnabled &&
                File.Exists(installPath) &&
@@ -389,133 +584,113 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             : GenshinGameEdition.Unknown;
     }
 
-    private static bool TryGetDesktopGenshinEdition(
-        IntPtr hWnd,
-        out GenshinGameEdition edition)
+    private static GenshinCaptureTargetClassification ClassifyCaptureTarget(IntPtr hWnd)
     {
         using var process = SystemControl.GetProcessByHandle(hWnd);
-        if (process is not null)
+        if (process is null)
         {
-            try
-            {
-                return GenshinHdrRegistryHelper.TryResolveEditionFromProcessName(
-                    process.ProcessName,
-                    out edition);
-            }
-            catch
-            {
-                // 进程退出或信息不可访问时按非原神窗口处理，不触碰注册表。
-            }
+            return GenshinCaptureTargetClassification.Unavailable(
+                new InvalidOperationException("无法根据窗口句柄取得进程。"));
         }
 
-        edition = GenshinGameEdition.Unknown;
+        try
+        {
+            return GenshinHdrRegistryHelper.TryResolveEditionFromProcessName(
+                process.ProcessName,
+                out var edition)
+                ? GenshinCaptureTargetClassification.Desktop(edition)
+                : GenshinCaptureTargetClassification.NonRegistry();
+        }
+        catch (Exception e)
+        {
+            return GenshinCaptureTargetClassification.Unavailable(e);
+        }
+    }
+
+    private enum GenshinCaptureTargetStatus
+    {
+        Desktop,
+        NonRegistry,
+        Unavailable,
+    }
+
+    private readonly record struct GenshinCaptureTargetClassification(
+        GenshinCaptureTargetStatus Status,
+        GenshinGameEdition Edition = GenshinGameEdition.Unknown,
+        Exception? Error = null)
+    {
+        public static GenshinCaptureTargetClassification Desktop(GenshinGameEdition edition) =>
+            edition == GenshinGameEdition.Unknown
+                ? Unavailable(new InvalidOperationException("无法确认配置的桌面客户端版本。"))
+                : new(GenshinCaptureTargetStatus.Desktop, edition);
+
+        public static GenshinCaptureTargetClassification NonRegistry() =>
+            new(GenshinCaptureTargetStatus.NonRegistry);
+
+        public static GenshinCaptureTargetClassification Unavailable(Exception error) =>
+            new(GenshinCaptureTargetStatus.Unavailable, Error: error);
+    }
+
+    private static uint GetProcessId(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero)
+        {
+            return 0;
+        }
+
+        _ = User32.GetWindowThreadProcessId(hWnd, out var processId);
+        return processId;
+    }
+
+    private static bool IsHdrRegistryFailure(GenshinHdrDisableStatus status)
+    {
+        return status is GenshinHdrDisableStatus.PreparationFailed or
+            GenshinHdrDisableStatus.ReadFailed or
+            GenshinHdrDisableStatus.WriteFailed or
+            GenshinHdrDisableStatus.UnsupportedEdition;
+    }
+
+    private bool TryCompleteHdrRegistryChange(
+        GenshinGameEdition edition,
+        string registryTarget)
+    {
+        var result = _hdrRestartStateStore.TryCompleteRegistryChange(
+            edition,
+            registryTarget,
+            DateTime.UtcNow.Ticks);
+        if (result.Success)
+        {
+            return true;
+        }
+
+        _logger.LogError(result.Error, "提交原神 HDR 版本变更状态失败");
         return false;
     }
 
-    private bool IsSameGameProcessWaitingForHdrRestart(
-        IntPtr runningGameHandle,
-        GenshinGameEdition edition)
+    private static async Task ShowHdrRestartRequiredAsync(bool registryRequiresManualAction)
     {
-        PruneExitedHdrRestartRequirements();
-        if (runningGameHandle == IntPtr.Zero)
-        {
-            return false;
-        }
-
-        _ = User32.GetWindowThreadProcessId(runningGameHandle, out var processId);
-        if (processId != 0 &&
-            _hdrRestartRequirementsByProcess.TryGetValue(processId, out var requirement) &&
-            requirement.Edition == edition)
-        {
-            var currentStartTime = TryGetProcessStartTime(processId);
-            if (requirement.ProcessStartTime is null || currentStartTime is null ||
-                requirement.ProcessStartTime == currentStartTime)
-            {
-                return true;
-            }
-
-            // PID 已被新进程复用，不再把它视为尚未重启的旧游戏进程。
-            _hdrRestartRequirementsByProcess.Remove(processId);
-        }
-
-        return _hdrRestartRequirementsByWindow.TryGetValue(runningGameHandle, out var windowEdition) &&
-               windowEdition == edition;
+        var message = registryRequiresManualAction
+            ? "当前游戏仍在使用修改前的 HDR 状态，且 HDR 注册表尚未确认关闭。请手动关闭原神 HDR 并重启游戏后再启动 BetterGI。"
+            : "当前游戏仍在使用修改前的 HDR 状态。请重启游戏后再启动 BetterGI，以确保截图颜色正确。";
+        await ThemedMessageBox.WarningAsync(message);
     }
 
-    private void MarkGameProcessWaitingForHdrRestart(
-        IntPtr runningGameHandle,
-        GenshinGameEdition edition)
+    private static async Task ShowHdrRestartStateFailureAsync()
     {
-        _ = User32.GetWindowThreadProcessId(runningGameHandle, out var processId);
-        if (processId != 0)
-        {
-            _hdrRestartRequirementsByProcess[processId] = new HdrRestartRequirement(
-                edition,
-                TryGetProcessStartTime(processId));
-            return;
-        }
-
-        _hdrRestartRequirementsByWindow[runningGameHandle] = edition;
+        await ThemedMessageBox.ErrorAsync(
+            "无法读取或保存原神 HDR 待重启状态。为避免 BetterGI 重启后错误放行旧游戏进程，本次未修改 HDR 设置，也未启动 SDR 捕获。请检查 LocalAppData/BetterGI/State 目录权限后重试。");
     }
 
-    private void PruneExitedHdrRestartRequirements()
+    private static async Task ShowHdrRegistryFailureAsync(string error)
     {
-        foreach (var pair in _hdrRestartRequirementsByProcess.ToArray())
-        {
-            try
-            {
-                using var process = Process.GetProcessById((int)pair.Key);
-                if (process.HasExited ||
-                    pair.Value.ProcessStartTime is { } expectedStartTime &&
-                    process.StartTime != expectedStartTime)
-                {
-                    _hdrRestartRequirementsByProcess.Remove(pair.Key);
-                }
-            }
-            catch (ArgumentException)
-            {
-                _hdrRestartRequirementsByProcess.Remove(pair.Key);
-            }
-            catch (InvalidOperationException)
-            {
-                _hdrRestartRequirementsByProcess.Remove(pair.Key);
-            }
-            catch
-            {
-                // 无法读取进程信息时保留要求，避免错误放行仍在运行的 HDR 进程。
-            }
-        }
-
-        foreach (var hWnd in _hdrRestartRequirementsByWindow.Keys.ToArray())
-        {
-            if (!User32.IsWindow(hWnd))
-            {
-                _hdrRestartRequirementsByWindow.Remove(hWnd);
-            }
-        }
+        await ThemedMessageBox.ErrorAsync(
+            $"无法读取或关闭原神 HDR 设置：{error}\n为避免 SDR 截图过曝或泛白，本次未启动捕获。请手动关闭原神 HDR 后重试。");
     }
 
-    private static DateTime? TryGetProcessStartTime(uint processId)
+    private static async Task ShowGenshinEditionUnknownAsync()
     {
-        try
-        {
-            using var process = Process.GetProcessById((int)processId);
-            return process.StartTime;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private readonly record struct HdrRestartRequirement(
-        GenshinGameEdition Edition,
-        DateTime? ProcessStartTime);
-
-    private static async Task ShowHdrRestartRequiredAsync()
-    {
-        await ThemedMessageBox.WarningAsync(
-            "已关闭原神 HDR 设置，但游戏正在运行。请重启游戏后再启动 BetterGI，以确保截图颜色正确。");
+        await ThemedMessageBox.ErrorAsync(
+            "已找到游戏窗口，但无法确认它属于国服还是国际服。为避免跳过对应版本的 HDR 安全检查，本次未启动捕获。请确认使用官方桌面客户端后重试。");
     }
 
     private void Start(IntPtr hWnd, CaptureModes? requestedCaptureMode = null)

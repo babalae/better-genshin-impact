@@ -13,6 +13,40 @@ internal enum GenshinGameEdition
     Global = 2,
 }
 
+internal enum GenshinHdrRegistryValueState
+{
+    NotConfigured,
+    Disabled,
+    Enabled,
+    Invalid,
+    ReadFailed,
+}
+
+internal enum GenshinHdrDisableStatus
+{
+    NotConfigured,
+    AlreadyDisabled,
+    Disabled,
+    PreparationFailed,
+    ReadFailed,
+    WriteFailed,
+    UnsupportedEdition,
+}
+
+internal readonly record struct GenshinHdrRegistryReadResult(
+    GenshinHdrRegistryValueState State,
+    RegistryValueKind? ValueKind = null,
+    Exception? Error = null);
+
+internal readonly record struct GenshinHdrRegistryWriteResult(
+    bool Success,
+    Exception? Error = null);
+
+internal readonly record struct GenshinHdrDisableResult(
+    GenshinHdrDisableStatus Status,
+    string? RegistryTarget,
+    Exception? Error = null);
+
 public static class GenshinHdrRegistryHelper
 {
     internal const string CnProcessName = "YuanShen";
@@ -72,47 +106,187 @@ public static class GenshinHdrRegistryHelper
         };
     }
 
-    internal static bool TryDisableHdr(
-        GenshinGameEdition edition,
-        out string? updatedFullKeyPath)
+    internal static string? GetHdrRegistryFullValuePath(GenshinGameEdition edition)
     {
-        updatedFullKeyPath = null;
+        var parentKeyPath = GetHdrRegistryParentKeyPath(edition);
+        return parentKeyPath is null
+            ? null
+            : $@"HKEY_CURRENT_USER\{parentKeyPath}\{HdrRegistryEntryName}";
+    }
+
+    internal static GenshinHdrRegistryReadResult GetHdrState(GenshinGameEdition edition)
+    {
+        return ReadHdrRegistryValue(edition);
+    }
+
+    /// <summary>
+    /// 关闭指定版本的原神 HDR。若传入 <paramref name="prepareBeforeWrite"/>，它会在注册表写入前执行，
+    /// 用于先持久化“当前游戏必须重启”的安全标记，避免 BetterGI 在两步之间退出后错误放行 SDR 捕获。
+    /// </summary>
+    internal static GenshinHdrDisableResult TryDisableHdr(
+        GenshinGameEdition edition,
+        Func<string, bool>? prepareBeforeWrite = null)
+    {
+        return TryDisableHdr(
+            edition,
+            prepareBeforeWrite,
+            ReadHdrRegistryValue,
+            WriteDisabledHdrRegistryValue);
+    }
+
+    internal static GenshinHdrDisableResult TryDisableHdr(
+        GenshinGameEdition edition,
+        Func<string, bool>? prepareBeforeWrite,
+        Func<GenshinGameEdition, GenshinHdrRegistryReadResult> readValue,
+        Func<GenshinGameEdition, RegistryValueKind, GenshinHdrRegistryWriteResult> writeDisabledValue)
+    {
+        ArgumentNullException.ThrowIfNull(readValue);
+        ArgumentNullException.ThrowIfNull(writeDisabledValue);
+
+        var registryTarget = GetHdrRegistryFullValuePath(edition);
+        if (registryTarget is null)
+        {
+            return new GenshinHdrDisableResult(
+                GenshinHdrDisableStatus.UnsupportedEdition,
+                null);
+        }
+
+        var readResult = readValue(edition);
+        switch (readResult.State)
+        {
+            case GenshinHdrRegistryValueState.NotConfigured:
+                return new GenshinHdrDisableResult(
+                    GenshinHdrDisableStatus.NotConfigured,
+                    registryTarget);
+            case GenshinHdrRegistryValueState.Disabled:
+                return new GenshinHdrDisableResult(
+                    GenshinHdrDisableStatus.AlreadyDisabled,
+                    registryTarget);
+            case GenshinHdrRegistryValueState.Invalid:
+            case GenshinHdrRegistryValueState.ReadFailed:
+                return new GenshinHdrDisableResult(
+                    GenshinHdrDisableStatus.ReadFailed,
+                    registryTarget,
+                    readResult.Error);
+            case GenshinHdrRegistryValueState.Enabled:
+                break;
+            default:
+                return new GenshinHdrDisableResult(
+                    GenshinHdrDisableStatus.ReadFailed,
+                    registryTarget,
+                    new InvalidDataException("未知的原神 HDR 注册表状态。"));
+        }
+
+        if (readResult.ValueKind is not { } valueKind)
+        {
+            return new GenshinHdrDisableResult(
+                GenshinHdrDisableStatus.ReadFailed,
+                registryTarget,
+                new InvalidDataException("原神 HDR 注册表值缺少数值类型。"));
+        }
+
+        if (prepareBeforeWrite is not null)
+        {
+            try
+            {
+                if (!prepareBeforeWrite(registryTarget))
+                {
+                    return new GenshinHdrDisableResult(
+                        GenshinHdrDisableStatus.PreparationFailed,
+                        registryTarget);
+                }
+            }
+            catch (Exception e)
+            {
+                return new GenshinHdrDisableResult(
+                    GenshinHdrDisableStatus.PreparationFailed,
+                    registryTarget,
+                    e);
+            }
+        }
+
+        var writeResult = writeDisabledValue(edition, valueKind);
+        return writeResult.Success
+            ? new GenshinHdrDisableResult(GenshinHdrDisableStatus.Disabled, registryTarget)
+            : new GenshinHdrDisableResult(
+                GenshinHdrDisableStatus.WriteFailed,
+                registryTarget,
+                writeResult.Error);
+    }
+
+    private static GenshinHdrRegistryReadResult ReadHdrRegistryValue(
+        GenshinGameEdition edition)
+    {
         var parentKeyPath = GetHdrRegistryParentKeyPath(edition);
         if (parentKeyPath is null)
         {
-            return false;
+            return new GenshinHdrRegistryReadResult(GenshinHdrRegistryValueState.NotConfigured);
+        }
+
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(parentKeyPath, writable: false);
+            if (key == null)
+            {
+                return new GenshinHdrRegistryReadResult(GenshinHdrRegistryValueState.NotConfigured);
+            }
+
+            var value = key.GetValue(HdrRegistryEntryName);
+            return value switch
+            {
+                null => new GenshinHdrRegistryReadResult(GenshinHdrRegistryValueState.NotConfigured),
+                0 => new GenshinHdrRegistryReadResult(GenshinHdrRegistryValueState.Disabled),
+                0L => new GenshinHdrRegistryReadResult(GenshinHdrRegistryValueState.Disabled),
+                1 => new GenshinHdrRegistryReadResult(
+                    GenshinHdrRegistryValueState.Enabled,
+                    RegistryValueKind.DWord),
+                1L => new GenshinHdrRegistryReadResult(
+                    GenshinHdrRegistryValueState.Enabled,
+                    RegistryValueKind.QWord),
+                _ => new GenshinHdrRegistryReadResult(
+                    GenshinHdrRegistryValueState.Invalid,
+                    Error: new InvalidDataException(
+                        $"原神 HDR 注册表值类型或内容无效：{value.GetType().Name}={value}")),
+            };
+        }
+        catch (Exception e)
+        {
+            return new GenshinHdrRegistryReadResult(
+                GenshinHdrRegistryValueState.ReadFailed,
+                Error: e);
+        }
+    }
+
+    private static GenshinHdrRegistryWriteResult WriteDisabledHdrRegistryValue(
+        GenshinGameEdition edition,
+        RegistryValueKind valueKind)
+    {
+        var parentKeyPath = GetHdrRegistryParentKeyPath(edition);
+        if (parentKeyPath is null)
+        {
+            return new GenshinHdrRegistryWriteResult(
+                false,
+                new InvalidOperationException("未知的原神版本，无法写入 HDR 注册表值。"));
         }
 
         try
         {
             using var key = Registry.CurrentUser.OpenSubKey(parentKeyPath, writable: true);
-            if (key == null)
+            if (key is null)
             {
-                return false;
-            }
-
-            var value = key.GetValue(HdrRegistryEntryName);
-            var disabledValue = value switch
-            {
-                1 => (object)0,
-                1L => 0L,
-                _ => null,
-            };
-            if (disabledValue is null)
-            {
-                return false;
+                return new GenshinHdrRegistryWriteResult(
+                    false,
+                    new UnauthorizedAccessException($@"无法以可写方式打开注册表项 HKEY_CURRENT_USER\{parentKeyPath}。"));
             }
 
             // 保留原注册表数值类型，避免罕见的 QWORD 配置被改写成 DWord。
-            var valueKind = value is long ? RegistryValueKind.QWord : RegistryValueKind.DWord;
+            var disabledValue = valueKind == RegistryValueKind.QWord ? (object)0L : 0;
             key.SetValue(HdrRegistryEntryName, disabledValue, valueKind);
-            updatedFullKeyPath = $@"HKEY_CURRENT_USER\{parentKeyPath}\{HdrRegistryEntryName}";
-            return true;
+            return new GenshinHdrRegistryWriteResult(true);
         }
-        catch
+        catch (Exception e)
         {
-            // 忽略读写失败，避免注册表权限或瞬时错误阻断启动流程。
-            return false;
+            return new GenshinHdrRegistryWriteResult(false, e);
         }
     }
 

@@ -87,8 +87,9 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             if (_captureHdrRequested)
             {
                 var displayState = HdrDisplayInformation.GetState(hWnd);
-                _isHdrDisplayEnabled = displayState.IsHdrEnabled;
-                _hdrSdrWhiteScale = displayState.SdrWhiteScale;
+                var pipelineDecision = ResolveHdrPipeline(displayState);
+                _isHdrDisplayEnabled = pipelineDecision.IsHdrEnabled;
+                _hdrSdrWhiteScale = pipelineDecision.SdrWhiteScale;
             }
             else
             {
@@ -190,6 +191,20 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         };
 
         return Math.Clamp(requestedInterval, MinimumFrameIntervalMs, MaximumFrameIntervalMs);
+    }
+
+    internal static HdrPipelineDecision ResolveHdrPipeline(HdrDisplayState displayState)
+    {
+        return displayState.Kind switch
+        {
+            HdrDisplayStateKind.Sdr => new HdrPipelineDecision(false, 1f),
+            HdrDisplayStateKind.Hdr => new HdrPipelineDecision(true, displayState.SdrWhiteScale),
+            HdrDisplayStateKind.HdrWhiteLevelUnavailable =>
+                new HdrPipelineDecision(true, HdrDisplayInformation.FallbackSdrWhiteScale),
+            _ => throw new InvalidOperationException(
+                "无法确认目标窗口所在显示器的 HDR 状态，已停止启动 WindowsGraphicsCapture（HDR），" +
+                "以避免按 SDR 错误捕获 HDR 画面。请检查显示器连接和显卡驱动后重试。"),
+        };
     }
 
     /// <summary>
@@ -561,3 +576,5 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         }
     }
 }
+
+internal readonly record struct HdrPipelineDecision(bool IsHdrEnabled, float SdrWhiteScale);

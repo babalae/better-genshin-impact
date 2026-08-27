@@ -9,12 +9,20 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.CaptureTests;
 public class HdrDisplayInformationTests
 {
     [Fact]
-    public void DisplayQueryFallback_UsesSdrPipeline()
+    public void DisplayQueryFallback_RemainsUnknown()
     {
-        var fallback = HdrDisplayState.Fallback;
+        var fallback = HdrDisplayState.Unknown;
 
+        Assert.Equal(HdrDisplayStateKind.Unknown, fallback.Kind);
+        Assert.False(fallback.IsKnown);
         Assert.False(fallback.IsHdrEnabled);
         Assert.Equal(1f, fallback.SdrWhiteScale);
+    }
+
+    [Fact]
+    public void DefaultDisplayState_IsUnknown()
+    {
+        Assert.Equal(HdrDisplayStateKind.Unknown, default(HdrDisplayState).Kind);
     }
 
     [Fact]
@@ -63,6 +71,42 @@ public class HdrDisplayInformationTests
         var actual = HdrDisplayInformation.CalculateSdrWhiteScale(whiteLevelNits);
 
         Assert.Equal(HdrDisplayInformation.FallbackSdrWhiteScale, actual);
+    }
+
+    [Fact]
+    public void ResolveHdrPipeline_ConfirmedSdr_UsesB8Pipeline()
+    {
+        var decision = GraphicsCapture.ResolveHdrPipeline(HdrDisplayState.Sdr);
+
+        Assert.False(decision.IsHdrEnabled);
+        Assert.Equal(1f, decision.SdrWhiteScale);
+    }
+
+    [Fact]
+    public void ResolveHdrPipeline_ConfirmedHdr_UsesMeasuredWhiteLevel()
+    {
+        var decision = GraphicsCapture.ResolveHdrPipeline(HdrDisplayState.CreateHdr(0.4f));
+
+        Assert.True(decision.IsHdrEnabled);
+        Assert.Equal(0.4f, decision.SdrWhiteScale);
+    }
+
+    [Fact]
+    public void ResolveHdrPipeline_WhiteLevelUnavailable_KeepsFp16Pipeline()
+    {
+        var decision = GraphicsCapture.ResolveHdrPipeline(HdrDisplayState.HdrWhiteLevelUnavailable);
+
+        Assert.True(decision.IsHdrEnabled);
+        Assert.Equal(HdrDisplayInformation.FallbackSdrWhiteScale, decision.SdrWhiteScale);
+    }
+
+    [Fact]
+    public void ResolveHdrPipeline_Unknown_StopsCaptureStartup()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            GraphicsCapture.ResolveHdrPipeline(HdrDisplayState.Unknown));
+
+        Assert.Contains("无法确认目标窗口所在显示器的 HDR 状态", exception.Message);
     }
 }
 

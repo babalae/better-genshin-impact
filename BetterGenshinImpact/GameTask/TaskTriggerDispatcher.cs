@@ -166,7 +166,7 @@ namespace BetterGenshinImpact.GameTask
             if (mode == CaptureModes.WindowsGraphicsCaptureHdr &&
                 GameCapture.ColorMode != CaptureColorMode.HdrToSdr)
             {
-                _logger.LogWarning("WindowsGraphicsCapture（HDR）未激活 HDR 管线，当前已回退为 SDR 捕获");
+                _logger.LogWarning("目标显示器当前未启用 HDR，WindowsGraphicsCapture（HDR）已使用 SDR 捕获管线");
             }
 
             // 使用 SetWinEventHook 监听窗口移动和大小变化事件
