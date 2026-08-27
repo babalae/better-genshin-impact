@@ -188,12 +188,15 @@ public class Dispatcher
                 return null;
 
             case "AutoDomain":
+            {
                 if (taskSettingsPageViewModel.GetFightStrategy(out var path))
                 {
                     return null;
                 }
 
-                return await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
+                using var autoDomainTask = new AutoDomainTask(new AutoDomainParam(0, path));
+                return await autoDomainTask.Start(cancellationToken);
+            }
 
             case "AutoBoss":
                 var autoBossConfig = TaskContext.Instance().Config.AutoBossConfig;
@@ -205,9 +208,12 @@ public class Dispatcher
                 return await new AutoBossTask(new AutoBossParam(autoBossPath)).Start(cancellationToken);
 
             case "AutoFishing":
-                await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
-                    cancellationToken);
+            {
+                using var autoFishingTask = new AutoFishingTask(
+                    AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config));
+                await autoFishingTask.Start(cancellationToken);
                 return null;
+            }
             case "AutoCook":
                 await new AutoCookTask().Start(cancellationToken);
                 return null;
@@ -337,7 +343,8 @@ public class Dispatcher
         }  
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
-        return await new AutoDomainTask(param).Start(cancellationToken);
+        using var autoDomainTask = new AutoDomainTask(param);
+        return await autoDomainTask.Start(cancellationToken);
     }  
 
     /// <summary>

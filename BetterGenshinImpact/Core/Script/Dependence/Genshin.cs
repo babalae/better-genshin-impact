@@ -464,7 +464,8 @@ public class Genshin
 
         var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
-        await new AutoFishingTask(param).Start(CancellationContext.Instance.Cts.Token);
+        using var autoFishingTask = new AutoFishingTask(param);
+        await autoFishingTask.Start(CancellationContext.Instance.Cts.Token);
     }
 
     /// <summary>

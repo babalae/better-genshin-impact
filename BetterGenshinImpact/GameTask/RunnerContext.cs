@@ -60,26 +60,63 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 当前队伍角色信息
     /// </summary>
     private CombatScenes? _combatScenes;
+    private readonly object _combatScenesLock = new();
+    private readonly List<CombatScenes> _retiredCombatScenes = [];
+    private long _combatScenesGeneration;
 
     public async Task<CombatScenes?> GetCombatScenes(CancellationToken ct)
     {
-        if (_combatScenes == null)
+        long generation;
+        lock (_combatScenesLock)
         {
-            // 返回主界面再识别
-            var returnMainUiTask = new ReturnMainUiTask();
-            await returnMainUiTask.Start(ct);
-
-            await Delay(200, ct);
-
-            _combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (!_combatScenes.CheckTeamInitialized())
+            if (_combatScenes is not null)
             {
-                Logger.LogError("队伍角色识别失败");
-                _combatScenes = null;
+                return _combatScenes;
             }
+
+            generation = _combatScenesGeneration;
         }
 
-        return _combatScenes;
+        // 返回主界面再识别。并发调用允许重复识别，但发布缓存时只保留一个实例，其他候选立即释放。
+        var returnMainUiTask = new ReturnMainUiTask();
+        await returnMainUiTask.Start(ct);
+        await Delay(200, ct);
+
+        using var capture = CaptureToRectArea();
+        var detectedScenes = new CombatScenes();
+        try
+        {
+            detectedScenes.InitializeTeam(capture);
+
+            if (!detectedScenes.CheckTeamInitialized())
+            {
+                Logger.LogError("队伍角色识别失败");
+                detectedScenes.Dispose();
+                return null;
+            }
+
+            lock (_combatScenesLock)
+            {
+                if (generation != _combatScenesGeneration)
+                {
+                    // 清理已在异步识别期间发生；不要把过期候选重新发布回缓存。
+                    return null;
+                }
+
+                if (_combatScenes is null)
+                {
+                    _combatScenes = detectedScenes;
+                    detectedScenes = null!;
+                }
+
+                return _combatScenes;
+            }
+        }
+        finally
+        {
+            // 如果并发调用已先发布缓存，释放本次未采用的候选场景。
+            detectedScenes?.Dispose();
+        }
     }
 
     /// <summary>
@@ -106,7 +143,16 @@ public class RunnerContext : Singleton<RunnerContext>
 
     public void ClearCombatScenes()
     {
-        _combatScenes = null;
+        lock (_combatScenesLock)
+        {
+            _combatScenesGeneration++;
+            if (_combatScenes is not null)
+            {
+                // 调用方拿到的是裸引用；任务进行中只退役不立即 Dispose，避免使现有借用者失效。
+                _retiredCombatScenes.Add(_combatScenes);
+                _combatScenes = null;
+            }
+        }
     }
 
     /// <summary>
@@ -120,7 +166,7 @@ public class RunnerContext : Singleton<RunnerContext>
             PartyName = null;
         }
 
-        _combatScenes = null;
+        DisposeCombatScenesCache();
         IsSuspend = false;
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
@@ -133,7 +179,7 @@ public class RunnerContext : Singleton<RunnerContext>
     {
         IsContinuousRunGroup = false;
         PartyName = null;
-        _combatScenes = null;
+        DisposeCombatScenesCache();
         IsSuspend = false;
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
@@ -212,6 +258,34 @@ public class RunnerContext : Singleton<RunnerContext>
     }
     public void stop()
     {
-        _combatScenes = null;
+        DisposeCombatScenesCache();
+    }
+
+    private void DisposeCombatScenesCache()
+    {
+        List<CombatScenes> scenes;
+        lock (_combatScenesLock)
+        {
+            _combatScenesGeneration++;
+            scenes = [.. _retiredCombatScenes];
+            _retiredCombatScenes.Clear();
+            if (_combatScenes is not null)
+            {
+                scenes.Add(_combatScenes);
+                _combatScenes = null;
+            }
+        }
+
+        foreach (var scene in scenes)
+        {
+            try
+            {
+                scene.Dispose();
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "释放缓存战斗场景资源失败");
+            }
+        }
     }
 }

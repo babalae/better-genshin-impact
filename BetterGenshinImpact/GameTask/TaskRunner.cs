@@ -126,24 +126,39 @@ public class TaskRunner
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
-
-        // 没启动的时候先启动
-        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
-                             !soloTask.Name.Contains("幽境危战");
-        await ScriptService.StartGameTask(waitForMainUi);
-        if (CancellationContext.Instance.IsCancellationRequested)
+        try
         {
-            _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
-            CancellationContext.Instance.Clear();
-            return;
+            // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+            CancellationContext.Instance.Set();
+
+            // 没启动的时候先启动
+            bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
+                                 !soloTask.Name.Contains("幽境危战");
+            await ScriptService.StartGameTask(waitForMainUi);
+            if (CancellationContext.Instance.IsCancellationRequested)
+            {
+                _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
+                CancellationContext.Instance.Clear();
+                return;
+            }
+
+            await Task.Run(() => RunCurrentAsync(
+                async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
+                resetCancellationContext: false,
+                clearCancellationContextOnLockFailure: true));
         }
-        
-        await Task.Run(() => RunCurrentAsync(
-            async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
-            resetCancellationContext: false,
-            clearCancellationContextOnLockFailure: true));
+        finally
+        {
+            // TaskRunner 接管一次性任务；在启动取消、异常或正常完成后统一释放其原生资源。
+            try
+            {
+                (soloTask as IDisposable)?.Dispose();
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "释放独立任务资源失败: {Name}", soloTask.Name);
+            }
+        }
     }
 
     public void Init()

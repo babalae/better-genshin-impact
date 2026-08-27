@@ -63,4 +63,23 @@ public class OnnxRuntimePolicyTests
         Assert.NotEqual(BgiOnnxModel.BgiTree.CachePath, BgiOnnxModel.BgiWorld.CachePath);
     }
 
+    [Fact]
+    public void YoloPredictor_DisposeBeforeLazyCreation_IsIdempotentAndPreventsRun()
+    {
+        var factoryCalled = false;
+        var predictor = new BgiYoloPredictor(
+            BgiOnnxModel.BgiWorld,
+            () =>
+            {
+                factoryCalled = true;
+                throw new InvalidOperationException("factory should not run");
+            });
+
+        predictor.Dispose();
+        predictor.Dispose();
+
+        Assert.False(factoryCalled);
+        Assert.Throws<ObjectDisposedException>(() => predictor.Run(_ => 0));
+    }
+
 }

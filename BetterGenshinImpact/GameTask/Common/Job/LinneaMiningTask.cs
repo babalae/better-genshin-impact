@@ -24,7 +24,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 莉奈娅挖矿
 /// </summary>
-public class LinneaMiningTask
+public class LinneaMiningTask : IDisposable
 {
     #region 配置参数
 
@@ -365,6 +365,12 @@ public class LinneaMiningTask
         }
 
         return clusters;
+    }
+
+    public void Dispose()
+    {
+        _predictor.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 

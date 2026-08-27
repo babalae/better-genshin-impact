@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -7,7 +6,6 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -36,12 +34,6 @@ public class AutoFightJsonTask : ISoloTask
     private readonly JsonCombatStrategy _strategy;
     private CancellationToken _ct;
 
-    /// <summary>
-    /// YOLO目标检测器（BgiWorld模型），用于战斗结束检测
-    /// 当前未使用（战斗结束检测已委托到 AutoFightEndDetection），保留声明以与 TXT 策略保持一致
-    /// 初始化条件：_taskParam.FightFinishDetectEnabled == true
-    /// </summary>
-    private readonly BgiYoloPredictor? _predictor;
     private DateTime _lastFightFlagTime = DateTime.Now;
     private int _skipCheckCounter;
 
@@ -86,11 +78,6 @@ public class AutoFightJsonTask : ISoloTask
         _taskParam = taskParam;
         _strategy = JsonCombatStrategyParser.ParseFile(_taskParam.CombatStrategyPath);
 
-        if (_taskParam.FightFinishDetectEnabled)
-        {
-            _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
-        }
-
         _finishDetectConfig = new AutoFightTask.TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
 
@@ -106,11 +93,23 @@ public class AutoFightJsonTask : ISoloTask
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (combatScenes.CheckTeamInitialized())
+            var combatScenes = new CombatScenes();
+            try
             {
-                return combatScenes;
+                using var capture = CaptureToRectArea();
+                combatScenes.InitializeTeam(capture);
+                if (combatScenes.CheckTeamInitialized())
+                {
+                    return combatScenes;
+                }
             }
+            catch
+            {
+                combatScenes.Dispose();
+                throw;
+            }
+
+            combatScenes.Dispose();
 
             if (attempt < maxRetries)
             {
@@ -132,7 +131,7 @@ public class AutoFightJsonTask : ISoloTask
         try
         {
             LogScreenResolution();
-            var combatScenes = GetCombatScenesWithRetry();
+            using var combatScenes = GetCombatScenesWithRetry();
     
             // 收集当前队伍角色名
             foreach (var avatar in combatScenes.GetAvatars())
@@ -474,7 +473,8 @@ public class AutoFightJsonTask : ISoloTask
                     {
                         if (_taskParam is { PickDropsAfterFightEnabled: true })
                         {
-                            await new ScanPickTask().Start(_ct);
+                            using var scanPickTask = new ScanPickTask();
+                            await scanPickTask.Start(_ct);
                         }
                         return;
                     }
@@ -831,7 +831,8 @@ public class AutoFightJsonTask : ISoloTask
 
         if (_taskParam is { PickDropsAfterFightEnabled: true })
         {
-            await new ScanPickTask().Start(_ct);
+            using var scanPickTask = new ScanPickTask();
+            await scanPickTask.Start(_ct);
         }
     }
 

@@ -39,7 +39,8 @@ public class LinneaMiningHandler : IActionHandler
             return;
         }
 
-        await new LinneaMiningTask(scanRounds, mineCount).Start(ct);
+        using var miningTask = new LinneaMiningTask(scanRounds, mineCount);
+        await miningTask.Start(ct);
     }
 
     private static (int mineCount, int scanRounds) ParseParams(string? actionParams)
