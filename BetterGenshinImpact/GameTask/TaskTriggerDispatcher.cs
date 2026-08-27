@@ -608,6 +608,12 @@ namespace BetterGenshinImpact.GameTask
             if (hwndPtr == target)
             {
                 SyncMaskWindowPosition();
+
+                // WGC HDR 管线依赖窗口所在显示器；只发出无阻塞通知，实际帧池重建由捕获回调完成。
+                if (GameCapture is GraphicsCapture graphicsCapture)
+                {
+                    graphicsCapture.NotifyWindowLocationChanged(hwndPtr);
+                }
             }
         }
 

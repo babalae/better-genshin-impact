@@ -58,6 +58,10 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     private int _surfaceHeight;
     private bool _screenInfoRefreshPending;
 
+    // HDR 管线依赖窗口所在的显示器；跨屏移动后由窗口事件设置请求，并在帧回调中安全重建帧池。
+    private IntPtr _hdrDisplayMonitor;
+    private int _hdrDisplayRefreshPending;
+
     private long _lastFrameTime;
     private int _targetFrameIntervalMs = MinimumFrameIntervalMs;
 
@@ -82,6 +86,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             _hWnd = hWnd;
             (_region, _captureRect) = GetGameScreenInfo(hWnd);
             _screenInfoRefreshPending = false;
+            _hdrDisplayMonitor = IntPtr.Zero;
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
             _targetFrameIntervalMs = ResolveTargetFrameInterval(settings);
 
             if (_captureHdrRequested)
@@ -90,6 +96,11 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 var pipelineDecision = ResolveHdrPipeline(displayState);
                 _isHdrDisplayEnabled = pipelineDecision.IsHdrEnabled;
                 _hdrSdrWhiteScale = pipelineDecision.SdrWhiteScale;
+                _hdrDisplayMonitor = GetMonitorHandle(hWnd);
+                if (_hdrDisplayMonitor == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException("无法确定 HDR 捕获目标显示器。请检查显示器连接和显卡驱动后重试。");
+                }
             }
             else
             {
@@ -208,6 +219,37 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     }
 
     /// <summary>
+    /// 通知捕获器窗口位置发生变化。只做无阻塞的监视器比较，实际的帧池重建延后到
+    /// free-threaded 帧回调，以避免在 WinEventHook 线程或 WPF/UI 线程上执行 D3D 操作。
+    /// </summary>
+    public void NotifyWindowLocationChanged(nint hWnd)
+    {
+        if (!_captureHdrRequested || !IsCapturing || hWnd == 0 || hWnd != _hWnd)
+        {
+            return;
+        }
+
+        IntPtr monitor;
+        try
+        {
+            monitor = GetMonitorHandle(hWnd);
+        }
+        catch
+        {
+            // WinEventHook 回调不应因瞬时的窗口/显示器查询异常影响系统事件线程；下一次事件会再次尝试。
+            return;
+        }
+
+        if (monitor == IntPtr.Zero || monitor == Volatile.Read(ref _hdrDisplayMonitor))
+        {
+            return;
+        }
+
+        // 多次位置事件只保留一个待处理标记；帧回调会重新读取当前监视器，避免使用过期目标。
+        Volatile.Write(ref _hdrDisplayRefreshPending, 1);
+    }
+
+    /// <summary>
     /// 从 DwmGetWindowAttribute 的矩形 截取出 GetClientRect的矩形（游戏区域）
     /// </summary>
     /// <param name="hWnd"></param>
@@ -240,6 +282,17 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         var bottom = top + clientRect.Height;
 
         return (region, new RECT(left, top, right, bottom));
+    }
+
+    private static IntPtr GetMonitorHandle(nint hWnd)
+    {
+        if (hWnd == 0)
+        {
+            return IntPtr.Zero;
+        }
+
+        var monitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
+        return monitor.IsInvalid ? IntPtr.Zero : monitor.DangerousGetHandle();
     }
 
     private Texture2D ProcessHdrTexture(
@@ -304,6 +357,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             }
 
             var shouldRecreateFramePool = false;
+            var shouldRefreshHdrDisplay = _captureHdrRequested &&
+                                           Volatile.Read(ref _hdrDisplayRefreshPending) != 0;
             var captureSize = default(Windows.Graphics.SizeInt32);
             using (var frame = sender.TryGetNextFrame())
             {
@@ -312,69 +367,87 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                     return;
                 }
 
-                // GPU 色彩转换与回读只按消费者需要的频率执行，避免默认 20 FPS 消费却处理约 62 FPS。
-                if (_frameTimer.ElapsedMilliseconds - _lastFrameTime < _targetFrameIntervalMs)
+                // 显示器切换必须优先于节流处理，否则低采样频率下可能长时间沿用旧 HDR 管线。
+                if (shouldRefreshHdrDisplay)
+                {
+                    captureSize = _captureItem!.Size;
+                }
+                else if (_frameTimer.ElapsedMilliseconds - _lastFrameTime < _targetFrameIntervalMs)
                 {
                     return;
                 }
-                _lastFrameTime = _frameTimer.ElapsedMilliseconds;
-
-                captureSize = _captureItem!.Size;
-                if (captureSize.Width != _surfaceWidth || captureSize.Height != _surfaceHeight)
-                {
-                    if (User32.IsIconic(_hWnd))
-                    {
-                        return;
-                    }
-
-                    shouldRecreateFramePool = true;
-                }
                 else
                 {
-                    if (_screenInfoRefreshPending && !TryRefreshGameScreenInfo())
+                    _lastFrameTime = _frameTimer.ElapsedMilliseconds;
+
+                    captureSize = _captureItem!.Size;
+                    if (captureSize.Width != _surfaceWidth || captureSize.Height != _surfaceHeight)
                     {
-                        // 帧池仍然有效，只跳过本帧并在下一帧继续查询窗口区域。
-                        return;
-                    }
-
-                    try
-                    {
-                        // 从捕获的帧创建一个可以被访问的纹理
-                        using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
-                        var d3dDevice = _sharpDxDevice ??
-                                        throw new InvalidOperationException("D3D device is unavailable.");
-                        var d3dContext = _d3dContext ??
-                                         throw new InvalidOperationException("D3D context is unavailable.");
-                        var sourceTexture = _isHdrEnabled
-                            ? ProcessHdrTexture(d3dDevice, d3dContext, surfaceTexture)
-                            : surfaceTexture;
-
-                        _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(
-                            d3dDevice,
-                            frame.ContentSize.Width,
-                            frame.ContentSize.Height,
-                            _region,
-                            sourceTexture.Description.Format);
-                        var newFrame = _stagingTexture.CreateMat(
-                            d3dContext,
-                            sourceTexture,
-                            _region,
-                            RecordCaptureFailure);
-
-                        // 新帧构造成功后再替换，异常时保留上一帧
-                        if (newFrame is not null)
+                        if (User32.IsIconic(_hWnd))
                         {
-                            var oldFrame = _latestFrame;
-                            _latestFrame = newFrame;
-                            oldFrame?.Dispose();
-                            Volatile.Write(ref _lastError, null);
+                            return;
+                        }
+
+                        shouldRecreateFramePool = true;
+                    }
+                    else
+                    {
+                        if (_screenInfoRefreshPending && !TryRefreshGameScreenInfo())
+                        {
+                            // 帧池仍然有效，只跳过本帧并在下一帧继续查询窗口区域。
+                            return;
+                        }
+
+                        try
+                        {
+                            // 从捕获的帧创建一个可以被访问的纹理
+                            using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
+                            var d3dDevice = _sharpDxDevice ??
+                                            throw new InvalidOperationException("D3D device is unavailable.");
+                            var d3dContext = _d3dContext ??
+                                             throw new InvalidOperationException("D3D context is unavailable.");
+                            var sourceTexture = _isHdrEnabled
+                                ? ProcessHdrTexture(d3dDevice, d3dContext, surfaceTexture)
+                                : surfaceTexture;
+
+                            _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(
+                                d3dDevice,
+                                frame.ContentSize.Width,
+                                frame.ContentSize.Height,
+                                _region,
+                                sourceTexture.Description.Format);
+                            var newFrame = _stagingTexture.CreateMat(
+                                d3dContext,
+                                sourceTexture,
+                                _region,
+                                RecordCaptureFailure);
+
+                            // 新帧构造成功后再替换，异常时保留上一帧
+                            if (newFrame is not null)
+                            {
+                                var oldFrame = _latestFrame;
+                                _latestFrame = newFrame;
+                                oldFrame?.Dispose();
+                                Volatile.Write(ref _lastError, null);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            RecordCaptureFailure(e);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        RecordCaptureFailure(e);
-                    }
                 }
+            }
+
+            // frame 已经释放后才能调用 Recreate；切换显示器时同时刷新像素格式、白电平和 GPU 资源。
+            if (shouldRefreshHdrDisplay)
+            {
+                if (!TryRefreshHdrDisplayPipeline(sender, captureSize))
+                {
+                    return;
+                }
+
+                return;
             }
 
             // 必须先释放并归还当前 frame，再重建帧池。
@@ -463,6 +536,114 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         }
     }
 
+    private bool TryRefreshHdrDisplayPipeline(
+        Direct3D11CaptureFramePool sender,
+        Windows.Graphics.SizeInt32 captureSize)
+    {
+        IntPtr monitor;
+        try
+        {
+            monitor = GetMonitorHandle(_hWnd);
+        }
+        catch (Exception e)
+        {
+            RecordCaptureFailure(e);
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender);
+            return false;
+        }
+
+        if (monitor == IntPtr.Zero || captureSize.Width <= 0 || captureSize.Height <= 0)
+        {
+            RecordCaptureFailure(new InvalidOperationException("无法确定跨屏移动后的 HDR 捕获目标。"));
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender);
+            return false;
+        }
+
+        // 窗口可能在多个位置事件之间移回原显示器，此时只需清除请求，不重建帧池。
+        if (monitor == Volatile.Read(ref _hdrDisplayMonitor))
+        {
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            return true;
+        }
+
+        HdrPipelineDecision pipelineDecision;
+        try
+        {
+            pipelineDecision = ResolveHdrPipeline(HdrDisplayInformation.GetState(_hWnd));
+        }
+        catch (Exception e)
+        {
+            // 未能确认新显示器状态时不能沿用旧管线，否则会把 SDR 当 HDR（或反之）交给识别层。
+            RecordCaptureFailure(e);
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender);
+            return false;
+        }
+
+        var pixelFormat = pipelineDecision.IsHdrEnabled
+            ? DirectXPixelFormat.R16G16B16A16Float
+            : DirectXPixelFormat.B8G8R8A8UIntNormalized;
+        var d3dDevice = _d3dDevice;
+        if (d3dDevice is null)
+        {
+            RecordCaptureFailure(new InvalidOperationException("D3D device is unavailable during HDR display refresh."));
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender);
+            return false;
+        }
+
+        try
+        {
+            sender.Recreate(d3dDevice, pixelFormat, 2, captureSize);
+        }
+        catch (Exception e)
+        {
+            RecordCaptureFailure(e);
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender);
+            return false;
+        }
+
+        _isHdrDisplayEnabled = pipelineDecision.IsHdrEnabled;
+        _isHdrEnabled = _captureHdrRequested && pipelineDecision.IsHdrEnabled;
+        _hdrSdrWhiteScale = pipelineDecision.SdrWhiteScale;
+        _pixelFormat = pixelFormat;
+        _hdrDisplayMonitor = monitor;
+        // 暂不清除 pending：重建期间若又跨到下一台显示器，下一帧会继续按最新监视器重建；
+        // 若位置已稳定，下一帧检测到同一句柄后再清除标记。
+
+        try
+        {
+            // Recreate 后旧 staging/output 纹理的格式可能不再匹配；全部清理并让下一帧按新管线懒加载。
+            _stagingTexture?.Dispose();
+            _stagingTexture = null;
+            _hdrOutputTexture?.Dispose();
+            _hdrOutputTexture = null;
+            _hdrComputeShader?.Dispose();
+            _hdrComputeShader = null;
+            _hdrParametersBuffer?.Dispose();
+            _hdrParametersBuffer = null;
+            _latestFrame?.Dispose();
+            _latestFrame = null;
+        }
+        catch (Exception e)
+        {
+            // 即使资源释放失败也不能让 free-threaded 回调异常逃逸；交由统一故障路径安全停止会话。
+            RecordCaptureFailure(e);
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender);
+            return false;
+        }
+
+        _surfaceWidth = captureSize.Width;
+        _surfaceHeight = captureSize.Height;
+        _screenInfoRefreshPending = !TryRefreshGameScreenInfo();
+        _lastFrameTime = _frameTimer.ElapsedMilliseconds - _targetFrameIntervalMs;
+        return true;
+    }
+
     private void StopCore(bool preserveLastError = false)
     {
         IsCapturing = false;
@@ -491,6 +672,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         }
         _captureRect = null;
         _screenInfoRefreshPending = false;
+        _hdrDisplayMonitor = IntPtr.Zero;
+        Volatile.Write(ref _hdrDisplayRefreshPending, 0);
         _stagingTexture?.Dispose();
         _stagingTexture = null;
         _hdrOutputTexture?.Dispose();
