@@ -698,8 +698,9 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 Config.NotificationConfig.WechatClawbotToUserId = bind.ToUserId;
             }
 
-            // 无条件刷新一次，确保即使凭证值未变化，通知器也会从独立存储重新加载最新的 context_token
-            _notificationService.RefreshNotifiers();
+            // 无需再显式刷新——SuppressRefreshNotifiers() 退出时已无条件调用 RefreshNotifiers()，
+            // 确保通知器从独立存储重新加载最新 context_token。
+            // 此处不再重复调用，避免第二次刷新销毁刚创建的会话导致 UI 卡死。
 
             WechatClawbotStatus = "绑定成功";
             Toast.Success("微信 Clawbot 绑定成功");

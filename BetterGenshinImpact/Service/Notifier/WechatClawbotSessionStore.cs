@@ -80,6 +80,7 @@ public static class WechatClawbotSessionStore
     /// <summary>
     /// 保存 context_token 与 get_updates_buf 到 JSON 文件。
     /// 仅在主实例的轮询循环中调用（token 变化或游标推进时）。
+    /// 持久化失败时抛出异常，让调用方（绑定路径）感知落盘状态并决定是否继续。
     /// </summary>
     public static async Task SaveAsync(string botToken, string? contextToken, string? getUpdatesBuf)
     {
@@ -93,10 +94,6 @@ public static class WechatClawbotSessionStore
             var path = FilePathFor(botToken);
             var state = new SessionState(contextToken, getUpdatesBuf);
             await File.WriteAllTextAsync(path, JsonSerializer.Serialize(state, JsonOptions));
-        }
-        catch (System.Exception ex)
-        {
-            Logger.LogWarning("保存微信 Clawbot 会话状态失败: {Ex}", ex.Message);
         }
         finally
         {
