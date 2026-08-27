@@ -147,7 +147,7 @@ public class HdrDisplayInformationTests
     {
         var monitor = new IntPtr(1);
 
-        var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(monitor, monitor, null);
+        var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(monitor, monitor, false);
 
         Assert.False(shouldRefresh);
     }
@@ -161,7 +161,7 @@ public class HdrDisplayInformationTests
         var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(
             new IntPtr(1),
             new IntPtr(2),
-            null);
+            false);
 
         Assert.True(shouldRefresh);
     }
@@ -170,14 +170,14 @@ public class HdrDisplayInformationTests
     /// 验证原显示器上的失败管线仍会进入恢复路径。
     /// </summary>
     [Fact]
-    public void ShouldRefreshHdrDisplayPipeline_SameMonitorWithError_ReturnsTrue()
+    public void ShouldRefreshHdrDisplayPipeline_SameMonitorWithRecoveryRequest_ReturnsTrue()
     {
         var monitor = new IntPtr(1);
 
         var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(
             monitor,
             monitor,
-            new InvalidOperationException("capture failed"));
+            true);
 
         Assert.True(shouldRefresh);
     }

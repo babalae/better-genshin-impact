@@ -61,6 +61,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     // HDR 管线依赖窗口所在的显示器；跨屏移动后由窗口事件设置请求，并在帧回调中安全重建帧池。
     private IntPtr _hdrDisplayMonitor;
     private int _hdrDisplayRefreshPending;
+    private int _hdrDisplayRecoveryRequired;
 
     // 延迟停止必须绑定到具体失败代次；同一帧池恢复成功后，旧停止任务不得再关闭健康会话。
     private long _framePoolFailureGeneration;
@@ -96,6 +97,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             _screenInfoRefreshPending = false;
             _hdrDisplayMonitor = IntPtr.Zero;
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            Volatile.Write(ref _hdrDisplayRecoveryRequired, 0);
             _targetFrameIntervalMs = ResolveTargetFrameInterval(settings);
 
             if (_captureHdrRequested)
@@ -237,14 +239,14 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     /// </summary>
     /// <param name="currentMonitor">当前管线绑定的显示器。</param>
     /// <param name="requestedMonitor">帧回调查询到的目标显示器。</param>
-    /// <param name="lastError">尚未由成功帧清除的捕获错误。</param>
-    /// <returns>显示器变化或旧管线仍处于故障状态时为 <see langword="true"/>。</returns>
+    /// <param name="recoveryRequired">HDR 管线是否存在尚未恢复的故障。</param>
+    /// <returns>显示器变化或 HDR 管线仍处于故障状态时为 <see langword="true"/>。</returns>
     internal static bool ShouldRefreshHdrDisplayPipeline(
         IntPtr currentMonitor,
         IntPtr requestedMonitor,
-        Exception? lastError)
+        bool recoveryRequired)
     {
-        return requestedMonitor != currentMonitor || lastError is not null;
+        return requestedMonitor != currentMonitor || recoveryRequired;
     }
 
     /// <summary>
@@ -400,6 +402,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                     catch (Exception e)
                     {
                         RecordCaptureFailure(e);
+                        MarkHdrDisplayRecoveryRequired();
                         ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
                         return;
                     }
@@ -407,6 +410,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                     if (hdrDisplayRefreshMonitor == IntPtr.Zero)
                     {
                         RecordCaptureFailure(new InvalidOperationException("无法确定跨屏移动后的 HDR 捕获目标。"));
+                        MarkHdrDisplayRecoveryRequired();
                         ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
                         return;
                     }
@@ -415,7 +419,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                     shouldRefreshHdrDisplay = ShouldRefreshHdrDisplayPipeline(
                         Volatile.Read(ref _hdrDisplayMonitor),
                         hdrDisplayRefreshMonitor,
-                        Volatile.Read(ref _lastError));
+                        Volatile.Read(ref _hdrDisplayRecoveryRequired) != 0);
                 }
 
                 // 显示器切换必须优先于节流处理，否则低采样频率下可能长时间沿用旧 HDR 管线。
@@ -607,6 +611,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         if (monitor == IntPtr.Zero || captureSize.Width <= 0 || captureSize.Height <= 0)
         {
             RecordCaptureFailure(new InvalidOperationException("无法确定跨屏移动后的 HDR 捕获目标。"));
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -628,6 +633,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             // 未能确认新显示器状态时不能沿用旧管线，否则会把 SDR 当 HDR（或反之）交给识别层。
             RecordCaptureFailure(e);
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -639,6 +645,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         if (d3dDevice is null)
         {
             RecordCaptureFailure(new InvalidOperationException("D3D device is unavailable during HDR display refresh."));
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -649,11 +656,13 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             // 成功切换管线同样视为帧池恢复，不能让旧失败任务误停新管线，
             // 也不能让旧错误在下一次同屏位置通知中触发重复重建。
             InvalidateFramePoolFailureGenerations();
+            MarkHdrDisplayRecovered();
             Volatile.Write(ref _lastError, null);
         }
         catch (Exception e)
         {
             RecordCaptureFailure(e);
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -682,6 +691,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             // 即使资源释放失败也不能让 free-threaded 回调异常逃逸；交由统一故障路径安全停止会话。
             RecordCaptureFailure(e);
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -704,6 +714,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         if (d3dDevice is null)
         {
             RecordCaptureFailure(new InvalidOperationException("D3D device is unavailable while recovering HDR capture."));
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -728,6 +739,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             _surfaceHeight = captureSize.Height;
             _screenInfoRefreshPending = !TryRefreshGameScreenInfo();
             _lastFrameTime = _frameTimer.ElapsedMilliseconds - _targetFrameIntervalMs;
+            MarkHdrDisplayRecovered();
 
             // 仅在窗口区域查询也成功时清除之前的 HDR 错误；否则保留诊断并让下一帧继续刷新区域。
             if (!_screenInfoRefreshPending)
@@ -740,6 +752,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         catch (Exception e)
         {
             RecordCaptureFailure(e);
+            MarkHdrDisplayRecoveryRequired();
             ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
@@ -780,6 +793,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _screenInfoRefreshPending = false;
         _hdrDisplayMonitor = IntPtr.Zero;
         Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+        Volatile.Write(ref _hdrDisplayRecoveryRequired, 0);
         _stagingTexture?.Dispose();
         _stagingTexture = null;
         _hdrOutputTexture?.Dispose();
@@ -822,6 +836,22 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         Volatile.Write(ref _lastError, exception);
         // Release 日志由上层统一限流输出，避免在帧回调持锁期间逐帧格式化完整异常。
         Debug.WriteLine($"Graphics capture failed: {exception}");
+    }
+
+    /// <summary>
+    /// 标记 HDR 捕获管线需要在下一次位置通知时恢复。
+    /// </summary>
+    private void MarkHdrDisplayRecoveryRequired()
+    {
+        Volatile.Write(ref _hdrDisplayRecoveryRequired, 1);
+    }
+
+    /// <summary>
+    /// 标记 HDR 捕获管线已经成功恢复。
+    /// </summary>
+    private void MarkHdrDisplayRecovered()
+    {
+        Volatile.Write(ref _hdrDisplayRecoveryRequired, 0);
     }
 
     /// <summary>
