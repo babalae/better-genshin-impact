@@ -270,6 +270,7 @@ public static class WechatClawbotHelper
     /// <summary>
     /// 长轮询 getupdates：服务端 hold 35s，客户端通过 linked CTS 按服务器建议超时取消。
     /// OperationCanceledException（非用户取消）视为正常轮询超时，调用方可安全 continue。
+    /// 业务失败码 ret/errcode 非零视为协议错误；errcode -14 表示会话过期需重新登录。
     /// </summary>
     internal static async Task<WechatClawbotGetUpdatesResponse> GetUpdatesAsync(
         HttpClient httpClient,

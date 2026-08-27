@@ -228,7 +228,7 @@ public sealed class WechatClawbotSession : IDisposable
             }
             catch (OperationCanceledException)
             {
-                // 长轮询超时，继续
+                // 长轮询客户端超时（>35s），视为正常事件间空闲，直接继续下一轮
             }
             catch (System.Exception ex)
             {
