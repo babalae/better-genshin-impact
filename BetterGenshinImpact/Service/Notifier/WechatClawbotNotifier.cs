@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model;
-using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Logging;
@@ -108,22 +107,16 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     }
 
     /// <summary>
-    /// 生成通知文本，包含结果标记（成功/失败/警告）和时间戳。
+    /// 生成通知文本。简洁排版：时间放开头，推送内容在第二行，
+    /// 去掉 [BetterGI] 前缀和 emoji 状态符号，使消息列表更紧凑、信息层级更清晰。
     /// </summary>
     private static string GenerateMessage(BaseNotificationData data)
     {
         var sb = new StringBuilder();
-        var mark = data.Result switch
-        {
-            NotificationEventResult.Success => "\u2705",
-            NotificationEventResult.Fail => "\u274C",
-            _ => "\u26A0\uFE0F"
-        };
-        sb.Append($"[BetterGI] {mark} ");
+        sb.Append($"[{data.Timestamp:yyyy-MM-dd HH:mm:ss}]");
+        sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(data.Message))
             sb.Append(data.Message);
-        sb.AppendLine();
-        sb.Append($"\uD83D\uDD50 {data.Timestamp:yyyy-MM-dd HH:mm:ss}");
         return sb.ToString();
     }
 
