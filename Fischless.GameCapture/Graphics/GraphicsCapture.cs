@@ -62,6 +62,9 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     private IntPtr _hdrDisplayMonitor;
     private int _hdrDisplayRefreshPending;
 
+    // 延迟停止必须绑定到具体失败代次；同一帧池恢复成功后，旧停止任务不得再关闭健康会话。
+    private long _framePoolFailureGeneration;
+
     private long _lastFrameTime;
     private int _targetFrameIntervalMs = MinimumFrameIntervalMs;
 
@@ -469,6 +472,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                         _pixelFormat,
                         2,
                         captureSize);
+                    // Recreate 成功代表当前帧池已恢复，令此前排队的延迟停止请求失效。
+                    Interlocked.Increment(ref _framePoolFailureGeneration);
                 }
                 catch (Exception e)
                 {
@@ -597,6 +602,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         try
         {
             sender.Recreate(d3dDevice, pixelFormat, 2, captureSize);
+            // 成功切换管线同样视为帧池恢复，不能让旧失败任务误停新管线。
+            Interlocked.Increment(ref _framePoolFailureGeneration);
         }
         catch (Exception e)
         {
@@ -646,6 +653,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
 
     private void StopCore(bool preserveLastError = false)
     {
+        // 会话停止/重启会产生新的生命周期，所有旧帧池失败任务都必须失效。
+        Interlocked.Increment(ref _framePoolFailureGeneration);
         IsCapturing = false;
         _hWnd = 0;
         _frameTimer.Reset();
@@ -714,6 +723,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
 
     private void ScheduleStopAfterFramePoolFailure(Direct3D11CaptureFramePool failedFramePool)
     {
+        // 记录失败代次而不只比较帧池引用；同一帧池可能在异步停止执行前已经成功 Recreate。
+        var failureGeneration = Interlocked.Increment(ref _framePoolFailureGeneration);
         _ = Task.Run(() =>
         {
             var lockTaken = false;
@@ -722,7 +733,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 _frameAccessLock.EnterWriteLock();
                 lockTaken = true;
                 // 重启期间可能已有新会话，只清理实际失败的旧帧池。
-                if (ReferenceEquals(failedFramePool, _captureFramePool))
+                if (ReferenceEquals(failedFramePool, _captureFramePool) &&
+                    Volatile.Read(ref _framePoolFailureGeneration) == failureGeneration)
                 {
                     // 保留触发停止的 D3D/帧池异常，供上层日志准确说明会话为何失效。
                     StopCore(preserveLastError: true);
