@@ -19,6 +19,9 @@ internal sealed class SileroVadDetector : IDisposable
     private readonly float[] _state = new float[StatePlaneCount * StateBatchCount * StateSize];
     private readonly long[] _sampleRate = [SampleRate];
 
+    /// <summary>
+    /// 初始化 <c>SileroVadDetector</c> 的新实例。
+    /// </summary>
     public SileroVadDetector()
     {
         var modelPath = BgiOnnxModel.SileroVad.ModalPath;

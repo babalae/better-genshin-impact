@@ -124,6 +124,9 @@ public class TaskRunner
         await Task.Run(() => RunCurrentAsync(action));
     }
 
+    /// <summary>
+    /// 运行 <c>RunSoloTaskAsync</c> 对应的任务流程。
+    /// </summary>
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
         try

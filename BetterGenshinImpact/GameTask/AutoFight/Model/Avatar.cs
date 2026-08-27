@@ -636,6 +636,9 @@ public class Avatar
         }
     }
 
+    /// <summary>
+    /// 判断 <c>IsBurstReadyByClassify</c> 所描述的条件是否成立。
+    /// </summary>
     private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
         using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).QRectForClassify);

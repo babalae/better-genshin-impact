@@ -290,6 +290,9 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         }
     }
 
+    /// <summary>
+    /// 释放当前实例持有的托管和原生资源。
+    /// </summary>
     private static void DisposeCombatScenes(CombatScenes combatScenes)
     {
         try

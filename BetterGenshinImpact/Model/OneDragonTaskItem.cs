@@ -54,6 +54,9 @@ public partial class OneDragonTaskItem : ObservableObject
     //     Action = action;
     // }
 
+    /// <summary>
+    /// 初始化 <c>InitAction</c> 所需的状态和资源。
+    /// </summary>
     public void InitAction(OneDragonFlowConfig config)
     {
         if (config.TaskEnabledList.ContainsKey(Id))

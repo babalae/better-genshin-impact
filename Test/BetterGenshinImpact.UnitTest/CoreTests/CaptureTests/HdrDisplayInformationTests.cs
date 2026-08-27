@@ -8,6 +8,9 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.CaptureTests;
 
 public class HdrDisplayInformationTests
 {
+    /// <summary>
+    /// 验证 <c>DisplayQueryFallback_RemainsUnknown</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void DisplayQueryFallback_RemainsUnknown()
     {
@@ -19,12 +22,18 @@ public class HdrDisplayInformationTests
         Assert.Equal(1f, fallback.SdrWhiteScale);
     }
 
+    /// <summary>
+    /// 验证 <c>DefaultDisplayState_IsUnknown</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void DefaultDisplayState_IsUnknown()
     {
         Assert.Equal(HdrDisplayStateKind.Unknown, default(HdrDisplayState).Kind);
     }
 
+    /// <summary>
+    /// 验证 <c>HdrToSdrShader_CompilesForShaderModel5</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void HdrToSdrShader_CompilesForShaderModel5()
     {
@@ -36,6 +45,9 @@ public class HdrDisplayInformationTests
         Assert.False(shader.HasErrors, shader.Message);
     }
 
+    /// <summary>
+    /// 验证 <c>HdrOutputTexture_SupportsTypedUnorderedAccessView</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void HdrOutputTexture_SupportsTypedUnorderedAccessView()
     {
@@ -49,6 +61,9 @@ public class HdrDisplayInformationTests
         Assert.False(unorderedAccessView.IsDisposed);
     }
 
+    /// <summary>
+    /// 验证 <c>CalculateSdrWhiteScale_NormalizesSceneReferredWhite</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(80f, 1f)]
     [InlineData(200f, 0.4f)]
@@ -61,6 +76,9 @@ public class HdrDisplayInformationTests
         Assert.Equal(expected, actual, 5);
     }
 
+    /// <summary>
+    /// 验证 <c>CalculateSdrWhiteScale_InvalidValue_UsesCompatibilityFallback</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(0f)]
     [InlineData(-1f)]
@@ -73,6 +91,9 @@ public class HdrDisplayInformationTests
         Assert.Equal(HdrDisplayInformation.FallbackSdrWhiteScale, actual);
     }
 
+    /// <summary>
+    /// 验证 <c>ResolveHdrPipeline_ConfirmedSdr_UsesB8Pipeline</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void ResolveHdrPipeline_ConfirmedSdr_UsesB8Pipeline()
     {
@@ -82,6 +103,9 @@ public class HdrDisplayInformationTests
         Assert.Equal(1f, decision.SdrWhiteScale);
     }
 
+    /// <summary>
+    /// 验证 <c>ResolveHdrPipeline_ConfirmedHdr_UsesMeasuredWhiteLevel</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void ResolveHdrPipeline_ConfirmedHdr_UsesMeasuredWhiteLevel()
     {
@@ -91,6 +115,9 @@ public class HdrDisplayInformationTests
         Assert.Equal(0.4f, decision.SdrWhiteScale);
     }
 
+    /// <summary>
+    /// 验证 <c>ResolveHdrPipeline_WhiteLevelUnavailable_KeepsFp16Pipeline</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void ResolveHdrPipeline_WhiteLevelUnavailable_KeepsFp16Pipeline()
     {
@@ -100,6 +127,9 @@ public class HdrDisplayInformationTests
         Assert.Equal(HdrDisplayInformation.FallbackSdrWhiteScale, decision.SdrWhiteScale);
     }
 
+    /// <summary>
+    /// 验证 <c>ResolveHdrPipeline_Unknown_StopsCaptureStartup</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void ResolveHdrPipeline_Unknown_StopsCaptureStartup()
     {
@@ -108,10 +138,56 @@ public class HdrDisplayInformationTests
 
         Assert.Contains("无法确认目标窗口所在显示器的 HDR 状态", exception.Message);
     }
+
+    /// <summary>
+    /// 验证稳定停留在同一显示器且没有错误时不会重复刷新 HDR 管线。
+    /// </summary>
+    [Fact]
+    public void ShouldRefreshHdrDisplayPipeline_SameMonitorWithoutError_ReturnsFalse()
+    {
+        var monitor = new IntPtr(1);
+
+        var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(monitor, monitor, null);
+
+        Assert.False(shouldRefresh);
+    }
+
+    /// <summary>
+    /// 验证跨显示器移动时会刷新 HDR 管线。
+    /// </summary>
+    [Fact]
+    public void ShouldRefreshHdrDisplayPipeline_DifferentMonitor_ReturnsTrue()
+    {
+        var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(
+            new IntPtr(1),
+            new IntPtr(2),
+            null);
+
+        Assert.True(shouldRefresh);
+    }
+
+    /// <summary>
+    /// 验证原显示器上的失败管线仍会进入恢复路径。
+    /// </summary>
+    [Fact]
+    public void ShouldRefreshHdrDisplayPipeline_SameMonitorWithError_ReturnsTrue()
+    {
+        var monitor = new IntPtr(1);
+
+        var shouldRefresh = GraphicsCapture.ShouldRefreshHdrDisplayPipeline(
+            monitor,
+            monitor,
+            new InvalidOperationException("capture failed"));
+
+        Assert.True(shouldRefresh);
+    }
 }
 
 public class GraphicsCapturePerformancePolicyTests
 {
+    /// <summary>
+    /// 验证 <c>ResolveTargetFrameInterval_ClampsToSafeRange</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(null, 16)]
     [InlineData(0, 16)]

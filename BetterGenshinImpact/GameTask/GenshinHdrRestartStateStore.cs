@@ -26,12 +26,21 @@ internal readonly record struct GenshinProcessIdentityReadResult(
     GenshinGameProcessIdentity Identity = default,
     Exception? Error = null)
 {
+    /// <summary>
+    /// 执行 <c>Found</c> 对应的处理逻辑。
+    /// </summary>
     public static GenshinProcessIdentityReadResult Found(GenshinGameProcessIdentity identity) =>
         new(GenshinProcessIdentityReadStatus.Found, identity);
 
+    /// <summary>
+    /// 执行 <c>NotFound</c> 对应的处理逻辑。
+    /// </summary>
     public static GenshinProcessIdentityReadResult NotFound() =>
         new(GenshinProcessIdentityReadStatus.NotFound);
 
+    /// <summary>
+    /// 执行 <c>Unavailable</c> 对应的处理逻辑。
+    /// </summary>
     public static GenshinProcessIdentityReadResult Unavailable(Exception error) =>
         new(GenshinProcessIdentityReadStatus.Unavailable, Error: error);
 }
@@ -75,11 +84,17 @@ internal sealed class GenshinHdrRestartStateStore
 
     internal static string DefaultStatePath => GetDefaultStatePath();
 
+    /// <summary>
+    /// 初始化 <c>GenshinHdrRestartStateStore</c> 的新实例。
+    /// </summary>
     public GenshinHdrRestartStateStore()
         : this(DefaultStatePath)
     {
     }
 
+    /// <summary>
+    /// 获取 <c>GetDefaultStatePath</c> 对应的数据。
+    /// </summary>
     private static string GetDefaultStatePath()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -92,6 +107,9 @@ internal sealed class GenshinHdrRestartStateStore
         return Path.Combine(localAppData, "BetterGI", "State", DefaultStateFileName);
     }
 
+    /// <summary>
+    /// 初始化 <c>GenshinHdrRestartStateStore</c> 的新实例。
+    /// </summary>
     internal GenshinHdrRestartStateStore(
         string statePath,
         Func<uint, GenshinProcessIdentityReadResult>? processIdentityReader = null,
@@ -262,6 +280,9 @@ internal sealed class GenshinHdrRestartStateStore
         return TryPrepareRegistryChange(null, edition, registryTarget);
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryPrepareRegistryChange</c> 对应的操作。
+    /// </summary>
     private GenshinHdrRestartStateWriteResult TryPrepareRegistryChange(
         GenshinGameProcessIdentity? processIdentity,
         GenshinGameEdition edition,
@@ -405,6 +426,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryLoad</c> 对应的操作。
+    /// </summary>
     private GenshinHdrRestartStateLoadResult TryLoad()
     {
         try
@@ -427,6 +451,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryWrite</c> 对应的操作。
+    /// </summary>
     private GenshinHdrRestartStateWriteResult TryWrite(GenshinHdrRestartStateDocument document)
     {
         try
@@ -442,6 +469,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 判断 <c>Validate</c> 所描述的条件是否成立。
+    /// </summary>
     private static void Validate(GenshinHdrRestartStateDocument document)
     {
         if (document.FormatVersion != CurrentFormatVersion)
@@ -495,6 +525,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 读取 <c>ReadProcessIdentityCore</c> 对应的数据。
+    /// </summary>
     private static GenshinProcessIdentityReadResult ReadProcessIdentityCore(uint processId)
     {
         if (processId == 0 || processId > int.MaxValue)
@@ -529,6 +562,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 读取 <c>ReadStateText</c> 对应的数据。
+    /// </summary>
     private static string? ReadStateText(string statePath)
     {
         try
@@ -545,6 +581,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 写入或持久化 <c>WriteStateTextAtomically</c> 对应的数据。
+    /// </summary>
     private static void WriteStateTextAtomically(string statePath, string json)
     {
         var directory = Path.GetDirectoryName(statePath)
@@ -590,11 +629,17 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 获取 <c>AcquireStateFileLock</c> 对应的独占资源。
+    /// </summary>
     private FileStream AcquireStateFileLock()
     {
         return AcquireExclusiveFileLock($"{_statePath}.lock");
     }
 
+    /// <summary>
+    /// 获取 <c>AcquireExclusiveFileLock</c> 对应的独占资源。
+    /// </summary>
     private FileStream AcquireExclusiveFileLock(string lockPath)
     {
         var directory = Path.GetDirectoryName(lockPath)
@@ -617,6 +662,9 @@ internal sealed class GenshinHdrRestartStateStore
         }
     }
 
+    /// <summary>
+    /// 获取 <c>AcquireExclusiveFileLockAsync</c> 对应的独占资源。
+    /// </summary>
     private static async Task<FileStream> AcquireExclusiveFileLockAsync(
         string lockPath,
         CancellationToken cancellationToken)
@@ -693,9 +741,15 @@ internal sealed class GenshinHdrRestartStateStore
         GenshinHdrRestartStateDocument? Document,
         Exception? Error)
     {
+        /// <summary>
+        /// 执行 <c>Succeeded</c> 对应的处理逻辑。
+        /// </summary>
         public static GenshinHdrRestartStateLoadResult Succeeded(GenshinHdrRestartStateDocument document) =>
             new(true, document, null);
 
+        /// <summary>
+        /// 执行 <c>Failed</c> 对应的处理逻辑。
+        /// </summary>
         public static GenshinHdrRestartStateLoadResult Failed(Exception error) =>
             new(false, null, error);
     }

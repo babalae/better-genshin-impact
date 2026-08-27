@@ -636,6 +636,9 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         Logger.LogInformation("========== 战斗循环结束 ==========");
     }
 
+    /// <summary>
+    /// 运行 <c>ExecuteBattleRound</c> 对应的任务流程。
+    /// </summary>
     private async Task ExecuteBattleRound(BvPage page)
     {
         // 等待进入战斗场地（从 BossSelect 转换到 BattleArena）
@@ -819,6 +822,9 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         }
     }
 
+    /// <summary>
+    /// 初始化 <c>InitializeCombatScenesLoop</c> 所需的状态和资源。
+    /// </summary>
     private async Task<CombatScenes> InitializeCombatScenesLoop()
     {
         CombatScenes? result = null;

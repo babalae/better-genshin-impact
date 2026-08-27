@@ -168,6 +168,9 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         return new Dictionary<string, int>(_rewardSummary);
     }
 
+    /// <summary>
+    /// 运行 <c>DoDomain</c> 对应的任务流程。
+    /// </summary>
     private async Task DoDomain()
     {
         // 传送到秘境
@@ -1058,6 +1061,9 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         });
     }
 
+    /// <summary>
+    /// 识别并返回 <c>DetectTree</c> 对应的结果。
+    /// </summary>
     private Rect DetectTree(ImageRegion region)
     {
         var result = _predictor.Run(predictor => predictor.Detect(region.CacheImage));
@@ -1552,6 +1558,9 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
     }
 
+    /// <summary>
+    /// 释放当前实例持有的托管和原生资源。
+    /// </summary>
     public void Dispose()
     {
         _predictor.Dispose();

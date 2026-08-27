@@ -5,6 +5,9 @@ namespace Fischless.GameCapture;
 
 public sealed class GameCaptureFrame : IDisposable
 {
+    /// <summary>
+    /// 初始化 <c>GameCaptureFrame</c> 的新实例。
+    /// </summary>
     public GameCaptureFrame(
         Mat frame,
         RECT? captureRect = null,

@@ -64,6 +64,9 @@ public class RunnerContext : Singleton<RunnerContext>
     private readonly List<CombatScenes> _retiredCombatScenes = [];
     private long _combatScenesGeneration;
 
+    /// <summary>
+    /// 获取 <c>GetCombatScenes</c> 对应的数据。
+    /// </summary>
     public async Task<CombatScenes?> GetCombatScenes(CancellationToken ct)
     {
         long generation;
@@ -141,6 +144,9 @@ public class RunnerContext : Singleton<RunnerContext>
         return null;
     }
 
+    /// <summary>
+    /// 停止或重置 <c>ClearCombatScenes</c> 对应的状态。
+    /// </summary>
     public void ClearCombatScenes()
     {
         lock (_combatScenesLock)
@@ -179,7 +185,9 @@ public class RunnerContext : Singleton<RunnerContext>
     {
         IsContinuousRunGroup = false;
         PartyName = null;
-        DisposeCombatScenesCache();
+        // Reset 可能在新的启动请求取得 TaskRunner 锁之前被调用。此时旧任务仍可能借用当前场景，
+        // 因此这里只退役缓存；持有任务结束时的 Clear 才能安全释放场景及其预测器。
+        ClearCombatScenes();
         IsSuspend = false;
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
@@ -256,11 +264,17 @@ public class RunnerContext : Singleton<RunnerContext>
         }
 
     }
+    /// <summary>
+    /// 停止或重置 <c>stop</c> 对应的状态。
+    /// </summary>
     public void stop()
     {
         DisposeCombatScenesCache();
     }
 
+    /// <summary>
+    /// 释放当前实例持有的托管和原生资源。
+    /// </summary>
     private void DisposeCombatScenesCache()
     {
         List<CombatScenes> scenes;

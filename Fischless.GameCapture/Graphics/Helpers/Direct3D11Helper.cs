@@ -35,12 +35,18 @@ public static class Direct3D11Helper
         return CreateDevice(false);
     }
 
+    /// <summary>
+    /// 创建 <c>CreateDevice</c> 对应的对象或资源。
+    /// </summary>
     public static IDirect3DDevice CreateDevice(bool useWARP)
     {
         using var sharpDxDevice = CreateSharpDxDevice(useWARP);
         return CreateDirect3DDeviceFromSharpDXDevice(sharpDxDevice);
     }
 
+    /// <summary>
+    /// 创建 <c>CreateDevice</c> 对应的对象或资源。
+    /// </summary>
     public static IDirect3DDevice CreateDevice(out Device sharpDxDevice, bool useWARP = false)
     {
         sharpDxDevice = CreateSharpDxDevice(useWARP);
@@ -55,6 +61,9 @@ public static class Direct3D11Helper
         }
     }
 
+    /// <summary>
+    /// 创建 <c>CreateSharpDxDevice</c> 对应的对象或资源。
+    /// </summary>
     private static Device CreateSharpDxDevice(bool useWARP)
     {
         return new Device(
@@ -90,6 +99,9 @@ public static class Direct3D11Helper
         return d3dSurface;
     }
 
+    /// <summary>
+    /// 创建 <c>CreateStagingTexture</c> 对应的对象或资源。
+    /// </summary>
     public static Texture2D CreateStagingTexture(
         Device device,
         int width,
@@ -112,6 +124,9 @@ public static class Direct3D11Helper
         });
     }
 
+    /// <summary>
+    /// 创建 <c>CreateOutputTexture</c> 对应的对象或资源。
+    /// </summary>
     public static Texture2D CreateOutputTexture(Device device, int width, int height)
     {
         return new Texture2D(device, new Texture2DDescription

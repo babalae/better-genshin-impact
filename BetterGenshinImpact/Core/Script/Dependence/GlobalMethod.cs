@@ -259,6 +259,9 @@ public class GlobalMethod
         return TaskControl.CaptureToRectArea();
     }
 
+    /// <summary>
+    /// 获取 <c>GetAvatars</c> 对应的数据。
+    /// </summary>
     public static string[] GetAvatars()
     {
         using var capture = CaptureGameRegion();

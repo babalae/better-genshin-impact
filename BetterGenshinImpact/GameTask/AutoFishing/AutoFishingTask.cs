@@ -257,6 +257,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             TaskControl.Sleep(millisecondsTimeout, _ct);
         }
 
+        /// <summary>
+        /// 设置 <c>SetUpTree</c> 对应的状态。
+        /// </summary>
         private BehaviourTree SetUpTree(AutoFishingBuilder builder)
         {
             var behaviourTree = new BehaviourTree(builder.Build());
@@ -267,6 +270,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return behaviourTree;
         }
 
+        /// <summary>
+        /// 释放当前实例持有的托管和原生资源。
+        /// </summary>
         public void Dispose()
         {
             _predictor.Dispose();

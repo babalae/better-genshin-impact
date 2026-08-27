@@ -228,6 +228,9 @@ public class AutoFightTask : ISoloTask
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
+    /// <summary>
+    /// 获取 <c>GetCombatScenesWithRetry</c> 对应的数据。
+    /// </summary>
     public CombatScenes GetCombatScenesWithRetry()
     {
         const int maxRetries = 5;
@@ -265,6 +268,9 @@ public class AutoFightTask : ISoloTask
     public Dictionary<string, int> delayTimes = new();
     public double checkTime = 5;
     public List<string> checkNames = new();*/
+    /// <summary>
+    /// 启动当前组件或任务的处理流程。
+    /// </summary>
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;

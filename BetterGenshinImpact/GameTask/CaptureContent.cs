@@ -24,11 +24,17 @@ public class CaptureContent : IDisposable
     
     public GameUiCategory CurrentGameUiCategory;
 
+    /// <summary>
+    /// 初始化 <c>CaptureContent</c> 的新实例。
+    /// </summary>
     public CaptureContent(Mat image, int frameIndex, double interval)
         : this(image, frameIndex, interval, TaskContext.Instance().CaptureColorMode)
     {
     }
 
+    /// <summary>
+    /// 初始化 <c>CaptureContent</c> 的新实例。
+    /// </summary>
     public CaptureContent(Mat image, int frameIndex, double interval, CaptureColorMode colorMode)
     {
         FrameIndex = frameIndex;

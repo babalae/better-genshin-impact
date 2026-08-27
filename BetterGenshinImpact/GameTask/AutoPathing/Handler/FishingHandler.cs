@@ -16,6 +16,9 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class FishingHandler : IActionHandler
 {
+    /// <summary>
+    /// 运行 <c>RunAsync</c> 对应的任务流程。
+    /// </summary>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         // 钓鱼

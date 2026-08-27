@@ -6,6 +6,9 @@ namespace Fischless.GameCapture.Graphics.Helpers;
 
 public static class Texture2DExtensions
 {
+    /// <summary>
+    /// 创建 <c>CreateMat</c> 对应的对象或资源。
+    /// </summary>
     public static Mat? CreateMat(
         this Texture2D staging,
         DeviceContext context,

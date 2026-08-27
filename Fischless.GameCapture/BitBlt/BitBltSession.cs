@@ -142,6 +142,9 @@ public class BitBltSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// 释放当前实例持有的托管和原生资源。
+    /// </summary>
     public void Dispose()
     {
         lock (_lockObject)
@@ -213,6 +216,9 @@ public class BitBltSession : IDisposable
         return buffer;
     }
 
+    /// <summary>
+    /// 执行 <c>ReleaseBuffer</c> 对应的处理逻辑。
+    /// </summary>
     public void ReleaseBuffer(IntPtr buffer)
     {
         if (buffer == IntPtr.Zero)

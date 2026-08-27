@@ -288,6 +288,9 @@ public class CombatScenes : IDisposable
         return (avatar.Name, costumeName);
     }
 
+    /// <summary>
+    /// 识别并返回 <c>ClassifyAvatarName</c> 对应的结果。
+    /// </summary>
     public string ClassifyAvatarName(Image<Rgb24> img, int index)
     {
         SpeedTimer speedTimer = new();

@@ -3337,6 +3337,9 @@ public class TpTask
         }
     }
 
+    /// <summary>
+    /// 获取 <c>GetMapChooseCandidates</c> 对应的数据。
+    /// </summary>
     private List<MapChooseCandidate> GetMapChooseCandidates(ImageRegion imageRegion)
     {
         var candidates = new List<MapChooseCandidate>();

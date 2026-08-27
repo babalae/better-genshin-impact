@@ -4,6 +4,9 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
 public class OnnxRuntimePolicyTests
 {
+    /// <summary>
+    /// 验证 <c>SelectGpuProviders_UsesAcceleratorThenCpuFallback</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(true, true, true, ProviderType.TensorRt, ProviderType.Cuda, ProviderType.Cpu)]
     [InlineData(true, false, true, ProviderType.TensorRt, ProviderType.Cpu)]
@@ -21,6 +24,9 @@ public class OnnxRuntimePolicyTests
         Assert.Equal(expected, actual);
     }
 
+    /// <summary>
+    /// 验证 <c>ParseAdditionalPaths_EmptyValue_ReturnsEmpty</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void ParseAdditionalPaths_EmptyValue_ReturnsEmpty()
     {
@@ -28,6 +34,9 @@ public class OnnxRuntimePolicyTests
         Assert.Empty(BgiOnnxFactory.ParseAdditionalPaths("  "));
     }
 
+    /// <summary>
+    /// 验证 <c>ParseAdditionalPaths_MultipleValues_TrimsAndRemovesEmptyEntries</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void ParseAdditionalPaths_MultipleValues_TrimsAndRemovesEmptyEntries()
     {
@@ -39,23 +48,38 @@ public class OnnxRuntimePolicyTests
         Assert.Equal([@"C:\CUDA", @"D:\TensorRT"], actual);
     }
 
+    /// <summary>
+    /// 验证 <c>EnumerateProviderFallbacks_RemovesFailedProviderOneAtATime</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void EnumerateProviderFallbacks_RemovesFailedProviderOneAtATime()
     {
         var actual = BgiOnnxFactory.EnumerateProviderFallbacks(
                 [ProviderType.TensorRt, ProviderType.Cuda, ProviderType.Cpu])
-            .Select(item => item.ProviderTypes)
             .ToArray();
 
-        Assert.Equal(
-            [
-                [ProviderType.TensorRt, ProviderType.Cuda, ProviderType.Cpu],
-                [ProviderType.Cuda, ProviderType.Cpu],
-                [ProviderType.Cpu]
-            ],
-            actual);
+        Assert.Collection(
+            actual,
+            item =>
+            {
+                Assert.Equal([ProviderType.TensorRt, ProviderType.Cuda, ProviderType.Cpu], item.ProviderTypes);
+                Assert.True(item.IsFirstAttempt);
+            },
+            item =>
+            {
+                Assert.Equal([ProviderType.Cuda, ProviderType.Cpu], item.ProviderTypes);
+                Assert.False(item.IsFirstAttempt);
+            },
+            item =>
+            {
+                Assert.Equal([ProviderType.Cpu], item.ProviderTypes);
+                Assert.False(item.IsFirstAttempt);
+            });
     }
 
+    /// <summary>
+    /// 验证 <c>RegisteredWorldAndTreeModels_UseDifferentCacheNamespaces</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void RegisteredWorldAndTreeModels_UseDifferentCacheNamespaces()
     {
@@ -63,6 +87,9 @@ public class OnnxRuntimePolicyTests
         Assert.NotEqual(BgiOnnxModel.BgiTree.CachePath, BgiOnnxModel.BgiWorld.CachePath);
     }
 
+    /// <summary>
+    /// 验证 <c>YoloPredictor_DisposeBeforeLazyCreation_IsIdempotentAndPreventsRun</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void YoloPredictor_DisposeBeforeLazyCreation_IsIdempotentAndPreventsRun()
     {

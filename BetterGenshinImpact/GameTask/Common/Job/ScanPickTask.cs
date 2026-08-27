@@ -174,6 +174,9 @@ public class ScanPickTask : IDisposable
         await Delay(100, ct);
     }
 
+    /// <summary>
+    /// 释放当前实例持有的托管和原生资源。
+    /// </summary>
     public void Dispose()
     {
         _predictor.Dispose();

@@ -44,6 +44,9 @@ public partial class SharedSurfaceCapture : IGameCapture
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// 启动当前组件或任务的处理流程。
+    /// </summary>
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
         _hWnd = hWnd;
@@ -89,6 +92,9 @@ public partial class SharedSurfaceCapture : IGameCapture
         return (region, new RECT(left, top, right, bottom));
     }
 
+    /// <summary>
+    /// 捕获并返回 <c>Capture</c> 对应的画面数据。
+    /// </summary>
     public GameCaptureFrame? Capture()
     {
         lock (LockObject)
@@ -173,6 +179,9 @@ public partial class SharedSurfaceCapture : IGameCapture
         }
     }
 
+    /// <summary>
+    /// 停止或重置 <c>Stop</c> 对应的状态。
+    /// </summary>
     public void Stop()
     {
         lock (LockObject)

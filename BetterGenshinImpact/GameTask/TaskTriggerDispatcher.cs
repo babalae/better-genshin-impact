@@ -133,6 +133,9 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 启动当前组件或任务的处理流程。
+        /// </summary>
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
@@ -184,6 +187,9 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 停止或重置 <c>Stop</c> 对应的状态。
+        /// </summary>
         public void Stop()
         {
             _timer.Stop();
@@ -231,6 +237,9 @@ namespace BetterGenshinImpact.GameTask
             Stop();
         }
 
+        /// <summary>
+        /// 处理 <c>Tick</c> 对应的事件或状态更新。
+        /// </summary>
         public void Tick(object? sender, EventArgs e)
         {
             var hasLock = false;
@@ -494,6 +503,9 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 执行 <c>LogCaptureUnavailable</c> 对应的处理逻辑。
+        /// </summary>
         private void LogCaptureUnavailable(IGameCapture capture, bool logImmediately = false)
         {
             var now = DateTime.UtcNow;
@@ -534,6 +546,9 @@ namespace BetterGenshinImpact.GameTask
             _lastCaptureFailureFingerprint = fingerprint;
         }
 
+        /// <summary>
+        /// 停止或重置 <c>ResetCaptureFailureTracking</c> 对应的状态。
+        /// </summary>
         private void ResetCaptureFailureTracking()
         {
             _captureUnavailableSinceUtc = DateTime.MinValue;
@@ -541,6 +556,9 @@ namespace BetterGenshinImpact.GameTask
             _lastCaptureFailureFingerprint = null;
         }
 
+        /// <summary>
+        /// 更新 <c>MarkCaptureAvailable</c> 对应的状态。
+        /// </summary>
         private void MarkCaptureAvailable()
         {
             // 保留最近异常的日志指纹和时间戳，避免“失败一帧、成功一帧”时绕过五秒限流。
@@ -591,6 +609,9 @@ namespace BetterGenshinImpact.GameTask
             return rect.Width == 0 || rect.Height == 0;
         }
 
+        /// <summary>
+        /// 处理 <c>WinEventCallback</c> 对应的事件或状态更新。
+        /// </summary>
         private void WinEventCallback(User32.HWINEVENTHOOK hWinEventHook, uint @event, HWND hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             var target = TaskContext.Instance().GameHandle;

@@ -5,6 +5,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests;
 
 public class GenshinHdrRegistryHelperTests
 {
+    /// <summary>
+    /// 验证 <c>TryResolveEditionFromProcessName_DesktopClient_ReturnsEdition</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData("YuanShen", 1)]
     [InlineData("yuanshen.exe", 1)]
@@ -22,6 +25,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Equal((GenshinGameEdition)expected, actual);
     }
 
+    /// <summary>
+    /// 验证 <c>TryResolveEditionFromProcessName_NonDesktopClient_ReturnsUnknown</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -38,6 +44,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Equal(GenshinGameEdition.Unknown, edition);
     }
 
+    /// <summary>
+    /// 验证 <c>TryResolveEditionFromExecutablePath_OfficialExecutable_ReturnsEdition</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(@"D:\Games\YuanShen.exe", 1)]
     [InlineData(@"D:\Games\GenshinImpact.exe", 2)]
@@ -53,6 +62,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Equal((GenshinGameEdition)expected, actual);
     }
 
+    /// <summary>
+    /// 验证 <c>TryResolveEditionFromExecutablePath_UnknownExecutable_ReturnsUnknown</c> 所描述的行为。
+    /// </summary>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -68,6 +80,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Equal(GenshinGameEdition.Unknown, edition);
     }
 
+    /// <summary>
+    /// 验证 <c>RegistryTarget_IsEditionSpecific</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void RegistryTarget_IsEditionSpecific()
     {
@@ -80,6 +95,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Null(GenshinHdrRegistryHelper.GetHdrRegistryParentKeyPath(GenshinGameEdition.Unknown));
     }
 
+    /// <summary>
+    /// 验证 <c>FullRegistryTarget_IsEditionSpecific</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void FullRegistryTarget_IsEditionSpecific()
     {
@@ -92,6 +110,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Null(GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(GenshinGameEdition.Unknown));
     }
 
+    /// <summary>
+    /// 验证 <c>TryDisableHdr_Enabled_PersistsMarkerBeforeRegistryWrite</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void TryDisableHdr_Enabled_PersistsMarkerBeforeRegistryWrite()
     {
@@ -117,6 +138,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Equal(["marker", "registry"], operations);
     }
 
+    /// <summary>
+    /// 验证 <c>TryDisableHdr_MarkerPersistenceFails_DoesNotWriteRegistry</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void TryDisableHdr_MarkerPersistenceFails_DoesNotWriteRegistry()
     {
@@ -138,6 +162,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.False(registryWriteCalled);
     }
 
+    /// <summary>
+    /// 验证 <c>TryDisableHdr_AlreadyDisabled_DoesNotPersistOrWrite</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void TryDisableHdr_AlreadyDisabled_DoesNotPersistOrWrite()
     {
@@ -163,6 +190,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.False(registryWriteCalled);
     }
 
+    /// <summary>
+    /// 验证 <c>TryDisableHdr_RegistryReadFails_ReturnsExplicitFailure</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void TryDisableHdr_RegistryReadFails_ReturnsExplicitFailure()
     {
@@ -180,6 +210,9 @@ public class GenshinHdrRegistryHelperTests
         Assert.Same(expected, result.Error);
     }
 
+    /// <summary>
+    /// 验证 <c>TryDisableHdr_RegistryWriteFails_ReturnsExplicitFailure</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void TryDisableHdr_RegistryWriteFails_ReturnsExplicitFailure()
     {

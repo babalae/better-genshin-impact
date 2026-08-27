@@ -83,6 +83,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             logger.LogInformation("开始寻找鱼塘");
         }
 
+        /// <summary>
+        /// 处理 <c>Update</c> 对应的事件或状态更新。
+        /// </summary>
         protected async override Task<Status> Update()
         {
             var imageRegion = Screenshot.Get();
@@ -487,6 +490,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private int mouseMoveI = 1; // 上下移动视角的初始方向控制参数
         private double mouseMoveR; // 上下移动视角的切换频率控制参数
 
+        /// <summary>
+        /// 处理 <c>Update</c> 对应的事件或状态更新。
+        /// </summary>
         protected async override Task<Status> Update()
         {
             var imageRegion = Screenshot.Get();

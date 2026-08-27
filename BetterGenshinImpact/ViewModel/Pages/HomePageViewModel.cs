@@ -92,6 +92,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private bool _isCustomNetworkBanner = false;
     private readonly ChildSessionService _childSessionService;
 
+    /// <summary>
+    /// 初始化 <c>HomePageViewModel</c> 的新实例。
+    /// </summary>
     public HomePageViewModel(
         IConfigService configService,
         TaskTriggerDispatcher taskTriggerDispatcher,
@@ -221,6 +224,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     // {
     // }
 
+    /// <summary>
+    /// 处理 <c>OnStartCaptureTest</c> 对应的事件或状态更新。
+    /// </summary>
     [RelayCommand]
     private void OnStartCaptureTest()
     {
@@ -250,6 +256,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
+    /// <summary>
+    /// 处理 <c>OnManualPickWindow</c> 对应的事件或状态更新。
+    /// </summary>
     [RelayCommand]
     private async Task OnManualPickWindow()
     {
@@ -295,6 +304,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     private bool CanStartTrigger() => StartButtonEnabled;
 
+    /// <summary>
+    /// 处理 <c>OnStartTriggerAsync</c> 对应的事件或状态更新。
+    /// </summary>
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
@@ -367,6 +379,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         Start(hWnd, captureMode);
     }
 
+    /// <summary>
+    /// 执行 <c>DisableGenshinHdrIfNeededAsync</c> 对应的处理逻辑。
+    /// </summary>
     private async Task<bool> DisableGenshinHdrIfNeededAsync(
         CaptureModes captureMode,
         IntPtr runningGameHandle,
@@ -572,6 +587,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
+    /// <summary>
+    /// 解析并返回 <c>ResolveConfiguredGenshinEdition</c> 对应的结果。
+    /// </summary>
     private GenshinGameEdition ResolveConfiguredGenshinEdition()
     {
         var installPath = Config.GenshinStartConfig.InstallPath;
@@ -584,6 +602,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             : GenshinGameEdition.Unknown;
     }
 
+    /// <summary>
+    /// 识别并返回 <c>ClassifyCaptureTarget</c> 对应的结果。
+    /// </summary>
     private static GenshinCaptureTargetClassification ClassifyCaptureTarget(IntPtr hWnd)
     {
         using var process = SystemControl.GetProcessByHandle(hWnd);
@@ -619,18 +640,30 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         GenshinGameEdition Edition = GenshinGameEdition.Unknown,
         Exception? Error = null)
     {
+        /// <summary>
+        /// 执行 <c>Desktop</c> 对应的处理逻辑。
+        /// </summary>
         public static GenshinCaptureTargetClassification Desktop(GenshinGameEdition edition) =>
             edition == GenshinGameEdition.Unknown
                 ? Unavailable(new InvalidOperationException("无法确认配置的桌面客户端版本。"))
                 : new(GenshinCaptureTargetStatus.Desktop, edition);
 
+        /// <summary>
+        /// 执行 <c>NonRegistry</c> 对应的处理逻辑。
+        /// </summary>
         public static GenshinCaptureTargetClassification NonRegistry() =>
             new(GenshinCaptureTargetStatus.NonRegistry);
 
+        /// <summary>
+        /// 执行 <c>Unavailable</c> 对应的处理逻辑。
+        /// </summary>
         public static GenshinCaptureTargetClassification Unavailable(Exception error) =>
             new(GenshinCaptureTargetStatus.Unavailable, Error: error);
     }
 
+    /// <summary>
+    /// 获取 <c>GetProcessId</c> 对应的数据。
+    /// </summary>
     private static uint GetProcessId(IntPtr hWnd)
     {
         if (hWnd == IntPtr.Zero)
@@ -642,6 +675,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         return processId;
     }
 
+    /// <summary>
+    /// 判断 <c>IsHdrRegistryFailure</c> 所描述的条件是否成立。
+    /// </summary>
     private static bool IsHdrRegistryFailure(GenshinHdrDisableStatus status)
     {
         return status is GenshinHdrDisableStatus.PreparationFailed or
@@ -650,6 +686,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             GenshinHdrDisableStatus.UnsupportedEdition;
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryCompleteHdrRegistryChange</c> 对应的操作。
+    /// </summary>
     private bool TryCompleteHdrRegistryChange(
         GenshinGameEdition edition,
         string registryTarget)
@@ -667,6 +706,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         return false;
     }
 
+    /// <summary>
+    /// 执行 <c>ShowHdrRestartRequiredAsync</c> 对应的处理逻辑。
+    /// </summary>
     private static async Task ShowHdrRestartRequiredAsync(bool registryRequiresManualAction)
     {
         var message = registryRequiresManualAction
@@ -675,24 +717,36 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         await ThemedMessageBox.WarningAsync(message);
     }
 
+    /// <summary>
+    /// 执行 <c>ShowHdrRestartStateFailureAsync</c> 对应的处理逻辑。
+    /// </summary>
     private static async Task ShowHdrRestartStateFailureAsync()
     {
         await ThemedMessageBox.ErrorAsync(
             "无法读取或保存原神 HDR 待重启状态。为避免 BetterGI 重启后错误放行旧游戏进程，本次未修改 HDR 设置，也未启动 SDR 捕获。请检查 LocalAppData/BetterGI/State 目录权限后重试。");
     }
 
+    /// <summary>
+    /// 执行 <c>ShowHdrRegistryFailureAsync</c> 对应的处理逻辑。
+    /// </summary>
     private static async Task ShowHdrRegistryFailureAsync(string error)
     {
         await ThemedMessageBox.ErrorAsync(
             $"无法读取或关闭原神 HDR 设置：{error}\n为避免 SDR 截图过曝或泛白，本次未启动捕获。请手动关闭原神 HDR 后重试。");
     }
 
+    /// <summary>
+    /// 执行 <c>ShowGenshinEditionUnknownAsync</c> 对应的处理逻辑。
+    /// </summary>
     private static async Task ShowGenshinEditionUnknownAsync()
     {
         await ThemedMessageBox.ErrorAsync(
             "已找到游戏窗口，但无法确认它属于国服还是国际服。为避免跳过对应版本的 HDR 安全检查，本次未启动捕获。请确认使用官方桌面客户端后重试。");
     }
 
+    /// <summary>
+    /// 启动当前组件或任务的处理流程。
+    /// </summary>
     private void Start(IntPtr hWnd, CaptureModes? requestedCaptureMode = null)
     {
         Debug.WriteLine($"原神启动句柄{hWnd}");
@@ -743,6 +797,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
+    /// <summary>
+    /// 获取 <c>GetCaptureMode</c> 对应的数据。
+    /// </summary>
     private CaptureModes GetCaptureMode()
     {
         if (Config.CaptureMode.TryToCaptureMode(out var mode))

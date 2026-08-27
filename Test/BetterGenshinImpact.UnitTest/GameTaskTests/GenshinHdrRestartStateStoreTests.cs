@@ -12,6 +12,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
 
     private string StatePath => Path.Combine(_testDirectory, "genshin-hdr-restart.json");
 
+    /// <summary>
+    /// 验证 <c>DefaultStatePath_UsesStablePerUserLocalAppData</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void DefaultStatePath_UsesStablePerUserLocalAppData()
     {
@@ -23,6 +26,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Contains(Path.Combine("BetterGI", "State"), statePath, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// 验证 <c>Mark_ThenCreateNewStore_ExactProcessStillRequiresRestart</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Mark_ThenCreateNewStore_ExactProcessStillRequiresRestart()
     {
@@ -42,6 +48,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Equal(GenshinHdrRestartCheckStatus.RestartRequired, checkResult.Status);
     }
 
+    /// <summary>
+    /// 验证 <c>Check_SamePidWithDifferentStartTime_PrunesReusedPid</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Check_SamePidWithDifferentStartTime_PrunesReusedPid()
     {
@@ -70,6 +79,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Empty(ReadRequirements());
     }
 
+    /// <summary>
+    /// 验证 <c>Check_ExitedProcess_PrunesPersistedRequirement</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Check_ExitedProcess_PrunesPersistedRequirement()
     {
@@ -88,6 +100,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Empty(ReadRequirements());
     }
 
+    /// <summary>
+    /// 验证 <c>Check_ProcessInspectionDenied_KeepsRequirementAndBlocksSamePid</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Check_ProcessInspectionDenied_KeepsRequirementAndBlocksSamePid()
     {
@@ -110,6 +125,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Single(ReadRequirements());
     }
 
+    /// <summary>
+    /// 验证 <c>Check_DifferentEditionAndTarget_DoesNotConsumeOtherEditionMarker</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Check_DifferentEditionAndTarget_DoesNotConsumeOtherEditionMarker()
     {
@@ -133,6 +151,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Equal(GenshinHdrRestartCheckStatus.RestartRequired, cnCheck.Status);
     }
 
+    /// <summary>
+    /// 验证 <c>CompleteRegistryChange_BlocksOtherProcessStartedBeforeBarrier</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void CompleteRegistryChange_BlocksOtherProcessStartedBeforeBarrier()
     {
@@ -153,6 +174,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Equal(GenshinHdrRestartCheckStatus.RestartRequired, secondProcessCheck.Status);
     }
 
+    /// <summary>
+    /// 验证 <c>CompleteRegistryChange_AllowsProcessStartedAfterBarrier</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void CompleteRegistryChange_AllowsProcessStartedAfterBarrier()
     {
@@ -172,6 +196,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Equal(GenshinHdrRestartCheckStatus.NotRequired, newProcessCheck.Status);
     }
 
+    /// <summary>
+    /// 验证 <c>PendingRegistryChange_BlocksProcessWithoutPidMarker</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void PendingRegistryChange_BlocksProcessWithoutPidMarker()
     {
@@ -188,6 +215,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Equal(GenshinHdrRestartCheckStatus.RestartRequired, check.Status);
     }
 
+    /// <summary>
+    /// 验证 <c>PrepareRegistryChange_AfterAppliedBarrier_CreatesNewPendingGeneration</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void PrepareRegistryChange_AfterAppliedBarrier_CreatesNewPendingGeneration()
     {
@@ -216,6 +246,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
             store.CheckAndPrune(processAfterOldBarrier.ProcessId, GenshinGameEdition.Cn, target).Status);
     }
 
+    /// <summary>
+    /// 验证 <c>Check_StateReadDenied_ReturnsExplicitUnavailable</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Check_StateReadDenied_ReturnsExplicitUnavailable()
     {
@@ -234,6 +267,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Same(expected, result.Error);
     }
 
+    /// <summary>
+    /// 验证 <c>Check_CorruptedState_ReturnsExplicitUnavailable</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Check_CorruptedState_ReturnsExplicitUnavailable()
     {
@@ -250,6 +286,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.NotNull(result.Error);
     }
 
+    /// <summary>
+    /// 验证 <c>Mark_StateWriteDenied_ReturnsExplicitFailure</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Mark_StateWriteDenied_ReturnsExplicitFailure()
     {
@@ -269,6 +308,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.Same(expected, result.Error);
     }
 
+    /// <summary>
+    /// 验证 <c>Mark_EditionAndRegistryTargetMismatch_IsRejected</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public void Mark_EditionAndRegistryTargetMismatch_IsRejected()
     {
@@ -284,6 +326,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         Assert.IsType<ArgumentException>(result.Error);
     }
 
+    /// <summary>
+    /// 验证 <c>PolicyLock_SerializesIndependentStoreInstances</c> 所描述的行为。
+    /// </summary>
     [Fact]
     public async Task PolicyLock_SerializesIndependentStoreInstances()
     {
@@ -302,6 +347,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         secondLock.LockHandle!.Dispose();
     }
 
+    /// <summary>
+    /// 验证 <c>Dispose</c> 所描述的行为。
+    /// </summary>
     public void Dispose()
     {
         try
@@ -317,6 +365,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// 验证 <c>CreateStore</c> 所描述的行为。
+    /// </summary>
     private GenshinHdrRestartStateStore CreateStore(
         IReadOnlyDictionary<uint, GenshinProcessIdentityReadResult> processTable)
     {
@@ -327,6 +378,9 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
                 : GenshinProcessIdentityReadResult.NotFound());
     }
 
+    /// <summary>
+    /// 验证 <c>CreateProcessTable</c> 所描述的行为。
+    /// </summary>
     private static Dictionary<uint, GenshinProcessIdentityReadResult> CreateProcessTable(
         params GenshinGameProcessIdentity[] identities)
     {
@@ -335,11 +389,17 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
             GenshinProcessIdentityReadResult.Found);
     }
 
+    /// <summary>
+    /// 验证 <c>GetTarget</c> 所描述的行为。
+    /// </summary>
     private static string GetTarget(GenshinGameEdition edition)
     {
         return GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(edition)!;
     }
 
+    /// <summary>
+    /// 验证 <c>ReadRequirements</c> 所描述的行为。
+    /// </summary>
     private JArray ReadRequirements()
     {
         var document = JObject.Parse(File.ReadAllText(StatePath));

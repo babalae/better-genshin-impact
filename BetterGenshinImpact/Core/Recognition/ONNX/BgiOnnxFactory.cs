@@ -167,6 +167,9 @@ public class BgiOnnxFactory
         }
     }
 
+    /// <summary>
+    /// 解析并返回 <c>SelectGpuProviders</c> 对应的结果。
+    /// </summary>
     internal static ProviderType[] SelectGpuProviders(bool hasTensorRt, bool hasCuda, bool hasDirectMl)
     {
         if (hasTensorRt)
@@ -186,6 +189,9 @@ public class BgiOnnxFactory
             : [ProviderType.Cpu];
     }
 
+    /// <summary>
+    /// 解析并返回 <c>ParseAdditionalPaths</c> 对应的结果。
+    /// </summary>
     internal static string[] ParseAdditionalPaths(string? additionalPath)
     {
         return string.IsNullOrWhiteSpace(additionalPath)
@@ -195,6 +201,9 @@ public class BgiOnnxFactory
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
+    /// <summary>
+    /// 判断 <c>IsTensorRtAvailable</c> 所描述的条件是否成立。
+    /// </summary>
     private bool IsTensorRtAvailable()
     {
         if (!IsNativeProviderAvailable("TensorrtExecutionProvider"))
@@ -214,6 +223,9 @@ public class BgiOnnxFactory
         }
     }
 
+    /// <summary>
+    /// 判断 <c>IsCudaAvailable</c> 所描述的条件是否成立。
+    /// </summary>
     private bool IsCudaAvailable()
     {
         if (!IsNativeProviderAvailable("CUDAExecutionProvider"))
@@ -233,6 +245,9 @@ public class BgiOnnxFactory
         }
     }
 
+    /// <summary>
+    /// 判断 <c>IsDirectMlAvailable</c> 所描述的条件是否成立。
+    /// </summary>
     private bool IsDirectMlAvailable()
     {
         if (!IsNativeProviderAvailable("DmlExecutionProvider"))
@@ -253,6 +268,9 @@ public class BgiOnnxFactory
         }
     }
 
+    /// <summary>
+    /// 判断 <c>IsNativeProviderAvailable</c> 所描述的条件是否成立。
+    /// </summary>
     private bool IsNativeProviderAvailable(string providerName)
     {
         return _availableProviderNames.Contains(providerName);
@@ -364,6 +382,9 @@ public class BgiOnnxFactory
         return new BgiYoloPredictor(model, () => CreateYoloRuntimePredictor(model));
     }
 
+    /// <summary>
+    /// 创建 <c>CreateYoloRuntimePredictor</c> 对应的对象或资源。
+    /// </summary>
     private YoloPredictor CreateYoloRuntimePredictor(BgiOnnxModel model)
     {
         foreach (var (providerTypes, isFirstAttempt) in EnumerateProviderFallbacks(ProviderTypes))
@@ -427,6 +448,9 @@ public class BgiOnnxFactory
         throw new InvalidOperationException($"模型 {model.Name} 没有可用的 ONNX provider");
     }
 
+    /// <summary>
+    /// 执行 <c>EnumerateProviderFallbacks</c> 对应的处理逻辑。
+    /// </summary>
     internal static IEnumerable<(ProviderType[] ProviderTypes, bool IsFirstAttempt)> EnumerateProviderFallbacks(
         ProviderType[] providerTypes)
     {
@@ -437,6 +461,9 @@ public class BgiOnnxFactory
         }
     }
 
+    /// <summary>
+    /// 解析并返回 <c>ResolveModelLoad</c> 对应的结果。
+    /// </summary>
     private (string ModelPath, bool GenerateCache) ResolveModelLoad(
         BgiOnnxModel model,
         ProviderType[] providerTypes,

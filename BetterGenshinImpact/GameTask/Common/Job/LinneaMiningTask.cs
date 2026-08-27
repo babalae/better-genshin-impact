@@ -367,6 +367,9 @@ public class LinneaMiningTask : IDisposable
         return clusters;
     }
 
+    /// <summary>
+    /// 释放当前实例持有的托管和原生资源。
+    /// </summary>
     public void Dispose()
     {
         _predictor.Dispose();

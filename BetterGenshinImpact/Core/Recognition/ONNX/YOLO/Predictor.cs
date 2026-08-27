@@ -12,6 +12,9 @@ public class Predictor
     private readonly InferenceSession _session;
     private readonly string[] labels;
 
+    /// <summary>
+    /// 初始化 <c>Predictor</c> 的新实例。
+    /// </summary>
     public Predictor()
     {
         using var options = new SessionOptions();

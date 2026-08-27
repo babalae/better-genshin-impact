@@ -72,6 +72,9 @@ public static class GenshinHdrRegistryHelper
     public static IReadOnlyList<string> HdrRegistryFullKeyPaths =>
         HdrRegistrySubKeyPaths.Select(static path => $@"HKEY_CURRENT_USER\{path}").ToArray();
 
+    /// <summary>
+    /// 尝试执行 <c>TryResolveEditionFromProcessName</c> 对应的操作。
+    /// </summary>
     internal static bool TryResolveEditionFromProcessName(
         string? processName,
         out GenshinGameEdition edition)
@@ -79,6 +82,9 @@ public static class GenshinHdrRegistryHelper
         return TryResolveEditionFromExecutableName(processName, out edition);
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryResolveEditionFromExecutablePath</c> 对应的操作。
+    /// </summary>
     internal static bool TryResolveEditionFromExecutablePath(
         string? executablePath,
         out GenshinGameEdition edition)
@@ -96,6 +102,9 @@ public static class GenshinHdrRegistryHelper
         }
     }
 
+    /// <summary>
+    /// 获取 <c>GetHdrRegistryParentKeyPath</c> 对应的数据。
+    /// </summary>
     internal static string? GetHdrRegistryParentKeyPath(GenshinGameEdition edition)
     {
         return edition switch
@@ -106,6 +115,9 @@ public static class GenshinHdrRegistryHelper
         };
     }
 
+    /// <summary>
+    /// 获取 <c>GetHdrRegistryFullValuePath</c> 对应的数据。
+    /// </summary>
     internal static string? GetHdrRegistryFullValuePath(GenshinGameEdition edition)
     {
         var parentKeyPath = GetHdrRegistryParentKeyPath(edition);
@@ -114,6 +126,9 @@ public static class GenshinHdrRegistryHelper
             : $@"HKEY_CURRENT_USER\{parentKeyPath}\{HdrRegistryEntryName}";
     }
 
+    /// <summary>
+    /// 获取 <c>GetHdrState</c> 对应的数据。
+    /// </summary>
     internal static GenshinHdrRegistryReadResult GetHdrState(GenshinGameEdition edition)
     {
         return ReadHdrRegistryValue(edition);
@@ -134,6 +149,9 @@ public static class GenshinHdrRegistryHelper
             WriteDisabledHdrRegistryValue);
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryDisableHdr</c> 对应的操作。
+    /// </summary>
     internal static GenshinHdrDisableResult TryDisableHdr(
         GenshinGameEdition edition,
         Func<string, bool>? prepareBeforeWrite,
@@ -214,6 +232,9 @@ public static class GenshinHdrRegistryHelper
                 writeResult.Error);
     }
 
+    /// <summary>
+    /// 读取 <c>ReadHdrRegistryValue</c> 对应的数据。
+    /// </summary>
     private static GenshinHdrRegistryReadResult ReadHdrRegistryValue(
         GenshinGameEdition edition)
     {
@@ -257,6 +278,9 @@ public static class GenshinHdrRegistryHelper
         }
     }
 
+    /// <summary>
+    /// 写入或持久化 <c>WriteDisabledHdrRegistryValue</c> 对应的数据。
+    /// </summary>
     private static GenshinHdrRegistryWriteResult WriteDisabledHdrRegistryValue(
         GenshinGameEdition edition,
         RegistryValueKind valueKind)
@@ -290,6 +314,9 @@ public static class GenshinHdrRegistryHelper
         }
     }
 
+    /// <summary>
+    /// 尝试执行 <c>TryResolveEditionFromExecutableName</c> 对应的操作。
+    /// </summary>
     private static bool TryResolveEditionFromExecutableName(
         string? executableName,
         out GenshinGameEdition edition)

@@ -12,6 +12,9 @@ internal static class HdrDisplayInformation
     internal const float FallbackSdrWhiteScale = 0.25f;
     private const float SceneReferredSdrWhiteNits = 80f;
 
+    /// <summary>
+    /// 获取 <c>GetState</c> 对应的数据。
+    /// </summary>
     public static HdrDisplayState GetState(nint hWnd)
     {
         try
@@ -104,11 +107,17 @@ internal static class HdrDisplayInformation
         return HdrDisplayState.Unknown;
     }
 
+    /// <summary>
+    /// 判断 <c>IsValidSdrWhiteLevel</c> 所描述的条件是否成立。
+    /// </summary>
     private static bool IsValidSdrWhiteLevel(float sdrWhiteLevelNits)
     {
         return float.IsFinite(sdrWhiteLevelNits) && sdrWhiteLevelNits > 0f;
     }
 
+    /// <summary>
+    /// 计算 <c>CalculateSdrWhiteScale</c> 对应的结果。
+    /// </summary>
     internal static float CalculateSdrWhiteScale(float sdrWhiteLevelNits)
     {
         if (!float.IsFinite(sdrWhiteLevelNits) || sdrWhiteLevelNits <= 0f)
@@ -144,6 +153,9 @@ internal readonly record struct HdrDisplayState(HdrDisplayStateKind Kind, float 
     public static HdrDisplayState HdrWhiteLevelUnavailable =>
         new(HdrDisplayStateKind.HdrWhiteLevelUnavailable, HdrDisplayInformation.FallbackSdrWhiteScale);
 
+    /// <summary>
+    /// 创建 <c>CreateHdr</c> 对应的对象或资源。
+    /// </summary>
     public static HdrDisplayState CreateHdr(float sdrWhiteScale) =>
         new(HdrDisplayStateKind.Hdr, sdrWhiteScale);
 }
