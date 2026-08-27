@@ -29,7 +29,7 @@
 
 <br/>
 
-[English](./Docs/i18n/README.en-US.md) | [中文](./Docs/i18n/README.zh-CN.md) | [繁體中文](./Docs/i18n/README.zh-TW.md) | [日本語](./Docs/i18n/README.ja-JP.md)  
+[English](./README.en-US.md) | [中文](./README.zh-CN.md) | [繁體中文](./README.zh-TW.md) | [日本語](./README.ja-JP.md)  
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
@@ -125,9 +125,9 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 开发者
 
-格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；<br>
+格式化：[CodeMaid.config](../../CodeMaid.config)、[Settings.XamlStyler](../../Settings.XamlStyler)；<br>
 
-[如何编译项目？](BetterGenshinImpact/README.md)
+[如何编译项目？](../../BetterGenshinImpact/README.md)
 
 ## 许可证
 
