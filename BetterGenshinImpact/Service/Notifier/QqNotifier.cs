@@ -95,22 +95,15 @@ public sealed class QqNotifier : INotifier
     }
 
     /// <summary>
-    /// 生成通知文本，包含结果标记（成功/失败/警告）和时间戳。
+    /// 生成通知文本。时间戳放在第一行，推送内容在第二行，排版更紧凑。
     /// </summary>
     private static string GenerateMessage(BaseNotificationData data)
     {
         var sb = new StringBuilder();
-        var mark = data.Result switch
-        {
-            NotificationEventResult.Success => "\u2705",
-            NotificationEventResult.Fail => "\u274C",
-            _ => "\u26A0\uFE0F"
-        };
-        sb.Append($"[BetterGI] {mark} ");
+        sb.Append($"[{data.Timestamp:yyyy-MM-dd HH:mm:ss}]");
+        sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(data.Message))
             sb.Append(data.Message);
-        sb.AppendLine();
-        sb.Append($"\uD83D\uDD50 {data.Timestamp:yyyy-MM-dd HH:mm:ss}");
         return sb.ToString();
     }
 

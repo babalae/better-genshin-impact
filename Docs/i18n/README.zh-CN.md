@@ -29,7 +29,7 @@
 
 <br/>
 
-[English](./Docs/i18n/README.en-US.md) | [中文](./Docs/i18n/README.zh-CN.md) | [繁體中文](./Docs/i18n/README.zh-TW.md) | [日本語](./Docs/i18n/README.ja-JP.md)  
+[English](./README.en-US.md) | [中文](./README.zh-CN.md) | [繁體中文](./README.zh-TW.md) | [日本語](./README.ja-JP.md)  
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
@@ -90,8 +90,8 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [.NET 8 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
 
 **⚠️注意：**
-1. 窗口大小变化、切换游戏分辨率/显示器/Windows HDR，或调整“SDR 内容亮度”后，请重启本软件。
-2. 不支持 N 卡滤镜等会改变画面颜色的滤镜。HDR 游戏画面需选择 `WindowsGraphicsCapture（HDR）`，程序会将 FP16 HDR 输入归一化为识别所需的 SDR；`BitBlt` 不提供原生 HDR。
+1. 窗口大小变化、切换游戏分辨率、切换显示器的时候请重启本软件。
+2. 不支持任何画面滤镜（HDR、N卡滤镜等）。游戏亮度请保持默认。
 3. 当前只支持 `16:9` 的分辨率，推荐在 `1920x1080` 窗口化游戏下使用。
 4. **模拟操作部分可能被部分安全软件拦截，请加入白名单。已知360或者自定义规则WD会拦截部分类型的模拟点击**
 
@@ -125,9 +125,9 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 开发者
 
-格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；<br>
+格式化：[CodeMaid.config](../../CodeMaid.config)、[Settings.XamlStyler](../../Settings.XamlStyler)；<br>
 
-[如何编译项目？](BetterGenshinImpact/README.md)
+[如何编译项目？](../../BetterGenshinImpact/README.md)
 
 ## 许可证
 

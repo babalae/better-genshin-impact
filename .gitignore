@@ -22,7 +22,11 @@ bld/
 [Ll]og/
 
 # Mine
-Tmp/
+/Tmp/
+
+# AI temporary design docs
+Docs/tmp/*
+!Docs/tmp/README.md
 /packages/
 node_modules/
 github_actions_cache/
