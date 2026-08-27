@@ -188,10 +188,13 @@ public static class WechatClawbotHelper
             foreach (var msg in resp.Msgs ?? [])
             {
                 var text = ExtractText(msg);
-                // 仅接受扫码用户发来的验证码消息，防止其他用户误绑
+                // 仅接受扫码用户发来的验证码消息，且必须携带 context_token，防止其他用户误绑
                 var isExpectedSender = string.Equals(msg.FromUserId, expectedUserId, StringComparison.Ordinal);
-                if (text != null && text.Contains(verifyCode) && isExpectedSender)
-                    return new WechatClawbotBindResult(msg.FromUserId!, msg.ContextToken ?? string.Empty, buf);
+                if (text != null && text.Contains(verifyCode) && isExpectedSender
+                    && !string.IsNullOrWhiteSpace(msg.ContextToken))
+                {
+                    return new WechatClawbotBindResult(msg.FromUserId!, msg.ContextToken!, buf);
+                }
             }
         }
 

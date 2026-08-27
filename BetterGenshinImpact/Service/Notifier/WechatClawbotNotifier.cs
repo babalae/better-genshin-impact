@@ -364,6 +364,10 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             return false;
         if (ex is JsonException || ex is InvalidOperationException)
             return false;
+        // NotifierException 为业务错误（如 getuploadurl 缺少上传地址、CDN 响应缺少 x-encrypted-param），
+        // 属于确定性失败，不应重试，避免重复上传截图并累计退避延迟。
+        if (ex is NotifierException)
+            return false;
         return true;
     }
 

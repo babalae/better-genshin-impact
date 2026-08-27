@@ -463,11 +463,10 @@ public class NotificationService : IHostedService, IDisposable
         public void Dispose()
         {
             service._suppressRefresh = false;
-            if (service._refreshPending)
-            {
-                service._refreshPending = false;
-                service.RefreshNotifiers();
-            }
+            service._refreshPending = false;
+            // 绑定是用户主动操作，即使凭证未变化也必须刷新通知器，
+            // 以确保会话从独立存储加载最新的 context_token / get_updates_buf。
+            service.RefreshNotifiers();
         }
     }
 
