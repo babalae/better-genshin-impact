@@ -209,6 +209,27 @@ public class GraphicsCapturePerformancePolicyTests
     }
 
     /// <summary>
+    /// 验证浮点帧间隔在转换为整数前会被安全限幅和舍入。
+    /// </summary>
+    [Theory]
+    [InlineData(1e100, 1000)]
+    [InlineData(-1e100, 16)]
+    [InlineData(50.6, 51)]
+    public void ResolveTargetFrameInterval_DoubleValue_ClampsBeforeIntegerConversion(
+        double requested,
+        int expected)
+    {
+        var settings = new Dictionary<string, object>
+        {
+            [GraphicsCapture.TargetFrameIntervalSettingName] = requested
+        };
+
+        var actual = GraphicsCapture.ResolveTargetFrameInterval(settings);
+
+        Assert.Equal(expected, actual);
+    }
+
+    /// <summary>
     /// 验证尺寸重建后只有尚未恢复的 HDR 会话会重新排队显示器刷新。
     /// </summary>
     [Theory]

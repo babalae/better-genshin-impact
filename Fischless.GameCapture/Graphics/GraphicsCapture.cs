@@ -210,7 +210,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             int intValue => intValue,
             long longValue when longValue is >= int.MinValue and <= int.MaxValue => (int)longValue,
-            double doubleValue when double.IsFinite(doubleValue) => (int)Math.Round(doubleValue),
+            double doubleValue when double.IsFinite(doubleValue) =>
+                (int)Math.Round(Math.Clamp(doubleValue, int.MinValue, int.MaxValue)),
             _ => MinimumFrameIntervalMs
         };
 
