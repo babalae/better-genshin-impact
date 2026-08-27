@@ -207,4 +207,24 @@ public class GraphicsCapturePerformancePolicyTests
 
         Assert.Equal(expected, actual);
     }
+
+    /// <summary>
+    /// 验证尺寸重建后只有尚未恢复的 HDR 会话会重新排队显示器刷新。
+    /// </summary>
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public void ShouldRetryHdrDisplayRefreshAfterFramePoolRecovery_RequiresHdrFailure(
+        bool captureHdrRequested,
+        bool recoveryRequired,
+        bool expected)
+    {
+        var actual = GraphicsCapture.ShouldRetryHdrDisplayRefreshAfterFramePoolRecovery(
+            captureHdrRequested,
+            recoveryRequired);
+
+        Assert.Equal(expected, actual);
+    }
 }

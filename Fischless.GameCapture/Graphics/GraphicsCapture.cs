@@ -250,6 +250,19 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     }
 
     /// <summary>
+    /// 判断尺寸重建成功后是否仍需重新排队 HDR 管线恢复。
+    /// </summary>
+    /// <param name="captureHdrRequested">当前会话是否请求 HDR 捕获。</param>
+    /// <param name="recoveryRequired">HDR 管线是否仍处于待恢复状态。</param>
+    /// <returns>需要在下一帧继续恢复 HDR 管线时为 <see langword="true"/>。</returns>
+    internal static bool ShouldRetryHdrDisplayRefreshAfterFramePoolRecovery(
+        bool captureHdrRequested,
+        bool recoveryRequired)
+    {
+        return captureHdrRequested && recoveryRequired;
+    }
+
+    /// <summary>
     /// 通知捕获器窗口位置发生变化。此方法只设置原子标记；显示器查询和帧池重建均延后到
     /// free-threaded 帧回调，避免阻塞 WinEventHook 线程或 WPF/UI 线程。
     /// </summary>
@@ -524,9 +537,15 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                         _pixelFormat,
                         2,
                         captureSize);
-                    // Recreate 成功代表当前帧池已恢复，令此前排队的延迟停止请求失效。
-                    // 仅恢复尺寸帧池，不代表 HDR 显示器管线已经匹配；保留 HDR 刷新失败请求。
-                    InvalidateFramePoolFailureGeneration();
+                    // Recreate 成功代表当前帧池已恢复，两类旧延迟停止都不能再关闭健康会话。
+                    // 尺寸恢复不代表 HDR 管线已经匹配；仍有 HDR 故障时在下一帧显式重试。
+                    InvalidateFramePoolFailureGenerations();
+                    if (ShouldRetryHdrDisplayRefreshAfterFramePoolRecovery(
+                            _captureHdrRequested,
+                            Volatile.Read(ref _hdrDisplayRecoveryRequired) != 0))
+                    {
+                        Volatile.Write(ref _hdrDisplayRefreshPending, 1);
+                    }
                 }
                 catch (Exception e)
                 {
