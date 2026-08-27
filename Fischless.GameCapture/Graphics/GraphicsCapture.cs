@@ -569,15 +569,12 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             return false;
         }
 
-        // 窗口可能在多个位置事件之间移回原显示器，此时只需清除请求，不重建帧池。
+        // 窗口可能在多个位置事件之间移回原显示器，此时需要验证原管线是否仍可用。
         if (monitor == Volatile.Read(ref _hdrDisplayMonitor))
         {
-            // 该帧池已经回到原显示器可继续使用；仅推进 HDR 代次，
-            // 不要误取消可能同时存在的尺寸重建失败停止请求。
-            InvalidateHdrDisplayFailureGeneration();
-
-            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            return true;
+            // 不能只清除 pending：此前 Recreate 失败可能令帧池或 LastError 仍处于故障状态。
+            // 先用原管线重新 Recreate，成功后才取消 HDR 延迟停止并恢复下一帧输出。
+            return TryRecoverHdrPipelineOnOriginalDisplay(sender, captureSize);
         }
 
         HdrPipelineDecision pipelineDecision;
@@ -656,6 +653,58 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         _screenInfoRefreshPending = !TryRefreshGameScreenInfo();
         _lastFrameTime = _frameTimer.ElapsedMilliseconds - _targetFrameIntervalMs;
         return true;
+    }
+
+    private bool TryRecoverHdrPipelineOnOriginalDisplay(
+        Direct3D11CaptureFramePool sender,
+        Windows.Graphics.SizeInt32 captureSize)
+    {
+        var d3dDevice = _d3dDevice;
+        if (d3dDevice is null)
+        {
+            RecordCaptureFailure(new InvalidOperationException("D3D device is unavailable while recovering HDR capture."));
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
+            return false;
+        }
+
+        try
+        {
+            // 回到原显示器后仍使用当前已知的像素格式；Recreate 成功才说明帧池确实恢复。
+            sender.Recreate(d3dDevice, _pixelFormat, 2, captureSize);
+            InvalidateFramePoolFailureGenerations();
+
+            _stagingTexture?.Dispose();
+            _stagingTexture = null;
+            _hdrOutputTexture?.Dispose();
+            _hdrOutputTexture = null;
+            _hdrComputeShader?.Dispose();
+            _hdrComputeShader = null;
+            _hdrParametersBuffer?.Dispose();
+            _hdrParametersBuffer = null;
+            _latestFrame?.Dispose();
+            _latestFrame = null;
+            _surfaceWidth = captureSize.Width;
+            _surfaceHeight = captureSize.Height;
+            _screenInfoRefreshPending = !TryRefreshGameScreenInfo();
+            _lastFrameTime = _frameTimer.ElapsedMilliseconds - _targetFrameIntervalMs;
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+
+            // 仅在窗口区域查询也成功时清除之前的 HDR 错误；否则保留诊断并让下一帧继续刷新区域。
+            if (!_screenInfoRefreshPending)
+            {
+                Volatile.Write(ref _lastError, null);
+            }
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            RecordCaptureFailure(e);
+            Volatile.Write(ref _hdrDisplayRefreshPending, 0);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
+            return false;
+        }
     }
 
     private void StopCore(bool preserveLastError = false)
