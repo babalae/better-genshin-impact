@@ -204,6 +204,7 @@ public static class WechatClawbotHelper
     /// <summary>
     /// 构建所有 POST 请求体附带的 base_info 块（协议要求）。
     /// channel_version 为 iLink 协议版本；bot_agent 用于后台观测与流量归因。
+    /// 该块随每个请求一起发送，服务端据此识别客户端类型与版本。
     /// </summary>
     internal static object BuildBaseInfo() => new
     {
