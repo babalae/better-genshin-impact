@@ -3343,8 +3343,7 @@ public class TpTask
     private List<MapChooseCandidate> GetMapChooseCandidates(ImageRegion imageRegion)
     {
         var candidates = new List<MapChooseCandidate>();
-        var isHdrCapture = TaskContext.Instance().CaptureColorMode == CaptureColorMode.HdrToSdr;
-        var threshold = isHdrCapture ? 0.7 : 0.8;
+        var threshold = ResolveMapChooseIconThreshold(imageRegion.ColorMode);
 
         var mapChooseIconRoi = imageRegion.CacheGreyMat[_assets.MapChooseIconRoi];
         using var ownedMapChooseIconRoi = mapChooseIconRoi;
@@ -3415,6 +3414,16 @@ public class TpTask
         }
 
         return orderedCandidates;
+    }
+
+    /// <summary>
+    /// 根据当前截图帧实际经过的色彩管线选择地图候选图标阈值。
+    /// </summary>
+    /// <param name="colorMode">当前截图帧的色彩模式。</param>
+    /// <returns>用于地图候选图标模板匹配的阈值。</returns>
+    internal static double ResolveMapChooseIconThreshold(CaptureColorMode colorMode)
+    {
+        return colorMode == CaptureColorMode.HdrToSdr ? 0.7 : 0.8;
     }
 
     private MapChooseCandidate? ChooseMapCandidate(

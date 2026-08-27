@@ -327,7 +327,10 @@ public class Region : IDisposable
         }
 
         var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(0, 0, Width, Height, this);
-        var newRegion = new ImageRegion(new Mat(res.TargetRegion.SrcMat, res.ToRect()), X, Y, Prev, PrevConverter);
+        var newRegion = new ImageRegion(new Mat(res.TargetRegion.SrcMat, res.ToRect()), X, Y, Prev, PrevConverter)
+        {
+            ColorMode = res.TargetRegion.ColorMode
+        };
         return newRegion;
     }
 

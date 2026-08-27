@@ -43,6 +43,7 @@ public class CaptureContent : IDisposable
         var systemInfo = TaskContext.Instance().SystemInfo;
 
         var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
+        gameCaptureRegion.ColorMode = colorMode;
         CaptureRectArea = gameCaptureRegion.DeriveTo1080P();
     }
 
@@ -53,7 +54,7 @@ public class CaptureContent : IDisposable
     public CaptureContent(ImageRegion ra)
     {
         CaptureRectArea = ra;
-        ColorMode = TaskContext.Instance().CaptureColorMode;
+        ColorMode = ra.ColorMode;
     }
 
     public void Dispose()

@@ -269,8 +269,25 @@ public class TaskControl
         }
     }
 
+    /// <summary>
+    /// 捕获一帧游戏画面。
+    /// </summary>
+    /// <param name="gameCapture">当前游戏截图器。</param>
+    /// <returns>由调用方负责释放的图像。</returns>
     public static Mat CaptureGameImage(IGameCapture? gameCapture)
     {
+        return CaptureGameImage(gameCapture, out _);
+    }
+
+    /// <summary>
+    /// 捕获一帧游戏画面，并返回该帧实际使用的色彩管线。
+    /// </summary>
+    /// <param name="gameCapture">当前游戏截图器。</param>
+    /// <param name="colorMode">成功捕获帧的实际色彩模式。</param>
+    /// <returns>由调用方负责释放的图像。</returns>
+    public static Mat CaptureGameImage(IGameCapture? gameCapture, out CaptureColorMode colorMode)
+    {
+        colorMode = CaptureColorMode.Sdr;
         var captureFrame = gameCapture?.Capture();
         var image = captureFrame?.Frame;
         if (image == null)
@@ -284,6 +301,7 @@ public class TaskControl
                 image = captureFrame?.Frame;
                 if (image != null)
                 {
+                    colorMode = captureFrame?.ColorMode ?? CaptureColorMode.Sdr;
                     return image;
                 }
 
@@ -295,6 +313,7 @@ public class TaskControl
         }
         else
         {
+            colorMode = captureFrame?.ColorMode ?? CaptureColorMode.Sdr;
             return image;
         }
     }
@@ -310,8 +329,8 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
-        var content = new CaptureContent(image, 0, 0);
+        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture, out var colorMode);
+        var content = new CaptureContent(image, 0, 0, colorMode);
         return content.CaptureRectArea;
     }
 }
