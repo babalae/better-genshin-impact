@@ -475,7 +475,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                         2,
                         captureSize);
                     // Recreate 成功代表当前帧池已恢复，令此前排队的延迟停止请求失效。
-                    InvalidateFramePoolFailureGenerations();
+                    // 仅恢复尺寸帧池，不代表 HDR 显示器管线已经匹配；保留 HDR 刷新失败请求。
+                    InvalidateFramePoolFailureGeneration();
                 }
                 catch (Exception e)
                 {
@@ -573,7 +574,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             // 该帧池已经回到原显示器可继续使用；仅推进 HDR 代次，
             // 不要误取消可能同时存在的尺寸重建失败停止请求。
-            Interlocked.Increment(ref _hdrDisplayFailureGeneration);
+            InvalidateHdrDisplayFailureGeneration();
 
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
             return true;
@@ -727,10 +728,20 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         Debug.WriteLine($"Graphics capture failed: {exception}");
     }
 
-    private void InvalidateFramePoolFailureGenerations()
+    private void InvalidateFramePoolFailureGeneration()
     {
         Interlocked.Increment(ref _framePoolFailureGeneration);
+    }
+
+    private void InvalidateHdrDisplayFailureGeneration()
+    {
         Interlocked.Increment(ref _hdrDisplayFailureGeneration);
+    }
+
+    private void InvalidateFramePoolFailureGenerations()
+    {
+        InvalidateFramePoolFailureGeneration();
+        InvalidateHdrDisplayFailureGeneration();
     }
 
     private void ScheduleStopAfterFramePoolFailure(
