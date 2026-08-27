@@ -289,10 +289,10 @@ public sealed class GenshinHdrRestartStateStoreTests : IDisposable
     {
         var firstStore = CreateStore(new Dictionary<uint, GenshinProcessIdentityReadResult>());
         var secondStore = CreateStore(new Dictionary<uint, GenshinProcessIdentityReadResult>());
-        var firstLock = firstStore.TryAcquirePolicyLock();
+        var firstLock = await firstStore.TryAcquirePolicyLockAsync();
         Assert.True(firstLock.Success, firstLock.Error?.ToString());
 
-        var secondLockTask = Task.Run(secondStore.TryAcquirePolicyLock);
+        var secondLockTask = secondStore.TryAcquirePolicyLockAsync();
         await Task.Delay(100);
         Assert.False(secondLockTask.IsCompleted);
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -128,13 +129,17 @@ internal sealed class GenshinHdrRestartStateStore
     /// 串行化跨 BetterGI 进程的“检查状态—修改注册表—提交时间屏障”完整决策，消除多实例 TOCTOU。
     /// UI 提示前应释放返回的句柄，避免用户交互期间长期占用策略锁。
     /// </summary>
-    internal GenshinHdrPolicyLockResult TryAcquirePolicyLock()
+    internal async Task<GenshinHdrPolicyLockResult> TryAcquirePolicyLockAsync(
+        CancellationToken cancellationToken = default)
     {
         try
         {
             return new GenshinHdrPolicyLockResult(
                 true,
-                AcquireExclusiveFileLock($"{_statePath}.policy.lock"));
+                await AcquireExclusiveFileLockAsync(
+                        $"{_statePath}.policy.lock",
+                        cancellationToken)
+                    .ConfigureAwait(false));
         }
         catch (Exception e)
         {
@@ -595,15 +600,38 @@ internal sealed class GenshinHdrRestartStateStore
         var directory = Path.GetDirectoryName(lockPath)
                         ?? throw new InvalidOperationException("HDR 重启状态文件缺少父目录。 ");
         Directory.CreateDirectory(directory);
+        try
+        {
+            // policy.lock 已串行化合规运行时；内部状态锁若仍冲突应立即 fail closed，不能再阻塞 UI。
+            return new FileStream(
+                lockPath,
+                FileMode.OpenOrCreate,
+                FileAccess.ReadWrite,
+                FileShare.None,
+                bufferSize: 1,
+                FileOptions.None);
+        }
+        catch (IOException e)
+        {
+            throw new IOException("HDR 重启状态文件正被另一进程占用。", e);
+        }
+    }
+
+    private static async Task<FileStream> AcquireExclusiveFileLockAsync(
+        string lockPath,
+        CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(lockPath)
+                        ?? throw new InvalidOperationException("HDR 重启状态文件缺少父目录。 ");
+        Directory.CreateDirectory(directory);
         var stopwatch = Stopwatch.StartNew();
         IOException? lastError = null;
 
         do
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                // FileShare.None 在不同 BetterGI 进程/Windows Session 间串行化完整的读取-修改-替换流程，
-                // 避免两个实例各自从旧快照写回时丢失另一游戏进程的 marker。
                 return new FileStream(
                     lockPath,
                     FileMode.OpenOrCreate,
@@ -620,12 +648,13 @@ internal sealed class GenshinHdrRestartStateStore
                     break;
                 }
 
-                Thread.Sleep(25);
+                // 策略锁由 WPF 命令等待，必须异步让出 UI 线程，不能沿用状态锁的 Thread.Sleep。
+                await Task.Delay(25, cancellationToken).ConfigureAwait(false);
             }
         }
         while (stopwatch.Elapsed < StateLockTimeout);
 
-        throw new IOException("等待 HDR 重启状态文件锁超时。", lastError);
+        throw new IOException("等待 HDR 跨进程策略锁超时。", lastError);
     }
 
     private sealed class GenshinHdrRestartStateDocument

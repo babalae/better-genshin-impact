@@ -385,7 +385,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             return false;
         }
 
-        var policyLockResult = _hdrRestartStateStore.TryAcquirePolicyLock();
+        var policyLockResult = await _hdrRestartStateStore.TryAcquirePolicyLockAsync();
         if (!policyLockResult.Success)
         {
             _logger.LogError(policyLockResult.Error, "获取原神 HDR 跨进程策略锁失败");
