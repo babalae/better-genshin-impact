@@ -34,19 +34,24 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     private const int MaxRetry = 3;
 
     private readonly HttpClient _httpClient;
-    private readonly NotificationConfig _config;
+    private readonly string _botToken;
+    private readonly string _toUserId;
+    private readonly string _baseUrl;
     private readonly WechatClawbotSession _session;
     private readonly CancellationTokenSource _cts = new();
 
-    public WechatClawbotNotifier(HttpClient httpClient, NotificationConfig config)
+    public WechatClawbotNotifier(HttpClient httpClient, NotificationConfig config, bool startSession = true)
     {
         _httpClient = httpClient;
-        _config = config;
-        _session = new WechatClawbotSession(
-            config.WechatClawbotBotToken,
-            config.WechatClawbotBaseUrl,
-            config.WechatClawbotToUserId);
-        _ = _session.StartAsync();
+        // 固定构造时的凭证快照：发送期间即使配置被重新绑定变更，旧实例也不会混用新旧凭证
+        _botToken = config.WechatClawbotBotToken;
+        _toUserId = config.WechatClawbotToUserId;
+        _baseUrl = WechatClawbotHelper.NormalizeBaseUrl(config.WechatClawbotBaseUrl);
+        _session = new WechatClawbotSession(_botToken, _baseUrl, _toUserId);
+        // 子实例（桌面分身等）保留微信发送能力，但只有主实例启动长轮询会话，
+        // 避免多个进程用旧游标并发推进、互相覆盖 context_token / get_updates_buf。
+        if (startSession)
+            _ = _session.StartAsync();
     }
 
     /// <summary>
@@ -54,10 +59,10 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     /// </summary>
     public async Task SendAsync(BaseNotificationData content)
     {
-        if (string.IsNullOrWhiteSpace(_config.WechatClawbotBotToken))
+        if (string.IsNullOrWhiteSpace(_botToken))
             throw new NotifierException("微信 Clawbot BotToken 为空，请先扫码登录");
 
-        if (string.IsNullOrWhiteSpace(_config.WechatClawbotToUserId))
+        if (string.IsNullOrWhiteSpace(_toUserId))
             throw new NotifierException("微信 Clawbot 未绑定用户，请先完成绑定");
 
         var ct = _cts.Token;
@@ -127,7 +132,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             msg = new
             {
                 from_user_id = string.Empty,
-                to_user_id = _config.WechatClawbotToUserId,
+                to_user_id = _toUserId,
                 client_id = WechatClawbotHelper.GenerateClientId(),
                 message_type = 2,
                 message_state = 2,
@@ -162,7 +167,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             msg = new
             {
                 from_user_id = string.Empty,
-                to_user_id = _config.WechatClawbotToUserId,
+                to_user_id = _toUserId,
                 client_id = WechatClawbotHelper.GenerateClientId(),
                 message_type = 2,
                 message_state = 2,
@@ -195,12 +200,12 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     /// </summary>
     private async Task SendMessageAsync(string body, CancellationToken ct)
     {
-        var baseUrl = WechatClawbotHelper.NormalizeBaseUrl(_config.WechatClawbotBaseUrl);
+        var baseUrl = _baseUrl;
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/ilink/bot/sendmessage")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
-        WechatClawbotHelper.AddCommonHeaders(request, _config.WechatClawbotBotToken);
+        WechatClawbotHelper.AddCommonHeaders(request, _botToken);
         using var response = await _httpClient.SendAsync(request, ct);
         var text = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)
@@ -246,7 +251,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
         {
             filekey,
             media_type = 1,
-            to_user_id = _config.WechatClawbotToUserId,
+            to_user_id = _toUserId,
             rawsize,
             rawfilemd5,
             filesize,
@@ -254,12 +259,12 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             aeskey = Convert.ToHexString(aeskey).ToLowerInvariant(),
             base_info = WechatClawbotHelper.BuildBaseInfo(),
         });
-        var baseUrl = WechatClawbotHelper.NormalizeBaseUrl(_config.WechatClawbotBaseUrl);
+        var baseUrl = _baseUrl;
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/ilink/bot/getuploadurl")
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
-        WechatClawbotHelper.AddCommonHeaders(request, _config.WechatClawbotBotToken);
+        WechatClawbotHelper.AddCommonHeaders(request, _botToken);
         using var response = await _httpClient.SendAsync(request, ct);
         var text = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)

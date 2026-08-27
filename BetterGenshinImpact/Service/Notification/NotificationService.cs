@@ -374,13 +374,12 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.WechatClawbotNotificationEnabled != true) return;
 
         // 微信会话状态（context_token / get_updates_buf）跨进程共享同一份 User/WechatClawbot 文件，
-        // 仅在主实例（Primary）维护长轮询会话，避免桌面分身等多实例用旧游标并发推进导致令牌互相覆盖。
-        if (!IsPrimaryInstance())
-            return;
-
+        // 仅主实例（Primary）启动长轮询会话，避免桌面分身等多实例用旧游标并发推进导致令牌互相覆盖。
+        // 子实例仍注册通知器保留发送能力（从共享存储读取最新 context_token）。
         _notifierManager.RegisterNotifier(new WechatClawbotNotifier(
             _notifyHttpClient,
-            _notificationConfig
+            _notificationConfig,
+            IsPrimaryInstance()
         ));
     }
 

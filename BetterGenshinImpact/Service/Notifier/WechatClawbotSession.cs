@@ -106,7 +106,7 @@ public sealed class WechatClawbotSession : IDisposable
     }
 
     /// <summary>
-    /// 停止会话。取消令牌，并等待初始化与长轮询任务退出后再释放依赖资源，
+    /// 停止会话。取消令牌，并等待初始化任务与其启动的长轮询任务完整退出后再释放依赖资源，
     /// 避免旧循环仍在访问已释放的信号量/HttpClient。
     /// </summary>
     public void Dispose()
@@ -115,6 +115,8 @@ public sealed class WechatClawbotSession : IDisposable
             return;
         _disposed = true;
         _cts.Cancel();
+
+        // 先等初始化任务完成（它负责启动 _loopTask，但不等 _loopTask 结束）
         try
         {
             _initTask?.GetAwaiter().GetResult();
@@ -125,7 +127,21 @@ public sealed class WechatClawbotSession : IDisposable
         }
         catch (System.Exception ex)
         {
-            Logger.LogWarning("微信 Clawbot 会话停止异常: {Ex}", ex.Message);
+            Logger.LogWarning("微信 Clawbot 会话初始化停止异常: {Ex}", ex.Message);
+        }
+
+        // 再等长轮询循环完整退出，避免其仍访问已释放的信号量/HttpClient
+        try
+        {
+            _loopTask?.GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            // 取消导致的退出是预期行为
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogWarning("微信 Clawbot 长轮询停止异常: {Ex}", ex.Message);
         }
 
         _cts.Dispose();
