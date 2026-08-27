@@ -117,141 +117,144 @@ public class CheckRewardsTask
     private async Task StartSummaryAsync(CancellationToken ct)
     {
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-
-        // 体力：打开大地图识别顶栏原粹树脂并截取图标+数字条
-        var resinOk = false;
-        var resinText = "体力识别失败";
         Mat? resinStrip = null;
-        try
-        {
-            await new TpTask(ct).OpenBigMapUi();
-            await Delay(300, ct);
-            using var capture = CaptureToRectArea();
-            var resin = ResinRecognition.RecognizeInBigMapTopBar(capture);
-            if (resin != null)
-            {
-                var result = resin.Value;
-                // 浓缩树脂为零时游戏顶栏不显示图标（图标缺失即视为 0）；
-                // 只有图标已匹配但数量 OCR 失败才算识别失败
-                resinOk = result.Condensed.HasValue || result.CondensedIconRect == null;
-                var condensedText = result.Condensed is int condensed
-                    ? $"浓缩树脂 {condensed}"
-                    : result.CondensedIconRect == null
-                        ? "浓缩树脂 0"
-                        : "浓缩树脂识别失败";
-                resinText = $"{condensedText}；原粹树脂 {result.Current}/{result.Max}";
-                using var mapCloseButton = capture.Find(RecognitionAssets.Get(
-                    "QuickTeleport", "MapCloseButton", capture));
-                if (mapCloseButton.IsEmpty())
-                {
-                    Logger.LogWarning("汇总通知：大地图关闭按钮识别失败，树脂截图使用默认右边界");
-                }
-
-                using var resinStripRegion = capture.DeriveCrop(BuildResinStripRect(
-                    result.OriginalIconRect, result.CondensedIconRect,
-                    mapCloseButton.IsEmpty() ? null : mapCloseButton.Left, assetScale));
-                resinStrip = resinStripRegion.SrcMat.Clone();
-                if (!result.Condensed.HasValue && result.CondensedIconRect != null)
-                {
-                    Logger.LogWarning("汇总通知：大地图浓缩树脂数量 OCR 失败");
-                }
-            }
-            else
-            {
-                Logger.LogWarning("汇总通知：大地图原粹树脂识别失败");
-            }
-        }
-        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
-        {
-            Logger.LogDebug(e, "汇总通知：读取体力异常");
-            Logger.LogWarning("汇总通知：读取体力失败: {Msg}", e.Message);
-        }
-        finally
-        {
-            await SafeReturnMainUiAsync(ct);
-        }
-
-        // 委托：打开冒险之证委托页识别奖励领取状态并截取左侧页签+奖励区域
-        bool? commissionClaimed = null;
-        var commissionText = "委托状态识别失败";
         Mat? commissionStrip = null;
         try
         {
-            await new ReturnMainUiTask().Start(ct);
-            await Delay(200, ct);
-
-            var opened = await NewRetry.WaitForElementAppear(
-                GetConfirmRa(true, "每日委托奖励"),
-                () =>
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
-                    using var screen = CaptureToRectArea();
-                    var ra = screen.FindMulti(GetConfirmRa())
-                        .FirstOrDefault(btn => btn.Text == "委托");
-                    ra?.Click();
-                }, ct, 4, 1000);
-
-            if (!opened)
+            // 体力：打开大地图识别顶栏原粹树脂并截取图标+数字条
+            var resinOk = false;
+            var resinText = "体力识别失败";
+            try
             {
-                Logger.LogWarning("汇总通知：打开冒险之证委托页失败");
+                await new TpTask(ct).OpenBigMapUi();
+                await Delay(300, ct);
+                using var capture = CaptureToRectArea();
+                var resin = ResinRecognition.RecognizeInBigMapTopBar(capture);
+                if (resin != null)
+                {
+                    var result = resin.Value;
+                    // 浓缩树脂为零时游戏顶栏不显示图标（图标缺失即视为 0）；
+                    // 只有图标已匹配但数量 OCR 失败才算识别失败
+                    resinOk = result.Condensed.HasValue || result.CondensedIconRect == null;
+                    var condensedText = result.Condensed is int condensed
+                        ? $"浓缩树脂 {condensed}"
+                        : result.CondensedIconRect == null
+                            ? "浓缩树脂 0"
+                            : "浓缩树脂识别失败";
+                    resinText = $"{condensedText}；原粹树脂 {result.Current}/{result.Max}";
+                    using var mapCloseButton = capture.Find(RecognitionAssets.Get(
+                        "QuickTeleport", "MapCloseButton", capture));
+                    if (mapCloseButton.IsEmpty())
+                    {
+                        Logger.LogWarning("汇总通知：大地图关闭按钮识别失败，树脂截图使用默认右边界");
+                    }
+
+                    using var resinStripRegion = capture.DeriveCrop(BuildResinStripRect(
+                        result.OriginalIconRect, result.CondensedIconRect,
+                        mapCloseButton.IsEmpty() ? null : mapCloseButton.Left, assetScale));
+                    resinStrip = resinStripRegion.SrcMat.Clone();
+                    if (!result.Condensed.HasValue && result.CondensedIconRect != null)
+                    {
+                        Logger.LogWarning("汇总通知：大地图浓缩树脂数量 OCR 失败");
+                    }
+                }
+                else
+                {
+                    Logger.LogWarning("汇总通知：大地图原粹树脂识别失败");
+                }
+            }
+            catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
+            {
+                Logger.LogDebug(e, "汇总通知：读取体力异常");
+                Logger.LogWarning("汇总通知：读取体力失败: {Msg}", e.Message);
+            }
+            finally
+            {
+                await SafeReturnMainUiAsync(ct);
+            }
+
+            // 委托：打开冒险之证委托页识别奖励领取状态并截取左侧页签+奖励区域
+            bool? commissionClaimed = null;
+            var commissionText = "委托状态识别失败";
+            try
+            {
+                await new ReturnMainUiTask().Start(ct);
+                await Delay(200, ct);
+
+                var opened = await NewRetry.WaitForElementAppear(
+                    GetConfirmRa(true, "每日委托奖励"),
+                    () =>
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
+                        using var screen = CaptureToRectArea();
+                        var ra = screen.FindMulti(GetConfirmRa())
+                            .FirstOrDefault(btn => btn.Text == "委托");
+                        ra?.Click();
+                    }, ct, 4, 1000);
+
+                if (!opened)
+                {
+                    Logger.LogWarning("汇总通知：打开冒险之证委托页失败");
+                }
+                else
+                {
+                    commissionClaimed = await NewRetry.WaitForElementAppear(
+                        GetConfirmRa(true, _dailyRewardsClaimedLocalizedString), null,
+                        ct, 4, 500);
+                    commissionText = commissionClaimed == true ? "每日委托奖励：已领取" : "每日委托奖励：未领取";
+
+                    using var handbookCapture = CaptureToRectArea();
+                    using var commissionStripRegion = handbookCapture.DeriveCrop(new Rect(
+                        (int)(366 * assetScale), (int)(161 * assetScale),
+                        (int)(1260 * assetScale), (int)(749 * assetScale)));
+                    commissionStrip = commissionStripRegion.SrcMat.Clone();
+                }
+            }
+            catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
+            {
+                Logger.LogDebug(e, "汇总通知：读取委托状态异常");
+                Logger.LogWarning("汇总通知：读取委托状态失败: {Msg}", e.Message);
+            }
+            finally
+            {
+                await SafeReturnMainUiAsync(ct);
+            }
+
+            // 拼接两块截图：上下排列、等宽白底补齐、中间灰色分隔线
+            Image<Rgb24>? stitched = null;
+            try
+            {
+                stitched = StitchStrips(resinStrip, commissionStrip);
+            }
+            catch (Exception e)
+            {
+                Logger.LogDebug(e, "汇总通知：拼接截图异常");
+                Logger.LogWarning("汇总通知：拼接截图失败: {Msg}", e.Message);
+            }
+
+            var message = $"{resinText}；{commissionText}";
+            Logger.LogInformation("一条龙结束汇总：{Msg}", message);
+
+            var data = Notify.Event(NotificationEvent.DailyReward);
+            data.Screenshot = stitched;
+            if (!resinOk || commissionClaimed == null)
+            {
+                data.Result = NotificationEventResult.PartialSuccess;
+                data.Send(message);
+            }
+            else if (commissionClaimed == true)
+            {
+                data.Success(message);
             }
             else
             {
-                commissionClaimed = await NewRetry.WaitForElementAppear(
-                    GetConfirmRa(true, _dailyRewardsClaimedLocalizedString), null,
-                    ct, 4, 500);
-                commissionText = commissionClaimed == true ? "每日委托奖励：已领取" : "每日委托奖励：未领取";
-
-                using var handbookCapture = CaptureToRectArea();
-                commissionStrip = handbookCapture.DeriveCrop(new Rect(
-                    (int)(366 * assetScale), (int)(161 * assetScale),
-                    (int)(1260 * assetScale), (int)(749 * assetScale))).SrcMat.Clone();
+                data.Fail(message);
             }
-        }
-        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
-        {
-            Logger.LogDebug(e, "汇总通知：读取委托状态异常");
-            Logger.LogWarning("汇总通知：读取委托状态失败: {Msg}", e.Message);
-        }
-        finally
-        {
-            await SafeReturnMainUiAsync(ct);
-        }
-
-        // 拼接两块截图：上下排列、等宽白底补齐、中间灰色分隔线
-        Image<Rgb24>? stitched = null;
-        try
-        {
-            stitched = StitchStrips(resinStrip, commissionStrip);
-        }
-        catch (Exception e)
-        {
-            Logger.LogDebug(e, "汇总通知：拼接截图异常");
-            Logger.LogWarning("汇总通知：拼接截图失败: {Msg}", e.Message);
         }
         finally
         {
             resinStrip?.Dispose();
             commissionStrip?.Dispose();
-        }
-
-        var message = $"{resinText}；{commissionText}";
-        Logger.LogInformation("一条龙结束汇总：{Msg}", message);
-
-        var data = Notify.Event(NotificationEvent.DailyReward);
-        data.Screenshot = stitched;
-        if (!resinOk || commissionClaimed == null)
-        {
-            data.Result = NotificationEventResult.PartialSuccess;
-            data.Send(message);
-        }
-        else if (commissionClaimed == true)
-        {
-            data.Success(message);
-        }
-        else
-        {
-            data.Fail(message);
         }
     }
 

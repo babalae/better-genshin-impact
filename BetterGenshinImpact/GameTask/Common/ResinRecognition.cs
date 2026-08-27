@@ -78,7 +78,7 @@ public static class ResinRecognition
         // 因此不校验 current <= max。
         var match = Regex.Match(
             StringUtils.ConvertFullWidthNumToHalfWidth(countText),
-            @"(\d{1,3})\s*[/17]\s*(2\d{2})");
+            @"(\d{1,3})\s*[/17]\s*(200)");
         if (!match.Success)
         {
             return null;
