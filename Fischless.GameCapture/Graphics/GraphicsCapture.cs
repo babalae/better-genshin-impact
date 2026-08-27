@@ -64,6 +64,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
 
     // 延迟停止必须绑定到具体失败代次；同一帧池恢复成功后，旧停止任务不得再关闭健康会话。
     private long _framePoolFailureGeneration;
+    // HDR 刷新使用独立代次，使“回到原屏”只取消 HDR 刷新失败，不会误取消尺寸重建失败。
+    private long _hdrDisplayFailureGeneration;
 
     private long _lastFrameTime;
     private int _targetFrameIntervalMs = MinimumFrameIntervalMs;
@@ -473,7 +475,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                         2,
                         captureSize);
                     // Recreate 成功代表当前帧池已恢复，令此前排队的延迟停止请求失效。
-                    Interlocked.Increment(ref _framePoolFailureGeneration);
+                    InvalidateFramePoolFailureGenerations();
                 }
                 catch (Exception e)
                 {
@@ -554,7 +556,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             RecordCaptureFailure(e);
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            ScheduleStopAfterFramePoolFailure(sender);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
 
@@ -562,13 +564,17 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             RecordCaptureFailure(new InvalidOperationException("无法确定跨屏移动后的 HDR 捕获目标。"));
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            ScheduleStopAfterFramePoolFailure(sender);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
 
         // 窗口可能在多个位置事件之间移回原显示器，此时只需清除请求，不重建帧池。
         if (monitor == Volatile.Read(ref _hdrDisplayMonitor))
         {
+            // 该帧池已经回到原显示器可继续使用；仅推进 HDR 代次，
+            // 不要误取消可能同时存在的尺寸重建失败停止请求。
+            Interlocked.Increment(ref _hdrDisplayFailureGeneration);
+
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
             return true;
         }
@@ -583,7 +589,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             // 未能确认新显示器状态时不能沿用旧管线，否则会把 SDR 当 HDR（或反之）交给识别层。
             RecordCaptureFailure(e);
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            ScheduleStopAfterFramePoolFailure(sender);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
 
@@ -595,7 +601,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             RecordCaptureFailure(new InvalidOperationException("D3D device is unavailable during HDR display refresh."));
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            ScheduleStopAfterFramePoolFailure(sender);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
 
@@ -603,13 +609,13 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             sender.Recreate(d3dDevice, pixelFormat, 2, captureSize);
             // 成功切换管线同样视为帧池恢复，不能让旧失败任务误停新管线。
-            Interlocked.Increment(ref _framePoolFailureGeneration);
+            InvalidateFramePoolFailureGenerations();
         }
         catch (Exception e)
         {
             RecordCaptureFailure(e);
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            ScheduleStopAfterFramePoolFailure(sender);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
 
@@ -640,7 +646,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             // 即使资源释放失败也不能让 free-threaded 回调异常逃逸；交由统一故障路径安全停止会话。
             RecordCaptureFailure(e);
             Volatile.Write(ref _hdrDisplayRefreshPending, 0);
-            ScheduleStopAfterFramePoolFailure(sender);
+            ScheduleStopAfterFramePoolFailure(sender, isHdrDisplayFailure: true);
             return false;
         }
 
@@ -654,7 +660,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     private void StopCore(bool preserveLastError = false)
     {
         // 会话停止/重启会产生新的生命周期，所有旧帧池失败任务都必须失效。
-        Interlocked.Increment(ref _framePoolFailureGeneration);
+        InvalidateFramePoolFailureGenerations();
         IsCapturing = false;
         _hWnd = 0;
         _frameTimer.Reset();
@@ -721,10 +727,21 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         Debug.WriteLine($"Graphics capture failed: {exception}");
     }
 
-    private void ScheduleStopAfterFramePoolFailure(Direct3D11CaptureFramePool failedFramePool)
+    private void InvalidateFramePoolFailureGenerations()
+    {
+        Interlocked.Increment(ref _framePoolFailureGeneration);
+        Interlocked.Increment(ref _hdrDisplayFailureGeneration);
+    }
+
+    private void ScheduleStopAfterFramePoolFailure(
+        Direct3D11CaptureFramePool failedFramePool,
+        bool isHdrDisplayFailure = false)
     {
         // 记录失败代次而不只比较帧池引用；同一帧池可能在异步停止执行前已经成功 Recreate。
-        var failureGeneration = Interlocked.Increment(ref _framePoolFailureGeneration);
+        var failureGeneration = isHdrDisplayFailure
+            ? Interlocked.Increment(ref _hdrDisplayFailureGeneration)
+            : Interlocked.Increment(ref _framePoolFailureGeneration);
+
         _ = Task.Run(() =>
         {
             var lockTaken = false;
@@ -733,8 +750,11 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 _frameAccessLock.EnterWriteLock();
                 lockTaken = true;
                 // 重启期间可能已有新会话，只清理实际失败的旧帧池。
+                var currentFailureGeneration = isHdrDisplayFailure
+                    ? Volatile.Read(ref _hdrDisplayFailureGeneration)
+                    : Volatile.Read(ref _framePoolFailureGeneration);
                 if (ReferenceEquals(failedFramePool, _captureFramePool) &&
-                    Volatile.Read(ref _framePoolFailureGeneration) == failureGeneration)
+                    currentFailureGeneration == failureGeneration)
                 {
                     // 保留触发停止的 D3D/帧池异常，供上层日志准确说明会话为何失效。
                     StopCore(preserveLastError: true);
