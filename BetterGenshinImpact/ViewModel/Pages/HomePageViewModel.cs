@@ -717,6 +717,14 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 catch (Exception e)
                 {
                     _taskDispatcher.Stop();
+                    // TaskContext.Init 已在创建捕获器前将上下文标记为已初始化；启动失败时
+                    // TaskDispatcherEnabled 仍为 false，常规 Stop() 不会再次进入清理分支，必须在此回滚。
+                    var taskContext = TaskContext.Instance();
+                    taskContext.IsInitialized = false;
+                    taskContext.GameHandle = IntPtr.Zero;
+                    taskContext.LinkedStartGenshinTime = DateTime.MinValue;
+                    taskContext.CaptureColorMode = CaptureColorMode.Sdr;
+                    _hWnd = IntPtr.Zero;
                     _logger.LogError(e, "截图器启动失败");
                     ThemedMessageBox.Error($"截图器启动失败：{e.GetBaseException().Message}");
                     return;
