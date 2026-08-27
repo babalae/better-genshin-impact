@@ -646,8 +646,10 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         try
         {
             sender.Recreate(d3dDevice, pixelFormat, 2, captureSize);
-            // 成功切换管线同样视为帧池恢复，不能让旧失败任务误停新管线。
+            // 成功切换管线同样视为帧池恢复，不能让旧失败任务误停新管线，
+            // 也不能让旧错误在下一次同屏位置通知中触发重复重建。
             InvalidateFramePoolFailureGenerations();
+            Volatile.Write(ref _lastError, null);
         }
         catch (Exception e)
         {
