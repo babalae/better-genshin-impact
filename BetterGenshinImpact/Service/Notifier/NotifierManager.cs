@@ -10,9 +10,16 @@ using BetterGenshinImpact.Service.Notification.Model;
 namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
-/// 通知器管理器。以「发送租约」协调通知器生命周期：
-/// 每个在途发送在持锁取得快照时同步获取通知器租约；移除/释放通知器前先原子替换集合，
-/// 再等待所有租约归还（无固定超时），避免在发送中途释放通知器资源。
+/// 通知器管理器。以「发送租约（Lease）」协调通知器生命周期：
+///
+/// 租约模型：
+/// - 发送方（SendNotificationToAllAsync / SendNotificationAsync）在 _sync 锁内
+///   原子地取得快照 + 为每个通知器递增租约计数，确保快照与租约同步获取。
+/// - 发送完成后释放租约（减计数，唤醒等待者）。
+/// - 移除方（RemoveAllNotifiers）在 _sync 锁内原子替换集合，
+///   然后等待所有旧通知器的租约归还（Monitor.Wait，无固定超时）后再 Dispose。
+///
+/// 这保证：旧集合在发送中途不会被释放，新集合立即生效接收新发送。
 /// </summary>
 public class NotifierManager
 {
@@ -201,6 +208,10 @@ public class NotifierManager
         }
     }
 
+    /// <summary>
+    /// 在持有租约期间执行发送；发送期间租约保证通知器不会被 RemoveAllNotifiers 释放。
+    /// 异常被吞掉并记录日志（不中断 Task.WhenAll 的其他发送任务）。
+    /// </summary>
     private async Task SendWithLeaseAsync(INotifier notifier, Lease lease, BaseNotificationData content)
     {
         try
@@ -214,7 +225,8 @@ public class NotifierManager
     }
 
     /// <summary>
-    /// 持有 _sync 时调用：若通知器仍注册则获取租约，否则返回 null。
+    /// 持有 _sync 时调用：若通知器仍注册则递增其租约计数并返回 Lease 句柄，
+    /// 否则返回 null（通知器已被移除，不应继续发送）。
     /// </summary>
     private Lease? TryAcquireLeaseLocked(INotifier notifier)
     {
@@ -243,7 +255,10 @@ public class NotifierManager
     }
 
     /// <summary>
-    /// 等待给定通知器集合的全部租约归还后才继续（无固定超时）。
+    /// 在 _sync 锁内等待给定通知器集合的全部租约归还（Monitor.Wait，无固定超时）。
+    /// 由 RemoveAllNotifiers / RemoveNotifier 调用，保证发送完成后再释放。
+    /// 注意：持有 _sync 等待期间，新发送会被阻塞（因为 TryAcquireLease 也在锁内），
+    /// 但由于发送通常较快（毫秒级），这不会造成可见的 UI 卡顿。
     /// </summary>
     private void WaitForLeasesReleased(INotifier[] notifiers)
     {

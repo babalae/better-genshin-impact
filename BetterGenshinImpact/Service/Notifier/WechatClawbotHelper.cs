@@ -12,9 +12,14 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
-/// 微信 Clawbot（iLink 协议）帮助类。
-/// 负责扫码登录（get_bot_qrcode → get_qrcode_status）和一次性验证码绑定（getupdates 长轮询）。
-/// 协议参考官方 npm 包 @tencent-weixin/openclaw-weixin，BetterGI 内置实现，不依赖 OpenClaw。
+/// 微信 Clawbot（iLink 协议）帮助类，BetterGI 内置实现，不依赖 OpenClaw。
+///
+/// 完整流程：
+/// 1. 登录（get_bot_qrcode → 轮询 get_qrcode_status）→ 获取 bot_token、base_url、用户 ID
+/// 2. 绑定（长轮询 getupdates → 用户发送一次性验证码 → 捕获 to_user_id + context_token）
+/// 3. 发送（sendmessage）+ 图片上传（getuploadurl → AES-128-ECB 加密 → CDN POST → sendmessage）
+///
+/// 协议参考官方 npm 包 @tencent-weixin/openclaw-weixin（v2.4.6），请求头格式见 AddCommonHeaders。
 /// </summary>
 public static class WechatClawbotHelper
 {
@@ -31,7 +36,10 @@ public static class WechatClawbotHelper
     private const int DefaultLongPollTimeoutMs = 35000;
 
     /// <summary>
-    /// 扫码登录：获取二维码并轮询扫码状态，确认后返回 bot_token 等信息。
+    /// 扫码登录：获取二维码并轮询扫码状态，确认后返回 bot_token、base_url、用户 ID 等。
+    ///
+    /// 流程：POST get_bot_qrcode → GET get_qrcode_status（长轮询 ~30s/次）→ confirmed。
+    /// 整体超时 300 秒。confirmed 时必须返回 ilink_user_id（扫码用户身份），否则拒绝继续。
     /// </summary>
     /// <param name="onQrCodeUrl">获取到二维码链接后的回调，用于 UI 展示/打开浏览器</param>
     /// <param name="cancellationToken">取消令牌（用户点击取消时触发）</param>
@@ -119,6 +127,7 @@ public static class WechatClawbotHelper
 
     /// <summary>
     /// 一次性验证码绑定：长轮询 getupdates，等待扫码用户发送验证码，返回 to_user_id 和 context_token。
+    /// 绑定窗口内仅接受 expectedUserId 发送的消息（安全校验），防止其他用户误绑。
     /// </summary>
     /// <param name="botToken">扫码登录获得的 bot_token</param>
     /// <param name="baseUrl">登录响应返回的 API 基础地址（为空回退默认主机）</param>
@@ -189,6 +198,10 @@ public static class WechatClawbotHelper
         throw new NotifierException("绑定超时，请重试");
     }
 
+    /// <summary>
+    /// 构建所有 POST 请求体附带的 base_info 块（协议要求）。
+    /// channel_version 为 iLink 协议版本；bot_agent 用于后台观测与流量归因。
+    /// </summary>
     internal static object BuildBaseInfo() => new
     {
         channel_version = ChannelVersion,
@@ -196,7 +209,8 @@ public static class WechatClawbotHelper
     };
 
     /// <summary>
-    /// X-WECHAT-UIN 请求头：随机 uint32（大端）→ 十进制字符串 → base64，每次请求随机生成防重放。
+    /// X-WECHAT-UIN 请求头：随机 uint32（大端序）→ 十进制字符串 → base64 编码。
+    /// 每次请求随机生成，防止请求重放攻击（服务端以 UIN + 时间戳去重）。
     /// </summary>
     internal static string RandomWechatUin()
     {
@@ -206,6 +220,10 @@ public static class WechatClawbotHelper
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(value.ToString()));
     }
 
+    /// <summary>
+    /// 生成唯一消息客户端 ID（openclaw-weixin- + 32 位随机 hex）。
+    /// 用于 sendmessage 的 client_id 字段，服务端可借此区分不同发送方。
+    /// </summary>
     internal static string GenerateClientId()
     {
         Span<byte> bytes = stackalloc byte[16];
@@ -214,7 +232,8 @@ public static class WechatClawbotHelper
     }
 
     /// <summary>
-    /// 规范化 API 基础地址：空值回退默认主机，并去除尾部斜杠。
+    /// 规范化 API 基础地址：空值回退默认主机（ilinkai.weixin.qq.com），并去除尾部斜杠。
+    /// 微信 ClawBot 协议的 host 可能因 IDC 重定向而变化，base_url 由登录响应提供。
     /// </summary>
     internal static string NormalizeBaseUrl(string? baseUrl)
     {
@@ -245,6 +264,10 @@ public static class WechatClawbotHelper
         request.Headers.TryAddWithoutValidation("iLink-App-ClientVersion", AppClientVersion);
     }
 
+    /// <summary>
+    /// 长轮询 getupdates：服务端 hold 35s，客户端通过 linked CTS 按服务器建议超时取消。
+    /// OperationCanceledException（非用户取消）视为正常轮询超时，调用方可安全 continue。
+    /// </summary>
     internal static async Task<WechatClawbotGetUpdatesResponse> GetUpdatesAsync(
         HttpClient httpClient,
         string baseUrl,

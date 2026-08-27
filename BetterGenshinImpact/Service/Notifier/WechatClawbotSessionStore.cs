@@ -11,9 +11,15 @@ using Microsoft.Extensions.Logging;
 namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
-/// 微信 Clawbot 会话状态（context_token / get_updates_buf）的独立持久化存储。
-/// 存于 User/WechatClawbot/ 目录，线程安全（SemaphoreSlim）。
+/// 微信 Clawbot 会话状态的独立持久化存储。
+///
+/// 存储位置：User/WechatClawbot/{SHA256(bot_token前16位hex)}.json
+/// 文件格式：{"contextToken":"...", "getUpdatesBuf":"..."}
+///
+/// 线程安全（SemaphoreSlim），但进程内单进程独占。
 /// 不写入 NotificationConfig，避免触发 AllConfig 的 PropertyChanged → Save() / RefreshNotifiers() 副作用。
+/// 主实例写入（轮询循环中持久化最新游标/令牌），
+/// 子实例只读（桌面分身等保留发送能力，从主实例写入的文件读取最新令牌）。
 /// </summary>
 public static class WechatClawbotSessionStore
 {
@@ -41,7 +47,8 @@ public static class WechatClawbotSessionStore
     }
 
     /// <summary>
-    /// 读取会话状态；无记录时返回空串。
+    /// 读取会话状态（从 JSON 文件）。文件不存在时返回空串。
+    /// 主实例轮询启动时 + 子实例发送时调用。
     /// </summary>
     public static async Task<(string ContextToken, string GetUpdatesBuf)> LoadAsync(string botToken)
     {
@@ -71,7 +78,8 @@ public static class WechatClawbotSessionStore
     }
 
     /// <summary>
-    /// 保存 context_token 与 get_updates_buf。
+    /// 保存 context_token 与 get_updates_buf 到 JSON 文件。
+    /// 仅在主实例的轮询循环中调用（token 变化或游标推进时）。
     /// </summary>
     public static async Task SaveAsync(string botToken, string? contextToken, string? getUpdatesBuf)
     {

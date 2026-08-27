@@ -40,22 +40,28 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     private readonly WechatClawbotSession _session;
     private readonly CancellationTokenSource _cts = new();
 
+    /// <summary>
+    /// 构造微信通知器，固定构造时的凭证快照（bot_token、user_id、base_url），
+    /// 发送期间即使配置被重新绑定变更，旧实例也不会混用新旧凭证。
+    /// </summary>
+    /// <param name="httpClient">共享的 HttpClient 实例（30s 超时）</param>
+    /// <param name="config">通知配置（读取绑定凭证，运行期不再读取）</param>
+    /// <param name="startSession">仅主实例启动长轮询会话；子实例（桌面分身等）保留发送能力但不推游标。</param>
     public WechatClawbotNotifier(HttpClient httpClient, NotificationConfig config, bool startSession = true)
     {
         _httpClient = httpClient;
-        // 固定构造时的凭证快照：发送期间即使配置被重新绑定变更，旧实例也不会混用新旧凭证
         _botToken = config.WechatClawbotBotToken;
         _toUserId = config.WechatClawbotToUserId;
         _baseUrl = WechatClawbotHelper.NormalizeBaseUrl(config.WechatClawbotBaseUrl);
         _session = new WechatClawbotSession(_botToken, _baseUrl, _toUserId);
-        // 子实例（桌面分身等）保留微信发送能力，但只有主实例启动长轮询会话，
-        // 避免多个进程用旧游标并发推进、互相覆盖 context_token / get_updates_buf。
         if (startSession)
             _ = _session.StartAsync();
     }
 
     /// <summary>
-    /// 发送通知：先发文本，再发截图（如有）。截图失败时降级为纯文本，不阻断主流程。
+    /// 发送通知：先发文本，再发截图（如有）。
+    /// 截图上传链路：JPEG 编码 → getuploadurl 获取预签名 → AES-128-ECB 加密 → CDN POST 上传 → sendmessage。
+    /// 图片发送失败时自动降级为纯文本（文本已成功），不阻断主流程。
     /// </summary>
     public async Task SendAsync(BaseNotificationData content)
     {
@@ -224,8 +230,11 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     }
 
     /// <summary>
-    /// 上传图片到微信 CDN：getuploadurl → AES-128-ECB 加密 → POST 上传。
-    /// 上传阶段幂等，可重试。
+    /// 上传图片到微信 CDN（幂等操作，全链路重试）：
+    /// 1. 计算明文 MD5、PKCS7 填充后密文大小、随机 filekey/aeskey
+    /// 2. POST getuploadurl → 获取 upload_full_url 或 upload_param
+    /// 3. AES-128-ECB 加密明文 → POST 密文到 CDN → 获取 x-encrypted-param
+    /// 4. 返回 downloadParam 供 sendmessage 的 image_item.media 引用
     /// </summary>
     private async Task<WechatClawbotUploadedImage> UploadImageAsync(byte[] imageBytes, CancellationToken ct)
     {
@@ -329,8 +338,13 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
     private static int AesEcbPaddedSize(int plaintextSize) => ((plaintextSize + 16) / 16) * 16;
 
     /// <summary>
-    /// 判断异常是否可重试。5xx/429/400 可重试（有界重试仅作用于幂等上传操作）；
-    /// 无状态码的网络故障可重试；取消/解析错误不重试。
+    /// 判断异常是否可重试。分类策略：
+    /// - WechatClawbotHttpException：仅 5xx/429/400 可重试（401/403/404 客户端错误不重试）
+    /// - HttpRequestException（无状态码）：网络故障可重试
+    /// - OperationCanceledException：用户取消不可重试（超时已在调用方处理）
+    /// - JsonException/InvalidOperationException：数据错误不重试
+    /// - NotifierException：业务错误不重试
+    /// 注意：仅用于幂等操作（getuploadurl、CDN 上传），非幂等的 sendmessage 不走此路径。
     /// </summary>
     private static bool IsRetryable(System.Exception ex)
     {

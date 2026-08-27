@@ -8,9 +8,15 @@ namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
 /// 微信 Clawbot 会话维持器。
-/// 后台长轮询 getupdates，持续刷新 context_token（会过期）和 get_updates_buf（同步游标）。
-/// 轮询状态通过 WechatClawbotSessionStore 独立持久化（User/WechatClawbot/），
-/// 不写入 NotificationConfig，避免触发全局配置保存与通知器刷新。
+///
+/// 生命周期：构造 → StartAsync() → InitAsync（从 Store 恢复状态）+ RunLoopAsync（长轮询循环）→ Dispose。
+/// - StartAsync 仅恢复上次会话状态（快速完成），不阻塞发送。
+/// - RunLoopAsync 持续轮询 getupdates，刷新 context_token/get_updates_buf，
+///   并通过 WechatClawbotSessionStore 独立持久化，不写入 NotificationConfig，
+///   避免触发 AllConfig 的 PropertyChanged → Save() / RefreshNotifiers() 副作用。
+/// - Dispose 依次取消令牌、等待 _initTask 和 _loopTask 完整退出、再释放依赖资源，
+///   避免旧循环仍访问已释放的信号量/HttpClient 造成 ObjectDisposedException。
+///
 /// 类似 QQ 渠道的 WebSocket 心跳，但 iLink 协议用 HTTP 长轮询实现。
 /// </summary>
 public sealed class WechatClawbotSession : IDisposable
@@ -74,7 +80,8 @@ public sealed class WechatClawbotSession : IDisposable
     }
 
     /// <summary>
-    /// 获取当前缓存的 context_token（线程安全）。在会话初始化完成前会等待。
+    /// 获取当前缓存的 context_token（线程安全，SemaphoreSlim 保护）。
+    /// 会等待 _initTask 完成（从 Store 恢复状态），确保不返回空令牌。
     /// </summary>
     public async Task<string> GetContextTokenAsync(CancellationToken ct)
     {
@@ -106,8 +113,12 @@ public sealed class WechatClawbotSession : IDisposable
     }
 
     /// <summary>
-    /// 停止会话。取消令牌，并等待初始化任务与其启动的长轮询任务完整退出后再释放依赖资源，
-    /// 避免旧循环仍在访问已释放的信号量/HttpClient。
+    /// 停止会话并释放所有资源。等待顺序：
+    /// 1. 取消 CTS（通知长轮询停止）
+    /// 2. 等待 _initTask（状态恢复）完成
+    /// 3. 等待 _loopTask（长轮询循环）完成
+    /// 4. 释放 CTS / SemaphoreSlim / HttpClient
+    /// 严格按此顺序执行，防止循环在资源释放后仍访问它们。
     /// </summary>
     public void Dispose()
     {
