@@ -395,11 +395,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private const int _maxLeftButtonRetry = 3; // 左键按下重试次数上限
         private const int _raiseHookWaitMs = 400; // 按下左键后等待举竿画面渲染的时间
         private const int _viewpointSearchStep = 30; // 寻找落点时每次上下移动视角的像素步长
+        private const int _raiseHookConfirmRetry = 3; // 钓鱼界面前置校验失败时的重试次数上限（换饵遮罩旧帧干扰场景）
+        private const int _outOfBaitPopupDismissRetry = 3; // 关闭鱼饵不足提示条的重试次数上限（防止提示条持续可见时无限按 ESC）
 
         private DateTimeOffset? _raiseHookWaitEndTime; // 举起鱼竿画面等待的结束时间
         private bool _raiseHookConfirmed; // 是否已按下左键（举起鱼竿）
         private bool _raiseHookConfirmedByTarget; // 是否已通过识别到落点确认鱼竿举起
         private int _leftButtonDownRetryTimes; // 左键按下重试次数
+        private int _raiseHookConfirmRetryTimes; // 钓鱼界面前置校验重试次数
+        private int _outOfBaitPopupStage; // 鱼饵不足弹窗处理阶段：0=无；1=已关提示条待退出；2=已按 ESC 待置 Abort
+        private int _outOfBaitPopupDismissRetryTimes; // 关闭鱼饵不足提示条的重试次数
 
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
@@ -480,6 +485,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _raiseHookConfirmed = false;
             _raiseHookConfirmedByTarget = false;
             _leftButtonDownRetryTimes = 0;
+            _raiseHookConfirmRetryTimes = 0;
+            _outOfBaitPopupStage = 0;
+            _outOfBaitPopupDismissRetryTimes = 0;
             _raiseHookWaitEndTime = timeProvider.GetLocalNow().AddMilliseconds(_raiseHookWaitMs);
             PitchReset.Set(true);
         }
@@ -502,6 +510,62 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var imageRegion = Screenshot.Get();
             Action<int> sleep = Sleep.Get();
 
+            // 检测"鱼饵不足"弹窗：抛竿时当前选用的饵料已用光会弹出提示条（out_of_bait）。
+            // 弹窗会遮挡落点/鱼塘识别，导致抛竿失败并误触发后续退出流程。
+            // 处理策略：跨 tick 状态机——先 ESC 关提示条，下一 tick 用新帧确认已关闭后再 ESC 退出钓鱼模式，
+            // 再等一个 tick 让"是否退出钓鱼？"确认弹窗渲染完成后才置 Abort，确保冒泡到 QuitFishingMode 时
+            // 其 Screenshot 是包含确认弹窗的新帧（避免用 ESC 按下前的旧帧误匹配/误点）。
+            using Region outOfBaitPopupRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "OutOfBaitPopup", imageRegion));
+            bool outOfBaitPopupVisible = !outOfBaitPopupRa.IsEmpty();
+
+            if (_outOfBaitPopupStage == 2)
+            {
+                // 阶段 2：确认弹窗已渲染（本 tick 截图为新帧），置 Abort 触发冒泡
+                _raiseHookConfirmed = false;
+                _raiseHookConfirmedByTarget = false;
+                _leftButtonDownRetryTimes = 0;
+                _raiseHookConfirmRetryTimes = 0;
+                _outOfBaitPopupStage = 0;
+                _outOfBaitPopupDismissRetryTimes = 0;
+                Abort.Set(true);
+                return Status.Failure;
+            }
+
+            if (_outOfBaitPopupStage == 1 && !outOfBaitPopupVisible)
+            {
+                // 阶段 1 → 2：提示条已关，按 ESC 退出钓鱼模式（会弹出"是否退出钓鱼？"确认弹窗），
+                // 等待确认弹窗渲染后下一 tick 再置 Abort
+                input.Keyboard.KeyPress(VK.VK_ESCAPE);
+                _outOfBaitPopupStage = 2;
+                sleep(500);
+                return Status.Running;
+            }
+
+            if (outOfBaitPopupVisible)
+            {
+                // 阶段 0 → 1：首次检测到弹窗（或上次 ESC 未关掉提示条），关闭"鱼饵不足"提示条，
+                // 等下一 tick 用新帧确认已关闭后再退出。重试有上限，避免提示条持续可见时无限按 ESC 活锁。
+                _outOfBaitPopupDismissRetryTimes++;
+                if (_outOfBaitPopupDismissRetryTimes > _outOfBaitPopupDismissRetry)
+                {
+                    logger.LogWarning("多次按下 ESC 后仍未关闭鱼饵不足弹窗，放弃本轮抛竿并退出钓鱼模式");
+                    _raiseHookConfirmed = false;
+                    _raiseHookConfirmedByTarget = false;
+                    _leftButtonDownRetryTimes = 0;
+                    _raiseHookConfirmRetryTimes = 0;
+                    _outOfBaitPopupStage = 0;
+                    _outOfBaitPopupDismissRetryTimes = 0;
+                    Abort.Set(true);
+                    return Status.Failure;
+                }
+
+                logger.LogWarning("检测到鱼饵不足弹窗，关闭弹窗并退出钓鱼模式，重新开始钓鱼");
+                input.Keyboard.KeyPress(VK.VK_ESCAPE);
+                _outOfBaitPopupStage = 1;
+                sleep(300);
+                return Status.Running;
+            }
+
             // 举起鱼竿：按下左键进入抛竿瞄准状态
             // 注：左键按下从 Initialize 挪到 Update（行为树 Initialize 仅做状态初始化，不应有输入副作用）
             if (!_raiseHookConfirmed)
@@ -509,14 +573,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 前置校验：确认处于钓鱼界面。
                 // 钓鱼界面存在两个标志性按钮：换饵按钮（switch_bait）和退出钓鱼按钮（exit_fishing），
                 // 二者任一存在即表明处于钓鱼界面；若都不存在说明未进入钓鱼状态，不应继续抛竿。
+                // 注意：换饵刚完成时（ChooseBait 返回 Success 的同一 tick），Screenshot.Get() 可能仍是
+                // 换饵界面遮罩的旧帧，遮罩会干扰模板匹配导致两个按钮均漏配。因此校验失败时不立即 Abort，
+                // 而是等待后续 tick 的新截图重试（最多 _raiseHookConfirmRetry 次），避免误判退出钓鱼。
                 using Region baitButtonRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "BaitButton", imageRegion));
                 using Region exitFishingButtonRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion));
                 if (baitButtonRa.IsEmpty() && exitFishingButtonRa.IsEmpty())
                 {
-                    logger.LogWarning("未检测到换饵按钮或退出钓鱼按钮，可能未处于钓鱼状态，退出抛竿");
-                    input.Mouse.LeftButtonUp();
-                    Abort.Set(true);
-                    return Status.Failure;
+                    _raiseHookConfirmRetryTimes++;
+                    if (_raiseHookConfirmRetryTimes > _raiseHookConfirmRetry)
+                    {
+                        logger.LogWarning("多次截图仍未检测到换饵按钮或退出钓鱼按钮，可能未处于钓鱼状态，退出抛竿");
+                        input.Mouse.LeftButtonUp();
+                        Abort.Set(true);
+                        return Status.Failure;
+                    }
+
+                    logger.LogWarning("未检测到换饵按钮或退出钓鱼按钮，等待新截图重试（第{Retry}次）", _raiseHookConfirmRetryTimes);
+                    sleep(100);
+                    return Status.Running;
                 }
 
                 _raiseHookConfirmed = true;
@@ -811,9 +886,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public partial class CheckThrowRod : Behaviour, IScreenshotBehaviour
     {
+        private const int _initialDelaySeconds = 3; // 抛竿后先等待下杆画面出现的基础延迟
+        private const int _renderWaitSeconds = 2; // 基础延迟后等待"等待咬钩"按钮渲染的额外窗口，避免用未渲染完成的旧帧误判抛竿失败
+
         private readonly ILogger logger;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? timeDelay;
+        private DateTimeOffset? _checkDeadline; // 双重校验的最终判定截止时间
         private bool hasChecked;
 
         [BlackboardKey(Access = Access.Read)]
@@ -827,7 +906,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override void Initialize()
         {
-            timeDelay = timeProvider.GetLocalNow().AddSeconds(3);
+            timeDelay = timeProvider.GetLocalNow().AddSeconds(_initialDelaySeconds);
+            _checkDeadline = timeProvider.GetLocalNow().AddSeconds(_initialDelaySeconds + _renderWaitSeconds);
             hasChecked = false;
         }
 
@@ -849,6 +929,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (baitButtonRa.IsEmpty() && !waitBiteButtonRa.IsEmpty())
             {
                 hasChecked = true;
+                return Status.Running;
+            }
+            else if (timeProvider.GetLocalNow() < _checkDeadline)
+            {
+                // 换饵按钮已消失但"等待咬钩"按钮尚未渲染出来（抛竿动画/UI 切换未完成），
+                // 继续用后续新截图重试，而不是立即返回 Failure——否则每次正常下杆都会被误判为
+                // 抛竿失败而触发整轮重抛（几乎每次下杆都重复一次）。
                 return Status.Running;
             }
             else

@@ -34,6 +34,13 @@
       "roi": "rect(cw - 140 * s, ch - 150 * s, 140 * s, 150 * s)",
       "threshold": 0.8,
       "draw": false
+    },
+    "OutOfBaitPopup": {
+      "type": "TemplateMatch",
+      "template": "out_of_bait.png",
+      "roi": "rect(cw / 4, ch / 3, cw / 2, ch / 3)",
+      "threshold": 0.85,
+      "draw": false
     }
   }
 }

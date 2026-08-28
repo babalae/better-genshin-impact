@@ -1,4 +1,4 @@
-﻿using Fischless.WindowsInput;
+using Fischless.WindowsInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +11,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
     internal class FakeInputSimulator : IInputSimulator
     {
         private readonly FakeMouseSimulator _mouse = new();
+        private readonly FakeKeyboardSimulator _keyboard = new();
 
-        public IKeyboardSimulator Keyboard => new FakeKeyboardSimulator();
+        public IKeyboardSimulator Keyboard => _keyboard;
 
         public IMouseSimulator Mouse => _mouse;
 
@@ -20,6 +21,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// 模拟输入设备状态：默认视为左键已按下（对应 ThrowRod 举起鱼竿后校验左键状态的场景）。
         /// </summary>
         public IInputDeviceStateAdaptor InputDeviceState => new FakeInputDeviceStateAdaptor(() => _mouse.IsLeftButtonDown);
+
+        /// <summary>
+        /// 暴露键盘模拟器以断言按键次数（如 ESC）。
+        /// </summary>
+        public FakeKeyboardSimulator FakeKeyboard => _keyboard;
     }
 
     internal class FakeInputDeviceStateAdaptor : IInputDeviceStateAdaptor
@@ -44,19 +50,38 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
     internal class FakeKeyboardSimulator : IKeyboardSimulator
     {
+        /// <summary>
+        /// 记录 ESC 键按下次数，供测试断言弹窗关闭/退出动作。
+        /// </summary>
+        public int EscapeKeyPressCount { get; private set; }
+
         public IMouseSimulator Mouse => throw new NotImplementedException();
 
         public IKeyboardSimulator KeyDown(User32.VK keyCode) => this;
 
         public IKeyboardSimulator KeyDown(bool? isExtendedKey, User32.VK keyCode) => this;
 
-        public IKeyboardSimulator KeyPress(User32.VK keyCode) => this;
+        public IKeyboardSimulator KeyPress(User32.VK keyCode)
+        {
+            if (keyCode == User32.VK.VK_ESCAPE)
+            {
+                EscapeKeyPressCount++;
+            }
+            return this;
+        }
 
-        public IKeyboardSimulator KeyPress(bool? isExtendedKey, User32.VK keyCode) => this;
+        public IKeyboardSimulator KeyPress(bool? isExtendedKey, User32.VK keyCode) => KeyPress(keyCode);
 
-        public IKeyboardSimulator KeyPress(params User32.VK[] keyCodes) => this;
+        public IKeyboardSimulator KeyPress(params User32.VK[] keyCodes)
+        {
+            foreach (var keyCode in keyCodes)
+            {
+                KeyPress(keyCode);
+            }
+            return this;
+        }
 
-        public IKeyboardSimulator KeyPress(bool? isExtendedKey, params User32.VK[] keyCodes) => this;
+        public IKeyboardSimulator KeyPress(bool? isExtendedKey, params User32.VK[] keyCodes) => KeyPress(keyCodes);
 
         public IKeyboardSimulator KeyUp(User32.VK keyCode) => this;
 
