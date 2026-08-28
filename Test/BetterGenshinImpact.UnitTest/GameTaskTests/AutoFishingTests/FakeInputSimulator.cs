@@ -1,4 +1,4 @@
-﻿using Fischless.WindowsInput;
+using Fischless.WindowsInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,28 +10,83 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
     internal class FakeInputSimulator : IInputSimulator
     {
-        public IKeyboardSimulator Keyboard => new FakeKeyboardSimulator();
+        private readonly FakeMouseSimulator _mouse = new();
+        private readonly FakeKeyboardSimulator _keyboard = new();
 
-        public IMouseSimulator Mouse => new FakeMouseSimulator();
+        public IKeyboardSimulator Keyboard => _keyboard;
 
-        public IInputDeviceStateAdaptor InputDeviceState => throw new NotImplementedException();
+        public IMouseSimulator Mouse => _mouse;
+
+        /// <summary>
+        /// 模拟输入设备状态：默认视为左键已按下（对应 ThrowRod 举起鱼竿后校验左键状态的场景）。
+        /// </summary>
+        public IInputDeviceStateAdaptor InputDeviceState => new FakeInputDeviceStateAdaptor(() => _mouse.IsLeftButtonDown);
+
+        /// <summary>
+        /// 暴露键盘模拟器以断言按键次数（如 ESC）。
+        /// </summary>
+        public FakeKeyboardSimulator FakeKeyboard => _keyboard;
+
+        /// <summary>
+        /// 暴露鼠标模拟器以断言按键状态（如左键是否释放）。
+        /// </summary>
+        public FakeMouseSimulator FakeMouse => _mouse;
+    }
+
+    internal class FakeInputDeviceStateAdaptor : IInputDeviceStateAdaptor
+    {
+        private readonly Func<bool> _isLeftButtonDown;
+
+        public FakeInputDeviceStateAdaptor(Func<bool> isLeftButtonDown)
+        {
+            _isLeftButtonDown = isLeftButtonDown;
+        }
+
+        public bool IsKeyDown(User32.VK keyCode) => keyCode == User32.VK.VK_LBUTTON && _isLeftButtonDown();
+
+        public bool IsKeyUp(User32.VK keyCode) => !IsKeyDown(keyCode);
+
+        public bool IsHardwareKeyDown(User32.VK keyCode) => IsKeyDown(keyCode);
+
+        public bool IsHardwareKeyUp(User32.VK keyCode) => IsKeyUp(keyCode);
+
+        public bool IsTogglingKeyInEffect(User32.VK keyCode) => false;
     }
 
     internal class FakeKeyboardSimulator : IKeyboardSimulator
     {
+        /// <summary>
+        /// 记录 ESC 键按下次数，供测试断言弹窗关闭/退出动作。
+        /// </summary>
+        public int EscapeKeyPressCount { get; private set; }
+
         public IMouseSimulator Mouse => throw new NotImplementedException();
 
         public IKeyboardSimulator KeyDown(User32.VK keyCode) => this;
 
         public IKeyboardSimulator KeyDown(bool? isExtendedKey, User32.VK keyCode) => this;
 
-        public IKeyboardSimulator KeyPress(User32.VK keyCode) => this;
+        public IKeyboardSimulator KeyPress(User32.VK keyCode)
+        {
+            if (keyCode == User32.VK.VK_ESCAPE)
+            {
+                EscapeKeyPressCount++;
+            }
+            return this;
+        }
 
-        public IKeyboardSimulator KeyPress(bool? isExtendedKey, User32.VK keyCode) => this;
+        public IKeyboardSimulator KeyPress(bool? isExtendedKey, User32.VK keyCode) => KeyPress(keyCode);
 
-        public IKeyboardSimulator KeyPress(params User32.VK[] keyCodes) => this;
+        public IKeyboardSimulator KeyPress(params User32.VK[] keyCodes)
+        {
+            foreach (var keyCode in keyCodes)
+            {
+                KeyPress(keyCode);
+            }
+            return this;
+        }
 
-        public IKeyboardSimulator KeyPress(bool? isExtendedKey, params User32.VK[] keyCodes) => this;
+        public IKeyboardSimulator KeyPress(bool? isExtendedKey, params User32.VK[] keyCodes) => KeyPress(keyCodes);
 
         public IKeyboardSimulator KeyUp(User32.VK keyCode) => this;
 
@@ -56,17 +111,22 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
     internal class FakeMouseSimulator : IMouseSimulator
     {
+        /// <summary>
+        /// 模拟左键是否处于按下状态（默认按下，对应抛竿流程中左键长按举起鱼竿）
+        /// </summary>
+        public bool IsLeftButtonDown { get; private set; } = true;
+
         public IKeyboardSimulator Keyboard => throw new NotImplementedException();
 
         public IMouseSimulator HorizontalScroll(int scrollAmountInClicks) => this;
 
-        public IMouseSimulator LeftButtonClick() => this;
+        public IMouseSimulator LeftButtonClick() { IsLeftButtonDown = false; return this; }
 
         public IMouseSimulator LeftButtonDoubleClick() => this;
 
-        public IMouseSimulator LeftButtonDown() => this;
+        public IMouseSimulator LeftButtonDown() { IsLeftButtonDown = true; return this; }
 
-        public IMouseSimulator LeftButtonUp() => this;
+        public IMouseSimulator LeftButtonUp() { IsLeftButtonDown = false; return this; }
 
         public IMouseSimulator MiddleButtonClick() => this;
 

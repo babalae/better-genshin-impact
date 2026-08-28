@@ -294,6 +294,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
+                // 注：不在此处清除 Abort——Abort 是全局终止标志（WholeProcessTimeout/FindFishTimeout 也会设置），
+                // 且鱼饵不足触发的退出后整棵行为树会结束、黑板随任务重建自动复位，无需在此清除。
                 _logger.LogInformation("进入钓鱼模式");
                 return Status.Success;
             }

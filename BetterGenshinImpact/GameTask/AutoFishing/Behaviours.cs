@@ -391,6 +391,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
 
+        // 举起鱼竿确认相关
+        private const int _maxLeftButtonRetry = 3; // 左键按下重试次数上限
+        private const int _raiseHookWaitMs = 400; // 按下左键后等待举竿画面渲染的时间
+        private const int _viewpointSearchStep = 30; // 寻找落点时每次上下移动视角的像素步长
+        private const int _raiseHookConfirmRetry = 3; // 钓鱼界面前置校验失败时的重试次数上限（换饵遮罩旧帧干扰场景）
+        private const int _outOfBaitPopupDismissRetry = 3; // 关闭鱼饵不足提示条的重试次数上限（防止提示条持续可见时无限按 ESC）
+
+        private DateTimeOffset? _raiseHookWaitEndTime; // 举起鱼竿画面等待的结束时间
+        private bool _raiseHookConfirmed; // 是否已按下左键（举起鱼竿）
+        private bool _raiseHookConfirmedByTarget; // 是否已通过识别到落点确认鱼竿举起
+        private int _leftButtonDownRetryTimes; // 左键按下重试次数
+        private int _raiseHookConfirmRetryTimes; // 钓鱼界面前置校验重试次数
+        private int _outOfBaitPopupStage; // 鱼饵不足弹窗处理阶段：0=无；1=已关提示条待退出；2=已按 ESC 待置 Abort
+        private int _outOfBaitPopupDismissRetryTimes; // 关闭鱼饵不足提示条的重试次数
+
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
@@ -465,12 +480,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             ThrowRodNoTarget.Set(false);
             findTargetEndTime = timeProvider.GetLocalNow().AddSeconds(5);
             foundTarget = false;
-            mouseMoveI *= -1;
+            // 不再每次抛竿翻转视角移动方向，避免连续失败时视角来回甩动
             mouseMoveR = 0d;
-
-            input.Mouse.LeftButtonDown();
+            _raiseHookConfirmed = false;
+            _raiseHookConfirmedByTarget = false;
+            _leftButtonDownRetryTimes = 0;
+            _raiseHookConfirmRetryTimes = 0;
+            _outOfBaitPopupStage = 0;
+            _outOfBaitPopupDismissRetryTimes = 0;
+            _raiseHookWaitEndTime = timeProvider.GetLocalNow().AddMilliseconds(_raiseHookWaitMs);
             PitchReset.Set(true);
-            logger.LogInformation("长按举起鱼竿");
         }
 
         protected override void Terminate(Status newStatus)
@@ -484,7 +503,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         public OneFish? currentFish { get; private set; }
 
-        private int mouseMoveI = 1; // 上下移动视角的初始方向控制参数
         private double mouseMoveR; // 上下移动视角的切换频率控制参数
 
         protected async override Task<Status> Update()
@@ -492,11 +510,142 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var imageRegion = Screenshot.Get();
             Action<int> sleep = Sleep.Get();
 
+            // 检测"鱼饵不足"弹窗：抛竿时当前选用的饵料已用光会弹出提示条（out_of_bait）。
+            // 弹窗会遮挡落点/鱼塘识别，导致抛竿失败并误触发后续退出流程。
+            // 处理策略：跨 tick 状态机——先 ESC 关提示条，下一 tick 用新帧确认已关闭后再 ESC 退出钓鱼模式，
+            // 再等一个 tick 让"是否退出钓鱼？"确认弹窗渲染完成后才置 Abort，确保冒泡到 QuitFishingMode 时
+            // 其 Screenshot 是包含确认弹窗的新帧（避免用 ESC 按下前的旧帧误匹配/误点）。
+            using Region outOfBaitPopupRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "OutOfBaitPopup", imageRegion));
+            bool outOfBaitPopupVisible = !outOfBaitPopupRa.IsEmpty();
+
+            if (_outOfBaitPopupStage == 2)
+            {
+                // 阶段 2：确认弹窗已渲染（本 tick 截图为新帧），置 Abort 触发冒泡
+                input.Mouse.LeftButtonUp(); // 释放左键，避免抛竿举竿阶段的按下状态残留导致镜头转动
+                _raiseHookConfirmed = false;
+                _raiseHookConfirmedByTarget = false;
+                _leftButtonDownRetryTimes = 0;
+                _raiseHookConfirmRetryTimes = 0;
+                _outOfBaitPopupStage = 0;
+                _outOfBaitPopupDismissRetryTimes = 0;
+                Abort.Set(true);
+                return Status.Failure;
+            }
+
+            if (_outOfBaitPopupStage == 1 && !outOfBaitPopupVisible)
+            {
+                // 阶段 1 → 2：提示条已关，按 ESC 退出钓鱼模式（会弹出"是否退出钓鱼？"确认弹窗），
+                // 等待确认弹窗渲染后下一 tick 再置 Abort
+                input.Keyboard.KeyPress(VK.VK_ESCAPE);
+                _outOfBaitPopupStage = 2;
+                sleep(500);
+                return Status.Running;
+            }
+
+            if (outOfBaitPopupVisible)
+            {
+                // 阶段 0 → 1：首次检测到弹窗（或上次 ESC 未关掉提示条），关闭"鱼饵不足"提示条，
+                // 等下一 tick 用新帧确认已关闭后再退出。重试有上限，避免提示条持续可见时无限按 ESC 活锁。
+                _outOfBaitPopupDismissRetryTimes++;
+                if (_outOfBaitPopupDismissRetryTimes > _outOfBaitPopupDismissRetry)
+                {
+                    logger.LogWarning("多次按下 ESC 后仍未关闭鱼饵不足弹窗，放弃本轮抛竿并退出钓鱼模式");
+                    input.Mouse.LeftButtonUp(); // 释放左键，避免抛竿举竿阶段的按下状态残留导致镜头转动
+                    _raiseHookConfirmed = false;
+                    _raiseHookConfirmedByTarget = false;
+                    _leftButtonDownRetryTimes = 0;
+                    _raiseHookConfirmRetryTimes = 0;
+                    _outOfBaitPopupStage = 0;
+                    _outOfBaitPopupDismissRetryTimes = 0;
+                    Abort.Set(true);
+                    return Status.Failure;
+                }
+
+                logger.LogWarning("检测到鱼饵不足弹窗，关闭弹窗并退出钓鱼模式，重新开始钓鱼");
+                input.Keyboard.KeyPress(VK.VK_ESCAPE);
+                _outOfBaitPopupStage = 1;
+                sleep(300);
+                return Status.Running;
+            }
+
+            // 举起鱼竿：按下左键进入抛竿瞄准状态
+            // 注：左键按下从 Initialize 挪到 Update（行为树 Initialize 仅做状态初始化，不应有输入副作用）
+            if (!_raiseHookConfirmed)
+            {
+                // 前置校验：确认处于钓鱼界面。
+                // 钓鱼界面存在两个标志性按钮：换饵按钮（switch_bait）和退出钓鱼按钮（exit_fishing），
+                // 二者任一存在即表明处于钓鱼界面；若都不存在说明未进入钓鱼状态，不应继续抛竿。
+                // 注意：换饵刚完成时（ChooseBait 返回 Success 的同一 tick），Screenshot.Get() 可能仍是
+                // 换饵界面遮罩的旧帧，遮罩会干扰模板匹配导致两个按钮均漏配。因此校验失败时不立即 Abort，
+                // 而是等待后续 tick 的新截图重试（最多 _raiseHookConfirmRetry 次），避免误判退出钓鱼。
+                using Region baitButtonRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "BaitButton", imageRegion));
+                using Region exitFishingButtonRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion));
+                if (baitButtonRa.IsEmpty() && exitFishingButtonRa.IsEmpty())
+                {
+                    _raiseHookConfirmRetryTimes++;
+                    if (_raiseHookConfirmRetryTimes > _raiseHookConfirmRetry)
+                    {
+                        logger.LogWarning("多次截图仍未检测到换饵按钮或退出钓鱼按钮，可能未处于钓鱼状态，退出抛竿");
+                        input.Mouse.LeftButtonUp();
+                        Abort.Set(true);
+                        return Status.Failure;
+                    }
+
+                    logger.LogWarning("未检测到换饵按钮或退出钓鱼按钮，等待新截图重试（第{Retry}次）", _raiseHookConfirmRetryTimes);
+                    sleep(100);
+                    return Status.Running;
+                }
+
+                _raiseHookConfirmed = true;
+                logger.LogInformation("长按举起鱼竿");
+                input.Mouse.LeftButtonDown();
+                PitchReset.Set(true);
+
+                // 按下后等待举竿画面渲染完成，避免用"未举竿"的旧帧做落点检测
+                if (_raiseHookWaitEndTime != null && timeProvider.GetLocalNow() < _raiseHookWaitEndTime)
+                {
+                    sleep(50);
+                    return Status.Running;
+                }
+            }
+
             // 找 鱼饵落点
             var result = _predictor.Predictor.Detect(imageRegion.CacheImage);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
             Fishpond.Set(fishpond);
+
+            // 以能否识别到落点确认左键是否生效（鱼竿是否举起）：
+            // 若识别不到落点，说明左键按下可能未生效（如游戏窗口失焦），重按左键重试（最多 _maxLeftButtonRetry 次）；
+            // 一旦识别到落点即视为鱼竿已举起，后续正常进入抛竿流程。
+            // 重按次数耗尽仍无落点时，不再判定"左键未按下"，转为按"视野内确实没有鱼塘/落点"
+            // 处理（转入下方移视角找落点 → 超时 → ThrowRodNoTarget），保留卡视角岸边的场景语义。
+            if (fishpond.TargetRect == null || fishpond.TargetRect == default)
+            {
+                if (!_raiseHookConfirmedByTarget)
+                {
+                    _leftButtonDownRetryTimes++;
+                    if (_leftButtonDownRetryTimes > _maxLeftButtonRetry)
+                    {
+                        logger.LogWarning("多次按下左键后仍无法识别到落点，尝试移动视角寻找落点");
+                        _raiseHookConfirmedByTarget = true; // 不再重按左键，转入移视角找落点流程
+                        // 不 return，继续向下执行移视角找落点逻辑
+                    }
+                    else
+                    {
+                        logger.LogWarning("未识别到落点，可能鱼竿未举起，重新按下左键（第{Retry}次）", _leftButtonDownRetryTimes);
+                        input.Mouse.LeftButtonDown();
+                        _raiseHookWaitEndTime = timeProvider.GetLocalNow().AddMilliseconds(_raiseHookWaitMs);
+                        sleep(100);
+                        return Status.Running;
+                    }
+                }
+            }
+            else
+            {
+                _raiseHookConfirmedByTarget = true;
+            }
+
             Random _rd = new();
             if (fishpond.TargetRect == null || fishpond.TargetRect == default)
             {
@@ -504,14 +653,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     if (timeProvider.GetLocalNow() <= findTargetEndTime)
                     {
-                        // 上下移动视角方便看落点
+                        // 上下小幅移动视角方便看落点，避免大幅摆动把落点环甩出视野
                         mouseMoveR += Math.PI / 16d;
-                        input.Mouse.MoveMouseBy(0, mouseMoveI * 80 * Math.Sign(Math.Cos(mouseMoveR)));
+                        input.Mouse.MoveMouseBy(0, (int)(_viewpointSearchStep * Math.Sign(Math.Cos(mouseMoveR))));
                         sleep(100);
                         return Status.Running;
                     }
                     else
                     {
+                        // 到达此处说明已通过落点确认鱼竿举起（_raiseHookConfirmedByTarget=true），
+                        // 但 5 秒内仍未找到落点，说明视野内确实没有鱼塘/落点（如卡视角岸边），
+                        // 按原逻辑超时失败并记录 ThrowRodNoTarget。
                         logger.LogInformation("举起鱼竿失败，始终没有找到落点");
                         input.Mouse.LeftButtonUp();
                         sleep(2000);
@@ -736,9 +888,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public partial class CheckThrowRod : Behaviour, IScreenshotBehaviour
     {
+        private const int _initialDelaySeconds = 3; // 抛竿后先等待下杆画面出现的基础延迟
+        private const int _renderWaitSeconds = 2; // 基础延迟后等待"等待咬钩"按钮渲染的额外窗口，避免用未渲染完成的旧帧误判抛竿失败
+
         private readonly ILogger logger;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? timeDelay;
+        private DateTimeOffset? _checkDeadline; // 双重校验的最终判定截止时间
         private bool hasChecked;
 
         [BlackboardKey(Access = Access.Read)]
@@ -752,7 +908,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override void Initialize()
         {
-            timeDelay = timeProvider.GetLocalNow().AddSeconds(3);
+            timeDelay = timeProvider.GetLocalNow().AddSeconds(_initialDelaySeconds);
+            _checkDeadline = timeProvider.GetLocalNow().AddSeconds(_initialDelaySeconds + _renderWaitSeconds);
             hasChecked = false;
         }
 
@@ -765,10 +922,22 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return Status.Running;
             }
 
-            using Region btnRectArea = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "BaitButton", imageRegion));
-            if (btnRectArea.IsEmpty())
+            // 抛竿成功判定（双重校验）：
+            // 1. 换饵按钮（BaitButton/switch_bait）应消失 —— 说明已退出换饵界面
+            // 2. 等待咬钩按钮（WaitBiteButton/wait_bite）应出现 —— 说明已进入下杆等待状态
+            // 二者同时满足才算抛竿成功，避免仅凭单个按钮误判。
+            using Region baitButtonRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "BaitButton", imageRegion));
+            using Region waitBiteButtonRa = imageRegion.Find(RecognitionAssets.Get("AutoFishing", "WaitBiteButton", imageRegion));
+            if (baitButtonRa.IsEmpty() && !waitBiteButtonRa.IsEmpty())
             {
                 hasChecked = true;
+                return Status.Running;
+            }
+            else if (timeProvider.GetLocalNow() < _checkDeadline)
+            {
+                // 换饵按钮已消失但"等待咬钩"按钮尚未渲染出来（抛竿动画/UI 切换未完成），
+                // 继续用后续新截图重试，而不是立即返回 Failure——否则每次正常下杆都会被误判为
+                // 抛竿失败而触发整轮重抛（几乎每次下杆都重复一次）。
                 return Status.Running;
             }
             else
@@ -951,6 +1120,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return RaiseRod("OCR");
             }
 
+            // 拉条识别提竿判断：拉条（黄色进度条）只在鱼上钩后出现，为纯色检测，不受帧率/文字位置/模板匹配影响，
+            // 中鱼后默认会出现进度条，作为兜底检测
+            using var fishBarTopMat = new Mat(imageRegion.SrcMat, new Rect(0, 0, imageRegion.Width, imageRegion.Height / 2));
+            var fishBarRects = AutoFishingImageRecognition.GetFishBarRect(fishBarTopMat);
+            if (AutoFishingImageRecognition.IsValidFishBar(fishBarRects, fishBarTopMat.Width))
+            {
+                return RaiseRod("拉条识别");
+            }
+
             return Status.Running;
         }
 
@@ -1009,20 +1187,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using var topMat = new Mat(imageRegion.SrcMat, new Rect(0, 0, imageRegion.Width, imageRegion.Height / 2));
 
             var rects = AutoFishingImageRecognition.GetFishBarRect(topMat);
-            if (rects != null && rects.Count == 2)
+            if (rects != null && rects.Count == 2 && Math.Abs(rects[0].Height - rects[1].Height) > 10)
+            {
+                if (saveScreenshotOnError)
+                {
+                    ScreenshotVisitor.SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
+                }
+                logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
+                return Status.Running;
+            }
+
+            // 复用统一的拉条几何校验：恰好2个矩形、游标/进度条位置关系等
+            if (AutoFishingImageRecognition.IsValidFishBar(rects, topMat.Width))
             {
                 Rect _cur, _right;
-                if (Math.Abs(rects[0].Height - rects[1].Height) > 10)
-                {
-                    if (saveScreenshotOnError)
-                    {
-                        ScreenshotVisitor.SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
-                    }
-                    logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
-                    return Status.Running;
-                }
-
-                if (rects[0].Width < rects[1].Width)
+                if (rects![0].Width < rects[1].Width)
                 {
                     _cur = rects[0];
                     _right = rects[1];
@@ -1031,16 +1210,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     _cur = rects[1];
                     _right = rects[0];
-                }
-
-                if (_right.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在right左边
-                    || _cur.Width > _right.Width // right一定比cur宽
-                    || _cur.X + _cur.Width > topMat.Width / 2 // cur 一定在屏幕左侧
-                    || _cur.X + _cur.Width > _right.X - _right.Width / 2 // cur 一定在right左侧+right的一半宽度
-                    || _cur.X + _cur.Width > topMat.Width / 2 - _right.Width // cur 一定在屏幕中轴线减去整个right的宽度的位置左侧
-                   )
-                {
-                    return Status.Running;
                 }
 
                 int hExtra = _cur.Height, vExtra = _cur.Height / 4;

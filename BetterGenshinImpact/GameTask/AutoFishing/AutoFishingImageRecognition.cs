@@ -96,5 +96,45 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             return null;
         }
+
+        /// <summary>
+        /// 校验检测到的黄色矩形是否为合法的钓鱼拉条（游标 + 进度条）。
+        /// 与 <c>GetFishBoxArea</c> 的几何校验保持一致：恰好 2 个矩形、高度接近、
+        /// 窄者为游标且位于进度条左侧、游标位于屏幕左半侧。
+        /// 用于提竿检测等场景，避免把画面中任意两个同水平线的黄色物体误判为上钩。
+        /// </summary>
+        /// <param name="rects">GetFishBarRect 检测到的黄色矩形列表</param>
+        /// <param name="topMatWidth">检测区域（拉条所在的上半屏）的宽度</param>
+        public static bool IsValidFishBar(IReadOnlyList<Rect>? rects, int topMatWidth)
+        {
+            if (rects == null || rects.Count != 2)
+            {
+                return false;
+            }
+
+            Rect _cur, _right;
+            if (Math.Abs(rects[0].Height - rects[1].Height) > 10)
+            {
+                return false;
+            }
+
+            if (rects[0].Width < rects[1].Width)
+            {
+                _cur = rects[0];
+                _right = rects[1];
+            }
+            else
+            {
+                _cur = rects[1];
+                _right = rects[0];
+            }
+
+            return !(_right.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在right左边
+                     || _cur.Width > _right.Width // right一定比cur宽
+                     || _cur.X + _cur.Width > topMatWidth / 2 // cur 一定在屏幕左侧
+                     || _cur.X + _cur.Width > _right.X - _right.Width / 2 // cur 一定在right左侧+right的一半宽度
+                     || _cur.X + _cur.Width > topMatWidth / 2 - _right.Width // cur 一定在屏幕中轴线减去整个right的宽度的位置左侧
+                    );
+        }
     }
 }
