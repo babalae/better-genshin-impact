@@ -37,6 +37,8 @@ public class BitBltSession : IDisposable
     // Bitmap 内存池
     private readonly ConcurrentStack<IntPtr> _bufferPool = [];
 
+    private volatile bool _disposed;
+
     // 窗口原宽高
     public int Width { get; }
     public int Height { get; }
@@ -45,7 +47,7 @@ public class BitBltSession : IDisposable
     ///     不是所有的失效情况都能被检测到
     /// </summary>
     /// <returns></returns>
-    public bool Invalid => _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == 0;
+    public bool Invalid => _disposed || _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == 0;
 
     public BitBltSession(HWND hWnd, int w, int h)
     {
@@ -144,6 +146,12 @@ public class BitBltSession : IDisposable
     {
         lock (_lockObject)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
             ReleaseResources();
         }
         GC.SuppressFinalize(this);
@@ -191,7 +199,16 @@ public class BitBltSession : IDisposable
 
     public void ReleaseBuffer(IntPtr buffer)
     {
-        _bufferPool.Push(buffer);
+        lock (_lockObject)
+        {
+            if (_disposed)
+            {
+                Marshal.FreeHGlobal(buffer);
+                return;
+            }
+
+            _bufferPool.Push(buffer);
+        }
     }
 
     /// <summary>
@@ -230,7 +247,7 @@ public class BitBltSession : IDisposable
 
         _bitsPtr = IntPtr.Zero;
 
-        foreach (var buffer in _bufferPool)
+        while (_bufferPool.TryPop(out var buffer))
         {
             Marshal.FreeHGlobal(buffer);
         }
