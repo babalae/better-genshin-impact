@@ -856,11 +856,23 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
             _ct.ThrowIfCancellationRequested();
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (combatScenes.CheckTeamInitialized())
+            using var capture = CaptureToRectArea();
+            var combatScenes = new CombatScenes();
+            try
             {
-                return combatScenes;
+                combatScenes.InitializeTeam(capture);
+                if (combatScenes.CheckTeamInitialized())
+                {
+                    return combatScenes;
+                }
             }
+            catch
+            {
+                combatScenes.Dispose();
+                throw;
+            }
+
+            combatScenes.Dispose();
 
             if (attempt < maxRetries)
             {
@@ -904,7 +916,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         else
         {
-            var combatScenes = GetCombatScenesWithRetry();
+            using var combatScenes = GetCombatScenesWithRetry();
             FindCombatScriptAndSwitchAvatar(combatScenes);
 
             var taskParam = BuildAutoFightParamForBoss();

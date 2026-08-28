@@ -650,7 +650,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         else
         {
             // 初始化战斗
-            var combatScenes = await InitializeCombatScenesLoop();
+            using var combatScenes = await InitializeCombatScenesLoop();
             var combatCommands = await PrepareForBattleLoop(combatScenes);
 
             Logger.LogInformation($"{Name}：执行战斗策略");
@@ -822,18 +822,30 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task<CombatScenes> InitializeCombatScenesLoop()
     {
         CombatScenes? result = null;
-        var found = await NewRetry.WaitForAction(() =>
+        try
         {
-            result = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            return result.CheckTeamInitialized();
-        }, _ct, 10, 500);
+            var found = await NewRetry.WaitForAction(() =>
+            {
+                result?.Dispose();
+                using var capture = CaptureToRectArea();
+                result = new CombatScenes();
+                result.InitializeTeam(capture);
+                return result.CheckTeamInitialized();
+            }, _ct, 10, 500);
 
-        if (!found || result == null)
-        {
-            throw new Exception("识别队伍角色失败！");
+            if (!found || result == null)
+            {
+                throw new Exception("识别队伍角色失败！");
+            }
+
+            Logger.LogInformation($"{Name}：队伍初始化成功");
+            return result;
         }
-        Logger.LogInformation($"{Name}：队伍初始化成功");
-        return result;
+        catch
+        {
+            result?.Dispose();
+            throw;
+        }
     }
 
     private async Task<List<CombatCommand>> PrepareForBattleLoop(CombatScenes combatScenes)

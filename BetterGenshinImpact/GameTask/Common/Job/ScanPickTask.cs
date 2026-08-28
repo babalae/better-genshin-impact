@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// 扫描拾取任务
 /// 请在安全地区使用
 /// </summary>
-public class ScanPickTask
+public class ScanPickTask : IDisposable
 {
     private readonly BgiYoloPredictor _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
     private readonly double _dpi = TaskContext.Instance().DpiScale;
@@ -172,5 +172,10 @@ public class ScanPickTask
         await Delay(500, ct);
         Simulation.SendInput.Keyboard.Mouse.MoveMouseBy(0, (int)(500 * _dpi));
         await Delay(100, ct);
+    }
+
+    public void Dispose()
+    {
+        _predictor.Dispose();
     }
 }

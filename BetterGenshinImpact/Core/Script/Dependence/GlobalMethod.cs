@@ -261,7 +261,9 @@ public class GlobalMethod
 
     public static string[] GetAvatars()
     {
-        var combatScenes = new CombatScenes().InitializeTeam(CaptureGameRegion());
+        using var capture = CaptureGameRegion();
+        using var combatScenes = new CombatScenes();
+        combatScenes.InitializeTeam(capture);
         ReadOnlyCollection<Avatar> avatars = combatScenes.GetAvatars();
         return avatars.Count > 0
             ? avatars.Select(avatar => avatar.Name).ToArray()

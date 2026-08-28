@@ -120,7 +120,8 @@ public partial class OneDragonTaskItem : ObservableObject
                         DomainName = domainName,
                         SundaySelectedValue = sundaySelectedValue
                     };
-                    await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
+                    using var task = new AutoDomainTask(autoDomainParam);
+                    await task.Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "自动首领讨伐":

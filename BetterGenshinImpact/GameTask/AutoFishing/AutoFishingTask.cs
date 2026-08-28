@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
-    public class AutoFishingTask : ISoloTask
+    public class AutoFishingTask : ISoloTask, IDisposable
     {
         private readonly ILogger _logger = App.GetLogger<AutoFishingTask>();
         private readonly InputSimulator input = Simulation.SendInput;
@@ -265,6 +265,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 behaviourTree.AddVisitor(new ScreenshotVisitor(_logger));
             }
             return behaviourTree;
+        }
+
+        public void Dispose()
+        {
+            _predictor.Dispose();
         }
     }
 }

@@ -43,8 +43,6 @@ public class MiningHandler : IActionHandler
     ];
     
 
-    private readonly ScanPickTask _scanPickTask = new();
-
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
@@ -65,7 +63,8 @@ public class MiningHandler : IActionHandler
             await Delay(1000, ct);
 
             // 拾取
-            await _scanPickTask.Start(ct);
+            using var task = new ScanPickTask();
+            await task.Start(ct);
         }
     }
 

@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -19,7 +18,6 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
-using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
@@ -39,8 +37,6 @@ public class AutoFightTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
-
-    private readonly BgiYoloPredictor _predictor;
 
     private static DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
     private static int _skipCheckCounter;
@@ -230,11 +226,6 @@ public class AutoFightTask : ISoloTask
         _taskParam = taskParam;
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
 
-        if (_taskParam.FightFinishDetectEnabled)
-        {
-            _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
-        }
-
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
     public CombatScenes GetCombatScenesWithRetry()
@@ -244,11 +235,23 @@ public class AutoFightTask : ISoloTask
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (combatScenes.CheckTeamInitialized())
+            using var capture = CaptureToRectArea();
+            var combatScenes = new CombatScenes();
+            try
             {
-                return combatScenes;
+                combatScenes.InitializeTeam(capture);
+                if (combatScenes.CheckTeamInitialized())
+                {
+                    return combatScenes;
+                }
             }
+            catch
+            {
+                combatScenes.Dispose();
+                throw;
+            }
+
+            combatScenes.Dispose();
         
             if (attempt < maxRetries)
             {
@@ -273,7 +276,7 @@ public class AutoFightTask : ISoloTask
         try
         {
             LogScreenResolution();
-        var combatScenes = GetCombatScenesWithRetry();
+        using var combatScenes = GetCombatScenesWithRetry();
         /*var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
@@ -606,7 +609,8 @@ public class AutoFightTask : ISoloTask
                     // 经验值检测未通过，跳过拾取（但仍执行扫描拾取逻辑）
                     if (_taskParam is { PickDropsAfterFightEnabled: true })
                     {
-                        await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
+                        using var task = new ScanPickTask();
+                        await task.Start(ct, _taskParam.PickDropsAfterFightSeconds);
                     }
                     return;
                 }
@@ -882,7 +886,8 @@ public class AutoFightTask : ISoloTask
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
         {
             // 执行扫描掉落物光柱并靠近的功能
-            await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
+            using var task = new ScanPickTask();
+            await task.Start(ct, _taskParam.PickDropsAfterFightSeconds);
         }
     }
         finally
@@ -1109,16 +1114,6 @@ public class AutoFightTask : ISoloTask
         }
 
         return dictionary;
-    }
-
-    private bool HasFightFlagByYolo(ImageRegion imageRegion)
-    {
-        // if (RuntimeHelper.IsDebug)
-        // {
-        //     imageRegion.SrcMat.SaveImage(Global.Absolute(@"log\fight\" + $"{DateTime.Now:yyyyMMdd_HHmmss_ffff}.png"));
-        // }
-        var dict = _predictor.Detect(imageRegion);
-        return dict.ContainsKey("health_bar") || dict.ContainsKey("enemy_identify");
     }
 
     // 无用

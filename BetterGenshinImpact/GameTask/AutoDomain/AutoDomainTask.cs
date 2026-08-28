@@ -45,7 +45,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
+public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
 {
     public string Name => "自动秘境";
 
@@ -178,7 +178,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 前置进入秘境
         await EnterDomain();
 
-        var combatScenes = new CombatScenes();
+        using var combatScenes = new CombatScenes();
         for (var i = 0; i < _taskParam.DomainRoundNum; i++)
         {
             // 0. 关闭秘境提示
@@ -202,7 +202,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 //0.5. 初始化队伍，只执行一次
                 if (i == 0)
                 {
-                    combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+                    using var capture = CaptureToRectArea();
+                    combatScenes.InitializeTeam(capture);
                 }
 
                 RetryTeamInit(combatScenes);
@@ -1059,7 +1060,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private Rect DetectTree(ImageRegion region)
     {
-        var result = _predictor.Predictor.Detect(region.CacheImage);
+        var result = _predictor.Run(predictor => predictor.Detect(region.CacheImage));
         var list = new List<RectDrawable>();
         foreach (var box in result)
         {
@@ -1549,5 +1550,10 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         }
 
         await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
+    }
+
+    public void Dispose()
+    {
+        _predictor.Dispose();
     }
 }

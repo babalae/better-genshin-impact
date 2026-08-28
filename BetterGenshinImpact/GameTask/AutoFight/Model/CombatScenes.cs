@@ -292,7 +292,7 @@ public class CombatScenes : IDisposable
     {
         SpeedTimer speedTimer = new();
         speedTimer.Record("角色侧面头像图像转换");
-        var result = _predictor.Predictor.Classify(img);
+        var result = _predictor.Run(predictor => predictor.Classify(img));
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();

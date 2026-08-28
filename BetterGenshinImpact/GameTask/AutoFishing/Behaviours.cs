@@ -94,7 +94,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 detectInterval = timeProvider.GetLocalNow().AddSeconds(0.5);
             }
-            var result = _predictor.Predictor.Detect(imageRegion.CacheImage);
+            var result = _predictor.Run(predictor => predictor.Detect(imageRegion.CacheImage));
             Debug.WriteLine($"YOLO识别: {result.Speed}");
             var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == default)
@@ -493,7 +493,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Action<int> sleep = Sleep.Get();
 
             // 找 鱼饵落点
-            var result = _predictor.Predictor.Detect(imageRegion.CacheImage);
+            var result = _predictor.Run(predictor => predictor.Detect(imageRegion.CacheImage));
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
             Fishpond.Set(fishpond);

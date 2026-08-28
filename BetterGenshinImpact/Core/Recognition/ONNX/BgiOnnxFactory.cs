@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using Compunet.YoloSharp;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.Win32;
@@ -302,13 +303,15 @@ public class BgiOnnxFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
-        if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
-
-        var cached = GetCached(model);
-        return cached == null
-            ? new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, true))
-            : new BgiYoloPredictor(model, cached, CreateSessionOptions(model, false));
+        return new BgiYoloPredictor(model, () =>
+        {
+            var cached = EnableCache ? GetCached(model) : null;
+            using var sessionOptions = CreateSessionOptions(model, EnableCache && cached is null);
+            return new YoloPredictor(cached ?? model.ModalPath, new YoloPredictorOptions
+            {
+                SessionOptions = sessionOptions
+            });
+        });
     }
 
     /// <summary>
@@ -323,13 +326,9 @@ public class BgiOnnxFactory
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
-        if (!EnableCache)
-            return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
-
-        var cached = GetCached(model, providerTypes);
-        return cached == null
-            ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
-            : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
+        var cached = EnableCache ? GetCached(model, providerTypes) : null;
+        using var sessionOptions = CreateSessionOptions(model, EnableCache && cached is null, providerTypes);
+        return new InferenceSession(cached ?? model.ModalPath, sessionOptions);
     }
 
     /// <summary>
