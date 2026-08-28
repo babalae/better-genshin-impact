@@ -173,15 +173,22 @@ public class SwitchPartyTask
         };
 
         // 打开菜单后先识别当前可见页，目标队伍在当前页则直接切换，无需回顶部
-        using (var currentPage = CaptureToRectArea())
+        try
         {
-            var currentPageNameList = currentPage.FindMulti(recognitionObject);
-            if (currentPageNameList != null && currentPageNameList.Count > 0
-                && await TrySwitchToPartyOnPage(currentPage, currentPageNameList, partyName, ct, isInPartyViewUi))
+            using (var currentPage = CaptureToRectArea())
             {
-                VisionContext.Instance().DrawContent.ClearAll();
-                return true;
+                var currentPageNameList = currentPage.FindMulti(recognitionObject);
+                if (currentPageNameList != null && currentPageNameList.Count > 0
+                    && await TrySwitchToPartyOnPage(currentPage, currentPageNameList, partyName, ct, isInPartyViewUi))
+                {
+                    return true;
+                }
             }
+        }
+        finally
+        {
+            // 无论成功、确认超时还是取消，都清理 OCR 绘制，避免残留影响后续任务
+            VisionContext.Instance().DrawContent.ClearAll();
         }
 
         // 点击到最上方
