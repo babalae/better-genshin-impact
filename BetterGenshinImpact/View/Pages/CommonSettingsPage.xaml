@@ -1762,7 +1762,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="切换队伍时，在队伍列表中每次滑动向下移动的栏数，数值越大跨越队伍速度越快。"
+                                  Text="切换队伍时，在队伍列表中每次滑动向下移动的栏数，数值越大跨越队伍速度越快。有效值为1-5。"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
