@@ -233,7 +233,7 @@ public class SwitchPartyTask
                 for (int s = 0; s < clickCount; s++)
                 {
                     page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom);
-                    await Delay(400, ct);
+                    await Delay(100, ct);
                 }
             }
         }
