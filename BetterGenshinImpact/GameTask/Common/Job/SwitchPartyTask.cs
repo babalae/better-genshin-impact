@@ -65,9 +65,12 @@ public class SwitchPartyTask
 
                 // 考虑加载时间 2s，共检查 4.2s，如果失败则抛出异常
 
-                for (int i = 0; i < 7; i++) // 检查 7 次
+                // 每次等待 600*系数 ms，循环次数为保证总等待时间不小于 4200ms 的最小整数
+                int waitMs = Ms(600);
+                int pollCount = Math.Max(1, (int)Math.Ceiling(4200d / waitMs));
+                for (int i = 0; i < pollCount; i++)
                 {
-                    await Delay(600, ct);
+                    await Delay(waitMs, ct);
                     using var raCheck = CaptureToRectArea();
                     if (Bv.IsInPartyViewUi(raCheck))
                     {
