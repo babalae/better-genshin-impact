@@ -89,8 +89,8 @@ BetterGI は、コンピュータービジョン技術で Genshin Impact をよ�
 - [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (不足していれば自動で案内されます)
 
 **⚠️ 注意:**
-1. 画面サイズ、ゲーム解像度、モニター、Windows HDR、または「SDR コンテンツの明るさ」を変更したらアプリを再起動してください。
-2. NVIDIA Filters など色を変えるフィルターは無効にしてください。HDR でプレイする場合は `WindowsGraphicsCapture（HDR）` を選択してください。FP16 HDR 入力を認識用の SDR に正規化します。`BitBlt` はネイティブ HDR に対応していません。
+1. ゲーム解像度、Windows HDR、または「SDR コンテンツの明るさ」を変更したらアプリを再起動してください。ゲームウィンドウを別のモニターへ移動した場合、WGC HDR は自動的に更新されます。
+2. NVIDIA Filters など色を変えるフィルターは無効にしてください。HDR でプレイする場合は `WindowsGraphicsCapture（HDR）` を選択してください。FP16 HDR 入力を認識用の SDR に正規化します。
 3. 対応は `16:9` のみです。推奨は `1920x1080` のウィンドウ表示です。
 4. **セキュリティソフトがシミュレーション入力をブロックする場合があります。必要に応じて除外設定に追加してください。**
 

@@ -45,7 +45,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
+public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 {
     public string Name => "自动秘境";
 
@@ -168,9 +168,6 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         return new Dictionary<string, int>(_rewardSummary);
     }
 
-    /// <summary>
-    /// 运行 <c>DoDomain</c> 对应的任务流程。
-    /// </summary>
     private async Task DoDomain()
     {
         // 传送到秘境
@@ -181,7 +178,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         // 前置进入秘境
         await EnterDomain();
 
-        using var combatScenes = new CombatScenes();
+        var combatScenes = new CombatScenes();
         for (var i = 0; i < _taskParam.DomainRoundNum; i++)
         {
             // 0. 关闭秘境提示
@@ -205,8 +202,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
                 //0.5. 初始化队伍，只执行一次
                 if (i == 0)
                 {
-                    using var capture = CaptureToRectArea();
-                    combatScenes.InitializeTeam(capture);
+                    combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
                 }
 
                 RetryTeamInit(combatScenes);
@@ -1061,12 +1057,9 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         });
     }
 
-    /// <summary>
-    /// 识别并返回 <c>DetectTree</c> 对应的结果。
-    /// </summary>
     private Rect DetectTree(ImageRegion region)
     {
-        var result = _predictor.Run(predictor => predictor.Detect(region.CacheImage));
+        var result = _predictor.Predictor.Detect(region.CacheImage);
         var list = new List<RectDrawable>();
         foreach (var box in result)
         {
@@ -1556,14 +1549,5 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>, IDisposable
         }
 
         await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
-    }
-
-    /// <summary>
-    /// 释放当前实例持有的托管和原生资源。
-    /// </summary>
-    public void Dispose()
-    {
-        _predictor.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

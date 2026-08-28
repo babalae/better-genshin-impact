@@ -43,13 +43,6 @@ namespace BetterGenshinImpact.GameTask
         private bool _prevGameActive;
 
         private DateTime _prevManualGc = DateTime.MinValue;
-        private DateTime _captureUnavailableSinceUtc = DateTime.MinValue;
-        private DateTime _lastCaptureFailureLogUtc = DateTime.MinValue;
-        private string? _lastCaptureFailureFingerprint;
-
-        // 首帧和帧池重建允许出现短暂空档；持久故障仍会告警，并限制重复日志频率。
-        private static readonly TimeSpan CaptureUnavailableWarningDelay = TimeSpan.FromMilliseconds(500);
-        private static readonly TimeSpan CaptureFailureLogInterval = TimeSpan.FromSeconds(5);
 
         private static readonly object _triggerListLocker = new();
 
@@ -133,14 +126,10 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        /// <summary>
-        /// 启动当前组件或任务的处理流程。
-        /// </summary>
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
             ChatUiHotkeyGuard.Reset();
-            ResetCaptureFailureTracking();
             GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
             SystemControl.ActivateWindow(hWnd);
@@ -161,16 +150,9 @@ namespace BetterGenshinImpact.GameTask
             GameCapture.Start(hWnd,
                 new Dictionary<string, object>()
                 {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt },
-                    { GraphicsCapture.TargetFrameIntervalSettingName, interval }
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
                 }
             );
-            TaskContext.Instance().CaptureColorMode = GameCapture.ColorMode;
-            if (mode == CaptureModes.WindowsGraphicsCaptureHdr &&
-                GameCapture.ColorMode != CaptureColorMode.HdrToSdr)
-            {
-                _logger.LogWarning("目标显示器当前未启用 HDR，WindowsGraphicsCapture（HDR）已使用 SDR 捕获管线");
-            }
 
             // 使用 SetWinEventHook 监听窗口移动和大小变化事件
             _winEventProc = WinEventCallback;
@@ -187,16 +169,11 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        /// <summary>
-        /// 停止或重置 <c>Stop</c> 对应的状态。
-        /// </summary>
         public void Stop()
         {
             _timer.Stop();
             ChatUiHotkeyGuard.Reset();
-            ResetCaptureFailureTracking();
             GameCapture?.Stop();
-            TaskContext.Instance().CaptureColorMode = CaptureColorMode.Sdr;
             _gameRect = RECT.Empty;
             _prevGameActive = false;
             PictureInPictureService.Hide(resetManual: true);
@@ -237,9 +214,6 @@ namespace BetterGenshinImpact.GameTask
             Stop();
         }
 
-        /// <summary>
-        /// 处理 <c>Tick</c> 对应的事件或状态更新。
-        /// </summary>
         public void Tick(object? sender, EventArgs e)
         {
             var hasLock = false;
@@ -262,14 +236,7 @@ namespace BetterGenshinImpact.GameTask
                     ChatUiHotkeyGuard.Reset();
                     if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
                     {
-                        if (GameCapture?.LastError is not null)
-                        {
-                            LogCaptureUnavailable(GameCapture, logImmediately: true);
-                        }
-                        else
-                        {
-                            _logger.LogError("截图器未初始化!");
-                        }
+                        _logger.LogError("截图器未初始化!");
                     }
                     else
                     {
@@ -402,13 +369,9 @@ namespace BetterGenshinImpact.GameTask
 
                 if (bitmap == null)
                 {
-                    LogCaptureUnavailable(GameCapture);
+                    _logger.LogWarning("截图失败!");
                     return;
                 }
-
-                MarkCaptureAvailable();
-
-                TaskContext.Instance().CaptureColorMode = captureFrame!.ColorMode;
 
                 if (shouldShowPictureInPicture && !active)
                 {
@@ -420,11 +383,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                using var content = new CaptureContent(
-                    bitmap,
-                    _frameIndex,
-                    _timer.Interval,
-                    captureFrame.ColorMode);
+                using var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
                 ChatUiHotkeyGuard.UpdateVisualState(Bv.DetectChatUi(content.CaptureRectArea));
 
                 if (!hasEnabledTriggers)
@@ -504,68 +463,6 @@ namespace BetterGenshinImpact.GameTask
         }
 
         /// <summary>
-        /// 执行 <c>LogCaptureUnavailable</c> 对应的处理逻辑。
-        /// </summary>
-        private void LogCaptureUnavailable(IGameCapture capture, bool logImmediately = false)
-        {
-            var now = DateTime.UtcNow;
-            if (_captureUnavailableSinceUtc == DateTime.MinValue)
-            {
-                _captureUnavailableSinceUtc = now;
-                _logger.LogDebug("截图暂不可用，正在等待首帧或帧池恢复");
-            }
-
-            var captureError = capture.LastError;
-            if (!logImmediately && captureError is null &&
-                now - _captureUnavailableSinceUtc < CaptureUnavailableWarningDelay)
-            {
-                return;
-            }
-
-            var fingerprint = captureError is null
-                ? "no-exception"
-                : $"{captureError.GetType().FullName}:{captureError.HResult}:{captureError.Message}";
-            var isNewError = captureError is not null &&
-                             !string.Equals(fingerprint, _lastCaptureFailureFingerprint, StringComparison.Ordinal);
-            if (!isNewError && now - _lastCaptureFailureLogUtc < CaptureFailureLogInterval)
-            {
-                return;
-            }
-
-            if (captureError is not null)
-            {
-                _logger.LogWarning(captureError, "截图失败，捕获管线返回异常");
-            }
-            else
-            {
-                _logger.LogWarning("截图持续不可用，已等待 {ElapsedMilliseconds:F0} ms",
-                    (now - _captureUnavailableSinceUtc).TotalMilliseconds);
-            }
-
-            _lastCaptureFailureLogUtc = now;
-            _lastCaptureFailureFingerprint = fingerprint;
-        }
-
-        /// <summary>
-        /// 停止或重置 <c>ResetCaptureFailureTracking</c> 对应的状态。
-        /// </summary>
-        private void ResetCaptureFailureTracking()
-        {
-            _captureUnavailableSinceUtc = DateTime.MinValue;
-            _lastCaptureFailureLogUtc = DateTime.MinValue;
-            _lastCaptureFailureFingerprint = null;
-        }
-
-        /// <summary>
-        /// 更新 <c>MarkCaptureAvailable</c> 对应的状态。
-        /// </summary>
-        private void MarkCaptureAvailable()
-        {
-            // 保留最近异常的日志指纹和时间戳，避免“失败一帧、成功一帧”时绕过五秒限流。
-            _captureUnavailableSinceUtc = DateTime.MinValue;
-        }
-
-        /// <summary>
         /// / 移动游戏窗口的时候同步遮罩窗口的位置
         /// </summary>
         /// <returns></returns>
@@ -609,9 +506,6 @@ namespace BetterGenshinImpact.GameTask
             return rect.Width == 0 || rect.Height == 0;
         }
 
-        /// <summary>
-        /// 处理 <c>WinEventCallback</c> 对应的事件或状态更新。
-        /// </summary>
         private void WinEventCallback(User32.HWINEVENTHOOK hWinEventHook, uint @event, HWND hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             var target = TaskContext.Instance().GameHandle;
@@ -629,8 +523,6 @@ namespace BetterGenshinImpact.GameTask
             if (hwndPtr == target)
             {
                 SyncMaskWindowPosition();
-
-                // WGC HDR 管线依赖窗口所在显示器；只发出无阻塞通知，实际帧池重建由捕获回调完成。
                 if (GameCapture is GraphicsCapture graphicsCapture)
                 {
                     graphicsCapture.NotifyWindowLocationChanged(hwndPtr);

@@ -288,14 +288,11 @@ public class CombatScenes : IDisposable
         return (avatar.Name, costumeName);
     }
 
-    /// <summary>
-    /// 识别并返回 <c>ClassifyAvatarName</c> 对应的结果。
-    /// </summary>
     public string ClassifyAvatarName(Image<Rgb24> img, int index)
     {
         SpeedTimer speedTimer = new();
         speedTimer.Record("角色侧面头像图像转换");
-        var result = _predictor.Run(predictor => predictor.Classify(img));
+        var result = _predictor.Predictor.Classify(img);
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();

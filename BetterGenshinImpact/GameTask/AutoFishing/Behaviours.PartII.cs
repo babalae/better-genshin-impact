@@ -133,14 +133,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _bgiYoloPredictor = bgiYoloPredictor;
         }
 
-        /// <summary>
-        /// 处理 <c>Update</c> 对应的事件或状态更新。
-        /// </summary>
         protected async override Task<Status> Update()
         {
             var imageRegion = Screenshot.Get();
             Action<int> sleep = Sleep.Get();
-            var result = _bgiYoloPredictor.Run(predictor => predictor.Detect(imageRegion.CacheImage));
+            var result = _bgiYoloPredictor.Predictor.Detect(imageRegion.CacheImage);
             if (result.Any())
             {
                 Fishpond fishpond = new Fishpond(result);

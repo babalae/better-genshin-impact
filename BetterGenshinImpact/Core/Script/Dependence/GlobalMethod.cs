@@ -259,14 +259,9 @@ public class GlobalMethod
         return TaskControl.CaptureToRectArea();
     }
 
-    /// <summary>
-    /// 获取 <c>GetAvatars</c> 对应的数据。
-    /// </summary>
     public static string[] GetAvatars()
     {
-        using var capture = CaptureGameRegion();
-        using var combatScenes = new CombatScenes();
-        combatScenes.InitializeTeam(capture);
+        var combatScenes = new CombatScenes().InitializeTeam(CaptureGameRegion());
         ReadOnlyCollection<Avatar> avatars = combatScenes.GetAvatars();
         return avatars.Count > 0
             ? avatars.Select(avatar => avatar.Name).ToArray()

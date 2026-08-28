@@ -131,7 +131,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
     private bool CheckMapChooseIcon(CaptureContent content)
     {
         var hasMapChooseIcon = false;
-        var isHdrCapture = content.ColorMode == CaptureColorMode.HdrToSdr;
+        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
 
         // 全匹配一遍
         var assets = _assets ?? QuickTeleportAssets.Get(content.CaptureRectArea);

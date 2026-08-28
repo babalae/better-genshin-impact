@@ -90,8 +90,8 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [.NET 8 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
 
 **⚠️注意：**
-1. 窗口大小变化、切换游戏分辨率/显示器/Windows HDR，或调整“SDR 内容亮度”后，请重启本软件。
-2. 不支持 N 卡滤镜等会改变画面颜色的滤镜。HDR 游戏画面需选择 `WindowsGraphicsCapture（HDR）`，程序会将 FP16 HDR 输入归一化为识别所需的 SDR；`BitBlt` 不提供原生 HDR。
+1. 切换游戏分辨率/Windows HDR，或调整“SDR 内容亮度”后，请重启本软件；将游戏窗口移至另一台显示器时，WGC HDR 会自动刷新。
+2. 不支持 N 卡滤镜等会改变画面颜色的滤镜。HDR 游戏画面需选择 `WindowsGraphicsCapture（HDR）`，程序会将 FP16 HDR 输入归一化为识别所需的 SDR。
 3. 当前只支持 `16:9` 的分辨率，推荐在 `1920x1080` 窗口化游戏下使用。
 4. **模拟操作部分可能被部分安全软件拦截，请加入白名单。已知360或者自定义规则WD会拦截部分类型的模拟点击**
 

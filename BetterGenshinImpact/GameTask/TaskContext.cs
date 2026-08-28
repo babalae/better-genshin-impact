@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using BetterGenshinImpact.Core.Script.Group;
-using Fischless.GameCapture;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -46,17 +45,6 @@ namespace BetterGenshinImpact.GameTask
         }
 
         public bool IsInitialized { get; set; }
-
-        private int _captureColorMode = (int)CaptureColorMode.Sdr;
-
-        /// <summary>
-        /// 最近一次有效截图实际使用的色彩管线。
-        /// </summary>
-        public CaptureColorMode CaptureColorMode
-        {
-            get => (CaptureColorMode)Volatile.Read(ref _captureColorMode);
-            set => Volatile.Write(ref _captureColorMode, (int)value);
-        }
 
         public IntPtr GameHandle { get; set; }
 

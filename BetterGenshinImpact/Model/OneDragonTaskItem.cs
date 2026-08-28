@@ -54,9 +54,6 @@ public partial class OneDragonTaskItem : ObservableObject
     //     Action = action;
     // }
 
-    /// <summary>
-    /// 初始化 <c>InitAction</c> 所需的状态和资源。
-    /// </summary>
     public void InitAction(OneDragonFlowConfig config)
     {
         if (config.TaskEnabledList.ContainsKey(Id))
@@ -123,8 +120,7 @@ public partial class OneDragonTaskItem : ObservableObject
                         DomainName = domainName,
                         SundaySelectedValue = sundaySelectedValue
                     };
-                    using var autoDomainTask = new AutoDomainTask(autoDomainParam);
-                    await autoDomainTask.Start(CancellationContext.Instance.Cts.Token);
+                    await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "自动首领讨伐":

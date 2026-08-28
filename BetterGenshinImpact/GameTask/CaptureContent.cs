@@ -2,7 +2,6 @@
 using System;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
-using Fischless.GameCapture;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -19,31 +18,16 @@ public class CaptureContent : IDisposable
     public int FrameRate => (int)(1000 / TimerInterval);
 
     public ImageRegion CaptureRectArea { get; }
-
-    public CaptureColorMode ColorMode { get; }
     
     public GameUiCategory CurrentGameUiCategory;
 
-    /// <summary>
-    /// 初始化 <c>CaptureContent</c> 的新实例。
-    /// </summary>
     public CaptureContent(Mat image, int frameIndex, double interval)
-        : this(image, frameIndex, interval, TaskContext.Instance().CaptureColorMode)
-    {
-    }
-
-    /// <summary>
-    /// 初始化 <c>CaptureContent</c> 的新实例。
-    /// </summary>
-    public CaptureContent(Mat image, int frameIndex, double interval, CaptureColorMode colorMode)
     {
         FrameIndex = frameIndex;
         TimerInterval = interval;
-        ColorMode = colorMode;
         var systemInfo = TaskContext.Instance().SystemInfo;
 
         var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
-        gameCaptureRegion.ColorMode = colorMode;
         CaptureRectArea = gameCaptureRegion.DeriveTo1080P();
     }
 
@@ -54,7 +38,6 @@ public class CaptureContent : IDisposable
     public CaptureContent(ImageRegion ra)
     {
         CaptureRectArea = ra;
-        ColorMode = ra.ColorMode;
     }
 
     public void Dispose()

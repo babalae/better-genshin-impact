@@ -12,12 +12,9 @@ public class Predictor
     private readonly InferenceSession _session;
     private readonly string[] labels;
 
-    /// <summary>
-    /// 初始化 <c>Predictor</c> 的新实例。
-    /// </summary>
     public Predictor()
     {
-        using var options = new SessionOptions();
+        var options = new SessionOptions();
         var modelPath = Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx");
         if (!File.Exists(modelPath)) throw new FileNotFoundException("自动钓鱼模型文件不存在", modelPath);
 

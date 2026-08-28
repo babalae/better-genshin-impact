@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
-using Compunet.YoloSharp;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.Win32;
@@ -25,7 +24,6 @@ public class BgiOnnxFactory
     ///     这样能避免并发加载模型问题。比如使用了未完全构建好的缓存文件，导致模型加载失败。
     /// </summary>
     private readonly ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
-    private readonly HashSet<string> _availableProviderNames;
 
 
     /// <summary>
@@ -39,11 +37,8 @@ public class BgiOnnxFactory
         var config = GetConfig();
         if (config.AutoAppendCudaPath) AppendCudaPath();
 
-        var additionalPaths = ParseAdditionalPaths(config.AdditionalPath);
-        if (additionalPaths.Length > 0)
-        {
-            AppendPath(additionalPaths);
-        }
+        if (string.IsNullOrWhiteSpace(config.AdditionalPath))
+            AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
 
 
         OptimizedModel = config.OptimizedModel;
@@ -54,10 +49,6 @@ public class BgiOnnxFactory
         CpuOcr = config.CpuOcr;
         OpenVinoDevice = config.OpenVinoDevice;
         OpenVinoCache = config.EnableOpenVinoCache;
-        // 以当前实际加载的 native onnxruntime 为准；补 PATH 不能凭空增加未编译进核心 DLL 的 EP。
-        _availableProviderNames = new HashSet<string>(
-            OrtEnv.Instance().GetAvailableProviders(),
-            StringComparer.OrdinalIgnoreCase);
         ProviderTypes = GetProviderType(config.InferenceDevice);
         _logger.LogDebug(
             "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
@@ -119,17 +110,66 @@ public class BgiOnnxFactory
                 return [ProviderType.Dml, ProviderType.Cpu];
             case InferenceDeviceType.Gpu:
             {
-                var hasTensorRt = CudaDeviceId >= 0 && IsTensorRtAvailable();
-                var hasCuda = CudaDeviceId >= 0 && IsCudaAvailable();
-                var hasDirectMl = !hasTensorRt && !hasCuda && DmlDeviceId >= 0 && IsDirectMlAvailable();
-                var providers = SelectGpuProviders(hasTensorRt, hasCuda, hasDirectMl);
+                List<ProviderType> list = [];
+                SessionOptions? testSession = null;
+                var hasGpu = false;
+                if (!hasGpu && CudaDeviceId >= 0)
+                    // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
+                    try
+                    {
+                        testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
+                        list.Add(ProviderType.TensorRt);
+                        hasGpu = true;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
+                    }
+                    finally
+                    {
+                        testSession?.Dispose();
+                    }
 
-                if (providers.Length == 1)
-                {
-                    _logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
-                }
+                if (!hasGpu && DmlDeviceId >= 0)
+                    // dml效果不如tensorrt，但是比纯cuda稳定性强
+                    try
+                    {
+                        testSession = new SessionOptions();
+                        testSession.AppendExecutionProvider_DML(DmlDeviceId);
+                        list.Add(ProviderType.Dml);
+                        hasGpu = true;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
+                    }
+                    finally
+                    {
+                        testSession?.Dispose();
+                    }
 
-                return providers;
+                if (!hasGpu && CudaDeviceId >= 0)
+                    // cuda优先级比较低，因为跑起来并不太理想。
+                    try
+                    {
+                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
+                        list.Add(ProviderType.Cuda);
+                        hasGpu = true;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
+                    }
+                    finally
+                    {
+                        testSession?.Dispose();
+                    }
+
+                if (!hasGpu) _logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
+
+                //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
+                list.Add(ProviderType.Cpu);
+                return list.ToArray();
             }
 
             case InferenceDeviceType.OpenVino:
@@ -140,11 +180,6 @@ public class BgiOnnxFactory
                 // 目前来看比Dml强
                 try
                 {
-                    if (!IsNativeProviderAvailable("OpenVINOExecutionProvider"))
-                    {
-                        throw new NotSupportedException("当前 ONNX Runtime 未编译 OpenVINO provider");
-                    }
-
                     testSession = new SessionOptions();
                     testSession.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig(null));
                     testSession.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
@@ -165,115 +200,6 @@ public class BgiOnnxFactory
             default:
                 throw new InvalidEnumArgumentException("无效的推理设备");
         }
-    }
-
-    /// <summary>
-    /// 解析并返回 <c>SelectGpuProviders</c> 对应的结果。
-    /// </summary>
-    internal static ProviderType[] SelectGpuProviders(bool hasTensorRt, bool hasCuda, bool hasDirectMl)
-    {
-        if (hasTensorRt)
-        {
-            return hasCuda
-                ? [ProviderType.TensorRt, ProviderType.Cuda, ProviderType.Cpu]
-                : [ProviderType.TensorRt, ProviderType.Cpu];
-        }
-
-        if (hasCuda)
-        {
-            return [ProviderType.Cuda, ProviderType.Cpu];
-        }
-
-        return hasDirectMl
-            ? [ProviderType.Dml, ProviderType.Cpu]
-            : [ProviderType.Cpu];
-    }
-
-    /// <summary>
-    /// 解析并返回 <c>ParseAdditionalPaths</c> 对应的结果。
-    /// </summary>
-    internal static string[] ParseAdditionalPaths(string? additionalPath)
-    {
-        return string.IsNullOrWhiteSpace(additionalPath)
-            ? []
-            : additionalPath.Split(
-                Path.PathSeparator,
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    }
-
-    /// <summary>
-    /// 判断 <c>IsTensorRtAvailable</c> 所描述的条件是否成立。
-    /// </summary>
-    private bool IsTensorRtAvailable()
-    {
-        if (!IsNativeProviderAvailable("TensorrtExecutionProvider"))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
-            return true;
-        }
-        catch (Exception e)
-        {
-            _logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// 判断 <c>IsCudaAvailable</c> 所描述的条件是否成立。
-    /// </summary>
-    private bool IsCudaAvailable()
-    {
-        if (!IsNativeProviderAvailable("CUDAExecutionProvider"))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
-            return true;
-        }
-        catch (Exception e)
-        {
-            _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// 判断 <c>IsDirectMlAvailable</c> 所描述的条件是否成立。
-    /// </summary>
-    private bool IsDirectMlAvailable()
-    {
-        if (!IsNativeProviderAvailable("DmlExecutionProvider"))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var testSession = new SessionOptions();
-            testSession.AppendExecutionProvider_DML(DmlDeviceId);
-            return true;
-        }
-        catch (Exception e)
-        {
-            _logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// 判断 <c>IsNativeProviderAvailable</c> 所描述的条件是否成立。
-    /// </summary>
-    private bool IsNativeProviderAvailable(string providerName)
-    {
-        return _availableProviderNames.Contains(providerName);
     }
 
     /// <summary>
@@ -356,18 +282,15 @@ public class BgiOnnxFactory
         if (extraPath.Length <= 0) return;
 
         var pathVariables = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
-            ?.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToList() ?? new List<string>();
-        pathVariables.AddRange(extraPath.Where(static path => !string.IsNullOrWhiteSpace(path)));
+            ?.Split(Path.PathSeparator).ToList() ?? new List<string>();
+        pathVariables.AddRange(extraPath);
         if (pathVariables.Count <= 0)
         {
             _logger.LogWarning("[GpuAuto]SetCudaPath:No valid paths found.");
             return;
         }
 
-        var updatedPath = string.Join(
-            Path.PathSeparator,
-            pathVariables.Distinct(StringComparer.OrdinalIgnoreCase));
+        var updatedPath = string.Join(Path.PathSeparator, pathVariables.Distinct());
         _logger.LogDebug("[GpuAuto]修改进程PATH为:{UpdatedPath}", updatedPath);
         Environment.SetEnvironmentVariable("PATH", updatedPath, EnvironmentVariableTarget.Process);
     }
@@ -379,39 +302,13 @@ public class BgiOnnxFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        return new BgiYoloPredictor(model, () => CreateYoloRuntimePredictor(model));
-    }
+        // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
+        if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
 
-    /// <summary>
-    /// 创建 <c>CreateYoloRuntimePredictor</c> 对应的对象或资源。
-    /// </summary>
-    private YoloPredictor CreateYoloRuntimePredictor(BgiOnnxModel model)
-    {
-        foreach (var (providerTypes, isFirstAttempt) in EnumerateProviderFallbacks(ProviderTypes))
-        {
-            var (modelPath, generateCache) = ResolveModelLoad(model, providerTypes, isFirstAttempt);
-            try
-            {
-                using var sessionOptions = CreateSessionOptions(model, generateCache, providerTypes);
-                return new YoloPredictor(
-                    modelPath,
-                    new YoloPredictorOptions
-                    {
-                        SessionOptions = sessionOptions
-                    });
-            }
-            catch (Exception e) when (providerTypes.Length > 1)
-            {
-                // EP 能注册不代表能为具体模型成功建会话；去掉首选 EP 后用原模型继续回退。
-                _logger.LogWarning(
-                    e,
-                    "[ONNX]模型 {Model} 使用 provider {Provider} 初始化失败，尝试下一级 provider",
-                    model.Name,
-                    providerTypes[0]);
-            }
-        }
-
-        throw new InvalidOperationException($"模型 {model.Name} 没有可用的 ONNX provider");
+        var cached = GetCached(model);
+        return cached == null
+            ? new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, true))
+            : new BgiYoloPredictor(model, cached, CreateSessionOptions(model, false));
     }
 
     /// <summary>
@@ -426,58 +323,13 @@ public class BgiOnnxFactory
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
-        var configuredProviders = providerTypes ?? ProviderTypes;
-        foreach (var (fallbackProviders, isFirstAttempt) in EnumerateProviderFallbacks(configuredProviders))
-        {
-            var (modelPath, generateCache) = ResolveModelLoad(model, fallbackProviders, isFirstAttempt);
-            try
-            {
-                using var sessionOptions = CreateSessionOptions(model, generateCache, fallbackProviders);
-                return new InferenceSession(modelPath, sessionOptions);
-            }
-            catch (Exception e) when (fallbackProviders.Length > 1)
-            {
-                _logger.LogWarning(
-                    e,
-                    "[ONNX]模型 {Model} 使用 provider {Provider} 初始化失败，尝试下一级 provider",
-                    model.Name,
-                    fallbackProviders[0]);
-            }
-        }
-
-        throw new InvalidOperationException($"模型 {model.Name} 没有可用的 ONNX provider");
-    }
-
-    /// <summary>
-    /// 执行 <c>EnumerateProviderFallbacks</c> 对应的处理逻辑。
-    /// </summary>
-    internal static IEnumerable<(ProviderType[] ProviderTypes, bool IsFirstAttempt)> EnumerateProviderFallbacks(
-        ProviderType[] providerTypes)
-    {
-        // 逐次移除初始化失败的首选 EP；CPU 保持在链尾作为最终可移植回退。
-        for (var index = 0; index < providerTypes.Length; index++)
-        {
-            yield return (providerTypes[index..], index == 0);
-        }
-    }
-
-    /// <summary>
-    /// 解析并返回 <c>ResolveModelLoad</c> 对应的结果。
-    /// </summary>
-    private (string ModelPath, bool GenerateCache) ResolveModelLoad(
-        BgiOnnxModel model,
-        ProviderType[] providerTypes,
-        bool isFirstAttempt)
-    {
-        if (!EnableCache || !isFirstAttempt)
-        {
-            return (model.ModalPath, false);
-        }
+        if (!EnableCache)
+            return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
 
         var cached = GetCached(model, providerTypes);
         return cached == null
-            ? (model.ModalPath, true)
-            : (cached, false);
+            ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
+            : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
 
     /// <summary>
@@ -541,81 +393,66 @@ public class BgiOnnxFactory
         ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
-        var providerTypes = forcedProvider is null || forcedProvider.Length == 0
-            ? ProviderTypes
-            : forcedProvider;
-        try
-        {
-            for (var providerIndex = 0; providerIndex < providerTypes.Length; providerIndex++)
+        foreach (var type in
+                 forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider)
+            try
             {
-                var type = providerTypes[providerIndex];
-                try
+                switch (type)
                 {
-                    switch (type)
-                    {
-                        case ProviderType.Dml:
-                            // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
-                            sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
-                            sessionOptions.EnableMemoryPattern = false;
-                            sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-                            break;
-                        case ProviderType.Cpu:
-                            sessionOptions.AppendExecutionProvider_CPU();
-                            break;
-                        case ProviderType.Dnnl:
-                            sessionOptions.AppendExecutionProvider_Dnnl();
-                            break;
-                        case ProviderType.OpenVino:
-                            sessionOptions.AppendExecutionProvider("OpenVINO",
-                                GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
-                            sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
-                            break;
-                        case ProviderType.TensorRt:
-                            using (var options = new OrtTensorRTProviderOptions())
-                            {
-                                options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
-                                sessionOptions.AppendExecutionProvider_Tensorrt(options);
-                            }
+                    case ProviderType.Dml:
+                        // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
+                        sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
+                        sessionOptions.EnableMemoryPattern = false;
+                        sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                        break;
+                    case ProviderType.Cpu:
+                        sessionOptions.AppendExecutionProvider_CPU();
+                        // if (model.Name.Contains("PpOcr") || model.Name.Contains("Yap"))
+                        // {
+                        //     sessionOptions.IntraOpNumThreads = 2;  // 限制算子内部并行线程数
+                        //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）  
+                        // }
+                        break;
+                    case ProviderType.Dnnl:
+                        sessionOptions.AppendExecutionProvider_Dnnl();
+                        break;
+                    case ProviderType.OpenVino:
+                        sessionOptions.AppendExecutionProvider("OpenVINO",
+                            GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
+                        sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
+                        break;
+                    case ProviderType.TensorRt:
+                        using (var options = new OrtTensorRTProviderOptions())
+                        {
+                            options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
+                            sessionOptions.AppendExecutionProvider_Tensorrt(options);
+                        }
 
-                            break;
-                        case ProviderType.Cuda:
-                            using (var options = new OrtCUDAProviderOptions())
-                            {
-                                options.UpdateOptions(GetCudaProviderConfig());
-                                sessionOptions.AppendExecutionProvider_CUDA(options);
-                            }
+                        break;
+                    case ProviderType.Cuda:
+                        using (var options = new OrtCUDAProviderOptions())
+                        {
+                            options.UpdateOptions(GetCudaProviderConfig());
+                            sessionOptions.AppendExecutionProvider_CUDA();
+                        }
 
-                            break;
-                        default:
-                            throw new InvalidEnumArgumentException("无效的推理设备");
-                    }
-                }
-                catch (Exception e) when (providerIndex > 0)
-                {
-                    // 后续 EP 只是当前首选 EP 的补充回退；注册失败时保留已成功注册的首选 EP。
-                    _logger.LogWarning(
-                        "无法加载后备 ONNX provider {Provider}，跳过。({Err})",
-                        Enum.GetName(type),
-                        e.Message);
+                        break;
+                    default:
+                        throw new InvalidEnumArgumentException("无效的推理设备");
                 }
             }
-
-            if (!OptimizedModel || !genCache)
+            catch (Exception e)
             {
-                return sessionOptions;
+                _logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
+                    e.Message);
             }
 
-            var optPath = Path.Combine(model.CachePath, "optimized");
-            if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
-            sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
-            return sessionOptions;
-        }
-        catch
-        {
-            // CreateSessionOptions 尚未把所有权交给调用方，异常时必须在此释放 native handle。
-            sessionOptions.Dispose();
-            throw;
-        }
+        if (!OptimizedModel) return sessionOptions;
+        if (!genCache) return sessionOptions;
+        var optPath = Path.Combine(model.CachePath, "optimized");
+        if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
+        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
+        return sessionOptions;
     }
 
 
@@ -719,7 +556,7 @@ public class BgiOnnxFactory
         var result = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(OpenVinoDevice))
         {
-            result["device_type"] = OpenVinoDevice;
+            result["deice_type"] = OpenVinoDevice;
         }
 
         if (!string.IsNullOrWhiteSpace(cacheFolder))

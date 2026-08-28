@@ -15,9 +15,6 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class LinneaMiningHandler : IActionHandler
 {
-    /// <summary>
-    /// 运行 <c>RunAsync</c> 对应的任务流程。
-    /// </summary>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         var (mineCount, scanRounds) = ParseParams(waypointForTrack?.ActionParams);
@@ -42,8 +39,7 @@ public class LinneaMiningHandler : IActionHandler
             return;
         }
 
-        using var miningTask = new LinneaMiningTask(scanRounds, mineCount);
-        await miningTask.Start(ct);
+        await new LinneaMiningTask(scanRounds, mineCount).Start(ct);
     }
 
     private static (int mineCount, int scanRounds) ParseParams(string? actionParams)

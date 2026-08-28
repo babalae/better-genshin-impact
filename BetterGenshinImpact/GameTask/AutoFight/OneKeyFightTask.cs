@@ -138,21 +138,10 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     /// </summary>
     private Task FightTask(CancellationToken ct, bool releasePressedKeysOnStop)
     {
-        using var imageRegion = CaptureToRectArea();
-        var detectedScenes = new CombatScenes();
-        try
+        var imageRegion = CaptureToRectArea();
+        var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
+        if (!combatScenes.CheckTeamInitialized())
         {
-            detectedScenes.InitializeTeam(imageRegion);
-        }
-        catch
-        {
-            DisposeCombatScenes(detectedScenes);
-            throw;
-        }
-
-        if (!detectedScenes.CheckTeamInitialized())
-        {
-            DisposeCombatScenes(detectedScenes);
             if (_currentCombatScenes == null)
             {
                 Logger.LogError("首次队伍角色识别失败");
@@ -165,25 +154,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         }
         else
         {
-            var previousScenes = _currentCombatScenes;
-            var previousTask = _fightTask;
-            _currentCombatScenes = detectedScenes;
-            if (previousScenes is not null)
-            {
-                // 松开再快速按下时旧宏可能仍在后台运行；等其任务结束后再释放旧预测器，避免并发使用已释放场景。
-                if (previousTask is { IsCompleted: false })
-                {
-                    _ = previousTask.ContinueWith(
-                        _ => DisposeCombatScenes(previousScenes),
-                        CancellationToken.None,
-                        TaskContinuationOptions.ExecuteSynchronously,
-                        TaskScheduler.Default);
-                }
-                else
-                {
-                    DisposeCombatScenes(previousScenes);
-                }
-            }
+            _currentCombatScenes = combatScenes;
         }
 
         // 找到出战角色
@@ -287,21 +258,6 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             Logger.LogWarning("→ {Name}配置[{Priority}]为空，请先配置一键宏", activeAvatar.Name, _activeMacroPriority);
             return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// 释放当前实例持有的托管和原生资源。
-    /// </summary>
-    private static void DisposeCombatScenes(CombatScenes combatScenes)
-    {
-        try
-        {
-            combatScenes.Dispose();
-        }
-        catch (Exception e)
-        {
-            Logger.LogWarning(e, "释放一键战斗旧队伍场景失败");
         }
     }
 

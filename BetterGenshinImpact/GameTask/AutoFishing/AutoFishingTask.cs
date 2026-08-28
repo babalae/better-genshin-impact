@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
-    public class AutoFishingTask : ISoloTask, IDisposable
+    public class AutoFishingTask : ISoloTask
     {
         private readonly ILogger _logger = App.GetLogger<AutoFishingTask>();
         private readonly InputSimulator input = Simulation.SendInput;
@@ -257,9 +257,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             TaskControl.Sleep(millisecondsTimeout, _ct);
         }
 
-        /// <summary>
-        /// 设置 <c>SetUpTree</c> 对应的状态。
-        /// </summary>
         private BehaviourTree SetUpTree(AutoFishingBuilder builder)
         {
             var behaviourTree = new BehaviourTree(builder.Build());
@@ -268,15 +265,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 behaviourTree.AddVisitor(new ScreenshotVisitor(_logger));
             }
             return behaviourTree;
-        }
-
-        /// <summary>
-        /// 释放当前实例持有的托管和原生资源。
-        /// </summary>
-        public void Dispose()
-        {
-            _predictor.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }

@@ -89,8 +89,8 @@ Latest builds: [![](https://github.com/babalae/better-genshin-impact/actions/wor
 - [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (auto-prompted if missing)
 
 **⚠️ Notes:**
-1. Restart the app after changing the window size, game resolution, monitor, Windows HDR state, or SDR content brightness.
-2. Disable color-altering filters such as NVIDIA Filters. For HDR gameplay, select `WindowsGraphicsCapture (HDR)`; the app normalizes FP16 HDR input to SDR for recognition. `BitBlt` does not provide native HDR.
+1. Restart the app after changing the game resolution, Windows HDR state, or SDR content brightness. WGC HDR refreshes automatically when the game window moves to another monitor.
+2. Disable color-altering filters such as NVIDIA Filters. For HDR gameplay, select `WindowsGraphicsCapture (HDR)`; the app normalizes FP16 HDR input to SDR for recognition.
 3. Only supports `16:9` resolutions (recommended: `1920x1080` windowed).
 4. **Antivirus/security software may block simulated inputs. Add to whitelist.**
 

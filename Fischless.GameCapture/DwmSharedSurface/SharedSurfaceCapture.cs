@@ -18,7 +18,6 @@ public partial class SharedSurfaceCapture : IGameCapture
 
     // D3D 设备
     private Device? _d3dDevice;
-    private DeviceContext? _d3dContext;
 
     // 截图区域
     private ResourceRegion? _region;
@@ -32,7 +31,6 @@ public partial class SharedSurfaceCapture : IGameCapture
     private int _surfaceHeight;
 
     public bool IsCapturing { get; private set; }
-    public CaptureColorMode ColorMode => CaptureColorMode.Sdr;
 
     [LibraryImport("user32.dll", EntryPoint = "DwmGetDxSharedSurface", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -44,16 +42,12 @@ public partial class SharedSurfaceCapture : IGameCapture
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// 启动当前组件或任务的处理流程。
-    /// </summary>
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
         _hWnd = hWnd;
         User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
         (_region, _captureRect) = GetGameScreenInfo(hWnd);
         _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
-        _d3dContext = _d3dDevice.ImmediateContext;
 
         IsCapturing = true;
     }
@@ -92,14 +86,11 @@ public partial class SharedSurfaceCapture : IGameCapture
         return (region, new RECT(left, top, right, bottom));
     }
 
-    /// <summary>
-    /// 捕获并返回 <c>Capture</c> 对应的画面数据。
-    /// </summary>
     public GameCaptureFrame? Capture()
     {
         lock (LockObject)
         {
-            if (_d3dDevice == null || _d3dContext == null)
+            if (_d3dDevice == null)
             {
                 Debug.WriteLine("D3Device is null.");
                 return null;
@@ -132,7 +123,7 @@ public partial class SharedSurfaceCapture : IGameCapture
                 }
 
                 _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
-                var mat = _stagingTexture.CreateMat(_d3dContext, surfaceTexture, _region);
+                var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
                 if (mat == null)
                 {
                     return null;
@@ -143,45 +134,14 @@ public partial class SharedSurfaceCapture : IGameCapture
             catch (SharpDXException e)
             {
                 Debug.WriteLine($"SharpDXException: {e.Descriptor}");
-                // staging texture 绑定旧设备；设备重建时必须一并丢弃，禁止跨设备 Copy/Map。
-                _stagingTexture?.Dispose();
-                _stagingTexture = null;
-                _d3dContext?.Dispose();
-                _d3dContext = null;
                 _d3dDevice?.Dispose();
-                _d3dDevice = null;
-                try
-                {
-                    var replacementDevice = new Device(
-                        SharpDX.Direct3D.DriverType.Hardware,
-                        DeviceCreationFlags.BgraSupport);
-                    try
-                    {
-                        var replacementContext = replacementDevice.ImmediateContext;
-                        _d3dDevice = replacementDevice;
-                        _d3dContext = replacementContext;
-                    }
-                    catch
-                    {
-                        replacementDevice.Dispose();
-                        throw;
-                    }
-                }
-                catch (Exception rebuildException)
-                {
-                    Debug.WriteLine($"Failed to rebuild D3D device: {rebuildException}");
-                    // 设备与 context 均不可用时同步停止，避免 IsCapturing=true 却永久返回空帧。
-                    Stop();
-                }
+                _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport);
             }
 
             return null;
         }
     }
 
-    /// <summary>
-    /// 停止或重置 <c>Stop</c> 对应的状态。
-    /// </summary>
     public void Stop()
     {
         lock (LockObject)
@@ -189,8 +149,6 @@ public partial class SharedSurfaceCapture : IGameCapture
             _stagingTexture?.Dispose();
             _stagingTexture = null;
             _captureRect = null;
-            _d3dContext?.Dispose();
-            _d3dContext = null;
             _d3dDevice?.Dispose();
             _d3dDevice = null;
             _hWnd = 0;

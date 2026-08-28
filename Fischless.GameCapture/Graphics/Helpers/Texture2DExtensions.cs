@@ -6,30 +6,22 @@ namespace Fischless.GameCapture.Graphics.Helpers;
 
 public static class Texture2DExtensions
 {
-    /// <summary>
-    /// 创建 <c>CreateMat</c> 对应的对象或资源。
-    /// </summary>
-    public static Mat? CreateMat(
-        this Texture2D staging,
-        DeviceContext context,
-        Texture2D surfaceTexture,
-        ResourceRegion? region = null,
-        Action<Exception>? onError = null)
+    public static Mat? CreateMat(this Texture2D staging, Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null)
     {
         try
         {
             // Copy data
             if (region != null)
             {
-                context.CopySubresourceRegion(surfaceTexture, 0, region, staging, 0);
+                d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, region, staging, 0);
             }
             else
             {
-                context.CopyResource(surfaceTexture, staging);
+                d3dDevice.ImmediateContext.CopyResource(surfaceTexture, staging);
             }
 
             // 映射纹理以便CPU读取
-            var dataBox = context.MapSubresource(
+            var dataBox = d3dDevice.ImmediateContext.MapSubresource(
                 staging,
                 0,
                 MapMode.Read,
@@ -43,12 +35,11 @@ public static class Texture2DExtensions
             }
             finally
             {
-                context.UnmapSubresource(staging, 0);
+                d3dDevice.ImmediateContext.UnmapSubresource(staging, 0);
             }
         }
         catch (Exception e)
         {
-            onError?.Invoke(e);
             Debug.WriteLine("Failed to copy texture to mat.");
             Debug.WriteLine(e.StackTrace);
             return null;

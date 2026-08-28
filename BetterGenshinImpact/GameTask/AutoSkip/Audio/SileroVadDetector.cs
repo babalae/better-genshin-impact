@@ -19,9 +19,6 @@ internal sealed class SileroVadDetector : IDisposable
     private readonly float[] _state = new float[StatePlaneCount * StateBatchCount * StateSize];
     private readonly long[] _sampleRate = [SampleRate];
 
-    /// <summary>
-    /// 初始化 <c>SileroVadDetector</c> 的新实例。
-    /// </summary>
     public SileroVadDetector()
     {
         var modelPath = BgiOnnxModel.SileroVad.ModalPath;
@@ -30,8 +27,7 @@ internal sealed class SileroVadDetector : IDisposable
             throw new FileNotFoundException("Silero VAD 模型文件不存在", modelPath);
         }
 
-        using var sessionOptions = CreateSessionOptions();
-        _session = new InferenceSession(modelPath, sessionOptions);
+        _session = new InferenceSession(modelPath, CreateSessionOptions());
     }
 
     public void Reset()

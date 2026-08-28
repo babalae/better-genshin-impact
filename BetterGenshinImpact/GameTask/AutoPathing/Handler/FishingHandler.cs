@@ -16,9 +16,6 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class FishingHandler : IActionHandler
 {
-    /// <summary>
-    /// 运行 <c>RunAsync</c> 对应的任务流程。
-    /// </summary>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         // 钓鱼
@@ -27,7 +24,7 @@ public class FishingHandler : IActionHandler
         {
             throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
-        using AutoFishingTask autoFishingTask = new(AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig));
+        AutoFishingTask autoFishingTask = new(AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig));
 
         await autoFishingTask.Start(ct);
 

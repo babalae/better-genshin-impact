@@ -39,7 +39,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Vanara.PInvoke;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -80,7 +79,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
-    private readonly GenshinHdrRestartStateStore _hdrRestartStateStore = new();
 
     [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
@@ -92,9 +90,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private bool _isCustomNetworkBanner = false;
     private readonly ChildSessionService _childSessionService;
 
-    /// <summary>
-    /// 初始化 <c>HomePageViewModel</c> 的新实例。
-    /// </summary>
     public HomePageViewModel(
         IConfigService configService,
         TaskTriggerDispatcher taskTriggerDispatcher,
@@ -113,11 +108,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         // https://github.com/babalae/better-genshin-impact/issues/394
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
-            // 两种 Windows Graphics Capture 模式具有相同的最低系统版本要求。
-            _modeNames = _modeNames.Where(x =>
-                    x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString() &&
-                    x.EnumName != CaptureModes.WindowsGraphicsCaptureHdr.ToString())
-                .ToList();
+            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture
+            _modeNames = _modeNames.Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()).ToList();
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
@@ -224,9 +216,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     // {
     // }
 
-    /// <summary>
-    /// 处理 <c>OnStartCaptureTest</c> 对应的事件或状态更新。
-    /// </summary>
     [RelayCommand]
     private void OnStartCaptureTest()
     {
@@ -237,17 +226,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (hWnd != IntPtr.Zero)
             {
                 var captureWindow = new CaptureTestWindow();
-                try
-                {
-                    captureWindow.StartCapture(hWnd, GetCaptureMode());
-                    captureWindow.Show();
-                }
-                catch (Exception e)
-                {
-                    captureWindow.Close();
-                    _logger.LogError(e, "测试截图器启动失败");
-                    ThemedMessageBox.Error($"测试截图器启动失败：{e.GetBaseException().Message}");
-                }
+                captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
+                captureWindow.Show();
             }
             else
             {
@@ -256,11 +236,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
-    /// <summary>
-    /// 处理 <c>OnManualPickWindow</c> 对应的事件或状态更新。
-    /// </summary>
     [RelayCommand]
-    private async Task OnManualPickWindow()
+    private void OnManualPickWindow()
     {
         var picker = new PickerWindow();
         if (picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle, out var hWnd))
@@ -268,23 +245,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (hWnd != IntPtr.Zero)
             {
                 _hWnd = hWnd;
-                var captureMode = GetCaptureMode();
-                var target = ClassifyCaptureTarget(hWnd);
-                if (target.Status == GenshinCaptureTargetStatus.Unavailable)
-                {
-                    _logger.LogError(target.Error, "无法读取手动选择窗口的进程身份");
-                    await ShowGenshinEditionUnknownAsync();
-                    return;
-                }
-
-                // 手动选择器允许任意已确认的非桌面目标；只有国服/国际服客户端才触碰 HDR 注册表。
-                if (target.Status == GenshinCaptureTargetStatus.Desktop &&
-                    !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, target.Edition))
-                {
-                    return;
-                }
-
-                Start(hWnd, captureMode);
+                Start(hWnd);
             }
             else
             {
@@ -304,35 +265,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     private bool CanStartTrigger() => StartButtonEnabled;
 
-    /// <summary>
-    /// 处理 <c>OnStartTriggerAsync</c> 对应的事件或状态更新。
-    /// </summary>
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
-        // 先把字符串配置归一化为有效枚举，后续 HDR 策略与实际启动共用同一个结果。
-        var captureMode = GetCaptureMode();
+        await DisableGenshinHdrIfNeededAsync();
+
         var hWnd = SystemControl.FindGenshinImpactHandle();
-        var configuredEdition = ResolveConfiguredGenshinEdition();
-        var initialTarget = hWnd != IntPtr.Zero
-            ? ClassifyCaptureTarget(hWnd)
-            : configuredEdition == GenshinGameEdition.Unknown
-                ? GenshinCaptureTargetClassification.NonRegistry()
-                : GenshinCaptureTargetClassification.Desktop(configuredEdition);
-        if (initialTarget.Status == GenshinCaptureTargetStatus.Unavailable)
-        {
-            _logger.LogError(initialTarget.Error, "无法读取自动选择游戏窗口的进程身份");
-            await ShowGenshinEditionUnknownAsync();
-            return;
-        }
-
-        var edition = initialTarget.Edition;
-        if (initialTarget.Status == GenshinCaptureTargetStatus.Desktop &&
-            !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, edition))
-        {
-            return;
-        }
-
         if (hWnd == IntPtr.Zero)
         {
             if (Config.GenshinStartConfig.LinkedStartEnabled)
@@ -347,21 +285,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 if (hWnd != IntPtr.Zero)
                 {
                     TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
-                    // StartFromLocalAsync 可能返回启动前已存在但当时尚无主窗口的旧进程；必须按最终 PID 再检查一次。
-                    var finalTarget = ClassifyCaptureTarget(hWnd);
-                    if (finalTarget.Status == GenshinCaptureTargetStatus.Unavailable)
-                    {
-                        _logger.LogError(finalTarget.Error, "无法读取关联启动后游戏窗口的进程身份");
-                        await ShowGenshinEditionUnknownAsync();
-                        return;
-                    }
-
-                    edition = finalTarget.Edition;
-                    if (finalTarget.Status == GenshinCaptureTargetStatus.Desktop &&
-                        !await DisableGenshinHdrIfNeededAsync(captureMode, hWnd, edition))
-                    {
-                        return;
-                    }
                 }
                 else
                 {
@@ -376,378 +299,28 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             }
         }
 
-        Start(hWnd, captureMode);
+        Start(hWnd);
     }
 
-    /// <summary>
-    /// 执行 <c>DisableGenshinHdrIfNeededAsync</c> 对应的处理逻辑。
-    /// </summary>
-    private async Task<bool> DisableGenshinHdrIfNeededAsync(
-        CaptureModes captureMode,
-        IntPtr runningGameHandle,
-        GenshinGameEdition edition)
+    private Task DisableGenshinHdrIfNeededAsync()
     {
-        if (captureMode == CaptureModes.WindowsGraphicsCaptureHdr || edition == GenshinGameEdition.Unknown)
-        {
-            return true;
-        }
-
-        var registryTarget = GenshinHdrRegistryHelper.GetHdrRegistryFullValuePath(edition);
-        if (registryTarget is null)
-        {
-            _logger.LogError("无法确定 {Edition} 对应的原神 HDR 注册表目标", edition);
-            await ShowHdrRegistryFailureAsync("无法确定当前游戏版本对应的 HDR 注册表项。");
-            return false;
-        }
-
-        var policyLockResult = await _hdrRestartStateStore.TryAcquirePolicyLockAsync();
-        if (!policyLockResult.Success)
-        {
-            _logger.LogError(policyLockResult.Error, "获取原神 HDR 跨进程策略锁失败");
-            await ShowHdrRestartStateFailureAsync();
-            return false;
-        }
-
-        using var policyLock = policyLockResult.LockHandle!;
-
-        var processId = GetProcessId(runningGameHandle);
-        var restartCheck = _hdrRestartStateStore.CheckAndPrune(
-            processId,
-            edition,
-            registryTarget);
-        if (restartCheck.Status == GenshinHdrRestartCheckStatus.StateUnavailable)
-        {
-            _logger.LogError(restartCheck.Error, "读取或清理原神 HDR 待重启状态失败");
-            policyLock.Dispose();
-            await ShowHdrRestartStateFailureAsync();
-            return false;
-        }
-
-        if (restartCheck.Status == GenshinHdrRestartCheckStatus.RestartRequired)
-        {
-            var registryRequiresManualAction = false;
-            if (Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
-            {
-                // marker 可能在注册表写入前因 BetterGI 异常退出而留下；重试写 0，但旧游戏仍必须重启。
-                var retryPreparationResult = default(GenshinHdrRestartStateWriteResult);
-                var retryResult = GenshinHdrRegistryHelper.TryDisableHdr(
-                    edition,
-                    target =>
-                    {
-                        // 即使当前拦截来自旧 Applied 屏障，再次从 1 写 0 也必须建立新代次。
-                        retryPreparationResult = _hdrRestartStateStore.TryPrepareRegistryChange(edition, target);
-                        return retryPreparationResult.Success;
-                    });
-                registryRequiresManualAction = IsHdrRegistryFailure(retryResult.Status);
-                if (registryRequiresManualAction)
-                {
-                    _logger.LogError(
-                        retryResult.Error ?? retryPreparationResult.Error,
-                        "重试关闭原神 HDR 注册表失败，目标：{RegistryTarget}",
-                        registryTarget);
-                }
-                else if (!TryCompleteHdrRegistryChange(edition, registryTarget))
-                {
-                    policyLock.Dispose();
-                    await ShowHdrRestartStateFailureAsync();
-                    return false;
-                }
-            }
-            else
-            {
-                var readResult = GenshinHdrRegistryHelper.GetHdrState(edition);
-                if (readResult.State is
-                    GenshinHdrRegistryValueState.Disabled or GenshinHdrRegistryValueState.NotConfigured)
-                {
-                    // 用户已手动关闭时提交 Pending 代次；当前旧进程仍需重启，后续新进程才能放行。
-                    if (!TryCompleteHdrRegistryChange(edition, registryTarget))
-                    {
-                        policyLock.Dispose();
-                        await ShowHdrRestartStateFailureAsync();
-                        return false;
-                    }
-                }
-                else
-                {
-                    registryRequiresManualAction = true;
-                    if (readResult.Error is not null)
-                    {
-                        _logger.LogError(readResult.Error, "读取原神 HDR 注册表状态失败");
-                    }
-                }
-            }
-
-            policyLock.Dispose();
-            await ShowHdrRestartRequiredAsync(registryRequiresManualAction);
-            return false;
-        }
-
         if (!Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
         {
-            return true;
+            return Task.CompletedTask;
         }
 
-        var processIdentityResult = _hdrRestartStateStore.ReadProcessIdentity(processId);
-        var markerWriteResult = default(GenshinHdrRestartStateWriteResult);
-        Func<string, bool> prepareBeforeWrite = target =>
+        if (!GenshinHdrRegistryHelper.TryDisableHdr(out _))
         {
-            if (runningGameHandle == IntPtr.Zero)
-            {
-                // 即使尚无可见窗口，也要先写版本级 Pending 代次，覆盖隐藏窗口和同版本多进程。
-                markerWriteResult = _hdrRestartStateStore.TryPrepareRegistryChange(edition, target);
-                return markerWriteResult.Success;
-            }
-
-            if (processIdentityResult.Status != GenshinProcessIdentityReadStatus.Found)
-            {
-                return false;
-            }
-
-            // 注册表写 0 前必须先同步落盘；失败时 helper 不会执行注册表写入。
-            markerWriteResult = _hdrRestartStateStore.TryMarkRestartRequired(
-                processIdentityResult.Identity,
-                edition,
-                target);
-            return markerWriteResult.Success;
-        };
-
-        // 只查询并修改当前运行或即将关联启动的版本，不能触碰另一版本的 HDR 状态。
-        var disableResult = GenshinHdrRegistryHelper.TryDisableHdr(edition, prepareBeforeWrite);
-        switch (disableResult.Status)
-        {
-            case GenshinHdrDisableStatus.NotConfigured:
-            case GenshinHdrDisableStatus.AlreadyDisabled:
-                if (!TryCompleteHdrRegistryChange(edition, registryTarget))
-                {
-                    policyLock.Dispose();
-                    await ShowHdrRestartStateFailureAsync();
-                    return false;
-                }
-
-                // 防御并发实例在本次初查后提交新屏障；策略锁内复核后才可放行。
-                var finalCheck = _hdrRestartStateStore.CheckAndPrune(processId, edition, registryTarget);
-                if (finalCheck.Status == GenshinHdrRestartCheckStatus.StateUnavailable)
-                {
-                    _logger.LogError(finalCheck.Error, "最终复核原神 HDR 待重启状态失败");
-                    policyLock.Dispose();
-                    await ShowHdrRestartStateFailureAsync();
-                    return false;
-                }
-
-                if (finalCheck.Status == GenshinHdrRestartCheckStatus.RestartRequired)
-                {
-                    policyLock.Dispose();
-                    await ShowHdrRestartRequiredAsync(registryRequiresManualAction: false);
-                    return false;
-                }
-
-                return true;
-            case GenshinHdrDisableStatus.Disabled:
-                if (!TryCompleteHdrRegistryChange(edition, registryTarget))
-                {
-                    policyLock.Dispose();
-                    await ShowHdrRestartStateFailureAsync();
-                    return false;
-                }
-
-                _logger.LogWarning(
-                    "检测到原神 HDR 已开启并已自动关闭，注册表目标：{RegistryTarget}",
-                    disableResult.RegistryTarget);
-                if (runningGameHandle != IntPtr.Zero)
-                {
-                    // 注册表修改无法改变当前进程；持久化 marker 会跨 BetterGI 重启继续拦截。
-                    policyLock.Dispose();
-                    await ShowHdrRestartRequiredAsync(registryRequiresManualAction: false);
-                    return false;
-                }
-
-                return true;
-            case GenshinHdrDisableStatus.PreparationFailed:
-                var preparationError = markerWriteResult.Error ??
-                                       processIdentityResult.Error ??
-                                       disableResult.Error;
-                _logger.LogError(
-                    preparationError,
-                    "保存原神 HDR 待重启状态失败；为避免状态丢失，未修改注册表");
-                policyLock.Dispose();
-                await ShowHdrRestartStateFailureAsync();
-                return false;
-            case GenshinHdrDisableStatus.ReadFailed:
-            case GenshinHdrDisableStatus.WriteFailed:
-            case GenshinHdrDisableStatus.UnsupportedEdition:
-            default:
-                _logger.LogError(
-                    disableResult.Error,
-                    "读取或关闭原神 HDR 注册表失败，目标：{RegistryTarget}",
-                    registryTarget);
-                policyLock.Dispose();
-                await ShowHdrRegistryFailureAsync(
-                    disableResult.Error?.GetBaseException().Message ?? "未知错误");
-                return false;
-        }
-    }
-
-    /// <summary>
-    /// 解析并返回 <c>ResolveConfiguredGenshinEdition</c> 对应的结果。
-    /// </summary>
-    private GenshinGameEdition ResolveConfiguredGenshinEdition()
-    {
-        var installPath = Config.GenshinStartConfig.InstallPath;
-        return Config.GenshinStartConfig.LinkedStartEnabled &&
-               File.Exists(installPath) &&
-               GenshinHdrRegistryHelper.TryResolveEditionFromExecutablePath(
-                   installPath,
-                   out var configuredEdition)
-            ? configuredEdition
-            : GenshinGameEdition.Unknown;
-    }
-
-    /// <summary>
-    /// 识别并返回 <c>ClassifyCaptureTarget</c> 对应的结果。
-    /// </summary>
-    private static GenshinCaptureTargetClassification ClassifyCaptureTarget(IntPtr hWnd)
-    {
-        using var process = SystemControl.GetProcessByHandle(hWnd);
-        if (process is null)
-        {
-            return GenshinCaptureTargetClassification.Unavailable(
-                new InvalidOperationException("无法根据窗口句柄取得进程。"));
+            return Task.CompletedTask;
         }
 
-        try
-        {
-            return GenshinHdrRegistryHelper.TryResolveEditionFromProcessName(
-                process.ProcessName,
-                out var edition)
-                ? GenshinCaptureTargetClassification.Desktop(edition)
-                : GenshinCaptureTargetClassification.NonRegistry();
-        }
-        catch (Exception e)
-        {
-            return GenshinCaptureTargetClassification.Unavailable(e);
-        }
+        // 这行日志可能看不到
+        _logger.LogWarning(
+            "检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
+        return Task.CompletedTask;
     }
 
-    private enum GenshinCaptureTargetStatus
-    {
-        Desktop,
-        NonRegistry,
-        Unavailable,
-    }
-
-    private readonly record struct GenshinCaptureTargetClassification(
-        GenshinCaptureTargetStatus Status,
-        GenshinGameEdition Edition = GenshinGameEdition.Unknown,
-        Exception? Error = null)
-    {
-        /// <summary>
-        /// 执行 <c>Desktop</c> 对应的处理逻辑。
-        /// </summary>
-        public static GenshinCaptureTargetClassification Desktop(GenshinGameEdition edition) =>
-            edition == GenshinGameEdition.Unknown
-                ? Unavailable(new InvalidOperationException("无法确认配置的桌面客户端版本。"))
-                : new(GenshinCaptureTargetStatus.Desktop, edition);
-
-        /// <summary>
-        /// 执行 <c>NonRegistry</c> 对应的处理逻辑。
-        /// </summary>
-        public static GenshinCaptureTargetClassification NonRegistry() =>
-            new(GenshinCaptureTargetStatus.NonRegistry);
-
-        /// <summary>
-        /// 执行 <c>Unavailable</c> 对应的处理逻辑。
-        /// </summary>
-        public static GenshinCaptureTargetClassification Unavailable(Exception error) =>
-            new(GenshinCaptureTargetStatus.Unavailable, Error: error);
-    }
-
-    /// <summary>
-    /// 获取 <c>GetProcessId</c> 对应的数据。
-    /// </summary>
-    private static uint GetProcessId(IntPtr hWnd)
-    {
-        if (hWnd == IntPtr.Zero)
-        {
-            return 0;
-        }
-
-        _ = User32.GetWindowThreadProcessId(hWnd, out var processId);
-        return processId;
-    }
-
-    /// <summary>
-    /// 判断 <c>IsHdrRegistryFailure</c> 所描述的条件是否成立。
-    /// </summary>
-    private static bool IsHdrRegistryFailure(GenshinHdrDisableStatus status)
-    {
-        return status is GenshinHdrDisableStatus.PreparationFailed or
-            GenshinHdrDisableStatus.ReadFailed or
-            GenshinHdrDisableStatus.WriteFailed or
-            GenshinHdrDisableStatus.UnsupportedEdition;
-    }
-
-    /// <summary>
-    /// 尝试执行 <c>TryCompleteHdrRegistryChange</c> 对应的操作。
-    /// </summary>
-    private bool TryCompleteHdrRegistryChange(
-        GenshinGameEdition edition,
-        string registryTarget)
-    {
-        var result = _hdrRestartStateStore.TryCompleteRegistryChange(
-            edition,
-            registryTarget,
-            DateTime.UtcNow.Ticks);
-        if (result.Success)
-        {
-            return true;
-        }
-
-        _logger.LogError(result.Error, "提交原神 HDR 版本变更状态失败");
-        return false;
-    }
-
-    /// <summary>
-    /// 执行 <c>ShowHdrRestartRequiredAsync</c> 对应的处理逻辑。
-    /// </summary>
-    private static async Task ShowHdrRestartRequiredAsync(bool registryRequiresManualAction)
-    {
-        var message = registryRequiresManualAction
-            ? "当前游戏仍在使用修改前的 HDR 状态，且 HDR 注册表尚未确认关闭。请手动关闭原神 HDR 并重启游戏后再启动 BetterGI。"
-            : "当前游戏仍在使用修改前的 HDR 状态。请重启游戏后再启动 BetterGI，以确保截图颜色正确。";
-        await ThemedMessageBox.WarningAsync(message);
-    }
-
-    /// <summary>
-    /// 执行 <c>ShowHdrRestartStateFailureAsync</c> 对应的处理逻辑。
-    /// </summary>
-    private static async Task ShowHdrRestartStateFailureAsync()
-    {
-        await ThemedMessageBox.ErrorAsync(
-            "无法读取或保存原神 HDR 待重启状态。为避免 BetterGI 重启后错误放行旧游戏进程，本次未修改 HDR 设置，也未启动 SDR 捕获。请检查 LocalAppData/BetterGI/State 目录权限后重试。");
-    }
-
-    /// <summary>
-    /// 执行 <c>ShowHdrRegistryFailureAsync</c> 对应的处理逻辑。
-    /// </summary>
-    private static async Task ShowHdrRegistryFailureAsync(string error)
-    {
-        await ThemedMessageBox.ErrorAsync(
-            $"无法读取或关闭原神 HDR 设置：{error}\n为避免 SDR 截图过曝或泛白，本次未启动捕获。请手动关闭原神 HDR 后重试。");
-    }
-
-    /// <summary>
-    /// 执行 <c>ShowGenshinEditionUnknownAsync</c> 对应的处理逻辑。
-    /// </summary>
-    private static async Task ShowGenshinEditionUnknownAsync()
-    {
-        await ThemedMessageBox.ErrorAsync(
-            "已找到游戏窗口，但无法确认它属于国服还是国际服。为避免跳过对应版本的 HDR 安全检查，本次未启动捕获。请确认使用官方桌面客户端后重试。");
-    }
-
-    /// <summary>
-    /// 启动当前组件或任务的处理流程。
-    /// </summary>
-    private void Start(IntPtr hWnd, CaptureModes? requestedCaptureMode = null)
+    private void Start(IntPtr hWnd)
     {
         Debug.WriteLine($"原神启动句柄{hWnd}");
         lock (this)
@@ -761,28 +334,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             if (!TaskDispatcherEnabled)
             {
                 _hWnd = hWnd;
-                try
-                {
-                    _taskDispatcher.Start(
-                        hWnd,
-                        requestedCaptureMode ?? GetCaptureMode(),
-                        Config.TriggerInterval);
-                }
-                catch (Exception e)
-                {
-                    _taskDispatcher.Stop();
-                    // TaskContext.Init 已在创建捕获器前将上下文标记为已初始化；启动失败时
-                    // TaskDispatcherEnabled 仍为 false，常规 Stop() 不会再次进入清理分支，必须在此回滚。
-                    var taskContext = TaskContext.Instance();
-                    taskContext.IsInitialized = false;
-                    taskContext.GameHandle = IntPtr.Zero;
-                    taskContext.LinkedStartGenshinTime = DateTime.MinValue;
-                    taskContext.CaptureColorMode = CaptureColorMode.Sdr;
-                    _hWnd = IntPtr.Zero;
-                    _logger.LogError(e, "截图器启动失败");
-                    ThemedMessageBox.Error($"截图器启动失败：{e.GetBaseException().Message}");
-                    return;
-                }
+                _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
                 _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
                 _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
                 _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
@@ -797,23 +349,17 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
-    /// <summary>
-    /// 获取 <c>GetCaptureMode</c> 对应的数据。
-    /// </summary>
     private CaptureModes GetCaptureMode()
     {
-        if (Config.CaptureMode.TryToCaptureMode(out var mode))
+        try
         {
-            // 持久化配置可能来自更高版本系统，启动前仍需再次验证能力而不只过滤下拉列表。
-            if (OsVersionHelper.IsWindows10_1903_OrGreater ||
-                mode is not (CaptureModes.WindowsGraphicsCapture or CaptureModes.WindowsGraphicsCaptureHdr))
-            {
-                return mode;
-            }
+            return Config.CaptureMode.ToCaptureMode();
         }
-
-        TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
-        return CaptureModes.BitBlt;
+        catch (Exception e)
+        {
+            TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
+            return CaptureModes.BitBlt;
+        }
     }
 
     private bool CanStopTrigger() => StopButtonEnabled;

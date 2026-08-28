@@ -37,8 +37,6 @@ public class BitBltSession : IDisposable
     // Bitmap 内存池
     private readonly ConcurrentStack<IntPtr> _bufferPool = [];
 
-    private volatile bool _disposed;
-
     // 窗口原宽高
     public int Width { get; }
     public int Height { get; }
@@ -47,7 +45,7 @@ public class BitBltSession : IDisposable
     ///     不是所有的失效情况都能被检测到
     /// </summary>
     /// <returns></returns>
-    public bool Invalid => _disposed || _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == 0;
+    public bool Invalid => _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == 0;
 
     public BitBltSession(HWND hWnd, int w, int h)
     {
@@ -142,19 +140,10 @@ public class BitBltSession : IDisposable
         }
     }
 
-    /// <summary>
-    /// 释放当前实例持有的托管和原生资源。
-    /// </summary>
     public void Dispose()
     {
         lock (_lockObject)
         {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
             ReleaseResources();
         }
         GC.SuppressFinalize(this);
@@ -167,11 +156,6 @@ public class BitBltSession : IDisposable
     {
         lock (_lockObject)
         {
-            if (_disposed)
-            {
-                return null;
-            }
-
             // 截图
             var success = Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height,
                 _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY);
@@ -179,30 +163,19 @@ public class BitBltSession : IDisposable
 
             // 新Mat
             var buffer = AcquireBuffer();
-            try
+            var step = Width * 3;
+            if (_stride == step)
             {
-                var step = Width * 3;
-                if (_stride == step)
-                {
-                    Buffer.MemoryCopy(_bitsPtr.ToPointer(), buffer.ToPointer(), _bufferSize, _bufferSize);
-                }
-                else
-                {
-                    for (var i = 0; i < Height; i++)
-                    {
-                        Buffer.MemoryCopy((void*)(_bitsPtr + _stride * i), (void*)(buffer + step * i), step, step);
-                    }
-                }
-
-                // 从这里开始 buffer 的所有权交给 BitBltMat，并在 Mat.Dispose 时归还。
-                return BitBltMat.FromPixelData(this, Height, Width, MatType.CV_8UC3, buffer, step);
+                Buffer.MemoryCopy(_bitsPtr.ToPointer(), buffer.ToPointer(), _bufferSize, _bufferSize);
             }
-            catch
+            else
             {
-                // 复制或 Mat 构造失败时所有权尚未移交，必须立即归还，避免非托管内存泄漏。
-                ReleaseBuffer(buffer);
-                throw;
+                for (var i = 0; i < Height; i++)
+                {
+                    Buffer.MemoryCopy((void*)(_bitsPtr + _stride * i), (void*)(buffer + step * i), step, step);
+                }
             }
+            return BitBltMat.FromPixelData(this, Height, Width, MatType.CV_8UC3, buffer, step);
         }
     }
 
@@ -216,26 +189,9 @@ public class BitBltSession : IDisposable
         return buffer;
     }
 
-    /// <summary>
-    /// 执行 <c>ReleaseBuffer</c> 对应的处理逻辑。
-    /// </summary>
     public void ReleaseBuffer(IntPtr buffer)
     {
-        if (buffer == IntPtr.Zero)
-        {
-            return;
-        }
-
-        lock (_lockObject)
-        {
-            if (_disposed)
-            {
-                Marshal.FreeHGlobal(buffer);
-                return;
-            }
-
-            _bufferPool.Push(buffer);
-        }
+        _bufferPool.Push(buffer);
     }
 
     /// <summary>
@@ -274,7 +230,7 @@ public class BitBltSession : IDisposable
 
         _bitsPtr = IntPtr.Zero;
 
-        while (_bufferPool.TryPop(out var buffer))
+        foreach (var buffer in _bufferPool)
         {
             Marshal.FreeHGlobal(buffer);
         }

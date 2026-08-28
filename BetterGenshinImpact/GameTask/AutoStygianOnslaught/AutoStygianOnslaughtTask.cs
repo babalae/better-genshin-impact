@@ -636,9 +636,6 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         Logger.LogInformation("========== 战斗循环结束 ==========");
     }
 
-    /// <summary>
-    /// 运行 <c>ExecuteBattleRound</c> 对应的任务流程。
-    /// </summary>
     private async Task ExecuteBattleRound(BvPage page)
     {
         // 等待进入战斗场地（从 BossSelect 转换到 BattleArena）
@@ -653,7 +650,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         else
         {
             // 初始化战斗
-            using var combatScenes = await InitializeCombatScenesLoop();
+            var combatScenes = await InitializeCombatScenesLoop();
             var combatCommands = await PrepareForBattleLoop(combatScenes);
 
             Logger.LogInformation($"{Name}：执行战斗策略");
@@ -822,36 +819,21 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         }
     }
 
-    /// <summary>
-    /// 初始化 <c>InitializeCombatScenesLoop</c> 所需的状态和资源。
-    /// </summary>
     private async Task<CombatScenes> InitializeCombatScenesLoop()
     {
         CombatScenes? result = null;
-        try
+        var found = await NewRetry.WaitForAction(() =>
         {
-            var found = await NewRetry.WaitForAction(() =>
-            {
-                result?.Dispose();
-                using var capture = CaptureToRectArea();
-                result = new CombatScenes();
-                result.InitializeTeam(capture);
-                return result.CheckTeamInitialized();
-            }, _ct, 10, 500);
+            result = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            return result.CheckTeamInitialized();
+        }, _ct, 10, 500);
 
-            if (!found || result == null)
-            {
-                result?.Dispose();
-                throw new Exception("识别队伍角色失败！");
-            }
-            Logger.LogInformation($"{Name}：队伍初始化成功");
-            return result;
-        }
-        catch
+        if (!found || result == null)
         {
-            result?.Dispose();
-            throw;
+            throw new Exception("识别队伍角色失败！");
         }
+        Logger.LogInformation($"{Name}：队伍初始化成功");
+        return result;
     }
 
     private async Task<List<CombatCommand>> PrepareForBattleLoop(CombatScenes combatScenes)

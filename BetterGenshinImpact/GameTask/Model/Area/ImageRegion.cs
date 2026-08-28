@@ -6,7 +6,6 @@ using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
-using Fischless.GameCapture;
 using OpenCvSharp;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -26,11 +25,6 @@ public class ImageRegion : Region
     private bool _disposed;
 
     public Mat SrcMat { get; }
-
-    /// <summary>
-    /// 当前图像帧实际使用的捕获色彩模式。
-    /// </summary>
-    public CaptureColorMode ColorMode { get; internal set; }
 
     public Mat CacheGreyMat
     {
@@ -60,16 +54,10 @@ public class ImageRegion : Region
         }
     }
 
-    /// <summary>
-    /// 初始化图像区域，并从父图像区域继承本帧色彩模式。
-    /// </summary>
     public ImageRegion(Mat mat, int x, int y, Region? owner = null, INodeConverter? converter = null,
         DrawContent? drawContent = null) : base(x, y, mat.Width, mat.Height, owner, converter, drawContent)
     {
         SrcMat = mat;
-        ColorMode = owner is ImageRegion imageOwner
-            ? imageOwner.ColorMode
-            : CaptureColorMode.Sdr;
     }
 
     /// <summary>

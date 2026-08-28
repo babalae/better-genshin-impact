@@ -8,7 +8,6 @@ namespace Fischless.GameCapture.BitBlt;
 public class BitBltCapture : IGameCapture
 {
     public bool IsCapturing { get; private set; }
-    public CaptureColorMode ColorMode => CaptureColorMode.Sdr;
     private readonly Stopwatch _sizeCheckTimer = new();
     private readonly ReaderWriterLockSlim _lockSlim = new();
     private volatile nint _hWnd; // 需要加锁
@@ -25,12 +24,10 @@ public class BitBltCapture : IGameCapture
 
     public GameCaptureFrame? Capture() => Capture(false);
 
-    /// <summary>
-    /// 启动当前组件或任务的处理流程。
-    /// </summary>
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
-        if (settings?.TryGetValue("autoFixWin11BitBlt", out var value) == true && value is true)
+        if (settings == null || !settings.TryGetValue("autoFixWin11BitBlt", out var value)) return;
+        if (value is true)
         {
             BitBltRegistryHelper.SetDirectXUserGlobalSettings();
         }
