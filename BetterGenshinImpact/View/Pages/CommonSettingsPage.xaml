@@ -1762,7 +1762,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="切换队伍时，在队伍列表中每次滑动向下移动的栏数，数值越大跨越队伍速度越快。有效值为1-5。"
+                                  Text="切换队伍时，在队伍列表中单次滚动下移的栏数。有效值1-5，数值越大滚动越快。"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -1795,7 +1795,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="切换队伍过程中所有固定等待时间的放大系数，数值大于1会放慢节奏，小于1会加快节奏（存在不稳定风险）。"
+                                  Text="切换队伍过程中各固定等待时间的放大系数。有效值0.2-5，数值越大节奏越慢，越小节奏越快（过小可能不稳定）。"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
