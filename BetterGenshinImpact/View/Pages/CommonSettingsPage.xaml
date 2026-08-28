@@ -1774,7 +1774,7 @@
                                   MaxDecimalPlaces="1"
                                   Minimum="1"
                                   SmallChange="0.5"
-                                  SpinButtonPlacementMode="Inline"
+                                  SpinButtonPlacementMode="Hidden"
                                   ValidationMode="InvalidInputOverwritten"
                                   Value="{Binding Config.OtherConfig.SwitchPartyScrollDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
@@ -1807,7 +1807,7 @@
                                   MaxDecimalPlaces="2"
                                   Minimum="0.2"
                                   SmallChange="0.1"
-                                  SpinButtonPlacementMode="Inline"
+                                  SpinButtonPlacementMode="Hidden"
                                   ValidationMode="InvalidInputOverwritten"
                                   Value="{Binding Config.OtherConfig.SwitchPartyHardcodeDelayFactor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>

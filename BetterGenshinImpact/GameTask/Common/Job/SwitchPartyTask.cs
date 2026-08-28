@@ -67,7 +67,7 @@ public class SwitchPartyTask
 
                 for (int i = 0; i < 7; i++) // 检查 7 次
                 {
-                    await Delay(Ms(600), ct);
+                    await Delay(600, ct);
                     using var raCheck = CaptureToRectArea();
                     if (Bv.IsInPartyViewUi(raCheck))
                     {
