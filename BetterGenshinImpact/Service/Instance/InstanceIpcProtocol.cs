@@ -23,6 +23,12 @@ public static class InstanceOperations
     public const string WebViewList = "webview.list";
     public const string WebViewSend = "webview.send";
     public const string WebViewMessage = "webview.message";
+
+    /// <summary>
+    /// 已注册的客户端（桌面分身 / WebView）请求根实例关闭自身。
+    /// 仅根实例处理该操作。
+    /// </summary>
+    public const string ApplicationShutdown = "instance.shutdownRoot";
 }
 
 public sealed class InstanceIpcEnvelope
