@@ -1778,6 +1778,39 @@
                                   ValidationMode="InvalidInputOverwritten"
                                   Value="{Binding Config.OtherConfig.SwitchPartyScrollDistance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="换队硬编码延迟系数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="切换队伍过程中所有固定等待时间的放大系数，数值大于1会放慢节奏，小于1会加快节奏（存在不稳定风险）。"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="100"
+                                  Margin="0,0,36,0"
+                                  AcceptsExpression="False"
+                                  Maximum="5"
+                                  MaxDecimalPlaces="2"
+                                  Minimum="0.2"
+                                  SmallChange="0.1"
+                                  SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding Config.OtherConfig.SwitchPartyHardcodeDelayFactor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
                 <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
