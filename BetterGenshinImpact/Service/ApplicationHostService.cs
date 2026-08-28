@@ -10,7 +10,9 @@ using System.Windows;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -20,7 +22,8 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class ApplicationHostService(
     IServiceProvider serviceProvider,
-    InstanceService instanceService) : IHostedService
+    InstanceService instanceService,
+    ILogger<ApplicationHostService> logger) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
 
@@ -48,12 +51,19 @@ public class ApplicationHostService(
     /// </summary>
     private async Task HandleActivationAsync()
     {
+        var cmdOptions = CommandLineOptions.Instance;
+
+        // 根实例通过 --start-clone-task 一键拉起桌面分身执行任务，随后退出自身。
+        if (cmdOptions.HasStartCloneTask && cmdOptions.InstanceType == BetterGiInstanceType.Primary)
+        {
+            await LaunchCloneTaskAndExitAsync(cmdOptions.CloneTaskArguments);
+            return;
+        }
+
         if (!Application.Current.Windows.OfType<MainWindow>().Any())
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
             _navigationWindow!.ShowWindow();
-
-            var cmdOptions = CommandLineOptions.Instance;
 
             if (cmdOptions.HasTaskArgs)
             {
@@ -112,5 +122,45 @@ public class ApplicationHostService(
         }
         //
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 根实例的一键拉起入口：在桌面分身中启动 BetterGI 并执行指定任务，随后关闭自身。
+    /// 任务由分身完成，分身会依据 <c>--close-on-complete</c> 自行关闭并请求主身关闭。
+    /// </summary>
+    private async Task LaunchCloneTaskAndExitAsync(string[] taskArguments)
+    {
+        try
+        {
+            var childSessionService = serviceProvider.GetService<ChildSessionService>();
+            if (childSessionService is null)
+            {
+                logger.LogWarning("当前环境不支持桌面分身，无法通过 --start-clone-task 拉起任务。");
+                return;
+            }
+
+            logger.LogInformation(
+                "主身将通过桌面分身执行任务：{TaskArguments}",
+                string.Join(" ", taskArguments));
+            await childSessionService.LaunchBetterGiWithTaskAsync(taskArguments);
+            logger.LogInformation("已请求桌面分身执行任务，主身即将退出。");
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "拉起桌面分身执行任务失败。");
+        }
+        finally
+        {
+            // 主身已把任务交给桌面分身，自身退出。若尚未进入消息循环则直接结束进程。
+            var application = Application.Current;
+            if (application is null)
+            {
+                Environment.Exit(0);
+            }
+            else
+            {
+                _ = application.Dispatcher.BeginInvoke(new Action(application.Shutdown));
+            }
+        }
     }
 }

@@ -29,6 +29,23 @@ internal static class ChildSessionProcessLauncher
             startInfo.WorkingDirectory);
     }
 
+    /// <summary>
+    /// 以管理员权限在桌面分身中启动 BetterGI，并附带要执行的任务参数。
+    /// 任务参数之后会追加 <see cref="CommandLineOptions.CloseOnCompleteArgument"/>，
+    /// 使分身在任务完成后自动关闭自身并请求主身 BGI 关闭。
+    /// </summary>
+    internal static Task LaunchBetterGiAsync(
+        uint childSessionId,
+        string[] taskArguments)
+    {
+        var startInfo = CreateBetterGiStartInfo(taskArguments);
+        return LaunchElevatedAsync(
+            childSessionId,
+            startInfo.ExecutablePath,
+            startInfo.Arguments,
+            startInfo.WorkingDirectory);
+    }
+
     internal static Task LaunchElevatedAsync(uint childSessionId, string executablePath)
     {
         var fullPath = ValidateExecutablePath(executablePath);
@@ -53,7 +70,7 @@ internal static class ChildSessionProcessLauncher
                 workingDirectory));
     }
 
-    private static ProcessLaunchInfo CreateBetterGiStartInfo()
+    private static ProcessLaunchInfo CreateBetterGiStartInfo(string[]? taskArguments = null)
     {
         var currentProcessPath = Environment.ProcessPath
             ?? throw new InvalidOperationException("无法取得 BetterGI 程序路径。");
@@ -74,14 +91,34 @@ internal static class ChildSessionProcessLauncher
             return new ProcessLaunchInfo(
                 fullProcessPath,
                 $"{QuoteArgument(Path.GetFullPath(entryAssemblyPath))} "
-                + $"{CommandLineOptions.InstanceArgument} childSession",
+                + $"{BuildInstanceArguments(taskArguments)}",
                 AppContext.BaseDirectory);
         }
 
         return new ProcessLaunchInfo(
             ValidateExecutablePath(fullProcessPath),
-            $"{CommandLineOptions.InstanceArgument} childSession",
+            BuildInstanceArguments(taskArguments),
             AppContext.BaseDirectory);
+    }
+
+    /// <summary>
+    /// 构造桌面分身的启动参数：固定的 <c>--instance childSession</c>，可选的任务参数，
+    /// 以及用于任务完成后自关闭的 <see cref="CommandLineOptions.CloseOnCompleteArgument"/>。
+    /// </summary>
+    private static string BuildInstanceArguments(string[]? taskArguments)
+    {
+        var arguments = $"{CommandLineOptions.InstanceArgument} childSession";
+        if (taskArguments is { Length: > 0 })
+        {
+            foreach (var taskArgument in taskArguments)
+            {
+                arguments += " " + QuoteArgument(taskArgument);
+            }
+
+            arguments += " " + CommandLineOptions.CloseOnCompleteArgument;
+        }
+
+        return arguments;
     }
 
     private static void LaunchWithTemporaryTask(
