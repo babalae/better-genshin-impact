@@ -138,7 +138,7 @@ public class SwitchPartyTask
             () => partyViewBtn.Click(),// 点击队伍选择按钮
             ct,
             4,
-            500
+            Ms(500)
         );
         if (!menu)
         {
@@ -154,7 +154,7 @@ public class SwitchPartyTask
                 switchRa = ocrRa;
                 partyDeleteBtn = switchRa.Find(ElementRecognition.Get("PartyBtnDelete", switchRa));
                 return partyDeleteBtn.IsExist();
-            }, ct, 5);
+            }, ct, 5, Ms(1000));
 
             if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
             {
@@ -302,7 +302,7 @@ public class SwitchPartyTask
         {
             using var ra2 = CaptureToRectArea();
             return ra2.Find(ElementRecognition.Get("PartyBtnDelete", ra2)).IsEmpty();
-        }, ct, 10);
+        }, ct, 10, Ms(1000));
         if (!partyChooseUiClosed)
         {
             throw new PartySetupFailedException("选择队伍失败，等待队伍切换超时！");
