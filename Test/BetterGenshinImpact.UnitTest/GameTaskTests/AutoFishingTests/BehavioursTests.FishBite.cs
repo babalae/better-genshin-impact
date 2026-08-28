@@ -30,7 +30,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .FishBite("-", new FakeLogger(), new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent())
+                        .CheckFishBite("-", new FakeLogger(), OcrService, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
@@ -60,14 +60,13 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeInputSimulator input = new FakeInputSimulator();
 
             //
-            FishBiteTimeout fishBiteTimeoutBehaviour = new FishBiteTimeout("-", 15, logger, input, blackboard, fakeTimeProvider);
             var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion1, imageRegion2], bb!))
                         .Parallel("-", new ParallelPolicy.SuccessOnOne())
-                            .FishBite("-", logger, input, OcrService, drawContent: new FakeDrawContent())
-                            .Leaf(() => fishBiteTimeoutBehaviour)
+                            .CheckFishBite("-", logger, OcrService, drawContent: new FakeDrawContent())
+                            .FishBiteTimeout("-", 15, logger)
                         .End()
                     .End()
                 .End()
@@ -76,7 +75,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             Assert.Equal(Status.Running, actual);
-            Assert.False(fishBiteTimeoutBehaviour.leftButtonClicked);
 
             //
             fakeTimeProvider.Advance(TimeSpan.FromSeconds(15));
@@ -86,7 +84,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             Assert.Equal(Status.Running, actual);
-            Assert.True(fishBiteTimeoutBehaviour.leftButtonClicked);
 
             //
             fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
@@ -96,7 +93,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             Assert.Equal(Status.Success, actual);
-            Assert.True(fishBiteTimeoutBehaviour.leftButtonClicked);
         }
 
         [Theory]
@@ -117,7 +113,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .FishBite("-", new FakeLogger(), new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer)
+                        .CheckFishBite("-", new FakeLogger(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer)
                     .End()
                 .End()
                 .Build();
