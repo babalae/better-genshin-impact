@@ -42,7 +42,7 @@ public class BgiOnnxModel
     /// <summary>
     /// 用于捡东西等的大世界模型
     /// </summary>
-    public static readonly BgiOnnxModel BgiWorld = Register("BgiTree", @"Assets\Model\World\bgi_world.onnx");
+    public static readonly BgiOnnxModel BgiWorld = Register("BgiWorld", @"Assets\Model\World\bgi_world.onnx");
 
     /// <summary>
     /// 矿物识别模型
