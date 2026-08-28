@@ -219,12 +219,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public BehaviourKeyAccess<BaitType?> SelectedBait { get; private set; } = null!;
 
         /// <summary>
-        /// 不钓啦（重新进入钓鱼模式时清除，避免上次鱼饵不足导致的 Abort 持续生效）
-        /// </summary>
-        [BlackboardKey(Access = Access.Write)]
-        public BehaviourKeyAccess<bool> Abort { get; private set; } = null!;
-
-        /// <summary>
         /// 镜头俯仰是否被行为重置
         /// 进入钓鱼模式后、以及提竿后，镜头的俯仰会被重置。进行相关动作前须优化俯仰角，避免鱼塘被脚下的悬崖遮挡。
         /// </summary>
@@ -300,13 +294,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                // 成功进入钓鱼模式：清除上次可能残留的 Abort（如鱼饵不足触发退出后重新进入）
-                if (Abort.Exists() && Abort.Get())
-                {
-                    _logger.LogInformation("清除残留的退出标记，重新开始钓鱼");
-                    Abort.Set(false);
-                }
-
+                // 注：不在此处清除 Abort——Abort 是全局终止标志（WholeProcessTimeout/FindFishTimeout 也会设置），
+                // 且鱼饵不足触发的退出后整棵行为树会结束、黑板随任务重建自动复位，无需在此清除。
                 _logger.LogInformation("进入钓鱼模式");
                 return Status.Success;
             }

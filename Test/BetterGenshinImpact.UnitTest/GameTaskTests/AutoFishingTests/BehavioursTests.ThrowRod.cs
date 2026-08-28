@@ -407,6 +407,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.Equal(Status.Failure, s3);
             Assert.True(abortAccess.Exists() && abortAccess.Get(), "确认弹窗渲染完成后应置 Abort 以退出钓鱼模式");
             Assert.Equal(2, input.FakeKeyboard.EscapeKeyPressCount);
+            Assert.False(input.FakeMouse.IsLeftButtonDown, "置 Abort 退出前应释放左键");
         }
 
         /// <summary>
@@ -465,6 +466,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.Equal(Status.Failure, s4);
             Assert.True(abortAccess.Exists() && abortAccess.Get());
             Assert.Equal(3, input.FakeKeyboard.EscapeKeyPressCount);
+            Assert.False(input.FakeMouse.IsLeftButtonDown, "置 Abort 退出前应释放左键");
         }
 
         /// <summary>
@@ -510,6 +512,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.Equal(Status.Failure, s4);
             Assert.True(abortAccess.Exists() && abortAccess.Get());
             Assert.Equal(3, input.FakeKeyboard.EscapeKeyPressCount);
+            Assert.False(input.FakeMouse.IsLeftButtonDown, "置 Abort 退出前应释放左键");
         }
     }
 }

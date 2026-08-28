@@ -26,6 +26,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// 暴露键盘模拟器以断言按键次数（如 ESC）。
         /// </summary>
         public FakeKeyboardSimulator FakeKeyboard => _keyboard;
+
+        /// <summary>
+        /// 暴露鼠标模拟器以断言按键状态（如左键是否释放）。
+        /// </summary>
+        public FakeMouseSimulator FakeMouse => _mouse;
     }
 
     internal class FakeInputDeviceStateAdaptor : IInputDeviceStateAdaptor

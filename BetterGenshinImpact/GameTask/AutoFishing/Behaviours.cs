@@ -521,6 +521,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (_outOfBaitPopupStage == 2)
             {
                 // 阶段 2：确认弹窗已渲染（本 tick 截图为新帧），置 Abort 触发冒泡
+                input.Mouse.LeftButtonUp(); // 释放左键，避免抛竿举竿阶段的按下状态残留导致镜头转动
                 _raiseHookConfirmed = false;
                 _raiseHookConfirmedByTarget = false;
                 _leftButtonDownRetryTimes = 0;
@@ -549,6 +550,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (_outOfBaitPopupDismissRetryTimes > _outOfBaitPopupDismissRetry)
                 {
                     logger.LogWarning("多次按下 ESC 后仍未关闭鱼饵不足弹窗，放弃本轮抛竿并退出钓鱼模式");
+                    input.Mouse.LeftButtonUp(); // 释放左键，避免抛竿举竿阶段的按下状态残留导致镜头转动
                     _raiseHookConfirmed = false;
                     _raiseHookConfirmedByTarget = false;
                     _leftButtonDownRetryTimes = 0;
