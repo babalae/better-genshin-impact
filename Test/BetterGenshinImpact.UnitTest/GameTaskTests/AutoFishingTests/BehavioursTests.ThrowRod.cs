@@ -34,7 +34,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
+                        .LiftRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
@@ -71,7 +71,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
+                        .LiftRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
@@ -106,7 +106,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 11), bb!))
-                        .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
+                        .LiftRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
@@ -148,7 +148,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             selectedBaitAccess.Set(BaitType.FakeFlyBait);
             var fishpondAccess = blackboard.GrantWrite<Fishpond>(null!, "Fishpond");
 
-            var sut = new ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, blackboard, new FakeTimeProvider(), drawContent: new FakeDrawContent());
+            var sut = new LiftRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, blackboard, new FakeTimeProvider(), drawContent: new FakeDrawContent());
             var tree = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
@@ -202,7 +202,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
-                        .ThrowRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
+                        .LiftRod("-", new FakeLogger(), new FakeInputSimulator(), Predictor, fakeTimeProvider, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
@@ -254,7 +254,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                                 .FailureIsSuccess("重复抛竿")
                                     .Sequence("-", true)
                                         .MoveViewpointDown("调整视角至俯视", logger, input)
-                                        .ThrowRod("抛竿", logger, input, Predictor, timeProvider, drawContent)
+                                        .LiftRod("抛竿", logger, input, Predictor, timeProvider, drawContent)
                                     .End()
                                 .End()
                                 .CheckThrowRodResult("抛竿检查")

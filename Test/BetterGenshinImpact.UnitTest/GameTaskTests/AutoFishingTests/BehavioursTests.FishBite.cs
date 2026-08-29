@@ -30,7 +30,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .FishBite("-", new FakeLogger(), new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent())
+                        .CheckFishBite("-", new FakeLogger(), OcrService, drawContent: new FakeDrawContent())
                     .End()
                 .End()
                 .Build();
@@ -43,7 +43,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [Theory]
         [InlineData(@"20250306111749714_CheckThrowRod_Succeeded.png", @"20250306111752053_FishBite_Succeeded.png")]
         /// <summary>
-        /// 测试鱼咬钩超时，在超时提竿时鱼咬钩了，结果为成功
+        /// 测试鱼咬钩超时，在超时提竿时鱼咬钩了，整体也能成功
+        /// 通过先超时提竿，但继续检查咬钩一定时间，来保证咬钩一定能被后续拉条处理
         /// </summary>
         public async Task FishBite_Tree_Timeout_ShouldSuccess(string screenshot1080pCheckThrowRod, string screenshot1080pFishBite)
         {
@@ -66,7 +67,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion1, imageRegion2], bb!))
                         .Parallel("-", new ParallelPolicy.SuccessOnOne())
-                            .FishBite("-", logger, input, OcrService, drawContent: new FakeDrawContent())
+                            .CheckFishBite("-", logger, OcrService, drawContent: new FakeDrawContent())
                             .Leaf(() => fishBiteTimeoutBehaviour)
                         .End()
                     .End()
@@ -117,7 +118,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .FishBite("-", new FakeLogger(), new FakeInputSimulator(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer)
+                        .CheckFishBite("-", new FakeLogger(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer)
                     .End()
                 .End()
                 .Build();
