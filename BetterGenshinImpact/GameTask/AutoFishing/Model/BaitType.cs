@@ -25,5 +25,7 @@ public enum BaitType
     [Description("槲梭饵")]
     BerryBait,
     [Description("清白饵")]
-    RefreshingLakkaBait
+    RefreshingLakkaBait,
+    [Description("闪烁饵")]
+    GlimmeringBait
 }
