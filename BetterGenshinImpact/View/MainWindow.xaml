@@ -191,6 +191,13 @@
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="AI Agent"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:AgentPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Bot24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="设置"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:CommonSettingsPage}">

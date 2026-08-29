@@ -41,6 +41,7 @@ public class InstanceIpcProtocolTests
         Assert.Equal(BetterGiInstanceType.WebView, options.InstanceType);
         Assert.True(options.HasExplicitInstanceType);
         Assert.Equal(CommandLineAction.None, options.Action);
+        Assert.False(options.McpEnabled);
     }
 
     [Fact]
@@ -74,6 +75,32 @@ public class InstanceIpcProtocolTests
         Assert.Equal(BetterGiInstanceType.Primary, options.InstanceType);
         Assert.False(options.HasExplicitInstanceType);
         Assert.Equal(CommandLineAction.None, options.Action);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldParseMcpOptionsWithoutCreatingTaskAction()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--mcp-port",
+            "6123"
+        ]);
+
+        Assert.True(options.McpEnabled);
+        Assert.Equal(6123, options.McpPort);
+        Assert.Equal(CommandLineAction.None, options.Action);
+        Assert.False(options.HasTaskArgs);
+    }
+
+    [Fact]
+    public void CommandLineParser_PrimaryInstanceShouldEnableLocalMcpByDefault()
+    {
+        var options = CommandLineOptions.Parse(["BetterGI.exe"]);
+
+        Assert.Equal(BetterGiInstanceType.Primary, options.InstanceType);
+        Assert.True(options.McpEnabled);
+        Assert.Equal(CommandLineOptions.DefaultMcpPort, options.McpPort);
     }
 
     [Fact]

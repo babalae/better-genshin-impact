@@ -520,7 +520,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 根据用户配置中的渠道名称解析仓库URL
     /// </summary>
-    private static string? ResolveRepoUrl(ScriptConfig scriptConfig)
+    public static string? ResolveRepoUrl(ScriptConfig scriptConfig)
     {
         var channelName = scriptConfig.SelectedChannelName;
 
@@ -2366,6 +2366,67 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         var filePath = GetSubscriptionFilePath(GetCurrentRepoFolderName());
         return ReadSubscriptionFile(filePath);
+    }
+
+    /// <summary>
+    /// 只修改当前仓库的订阅清单，不安装或删除用户脚本文件。
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SetSubscribedPathsForCurrentRepoAsync(IEnumerable<string> paths)
+    {
+        var normalizedPaths = NormalizeSubscriptionPaths(paths);
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            SetSubscribedPathsForCurrentRepo(normalizedPaths);
+            return normalizedPaths;
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// 从当前仓库订阅清单移除路径，不删除已经安装到 User 目录的脚本。
+    /// </summary>
+    public async Task<IReadOnlyList<string>> RemoveSubscribedPathsForCurrentRepoAsync(IEnumerable<string> paths)
+    {
+        var toRemove = NormalizeSubscriptionPaths(paths).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            var remaining = GetSubscribedPathsForCurrentRepo()
+                .Where(x => !toRemove.Contains(x))
+                .ToList();
+            SetSubscribedPathsForCurrentRepo(remaining);
+            return remaining;
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    private static List<string> NormalizeSubscriptionPaths(IEnumerable<string> paths)
+    {
+        var normalized = paths
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Replace('\\', '/').Trim().Trim('/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var path in normalized)
+        {
+            var first = path.Split('/', 2)[0];
+            if (Path.IsPathRooted(path)
+                || path.Split('/').Any(x => x is "." or "..")
+                || !PathMapper.ContainsKey(first))
+            {
+                throw new ArgumentException($"无效订阅路径：{path}。首段必须是 {string.Join("、", PathMapper.Keys)} 之一，且不能包含相对路径跳转。");
+            }
+        }
+
+        return normalized;
     }
 
     /// <summary>

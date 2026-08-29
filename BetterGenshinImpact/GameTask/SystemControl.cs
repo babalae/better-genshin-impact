@@ -278,6 +278,12 @@ public class SystemControl
             restartArgs.Add(CommandLineOptions.InstanceArgument);
             restartArgs.Add("webview");
         }
+        var commandLineOptions = CommandLineOptions.Instance;
+        if (commandLineOptions.McpEnabled)
+        {
+            restartArgs.Add(CommandLineOptions.McpPortArgument);
+            restartArgs.Add(commandLineOptions.McpPort.ToString());
+        }
         restartArgs.Add(CommandLineOptions.RestartFromProcessIdArgument);
         restartArgs.Add(Environment.ProcessId.ToString());
 
@@ -334,6 +340,12 @@ public class SystemControl
             _ = User32.BringWindowToTop(hWnd);
             _ = User32.SetActiveWindow(hWnd);
         }
+    }
+
+    public static bool MinimizeGameWindow()
+    {
+        var hWnd = FindGenshinImpactHandle();
+        return hWnd != IntPtr.Zero && User32.ShowWindow(hWnd, ShowWindowCommand.SW_MINIMIZE);
     }
 
     public static bool IsFullScreenMode(IntPtr hWnd)

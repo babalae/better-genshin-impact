@@ -272,6 +272,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public ChildSessionConfig ChildSessionConfig { get; set; } = new();
 
+    /// <summary>
+    /// 内置 AI Agent 与外部 OpenAI-compatible 服务设置。
+    /// </summary>
+    public AgentConfig AgentConfig { get; set; } = new();
+
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -309,6 +314,7 @@ public partial class AllConfig : ObservableObject
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
         ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
+        AgentConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 

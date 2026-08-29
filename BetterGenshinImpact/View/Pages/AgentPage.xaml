@@ -1,0 +1,207 @@
+<Page x:Class="BetterGenshinImpact.View.Pages.AgentPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      d:DataContext="{d:DesignInstance Type=viewModel:AgentPageViewModel}"
+      mc:Ignorable="d">
+    <Page.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Page.Resources>
+
+    <Grid Margin="22,14,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="2,0,2,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="38" Height="38" Margin="0,0,11,0"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="10">
+                    <ui:SymbolIcon Symbol="Bot24" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="BetterGI Agent" />
+                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding ViewModel.Config.Model, TargetNullValue=未选择模型, FallbackValue=未选择模型}" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                <ui:ProgressRing Width="18" Height="18" Margin="0,0,9,0" IsIndeterminate="True"
+                                 Visibility="{Binding ViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ui:Button Width="38" Height="34" Margin="0,0,7,0" Padding="0"
+                           Command="{Binding ViewModel.OpenSettingsCommand}"
+                           Icon="{ui:SymbolIcon Settings24}" ToolTip="Agent 设置" />
+                <ui:Button Height="34" Command="{Binding ViewModel.ClearCommand}" Content="新对话" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Margin="0,0,0,8" Padding="10,8"
+                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="9">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ViewModel.Activities.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel>
+                    <TextBlock FontSize="12" FontWeight="SemiBold" Text="执行活动" />
+                    <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl Margin="0,5,0,0" ItemsSource="{Binding ViewModel.Activities}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="52" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding Kind}" />
+                                    <TextBlock Grid.Column="1" FontSize="11" Text="{Binding Content}" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="12" />
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ViewModel.Messages.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <ui:SymbolIcon Width="44" Height="44" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Symbol="Chat24" />
+                <TextBlock Margin="0,12,0,0" HorizontalAlignment="Center" FontSize="17" FontWeight="SemiBold"
+                           Text="今天想让 BetterGI 做什么？" />
+                <TextBlock Width="450" Margin="0,7,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="检查游戏就绪状态、查找路线、配置脚本、运行任务，或者停止正在执行的自动化。" />
+            </StackPanel>
+
+            <ListBox Grid.Row="1" Margin="10" Padding="5"
+                     Background="Transparent" BorderThickness="0"
+                     HorizontalContentAlignment="Stretch"
+                     ItemsSource="{Binding ViewModel.Messages}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <b:Interaction.Behaviors>
+                    <behavior:ScrollToNewestItemBehavior />
+                </b:Interaction.Behaviors>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="IsTabStop" Value="False" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="5,4">
+                            <Border x:Name="Bubble" MaxWidth="680" Padding="14,11"
+                                    HorizontalAlignment="Left"
+                                    Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                                    CornerRadius="11">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock x:Name="RoleText" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{Binding DisplayRole}" />
+                                        <ui:ProgressRing Width="12" Height="12" Margin="7,0,0,0"
+                                                         IsIndeterminate="True"
+                                                         Visibility="{Binding IsStreaming, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                    <TextBox x:Name="ContentBox" Margin="0,5,0,0" Padding="0"
+                                             Background="Transparent" BorderThickness="0"
+                                             IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                             Text="{Binding Content}" TextWrapping="Wrap"
+                                             VerticalScrollBarVisibility="Disabled" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Role}" Value="user">
+                                <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Bubble" Property="Background" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                <Setter TargetName="RoleText" Property="Foreground" Value="White" />
+                                <Setter TargetName="ContentBox" Property="Foreground" Value="White" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Role}" Value="system">
+                                <Setter TargetName="Bubble" Property="Background" Value="#22E81123" />
+                                <Setter TargetName="RoleText" Property="Foreground" Value="#FFE81123" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <Border Grid.Row="2" Margin="0,10,0,0" Padding="10"
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="11">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBox MinHeight="72" MaxHeight="170" AcceptsReturn="True"
+                            PlaceholderText="输入操作目标…（Ctrl+Enter 发送）"
+                            Text="{Binding ViewModel.InputText, UpdateSourceTrigger=PropertyChanged}"
+                            TextWrapping="Wrap" VerticalScrollBarVisibility="Auto">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding ViewModel.SendCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
+                <ui:Button Grid.Column="1" MinWidth="76" Margin="10,0,0,0" Appearance="Primary"
+                           Command="{Binding ViewModel.SendCommand}" Content="发送" />
+                <ui:Button Grid.Column="2" MinWidth="68" Margin="7,0,0,0"
+                           Command="{Binding ViewModel.CancelCommand}" Content="停止" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="2,7,2,0" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="{Binding ViewModel.StatusText}" TextWrapping="Wrap" />
+            </Grid>
+        </Border>
+    </Grid>
+</Page>
