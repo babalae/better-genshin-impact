@@ -57,7 +57,9 @@ public sealed class I18nService : INotifyPropertyChanged
 
     public string Translate(string key)
     {
-        return _translations.TryGetValue(key, out var translation) ? translation : key;
+        return _translations.TryGetValue(key, out var translation) && !string.IsNullOrWhiteSpace(translation)
+            ? translation
+            : key;
     }
 
     private IReadOnlyDictionary<string, string> LoadTranslations(string language)

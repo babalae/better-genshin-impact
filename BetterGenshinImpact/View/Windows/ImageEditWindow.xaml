@@ -4,7 +4,8 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="编辑背景图片"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T 编辑背景图片}"
                  Width="920"
                  Height="680"
                  MinWidth="640"
@@ -31,24 +32,24 @@
                 <ui:Button MinWidth="96"
                            Margin="0,0,8,0"
                            Click="RotateLeft_Click"
-                           Content="&#8634; 左转 90°"
-                           ToolTip="逆时针旋转 90 度" />
+                           Content="{i18n:T ↺ 左转 90°}"
+                           ToolTip="{i18n:T 逆时针旋转 90 度}" />
                 <ui:Button MinWidth="96"
                            Margin="0,0,8,0"
                            Click="RotateRight_Click"
-                           Content="&#8635; 右转 90°"
-                           ToolTip="顺时针旋转 90 度" />
+                           Content="{i18n:T ↻ 右转 90°}"
+                           ToolTip="{i18n:T 顺时针旋转 90 度}" />
                 <ui:Button MinWidth="96"
                            Margin="0,0,16,0"
                            Click="ResetCrop_Click"
-                           Content="&#9633; 重置裁剪"
-                           ToolTip="清除裁剪区域，保留整张图片" />
+                           Content="{i18n:T □ 重置裁剪}"
+                           ToolTip="{i18n:T 清除裁剪区域，保留整张图片}" />
                 <ui:TextBlock Name="InfoText"
                               Margin="8,0,0,0"
                               VerticalAlignment="Center"
                               FontSize="12"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="在图片上拖拽可框选裁剪区域；拖动框内移动、贴边缩放" />
+                              Text="{i18n:T 在图片上拖拽可框选裁剪区域；拖动框内移动、贴边缩放}" />
             </StackPanel>
 
             <!-- 图片预览 + 裁剪框覆盖层 -->
@@ -93,23 +94,23 @@
                 <ui:Button Grid.Column="0"
                            Width="88"
                            Click="CancelButton_Click"
-                           Content="取消" />
+                           Content="{i18n:T 取消}" />
                 <ui:Button Grid.Column="2"
                            Margin="0,0,8,0"
                            Width="110"
                            Click="UseOriginalButton_Click"
-                           Content="使用原图"
-                           ToolTip="不做任何修改，直接使用选择的图片" />
+                           Content="{i18n:T 使用原图}"
+                           ToolTip="{i18n:T 不做任何修改，直接使用选择的图片}" />
                 <ui:Button Grid.Column="2"
                            Margin="0,0,130,0"
                            Width="120"
                            Appearance="Primary"
                            Click="SaveButton_Click"
-                           Content="保存并使用"
-                           ToolTip="应用旋转与裁剪，另存为副本后使用" />
+                           Content="{i18n:T 保存并使用}"
+                           ToolTip="{i18n:T 应用旋转与裁剪，另存为副本后使用}" />
             </Grid>
         </ui:Grid>
-        <ui:TitleBar Title="编辑背景图片">
+        <ui:TitleBar Title="{i18n:T 编辑背景图片}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

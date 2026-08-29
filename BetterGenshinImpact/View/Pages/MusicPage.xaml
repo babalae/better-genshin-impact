@@ -7,6 +7,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              d:DesignHeight="800"
              d:DesignWidth="1180"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -229,40 +230,41 @@
                         <TextBlock VerticalAlignment="Center"
                                    FontSize="17"
                                    FontWeight="SemiBold"
-                                   Text="我的曲库" />
+                                   Text="{i18n:T 我的曲库}" />
                         <TextBlock Grid.Column="1"
                                    Margin="14,0"
                                    VerticalAlignment="Center"
                                    FontSize="12"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                   Text="{Binding ViewModel.MusicFolderDisplayText, StringFormat=曲谱目录：{0}}"
                                    TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}" />
+                                   ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}">
+                            <Run Text="{i18n:T 曲谱目录：}" /><Run Text="{Binding ViewModel.MusicFolderDisplayText}" />
+                        </TextBlock>
                         <ui:Button Grid.Column="2"
                                    Width="36"
                                    Height="34"
                                    Margin="0,0,7,0"
                                    Command="{Binding ViewModel.OpenFolderCommand}"
                                    Icon="{ui:SymbolIcon Open24}"
-                                   ToolTip="打开当前目录" />
+                                   ToolTip="{i18n:T 打开当前目录}" />
                         <ui:Button Grid.Column="3"
                                    Height="34"
                                    Margin="0,0,7,0"
                                    Appearance="Primary"
                                    Command="{Binding ViewModel.ChooseFolderCommand}"
-                                   Content="选择目录"
+                                   Content="{i18n:T 选择目录}"
                                    Icon="{ui:SymbolIcon FolderOpen24}" />
                         <ui:Button Grid.Column="4"
                                    Height="34"
                                    Margin="0,0,7,0"
                                    Command="{Binding ViewModel.DeleteMusicFolderCommand}"
                                    CommandParameter="{Binding SelectedValue, ElementName=MusicFolderHistoryComboBox}"
-                                   Content="删除记录"
+                                   Content="{i18n:T 删除记录}"
                                    Icon="{ui:SymbolIcon Delete24}" />
                         <ui:Button Grid.Column="5"
                                    Height="34"
                                    Command="{Binding ViewModel.OpenSettingsCommand}"
-                                   Content="设置"
+                                   Content="{i18n:T 设置}"
                                    Icon="{ui:SymbolIcon Settings24}" />
                     </Grid>
 
@@ -280,7 +282,7 @@
                                   ItemsSource="{Binding ViewModel.MusicFolderHistory}"
                                   SelectedValue="{Binding ViewModel.SelectedMusicFolder, Mode=OneWay}"
                                   SelectedValuePath="FullPath"
-                                  ToolTip="历史目录：切换曲谱目录">
+                                  ToolTip="{i18n:T 历史目录：切换曲谱目录}">
                             <b:Interaction.Triggers>
                                 <b:EventTrigger EventName="SelectionChanged">
                                     <b:InvokeCommandAction Command="{Binding ViewModel.SelectMusicFolderCommand}"
@@ -290,24 +292,24 @@
                         </ComboBox>
                         <ui:TextBox Grid.Column="2"
                                     Margin="0,0,8,0"
-                                    PlaceholderText="搜索曲名、作者或路径"
+                                    PlaceholderText="{i18n:T 搜索曲名、作者或路径}"
                                     Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
                         <ComboBox Grid.Column="3"
                                   Margin="0,0,8,0"
                                   ItemsSource="{Binding ViewModel.FormatFilters}"
                                   SelectedItem="{Binding ViewModel.SelectedFormatFilter}"
-                                  ToolTip="按格式筛选" />
+                                  ToolTip="{i18n:T 按格式筛选}" />
                         <ComboBox Grid.Column="4"
                                   ItemsSource="{Binding ViewModel.InstrumentFilters}"
                                   SelectedItem="{Binding ViewModel.SelectedInstrumentFilter}"
-                                  ToolTip="按乐器筛选" />
+                                  ToolTip="{i18n:T 按乐器筛选}" />
                         <ui:Button Grid.Column="5"
                                    Width="44"
                                    Height="34"
                                    Margin="8,0,0,0"
                                    Command="{Binding ViewModel.RefreshCommand}"
                                    IsEnabled="{Binding ViewModel.IsRefreshing, Converter={StaticResource InverseBooleanConverter}}"
-                                   ToolTip="重新扫描曲谱目录">
+                                   ToolTip="{i18n:T 重新扫描曲谱目录}">
                             <Grid Width="18" Height="18">
                                 <ui:SymbolIcon Symbol="ArrowClockwise24"
                                                Visibility="{Binding ViewModel.IsRefreshing, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
@@ -400,8 +402,9 @@
                                                            Margin="0,2,0,0"
                                                            HorizontalAlignment="Right"
                                                            FontSize="11"
-                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                           Text="{Binding PlayableRatioText, StringFormat=可演奏 {0}}" />
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                                                    <Run Text="{i18n:T 可演奏 }" /><Run Text="{Binding PlayableRatioText}" />
+                                                </TextBlock>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -467,7 +470,7 @@
                                            HorizontalAlignment="Center"
                                            FontSize="17"
                                            FontWeight="SemiBold"
-                                           Text="曲库还是空的" />
+                                           Text="{i18n:T 曲库还是空的}" />
                                 <TextBlock MaxWidth="300"
                                            Margin="0,7,0,0"
                                            HorizontalAlignment="Center"
@@ -593,13 +596,13 @@
                                    Appearance="Secondary"
                                    Command="{Binding ViewModel.PreviousCommand}"
                                    Icon="{ui:SymbolIcon Previous24}"
-                                   ToolTip="上一首" />
+                                   ToolTip="{i18n:T 上一首}" />
                         <ui:Button Width="52"
                                    Height="52"
                                    Margin="4,0"
                                    Appearance="Primary"
                                    Command="{Binding ViewModel.PlayPauseCommand}"
-                                   ToolTip="播放/暂停">
+                                   ToolTip="{i18n:T 播放/暂停}">
                             <ui:SymbolIcon FontSize="22"
                                            Symbol="{Binding ViewModel.PlayPauseSymbol}" />
                         </ui:Button>
@@ -609,14 +612,14 @@
                                    Appearance="Secondary"
                                    Command="{Binding ViewModel.NextCommand}"
                                    Icon="{ui:SymbolIcon Next24}"
-                                   ToolTip="下一首" />
+                                   ToolTip="{i18n:T 下一首}" />
                         <ui:Button Width="44"
                                    Height="44"
                                    Margin="3,0"
                                    Appearance="Transparent"
                                    Command="{Binding ViewModel.StopCommand}"
                                    Icon="{ui:SymbolIcon Stop24}"
-                                   ToolTip="停止" />
+                                   ToolTip="{i18n:T 停止}" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="2"
@@ -635,7 +638,7 @@
                                    VerticalAlignment="Center"
                                    FontSize="12"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                   Text="输入方式" />
+                                   Text="{i18n:T 输入方式}" />
                         <TextBlock Width="28"
                                    Margin="0,0,7,0"
                                    VerticalAlignment="Center"

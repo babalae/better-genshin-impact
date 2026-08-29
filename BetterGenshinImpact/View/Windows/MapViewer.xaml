@@ -5,7 +5,8 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
-                 Title="地图"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T 地图}"
                  Width="512"
                  Height="512"
                  d:DataContext="{d:DesignInstance Type=windows:MapViewerViewModel}"
@@ -30,7 +31,7 @@
         </Canvas>
 
 
-        <ui:TitleBar Title="地图" Grid.Row="0">
+        <ui:TitleBar Title="{i18n:T 地图}" Grid.Row="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

@@ -99,7 +99,7 @@
                                   TextWrapping="Wrap">
                         <Run Text="{i18n:T 截图器启动后才能使用各项功能，}" /><Run FontWeight="Bold"
                                                                                  Text="{i18n:T 点击展开启动相关配置}"
-                                                                                 TextDecorations="Underline" /><Run Text="{i18n:T 。}" />
+                                                                                 TextDecorations="Underline" /><Run Text="。" />
                     </ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"

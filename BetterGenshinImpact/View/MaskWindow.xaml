@@ -12,6 +12,7 @@
         xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -302,13 +303,13 @@
                         <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}"
                                         FontSize="{Binding FontSize, ElementName=LogTextBox}">
                             <Paragraph>
-                                <Run>[00:00:00 INF] 更好的原神</Run>
+                                <Run Text="{i18n:T [00:00:00 INF] 更好的原神}" />
                                 <LineBreak />
-                                <Run>[00:00:00 INF] 遮罩窗口已启动，游戏大小1920x1080，素材缩放1.00，DPI缩放1</Run>
+                                <Run Text="{i18n:T [00:00:00 INF] 遮罩窗口已启动，游戏大小1920x1080，素材缩放1.00，DPI缩放1}" />
                                 <LineBreak />
-                                <Run>[00:00:01 INF] Never gonna give you up</Run>
+                                <Run Text="[00:00:01 INF] Never gonna give you up" />
                                 <LineBreak />
-                                <Run>[00:00:01 INF] Never gonna let you down</Run>
+                                <Run Text="[00:00:01 INF] Never gonna let you down" />
                             </Paragraph>
                         </d:FlowDocument>
                     </RichTextBox>
@@ -502,7 +503,7 @@
                   Panel.ZIndex="999"
                   Visibility="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="当前处于编辑模式"
+                    <TextBlock Text="{i18n:T 当前处于编辑模式}"
                                FontSize="72"
                                FontWeight="DemiBold"
                                Foreground="#CCFFFFFF"
@@ -511,7 +512,7 @@
                             <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
                         </TextBlock.Effect>
                     </TextBlock>
-                    <TextBlock Text="可以调整日志框、状态栏控件的位置和大小"
+                    <TextBlock Text="{i18n:T 可以调整日志框、状态栏控件的位置和大小}"
                                Margin="0,8,0,0"
                                FontSize="22"
                                FontWeight="SemiBold"
@@ -521,7 +522,7 @@
                             <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
                         </TextBlock.Effect>
                     </TextBlock>
-                    <TextBlock Text="右键相关控件可退出编辑状态"
+                    <TextBlock Text="{i18n:T 右键相关控件可退出编辑状态}"
                                Margin="0,8,0,0"
                                FontSize="22"
                                FontWeight="SemiBold"
@@ -583,7 +584,7 @@
                                Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Text="西">
+                               Text="{i18n:T 西}">
                     </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="4"
@@ -595,7 +596,7 @@
                                Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Text="南">
+                               Text="{i18n:T 南}">
                     </TextBlock>
                     <TextBlock Grid.Column="4"
                                Grid.Row="2"
@@ -607,7 +608,7 @@
                                Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Text="东">
+                               Text="{i18n:T 东}">
                     </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="0"
@@ -619,7 +620,7 @@
                                Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Text="北">
+                               Text="{i18n:T 北}">
                     </TextBlock>
                 </Grid>
             </Viewbox>
@@ -748,8 +749,8 @@
                                        BorderBrush="#26FFFFFF"
                                        Cursor="Hand"
                                        Icon="{ui:SymbolIcon EyeOff24}"
-                                       Content="隐藏"
-                                       ToolTip="隐藏"
+                                       Content="{i18n:T 隐藏}"
+                                       ToolTip="{i18n:T 隐藏}"
                                        Visibility="{Binding IsCurrentPointHidden, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                        Command="{Binding ToggleHiddenCommand}" />
                             <ui:Button Grid.Column="1"
@@ -761,8 +762,8 @@
                                        BorderBrush="#26FFFFFF"
                                        Cursor="Hand"
                                        Icon="{ui:SymbolIcon Eye24}"
-                                       Content="显示"
-                                       ToolTip="显示"
+                                       Content="{i18n:T 显示}"
+                                       ToolTip="{i18n:T 显示}"
                                        Visibility="{Binding IsCurrentPointHidden, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        Command="{Binding ToggleHiddenCommand}" />
                             <ui:Button Grid.Column="2"
@@ -782,7 +783,7 @@
                                         Height="16"
                                         Visibility="{Binding IsTextLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
-                                <TextBlock Foreground="#B3FFFFFF" Text="正在加载文本..." />
+                                <TextBlock Foreground="#B3FFFFFF" Text="{i18n:T 正在加载文本...}" />
                             </StackPanel>
 
                             <TextBlock Margin="0,6,0,0"
@@ -873,7 +874,7 @@
                                                 VerticalAlignment="Center"
                                                 Visibility="{Binding IsImageLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
-                                        <TextBlock Foreground="#B3FFFFFF" Text="图片加载中..." />
+                                        <TextBlock Foreground="#B3FFFFFF" Text="{i18n:T 图片加载中...}" />
                                     </StackPanel>
 
                                     <TextBlock HorizontalAlignment="Center"
@@ -1052,7 +1053,7 @@
                                             <ui:TextBox x:Name="MapLabelSearchTextBox"
                                                         Grid.Column="2"
                                                         Height="32"
-                                                        PlaceholderText="搜索当前区域下的标点分类"
+                                                        PlaceholderText="{i18n:T 搜索当前区域下的标点分类}"
                                                         Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                         PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
 
@@ -1060,7 +1061,7 @@
                                                 <TextBlock VerticalAlignment="Center"
                                                            Margin="0,0,8,0"
                                                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                           ToolTip="当前显示/全部标点"
+                                                           ToolTip="{i18n:T 当前显示/全部标点}"
                                                            Text="{Binding MapPointVisibilitySummary}" />
                                                 <ui:Button Width="32"
                                                            Height="32"
@@ -1069,7 +1070,7 @@
                                                            Foreground="White"
                                                            Cursor="Hand"
                                                            Icon="{ui:SymbolIcon EyeOff24}"
-                                                           ToolTip="全部隐藏"
+                                                           ToolTip="{i18n:T 全部隐藏}"
                                                            IsEnabled="{Binding HasMapPoints}"
                                                            Command="{Binding HideAllMapPointsCommand}" />
                                                 <ui:Button Width="32"
@@ -1079,7 +1080,7 @@
                                                            Foreground="White"
                                                            Cursor="Hand"
                                                            Icon="{ui:SymbolIcon Eye24}"
-                                                           ToolTip="全部显示"
+                                                           ToolTip="{i18n:T 全部显示}"
                                                            IsEnabled="{Binding HasHiddenMapPoints}"
                                                            Command="{Binding ShowAllMapPointsCommand}" />
                                                 <ui:Button
@@ -1212,7 +1213,7 @@
                                                                       VerticalAlignment="Center"
                                                                       Foreground="White"
                                                                       FontTypography="BodyStrong"
-                                                                      Text="加载中..." />
+                                                                      Text="{i18n:T 加载中...}" />
                                                     </Grid>
                                                 </Grid>
                                             </Border>
@@ -1256,7 +1257,7 @@
                                                             HorizontalContentAlignment="Center"
                                                             VerticalContentAlignment="Center"
                                                             Cursor="Hand"
-                                                            ToolTip="重置选择"
+                                                            ToolTip="{i18n:T 重置选择}"
                                                             Command="{Binding ResetSelectedMapLabelSelectionCommand}">
                                                         <Border Width="40"
                                                                 Height="40"
