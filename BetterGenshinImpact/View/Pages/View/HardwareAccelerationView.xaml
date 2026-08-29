@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:onnx="clr-namespace:BetterGenshinImpact.Core.Recognition.ONNX"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:HardwareAccelerationViewModel}"
              d:DesignHeight="600"
@@ -139,35 +140,6 @@
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                    Text="{Binding Status.CpuOcr, StringFormat='当前状态: {0}'}" />
                     </Grid>
-                    <!--  GPU Device  -->
-                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Margin="16,16,16,16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      FontTypography="Body"
-                                      Text="GPU设备ID" />
-                        <ui:TextBox Grid.Row="0"
-                                    Grid.RowSpan="2"
-                                    Grid.Column="1"
-                                    MinWidth="80"
-                                    Text="{Binding Config.GpuDevice, Mode=TwoWay}" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="指定使用的GPU设备编号 使用默认配置请设为0 可以在任务管理器中查看编号" />
-                        <TextBlock Grid.Row="2"
-                                   Grid.Column="0"
-                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                   Text="{Binding Status.DmlDeviceId, StringFormat='当前DML设备: {0}'}" />
-                    </Grid>
                     <!--  _optimizedModel  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                     <Grid Margin="16,16,16,16">
@@ -196,13 +168,25 @@
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                    Text="{Binding Status.OptimizedModel, StringFormat='当前状态: {0}'}" />
                     </Grid>
-
                 </StackPanel>
             </ui:CardExpander>
-            <!--  CUDA配置  -->
+
+            <!-- DirectML -->
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
                              Icon="{ui:SymbolIcon Settings24}">
+                <ui:CardExpander.Style>
+                    <Style TargetType="{x:Type ui:CardExpander}"
+                           BasedOn="{StaticResource {x:Type ui:CardExpander}}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Config.InferenceDevice}"
+                                         Value="{x:Static onnx:InferenceDeviceType.GpuDirectMl}">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:CardExpander.Style>
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -216,7 +200,79 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="CUDA配置"
+                                      Text="DirectML 设定"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      TextWrapping="Wrap">
+                            修改后需要重启程序生效。
+                        </ui:TextBlock>
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <!-- DirectML Device Select -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="GPU设备ID" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="80"
+                                    Text="{Binding Config.GpuDevice, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="指定使用的GPU设备编号 使用默认配置请设为0 可以在任务管理器中查看编号" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.DmlDeviceId, StringFormat='当前DML设备: {0}'}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+
+            <!--  TensorRT / CUDA  -->
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             Icon="{ui:SymbolIcon Settings24}">
+                <ui:CardExpander.Style>
+                    <Style TargetType="{x:Type ui:CardExpander}"
+                           BasedOn="{StaticResource {x:Type ui:CardExpander}}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Config.InferenceDevice}"
+                                         Value="{x:Static onnx:InferenceDeviceType.Gpu}">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:CardExpander.Style>
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="TensorRT / CUDA 设定"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
@@ -308,66 +364,6 @@
                                     Text="{Binding Config.AdditionalPath, Mode=TwoWay}"
                                     TextWrapping="Wrap" />
                     </Grid>
-                </StackPanel>
-            </ui:CardExpander>
-
-            <!--  TensorRT配置  -->
-            <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             Icon="{ui:SymbolIcon Settings24}"
-                             IsExpanded="False">
-                <ui:CardExpander.Header>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="TensorRT配置"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            修改后需要重启程序生效。
-                        </ui:TextBlock>
-                    </Grid>
-                </ui:CardExpander.Header>
-                <StackPanel>
-                    <!--  Enable Cache  -->
-                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Margin="16,16,16,16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      FontTypography="Body"
-                                      Text="启用TensorRT缓存" />
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         IsChecked="{Binding Config.EnableTensorRtCache, Mode=TwoWay}" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="提升TensorRT模型加载速度 默认开启" />
-                        <TextBlock Grid.Row="2"
-                                   Grid.Column="0"
-                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                   Text="{Binding Status.EnableCache, StringFormat='缓存状态: {0}'}" />
-                    </Grid>
 
                     <!--  Embed Mode  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
@@ -400,12 +396,23 @@
                 </StackPanel>
             </ui:CardExpander>
 
-
             <!--  OpenVino配置  -->
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
                              Icon="{ui:SymbolIcon Settings24}"
                              IsExpanded="False">
+                <ui:CardExpander.Style>
+                    <Style TargetType="{x:Type ui:CardExpander}"
+                           BasedOn="{StaticResource {x:Type ui:CardExpander}}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Config.InferenceDevice}"
+                                         Value="{x:Static onnx:InferenceDeviceType.OpenVino}">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:CardExpander.Style>
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -419,7 +426,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="OpenVino配置"
+                                      Text="OpenVino 设定"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
