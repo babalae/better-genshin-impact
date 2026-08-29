@@ -4,6 +4,7 @@
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -28,10 +29,10 @@
         <Border Height="200" CornerRadius="8">
             <Border.ContextMenu>
                 <ContextMenu>
-                    <ui:MenuItem Header="更换背景图片" Command="{Binding ChangeBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
-                    <ui:MenuItem Header="使用网络图片" Command="{Binding ChangeWebBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
-                    <ui:MenuItem Header="刷新网络图片" Command="{Binding RefreshWebBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" Visibility="{Binding IsCustomNetworkBanner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <ui:MenuItem Header="恢复默认图片" Command="{Binding ResetBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" />
+                    <ui:MenuItem Header="{i18n:T 更换背景图片}" Command="{Binding ChangeBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
+                    <ui:MenuItem Header="{i18n:T 使用网络图片}" Command="{Binding ChangeWebBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
+                    <ui:MenuItem Header="{i18n:T 刷新网络图片}" Command="{Binding RefreshWebBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" Visibility="{Binding IsCustomNetworkBanner, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <ui:MenuItem Header="{i18n:T 恢复默认图片}" Command="{Binding ResetBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" />
                 </ContextMenu>
             </Border.ContextMenu>
             <Grid>
@@ -56,12 +57,12 @@
                         <ui:TextBlock FontTypography="Title" Text="BetterGI" />
                         <ui:TextBlock FontTypography="Subtitle"
                                       Opacity="0.8"
-                                      Text="更好的原神，免费且开源" />
+                                      Text="{i18n:T 更好的原神，免费且开源}" />
                         <ui:TextBlock FontTypography="BodyStrong" Opacity="0.5">
                             <Hyperlink Command="{Binding GoToWikiUrlCommand}"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        TextDecorations="None">
-                                <Run>点击查看文档与教程</Run>
+                                <Run Text="{i18n:T 点击查看文档与教程}" />
                                 <Run FontFamily="{StaticResource FluentSystemIcons}" FontWeight="Light">&#xEE7A;</Run>
                             </Hyperlink>
 
@@ -90,26 +91,26 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="BetterGI 截图器，启动！"
+                                  Text="{i18n:T BetterGI 截图器，启动！}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
-                            点击展开启动相关配置
-                        </Run>
-                        。</ui:TextBlock>
+                        <Run Text="{i18n:T 截图器启动后才能使用各项功能，}" /><Run FontWeight="Bold"
+                                                                                 Text="{i18n:T 点击展开启动相关配置}"
+                                                                                 TextDecorations="Underline" /><Run Text="。" />
+                    </ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 Margin="0,0,24,0"
                                 Orientation="Horizontal">
                         <controls:TwoStateButton DisableCommand="{Binding StopTriggerCommand}"
-                                                 DisableContent="停止"
+                                                 DisableContent="{i18n:T 停止}"
                                                  DisableIcon="{ui:SymbolIcon Dismiss24}"
                                                  EnableCommand="{Binding StartTriggerCommand}"
-                                                 EnableContent="启动"
+                                                 EnableContent="{i18n:T 启动}"
                                                  EnableIcon="{ui:SymbolIcon Play24}"
                                                  IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
                         <!--  <ui:Button Command="{Binding StartTriggerCommand}"  -->
@@ -137,12 +138,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图模式"
+                                  Text="{i18n:T 截图模式}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="推荐选择 BitBlt，问题较少"
+                                  Text="{i18n:T 推荐选择 BitBlt，问题较少}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -172,12 +173,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="触发器间隔（毫秒）"
+                                  Text="{i18n:T 触发器间隔（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认50ms，普通用户不建议调整这个值，具体调整方式见文档"
+                                  Text="{i18n:T 默认50ms，普通用户不建议调整这个值，具体调整方式见文档}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -226,12 +227,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="AI推理设备设置"
+                                  Text="{i18n:T AI推理设备设置}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改后需要重启程序生效"
+                                  Text="{i18n:T 修改后需要重启程序生效}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -250,7 +251,7 @@
                                Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenHardwareAccelerationSettingsCommand}"
-                               Content="更多..." />
+                               Content="{i18n:T 更多...}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -265,19 +266,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试图像捕获"
+                                  Text="{i18n:T 测试图像捕获}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="测试功能，测试几种截图模式的效果"
+                                  Text="{i18n:T 测试功能，测试几种截图模式的效果}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding StartCaptureTestCommand}"
-                               Content="测试图像捕获" />
+                               Content="{i18n:T 测试图像捕获}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -292,19 +293,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="手动选择窗口（无法找到原神窗口时使用）"
+                                  Text="{i18n:T 手动选择窗口（无法找到原神窗口时使用）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神已经启动的情况下，点击“启动”仍旧提示无法找到窗口时使用"
+                                  Text="{i18n:T 原神已经启动的情况下，点击“启动”仍旧提示无法找到窗口时使用}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding ManualPickWindowCommand}"
-                               Content="选择捕获窗口" />
+                               Content="{i18n:T 选择捕获窗口}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -320,12 +321,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动关闭 Windows11 窗口化优化以支持 BitBlt"
+                                  Text="{i18n:T 自动关闭 Windows11 窗口化优化以支持 BitBlt}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改设置后重启游戏生效"
+                                  Text="{i18n:T 修改设置后重启游戏生效}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -337,7 +338,7 @@
                                Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
-                               Content="手动设置" />
+                               Content="{i18n:T 手动设置}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -359,12 +360,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="同时启动原神"
+                                  Text="{i18n:T 同时启动原神}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动截图器时，如果原神未启动，则自动启动原神。"
+                                  Text="{i18n:T 启动截图器时，如果原神未启动，则自动启动原神。}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -387,7 +388,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="原神安装位置（不支持云原神的联动启动）"
+                                  Text="{i18n:T 原神安装位置（不支持云原神的联动启动）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -399,7 +400,7 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding SelectInstallPathCommand}"
-                               Content="浏览" />
+                               Content="{i18n:T 浏览}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -412,13 +413,13 @@
 
                         <ui:TextBlock FontTypography="Body" TextWrapping="Wrap">
                             <ui:TextBlock.Inlines>
-                                <Run Text="启动参数" />
+                                <Run Text="{i18n:T 启动参数}" />
                                 <ui:HyperlinkButton Margin="4,0,0,0"
                                                     Padding="0"
                                                     Command="{Binding OpenGameCommandLineDocumentCommand}"
                                                     Cursor="Hand">
                                     <ui:HyperlinkButton.Content>
-                                        <TextBlock FontSize="11" Text="打开文档" />
+                                        <TextBlock FontSize="11" Text="{i18n:T 打开文档}" />
                                     </ui:HyperlinkButton.Content>
                                 </ui:HyperlinkButton>
                             </ui:TextBlock.Inlines>
@@ -426,7 +427,7 @@
 
                         <ui:TextBlock Margin="0,4,0,0"
                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                    Text="如果你不知道什么是启动参数请不要填写。"
+                                    Text="{i18n:T 如果你不知道什么是启动参数请不要填写。}"
                                     TextWrapping="Wrap" />
                     </StackPanel>
                     <!--  常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080  -->
@@ -434,7 +435,7 @@
                                 Width="300"
                                 Margin="0,0,36,0"
                                 VerticalAlignment="Top"
-                                PlaceholderText="示例：-screen-width 1920"
+                                PlaceholderText="{i18n:T 示例：-screen-width 1920}"
                                 Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True" />
@@ -452,12 +453,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启动前自动关闭原神 HDR"
+                                  Text="{i18n:T 启动前自动关闭原神 HDR}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="检测到开启时会自动关闭原神 HDR 注册表设置"
+                                  Text="{i18n:T 检测到开启时会自动关闭原神 HDR 注册表设置}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -478,12 +479,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动进入游戏"
+                                  Text="{i18n:T 自动进入游戏}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）"
+                                  Text="{i18n:T 原神启动后自动进入游戏（自动开门、领取月卡）}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -504,12 +505,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用 CMD 启动游戏"
+                                  Text="{i18n:T 使用 CMD 启动游戏}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果原神弹窗“检测到非法工具，请重启机器”，请尝试开启此选项"
+                                  Text="{i18n:T 如果原神弹窗“检测到非法工具，请重启机器”，请尝试开启此选项}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -530,12 +531,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用Starward记录游戏时间"
+                                  Text="{i18n:T 使用Starward记录游戏时间}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动游戏后Starward将同步记录时间"
+                                  Text="{i18n:T 启动游戏后Starward将同步记录时间}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -585,17 +586,17 @@
                     </Grid.RowDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="BetterGI 桌面分身"
+                                  Text="{i18n:T BetterGI 桌面分身}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏在桌面分身中运行时，可以不占用当前桌面鼠标。"
+                                  Text="{i18n:T 游戏在桌面分身中运行时，可以不占用当前桌面鼠标。}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenChildSessionWindowCommand}"
-                       Content="打开"
+                       Content="{i18n:T 打开}"
                        Icon="{ui:SymbolIcon Open24}" />
         </ui:CardControl>
 

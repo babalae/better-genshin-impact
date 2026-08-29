@@ -3,6 +3,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:markdown="clr-namespace:BetterGenshinImpact.View.Controls.Markdown"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              Background="Transparent">
     <Grid Background="{Binding Background, ElementName=Root}">
         <FlowDocumentScrollViewer x:Name="DocumentViewer"
@@ -36,7 +37,7 @@
                 <TextBlock FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource MarkdownErrorBrush}"
-                           Text="Markdown 加载失败" />
+                           Text="{i18n:T Markdown 加载失败}" />
                 <TextBlock Margin="0,8,0,0"
                            Foreground="{DynamicResource MarkdownSecondaryForegroundBrush}"
                            Text="{Binding LastError.Message, ElementName=Root}"
@@ -67,7 +68,7 @@
                              IsIndeterminate="True" />
                 <TextBlock VerticalAlignment="Center"
                            Foreground="{DynamicResource MarkdownSecondaryForegroundBrush}"
-                           Text="正在渲染 Markdown…" />
+                           Text="{i18n:T 正在渲染 Markdown…}" />
             </StackPanel>
         </Border>
     </Grid>

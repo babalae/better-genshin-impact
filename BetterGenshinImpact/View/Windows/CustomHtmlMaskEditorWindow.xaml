@@ -1,12 +1,12 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.CustomHtmlMaskEditorWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:codeEditor="clr-namespace:BetterGenshinImpact.View.Controls.CodeEditor"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="编辑 HTML 遮罩"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T 编辑 HTML 遮罩}"
                  Width="900"
                  Height="680"
                  MinWidth="720"
@@ -14,7 +14,6 @@
                  d:DesignHeight="680"
                  d:DesignWidth="900"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  Tag="CustomHtmlMaskEditorWindow"
                  WindowBackdropType="Mica"
@@ -53,22 +52,22 @@
                         Orientation="Horizontal">
                 <ui:Button Margin="0,0,8,0"
                            Command="{Binding SaveCustomHtmlMaskCommand}"
-                           Content="保存 HTML" />
+                           Content="{i18n:T 保存 HTML}" />
                 <ui:Button Margin="0,0,8,0"
                            Command="{Binding ToggleCustomHtmlMaskPreviewCommand}"
                            Content="{Binding PreviewButtonText}" />
                 <ui:Button Margin="0,0,8,0"
                            Command="{Binding RestoreDefaultCustomHtmlMaskCommand}"
-                           Content="恢复默认 HTML" />
+                           Content="{i18n:T 恢复默认 HTML}" />
                 <ui:Button Margin="0,0,8,0"
                            Command="{Binding OpenCustomHtmlMaskFolderCommand}"
-                           Content="打开目录" />
+                           Content="{i18n:T 打开目录}" />
                 <ui:Button Command="{Binding CloseCommand}"
-                           Content="关闭" />
+                           Content="{i18n:T 关闭}" />
             </StackPanel>
         </Grid>
 
-        <ui:TitleBar Title="编辑 HTML 遮罩">
+        <ui:TitleBar Title="{i18n:T 编辑 HTML 遮罩}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

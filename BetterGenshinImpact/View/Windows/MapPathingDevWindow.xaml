@@ -4,9 +4,9 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  d:DataContext="{d:DesignInstance Type=windows:MapPathingDevViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -14,18 +14,17 @@
                  Height="260"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Auto"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  mc:Ignorable="d">
     <StackPanel>
-        <ui:TitleBar Title="地图追踪开发者工具">
+        <ui:TitleBar Title="{i18n:T 地图追踪开发者工具}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
         <StackPanel Margin="12">
-            <ui:TextBlock Margin="5">(下方地图选择会影响路径录制所在的独立地图)</ui:TextBlock>
-            <ui:TextBlock Margin="5">请选择地图：</ui:TextBlock>
+            <ui:TextBlock Margin="5" Text="{i18n:T (下方地图选择会影响路径录制所在的独立地图)}" />
+            <ui:TextBlock Margin="5" Text="{i18n:T 请选择地图：}" />
             <ComboBox ItemsSource="{Binding MapTypeItems}"
                       DisplayMemberPath="DisplayName"
                       SelectedValuePath="EnumName"
@@ -40,11 +39,11 @@
             </ComboBox>
             <ui:Button Margin="5"
                        Command="{Binding OpenMapViewerCommand}"
-                       Content="查看实时追踪地图" />
+                       Content="{i18n:T 查看实时追踪地图}" />
 
             <ui:Button Margin="5"
                        Command="{Binding OpenMapEditorCommand}"
-                       Content="录制编辑器" />
+                       Content="{i18n:T 录制编辑器}" />
         </StackPanel>
     </StackPanel>
 </ui:FluentWindow>

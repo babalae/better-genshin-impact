@@ -4,7 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  Width="560"
                  SizeToContent="Height"
                  MinWidth="440"
@@ -13,7 +13,6 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner"
@@ -74,7 +73,7 @@
 
             <!-- 主按钮 -->
             <ui:Button x:Name="PrimaryButton"
-                      Content="确定"
+                      Content="{i18n:T 确定}"
                       Appearance="Primary"
                       MinWidth="100"
                       Margin="0,0,8,0"
@@ -83,7 +82,7 @@
 
             <!-- 次要按钮 -->
             <ui:Button x:Name="SecondaryButton"
-                      Content="取消"
+                      Content="{i18n:T 取消}"
                       Appearance="Secondary"
                       MinWidth="100"
                       Margin="0,0,8,0"
@@ -92,7 +91,7 @@
 
             <!-- 关闭按钮 -->
             <ui:Button x:Name="CloseButton"
-                      Content="关闭"
+                      Content="{i18n:T 关闭}"
                       Appearance="Secondary"
                       MinWidth="100"
                       Visibility="Collapsed"

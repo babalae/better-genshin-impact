@@ -7,9 +7,6 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -28,6 +25,7 @@ using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View;
@@ -42,18 +40,19 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
-using Newtonsoft.Json;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class CommonSettingsPageViewModel : ViewModel
 {
+    private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
 
     private readonly NotificationService _notificationService;
     private readonly CustomHtmlMaskService _customHtmlMaskService;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
+    private readonly I18nService _i18nService;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     private string _selectedArea = string.Empty;
@@ -71,15 +70,17 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
-        RecognitionTemplateEditorService recognitionTemplateEditorService)
+        RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService)
     {
         Config = configService.Get();
+        _configService = configService;
         Config.MaskWindowConfig.EnsureOverlayMetricItems();
         Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
         _navigationService = navigationService;
         _notificationService = notificationService;
         _customHtmlMaskService = customHtmlMaskService;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
+        _i18nService = i18nService;
         // 设置页需要可绑定对象，避免把 Dictionary<string, bool> 直接暴露给 XAML 并丢失固定枚举顺序。
         OverlayMetricItems = new ObservableCollection<OverlayMetricSettingItem>(
             OverlayMetricItemDefaults.AllItems.Select(item => new OverlayMetricSettingItem(Config.MaskWindowConfig, item, OnRefreshMaskSettings)));
@@ -101,94 +102,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
         new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it"  }
             .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
-
-    [RelayCommand]
-    private async Task OnUpdateUiLanguageAsync()
-    {
-        var cultureName = Config.OtherConfig.UiCultureInfoName ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(cultureName))
-        {
-            throw new InvalidOperationException("当前UI语言为空，无法更新语言文件。");
-        }
-
-        if (cultureName == "zh-Hans")
-        {
-            await ThemedMessageBox.InformationAsync("zh-Hans 无语言文件，无需更新。");
-            return;
-        }
-
-        var urls = new[]
-        {
-            $"https://raw.githubusercontent.com/babalae/bettergi-i18n/refs/heads/main/i18n/{cultureName}.json",
-            $"https://cnb.cool/bettergi/bettergi-i18n/-/git/raw/main/i18n/{cultureName}.json"
-        };
-
-        using var httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-
-        byte[]? bytes = null;
-        Exception? lastError = null;
-        var allNotFound = true;
-        foreach (var url in urls)
-        {
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.UserAgent.ParseAdd("BetterGenshinImpact");
-                using var response = await httpClient.SendAsync(request);
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    lastError = new HttpRequestException("Language file not found.", null, response.StatusCode);
-                    continue;
-                }
-
-                allNotFound = false;
-                response.EnsureSuccessStatusCode();
-                bytes = await response.Content.ReadAsByteArrayAsync();
-
-                var json = Encoding.UTF8.GetString(bytes);
-                _ = JsonConvert.DeserializeObject<Dictionary<string, string>>(json)
-                    ?? throw new JsonException("翻译文件不是有效的 JSON 字典。");
-                break;
-            }
-            catch (Exception e)
-            {
-                lastError = e;
-                allNotFound = false;
-            }
-        }
-
-        if (bytes == null)
-        {
-            if (allNotFound)
-            {
-                await ThemedMessageBox.WarningAsync($"语言文件不存在：{cultureName}.json");
-                return;
-            }
-
-            throw new Exception($"下载语言文件失败：{cultureName}.json", lastError);
-        }
-
-        var dir = Global.Absolute(@"User\I18n");
-        Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, $"{cultureName}.json");
-        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
-        await File.WriteAllBytesAsync(tmp, bytes);
-
-        if (File.Exists(path))
-        {
-            File.Replace(tmp, path, null);
-        }
-        else
-        {
-            File.Move(tmp, path);
-        }
-
-        var translator = App.GetService<ITranslationService>() ?? throw new NullReferenceException();
-        translator.Reload();
-    }
 
     public string SelectedCountry
     {
@@ -501,6 +414,19 @@ public partial class CommonSettingsPageViewModel : ViewModel
     //     await Launcher.LaunchUriAsync(
     //         new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
     // }
+
+    [RelayCommand]
+    private void OnUiLanguageSelectionChanged(object? value)
+    {
+        if (value is not KeyValuePair<string, string> language)
+        {
+            return;
+        }
+
+        Config.OtherConfig.UiCultureInfoName = language.Key;
+        _i18nService.ChangeLanguage(language.Key);
+        _configService.Save();
+    }
 
     [RelayCommand]
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)

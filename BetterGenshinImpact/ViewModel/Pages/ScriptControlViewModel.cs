@@ -12,7 +12,6 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
-using BetterGenshinImpact.View.Behavior;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
 using BetterGenshinImpact.ViewModel.Pages.View;
@@ -885,11 +884,7 @@ public partial class ScriptControlViewModel : ViewModel
                 "请选择需要添加的地图追踪任务",
                 "请选择需要添加的地图追踪任务",
                 stackPanel,
-                new Size(600, 720),
-                new PromptDialogConfig
-                {
-                    DisableAutoTranslate = true
-                });
+                new Size(600, 720));
 
             if (!string.IsNullOrEmpty(result))
             {
@@ -1670,7 +1665,6 @@ public partial class ScriptControlViewModel : ViewModel
                 Owner = Application.Current.MainWindow,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
             };
-            AutoTranslateInterceptor.SetEnableAutoTranslate(uiMessageBox, false);
             WindowHelper.CenterOnVisibleOwner(uiMessageBox);
             uiMessageBox.ShowDialogAsync();
 
