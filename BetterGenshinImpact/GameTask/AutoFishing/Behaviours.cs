@@ -720,6 +720,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
     /// <summary>
     /// 抛竿
+    /// <para>抛出后瞬间无法收杆，且有可能被回弹，因此视滞空时为运行中</para>
     /// </summary>
     public partial class Cast : Behaviour, IScreenshotBehaviour
     {
@@ -810,34 +811,54 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
     }
 
+    /// <summary>
+    /// 咬钩超时检查
+    /// <para>内置先收杆，延迟一定时间后才失败的机制。配合CheckFishBite并行，可以避免超时和咬钩撞上</para>
+    /// </summary>
     public partial class FishBiteTimeout : Behaviour, IScreenshotBehaviour
     {
         private readonly ILogger logger;
+        private readonly IInputSimulator input;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? waitFishBiteTimeout;
         private readonly int seconds;
+        public bool leftButtonClicked;
 
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        private FishBiteTimeout(string name, int seconds, ILogger logger, TimeProvider? timeProvider = null) : base(name)
+        private FishBiteTimeout(string name, int seconds, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.seconds = seconds;
+            this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
         }
 
         protected override void Initialize()
         {
             waitFishBiteTimeout = timeProvider.GetLocalNow().AddSeconds(seconds);
+            leftButtonClicked = false;
         }
 
         protected async override Task<Status> Update()
         {
             if (timeProvider.GetLocalNow() >= waitFishBiteTimeout)
             {
-                logger.LogInformation($"{seconds}秒没有咬杆，本次收杆");
-                return Status.Failure;
+                if (leftButtonClicked)
+                {
+                    logger.LogInformation($"收杆成功");
+
+                    return Status.Failure;
+                }
+                else
+                {
+                    logger.LogInformation($"{seconds}秒没有咬杆，本次收杆");
+                    leftButtonClicked = true;
+                    input.Mouse.LeftButtonClick();
+                    waitFishBiteTimeout = timeProvider.GetLocalNow().AddSeconds(2);
+                    return Status.Running;
+                }
             }
             else
             {
@@ -978,6 +999,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
     /// <summary>
     /// 提竿，无论是否咬钩。
+    /// <para>如果超出一定时间没有找到下钩或咬钩图标，就不操作直接成功</para>
     /// </summary>
     public partial class RaiseHook : Behaviour, IScreenshotBehaviour
     {
@@ -985,7 +1007,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly IInputSimulator input;
         private readonly TimeProvider timeProvider;
 
+        /// <summary>
+        /// 提竿后延迟这个时间才返回成功
+        /// </summary>
         private DateTimeOffset? raiseHookDelay;
+
+        /// <summary>
+        /// 在这个时间内尝试查找图标并提竿
+        /// </summary>
+        private DateTimeOffset? raiseHookTimeout;
 
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
@@ -1000,11 +1030,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         protected override void Initialize()
         {
             raiseHookDelay = null;
+            raiseHookTimeout = timeProvider.GetLocalNow().AddSeconds(2);
         }
 
         protected async override Task<Status> Update()
         {
-            if (raiseHookDelay == null)
+            if (timeProvider.GetLocalNow() < raiseHookTimeout && raiseHookDelay == null)
             {
                 var imageRegion = Screenshot.Get();
 
@@ -1014,12 +1045,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     logger.LogInformation("提竿");
                     input.Mouse.LeftButtonClick();
-                    raiseHookDelay = timeProvider.GetLocalNow();
+                    raiseHookDelay = timeProvider.GetLocalNow().AddSeconds(0.8);
                 }
 
                 return Status.Running;
             }
-            else if ((timeProvider.GetLocalNow() - raiseHookDelay.Value).TotalSeconds < 0.8)
+            else if (raiseHookDelay != null && timeProvider.GetLocalNow() < raiseHookDelay.Value)
             {
                 return Status.Running;
             }

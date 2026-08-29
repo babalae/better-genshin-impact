@@ -128,8 +128,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             string name,
             int seconds,
             ILogger logger,
+            IInputSimulator input,
             Blackboard blackboard,
-            TimeProvider? timeProvider = null) => new FishBiteTimeout(name, seconds, logger, blackboard, timeProvider);
+            TimeProvider? timeProvider = null) => new FishBiteTimeout(name, seconds, logger, input, blackboard, timeProvider);
 
         public CheckRaiseHook CheckRaiseHook(
             string name,

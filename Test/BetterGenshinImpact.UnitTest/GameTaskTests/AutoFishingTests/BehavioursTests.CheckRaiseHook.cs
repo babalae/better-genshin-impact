@@ -42,7 +42,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                         .Parallel("下杆中", new ParallelPolicy.SuccessOnOne())
                             .CheckThrowRod("检查抛竿结果", logger, timeProvider)    // todo 后面串联一个召回率高的下杆中检测方法
                             .CheckFishBite("自动提竿", logger, OcrService, drawContent)
-                            .FishBiteTimeout("下杆超时检查", 15, logger, timeProvider)
+                            .FishBiteTimeout("下杆超时检查", 15, logger, input, timeProvider)
                         .End()
                     .End()
                 .End()

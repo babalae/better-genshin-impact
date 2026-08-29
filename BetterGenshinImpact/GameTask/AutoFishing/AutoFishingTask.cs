@@ -106,7 +106,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                                     .Parallel("下杆中", new ParallelPolicy.SuccessOnOne())
                                                                         .CheckThrowRod("检查抛竿结果", _logger)    // todo 后面串联一个召回率高的下杆中检测方法
                                                                         .CheckFishBite("检查上钩", _logger, ocrService, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer)
-                                                                        .FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger)
+                                                                        .FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, input)
                                                                     .End()
                                                                 .End()
                                                             .Finally()
