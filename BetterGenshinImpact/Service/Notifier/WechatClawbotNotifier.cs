@@ -188,7 +188,11 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
                             media = new
                             {
                                 encrypt_query_param = uploaded.DownloadParam,
-                                aes_key = Convert.ToBase64String(uploaded.AesKey),
+                                // 注意：aes_key 是对 hex 字符串（ASCII 文本）做 base64，而非对原始密钥字节。
+                                // 官方实现 UploadedFileInfo.aeskey 为 hex 字符串，发送时
+                                // Buffer.from(hexString).toString("base64")；接收端按
+                                // base64解码 → ASCII → hex解码 还原 16 字节密钥。
+                                aes_key = Convert.ToBase64String(Encoding.UTF8.GetBytes(uploaded.AesKeyHex)),
                                 encrypt_type = 1,
                             },
                             mid_size = uploaded.CiphertextSize,
@@ -243,18 +247,19 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
         var filesize = AesEcbPaddedSize(rawsize);
         var filekey = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
         var aeskey = RandomNumberGenerator.GetBytes(16);
+        var aeskeyHex = Convert.ToHexString(aeskey).ToLowerInvariant();
 
-        var uploadUrl = await WithRetryAsync(() => GetUploadUrlAsync(filekey, rawsize, rawfilemd5, filesize, aeskey, ct), ct);
+        var uploadUrl = await WithRetryAsync(() => GetUploadUrlAsync(filekey, rawsize, rawfilemd5, filesize, aeskeyHex, ct), ct);
         var downloadParam = await WithRetryAsync(() => UploadToCdnAsync(uploadUrl, filekey, imageBytes, aeskey, ct), ct);
 
-        return new WechatClawbotUploadedImage(downloadParam, aeskey, filesize);
+        return new WechatClawbotUploadedImage(downloadParam, aeskeyHex, filesize);
     }
 
     /// <summary>
     /// 调用 getuploadurl 接口获取 CDN 上传地址。
     /// </summary>
     private async Task<WechatClawbotUploadUrl> GetUploadUrlAsync(
-        string filekey, int rawsize, string rawfilemd5, int filesize, byte[] aeskey, CancellationToken ct)
+        string filekey, int rawsize, string rawfilemd5, int filesize, string aeskeyHex, CancellationToken ct)
     {
         var body = JsonSerializer.Serialize(new
         {
@@ -265,7 +270,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             rawfilemd5,
             filesize,
             no_need_thumb = true,
-            aeskey = Convert.ToHexString(aeskey).ToLowerInvariant(),
+            aeskey = aeskeyHex,
             base_info = WechatClawbotHelper.BuildBaseInfo(),
         });
         var baseUrl = _baseUrl;
@@ -394,7 +399,7 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
 
     private sealed record WechatClawbotUploadUrl(string? UploadParam, string? UploadFullUrl);
 
-    private sealed record WechatClawbotUploadedImage(string DownloadParam, byte[] AesKey, int CiphertextSize);
+    private sealed record WechatClawbotUploadedImage(string DownloadParam, string AesKeyHex, int CiphertextSize);
 
     /// <summary>
     /// 携带 HTTP 状态码的通知异常，供重试判定使用（避免把 401/403/404 等客户端错误当成可重试）。
