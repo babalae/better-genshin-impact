@@ -91,12 +91,14 @@ public class GeniusInvokationControl
 
     public Mat CaptureGameMat()
     {
-        return CaptureToRectArea().SrcMat;
+        using var capture = CaptureToRectArea();
+        return capture.SrcMat.Clone();
     }
 
     public Mat CaptureGameGreyMat()
     {
-        return CaptureToRectArea().CacheGreyMat;
+        using var capture = CaptureToRectArea();
+        return capture.CacheGreyMat.Clone();
     }
 
     public ImageRegion CaptureGameRectArea()
@@ -189,13 +191,13 @@ public class GeniusInvokationControl
     /// <returns></returns>
     public List<Rect> GetCharacterRects()
     {
-        var srcMat = CaptureGameMat();
+        using var srcMat = CaptureGameMat();
         var halfHeight = srcMat.Height / 2;
-        var bottomMat = new Mat(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
+        using var bottomMat = new Mat(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
 
         var lowPurple = new Scalar(235, 245, 198);
         var highPurple = new Scalar(255, 255, 236);
-        var gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
+        using var gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
 
         // 水平投影到y轴 正常只有一个连续区域
         var h = ArithmeticHelper.HorizontalProjection(gray);
@@ -447,7 +449,7 @@ public class GeniusInvokationControl
     /// <param name="holdElementalTypes">保留的元素类型</param>
     public bool RollPhaseReRoll(params ElementalType[] holdElementalTypes)
     {
-        var gameSnapshot = CaptureGameMat();
+        using var gameSnapshot = CaptureGameMat();
         Cv2.CvtColor(gameSnapshot, gameSnapshot, ColorConversionCodes.BGRA2BGR);
         var dictionary = FindMultiPicFromOneImage2OneByOne(gameSnapshot, _assets.RollPhaseDiceMats, 0.73);
 
@@ -574,11 +576,12 @@ public class GeniusInvokationControl
     /// <returns></returns>
     public Dictionary<string, int> ActionPhaseDice()
     {
-        var srcMat = CaptureGameMat();
+        using var srcMat = CaptureGameMat();
         Cv2.CvtColor(srcMat, srcMat, ColorConversionCodes.BGRA2BGR);
         // 切割图片后再识别 加快速度 位置没啥用，所以切割后比较方便
+        using var rightMat = CutRight(srcMat, srcMat.Width / 5);
         var dictionary =
-            FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _actionPhaseDiceMats, 0.7);
+            FindMultiPicFromOneImage2OneByOne(rightMat, _actionPhaseDiceMats, 0.7);
 
         var msg = "";
         var result = new Dictionary<string, int>();
@@ -927,7 +930,8 @@ public class GeniusInvokationControl
             throw new System.Exception("未能获取到我方角色卡位置");
         }
 
-        var pList = MatchTemplateHelper.MatchTemplateMulti(CaptureGameGreyMat(), _assets.CharacterDefeatedMat, 0.8);
+        using var greyMat = CaptureGameGreyMat();
+        var pList = MatchTemplateHelper.MatchTemplateMulti(greyMat, _assets.CharacterDefeatedMat, 0.8);
 
         var res = new bool[3];
         foreach (var p in pList)
@@ -1170,16 +1174,16 @@ public class GeniusInvokationControl
             throw new System.Exception("未能获取到我方角色卡位置");
         }
 
-        var srcMat = CaptureGameMat();
+        using var srcMat = CaptureGameMat();
 
         int halfHeight = srcMat.Height / 2;
-        Mat bottomMat = new(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
+        using Mat bottomMat = new(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
 
         var lowPurple = new Scalar(239, 239, 239);
         var highPurple = new Scalar(255, 255, 255);
-        Mat gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
+        using Mat gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
 
-        var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(15, 10),
+        using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(15, 10),
             new OpenCvSharp.Point(-1, -1));
         Cv2.Dilate(gray, gray, kernel); //膨胀
 
@@ -1208,7 +1212,7 @@ public class GeniusInvokationControl
                     {
                         // 首个相交矩形就是出战角色
                         duel.CurrentCharacter = duel.Characters[i + 1];
-                        var grayMat = new Mat();
+                        using var grayMat = new Mat();
                         Cv2.CvtColor(srcMat, grayMat, ColorConversionCodes.BGR2GRAY);
                         AppendCharacterStatus(duel.CurrentCharacter, grayMat);
 
@@ -1240,7 +1244,7 @@ public class GeniusInvokationControl
             throw new System.Exception("未能获取到我方角色卡位置");
         }
 
-        var imageRegion = CaptureToRectArea();
+        using var imageRegion = CaptureToRectArea();
 
         var hpArray = new int[3]; // 1 代表未出战 2 代表出战
         for (var i = 0; i < duel.CharacterCardRects.Count; i++)
@@ -1254,7 +1258,7 @@ public class GeniusInvokationControl
 
             var cardRect = duel.CharacterCardRects[i];
             // 未出战角色的hp区域
-            var hpMat = new Mat(imageRegion.SrcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
+            using var hpMat = new Mat(imageRegion.SrcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
                 cardRect.Y + _config.CharacterCardExtendHpRect.Y,
                 _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
             var text = OcrFactory.Paddle.Ocr(hpMat);
@@ -1273,8 +1277,8 @@ public class GeniusInvokationControl
                     cardRect.Y + _config.CharacterCardExtendHpRect.Y - _config.ActiveCharacterCardSpace,
                     _config.CharacterCardExtendHpRect.Width,
                     _config.CharacterCardExtendHpRect.Height).ClampTo(imageRegion.SrcMat);
-                hpMat = new Mat(imageRegion.SrcMat, activeHpRect);
-                text = OcrFactory.Paddle.Ocr(hpMat);
+                using var activeHpMat = new Mat(imageRegion.SrcMat, activeHpRect);
+                text = OcrFactory.Paddle.Ocr(activeHpMat);
                 //Cv2.ImWrite($"log\\hp_active_{i}.jpg", hpMat);
                 Debug.WriteLine($"角色{i}出战HP位置识别结果{text}");
                 if (!string.IsNullOrWhiteSpace(text))
@@ -1334,8 +1338,8 @@ public class GeniusInvokationControl
     /// <returns></returns>
     public int GetDiceCountByOcr()
     {
-        var srcMat = CaptureGameGreyMat();
-        var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
+        using var srcMat = CaptureGameGreyMat();
+        using var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
         var text = OcrFactory.Paddle.OcrWithoutDetector(diceCountMap);
         text = text.Replace(" ", "")
             .Replace("①", "1")

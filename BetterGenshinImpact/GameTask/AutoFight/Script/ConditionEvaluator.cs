@@ -14,14 +14,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 /// <summary>
 /// 条件表达式求值器
 /// 支持语法：||, &&, !, (), +, -, *, /, >, <, =, 函数调用
-/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, onfield, t, since, count, min, max
+/// 支持函数：last-exec, q-ready, e-ready, e-cd, low-hp, battle-time, in-party, onfield, t, since, count, min, max, last-check
 /// </summary>
 public class ConditionEvaluator
 {
     /// <summary>内置条件函数名（词法解析时优先按函数名合并连字符）</summary>
     public static readonly HashSet<string> FunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count", "min", "max"
+        "last-exec", "q-ready", "e-ready", "e-cd", "low-hp", "battle-time", "in-party", "onfield", "t", "since", "count", "min", "max", "last-check"
     };
 
     /// <summary>
@@ -452,6 +452,7 @@ public class ConditionEvaluator
             "count" => EvalCount(args, currentIndex),
             "min" => EvalMinMax(args, currentIndex, isMax: false),
             "max" => EvalMinMax(args, currentIndex, isMax: true),
+            "last-check" => EvalLastCheck(),
             _ => throw new InvalidOperationException($"未知条件函数：{name}")
         };
     }
@@ -756,6 +757,16 @@ public class ConditionEvaluator
     private double EvalT()
     {
         return (DateTime.Now - _battleStartTime).TotalSeconds;
+    }
+
+    /// <summary>
+    /// 距最近一次战斗结束检查的时间，单位秒（如 last-check() > 3）
+    /// 数据源为 AutoFightTask.LastFightFinishCheckTime：由战斗结束检查与策略中的 check 指令更新，
+    /// 战斗开始时在 AutoFightJsonTask 中重置，供 JSON 策略按检查间隔编排动作。
+    /// </summary>
+    private double EvalLastCheck()
+    {
+        return (DateTime.Now - AutoFightTask.LastFightFinishCheckTime).TotalSeconds;
     }
 
     /// <summary>

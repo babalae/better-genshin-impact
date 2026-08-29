@@ -28,6 +28,11 @@ public partial class ChooseTalkOptionTask
         return RecognitionAssets.Get("AutoSkip", "OptionIcon", region.Width, region.Height);
     }
 
+    private static RecognitionObject GetChatExitRecognitionObject(ImageRegion region)
+    {
+        return RecognitionAssets.Get("AutoSkip", "ChatExit", region.Width, region.Height);
+    }
+
     public string Name => "持续对话并选择目标选项";
 
     // private readonly AutoSkipConfig _config = TaskContext.Instance().Config.AutoSkipConfig;
@@ -97,7 +102,7 @@ public partial class ChooseTalkOptionTask
 
     public async Task SelectLastOptionOnce(CancellationToken ct)
     {
-        var region = CaptureToRectArea();
+        using var region = CaptureToRectArea();
         if (Bv.IsInTalkUi(region))
         {
             var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));
@@ -110,11 +115,46 @@ public partial class ChooseTalkOptionTask
         }
     }
 
+    /// <summary>
+    /// 识别并点击退出对话按钮，直到返回主界面
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes">最大识别次数</param>
+    /// <returns>是否已返回主界面</returns>
+    public async Task<bool> ClickChatExitUntilMainUi(CancellationToken ct, int retryTimes = 15)
+    {
+        for (var i = 0; i < retryTimes; i++)
+        {
+            using var region = CaptureToRectArea();
+            if (Bv.IsInMainUi(region))
+            {
+                return true;
+            }
+
+            using var chatExit = region.Find(GetChatExitRecognitionObject(region));
+            if (chatExit.IsExist())
+            {
+                chatExit.Click();
+                _logger.LogInformation("点击退出对话按钮");
+                await Delay(200, ct);
+            }
+            else if (Bv.IsInTalkUi(region))
+            {
+                TaskContext.Instance().PostMessageSimulator.KeyPressBackground(User32.VK.VK_SPACE);
+            }
+
+            await Delay(500, ct);
+        }
+
+        using var finalRegion = CaptureToRectArea();
+        return Bv.IsInMainUi(finalRegion);
+    }
+
     public async Task SelectLastOptionUntilEnd(CancellationToken ct, Func<ImageRegion, bool>? endAction = null, int retry = 2400)
     {
         for (var i = 0; i < retry; i++)
         {
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             if (Bv.IsInTalkUi(region))
             {
                 var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));

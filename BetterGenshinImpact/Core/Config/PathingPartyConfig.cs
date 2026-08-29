@@ -177,6 +177,10 @@ public partial class PathingPartyConfig : ObservableObject
         {
             ApproachStopDistance = value;
         }
+        if (MwkJumpFlyDistance <= value)
+        {
+            MwkJumpFlyDistance = value + 1;
+        }
     }
 
     partial void OnApproachStopDistanceChanged(int value)
@@ -187,14 +191,35 @@ public partial class PathingPartyConfig : ObservableObject
         }
     }
 
+    partial void OnMwkJumpFlyDistanceChanged(int value)
+    {
+        if (value <= Distance)
+        {
+            MwkJumpFlyDistance = Distance + 1;
+        }
+    }
+
+    /// <summary>
+    /// 赶路角色选择说明：
+    /// - 空选（""）：不进行赶路动作，仅普通跑图
+    /// - 选择具体角色：仅使用该角色的赶路逻辑
+    /// - 选择"自动"：优先使用行走位（MainAvatarIndex）角色跑图，行走位不支持赶路时，按支持列表顺序尝试使用队伍中其他角色
+    /// 支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰
+    /// </summary>
     [JsonIgnore]
-    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁"];
+    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁","法尔伽","夜兰"];
 
     [JsonIgnore]
     public List<string> TravelModeList { get; } = ["精准靠近","连续赶路"];
 
     [ObservableProperty]
     private string _hurryOnAvatar = "";
+
+    /// <summary>
+    /// 覆写赶路帧间隔（ms），默认 100。存在有效赶路角色时生效，有效范围 1-150，超出自动钳制。
+    /// </summary>
+    [ObservableProperty]
+    private int _hurryOnFrameInterval = 100;
 
     [ObservableProperty]
     private string _travelMode = "精准靠近";
@@ -205,9 +230,6 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _switchToWalkEnabled = false;
 
-    [ObservableProperty]
-    private bool _mwkFlyEnabled = true;
-
     /// <summary>
     /// 玛薇卡跳飞开关
     /// </summary>
@@ -215,10 +237,29 @@ public partial class PathingPartyConfig : ObservableObject
     private bool _mwkJumpFlyEnabled = true;
 
     /// <summary>
+    /// 玛薇卡跳飞启用距离（米），必须大于 <see cref="Distance"/>，越界时自动使用 Distance+1 的值。
+    /// </summary>
+    [ObservableProperty]
+    private int _mwkJumpFlyDistance = 75;
+
+    /// <summary>
     /// 跳飞间隔（秒），闲云使用其1/2值
     /// </summary>
     [ObservableProperty]
     private double _mwkJumpFlyIntervalSeconds = 1;
+
+    /// <summary>
+    /// 玛薇卡在车上禁用冲刺。0命玛薇卡酌情勾选，节约夜魂值。
+    /// </summary>
+    [ObservableProperty]
+    private bool _mwkDisableSprintEnabled = false;
+
+    /// <summary>
+    /// 跳飞前额外冲刺次数。6命玛薇卡可选，每次上车后前若干次跳飞改为冲刺跳飞，速度更快，夜魂值消耗更高，推荐3次。
+    /// 0 表示不使用冲刺跳飞。
+    /// </summary>
+    [ObservableProperty]
+    private int _mwkJumpFlySprintCount = 0;
 
     public static PathingPartyConfig BuildDefault()
     {

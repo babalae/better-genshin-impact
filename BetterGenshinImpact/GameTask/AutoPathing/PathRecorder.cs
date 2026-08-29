@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
@@ -60,7 +60,7 @@ public class PathRecorder : Singleton<PathRecorder>
         }
 
         var waypoint = new Waypoint();
-        var screen = TaskControl.CaptureToRectArea();
+        using var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
         var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (nullablePosition == null)
@@ -91,7 +91,7 @@ public class PathRecorder : Singleton<PathRecorder>
     public void AddWaypoint(string waypointType = "")
     {
         Waypoint waypoint = new();
-        var screen = TaskControl.CaptureToRectArea();
+        using var screen = TaskControl.CaptureToRectArea();
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
         var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);

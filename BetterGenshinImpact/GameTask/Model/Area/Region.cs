@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model.Area.Converter;
+using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using OpenCvSharp;
@@ -345,7 +345,7 @@ public class Region : IDisposable
         return !IsEmpty();
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         // 子节点全部释放
         // NextChildren?.ForEach(x => x.Dispose());

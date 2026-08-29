@@ -121,6 +121,13 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _takeScreenshotHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
+    // Recognition 模板素材制作
+    [ObservableProperty]
+    private string _recognitionTemplateEditorHotkey = "";
+
+    [ObservableProperty]
+    private string _recognitionTemplateEditorHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
     [ObservableProperty]
     private string _turnAroundHotkey = "";
 

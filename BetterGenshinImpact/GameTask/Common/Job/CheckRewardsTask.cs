@@ -41,7 +41,7 @@ public class CheckRewardsTask
     
     private static RecognitionObject GetConfirmRa(bool isOcrMatch = false,params string[] targetText)
     {
-        var screenArea = CaptureToRectArea();
+        using var screenArea = CaptureToRectArea();
         var x = (int)(screenArea.Width * 0.1);
         var y = (int)(screenArea.Height * 0.1);
         var width = (int)(screenArea.Width * 0.3);
@@ -62,7 +62,7 @@ public class CheckRewardsTask
                 ()=>
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
-                    var screen = CaptureToRectArea();
+                    using var screen = CaptureToRectArea();
                     var ra = screen.FindMulti(GetConfirmRa())
                         .FirstOrDefault(btn => Regex.IsMatch(btn.Text.Trim(), $"^(?:{_commissionsButtonString})$", RegexOptions.IgnoreCase));
                         ra?.Click();

@@ -418,7 +418,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="选择赶路角色后自动启用，留空则关闭赶路"
+                                              Text="空选：不进行赶路动作。选择具体角色：使用对应角色。选择自动：优先选择行走位跑图，行走位不支持时尝试使用其他角色。支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
@@ -426,6 +426,35 @@
                                           MinWidth="120"
                                           ItemsSource="{Binding PathingConfig.HurryOnAvatarList}"
                                           SelectedItem="{Binding PathingConfig.HurryOnAvatar}" />
+                            </Grid>
+
+                            <!-- 覆写赶路帧间隔 -->
+                            <Grid Margin="16,0,16,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="覆写赶路帧间隔"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="启用赶路逻辑时移速较快，设备性能富余时可选择适当降低帧间隔以提高稳定性，默认值100（ms）"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.HurryOnFrameInterval}" />
                             </Grid>
 
                             <!-- 赶路模式 -->
@@ -486,7 +515,8 @@
                             </Grid>
 
                             <!-- 接近停车距离 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsApproachStopDistanceVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -515,7 +545,8 @@
                             </Grid>
 
                             <!-- 接近切人步行 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsSwitchToWalkVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -541,7 +572,8 @@
                             </Grid>
 
                             <!-- 启用跳飞 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAuto, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -566,8 +598,39 @@
                                                  IsChecked="{Binding PathingConfig.MwkJumpFlyEnabled, Mode=TwoWay}" />
                             </Grid>
 
+                            <!-- 跳飞启用距离 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsJumpFlyDistanceVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="跳飞启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="节点距离大于此值时启用跳飞，需大于赶路启用距离"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.MwkJumpFlyDistance}" />
+                            </Grid>
+
                             <!-- 跳飞间隔 -->
-                            <Grid Margin="16,0,16,10">
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsHurryOnMwkOrAutoOrXianyun, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -595,6 +658,63 @@
                                             Text="{Binding PathingConfig.MwkJumpFlyIntervalSeconds}" />
                             </Grid>
 
+                            <!-- 跳飞前额外冲刺次数 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsJumpFlySprintCountVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="跳飞前额外冲刺次数"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="6命玛薇卡可选，每次上车后前若干次跳飞改为冲刺跳飞，速度更快，夜魂值消耗更高，推荐3次"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="60"
+                                            Height="35"
+                                            HorizontalContentAlignment="Center"
+                                            Text="{Binding PathingConfig.MwkJumpFlySprintCount}" />
+                            </Grid>
+
+                            <!-- 玛薇卡在车上禁用冲刺 -->
+                            <Grid Margin="16,0,16,10"
+                                  Visibility="{Binding IsDisableSprintVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="玛薇卡在车上禁用冲刺"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="0命玛薇卡酌情勾选，节约夜魂值"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,24,0"
+                                                 IsChecked="{Binding PathingConfig.MwkDisableSprintEnabled}" />
+                            </Grid>
 
                         </StackPanel>
                     </ui:CardExpander>
@@ -1220,12 +1340,12 @@
                                                     <ui:TextBlock Grid.Row="0"
                                                                   Grid.Column="0"
                                                                   FontTypography="Body"
-                                                                  Text="更快检查结束战斗"
+                                                                  Text="更快触发战斗结束检查"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束( 默认关闭 )，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                                  Text="快速检查战斗结束( 默认关闭 )，完成一轮动作后，如果满足条件，则触发一次战斗结束检查。"
                                                                   TextWrapping="Wrap" />
                                                     <ui:ToggleSwitch Grid.Row="0"
                                                                      Grid.RowSpan="2"
@@ -1247,12 +1367,12 @@
                                                     <ui:TextBlock Grid.Row="0"
                                                                   Grid.Column="0"
                                                                   FontTypography="Body"
-                                                                  Text="更快检查结束战斗参数"
+                                                                  Text="更快触发战斗结束检查参数"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                                  Text="快速检查战斗结束的参数，填写数字（秒）时距离上次检查超过该时间则触发检查，填写人名时对应角色动作后触发检查。多项时使用分号分隔，格式如5或5;白术;"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBox Grid.Row="0"
                                                                 Grid.RowSpan="2"
@@ -1262,6 +1382,25 @@
                                                                 Margin="0,0,36,0"
                                                                 Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.FastCheckParams, Mode=TwoWay}"
                                                                 TextWrapping="Wrap" />
+                                                </Grid>
+
+                                                <!-- 切人后再执行战斗结束检查 -->
+                                                <Grid Margin="16">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <ui:TextBlock FontTypography="Body"
+                                                                      Text="切人后再执行战斗结束检查"
+                                                                      TextWrapping="Wrap" />
+                                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                                      Text="将触发战斗结束检查的时机调整为切人后，无需等待上一个动作后摇。目前仅 JSON 策略下生效。"
+                                                                      TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <ui:ToggleSwitch Grid.Column="1"
+                                                                     Margin="0,0,36,0"
+                                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.CheckAfterSwitchAvatar, Mode=TwoWay}" />
                                                 </Grid>
                                             </StackPanel>
                                         </ui:CardExpander>
@@ -1285,6 +1424,74 @@
                                 <ui:ToggleSwitch Grid.Column="1"
                                                  Margin="0,0,36,0"
                                                  IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.SkipFightEndCheckWhenEnemyVisible, Mode=TwoWay}" />
+                            </Grid>
+
+                            <!-- 开战后一段时间阻断战斗结束检查 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="开战后一段时间阻断战斗结束检查（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="开战后该时间内的战斗结束检查直接视为战斗未结束，默认为0表示不阻断。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:NumberBox Grid.Column="1"
+                                              MinWidth="120"
+                                              Margin="0,0,36,0"
+                                              Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.BlockCheckBeforeBattleSeconds, Mode=TwoWay}"
+                                              ValidationMode="InvalidInputOverwritten"
+                                              Minimum="0"
+                                              Maximum="10"
+                                              SpinButtonPlacementMode="Hidden" />
+                            </Grid>
+
+                            <!-- 派蒙辅助检测 -->
+                            <Grid Margin="16,0,16,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="派蒙辅助检测"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="按L后当派蒙头像可见时提前跳出战斗结束检测。默认开启。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled, Mode=TwoWay}" />
+                            </Grid>
+
+                            <!-- 派蒙检测延时（勾选派蒙辅助检测后显示） -->
+                            <Grid Margin="16,0,16,16"
+                                  Visibility="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="派蒙检测延时（秒）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="按L后等待该时间再检测派蒙头像，默认为0.1秒"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ui:NumberBox Grid.Column="1"
+                                              MinWidth="120"
+                                              Margin="0,0,36,0"
+                                              Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}"
+                                              ValidationMode="InvalidInputOverwritten"
+                                              Minimum="0.05"
+                                              Maximum="0.4"
+                                              SpinButtonPlacementMode="Hidden" />
                             </Grid>
 
                             <Grid Margin="16,0,16,16">
@@ -1390,7 +1597,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒( 预设0.4秒 )。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                                  Text="触发战斗结束检查时，先等待该延时以确保角色动作后摇结束。也可为角色单独指定延时，格式如0.4或0.4;钟离,1.5"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -1415,7 +1622,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒( 预设0.4秒 )。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若出现无法结束战斗可以适当提高这个值，比如0.75。但不要太大，确保这个延时不会真的把队伍配置界面切出来。"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"

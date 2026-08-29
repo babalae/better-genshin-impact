@@ -150,7 +150,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private static RecognitionObject GetConfirmRa(params string[] targetText)
     {
-        var screenArea = CaptureToRectArea();
+        using var screenArea = CaptureToRectArea();
         var x = (int)(screenArea.Width * 0.5);
         var y = (int)(screenArea.Height * 0.5);
         var width = (int)(screenArea.Width * 0.5);
@@ -883,7 +883,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (Bv.CurrentAvatarIsLowHp(CaptureToRectArea()))
+                    using var capture = CaptureToRectArea();
+                    if (Bv.CurrentAvatarIsLowHp(capture))
                     {
                         // 模拟按键 "Z"
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
@@ -949,7 +950,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             var backwardsAndForwardsCount = 0;
             while (!_ct.IsCancellationRequested)
             {
-                var treeRect = DetectTree(CaptureToRectArea());
+                using var capture = CaptureToRectArea();
+                var treeRect = DetectTree(capture);
                 if (treeRect != default)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
@@ -1324,7 +1326,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
 
         Sleep(1000, _ct);
-        TryRecognizeRewardResult();
+        await TryRecognizeRewardResult();
 
         for (var i = 0; i < 30; i++)
         {
@@ -1359,7 +1361,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     {
                         // 真没树脂了还有提示兜底
                         await Delay(900, _ct);
-                        var textListInNoResinPrompt = CaptureToRectArea().FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
+                        using var noResinPromptCapture = CaptureToRectArea();
+                        var textListInNoResinPrompt = noResinPromptCapture.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
                         if (textListInNoResinPrompt.Any(t => Regex.IsMatch(t.Text, retryDomainPromptPattern)))
                         {
                             var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => Regex.IsMatch(t.Text, cancelButtonString));
@@ -1381,7 +1384,7 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
     }
 
-    private void TryRecognizeRewardResult()
+    private async Task TryRecognizeRewardResult()
     {
         if (!_taskParam.RewardRecognitionEnabled)
         {
@@ -1390,6 +1393,12 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         try
         {
+            if (!await WaitForRewardResultReady())
+            {
+                Logger.LogWarning("自动秘境：奖励结果页未检测到退出按钮，已跳过本轮奖励识别");
+                return;
+            }
+
             // 使用多页识别（自动检测是否需要翻页）
             Logger.LogInformation("自动秘境：开始奖励识别");
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage();
@@ -1406,10 +1415,25 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 Logger.LogWarning("自动秘境：本轮奖励识别结果为空");
             }
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception e) when (e is not OperationCanceledException and not NormalEndException)
         {
             Logger.LogWarning(e, "自动秘境：奖励识别失败，已跳过本轮奖励汇总");
         }
+    }
+
+    private async Task<bool> WaitForRewardResultReady()
+    {
+        for (var i = 0; i < 20; i++)
+        {
+            using var capture = CaptureToRectArea();
+            using var exitRegion = capture.Find(RecognitionAssets.Get("AutoFight", "Exit", capture));
+            if (exitRegion.IsExist())
+            {
+                return true;
+            }
+            await Delay(300, _ct);
+        }
+        return false;
     }
 
     private async Task ExitDomain()
@@ -1418,7 +1442,8 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         await Delay(500, _ct);
         Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         await Delay(800, _ct);
-        Bv.ClickBlackConfirmButton(CaptureToRectArea());
+        using var capture = CaptureToRectArea();
+        Bv.ClickBlackConfirmButton(capture);
     }
 
     public static (bool, int) PressUseResin(ImageRegion ra, string resinName, string logPrefix = "自动秘境")

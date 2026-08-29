@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using OpenCvSharp;
 using System;
 
@@ -112,7 +112,8 @@ public class CameraOrientationCalculator : IDisposable
         }
         Cv2.Resize(result, result, new Size(result.Width * Scale, 1), 0, 0, InterpolationFlags.Cubic);
         RightShiftCv(result, resultShift, PeakWidth);
-        var peakRegionSum = Cv2.Sum(resultShift[0, 1, 0, PeakWidth]).Val0;
+        using var peakRegion = resultShift[0, 1, 0, PeakWidth];
+        var peakRegionSum = Cv2.Sum(peakRegion).Val0;
         Cv2.Subtract(result, resultShift, resultShift);
         Cv2.Integral(resultShift, result);
         Cv2.MinMaxLoc(result, out _, out var maxVal, out _, out var maxLoc);
@@ -129,6 +130,7 @@ public class CameraOrientationCalculator : IDisposable
     {
         _rotationRemapDataX.Dispose();
         _rotationRemapDataY.Dispose();
+        _alphaMask1Remap.Dispose();
         _alphaMask2Remap.Dispose();
     }
 }

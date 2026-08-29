@@ -2,6 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -25,10 +27,12 @@ public partial class HtmlMaskWindow : Window
 {
     private static readonly ConcurrentDictionary<string, HtmlMaskWindow> _windows = new();
     private const int MaxWindows = 5;
+    private const string HtmlMaskProfileName = "HtmlMask";
 
     private readonly string _id;
     private readonly string _workDir;
     private readonly string _webView2DataPath;
+    private readonly string? _virtualHostName;
     private readonly string _pageUrl;
     private bool _navigationCompleted;
     private bool _styleCaptured;
@@ -51,13 +55,59 @@ public partial class HtmlMaskWindow : Window
     private HtmlMaskWindow(string url, string? id, string workDir)
     {
         _id = id ?? Guid.NewGuid().ToString("N");
-        _workDir = workDir;
-        _webView2DataPath = Path.Combine(workDir, "WebView2Data");
-        _pageUrl = url;
+        _workDir = Path.GetFullPath(workDir);
+        _webView2DataPath = Path.Combine(AppContext.BaseDirectory, "WebView2Data");
+
+        var scriptName = Path.GetFileName(Path.TrimEndingDirectorySeparator(_workDir));
+        var scriptKey = CreateScriptKey(scriptName);
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var pageUri) && pageUri.IsFile)
+        {
+            _virtualHostName = $"hm-{scriptKey}.bettergi.local";
+            _pageUrl = CreateVirtualPageUrl(pageUri, _workDir, _virtualHostName);
+        }
+        else
+        {
+            _pageUrl = url;
+        }
+
         InitializeComponent();
         ClickThroughBorder.Background = _backgroundBrush;
         Loaded += OnLoaded;
         Closing += (_, _) => _isClosing = true;
+    }
+
+    private static string CreateScriptKey(string scriptName)
+    {
+        var normalizedName = scriptName.ToUpperInvariant();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedName));
+        return Convert.ToHexString(hash.AsSpan(0, 4)).ToLowerInvariant();
+    }
+
+    private static string CreateVirtualPageUrl(Uri fileUri, string workDir, string virtualHostName)
+    {
+        var pagePath = Path.GetFullPath(fileUri.LocalPath);
+        var relativePath = Path.GetRelativePath(workDir, pagePath);
+
+        if (Path.IsPathRooted(relativePath)
+            || relativePath.Equals("..", StringComparison.Ordinal)
+            || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+            || relativePath.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"HTML页面路径越界访问: {fileUri}", nameof(fileUri));
+        }
+
+        var escapedPath = string.Join('/', relativePath
+            .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString));
+
+        var uriBuilder = new UriBuilder(Uri.UriSchemeHttps, virtualHostName)
+        {
+            Path = $"/{escapedPath}",
+            Query = fileUri.Query.TrimStart('?'),
+            Fragment = fileUri.Fragment.TrimStart('#')
+        };
+        return uriBuilder.Uri.AbsoluteUri;
     }
 
     #region 静态窗口管理
@@ -276,13 +326,23 @@ public partial class HtmlMaskWindow : Window
             var environment = await CoreWebView2Environment.CreateAsync(null, _webView2DataPath);
             if (_isClosing) return;
 
-            await WebView.EnsureCoreWebView2Async(environment);
+            var controllerOptions = environment.CreateCoreWebView2ControllerOptions();
+            controllerOptions.ProfileName = HtmlMaskProfileName;
+            await WebView.EnsureCoreWebView2Async(environment, controllerOptions);
             if (_isClosing) return;
 
             WebView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
             WebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;
             WebView.CoreWebView2.Settings.IsScriptEnabled = true;
             WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
+
+            if (_virtualHostName != null)
+            {
+                WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    _virtualHostName,
+                    _workDir,
+                    CoreWebView2HostResourceAccessKind.Deny);
+            }
 
             // 拦截网络请求，仅允许注册过的域名
             WebView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
@@ -435,6 +495,14 @@ public partial class HtmlMaskWindow : Window
 
             // 允许数据URI
             if (uri.Scheme == "data") return;
+
+            // 虚拟主机只映射当前脚本目录，允许页面及其相对资源正常加载
+            if (_virtualHostName != null
+                && uri.Scheme == Uri.UriSchemeHttps
+                && uri.Host.Equals(_virtualHostName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
 
             // 本地文件：必须在脚本目录内
             if (uri.Scheme == "file")

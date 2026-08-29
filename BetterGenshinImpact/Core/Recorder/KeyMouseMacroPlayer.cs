@@ -58,7 +58,7 @@ public class KeyMouseMacroPlayer
             }
 
             var timeToWait = e.Time - (DateTime.UtcNow - startTime).TotalMilliseconds;
-            if (timeToWait < 0)
+            if (timeToWait < -1)
             {
                 TaskControl.Logger.LogDebug("无法原速重放事件{Event}，落后{TimeToWait}ms", e.Type.ToString(), (-timeToWait).ToString("F0"));
             }
@@ -178,7 +178,8 @@ public class KeyMouseMacroPlayer
                 case MacroEventType.MouseMoveBy:
                     if (e.CameraOrientation != null)
                     {
-                        var cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcMat);
+                        using var capture = TaskControl.CaptureToRectArea();
+                        var cao = CameraOrientation.Compute(capture.SrcMat);
                         var diff = ((int)Math.Round(cao) - (int)e.CameraOrientation + 180) % 360 - 180;
                         diff += diff < -180 ? 360 : 0;
                         //过滤一下特别大的角度偏差

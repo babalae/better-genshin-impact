@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
@@ -22,6 +22,7 @@ public class ImageRegion : Region
 {
     private Mat? _cacheGreyMat;
     private Image<Rgb24>? _cacheImage;
+    private bool _disposed;
 
     public Mat SrcMat { get; }
 
@@ -137,14 +138,14 @@ public class ImageRegion : Region
             {
                 var roi = GetTemplateMatchSource(ro, out ownedRoi);
 
-                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var referenceScale))
+                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var effectiveReferenceBoundingBoxSize))
                 {
                     failAction?.Invoke();
                     return new Region();
                 }
 
                 // 参考搜索会根据输入截图尺寸同步缩放模板和 mask，普通搜索则直接复用原始 Mat。
-                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, referenceScale, out var shouldDisposeTemplate);
+                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, effectiveReferenceBoundingBoxSize, out var shouldDisposeTemplate);
                 Mat? effectiveMask = null;
                 var shouldDisposeMask = false;
                 try
@@ -232,11 +233,10 @@ public class ImageRegion : Region
                 return new Region();
             }
 
-            var roi = SrcMat;
-            if (effectiveRegionOfInterest != default)
-            {
-                roi = new Mat(SrcMat, effectiveRegionOfInterest);
-            }
+            using var ownedRoi = effectiveRegionOfInterest != default
+                ? new Mat(SrcMat, effectiveRegionOfInterest)
+                : null;
+            var roi = ownedRoi ?? SrcMat;
 
             var result = OcrFactory.Paddle.OcrResult(roi);
             var text = StringUtils.RemoveAllSpace(result.Text);
@@ -309,16 +309,16 @@ public class ImageRegion : Region
                 return new Region();
             }
 
-            Mat roi;
-            if (RecognitionTypes.ColorRangeAndOcr.Equals(ro.RecognitionType))
+            using var ownedRoi = effectiveRegionOfInterest != default
+                ? new Mat(SrcMat, effectiveRegionOfInterest)
+                : null;
+            var roi = ownedRoi ?? SrcMat;
+            using var colorRoi = RecognitionTypes.ColorRangeAndOcr.Equals(ro.RecognitionType)
+                ? roi.Clone()
+                : null;
+            if (colorRoi != null)
             {
-                roi = SrcMat;
-                if (effectiveRegionOfInterest != default)
-                {
-                    roi = new Mat(SrcMat, effectiveRegionOfInterest);
-                }
-
-                roi = roi.Clone();
+                roi = colorRoi;
                 if (ro.ColorConversionCode != ColorConversionCodes.BGRA2BGR)
                 {
                     Cv2.CvtColor(roi, roi, ro.ColorConversionCode);
@@ -326,15 +326,6 @@ public class ImageRegion : Region
 
                 Cv2.InRange(roi, ro.LowerColor, ro.UpperColor, roi);
             }
-            else
-            {
-                roi = SrcMat;
-                if (effectiveRegionOfInterest != default)
-                {
-                    roi = new Mat(SrcMat, effectiveRegionOfInterest);
-                }
-            }
-
             var result = OcrFactory.Paddle.OcrResult(roi);
             var text = StringUtils.RemoveAllSpace(result.Text);
             text = ApplyTextReplacements(text, ro.ReplaceDictionary);
@@ -416,14 +407,14 @@ public class ImageRegion : Region
             {
                 var roi = GetTemplateMatchSource(ro, out ownedRoi);
 
-                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var referenceScale))
+                if (!ImageRegionReferenceSearchHelper.TryGetReferenceSearchRegion(this, ro, out var effectiveRegionOfInterest, out var effectiveReferenceBoundingBoxSize))
                 {
                     failAction?.Invoke();
                     return [];
                 }
 
                 // 参考搜索会根据输入截图尺寸同步缩放模板和 mask，普通搜索则直接复用原始 Mat。
-                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, referenceScale, out var shouldDisposeTemplate);
+                var effectiveTemplate = ImageRegionReferenceSearchHelper.GetEffectiveTemplate(ro, template, effectiveReferenceBoundingBoxSize, out var shouldDisposeTemplate);
                 Mat? effectiveMask = null;
                 var shouldDisposeMask = false;
                 try
@@ -504,28 +495,33 @@ public class ImageRegion : Region
                 return [];
             }
 
-            var roi = SrcMat;
-            if (effectiveRegionOfInterest != default)
-            {
-                roi = new Mat(SrcMat, effectiveRegionOfInterest);
-            }
+            using var ownedRoi = effectiveRegionOfInterest != default
+                ? new Mat(SrcMat, effectiveRegionOfInterest)
+                : null;
+            var roi = ownedRoi ?? SrcMat;
 
             var result = OcrFactory.Paddle.OcrResult(roi);
-
-            if (result.Regions.Length > 0)
+            var resRaList = new List<Region>();
+            foreach (var ocrRegion in result.Regions)
             {
-                var resRaList = result.Regions.Select(r =>
+                // PaddleOCR 的旋转文本框在取外接矩形时可能略微超出输入图像，必须先按 OCR 输入范围裁剪。
+                var rect = ocrRegion.Rect.BoundingRect().ClampTo(roi);
+                if (rect.Width <= 0 || rect.Height <= 0)
                 {
-                    var newRa = this.Derive(r.Rect.BoundingRect() + effectiveRegionOfInterest.Location);
-                    newRa.Text = ApplyTextReplacements(r.Text, ro.ReplaceDictionary);
-                    return newRa;
-                }).ToList();
+                    continue;
+                }
+
+                var newRa = Derive(rect + effectiveRegionOfInterest.Location);
+                newRa.Text = ApplyTextReplacements(ocrRegion.Text, ro.ReplaceDictionary);
+                resRaList.Add(newRa);
+            }
+
+            if (resRaList.Count > 0)
+            {
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
                     // 画出OCR识别到的区域
-                    var drawList = result.Regions.Select(item =>
-                        this.ToRectDrawable(item.Rect.BoundingRect() + effectiveRegionOfInterest.Location, ro.Name,
-                            ro.DrawOnWindowPen)).ToList();
+                    var drawList = resRaList.Select(item => item.SelfToRectDrawable(ro.Name, ro.DrawOnWindowPen)).ToList();
                     VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, drawList);
                 }
 
@@ -582,10 +578,17 @@ public class ImageRegion : Region
         return text;
     }
 
-    public new void Dispose()
+    public override void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _cacheImage?.Dispose();
         _cacheGreyMat?.Dispose();
         SrcMat.Dispose();
+        base.Dispose();
     }
 }

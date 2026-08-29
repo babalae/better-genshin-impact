@@ -317,6 +317,7 @@ public partial class ScriptControlViewModel : ViewModel
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
         uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
+        WindowHelper.CenterOnVisibleOwner(uiMessageBox);
 
         void OnQuestionButtonOnClick(object sender, RoutedEventArgs args)
         {
@@ -1573,14 +1574,14 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    public void OnEditScriptCommon(ScriptGroupProject? item)
+    public async Task OnEditScriptCommon(ScriptGroupProject? item)
     {
         if (item == null)
         {
             return;
         }
 
-        ShowEditWindow(item);
+        await ShowEditWindowAsync(item);
 
         // foreach (var group in ScriptGroups)
         // {
@@ -1612,13 +1613,10 @@ public partial class ScriptControlViewModel : ViewModel
         item.NextFlag = true;
     }
 
-    public static void ShowEditWindow(ScriptGroupProject project)
+    public static async Task ShowEditWindowAsync(ScriptGroupProject project)
     {
-        var viewModel = new ScriptGroupProjectEditorViewModel(project);
-        var editor = new ScriptGroupProjectEditor(project)
-        {
-            DataContext = viewModel
-        };
+        using var viewModel = new ScriptGroupProjectEditorViewModel(project);
+        var editor = new ScriptGroupProjectEditor(viewModel);
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = "修改通用设置",
@@ -1627,7 +1625,9 @@ public partial class ScriptControlViewModel : ViewModel
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
-        uiMessageBox.ShowDialogAsync();
+        WindowHelper.CenterOnVisibleOwner(uiMessageBox);
+        await uiMessageBox.ShowDialogAsync();
+        editor.DataContext = null;
     }
 
     [RelayCommand]
@@ -1671,6 +1671,7 @@ public partial class ScriptControlViewModel : ViewModel
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
             };
             AutoTranslateInterceptor.SetEnableAutoTranslate(uiMessageBox, false);
+            WindowHelper.CenterOnVisibleOwner(uiMessageBox);
             uiMessageBox.ShowDialogAsync();
 
             // 由于 JsScriptSettingsObject 的存在，这里只能手动再次保存配置
@@ -1850,7 +1851,7 @@ public partial class ScriptControlViewModel : ViewModel
             }
 
             var file = Path.Combine(ScriptGroupPath, $"{scriptGroup.Name}.json");
-            File.WriteAllText(file, scriptGroup.ToJson());
+            scriptGroup.WriteToFileAtomically(file);
         }
         catch (Exception e)
         {
@@ -2177,6 +2178,7 @@ public partial class ScriptControlViewModel : ViewModel
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        WindowHelper.CenterOnVisibleOwner(uiMessageBox);
 
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == MessageBoxResult.Primary)
@@ -2365,6 +2367,7 @@ public partial class ScriptControlViewModel : ViewModel
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        WindowHelper.CenterOnVisibleOwner(uiMessageBox);
 
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == MessageBoxResult.Primary)

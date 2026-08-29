@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -51,6 +52,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isConnectionPromptVisible = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSessionInteractionEnabled))]
+    private bool _isSessionClosing;
+
+    [ObservableProperty]
     private bool _isTopmost;
 
     [ObservableProperty]
@@ -61,6 +66,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     [ObservableProperty]
     private bool _keepAspectRatio = true;
+
+    [ObservableProperty]
+    private WindowPositionConfig? _normalWindowPosition;
+
+    [ObservableProperty]
+    private WindowPositionConfig? _smallWindowPosition;
 
     [ObservableProperty]
     private int _smallWindowResizeRequest;
@@ -80,6 +91,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isGameMouseModeEnabled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AudioButtonToolTip))]
+    private bool _isAudioMuted;
+
+    [ObservableProperty]
     private bool _isNotificationOpen;
 
     [ObservableProperty]
@@ -95,6 +110,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
     [NotifyCanExecuteChangedFor(nameof(ToggleSendSystemShortcutsToRemoteCommand))]
     private bool _isSystemShortcutsReconnectPending;
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ToggleAudioMutedCommand))]
+    private bool _isAudioReconnectPending;
+
     public bool IsDefaultResolutionSelected => true;
 
     public string TopmostButtonToolTip => IsTopmost ? "取消置顶" : "置顶";
@@ -105,6 +124,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
     public string GameMouseModeButtonToolTip => IsGameMouseModeEnabled
         ? "桌面分身内的 BetterGI 打开时生效；当前窗口处于焦点时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。"
         : "切换至游戏鼠标模式。桌面分身内的 BetterGI 打开时生效；当前窗口处于前台时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。";
+
+    public string AudioButtonToolTip => IsAudioMuted
+        ? "开启桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP"
+        : "关闭桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP";
 
     public string WindowSizeModeMenuHeader => IsSmallWindowMode ? "还原窗口" : "小窗模式";
 
@@ -118,6 +141,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     public bool HasChildSession => _childSessionService.ChildSessionId is not null;
 
+    public bool IsSessionInteractionEnabled => !IsSessionClosing;
+
     public ChildSessionWindowViewModel(ChildSessionService childSessionService)
     {
         _childSessionService = childSessionService;
@@ -125,8 +150,11 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _isAdaptive = _childSessionService.SmartSizingEnabled;
         _isOneToOne = !_isAdaptive;
         _keepAspectRatio = _childSessionService.KeepAspectRatio;
+        _normalWindowPosition = _childSessionService.NormalWindowPosition;
+        _smallWindowPosition = _childSessionService.SmallWindowPosition;
         _sendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
         _isGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+        _isAudioMuted = _childSessionService.AudioMuted;
         _notificationTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromSeconds(5)
@@ -136,12 +164,45 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _childSessionService.ConnectionFailed += OnChildSessionConnectionFailed;
         _childSessionService.SystemShortcutsReconnectCompleted +=
             OnSystemShortcutsReconnectCompleted;
+        _childSessionService.AudioReconnectCompleted += OnAudioReconnectCompleted;
         UpdateConnectionStatus();
     }
 
-    public Task LogoffAndHideAsync()
+    partial void OnNormalWindowPositionChanged(WindowPositionConfig? value)
     {
-        return ExecuteAsync(_childSessionService.LogoffAndHideAsync);
+        _childSessionService.NormalWindowPosition = value;
+    }
+
+    partial void OnSmallWindowPositionChanged(WindowPositionConfig? value)
+    {
+        _childSessionService.SmallWindowPosition = value;
+    }
+
+    public async Task LogoffAndHideAsync()
+    {
+        if (IsSessionClosing)
+        {
+            return;
+        }
+
+        IsSessionClosing = true;
+        UpdateConnectionStatus();
+
+        try
+        {
+            // 先让“正在关闭”状态完成渲染，再执行可能耗时的注销操作。
+            await Dispatcher.Yield(DispatcherPriority.Render);
+            await _childSessionService.LogoffAndHideAsync();
+        }
+        catch (Exception exception)
+        {
+            ShowError(exception);
+        }
+        finally
+        {
+            IsSessionClosing = false;
+            UpdateConnectionStatus();
+        }
     }
 
     partial void OnIsTopmostChanged(bool value)
@@ -308,6 +369,43 @@ public partial class ChildSessionWindowViewModel : ViewModel
             enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
     }
 
+    [RelayCommand(CanExecute = nameof(CanToggleAudioMuted))]
+    private void ToggleAudioMuted()
+    {
+        try
+        {
+            var reconnectStarted = _childSessionService.SetAudioMuted(!IsAudioMuted);
+            IsAudioMuted = _childSessionService.AudioMuted;
+            IsAudioReconnectPending = reconnectStarted;
+            UpdateConnectionStatus();
+
+            ShowNotification(
+                reconnectStarted ? "正在应用音频设置" : "音频设置已保存",
+                reconnectStarted
+                    ? "RDP 正在自动重新连接，连接完成后音频设置生效。"
+                    : IsAudioMuted
+                        ? "桌面分身将在下次连接时保持静音。"
+                        : "桌面分身将在下次连接时播放声音。",
+                InfoBarSeverity.Informational);
+        }
+        catch (Exception exception)
+        {
+            IsAudioReconnectPending = false;
+            IsAudioMuted = _childSessionService.AudioMuted;
+            ShowNotification(
+                "音频设置切换失败",
+                exception.GetBaseException().Message,
+                InfoBarSeverity.Error,
+                TimeSpan.FromSeconds(8));
+            UpdateConnectionStatus();
+        }
+    }
+
+    private bool CanToggleAudioMuted()
+    {
+        return !IsAudioReconnectPending;
+    }
+
     [RelayCommand]
     private void ShowDesktop()
     {
@@ -416,6 +514,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
             new Action(() =>
             {
                 IsSystemShortcutsReconnectPending = false;
+                IsAudioReconnectPending = false;
                 UpdateConnectionStatus();
                 ShowNotification(
                     "RDP 连接失败",
@@ -438,6 +537,24 @@ public partial class ChildSessionWindowViewModel : ViewModel
                     SendSystemShortcutsToRemote
                         ? "系统组合键现在会发送到桌面分身。"
                         : "系统组合键现在会在本机生效。",
+                    InfoBarSeverity.Success);
+            }));
+    }
+
+    private void OnAudioReconnectCompleted(object? sender, EventArgs e)
+    {
+        _ = Application.Current.Dispatcher.BeginInvoke(
+            DispatcherPriority.Normal,
+            new Action(() =>
+            {
+                IsAudioReconnectPending = false;
+                IsAudioMuted = _childSessionService.AudioMuted;
+                UpdateConnectionStatus();
+                ShowNotification(
+                    IsAudioMuted ? "桌面分身已静音" : "桌面分身声音已开启",
+                    IsAudioMuted
+                        ? "仅桌面分身的声音已关闭，主桌面其他程序不受影响。"
+                        : "桌面分身的声音已恢复。",
                     InfoBarSeverity.Success);
             }));
     }
@@ -473,8 +590,23 @@ public partial class ChildSessionWindowViewModel : ViewModel
         KeepAspectRatio = _childSessionService.KeepAspectRatio;
         SendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
         IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+        IsAudioMuted = _childSessionService.AudioMuted;
         IsRdpConnected = connectedState == 1;
-        IsConnectionPromptVisible = connectedState == 0 && !_startRequested;
+        IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !_startRequested;
+
+        if (IsSessionClosing)
+        {
+            ConnectionStatusBrush = Brushes.Orange;
+            ConnectionStatusTitle = "正在关闭桌面分身";
+            ConnectionStatusDescription = "正在断开 RDP 并注销桌面分身会话，此过程可能需要一些时间。";
+            RdpStatusText = connectedState == 0 ? "RDP 已断开" : "正在断开 RDP";
+            ChildSessionStatusText = childSessionId is null
+                ? "正在确认桌面分身会话已注销"
+                : $"正在注销桌面分身会话 {childSessionId.Value}";
+            ConnectionStatusToolTip = "关闭期间已暂停桌面分身操作，完成后窗口会自动隐藏。";
+            OnPropertyChanged(nameof(HasChildSession));
+            return;
+        }
 
         if (IsRdpConnected)
         {

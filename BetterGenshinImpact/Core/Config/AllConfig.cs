@@ -84,6 +84,12 @@ public partial class AllConfig : ObservableObject
     private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
     
     /// <summary>
+    /// 禁用键鼠监听，需重启
+    /// </summary>
+    [ObservableProperty]
+    private bool _disableInputMonitor = false;
+
+    /// <summary>
     /// 连续执行任务时，从此任务开始执行
     /// </summary>
     [JsonIgnore]
@@ -211,6 +217,11 @@ public partial class AllConfig : ObservableObject
     public RecordConfig RecordConfig { get; set; } = new();
 
     /// <summary>
+    /// 原琴演奏配置
+    /// </summary>
+    public MusicConfig MusicConfig { get; set; } = new();
+
+    /// <summary>
     /// 脚本配置
     /// </summary>
     public ScriptConfig ScriptConfig { get; set; } = new();
@@ -292,6 +303,7 @@ public partial class AllConfig : ObservableObject
         MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
+        MusicConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;

@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
         private static readonly string _configPath = Global.Absolute(@"log\logparse\config.json");
         private static readonly string _assets_dir = Global.Absolute($@"GameTask\LogParse\Assets");
         private static readonly Regex LogHeaderRegex = new(
-            @"^\[\d{2}:\d{2}:\d{2}\.\d+\] \[[^\]]+\](?: \[(?<Instance>[^\]]+)\])?",
+            @"^\[\d{2}:\d{2}:\d{2}\.\d+\] \[[^\]]+\](?: \[(?<Instance>[A-Za-z][A-Za-z0-9]*:S\d+:P\d+:T\d+)\])?",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
         // 添加一个静态事件用于通知日志的生成状态
         public static event Action<string> HtmlGenerationStatusChanged = delegate { };
@@ -62,6 +62,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
                     if (headerMatch.Success)
                     {
                         var instanceGroup = headerMatch.Groups["Instance"];
+                        // 兼容实例标识引入前的旧日志；旧格式的所有行统一归入默认分组。
                         currentInstance = instanceGroup.Success ? instanceGroup.Value : string.Empty;
                     }
 
