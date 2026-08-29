@@ -82,14 +82,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Blackboard blackboard,
             TimeProvider? timeProvider = null) => new ChooseBait(name, logger, systemInfo, input, session, prototypes, blackboard, timeProvider);
 
-        public ThrowRod ThrowRod(
+        public LiftRod LiftRod(
             string name,
             ILogger logger,
             IInputSimulator input,
             BgiYoloPredictor predictor,
             Blackboard blackboard,
             TimeProvider? timeProvider = null,
-            DrawContent? drawContent = null) => new ThrowRod(name, logger, input, predictor, blackboard, timeProvider, drawContent);
+            DrawContent? drawContent = null) => new LiftRod(name, logger, input, predictor, blackboard, timeProvider, drawContent);
+
+        public Cast Cast(
+            string name,
+            ILogger logger,
+            IInputSimulator input,
+            Blackboard blackboard,
+            TimeProvider? timeProvider = null) => new Cast(name, logger, input, blackboard, timeProvider);
 
         public CheckThrowRodResult CheckThrowRodResult(
             string name,
@@ -101,15 +108,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Blackboard blackboard,
             TimeProvider? timeProvider = null) => new CheckThrowRod(name, logger, blackboard, timeProvider);
 
-        public FishBite FishBite(
+        public CheckFishBite CheckFishBite(
             string name,
             ILogger logger,
-            IInputSimulator input,
             IOcrService ocrService,
             Blackboard blackboard,
             DrawContent? drawContent = null,
             CultureInfo? cultureInfo = null,
-            IStringLocalizer? stringLocalizer = null) => new FishBite(name, logger, input, ocrService, blackboard, drawContent, cultureInfo, stringLocalizer);
+            IStringLocalizer? stringLocalizer = null) => new CheckFishBite(name, logger, ocrService, blackboard, drawContent, cultureInfo, stringLocalizer);
+
+        public RaiseHook RaiseHook(
+            string name,
+            ILogger logger,
+            IInputSimulator input,
+            Blackboard blackboard,
+            TimeProvider? timeProvider = null) => new RaiseHook(name, logger, input, blackboard, timeProvider);
 
         public FishBiteTimeout FishBiteTimeout(
             string name,

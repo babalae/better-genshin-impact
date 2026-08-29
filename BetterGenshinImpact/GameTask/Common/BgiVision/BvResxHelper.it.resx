@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,55 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="地脉异常" xml:space="preserve">
-    <value>地[脈服][異翼昊]常</value>
-  </data>
-  <data name="挑战达成" xml:space="preserve">
-    <value>(挑戰|達成)</value>
-  </data>
-  <data name="点击任意位置关闭" xml:space="preserve">
-    <value>點擊任意位置關閉</value>
-  </data>
-  <data name="自动退出" xml:space="preserve">
-    <value>(自動|退出)</value>
-  </data>
-  <data name="跳过" xml:space="preserve">
-    <value>跳過</value>
-  </data>
-  <data name="单人挑战" xml:space="preserve">
-    <value>單人挑戰</value>
-  </data>
-  <data name="开始挑战" xml:space="preserve">
-    <value>開始挑戰</value>
-  </data>
-  <data name="是否仍要.*挑战.*秘境" xml:space="preserve">
-    <value>是否仍要.*挑戰.*秘境</value>
-  </data>
-  <data name="石化古树" xml:space="preserve">
-    <value>石化古樹</value>
-  </data>
-  <data name="数量不足" xml:space="preserve">
-    <value>數量不足</value>
-  </data>
-  <data name="补充原粹树脂" xml:space="preserve">
-    <value>補充原粹樹脂</value>
-  </data>
-  <data name="取消" xml:space="preserve">
-    <value>取消</value>
-  </data>
-  <data name="使用" xml:space="preserve">
-    <value>使用</value>
-  </data>
-  <data name="浓缩树脂" xml:space="preserve">
-    <value>濃縮樹脂</value>
-  </data>
-  <data name="原粹树脂" xml:space="preserve">
-    <value>原粹樹脂</value>
-  </data>
-  <data name="须臾树脂" xml:space="preserve">
-    <value>須臾樹脂</value>
-  </data>
-  <data name="脆弱树脂" xml:space="preserve">
-    <value>脆弱樹脂</value>
+  <data name="复苏" xml:space="preserve">
+    <value>Rianima</value>
   </data>
 </root>

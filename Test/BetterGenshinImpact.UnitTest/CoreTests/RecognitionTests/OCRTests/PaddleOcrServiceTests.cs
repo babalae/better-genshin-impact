@@ -42,6 +42,22 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("fr", "Cliquez pour fermer", "Cliquez.*pour.*fermer")]
         [InlineData("fr", "Sélection rapide", "Sélection.*rapide")]
         [InlineData("fr", "Artéfact 2★", "Artéfact.*2★?")]
+        [InlineData("en", "Daily Commission Rewards", "DailyCommissionRewards")]
+        [InlineData("fr", "Récompenses de missions quotidiennes", "Récompensesdemissionsquotidiennes")]
+        [InlineData("zh-Hant", "每日委託獎勵")]
+        [InlineData("en", "Start Challenge", "StartChallenge")]
+        [InlineData("fr", "Commencer")]
+        [InlineData("en", "Replenish Original Resin", "Replenish.*Original.*Resin")]
+        [InlineData("fr", "Recharger la Résine originelle", "Recharger.*la.*Résine.*originelle")]
+        [InlineData("it", "Manufatti da 2★", "Manufatti.*da.*2★?")]
+        [InlineData("it", "Selezione rapida", "Selezione.*rapida")]
+        [InlineData("it", "Sfida completata", "(Sfida|completata)")]
+        [InlineData("it", "Anomalia geomantica", "Anomalia.*geomantica")]
+        [InlineData("it", "Salta")]
+        [InlineData("it", "Riscatta")]
+        [InlineData("it", "Incarichi")]
+        [InlineData("it", "Pesca")]
+        [InlineData("it", "Katheryne")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>

@@ -59,7 +59,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected async override Task<Status> Update()
         {
-            if ((!Abort.Exists() || !Abort.Get()) &&  _timeProvider.GetLocalNow() >= _timeout)
+            if ((!Abort.Exists() || !Abort.Get()) && _timeProvider.GetLocalNow() >= _timeout)
             {
                 Abort.Set(true);
                 _logger.LogInformation($"{_seconds}秒超时已到，结束任务");
@@ -315,6 +315,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
+        [BlackboardKey(Access = Access.Read)]
+        public BehaviourKeyAccess<int> HandoffTimeSeconds { get; private set; } = null!;
+
         private QuitFishingMode(string name, ILogger logger, IInputSimulator input, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
         {
             _logger = logger;
@@ -324,6 +327,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected async override Task<Status> Update()
         {
+            if (HandoffTimeSeconds.TryGet(out int handoffTimeSeconds) && handoffTimeSeconds <= 10)   // Handoff空当超过10秒才退出钓鱼模式
+            {
+                return Status.Success;
+            }
+
             var imageRegion = Screenshot.Get();
 
             if (this.Status == Status.Invalid)
@@ -459,7 +467,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public partial class SetSleep : Behaviour
     {
-        [BlackboardKey(Access = Access.ExclusiveWrite)]
+        [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
         private readonly Action<int> _sleep;
