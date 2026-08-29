@@ -721,8 +721,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
-                _logger.LogInformation("大地图位置：{Position}", p);
+                try
+                {
+                    var (mapType, position) = new TpTask(CancellationToken.None).GetPositionFromCurrentBigMap();
+                    _logger.LogInformation("大地图位置（{MapType}）：X={X},Y={Y}", mapType.GetDescription(), position.X, position.Y);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "获取当前大地图位置失败");
+                }
             }
         ));
 

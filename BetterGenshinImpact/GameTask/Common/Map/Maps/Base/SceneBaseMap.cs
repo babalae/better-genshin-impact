@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
@@ -77,9 +78,9 @@ public abstract class SceneBaseMap : ISceneMap
                 {
                     if (_layers.Count == 0)
                     {
-                        TaskControl.Logger.LogInformation("[SIFT]地图特征点加载中，预计耗时2秒，请等待...");
+                        TaskControl.Logger.LogInformation("[SIFT]{MapType}地图特征点加载中，预计耗时2秒，请等待...", Type.GetDescription());
                         _layers = BaseMapLayer.LoadLayers(this);
-                        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+                        TaskControl.Logger.LogInformation("[SIFT]{MapType}地图特征点加载完成！", Type.GetDescription());
                     }
                 }
             }
@@ -116,6 +117,21 @@ public abstract class SceneBaseMap : ISceneMap
     public virtual Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
         return SiftMatcher.Match(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
+    }
+
+    public virtual FeatureMatchResult GetBigMapPositionMatchResult(Mat greyBigMapMat)
+    {
+        return SiftMatcher.MatchWithQuality(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
+    }
+
+    public virtual FeatureMatchResult GetBigMapPositionMatchResult(KeyPoint[] queryKeyPoints, Mat queryDescriptors, Size querySize)
+    {
+        return SiftMatcher.MatchWithQuality(
+            MainLayer.TrainKeyPoints,
+            MainLayer.TrainDescriptors,
+            queryKeyPoints,
+            queryDescriptors,
+            querySize);
     }
 
     public virtual Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter)
