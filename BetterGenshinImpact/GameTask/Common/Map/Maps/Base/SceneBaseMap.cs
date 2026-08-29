@@ -78,7 +78,7 @@ public abstract class SceneBaseMap : ISceneMap
                 {
                     if (_layers.Count == 0)
                     {
-                        TaskControl.Logger.LogInformation("[SIFT]{MapType}地图特征点加载中，预计耗时2秒，请等待...", Type.GetDescription());
+                        TaskControl.Logger.LogInformation("[SIFT]{MapType}地图特征点加载中，预计耗时2秒内，请等待...", Type.GetDescription());
                         _layers = BaseMapLayer.LoadLayers(this);
                         TaskControl.Logger.LogInformation("[SIFT]{MapType}地图特征点加载完成！", Type.GetDescription());
                     }
