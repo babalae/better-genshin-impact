@@ -53,6 +53,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             if (!value)
             {
                 ReleaseChooseOptionWait("触发器关闭");
+                ResetPageCloseRecognition();
             }
         }
     }
@@ -69,6 +70,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool IsUseInteractionKey { get; set; } = false;
     
     private const int PlayingFlagDisappearDelaySeconds = 10; // 播放标识消失后继续识别的秒数
+    private const int PageCloseRecognitionDelayMilliseconds = 200;
 
     private readonly AutoSkipConfig _config;
     private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter = new();
@@ -184,6 +186,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private DateTime _prevBringToFrontTime = DateTime.MinValue;
     private DateTime _chooseOptionDelayUntil = DateTime.MinValue;
     private DateTime _chooseOptionWaitRecheckUntil = DateTime.MinValue;
+    private DateTime _pageCloseRecognitionStartTime = DateTime.MinValue;
     private bool _pendingBringToFront;
 
     public void OnCapture(CaptureContent content)
@@ -213,6 +216,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             else
             {
                 UpdateChooseOptionWait();
+                ResetPageCloseRecognition();
                 return;
             }
         }
@@ -244,6 +248,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 CloseItemPopup(content);
                 CloseCharacterPopup(content);
             }
+            else
+            {
+                ResetPageCloseRecognition();
+            }
 
             // 自动剧情点击3s内判断
             if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
@@ -259,6 +267,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     return;
                 }
             }
+        }
+        else
+        {
+            ResetPageCloseRecognition();
         }
 
         if (isPlaying)
@@ -381,66 +393,63 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 .. selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)),
                 .. unselectedRects.Select(unselectedRect => new HangoutOption(unselectedRect, false)),
             ];
-            // 只有一个选项直接点击
-            // if (hangoutOptionList.Count == 1)
-            // {
-            //     hangoutOptionList[0].Click(clickOffset);
-            //     AutoHangoutSkipLog("点击唯一邀约选项");
-            //     return;
-            // }
-
-            hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != null).ToList();
-            if (hangoutOptionList.Count == 0)
+            var allHangoutOptions = hangoutOptionList;
+            try
             {
-                return;
-            }
+                // 文字区域不存在的识别结果不能参与选择。
+                hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != null).ToList();
+                if (hangoutOptionList.Count == 0)
+                {
+                    return;
+                }
 
-            // OCR识别选项文字
-            foreach (var hangoutOption in hangoutOptionList)
-            {
-                var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcMat);
-                hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
-            }
-
-            // 优先选择分支选项
-            if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose))
-            {
-                var chooseList = HangoutConfig.Instance.HangoutOptions[_config.AutoHangoutEndChoose];
+                // OCR识别选项文字
                 foreach (var hangoutOption in hangoutOptionList)
                 {
-                    foreach (var str in chooseList)
+                    var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcMat);
+                    hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
+                }
+
+                // 历史已选状态不影响当前路线，目标分支仍需优先匹配全部选项。
+                if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose)
+                    && HangoutConfig.Instance.HangoutOptions.TryGetValue(_config.AutoHangoutEndChoose, out var chooseList))
+                {
+                    var target = FindHangoutTargetOption(hangoutOptionList, chooseList);
+                    if (target != null)
                     {
-                        if (hangoutOption.OptionTextSrc.Contains(str))
-                        {
-                            HangoutOptionClick(hangoutOption);
-                            _logger.LogInformation("邀约分支[{Text}]关键词[{Str}]命中", _config.AutoHangoutEndChoose, str);
-                            AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
-                            VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-                            VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
-                            return;
-                        }
+                        HangoutOptionClick(target);
+                        _logger.LogInformation("邀约分支[{Text}]关键词命中，选择[{Option}]", _config.AutoHangoutEndChoose, target.OptionTextSrc);
+                        AutoHangoutSkipLog(target.OptionTextSrc);
+                        VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+                        VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                        return;
                     }
                 }
-            }
 
-            // 没有停留的选项 优先选择未点击的的选项
-            foreach (var hangoutOption in hangoutOptionList)
-            {
-                if (!hangoutOption.IsSelected)
+                // 没有命中目标分支时，优先选择未点击的选项。
+                var unselectedOption = hangoutOptionList.FirstOrDefault(hangoutOption => !hangoutOption.IsSelected);
+                if (unselectedOption != null)
                 {
-                    HangoutOptionClick(hangoutOption);
-                    AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
+                    HangoutOptionClick(unselectedOption);
+                    AutoHangoutSkipLog(unselectedOption.OptionTextSrc);
                     VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
                     VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
                     return;
                 }
-            }
 
-            // 没有未点击的选项 选择第一个已点击选项
-            HangoutOptionClick(hangoutOptionList[0]);
-            AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
-            VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-            VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                // 没有未点击的选项时选择第一个已点击选项，推进对话状态。
+                HangoutOptionClick(hangoutOptionList[0]);
+                AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
+                VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+                VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+            }
+            finally
+            {
+                foreach (var hangoutOption in allHangoutOptions)
+                {
+                    hangoutOption.Dispose();
+                }
+            }
         }
         else
         {
@@ -463,6 +472,49 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
             }
         }
+    }
+
+    private static HangoutOption? FindHangoutTargetOption(
+        IEnumerable<HangoutOption> options,
+        IEnumerable<string> keywords)
+    {
+        var normalizedOptions = options
+            .Select(option => new
+            {
+                Option = option,
+                Text = NormalizeHangoutText(option.OptionTextSrc)
+            })
+            .Where(item => !string.IsNullOrEmpty(item.Text))
+            .ToList();
+
+        return keywords
+            .Select(keyword => new
+            {
+                Keyword = keyword,
+                Text = NormalizeHangoutText(keyword)
+            })
+            .Where(item => !string.IsNullOrEmpty(item.Text))
+            .SelectMany(keyword => normalizedOptions
+                .Where(option => option.Text.Contains(keyword.Text, StringComparison.Ordinal))
+                .Select(option => new
+                {
+                    option.Option,
+                    option.Text,
+                    Keyword = keyword.Text,
+                    IsExact = string.Equals(option.Text, keyword.Text, StringComparison.Ordinal)
+                }))
+            .OrderByDescending(item => item.IsExact)
+            .ThenByDescending(item => item.Keyword.Length)
+            .ThenBy(item => item.Option.IconRect.Top)
+            .Select(item => item.Option)
+            .FirstOrDefault();
+    }
+
+    private static string NormalizeHangoutText(string text)
+    {
+        return new string(text
+            .Where(character => !char.IsWhiteSpace(character) && !char.IsPunctuation(character))
+            .ToArray());
     }
 
     private bool IsOrangeOption(Mat textMat)
@@ -1008,19 +1060,48 @@ public partial class AutoSkipTrigger : ITaskTrigger
     {
         if (!_config.ClosePopupPagedEnabled)
         {
+            ResetPageCloseRecognition();
             return;
         }
         
         content.CaptureRectArea.Find(GetRecognitionObject("PageClose", content.CaptureRectArea), pageCloseRoRa =>
         {
-            if (!Bv.IsInBigMapUi(content.CaptureRectArea))
+            using (pageCloseRoRa)
             {
-                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+                var now = DateTime.Now;
+                if (_pageCloseRecognitionStartTime == DateTime.MinValue)
+                {
+                    _pageCloseRecognitionStartTime = now;
+                    return;
+                }
 
-                AutoSkipLog("关闭弹出页");
-                pageCloseRoRa.Dispose();
+                if ((now - _pageCloseRecognitionStartTime).TotalMilliseconds < PageCloseRecognitionDelayMilliseconds)
+                {
+                    return;
+                }
+
+                using var guidingNotesRa = content.CaptureRectArea.Find(GetRecognitionObject("GuidingNotes", content.CaptureRectArea));
+                using var chatHistoryRa = content.CaptureRectArea.Find(GetRecognitionObject("ChatHistory", content.CaptureRectArea));
+                using var valiantChroniclesRa = content.CaptureRectArea.Find(GetRecognitionObject("ValiantChronicles", content.CaptureRectArea));
+                if (!guidingNotesRa.IsEmpty() || !chatHistoryRa.IsEmpty()|| !valiantChroniclesRa.IsEmpty())
+                {
+                    return;
+                }
+
+                if (!Bv.IsInBigMapUi(content.CaptureRectArea))
+                {
+                    TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+
+                    AutoSkipLog("关闭弹出页");
+                    ResetPageCloseRecognition();
+                }
             }
-        });
+        }, ResetPageCloseRecognition);
+    }
+
+    private void ResetPageCloseRecognition()
+    {
+        _pageCloseRecognitionStartTime = DateTime.MinValue;
     }
     
     private DateTime _prevCloseItemTime = DateTime.MinValue;

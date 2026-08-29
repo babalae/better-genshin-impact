@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -144,6 +145,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
     public static List<string> LeyLineOutcropTypeList = ["启示之花", "藏金之花"];
     public static List<string> LeyLineOutcropCountryList = ["蒙德", "璃月", "稻妻", "须弥", "枫丹", "纳塔", "挪德卡莱", "至冬"];
+    public static List<string> LeyLineOutcropTypeListWithEmpty = ["", .. LeyLineOutcropTypeList];
+    public static List<string> LeyLineOutcropCountryListWithEmpty = ["", .. LeyLineOutcropCountryList];
 
     [ObservableProperty]
     private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
@@ -218,6 +221,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchGridIconsAccuracyTestButtonText = "运行模型准确率测试";
 
+    /// <summary>数量 OCR 测试当前选择的分类或当前一页模式。</summary>
+    [ObservableProperty]
+    private InventoryCountComparisonTarget _inventoryCountComparisonTarget = InventoryCountComparisonTarget.CharacterDevelopmentItems;
+
+    /// <summary>数量 OCR 测试下拉框显示的四个目标选项。</summary>
+    public FrozenDictionary<Enum, string> InventoryCountComparisonTargetDict { get; } = Enum
+        .GetValues<InventoryCountComparisonTarget>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
     [ObservableProperty]
     private bool _switchAutoRedeemCodeEnabled;
 
@@ -270,6 +287,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        WindowHelper.CenterOnVisibleOwner(messageBox);
 
         var result = await messageBox.ShowDialogAsync();
         var accepted = result == Wpf.Ui.Controls.MessageBoxResult.Primary;
@@ -809,6 +827,34 @@ public partial class TaskSettingsPageViewModel : ViewModel
         {
             SwitchGetGridIconsEnabled = false;
         }
+    }
+
+    /// <summary>启动当前选择目标的数量 OCR 对比任务。</summary>
+    [RelayCommand]
+    private async Task OnRunInventoryCountComparison()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new InventoryCountComparisonTask(InventoryCountComparisonTarget));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    /// <summary>创建并打开数量 OCR 对比结果根目录。</summary>
+    [RelayCommand]
+    private void OnGoToInventoryCountComparisonFolder()
+    {
+        var path = Global.Absolute(@"log\InventoryCountComparison\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
     }
 
     [RelayCommand]

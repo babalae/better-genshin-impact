@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
@@ -12,9 +12,9 @@ public class ResolutionSettings
     public int Width { get; protected set; }
     public bool FullScreen { get; protected set; }
 
-    public ResolutionSettings()
+    public ResolutionSettings(GenshinRegistryType registryType = GenshinRegistryType.Auto, string? gameExecutablePath = null)
     {
-        if (GenshinRegistry.GetRegistryKey() is not { } hk)
+        if (GenshinRegistry.GetRegistryKey(registryType, gameExecutablePath) is not { } hk)
         {
             return;
         }

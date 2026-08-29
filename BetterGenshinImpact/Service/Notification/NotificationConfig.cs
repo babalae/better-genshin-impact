@@ -301,4 +301,64 @@ public partial class NotificationConfig : ObservableObject
     ///     MeoW消息标题（可选，路径参数）
     /// </summary>
     [ObservableProperty] private string _meowTitle = string.Empty;
+
+    /// <summary>
+    ///     Gotify通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _gotifyNotificationEnabled;
+
+    /// <summary>
+    ///     Gotify服务地址
+    /// </summary>
+    [ObservableProperty] private string _gotifyUrl = string.Empty;
+
+    /// <summary>
+    ///     Gotify服务APP Token
+    /// </summary>
+    [ObservableProperty] private string _gotifyAppToken = string.Empty;
+
+    /// <summary>
+    ///     Gotify通知优先级
+    /// </summary>
+    [ObservableProperty] private int _gotifyNotifyLevel = 3;
+
+    /// <summary>
+    ///     QQ通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _qqNotificationEnabled;
+
+    /// <summary>
+    ///     QQ开放平台 AppID
+    /// </summary>
+    [ObservableProperty] private string _qqAppId = string.Empty;
+
+    /// <summary>
+    ///     QQ开放平台 AppSecret
+    /// </summary>
+    [ObservableProperty] private string _qqClientSecret = string.Empty;
+
+    /// <summary>
+    ///     用户的 C2C OpenID（单聊场景）
+    /// </summary>
+    [ObservableProperty] private string _qqOpenId = string.Empty;
+
+    /// <summary>
+    ///     微信 Clawbot 通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _wechatClawbotNotificationEnabled;
+
+    /// <summary>
+    ///     微信 Clawbot 扫码登录获得的 bot_token
+    /// </summary>
+    [ObservableProperty] private string _wechatClawbotBotToken = string.Empty;
+
+    /// <summary>
+    ///     微信 Clawbot 推送目标用户 ID（用户给机器人发消息后自动获取）
+    /// </summary>
+    [ObservableProperty] private string _wechatClawbotToUserId = string.Empty;
+
+    /// <summary>
+    ///     微信 Clawbot API 基础地址（登录响应 baseurl；为空时使用默认 https://ilinkai.weixin.qq.com）
+    /// </summary>
+    [ObservableProperty] private string _wechatClawbotBaseUrl = string.Empty;
 }

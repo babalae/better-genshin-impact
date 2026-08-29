@@ -79,6 +79,12 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private const int MaxRecheckCount = 3;
     private const int MaxConsecutiveFailures = 5;
+    private const int MaxCountryScrollAttempts = 8;
+    private const int CountryScrollDelayMs = 250;
+    private const double CountryListLeftRatio = 0.55;
+    private const double CountryListTopRatio = 0.15;
+    private const double CountryListRightRatio = 0.95;
+    private const double CountryListVisibleBottomRatio = 0.74;
     private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
@@ -2295,15 +2301,44 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task FindAndClickCountry(string country)
     {
         var match = country == "挪德卡莱" ? "挪德卡" : country;
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        var target = list.FirstOrDefault(r => r.Text.Contains(match, StringComparison.Ordinal));
-        if (target == null)
+
+        for (var attempt = 0; attempt <= MaxCountryScrollAttempts; attempt++)
         {
-            throw new Exception($"冒险之证未找到国家: {country}");
+            using var capture = CaptureToRectArea();
+            var list = capture.FindMulti(_ocrRoThis);
+            var matchingTargets = list.Where(r => r.Text.Contains(match, StringComparison.Ordinal)).ToList();
+            var target = matchingTargets.FirstOrDefault(r => IsCountryOptionFullyVisible(r, capture));
+            if (target != null)
+            {
+                target.Click();
+                return;
+            }
+
+            if (matchingTargets.Count > 0)
+            {
+                _logger.LogDebug("国家 {Country} 仅在冒险之证下拉列表裁切区域中被识别，继续向下滚动", country);
+            }
+
+            if (attempt == MaxCountryScrollAttempts)
+            {
+                break;
+            }
+
+            GameCaptureRegion.GameRegion1080PPosMove(1500, 600);
+            Simulation.SendInput.Mouse.VerticalScroll(-1);
+            await Delay(CountryScrollDelayMs, _ct);
         }
 
-        target.Click();
+        _logger.LogWarning("冒险之证向下滚动{ScrollAttempts}次后仍未找到国家: {Country}", MaxCountryScrollAttempts, country);
+        throw new Exception($"冒险之证未找到国家: {country}");
+    }
+
+    private static bool IsCountryOptionFullyVisible(Region region, ImageRegion capture)
+    {
+        return region.Left >= capture.Width * CountryListLeftRatio
+               && region.Top >= capture.Height * CountryListTopRatio
+               && region.Right <= capture.Width * CountryListRightRatio
+               && region.Bottom <= capture.Height * CountryListVisibleBottomRatio;
     }
 
     private async Task<bool> TryOpenBigMapFromHandbook()

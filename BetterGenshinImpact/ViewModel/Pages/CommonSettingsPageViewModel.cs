@@ -53,6 +53,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private readonly NotificationService _notificationService;
     private readonly CustomHtmlMaskService _customHtmlMaskService;
+    private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     private string _selectedArea = string.Empty;
@@ -69,7 +70,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
-        NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService)
+        NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
+        RecognitionTemplateEditorService recognitionTemplateEditorService)
     {
         Config = configService.Get();
         Config.MaskWindowConfig.EnsureOverlayMetricItems();
@@ -77,6 +79,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _navigationService = navigationService;
         _notificationService = notificationService;
         _customHtmlMaskService = customHtmlMaskService;
+        _recognitionTemplateEditorService = recognitionTemplateEditorService;
         // 设置页需要可绑定对象，避免把 Dictionary<string, bool> 直接暴露给 XAML 并丢失固定枚举顺序。
         OverlayMetricItems = new ObservableCollection<OverlayMetricSettingItem>(
             OverlayMetricItemDefaults.AllItems.Select(item => new OverlayMetricSettingItem(Config.MaskWindowConfig, item, OnRefreshMaskSettings)));
@@ -96,7 +99,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
-        new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru" }
+        new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it"  }
             .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
 
     [RelayCommand]
@@ -377,6 +380,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private async Task OpenRecognitionTemplateEditorFromImageAsync()
+    {
+        await _recognitionTemplateEditorService.OpenFromImageAsync();
+    }
+
+    [RelayCommand]
     public void OnSwitchTakenScreenshotEnabled()
     {
     }
@@ -518,6 +527,38 @@ public partial class CommonSettingsPageViewModel : ViewModel
         {
             Config.MaskWindowConfig.CrosshairImagePath = dialog.FileName;
         }
+    }
+
+    [RelayCommand]
+    private void SelectMainBackgroundImage()
+    {
+        var dialog = new OpenFileDialog
+        {
+            // 注意：不声明 *.webp —— WPF BitmapImage 原生不支持 WebP 解码，声明了会导致用户选中后加载失败
+            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
+            Title = "选择主窗口背景图片"
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            // 选图后弹出编辑器：可旋转/裁剪后保存副本使用，也可直接使用原图
+            var editor = new ImageEditWindow(dialog.FileName)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            if (editor.ShowDialog() == true && !string.IsNullOrEmpty(editor.ResultImagePath))
+            {
+                // 主窗口 ViewModel 通过订阅配置变更事件实时刷新背景
+                Config.CommonConfig.MainBackgroundImagePath = editor.ResultImagePath;
+                Config.CommonConfig.MainBackgroundEnabled = true;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void ClearMainBackgroundImage()
+    {
+        Config.CommonConfig.MainBackgroundImagePath = string.Empty;
+        Config.CommonConfig.MainBackgroundEnabled = false;
     }
 }
 

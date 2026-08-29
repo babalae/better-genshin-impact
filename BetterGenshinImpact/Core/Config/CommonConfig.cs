@@ -2,6 +2,7 @@ using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Windows.Media;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -61,6 +62,30 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private WindowBackdropType _currentBackdropType = WindowBackdropType.Mica;
+
+    /// <summary>
+    /// 是否启用主窗口自定义背景图
+    /// </summary>
+    [ObservableProperty]
+    private bool _mainBackgroundEnabled;
+
+    /// <summary>
+    /// 主窗口自定义背景图路径，空字符串表示未设置
+    /// </summary>
+    [ObservableProperty]
+    private string _mainBackgroundImagePath = string.Empty;
+
+    /// <summary>
+    /// 主窗口背景图不透明度，数值越小背景越淡，文字越清晰
+    /// </summary>
+    [ObservableProperty]
+    private double _mainBackgroundOpacity = 0.35;
+
+    /// <summary>
+    /// 主窗口背景图拉伸模式
+    /// </summary>
+    [ObservableProperty]
+    private Stretch _mainBackgroundStretch = Stretch.UniformToFill;
 
     /// <summary>
     /// 是否是第一次运行

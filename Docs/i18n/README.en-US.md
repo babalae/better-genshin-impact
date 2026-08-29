@@ -28,7 +28,7 @@
 
 <br/>  
 
-[English](./readme_en.md) | [中文](../README.md) | [繁體中文](./readme_tcn.md) | [日本語](./readme_ja.md)
+[English](./README.en-US.md) | [中文](./README.zh-CN.md) | [繁體中文](./README.zh-TW.md) | [日本語](./README.ja-JP.md)
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-%237289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8xUfcw5nTS)
 
@@ -122,9 +122,9 @@ Special thanks to these projects:
 Core contributors: [@Lightczx](https://github.com/Lightczx), [@emako](https://github.com/emako)
 
 ## Development
-Formatting: [CodeMaid.config](CodeMaid.config), [Settings.XamlStyler](Settings.XamlStyler)
+Formatting: [CodeMaid.config](../../CodeMaid.config), [Settings.XamlStyler](../../Settings.XamlStyler)
 
-[Build instructions](BetterGenshinImpact/README.md)
+[Build instructions](../../BetterGenshinImpact/README.md)
 
 ## License
 ![GPL-v3](https://www.gnu.org/graphics/gplv3-127x51.png)

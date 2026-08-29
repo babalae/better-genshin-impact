@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.IO;
+using System.Text;
 using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
@@ -12,6 +14,8 @@ namespace BetterGenshinImpact.Core.Script.Group;
 /// </summary>
 public partial class ScriptGroup : ObservableObject
 {
+    private static readonly Encoding Utf8WithoutBom = new UTF8Encoding(false);
+
     public int Index { get; set; }
 
     [ObservableProperty]
@@ -44,6 +48,26 @@ public partial class ScriptGroup : ObservableObject
     public string ToJson()
     {
         return JsonSerializer.Serialize(this, ConfigService.JsonOptions);
+    }
+
+    public void WriteToFileAtomically(string filePath)
+    {
+        var json = ToJson();
+        var fullPath = Path.GetFullPath(filePath);
+        var directory = Path.GetDirectoryName(fullPath)
+                        ?? throw new ArgumentException("配置组文件路径无效", nameof(filePath));
+        Directory.CreateDirectory(directory);
+
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(tempPath, json, Utf8WithoutBom);
+            File.Move(tempPath, fullPath, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
     }
 
     public static ScriptGroup FromJson(string json)

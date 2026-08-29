@@ -113,4 +113,31 @@ public class WindowHelper
             _ => Color.FromArgb(255, 32, 32, 32)
         };
     }
+
+    /// <summary>
+    /// 按父窗口当前可见区域居中。尚未 Loaded 时会在 Loaded 后再执行。
+    /// </summary>
+    public static void CenterOnVisibleOwner(System.Windows.Window window)
+    {
+        if (!window.IsLoaded)
+        {
+            window.Loaded += (_, _) => CenterOnVisibleOwner(window);
+            return;
+        }
+
+        var owner = window.Owner ?? System.Windows.Application.Current?.MainWindow;
+        if (owner is null || !owner.IsVisible || owner.WindowState == System.Windows.WindowState.Minimized)
+        {
+            return;
+        }
+
+        if (System.Windows.PresentationSource.FromVisual(owner)?.CompositionTarget is not { } ct)
+        {
+            return;
+        }
+
+        var origin = ct.TransformFromDevice.Transform(owner.PointToScreen(default));
+        window.Left = origin.X + (owner.ActualWidth - window.ActualWidth) / 2;
+        window.Top = origin.Y + (owner.ActualHeight - window.ActualHeight) / 2;
+    }
 }

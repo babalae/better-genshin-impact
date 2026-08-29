@@ -197,7 +197,7 @@ public partial class MaskWindowConfig : ObservableObject
     /// 是否启用遮罩 UI 缩放。关闭后直接使用各遮罩元素的基础尺寸。
     /// </summary>
     [ObservableProperty]
-    private bool _overlayScalingEnabled = true;
+    private bool _overlayScalingEnabled = false;
 
     /// <summary>
     /// 遮罩 UI 缩放率 (0.5-3.0)，叠加到日志、状态和 FPS 的基础字号上。

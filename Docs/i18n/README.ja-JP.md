@@ -28,7 +28,7 @@
 
 <br/>  
 
-[English](./readme_en.md) | [中文](../README.md) | [繁體中文](./readme_tcn.md) | [日本語](./readme_ja.md)
+[English](./README.en-US.md) | [中文](./README.zh-CN.md) | [繁體中文](./README.zh-TW.md) | [日本語](./README.ja-JP.md)
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-%237289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8xUfcw5nTS)
 
@@ -122,9 +122,9 @@ BetterGI は、コンピュータービジョン技術で Genshin Impact をよ�
 コア貢献者: [@Lightczx](https://github.com/Lightczx), [@emako](https://github.com/emako)
 
 ## 開発
-整形: [CodeMaid.config](CodeMaid.config), [Settings.XamlStyler](Settings.XamlStyler)
+整形: [CodeMaid.config](../../CodeMaid.config), [Settings.XamlStyler](../../Settings.XamlStyler)
 
-[ビルド手順](BetterGenshinImpact/README.md)
+[ビルド手順](../../BetterGenshinImpact/README.md)
 
 ## ライセンス
 GPLv3
