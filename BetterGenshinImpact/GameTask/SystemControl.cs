@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.User32.SetWindowPosFlags;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -63,21 +64,36 @@ public class SystemControl
             });
         }
 
+        nint handle = 0;
         for (var i = 0; i < 5; i++)
         {
-            var handle = FindGenshinImpactHandle();
+            handle = FindGenshinImpactHandle();
             if (handle != 0)
             {
                 await Task.Delay(2333);
                 handle = FindGenshinImpactHandle();
                 await Task.Delay(2577);
-                return handle;
+                break;
             }
 
             await Task.Delay(5577);
         }
 
-        return FindGenshinImpactHandle();
+        if (handle == 0)
+        {
+            handle = FindGenshinImpactHandle();
+        }
+
+        // 按工作区重新放置窗口，不改大小
+        RepositionWindow(handle);
+
+        if (handle != 0 && User32.IsWindow(handle))
+        {
+            return handle;
+        }
+
+        await ThemedMessageBox.ErrorAsync("未找到原神窗口，启动原神失败！");
+        return 0;
     }
 
     internal static string BuildGenshinStartArguments(string? configuredArguments, bool isChildSession)
@@ -105,7 +121,7 @@ public class SystemControl
         var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
         return processNames.Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
     }
-    
+
     public static string GetActiveByProcess()
     {
         return GetActiveProcessName() ?? "Unknown";
@@ -204,6 +220,45 @@ public class SystemControl
             Debug.WriteLine(ex);
             return null;
         }
+    }
+
+    /// <summary>
+    /// 按工作区重新放置窗口，不改大小。超出则贴左或贴顶。最小化、最大化、全屏时忽略。
+    /// </summary>
+    public static void RepositionWindow(nint hWnd)
+    {
+        if (hWnd == 0 || !User32.IsWindow(hWnd))
+        {
+            return;
+        }
+
+        if (User32.IsIconic(hWnd) || User32.IsZoomed(hWnd) || IsFullScreenMode(hWnd))
+        {
+            return;
+        }
+
+        POINT origin = default;
+        var mi = User32.MONITORINFO.Default;
+        var hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
+
+        if (
+            // 窗口
+            !User32.GetWindowRect(hWnd, out var wnd)
+            || !User32.GetClientRect(hWnd, out var client)
+            || client is not { Width: > 0, Height: > 0 }
+            || !User32.ClientToScreen(hWnd, ref origin)
+            // 工作区
+            || !User32.GetMonitorInfo(hMonitor, ref mi)
+            || mi.rcWork is not { Width: > 0, Height: > 0 } work)
+        {
+            return;
+        }
+
+        var x = wnd.Left - origin.X + Math.Clamp(origin.X, work.Left, Math.Max(work.Left, work.Right - client.Width));
+        var y = wnd.Top - origin.Y + Math.Clamp(origin.Y, work.Top, Math.Max(work.Top, work.Bottom - client.Height));
+
+        const User32.SetWindowPosFlags flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+        User32.SetWindowPos(hWnd, HWND.NULL, x, y, 0, 0, flags);
     }
 
     /// <summary>
