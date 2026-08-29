@@ -96,25 +96,7 @@ public partial class App : Application
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
-                services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
-                services.AddSingleton<ITranslationService, JsonTranslationService>();
-
                 services.AddLogging(c => c.AddSerilog());
-                // if ("zh-Hans".Equals(all.OtherConfig.UiCultureInfoName, StringComparison.OrdinalIgnoreCase))
-                // {
-                //     services.AddLogging(c => c.AddSerilog());
-                // }
-                // else
-                // {
-                //     services.AddLogging(logging =>
-                //     {
-                //         logging.ClearProviders();
-                //         logging.SetMinimumLevel(LogLevel.Debug);
-                //         logging.AddFilter("Microsoft", LogLevel.Warning);
-                //         logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
-                //         logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
-                //     });
-                // }
 
                 services.AddLocalization();
 
@@ -286,8 +268,8 @@ public partial class App : Application
                 try
                 {
                     System.Windows.Forms.MessageBox.Show(
-                        $"{TranslateText("应用程序启动失败：")}{ex.Message}",
-                        TranslateText("BetterGI 启动失败"),
+                        $"应用程序启动失败：{ex.Message}",
+                        "BetterGI 启动失败",
                         System.Windows.Forms.MessageBoxButtons.OK,
                         System.Windows.Forms.MessageBoxIcon.Error);
                 }
@@ -432,7 +414,7 @@ public partial class App : Application
         // 通过日志遮罩提示用户：非致命异常已记录。
         if (!isTerminating)
         {
-            var nonFatalMessage = TranslateText("发生非致命异常，已记录日志，请查看日志详情。");
+            const string nonFatalMessage = "发生非致命异常，已记录日志，请查看日志详情。";
             GetLogger<App>().LogWarning(nonFatalMessage);
             return false;
         }
@@ -449,7 +431,7 @@ public partial class App : Application
         }
 
         // 确认 Dispatcher 可用后才记录"正在弹窗"，避免与实际行为不一致。
-        var popupShownMessage = TranslateText("发生致命异常，正在弹窗提示，同时已记录日志。");
+        const string popupShownMessage = "发生致命异常，正在弹窗提示，同时已记录日志。";
         GetLogger<App>().LogWarning(popupShownMessage);
 
         try
@@ -482,8 +464,7 @@ public partial class App : Application
                 // 只为"UI 是否开始执行"设置超时：UI 线程被阻塞/死锁时避免无限等待。
                 if (!startedSignal.Wait(TimeSpan.FromSeconds(3)))
                 {
-                    GetLogger<App>().LogWarning(
-                        TranslateText("弹窗调度超时，异常已记录，进程即将退出。"));
+                    GetLogger<App>().LogWarning("弹窗调度超时，异常已记录，进程即将退出。");
                     return false;
                 }
 
@@ -497,21 +478,6 @@ public partial class App : Application
         {
             // 弹窗失败不影响进程退出。
             return false;
-        }
-    }
-
-    /// <summary>
-    /// 翻译一条异常提示文本。翻译服务不可用时返回原文。
-    /// </summary>
-    private static string TranslateText(string text)
-    {
-        try
-        {
-            return ServiceProvider.GetService<ITranslationService>()?.Translate(text) ?? text;
-        }
-        catch
-        {
-            return text;
         }
     }
 

@@ -35,7 +35,6 @@
             <bgivc:EnumToKVPConverter x:Key="EnumToKVPConverter" />
             <bgivc:CultureInfoNameToKVPConverter x:Key="CultureInfoNameToKVPConverter" />
             <bgivc:StringToColorConverter x:Key="StringToColorConverter" />
-            <bgivc:TrConverter x:Key="TrConverter" />
             <bgivc:AdaptiveUniformGridColumnsConverter x:Key="AdaptiveUniformGridColumnsConverter" />
 
             <!-- ===== 全局 TextBox 安全剪贴板 ===== -->

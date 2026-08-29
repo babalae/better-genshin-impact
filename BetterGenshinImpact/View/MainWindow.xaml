@@ -19,7 +19,6 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
                  WindowBackdropType="Auto"
@@ -235,12 +234,12 @@
                                     <TextBlock FontSize="13"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                               Text="{Binding Source={StaticResource RedeemCodeTitleText}, Converter={StaticResource TrConverter}}"/>
+                                               Text="{Binding Source={StaticResource RedeemCodeTitleText}}"/>
                                     <TextBlock FontSize="12"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                Margin="0,4,0,0"
                                                TextWrapping="Wrap"
-                                               Text="{Binding Source={StaticResource RedeemCodeDetailText}, Converter={StaticResource TrConverter}}"/>
+                                               Text="{Binding Source={StaticResource RedeemCodeDetailText}}"/>
                                 </StackPanel>
                             </Border>
                             <!-- 右侧关闭按钮区域 -->
