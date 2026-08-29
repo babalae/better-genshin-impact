@@ -16,6 +16,7 @@ using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
@@ -99,6 +100,22 @@ public partial class App : Application
                 services.AddLogging(c => c.AddSerilog());
 
                 services.AddLocalization();
+                var i18nService = I18nService.Instance;
+                var uiLanguage = all.OtherConfig.UiCultureInfoName switch
+                {
+                    "zh-CN" => "zh-Hans",
+                    "en-US" => "en",
+                    "ja-JP" => "ja",
+                    _ => all.OtherConfig.UiCultureInfoName,
+                };
+                if (uiLanguage != all.OtherConfig.UiCultureInfoName)
+                {
+                    all.OtherConfig.UiCultureInfoName = uiLanguage;
+                    configService.Save();
+                }
+
+                i18nService.ChangeLanguage(uiLanguage);
+                services.AddSingleton(i18nService);
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
