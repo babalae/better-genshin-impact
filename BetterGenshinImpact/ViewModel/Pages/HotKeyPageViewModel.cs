@@ -86,6 +86,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             {
                 if (sender is HotKeySettingModel model)
                 {
+                    // 遮罩显示勾选变化：HotKeySettingModel 内部已完成配置写回与消息发送。
+                    // 必须提前返回——下方会无条件重注册热键，误触会导致注册失败时热键静默失效。
+                    if (e.PropertyName == nameof(HotKeySettingModel.ShowOnOverlay))
+                    {
+                        return;
+                    }
+
                     // 反射更新配置
 
                     // 更新快捷键
@@ -104,6 +111,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                             _acceptedHotKeys[model.ConfigPropertyName] = newHotKey;
                             ShowGameKeyBindingConflictWarning(model, newHotKey, previousHotKey);
                         }
+
+                        // 改键会影响遮罩上的快捷键徽章与速查条（绑定/解绑/组合键有效性变化）
+                        SendRefreshSettingsMessageDebounced();
                     }
 
                     // 更新快捷键类型
@@ -116,6 +126,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                         {
                             pi.SetValue(Config.HotKeyConfig, model.HotKeyType.ToString(), null);
                         }
+
+                        // 类型切换（全局热键/键鼠监听）影响组合键的生效判定
+                        SendRefreshSettingsMessageDebounced();
                     }
 
                     RemoveDuplicateHotKey(model);
@@ -262,6 +275,30 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         if (null != pi && pi.CanWrite)
         {
             pi.SetValue(Config.HotKeyConfig, model.HotKey.IsEmpty ? "" : model.HotKey.ToString(), null);
+        }
+    }
+
+    private CancellationTokenSource? _refreshSettingsCts;
+
+    /// <summary>
+    /// 防抖发送遮罩刷新消息（"RefreshSettings"）。
+    /// HotKeyTextBox 逐键输入会连续触发 HotKey 属性变化回调（含 RemoveDuplicateHotKey 引发的级联置空），
+    /// 直接发送会导致遮罩状态栏徽章与速查条频繁重算，这里合并为最后一次变更后 300ms 发送一次。
+    /// 遮罩侧 handler 已用 UIDispatcherHelper.Invoke 回 UI 线程，线程安全。
+    /// </summary>
+    private async void SendRefreshSettingsMessageDebounced()
+    {
+        _refreshSettingsCts?.Cancel();
+        _refreshSettingsCts?.Dispose();
+        _refreshSettingsCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(300, _refreshSettingsCts.Token);
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "快捷键配置变更"));
+        }
+        catch (TaskCanceledException)
+        {
+            // 被后续变更取消，正常防抖行为
         }
     }
 

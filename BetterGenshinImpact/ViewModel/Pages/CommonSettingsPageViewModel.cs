@@ -563,6 +563,7 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogPanelBorderThickness), "日志区域边框粗细", "日志窗口边框线宽。填 0 表示不显示边框。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogTextColor), "日志文字颜色", "日志内容的文字颜色。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogFontSize), "日志文字大小", "日志内容字号。", onChanged),
+                OverlayStyleSettingItem.Text(config, nameof(MaskWindowConfig.LogColorTheme), "日志配色主题", "Literate（默认，按级别着色）、Grayscale（灰阶）或 Colored（高对比彩色）。修改后重启软件生效。", onChanged),
                 OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.LogShadowEnabled), "显示日志阴影", "开启后文字和区域更容易从游戏背景中区分出来。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogShadowColor), "日志阴影颜色", "日志阴影颜色。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowOpacity), "日志阴影透明度", "日志阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
@@ -575,6 +576,7 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusDisabledTextColor), "未启用状态文字颜色", "任务未启用时图标和文字的颜色。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusEnabledTextColor), "已启用状态文字颜色", "任务启用时图标和文字的颜色。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusFontSize), "状态文字大小", "状态栏字号。", onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.StatusHotkeyBadgeEnabled), "显示快捷键徽章", "开启后状态栏中已绑定快捷键的功能项会显示按键提示（如「拾取 F」），忘记按键时瞄一眼即可。", onChanged),
                 OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.StatusShadowEnabled), "显示状态栏阴影", "开启后状态栏在复杂背景上更容易看清。", onChanged),
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusShadowColor), "状态栏阴影颜色", "状态栏阴影颜色。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowOpacity), "状态栏阴影透明度", "状态栏阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
@@ -595,6 +597,11 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowOpacity), "指标栏阴影透明度", "指标栏阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowBlurRadius), "指标栏阴影模糊半径", "指标栏阴影的扩散范围，数值越大阴影越柔和。", onChanged),
             ], config, nameof(MaskWindowConfig.ShowOverlayMetrics), onChanged),
+            new OverlayStyleSettingGroup("快捷键速查条", "在遮罩右下角显示已绑定且实际生效的快捷键，忘记按键时瞄一眼即可。具体显示哪些快捷键在「快捷键设置」页逐项勾选。", OverlayStyleSettingGroupKind.HotkeyBar, [
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.HotkeyBarExcludeStatusItems), "排除状态栏已显示项", "开启后速查条不再重复显示状态栏已展示的拾取、剧情、邀约、钓鱼、传送等开关项。", onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.HotkeyBarTextColor), "速查条文字颜色", "速查条按键与功能名的文字颜色。", onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.HotkeyBarFontSize), "速查条文字大小", "速查条基础字号，实际字号还会随遮罩字体缩放率与游戏分辨率变化。", onChanged),
+            ], config, nameof(MaskWindowConfig.ShowHotkeyBar), onChanged),
             new OverlayStyleSettingGroup("方位遮罩", "在小地图周围显示东、南、西、北文字，辅助判断朝向。", OverlayStyleSettingGroupKind.Direction, [
                 OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionTextColor), "方位文字颜色", "小地图周围方位文字的颜色。", onChanged),
                 OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionFontSize), "方位文字大小", "小地图方位文字字号。", onChanged),
@@ -894,6 +901,7 @@ public enum OverlayStyleSettingGroupKind
     Log,
     Status,
     Metrics,
+    HotkeyBar,
     Direction,
     Recognition,
     CustomHtml
