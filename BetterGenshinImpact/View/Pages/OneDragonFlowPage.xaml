@@ -39,10 +39,9 @@
 
         <!--  左侧任务列表  -->
        <DockPanel Grid.Column="0"
-                  Tag="{Binding ElementName=TaskListView}"
-                  ContextMenuOpening="DockPanel_ContextMenuOpening">
+                  Tag="{Binding ElementName=TaskListView}">
            <DockPanel.ContextMenu>
-               <ContextMenu>
+               <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                    <MenuItem Command="{Binding AddTaskGroupCommand}" Header="{i18n:T 新增配置}" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                              CommandParameter="{Binding PlacementTarget.Tag.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -157,7 +156,8 @@
                                      dd:DragDrop.UseDefaultDragAdorner="True"
                                      ItemsSource="{Binding TaskList}"
                                      SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
-                                     SelectionMode="Single">
+                                     SelectionMode="Single"
+                                     behavior:RightClickSelectBehavior.Enabled="True">
                             <ui:ListView.ItemTemplate>
                                 <DataTemplate>
                                     <ui:Card Margin="0,2,14,2">

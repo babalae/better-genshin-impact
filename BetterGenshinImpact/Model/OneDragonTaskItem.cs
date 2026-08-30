@@ -97,6 +97,26 @@ public partial class OneDragonTaskItem : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 在服务器游戏日切换或外部强制刷新时，手动触发 ShouldRunToday 及 HasCondition 的属性变更通知。
+    /// </summary>
+    public void NotifyDateStateChanged()
+    {
+        OnPropertyChanged(nameof(ShouldRunToday));
+        OnPropertyChanged(nameof(HasCondition));
+    }
+
+    /// <summary>
+    /// 创建一个用于条件弹窗编辑的临时副本，仅复制名称、Id 与运行日条件，
+    /// 修改此副本不会影响原任务在列表中的状态或触发自动保存。
+    /// </summary>
+    public OneDragonTaskItem CreateConditionEditingClone()
+    {
+        var clone = new OneDragonTaskItem(Name, Id);
+        clone.ApplyCondition(ToCondition());
+        return clone;
+    }
+
     public OneDragonTaskItem(string name)
     {
         Name = name;

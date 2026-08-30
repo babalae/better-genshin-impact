@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
@@ -60,7 +61,20 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private bool _shouldShowTaskConditionPopup = false;
 
+    /// <summary>
+    /// 条件弹窗当前正在编辑的原始任务 Id（非副本）。
+    /// 为空或 null 表示当前未处于条件编辑状态。
+    /// </summary>
+    private string? _conditionEditingTargetId;
+
     private OneDragonTaskCondition? _conditionEditingBackup;
+
+    /// <summary>
+    /// 服务器 4:00 日界刷新调度器：在到达下一个服务器游戏日时刷新 TaskList 中所有任务的 ShouldRunToday。
+    /// </summary>
+    private CancellationTokenSource? _dailyRefreshCts;
+
+    private Task? _dailyRefreshTask;
 
     partial void OnSelectedTaskChanged(OneDragonTaskItem value)
     {
@@ -495,6 +509,24 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // 条件弹窗中的编辑副本永远不会参与 TaskList（Add 时才订阅），
+        // 这里加一道 Id 过滤，避免任何误用仍触发保存。
+        if (_conditionEditingTargetId != null &&
+            sender is OneDragonTaskItem item &&
+            item.Id == _conditionEditingTargetId &&
+            e.PropertyName is nameof(OneDragonTaskItem.RunMonday)
+                or nameof(OneDragonTaskItem.RunTuesday)
+                or nameof(OneDragonTaskItem.RunWednesday)
+                or nameof(OneDragonTaskItem.RunThursday)
+                or nameof(OneDragonTaskItem.RunFriday)
+                or nameof(OneDragonTaskItem.RunSaturday)
+                or nameof(OneDragonTaskItem.RunSunday)
+                or nameof(OneDragonTaskItem.HasCondition)
+                or nameof(OneDragonTaskItem.ShouldRunToday))
+        {
+            return;
+        }
+
         await Task.Delay(100); //等会加载完再保存
         SaveConfig();
     }
@@ -529,8 +561,10 @@ public partial class OneDragonFlowViewModel : ViewModel
     private bool _autoRun = true;
     
     [RelayCommand]
-    private void OnLoaded()
+    internal void OnLoaded()
     {
+        StartDailyRefreshLoop();
+
         // 组件首次加载时运行一次。
         if (!_autoRun)
         {
@@ -566,6 +600,131 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    /// <summary>
+    /// 启动服务器日界（4:00）刷新循环：每次计算距离下一个服务器 4:00 的剩余时间并等待，
+    /// 唤醒后刷新所有任务的 ShouldRunToday / HasCondition 通知，然后为下一个日界重新调度。
+    /// </summary>
+    private void StartDailyRefreshLoop()
+    {
+        if (_dailyRefreshTask != null && !_dailyRefreshTask.IsCompleted)
+        {
+            return;
+        }
+
+        StopDailyRefreshLoopAsync(false).GetAwaiter().GetResult();
+        _dailyRefreshCts = new CancellationTokenSource();
+        var token = _dailyRefreshCts.Token;
+
+        _dailyRefreshTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    DateTimeOffset now;
+                    try
+                    {
+                        now = ServerTimeHelper.GetServerTimeNow();
+                    }
+                    catch
+                    {
+                        now = DateTimeOffset.Now;
+                    }
+
+                    var next4am = now.Date.AddHours(4);
+                    if (now.TimeOfDay >= TimeSpan.FromHours(4))
+                    {
+                        next4am = next4am.AddDays(1);
+                    }
+
+                    var delay = next4am - now;
+                    if (delay <= TimeSpan.Zero)
+                    {
+                        delay = TimeSpan.FromMinutes(1);
+                    }
+
+                    await Task.Delay(delay, token).ConfigureAwait(false);
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        foreach (var t in TaskList)
+                        {
+                            t.NotifyDateStateChanged();
+                        }
+                    });
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 预期取消路径
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "一条龙服务器日界刷新循环异常");
+            }
+        }, token);
+    }
+
+    /// <summary>
+    /// 停止服务器日界刷新循环并释放 CancellationTokenSource 与后台任务引用。
+    /// 从 View 卸载或应用退出时调用，避免后台线程挂起与 ViewModel 内存泄漏。
+    /// </summary>
+    public Task StopDailyRefreshLoopAsync(bool waitForCompletion = true)
+    {
+        var cts = _dailyRefreshCts;
+        var task = _dailyRefreshTask;
+
+        try
+        {
+            if (cts != null)
+            {
+                if (!cts.IsCancellationRequested)
+                {
+                    cts.Cancel();
+                }
+            }
+        }
+        catch (AggregateException ex)
+        {
+            // Task.Delay 的 OperationCanceledException 在 Cancel 回调注册时已被抛出时聚合
+            foreach (var inner in ex.InnerExceptions)
+            {
+                _logger.LogDebug(inner, "停止一条龙日界刷新循环时抛出已预期的取消异常");
+            }
+        }
+
+        Task stopTask;
+        if (task == null || task.IsCompleted)
+        {
+            stopTask = Task.CompletedTask;
+        }
+        else if (waitForCompletion)
+        {
+            // 最多等待 1.5 秒。Token 已经 Cancel，正常情况 Delay 会马上抛 OCE，应当很快完成。
+            stopTask = Task.WhenAny(task, Task.Delay(1500, CancellationToken.None)).ContinueWith(_ => { }, CancellationToken.None);
+        }
+        else
+        {
+            stopTask = Task.CompletedTask;
+        }
+
+        // null 化字段，确保下一次 StartDailyRefreshLoop 能重新调度，同时让 GC 能回收旧任务。
+        if (ReferenceEquals(_dailyRefreshCts, cts))
+        {
+            _dailyRefreshCts = null;
+        }
+        if (ReferenceEquals(_dailyRefreshTask, task))
+        {
+            _dailyRefreshTask = null;
+        }
+        cts?.Dispose();
+        return stopTask;
+    }
+
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
@@ -598,10 +757,11 @@ public partial class OneDragonFlowViewModel : ViewModel
             task.InitAction(SelectedConfig);
         }
 
+        int enabledTaskCountall = taskListCopy.Count(t => t.IsEnabled);
+        int runnableTodayCount = taskListCopy.Count(t => t.IsEnabled && t.ShouldRunToday);
         int finishOneTaskcount = 1;
         int finishTaskcount = 1;
-        int enabledTaskCountall = taskListCopy.Count(t => t.IsEnabled);
-        _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
+        _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}，今日可执行数量: {runnableTodayCount}");
         
         ReadScriptGroup();
         foreach (var task in ScriptGroupsdefault)
@@ -609,10 +769,17 @@ public partial class OneDragonFlowViewModel : ViewModel
             ScriptGroups.Remove(task);
         }
 
-        if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
+        if (SelectedConfig == null || enabledTaskCountall == 0)
         {
             Toast.Warning("请先选择任务");
             _logger.LogInformation("没有配置,退出执行!");
+            return;
+        }
+
+        if (runnableTodayCount == 0)
+        {
+            Toast.Information("今日无符合执行条件的任务，已跳过启动一条龙");
+            _logger.LogInformation("今日所有启用任务均不满足执行日期条件，跳过启动一条龙");
             return;
         }
 
@@ -1019,8 +1186,11 @@ public partial class OneDragonFlowViewModel : ViewModel
             Toast.Warning("请先选择一个任务");
             return;
         }
-        ConditionEditingTask = task;
-        _conditionEditingBackup = ConditionEditingTask.ToCondition();
+        // 使用独立副本进行弹窗编辑：副本不加入 TaskList 订阅，不触发自动保存，
+        // 用户取消即丢弃副本，确认时才把条件写回原任务。
+        ConditionEditingTask = task.CreateConditionEditingClone();
+        _conditionEditingTargetId = task.Id;
+        _conditionEditingBackup = task.ToCondition();
         ShouldShowTaskConditionPopup = true;
         if (task != SelectedTask)
         {
@@ -1031,8 +1201,25 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void CloseTaskCondition()
     {
-        ShouldShowTaskConditionPopup = false;
-        SaveConfig();
+        try
+        {
+            if (!string.IsNullOrEmpty(_conditionEditingTargetId) && ConditionEditingTask != null)
+            {
+                var target = TaskList.FirstOrDefault(t => t.Id == _conditionEditingTargetId);
+                if (target != null)
+                {
+                    target.ApplyCondition(ConditionEditingTask.ToCondition());
+                    SaveConfig();
+                }
+            }
+        }
+        finally
+        {
+            _conditionEditingTargetId = null;
+            _conditionEditingBackup = null;
+            ConditionEditingTask = null;
+            ShouldShowTaskConditionPopup = false;
+        }
     }
 
     [RelayCommand]
@@ -1044,10 +1231,10 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void CancelTaskCondition()
     {
-        if (ConditionEditingTask != null && _conditionEditingBackup != null)
-        {
-            ConditionEditingTask.ApplyCondition(_conditionEditingBackup);
-        }
+        // 取消编辑：副本改动直接丢弃，不再 Apply 到原任务。
+        _conditionEditingTargetId = null;
+        _conditionEditingBackup = null;
+        ConditionEditingTask = null;
         ShouldShowTaskConditionPopup = false;
     }
 }
