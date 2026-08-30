@@ -489,25 +489,19 @@
                                 Margin="0,0,36,0"
                                 Orientation="Horizontal">
                         <ui:NumberBox Width="100"
-                                      AcceptsExpression="False"
-                                      MaxDecimalPlaces="0"
                                       Minimum="640"
                                       Maximum="7680"
                                       SmallChange="1"
                                       SpinButtonPlacementMode="Inline"
-                                      ValidationMode="InvalidInputOverwritten"
                                       Value="{Binding Config.GenshinStartConfig.WindowedModeWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:TextBlock Margin="8,0"
                                       VerticalAlignment="Center"
                                       Text="x" />
                         <ui:NumberBox Width="100"
-                                      AcceptsExpression="False"
-                                      MaxDecimalPlaces="0"
                                       Minimum="480"
                                       Maximum="4320"
                                       SmallChange="1"
                                       SpinButtonPlacementMode="Inline"
-                                      ValidationMode="InvalidInputOverwritten"
                                       Value="{Binding Config.GenshinStartConfig.WindowedModeHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                 </Grid>

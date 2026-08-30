@@ -60,7 +60,7 @@ public partial class GenshinStartConfig : ObservableObject
     ///     并在游戏退出后自动恢复为启动前的显示设置）
     /// </summary>
     [ObservableProperty]
-    private bool _autoSetWindowedModeEnabled = false;
+    private bool _autoSetWindowedModeEnabled = true;
 
     /// <summary>
     ///     窗口化模式分辨率（宽）
