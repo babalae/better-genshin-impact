@@ -58,11 +58,13 @@ public class SystemControl
 
     /// <summary>
     /// 兜底①：按窗口类名 EnumWindows 枚举顶层可见窗口（不看窗口标题，规避标题变化），
-    /// 再经 GetWindowThreadProcessId 反查进程名，须在游戏进程名白名单内（不限会话）
+    /// 再经 GetWindowThreadProcessId 反查进程名，须在游戏进程名白名单内；
+    /// 同会话命中直接返回，否则记住第一个跨会话命中继续枚举（多开/多会话时同会话优先）
     /// </summary>
     private static nint FindWindowByUnityWndClass(IEnumerable<string> processNames)
     {
         var nameSet = new HashSet<string>(processNames, StringComparer.OrdinalIgnoreCase);
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
         nint found = 0;
         _ = User32.EnumWindows((hWnd, lParam) =>
         {
@@ -73,7 +75,8 @@ public class SystemControl
 
             var className = GetWindowClassName((nint)hWnd);
             if (!string.Equals(className, "UnityWndClass", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(className, "Qt5152QWindowIcon", StringComparison.OrdinalIgnoreCase))
+                && !(className?.StartsWith("Qt", StringComparison.OrdinalIgnoreCase) == true
+                     && className.EndsWith("QWindowIcon", StringComparison.OrdinalIgnoreCase)))
             {
                 return true;
             }
@@ -86,26 +89,47 @@ public class SystemControl
                 {
                     return true;
                 }
+
+                if (p.SessionId == currentSessionId)
+                {
+                    // 同会话命中，直接采用
+                    found = (nint)hWnd;
+                    return false;
+                }
             }
-            catch
+            catch (ArgumentException)
+            {
+                // pid 已失效（进程已退出），跳过
+                return true;
+            }
+            catch (Exception ex)
             {
                 // 进程已退出或无法访问，跳过
+                Debug.WriteLine(ex);
                 return true;
             }
 
-            found = (nint)hWnd;
-            return false;
+            // 跨会话命中：先记住，继续枚举看有没有同会话的
+            if (found == 0)
+            {
+                found = (nint)hWnd;
+            }
+
+            return true;
         }, IntPtr.Zero);
         return found;
     }
 
     /// <summary>
-    /// 兜底②：对游戏进程名白名单内的所有进程（不限会话、不依赖 MainWindowHandle）
-    /// EnumWindows 枚举其名下的可见顶层窗口，取客户区面积最大者
+    /// 兜底②：对游戏进程名白名单内的所有进程（不依赖 MainWindowHandle）
+    /// EnumWindows 枚举其名下的可见顶层窗口，取客户区面积最大者；
+    /// 存在同会话进程时只在本会话窗口里选（多开/多会话时同会话优先）
     /// </summary>
     private static nint FindLargestVisibleWindowByProcessName(IEnumerable<string> processNames)
     {
+        var currentSessionId = Process.GetCurrentProcess().SessionId;
         var pidSet = new HashSet<int>();
+        var sameSessionPids = new HashSet<int>();
         foreach (var name in processNames)
         {
             foreach (var p in Process.GetProcessesByName(name))
@@ -113,6 +137,10 @@ public class SystemControl
                 try
                 {
                     pidSet.Add(p.Id);
+                    if (p.SessionId == currentSessionId)
+                    {
+                        sameSessionPids.Add(p.Id);
+                    }
                 }
                 catch (InvalidOperationException)
                 {
@@ -130,6 +158,8 @@ public class SystemControl
             return 0;
         }
 
+        var effectivePids = sameSessionPids.Count > 0 ? sameSessionPids : pidSet;
+
         nint best = 0;
         long bestArea = -1;
         _ = User32.EnumWindows((hWnd, lParam) =>
@@ -140,7 +170,7 @@ public class SystemControl
             }
 
             _ = User32.GetWindowThreadProcessId(hWnd, out var pid);
-            if (!pidSet.Contains((int)pid))
+            if (!effectivePids.Contains((int)pid))
             {
                 return true;
             }
