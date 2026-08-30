@@ -97,6 +97,10 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     /// </summary>
     private CancellationTokenSource? _wechatClawbotBindCts;
 
+    /// <summary>
+    /// 构造通知设置页 ViewModel，并订阅微信 Clawbot 推送会话过期事件，
+    /// 使普通发送失败时也能在设置页状态文本上提示用户如何重新激活推送端口。
+    /// </summary>
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
         Config = configService.Get();
@@ -119,6 +123,18 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
         Config.NotificationConfig.PropertyChanged += OnNotificationConfigPropertyChanged;
         ApplyNotificationEventSelectionFromConfig();
+
+        // 订阅微信 Clawbot 推送会话过期事件：普通发送（非测试按钮）失败时，
+        // 也能及时在设置页状态文本上提示用户如何重新激活推送端口。
+        WechatClawbotNotifier.SessionExpired += OnWechatClawbotSessionExpired;
+    }
+
+    /// <summary>
+    /// 微信 Clawbot 推送会话过期回调（后台线程触发），编组回 UI 线程更新状态提示。
+    /// </summary>
+    private void OnWechatClawbotSessionExpired(string hint)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() => WechatClawbotStatus = hint);
     }
 
     public AllConfig Config { get; set; }
