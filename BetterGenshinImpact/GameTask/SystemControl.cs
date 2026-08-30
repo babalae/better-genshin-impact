@@ -55,9 +55,12 @@ public class SystemControl
         }
         else
         {
+            // 不使用 ShellExecuteEx（UseShellExecute=true）：桌面分身（RDP 子会话）中
+            // ShellExecuteEx 会返回“不支持该请求”（Win32 错误 50），导致游戏无法启动。
+            // 直接创建进程即可，主会话下行为不变。
             Process.Start(new ProcessStartInfo(path)
             {
-                UseShellExecute = true,
+                UseShellExecute = false,
                 Arguments = arg,
                 WorkingDirectory = workdir
             });
