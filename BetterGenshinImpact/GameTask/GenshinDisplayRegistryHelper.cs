@@ -28,6 +28,7 @@ public static class GenshinDisplayRegistryHelper
     ///     各注册表路径对应的启动前显示设置快照（游戏退出后按此恢复）
     /// </summary>
     private static readonly Dictionary<string, GenshinDisplaySettings> PreviousDisplaySettings = new();
+    private static readonly object PreviousDisplaySettingsLock = new();
 
     /// <summary>
     ///     记录各注册表路径当前的显示设置快照，并设置为窗口化模式
@@ -45,9 +46,16 @@ public static class GenshinDisplayRegistryHelper
                     continue;
                 }
 
-                if (TryGetDisplaySettings(key, out var settings))
+                // 读不到完整快照时跳过，避免修改显示设置后无法恢复
+                if (!TryGetDisplaySettings(key, out var settings))
                 {
-                    PreviousDisplaySettings[parentKeyPath] = settings;
+                    continue;
+                }
+
+                lock (PreviousDisplaySettingsLock)
+                {
+                    // 已有未恢复的快照时不覆盖（防止启动前游戏仍在运行时重复启动丢失原始设置）
+                    PreviousDisplaySettings.TryAdd(parentKeyPath, settings);
                 }
 
                 key.SetValue(ResolutionWidthRegistryValueName, width, RegistryValueKind.DWord);
@@ -70,28 +78,32 @@ public static class GenshinDisplayRegistryHelper
     public static bool RestorePreviousDisplaySettings(out IReadOnlyList<GenshinDisplaySettings> restoredSettings)
     {
         var restored = new List<GenshinDisplaySettings>();
-        foreach (var (parentKeyPath, settings) in PreviousDisplaySettings)
+        lock (PreviousDisplaySettingsLock)
         {
-            try
+            foreach (var (parentKeyPath, settings) in PreviousDisplaySettings)
             {
-                using var key = Registry.CurrentUser.OpenSubKey(parentKeyPath, writable: true);
-                if (key == null)
+                try
                 {
-                    continue;
-                }
+                    using var key = Registry.CurrentUser.OpenSubKey(parentKeyPath, writable: true);
+                    if (key == null)
+                    {
+                        continue;
+                    }
 
-                key.SetValue(ResolutionWidthRegistryValueName, settings.Width, RegistryValueKind.DWord);
-                key.SetValue(ResolutionHeightRegistryValueName, settings.Height, RegistryValueKind.DWord);
-                key.SetValue(FullscreenModeRegistryValueName, settings.FullscreenMode, RegistryValueKind.DWord);
-                restored.Add(settings);
+                    key.SetValue(ResolutionWidthRegistryValueName, settings.Width, RegistryValueKind.DWord);
+                    key.SetValue(ResolutionHeightRegistryValueName, settings.Height, RegistryValueKind.DWord);
+                    key.SetValue(FullscreenModeRegistryValueName, settings.FullscreenMode, RegistryValueKind.DWord);
+                    restored.Add(settings);
+                }
+                catch
+                {
+                    // 忽略写入失败，避免影响启动流程
+                }
             }
-            catch
-            {
-                // 忽略写入失败，避免影响启动流程
-            }
+
+            PreviousDisplaySettings.Clear();
         }
 
-        PreviousDisplaySettings.Clear();
         restoredSettings = restored;
         return restored.Count > 0;
     }

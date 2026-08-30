@@ -9,12 +9,15 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
 
 public class SystemControl
 {
+    private static readonly ILogger<SystemControl> Logger = App.GetLogger<SystemControl>();
+
     private const string ChildSessionGenshinStartArgs =
         "-popupwindow -screen-width 1920 -screen-height 1080";
 
@@ -46,6 +49,8 @@ public class SystemControl
         if (cfg.AutoSetWindowedModeEnabled)
         {
             GenshinDisplayRegistryHelper.CaptureAndSetWindowed(cfg.WindowedModeWidth, cfg.WindowedModeHeight);
+            // 写注册表后立即启动恢复监听，避免游戏启动失败时快照无人恢复
+            StartDisplayModeRestoreMonitor();
         }
 
         if (cfg.StartGameWithCmd)
@@ -84,6 +89,37 @@ public class SystemControl
         }
 
         return FindGenshinImpactHandle();
+    }
+
+    /// <summary>
+    ///     游戏退出后恢复启动前的显示设置：原神退出时会把显示设置写回注册表，
+    ///     必须等游戏进程完全退出后再恢复，否则恢复结果会被游戏退出时的写回覆盖。
+    /// </summary>
+    private static void StartDisplayModeRestoreMonitor()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+                while (processNames.Any(name => Process.GetProcessesByName(name).Length > 0))
+                {
+                    await Task.Delay(3000);
+                }
+
+                if (GenshinDisplayRegistryHelper.RestorePreviousDisplaySettings(out var restoredSettings))
+                {
+                    var settings = restoredSettings[0];
+                    Logger.LogInformation(
+                        "检测到原神已退出，已将显示设置恢复为启动前的 {Width}x{Height}",
+                        settings.Width, settings.Height);
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "恢复原神显示设置失败");
+            }
+        });
     }
 
     internal static string BuildGenshinStartArguments(string? configuredArguments, bool isChildSession)

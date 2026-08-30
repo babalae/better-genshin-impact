@@ -54,8 +54,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 {
     private bool _disposed;
 
-    // 是否已启动"游戏退出后恢复全屏"的监听，避免重复启动
-    private bool _displayModeRestoreMonitorStarted;
     [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
@@ -348,51 +346,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
-                StartDisplayModeRestoreMonitorIfNeeded();
             }
         }
-    }
-
-    /// <summary>
-    ///     游戏退出后恢复启动前的显示设置：原神退出时会把显示设置写回注册表，
-    ///     必须等游戏进程完全退出后再恢复，否则恢复结果会被游戏退出时的写回覆盖。
-    /// </summary>
-    private void StartDisplayModeRestoreMonitorIfNeeded()
-    {
-        var config = Config.GenshinStartConfig;
-        if (!config.AutoSetWindowedModeEnabled || _displayModeRestoreMonitorStarted)
-        {
-            return;
-        }
-
-        _displayModeRestoreMonitorStarted = true;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
-                while (processNames.Any(name => Process.GetProcessesByName(name).Length > 0))
-                {
-                    await Task.Delay(3000);
-                }
-
-                if (GenshinDisplayRegistryHelper.RestorePreviousDisplaySettings(out var restoredSettings))
-                {
-                    var settings = restoredSettings[0];
-                    _logger.LogInformation(
-                        "检测到原神已退出，已将显示设置恢复为启动前的 {Width}x{Height}",
-                        settings.Width, settings.Height);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "恢复原神显示设置失败");
-            }
-            finally
-            {
-                _displayModeRestoreMonitorStarted = false;
-            }
-        });
     }
 
     private CaptureModes GetCaptureMode()
