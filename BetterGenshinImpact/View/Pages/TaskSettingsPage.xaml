@@ -30,6 +30,47 @@
                    FontSize="18"
                    FontWeight="SemiBold"
                    Text="{i18n:T 独立任务设置}" />
+
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf6b2;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  FontTypography="Body"
+                                  Text="实验性优化设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="行为实验性开关，默认全部关闭，出问题请关闭对应开关回退"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16,12,16,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <ui:TextBlock FontTypography="Body"
+                                      Text="窗口检测增强兜底"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="旧逻辑（进程名+主窗口句柄）找不到原神窗口时，依次按窗口类名枚举、按进程枚举最大可见窗口兜底（即时生效）。默认关闭，关闭时行为与旧版完全一致；开启后如绑定到错误窗口请关闭此开关回退"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.ExperimentalConfig.WindowDetectFallbackEnabled}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
         <!--  ~1~  停止任务  @1@  -->
         <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}"> -->
         <!--     <ui:CardControl.Header> -->

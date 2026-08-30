@@ -272,6 +272,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public ChildSessionConfig ChildSessionConfig { get; set; } = new();
 
+    /// <summary>
+    /// 实验性优化设置
+    /// </summary>
+    public ExperimentalConfig ExperimentalConfig { get; set; } = new();
+
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -309,6 +314,7 @@ public partial class AllConfig : ObservableObject
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
         ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
+        ExperimentalConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 

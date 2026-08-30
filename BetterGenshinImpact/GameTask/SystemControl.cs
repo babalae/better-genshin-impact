@@ -1,11 +1,13 @@
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +17,8 @@ namespace BetterGenshinImpact.GameTask;
 
 public class SystemControl
 {
+    private static readonly ILogger Logger = App.GetLogger<SystemControl>();
+
     private const string ChildSessionGenshinStartArgs =
         "-popupwindow -screen-width 1920 -screen-height 1080";
 
@@ -25,7 +29,151 @@ public class SystemControl
     public static nint FindGenshinImpactHandle()
     {
         var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+
+        // 实验性开关：窗口检测增强兜底（默认关闭，关闭时走原始路径）
+        if (TaskContext.Instance().Config.ExperimentalConfig.WindowDetectFallbackEnabled)
+        {
+            var handle = FindHandleByProcessName(processNames.ToArray());
+            if (IsValidTopLevelWindow(handle))
+            {
+                return handle;
+            }
+
+            Logger.LogInformation("[窗口检测] 旧逻辑未找到有效窗口（句柄={Handle}），启用增强兜底", handle);
+
+            handle = FindWindowByUnityWndClass(processNames);
+            if (handle != 0)
+            {
+                Logger.LogInformation("[窗口检测] 兜底①按窗口类名枚举命中，句柄={Handle}", handle);
+                return handle;
+            }
+
+            handle = FindLargestVisibleWindowByProcessName(processNames);
+            if (handle != 0)
+            {
+                Logger.LogInformation("[窗口检测] 兜底②按进程枚举最大可见窗口命中，句柄={Handle}", handle);
+                return handle;
+            }
+
+            Logger.LogInformation("[窗口检测] 增强兜底仍未找到原神窗口");
+            return 0;
+        }
+
         return FindHandleByProcessName(processNames.ToArray());
+    }
+
+    private static bool IsValidTopLevelWindow(nint hWnd)
+    {
+        return hWnd != 0 && User32.IsWindow(hWnd) && User32.IsWindowVisible(hWnd);
+    }
+
+    /// <summary>
+    /// 兜底①：按窗口类名 EnumWindows 枚举顶层可见窗口（不看窗口标题，规避标题变化），
+    /// 再经 GetWindowThreadProcessId 反查进程名，须在游戏进程名白名单内（不限会话）
+    /// </summary>
+    private static nint FindWindowByUnityWndClass(IEnumerable<string> processNames)
+    {
+        var nameSet = new HashSet<string>(processNames, StringComparer.OrdinalIgnoreCase);
+        nint found = 0;
+        _ = User32.EnumWindows((hWnd, lParam) =>
+        {
+            if (!User32.IsWindowVisible(hWnd))
+            {
+                return true;
+            }
+
+            var className = GetWindowClassName((nint)hWnd);
+            if (!string.Equals(className, "UnityWndClass", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(className, "Qt5152QWindowIcon", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            _ = User32.GetWindowThreadProcessId(hWnd, out var pid);
+            try
+            {
+                var p = Process.GetProcessById((int)pid);
+                if (!nameSet.Contains(p.ProcessName))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // 进程已退出或无法访问，跳过
+                return true;
+            }
+
+            found = (nint)hWnd;
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    /// <summary>
+    /// 兜底②：对游戏进程名白名单内的所有进程（不限会话、不依赖 MainWindowHandle）
+    /// EnumWindows 枚举其名下的可见顶层窗口，取客户区面积最大者
+    /// </summary>
+    private static nint FindLargestVisibleWindowByProcessName(IEnumerable<string> processNames)
+    {
+        var pidSet = new HashSet<int>();
+        foreach (var name in processNames)
+        {
+            foreach (var p in Process.GetProcessesByName(name))
+            {
+                try
+                {
+                    pidSet.Add(p.Id);
+                }
+                catch (InvalidOperationException)
+                {
+                    // 进程已退出，跳过
+                }
+                finally
+                {
+                    p.Dispose();
+                }
+            }
+        }
+
+        if (pidSet.Count == 0)
+        {
+            return 0;
+        }
+
+        nint best = 0;
+        long bestArea = -1;
+        _ = User32.EnumWindows((hWnd, lParam) =>
+        {
+            if (!User32.IsWindowVisible(hWnd))
+            {
+                return true;
+            }
+
+            _ = User32.GetWindowThreadProcessId(hWnd, out var pid);
+            if (!pidSet.Contains((int)pid))
+            {
+                return true;
+            }
+
+            User32.GetClientRect(hWnd, out var rect);
+            var area = (long)rect.Right * rect.Bottom;
+            if (area > bestArea)
+            {
+                bestArea = area;
+                best = (nint)hWnd;
+            }
+
+            return true;
+        }, IntPtr.Zero);
+        return best;
+    }
+
+    private static string? GetWindowClassName(nint hWnd)
+    {
+        var sb = new StringBuilder(256);
+        _ = User32.GetClassName(hWnd, sb, sb.Capacity);
+        return sb.ToString();
     }
 
     public static async Task<nint> StartFromLocalAsync(string path)
