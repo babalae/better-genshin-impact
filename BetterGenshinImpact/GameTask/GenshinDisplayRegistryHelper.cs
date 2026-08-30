@@ -22,6 +22,12 @@ public static class GenshinDisplayRegistryHelper
     public const string CnDisplayRegistryParentKeyPath = @"Software\miHoYo\原神";
     public const string GlobalDisplayRegistryParentKeyPath = @"Software\miHoYo\Genshin Impact";
 
+    /// <summary>
+    ///     窗口化模式的固定分辨率
+    /// </summary>
+    public const int WindowedModeWidth = 1920;
+    public const int WindowedModeHeight = 1080;
+
     public static readonly IReadOnlyList<string> DisplayRegistryParentKeyPaths =
     [
         CnDisplayRegistryParentKeyPath,
@@ -37,9 +43,9 @@ public static class GenshinDisplayRegistryHelper
     private static readonly string SnapshotFilePath = Global.Absolute("User/Config/genshin_display_settings_snapshot.json");
 
     /// <summary>
-    ///     记录各注册表路径当前的显示设置快照，并设置为窗口化模式
+    ///     记录各注册表路径当前的显示设置快照，并设置为固定分辨率窗口化模式
     /// </summary>
-    public static bool CaptureAndSetWindowed(int width, int height)
+    public static bool CaptureAndSetWindowed()
     {
         var updated = false;
         foreach (var parentKeyPath in DisplayRegistryParentKeyPaths)
@@ -64,8 +70,8 @@ public static class GenshinDisplayRegistryHelper
                     PreviousDisplaySettings.TryAdd(parentKeyPath, settings);
                 }
 
-                key.SetValue(ResolutionWidthRegistryValueName, width, RegistryValueKind.DWord);
-                key.SetValue(ResolutionHeightRegistryValueName, height, RegistryValueKind.DWord);
+                key.SetValue(ResolutionWidthRegistryValueName, WindowedModeWidth, RegistryValueKind.DWord);
+                key.SetValue(ResolutionHeightRegistryValueName, WindowedModeHeight, RegistryValueKind.DWord);
                 key.SetValue(FullscreenModeRegistryValueName, 0, RegistryValueKind.DWord);
                 updated = true;
             }

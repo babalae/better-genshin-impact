@@ -48,7 +48,7 @@ public class SystemControl
         // 原神 7.0+ 的显示设置以注册表为准（启动参数无法设置窗口模式），启动游戏前按需写入注册表
         if (cfg.AutoSetWindowedModeEnabled)
         {
-            GenshinDisplayRegistryHelper.CaptureAndSetWindowed(cfg.WindowedModeWidth, cfg.WindowedModeHeight);
+            GenshinDisplayRegistryHelper.CaptureAndSetWindowed();
             // 写注册表后立即启动恢复监听，避免游戏启动失败时快照无人恢复
             StartDisplayModeRestoreMonitor();
         }
