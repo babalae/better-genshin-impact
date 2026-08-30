@@ -97,6 +97,10 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     /// </summary>
     private CancellationTokenSource? _wechatClawbotBindCts;
 
+    /// <summary>
+    /// 构造通知设置页 ViewModel，并订阅微信 Clawbot 推送会话过期事件，
+    /// 使普通发送失败时也能在设置页状态文本上提示用户如何重新激活推送端口。
+    /// </summary>
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
         Config = configService.Get();
