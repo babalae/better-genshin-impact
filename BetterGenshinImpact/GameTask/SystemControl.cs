@@ -42,6 +42,12 @@ public class SystemControl
             cfg.GenshinStartArgs,
             InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession);
 
+        // 原神 7.0+ 的显示设置以注册表为准（启动参数无法设置窗口模式），启动游戏前按需写入注册表
+        if (cfg.AutoSetWindowedModeEnabled)
+        {
+            GenshinDisplayRegistryHelper.CaptureAndSetWindowed(cfg.WindowedModeWidth, cfg.WindowedModeHeight);
+        }
+
         if (cfg.StartGameWithCmd)
         {
             var psi = new ProcessStartInfo

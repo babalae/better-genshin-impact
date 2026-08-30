@@ -53,4 +53,24 @@ public partial class GenshinStartConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _autoDisableGenshinHdrEnabled = true;
+
+    /// <summary>
+    ///     启动前自动将原神设置为窗口化
+    ///     （原神 7.0+ 的显示设置以注册表为准，启动参数无法设置窗口模式，此选项会在启动游戏前自动写入注册表，
+    ///     并在游戏退出后自动恢复为启动前的显示设置）
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoSetWindowedModeEnabled = false;
+
+    /// <summary>
+    ///     窗口化模式分辨率（宽）
+    /// </summary>
+    [ObservableProperty]
+    private int _windowedModeWidth = 1920;
+
+    /// <summary>
+    ///     窗口化模式分辨率（高）
+    /// </summary>
+    [ObservableProperty]
+    private int _windowedModeHeight = 1080;
 }
