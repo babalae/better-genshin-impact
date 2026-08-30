@@ -30,18 +30,10 @@ public class SystemControl
     {
         var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
 
-        // 实验性开关：窗口检测增强兜底（默认关闭，关闭时走原始路径）
-        if (TaskContext.Instance().Config.ExperimentalConfig.WindowDetectFallbackEnabled)
+        // 其他设置：窗口检测增强兜底（默认关闭，关闭时走原始路径；开启时兜底优先）
+        if (TaskContext.Instance().Config.OtherConfig.WindowDetectFallbackEnabled)
         {
-            var handle = FindHandleByProcessName(processNames.ToArray());
-            if (IsValidTopLevelWindow(handle))
-            {
-                return handle;
-            }
-
-            Logger.LogInformation("[窗口检测] 旧逻辑未找到有效窗口（句柄={Handle}），启用增强兜底", handle);
-
-            handle = FindWindowByUnityWndClass(processNames);
+            var handle = FindWindowByUnityWndClass(processNames);
             if (handle != 0)
             {
                 Logger.LogInformation("[窗口检测] 兜底①按窗口类名枚举命中，句柄={Handle}", handle);
@@ -55,16 +47,13 @@ public class SystemControl
                 return handle;
             }
 
-            Logger.LogInformation("[窗口检测] 增强兜底仍未找到原神窗口");
-            return 0;
+            // 兜底未命中，回退旧逻辑（进程名 + MainWindowHandle）
+            handle = FindHandleByProcessName(processNames.ToArray());
+            Logger.LogInformation("[窗口检测] 兜底未命中，回退旧逻辑，句柄={Handle}", handle);
+            return handle;
         }
 
         return FindHandleByProcessName(processNames.ToArray());
-    }
-
-    private static bool IsValidTopLevelWindow(nint hWnd)
-    {
-        return hWnd != 0 && User32.IsWindow(hWnd) && User32.IsWindowVisible(hWnd);
     }
 
     /// <summary>

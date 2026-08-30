@@ -1646,6 +1646,31 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="{i18n:T 窗口检测增强兜底}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后优先按窗口类名/进程枚举检测原神窗口，未命中再回退旧的进程名+主窗口句柄方式，检测过程会输出[窗口检测]日志（即时生效）。默认关闭，关闭时行为与旧版完全一致}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.WindowDetectFallbackEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="{i18n:T 游戏失去焦点时候，强制恢复激活游戏窗口}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
