@@ -243,7 +243,16 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
             {
                 const string hint = "微信 Clawbot 推送权限已过期，请在微信侧给 Clawbot 私聊任意内容以激活推送端口";
                 Logger.LogWarning("{Hint}", hint);
-                SessionExpired?.Invoke(hint);
+                try
+                {
+                    // 隔离事件订阅者异常（如应用关闭期间 Dispatcher 不可用），
+                    // 确保订阅者抛出的异常不会吞掉下方要抛出的专门领域异常。
+                    SessionExpired?.Invoke(hint);
+                }
+                catch (System.Exception eventEx)
+                {
+                    Logger.LogWarning("微信 Clawbot 会话过期事件通知订阅者异常: {Ex}", eventEx.Message);
+                }
                 throw new WechatClawbotSessionExpiredException(hint);
             }
 
