@@ -116,7 +116,15 @@ public class SystemControl
             try
             {
                 var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
-                while (processNames.Any(name => Process.GetProcessesByName(name).Length > 0))
+
+                // 游戏可能刚发起启动、进程尚未创建：先等待进程出现，
+                // 避免把“游戏正在启动”误判为“游戏已退出”而过早恢复注册表（恢复后游戏启动时会读到已恢复的设置）
+                for (var i = 0; i < 15 && !IsGenshinRunning(processNames); i++)
+                {
+                    await Task.Delay(1000);
+                }
+
+                while (IsGenshinRunning(processNames))
                 {
                     await Task.Delay(3000);
                 }
@@ -137,6 +145,11 @@ public class SystemControl
                 Logger.LogWarning(e, "恢复原神显示设置失败");
             }
         });
+    }
+
+    private static bool IsGenshinRunning(IEnumerable<string> processNames)
+    {
+        return processNames.Any(name => Process.GetProcessesByName(name).Length > 0);
     }
 
     internal static string BuildGenshinStartArguments(string? configuredArguments, bool isChildSession)
