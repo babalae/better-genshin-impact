@@ -106,6 +106,7 @@ public partial class App : Application
                     "zh-CN" => "zh-Hans",
                     "en-US" => "en",
                     "ja-JP" => "ja",
+                    "vi-VN" => "vi",
                     _ => all.OtherConfig.UiCultureInfoName,
                 };
                 if (uiLanguage != all.OtherConfig.UiCultureInfoName)
