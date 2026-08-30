@@ -176,8 +176,24 @@ namespace BetterGenshinImpact.ViewModel
             });
         }
 
+        /// <summary>
+        /// 释放并清空状态栏订阅。StatusItem 订阅了应用级单例配置对象的 PropertyChanged，
+        /// 遮罩窗口关闭时必须退订，否则旧实例无法回收并随遮罩重建累积。
+        /// </summary>
+        public void DisposeStatusList()
+        {
+            foreach (var statusItem in StatusList)
+            {
+                statusItem.Dispose();
+            }
+
+            StatusList.Clear();
+        }
+
         private void InitializeStatusList()
         {
+            // 防御 Loaded 重复触发：先释放旧订阅，避免在同一批配置对象上叠加事件处理器
+            DisposeStatusList();
             if (Config != null)
             {
                 StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig, "Enabled", nameof(HotKeyConfig.AutoPickEnabledHotkey)));
