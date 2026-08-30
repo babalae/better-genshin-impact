@@ -18,6 +18,11 @@ public class SystemControl
 {
     private static readonly ILogger<SystemControl> Logger = App.GetLogger<SystemControl>();
 
+    /// <summary>
+    ///     显示设置恢复监听是否在运行（防止重复启动游戏时生成多个监听争用同一份快照）
+    /// </summary>
+    private static int DisplayModeRestoreMonitorActive;
+
     private const string ChildSessionGenshinStartArgs =
         "-popupwindow -screen-width 1920 -screen-height 1080";
 
@@ -46,49 +51,64 @@ public class SystemControl
             InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession);
 
         // 原神 7.0+ 的显示设置以注册表为准（启动参数无法设置窗口模式），启动游戏前按需写入注册表
+        TaskCompletionSource<bool>? launchOutcome = null;
         if (cfg.AutoSetWindowedModeEnabled)
         {
             GenshinDisplayRegistryHelper.CaptureAndSetWindowed();
-            // 写注册表后立即启动恢复监听，避免游戏启动失败时快照无人恢复
-            StartDisplayModeRestoreMonitor();
+            // 写注册表后立即启动恢复监听，启动结果由下方查找游戏窗口的循环通知：
+            // 找到窗口 → 等游戏退出后恢复；查找超时 → 立即恢复（或等待慢启动的进程退出后再恢复）
+            launchOutcome = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            StartDisplayModeRestoreMonitor(launchOutcome);
         }
 
-        if (cfg.StartGameWithCmd)
+        try
         {
-            var psi = new ProcessStartInfo
+            if (cfg.StartGameWithCmd)
             {
-                FileName = "cmd.exe",
-                Arguments = $"/c start \"\" /d \"{workdir}\" \"{path}\" {arg}",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            Process.Start(psi);
-        }
-        else
-        {
-            Process.Start(new ProcessStartInfo(path)
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c start \"\" /d \"{workdir}\" \"{path}\" {arg}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                Process.Start(psi);
+            }
+            else
             {
-                UseShellExecute = true,
-                Arguments = arg,
-                WorkingDirectory = workdir
-            });
-        }
-
-        for (var i = 0; i < 5; i++)
-        {
-            var handle = FindGenshinImpactHandle();
-            if (handle != 0)
-            {
-                await Task.Delay(2333);
-                handle = FindGenshinImpactHandle();
-                await Task.Delay(2577);
-                return handle;
+                Process.Start(new ProcessStartInfo(path)
+                {
+                    UseShellExecute = true,
+                    Arguments = arg,
+                    WorkingDirectory = workdir
+                });
             }
 
-            await Task.Delay(5577);
-        }
+            for (var i = 0; i < 5; i++)
+            {
+                var handle = FindGenshinImpactHandle();
+                if (handle != 0)
+                {
+                    // 游戏窗口已找到，通知监听等待游戏退出后恢复显示设置
+                    launchOutcome?.TrySetResult(true);
+                    await Task.Delay(2333);
+                    handle = FindGenshinImpactHandle();
+                    await Task.Delay(2577);
+                    return handle;
+                }
 
-        return FindGenshinImpactHandle();
+                await Task.Delay(5577);
+            }
+
+            launchOutcome?.TrySetResult(false);
+            return FindGenshinImpactHandle();
+        }
+        catch
+        {
+            // 启动过程异常（如 Process.Start 失败）时同样通知监听立即恢复，避免快照悬挂
+            launchOutcome?.TrySetResult(false);
+            throw;
+        }
     }
 
     /// <summary>
@@ -102,28 +122,36 @@ public class SystemControl
             return;
         }
 
-        StartDisplayModeRestoreMonitor();
+        StartDisplayModeRestoreMonitor(null);
     }
 
     /// <summary>
     ///     游戏退出后恢复启动前的显示设置：原神退出时会把显示设置写回注册表，
     ///     必须等游戏进程完全退出后再恢复，否则恢复结果会被游戏退出时的写回覆盖。
     /// </summary>
-    internal static void StartDisplayModeRestoreMonitor()
+    internal static void StartDisplayModeRestoreMonitor(TaskCompletionSource<bool>? launchOutcome)
     {
+        // 已有恢复监听在运行时不再新建，避免多个监听争用同一份快照
+        if (Interlocked.Exchange(ref DisplayModeRestoreMonitorActive, 1) != 0)
+        {
+            return;
+        }
+
         _ = Task.Run(async () =>
         {
             try
             {
                 var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
 
-                // 游戏可能刚发起启动、进程尚未创建：先等待进程出现，
-                // 避免把“游戏正在启动”误判为“游戏已退出”而过早恢复注册表（恢复后游戏启动时会读到已恢复的设置）
-                for (var i = 0; i < 15 && !IsGenshinRunning(processNames); i++)
+                // 联动启动时等待启动结果（找到窗口或查找超时），
+                // 避免在游戏启动过程中误判为“已退出”而过早恢复注册表（恢复后游戏启动时会读到已恢复的设置）。
+                // 兜底场景（BetterGI 启动时发现遗留快照）没有启动流程，直接按当前游戏进程状态处理。
+                if (launchOutcome != null)
                 {
-                    await Task.Delay(1000);
+                    await launchOutcome.Task;
                 }
 
+                // 等游戏进程退出（联动启动失败但进程仍存在即慢启动场景，同样需要等其退出后再恢复）
                 while (IsGenshinRunning(processNames))
                 {
                     await Task.Delay(3000);
@@ -143,6 +171,10 @@ public class SystemControl
             catch (Exception e)
             {
                 Logger.LogWarning(e, "恢复原神显示设置失败");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref DisplayModeRestoreMonitorActive, 0);
             }
         });
     }
