@@ -185,9 +185,19 @@
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <Setter Property="Opacity" Value="1.0" />
                                                         <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding HasCondition}" Value="True" />
+                                                                    <Condition Binding="{Binding ShouldRunToday}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                                <Setter Property="Opacity" Value="0.7" />
+                                                            </MultiDataTrigger>
                                                             <DataTrigger Binding="{Binding IsNextTask}" Value="True">
                                                                 <Setter Property="Foreground" Value="DodgerBlue" />
+                                                                <Setter Property="Opacity" Value="1.0" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -221,7 +231,7 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </ui:Button.Style>
-                                                <ui:SymbolIcon Symbol="CalendarDay24">
+                                                <ui:SymbolIcon Symbol="Filter24">
                                                     <ui:SymbolIcon.Style>
                                                         <Style TargetType="ui:SymbolIcon">
                                                             <Setter Property="Opacity" Value="1.0" />
