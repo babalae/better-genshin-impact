@@ -232,6 +232,7 @@ public partial class MaskWindow : Window
         if (_viewModel != null)
         {
             _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+            _viewModel.DisposeStatusList();
         }
 
         if (_mapLabelSearchWindow != null)
