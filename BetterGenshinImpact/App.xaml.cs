@@ -256,6 +256,8 @@ public partial class App : Application
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
             await _host.StartAsync();
+            // 上次 BetterGI 可能因进程意外退出而未恢复原神显示设置，启动时兜底恢复
+            SystemControl.RestoreDisplaySettingsIfPending();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
             await UrlProtocolHelper.RegisterAsync();
         }

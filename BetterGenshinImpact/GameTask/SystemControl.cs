@@ -92,10 +92,24 @@ public class SystemControl
     }
 
     /// <summary>
+    ///     存在尚未恢复的原神显示设置快照时恢复：游戏未运行则立即恢复，运行中则等游戏退出后恢复。
+    ///     用于 BetterGI 启动时的兜底（上次进程意外退出可能遗留快照）。
+    /// </summary>
+    internal static void RestoreDisplaySettingsIfPending()
+    {
+        if (!GenshinDisplayRegistryHelper.HasPendingDisplaySettings())
+        {
+            return;
+        }
+
+        StartDisplayModeRestoreMonitor();
+    }
+
+    /// <summary>
     ///     游戏退出后恢复启动前的显示设置：原神退出时会把显示设置写回注册表，
     ///     必须等游戏进程完全退出后再恢复，否则恢复结果会被游戏退出时的写回覆盖。
     /// </summary>
-    private static void StartDisplayModeRestoreMonitor()
+    internal static void StartDisplayModeRestoreMonitor()
     {
         _ = Task.Run(async () =>
         {
@@ -106,6 +120,9 @@ public class SystemControl
                 {
                     await Task.Delay(3000);
                 }
+
+                // 游戏进程退出时写回注册表可能略有延迟，稍候片刻避免与恢复竞争
+                await Task.Delay(3000);
 
                 if (GenshinDisplayRegistryHelper.RestorePreviousDisplaySettings(out var restoredSettings))
                 {
