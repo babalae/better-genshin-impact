@@ -115,17 +115,16 @@ public static class GenshinDisplayRegistryHelper
         value = 0;
         try
         {
-            return key.GetValue(name) switch
+            switch (key.GetValue(name))
             {
-                int intValue => SetValue(intValue),
-                long longValue => SetValue((int)longValue),
-                _ => false
-            };
-
-            bool SetValue(int v)
-            {
-                value = v;
-                return true;
+                case int intValue:
+                    value = intValue;
+                    return true;
+                case long longValue:
+                    value = (int)longValue;
+                    return true;
+                default:
+                    return false;
             }
         }
         catch
