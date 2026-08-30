@@ -40,6 +40,18 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<StatusItem> _statusList = [];
 
+        /// <summary>
+        /// 快捷键速查条显示项（已绑定、实际生效且用户勾选允许显示的快捷键）
+        /// </summary>
+        [ObservableProperty] private IReadOnlyList<OverlayHotkeyDisplayItem> _overlayHotkeyDisplayItems = [];
+
+        public bool HasHotkeyBarItems => OverlayHotkeyDisplayItems.Count > 0;
+
+        /// <summary>
+        /// 速查条整体可见性：总开关开启且至少有一项可显示，空集合不占位
+        /// </summary>
+        public bool IsHotkeyBarVisible => Config?.MaskWindowConfig.ShowHotkeyBar == true && HasHotkeyBarItems;
+
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private string _fps = "0";
@@ -168,12 +180,71 @@ namespace BetterGenshinImpact.ViewModel
         {
             if (Config != null)
             {
-                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
-                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
-                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
-                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig));
-                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig));
+                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig, "Enabled", nameof(HotKeyConfig.AutoPickEnabledHotkey)));
+                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig, "Enabled", nameof(HotKeyConfig.AutoSkipEnabledHotkey)));
+                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled", nameof(HotKeyConfig.AutoSkipHangoutEnabledHotkey)));
+                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig, "Enabled", nameof(HotKeyConfig.AutoFishingEnabledHotkey)));
+                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig, "Enabled", nameof(HotKeyConfig.QuickTeleportEnabledHotkey)));
             }
+        }
+
+        /// <summary>
+        /// 组装速查条显示项。两级过滤：
+        /// 1. 用户勾选层（MaskWindowConfig.OverlayHotkeyItems，改配置时可整体重算）
+        /// 2. 运行时生效层（未绑定的跳过；键鼠监听下的组合键无法触发，跳过）
+        /// 仅在配置变更时调用（RefreshSettings 消息），绝不进入 50ms 主循环。
+        /// </summary>
+        private void BuildOverlayHotkeyItems()
+        {
+            if (Config == null)
+            {
+                OverlayHotkeyDisplayItems = [];
+                return;
+            }
+
+            var hotKeyConfig = Config.HotKeyConfig;
+            var maskConfig = Config.MaskWindowConfig;
+            maskConfig.EnsureOverlayHotkeyItems();
+
+            var excludeStatusItems = maskConfig.HotkeyBarExcludeStatusItems;
+            var hotKeyConfigType = hotKeyConfig.GetType();
+            var items = new List<OverlayHotkeyDisplayItem>();
+
+            foreach (var propertyName in OverlayHotkeyItemDefaults.AllItems)
+            {
+                // 第一级：用户勾选（默认 true，未绑定不显示由生效层兜底）
+                if (!maskConfig.IsOverlayHotkeyEnabled(propertyName))
+                {
+                    continue;
+                }
+
+                // 去重开关：排除状态栏已展示的那 5 个实时任务开关项
+                if (excludeStatusItems && OverlayHotkeyItemDefaults.StatusBarItemPropertyNames.Contains(propertyName))
+                {
+                    continue;
+                }
+
+                // 未知 key（映射表未同步的新快捷键）跳过渲染，不回退显示英文属性名
+                var displayName = OverlayHotkeyItemDefaults.GetDisplayName(propertyName);
+                if (string.IsNullOrEmpty(displayName))
+                {
+                    continue;
+                }
+
+                var hotkeyValue = hotKeyConfigType.GetProperty(propertyName)?.GetValue(hotKeyConfig) as string;
+                var hotkeyType = hotKeyConfigType.GetProperty(propertyName + "Type")?.GetValue(hotKeyConfig) as string;
+
+                // 第二级：实际生效判定
+                if (!OverlayHotkeyItemDefaults.IsHotkeyEffective(hotkeyValue, hotkeyType))
+                {
+                    continue;
+                }
+
+                items.Add(new OverlayHotkeyDisplayItem(OverlayHotkeyItemDefaults.ToCompactHotkeyText(hotkeyValue!), displayName));
+            }
+
+            OverlayHotkeyDisplayItems = items;
+            OnPropertyChanged(nameof(IsHotkeyBarVisible));
         }
 
         [RelayCommand]
@@ -254,6 +325,13 @@ namespace BetterGenshinImpact.ViewModel
                 RefreshDisplayDpiScale();
                 OnPropertyChanged(nameof(Config));
                 OnPropertyChanged(nameof(IsOverlayMetricsVisible));
+
+                // 快捷键徽章与速查条：StatusList 只初始化一次不重建，逐项刷新徽章文本；速查条整体重算
+                foreach (var statusItem in StatusList)
+                {
+                    statusItem.RefreshHotkey();
+                }
+                BuildOverlayHotkeyItems();
             }
 
             SyncSelectedMapPointApiProviderFromConfig();
@@ -506,6 +584,12 @@ namespace BetterGenshinImpact.ViewModel
                     Config.MaskWindowConfig.MetricsTopRatio = topRatio;
                     Config.MaskWindowConfig.MetricsWidthRatio = widthRatio;
                     Config.MaskWindowConfig.MetricsHeightRatio = heightRatio;
+                    break;
+                case "HotkeyBar":
+                    Config.MaskWindowConfig.HotkeyBarLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.HotkeyBarTopRatio = topRatio;
+                    Config.MaskWindowConfig.HotkeyBarWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.HotkeyBarHeightRatio = heightRatio;
                     break;
             }
         }
