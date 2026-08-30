@@ -41,7 +41,8 @@
                    BorderThickness="1"
                    CornerRadius="{DynamicResource ControlCornerRadius}">
             <Grid Margin="4">
-                <ui:Grid ColumnDefinitions="*,235" Visibility="Hidden">
+                <!--  固定列合计 305（类型 100 + 快捷键 120 + 遮罩显示 70 + 余量 15），功能列占满剩余宽度，避免出现横向滚动条  -->
+                <ui:Grid ColumnDefinitions="*,305" Visibility="Hidden">
                     <Grid x:Name="TreeColumnStar" Grid.Column="0" />
                 </ui:Grid>
                 <ui:TreeListView BorderThickness="0" ItemsSource="{Binding HotKeySettingModels}">
@@ -76,6 +77,18 @@
                                                               Style="{StaticResource DefaultTextBoxStyle}"
                                                               TextAlignment="Center"
                                                               Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Width="70" Header="{i18n:T 遮罩显示}">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <!--  勾选后该快捷键出现在遮罩速查条上（须先绑定快捷键且实际生效）；目录行不渲染  -->
+                                        <CheckBox HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  IsChecked="{Binding ShowOnOverlay, Mode=TwoWay}"
+                                                  IsEnabled="{Binding HotKey.IsEmpty, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                                                  Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
