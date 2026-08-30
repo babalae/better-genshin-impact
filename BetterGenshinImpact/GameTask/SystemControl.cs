@@ -84,7 +84,7 @@ public class SystemControl
             _ = User32.GetWindowThreadProcessId(hWnd, out var pid);
             try
             {
-                var p = Process.GetProcessById((int)pid);
+                using var p = Process.GetProcessById((int)pid);
                 if (!nameSet.Contains(p.ProcessName))
                 {
                     return true;
@@ -104,8 +104,8 @@ public class SystemControl
             }
             catch (Exception ex)
             {
-                // 进程已退出或无法访问，跳过
-                Debug.WriteLine(ex);
+                // ArgumentException 已单独接走，落到这里的多为跨会话/提权进程访问被拒
+                Logger.LogDebug(ex, "[窗口检测] 兜底①读取窗口进程信息失败（pid={Pid}）", (int)pid);
                 return true;
             }
 
