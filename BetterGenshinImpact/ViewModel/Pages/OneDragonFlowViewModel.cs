@@ -56,6 +56,12 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private OneDragonTaskItem _selectedTask;
 
+    [ObservableProperty] private OneDragonTaskItem? _conditionEditingTask;
+
+    [ObservableProperty] private bool _shouldShowTaskConditionPopup = false;
+
+    private OneDragonTaskCondition? _conditionEditingBackup;
+
     partial void OnSelectedTaskChanged(OneDragonTaskItem value)
     {
         if (value != null)
@@ -368,6 +374,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             if (isOldFormat)
             {
                 taskItem = new OneDragonTaskItem(key) { IsEnabled = enabled };
+                taskItem.ApplyCondition(SelectedConfig.GetTaskCondition(key));
             }
             else
             {
@@ -376,6 +383,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     continue;
                 }
                 taskItem = new OneDragonTaskItem(name, key) { IsEnabled = enabled };
+                taskItem.ApplyCondition(SelectedConfig.GetTaskCondition(key));
             }
             taskItem.IsNextTask = key == SelectedConfig.NextTaskId;
             TaskList.Add(taskItem);
@@ -413,14 +421,32 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
+        if (SelectedConfig.TaskDefinitions == null)
+        {
+            SelectedConfig.TaskDefinitions = new Dictionary<string, string>();
+        }
         SelectedConfig.TaskDefinitions.Clear();
+        if (SelectedConfig.TaskEnabledList == null)
+        {
+            SelectedConfig.TaskEnabledList = new Dictionary<string, bool>();
+        }
         SelectedConfig.TaskEnabledList.Clear();
+        if (SelectedConfig.TaskOrder == null)
+        {
+            SelectedConfig.TaskOrder = new List<string>();
+        }
         SelectedConfig.TaskOrder.Clear();
+        if (SelectedConfig.TaskConditions == null)
+        {
+            SelectedConfig.TaskConditions = new Dictionary<string, OneDragonTaskCondition>();
+        }
+        SelectedConfig.TaskConditions.Clear();
         foreach (var task in TaskList)
         {
             SelectedConfig.TaskDefinitions[task.Id] = task.Name;
             SelectedConfig.TaskEnabledList[task.Id] = task.IsEnabled;
             SelectedConfig.TaskOrder.Add(task.Id);
+            SelectedConfig.TaskConditions[task.Id] = task.ToCondition();
         }
 
         WriteConfig(SelectedConfig);
@@ -615,6 +641,12 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             if (task is { IsEnabled: true, Action: not null })
             {
+                if (!task.ShouldRunToday)
+                {
+                    _logger.LogInformation($"任务 {task.Name} 不满足执行条件（运行日：{task.GetConditionSummaryText()}），跳过");
+                    continue;
+                }
+
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
@@ -722,6 +754,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         var copy = new OneDragonTaskItem(taskItem.Name) { IsEnabled = taskItem.IsEnabled };
         copy.Id = GenerateUniqueTaskId();
+        copy.ApplyCondition(taskItem.ToCondition());
 
         var index = TaskList.IndexOf(taskItem);
         if (index >= 0)
@@ -975,5 +1008,46 @@ public partial class OneDragonFlowViewModel : ViewModel
             _logger.LogError(e, "重命名配置时失败");
             Toast.Error("重命名配置时失败");
         }
+    }
+
+    [RelayCommand]
+    private void OpenTaskCondition(OneDragonTaskItem? task)
+    {
+        task ??= SelectedTask;
+        if (task == null)
+        {
+            Toast.Warning("请先选择一个任务");
+            return;
+        }
+        ConditionEditingTask = task;
+        _conditionEditingBackup = ConditionEditingTask.ToCondition();
+        ShouldShowTaskConditionPopup = true;
+        if (task != SelectedTask)
+        {
+            SelectedTask = task;
+        }
+    }
+
+    [RelayCommand]
+    private void CloseTaskCondition()
+    {
+        ShouldShowTaskConditionPopup = false;
+        SaveConfig();
+    }
+
+    [RelayCommand]
+    private void ResetTaskCondition()
+    {
+        ConditionEditingTask?.ApplyCondition(null);
+    }
+
+    [RelayCommand]
+    private void CancelTaskCondition()
+    {
+        if (ConditionEditingTask != null && _conditionEditingBackup != null)
+        {
+            ConditionEditingTask.ApplyCondition(_conditionEditingBackup);
+        }
+        ShouldShowTaskConditionPopup = false;
     }
 }

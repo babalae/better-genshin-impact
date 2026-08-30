@@ -1,4 +1,5 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.OneDragonFlowPage"
+             x:Name="OneDragonRoot"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -38,19 +39,24 @@
 
         <!--  左侧任务列表  -->
        <DockPanel Grid.Column="0"
+                  Tag="{Binding ElementName=TaskListView}"
                   ContextMenuOpening="DockPanel_ContextMenuOpening">
            <DockPanel.ContextMenu>
                <ContextMenu>
                    <MenuItem Command="{Binding AddTaskGroupCommand}" Header="{i18n:T 新增配置}" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
-                             CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                             CommandParameter="{Binding PlacementTarget.Tag.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                              Header="{i18n:T 删除}" />
                    <Separator />
                    <MenuItem Command="{Binding NextTaskGroupCommand}"
-                             CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                             CommandParameter="{Binding PlacementTarget.Tag.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                              Header="{i18n:T 从此执行}" />
                    <MenuItem Command="{Binding ClearNextTaskGroupCommand}"
                              Header="{i18n:T 清除标记}" />
+                   <Separator />
+                   <MenuItem Header="设置执行条件…"
+                             Command="{Binding OpenTaskConditionCommand}"
+                             CommandParameter="{Binding PlacementTarget.Tag.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                </ContextMenu>
            </DockPanel.ContextMenu>
        <Grid DockPanel.Dock="Top"
@@ -145,7 +151,8 @@
             <Style TargetType="ContentControl">
                 <Setter Property="Content">
                     <Setter.Value>
-                        <ui:ListView dd:DragDrop.IsDragSource="True"
+                        <ui:ListView x:Name="TaskListView"
+                                     dd:DragDrop.IsDragSource="True"
                                      dd:DragDrop.IsDropTarget="True"
                                      dd:DragDrop.UseDefaultDragAdorner="True"
                                      ItemsSource="{Binding TaskList}"
@@ -159,6 +166,7 @@
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <ui:FontIcon Grid.Column="0"
@@ -185,9 +193,62 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            
-                                            
-                                            <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+
+                                            <ui:Button Grid.Column="3"
+                                                       Command="{Binding DataContext.OpenTaskConditionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                       CommandParameter="{Binding}">
+                                                <ui:Button.Style>
+                                                    <Style TargetType="ui:Button">
+                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Setter Property="BorderBrush" Value="Transparent" />
+                                                        <Setter Property="BorderThickness" Value="0" />
+                                                        <Setter Property="Padding" Value="4" />
+                                                        <Setter Property="ToolTip" Value="未设置执行条件（每天执行），点击设置" />
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ui:Button">
+                                                                    <ContentPresenter Content="{TemplateBinding Content}"
+                                                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                                      HorizontalAlignment="Center"
+                                                                                      VerticalAlignment="Center" />
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasCondition}" Value="True">
+                                                                <Setter Property="ToolTip" Value="已设置执行条件，点击修改" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:Button.Style>
+                                                <ui:SymbolIcon Symbol="CalendarDay24">
+                                                    <ui:SymbolIcon.Style>
+                                                        <Style TargetType="ui:SymbolIcon">
+                                                            <Setter Property="Opacity" Value="1.0" />
+                                                            <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasCondition}" Value="True">
+                                                                    <Setter Property="Opacity" Value="1.0" />
+                                                                    <Setter Property="Foreground">
+                                                                        <Setter.Value>
+                                                                            <SolidColorBrush Color="#FF1E90FF" />
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </DataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding HasCondition}" Value="True" />
+                                                                        <Condition Binding="{Binding ShouldRunToday}" Value="False" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Opacity" Value="0.6" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ui:SymbolIcon.Style>
+                                                </ui:SymbolIcon>
+                                            </ui:Button>
+
+                                            <ui:ToggleSwitch Grid.Column="4" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
                                         </Grid>
                                     </ui:Card>
                                 </DataTemplate>
@@ -2161,5 +2222,92 @@
                 </StackPanel>
             </ScrollViewer>
         </DockPanel>
+
+        <!--  任务执行条件设置 Popup  -->
+        <Popup x:Name="TaskConditionPopup"
+               PlacementTarget="{Binding ElementName=OneDragonRoot}"
+               Placement="Center"
+               AllowsTransparency="True"
+               PopupAnimation="Fade"
+               StaysOpen="True"
+               IsOpen="{Binding ShouldShowTaskConditionPopup, Mode=TwoWay}">
+            <Border CornerRadius="8"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                    BorderThickness="1"
+                    MinWidth="380">
+                <StackPanel Margin="18">
+                    <TextBlock FontSize="16"
+                               FontWeight="Bold"
+                               Margin="0,0,0,12"
+                               HorizontalAlignment="Center"
+                               Text="{Binding ConditionEditingTask.Name, StringFormat=任务执行条件 - {0}}" />
+
+                    <UniformGrid Rows="2" Columns="4" Margin="0,0,0,8">
+                        <CheckBox Content="周一" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunMonday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox Content="周二" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunTuesday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox Content="周三" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunWednesday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox Content="周四" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunThursday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox Content="周五" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunFriday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox Content="周六" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunSaturday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <CheckBox Content="周日" Margin="6"
+                                  IsChecked="{Binding ConditionEditingTask.RunSunday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </UniformGrid>
+
+                    <Grid Margin="0,4,0,12">
+                        <TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   FontSize="12"
+                                   Text="当前：每天执行（未勾选任何日期则为每天）">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ConditionEditingTask.HasCondition}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   FontSize="12"
+                                   Text="当前：设置了执行日期，仅勾选日运行">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ConditionEditingTask.HasCondition}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center">
+                        <ui:Button Content="重置"
+                                   Width="72"
+                                   Margin="0,0,8,0"
+                                   Command="{Binding ResetTaskConditionCommand}" />
+                        <ui:Button Content="取消"
+                                   Width="72"
+                                   Margin="0,0,8,0"
+                                   Command="{Binding CancelTaskConditionCommand}" />
+                        <ui:Button Content="确认"
+                                   Width="72"
+                                   Appearance="Primary"
+                                   Command="{Binding CloseTaskConditionCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </UserControl>
