@@ -113,6 +113,9 @@ public class NotifierManager
         }
     }
 
+    /// <summary>
+    /// 以租约方式向指定类型的通知器发送通知（在途计数，供普通通知路径使用）。
+    /// </summary>
     public async Task SendNotificationAsync<T>(BaseNotificationData content) where T : INotifier
     {
         INotifier? notifier;
