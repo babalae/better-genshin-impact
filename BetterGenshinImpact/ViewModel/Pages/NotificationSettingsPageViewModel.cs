@@ -794,6 +794,13 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                         QqStatus = $"请将机器人加入群聊，或在群里 @机器人 发送验证码 [{code}]";
                     });
                 },
+                status =>
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        QqStatus = status;
+                    });
+                },
                 _groupBindCts.Token);
 
             // 绑定成功，自动回填群 OpenID（配置自动保存 + 刷新通知器）

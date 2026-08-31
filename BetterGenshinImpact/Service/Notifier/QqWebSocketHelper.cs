@@ -112,6 +112,7 @@ public class QqWebSocketHelper
         string appId,
         string clientSecret,
         Action<string> onVerifyCode,
+        Action<string> onBindingStatus,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(appId))
@@ -131,12 +132,14 @@ public class QqWebSocketHelper
         {
             // 1. 获取 access_token
             var accessToken = await GetAccessTokenAsync(httpClient, appId, clientSecret, ct);
+            Logger.LogInformation("QQ 群绑定已获取访问令牌");
             // 2. 获取 WebSocket 网关地址
             var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, ct);
 
             using var socket = new ClientWebSocket();
             // 3. 连接网关
             await socket.ConnectAsync(new Uri(gatewayUrl), ct);
+            Logger.LogInformation("QQ 群绑定已连接 WebSocket 网关");
 
             // 4. 接收 Hello 握手，获取心跳间隔
             var heartbeatInterval = await ReceiveHelloAsync(socket, ct);
@@ -151,6 +154,7 @@ public class QqWebSocketHelper
             // 6. 等待网关 READY 确认（op=0, t=READY），确保订阅已真正生效，
             //    避免用户在订阅建立前完成加群导致 GROUP_ADD_ROBOT 事件丢失
             await ReceiveReadyAsync(socket, setSeq, ct);
+            Logger.LogInformation("QQ 群绑定已收到 READY，开始等待群事件");
 
             // 7. 网关订阅已确认就绪，此时再显示验证码，确保用户发消息时已经在监听
             onVerifyCode(verifyCode);
@@ -162,7 +166,12 @@ public class QqWebSocketHelper
             try
             {
                 // 9. 进入接收循环，等待用户发送验证码或机器人被加入群聊
-                return await ReceiveUntilGroupOpenIdAsync(socket, verifyCode, (s) => { Interlocked.Exchange(ref seq, s); }, ct);
+                return await ReceiveUntilGroupOpenIdAsync(
+                    socket,
+                    verifyCode,
+                    (s) => { Interlocked.Exchange(ref seq, s); },
+                    onBindingStatus,
+                    ct);
             }
             finally
             {
@@ -417,7 +426,12 @@ public class QqWebSocketHelper
     /// 接收循环，等待用户发送验证码或机器人被加入群聊，提取 group_openid。
     /// 用于群聊绑定场景，监听 GROUP_AT_MESSAGE_CREATE 和 GROUP_ADD_ROBOT 事件。
     /// </summary>
-    private static async Task<string> ReceiveUntilGroupOpenIdAsync(ClientWebSocket socket, string verifyCode, Action<long> setSeq, CancellationToken ct)
+    private static async Task<string> ReceiveUntilGroupOpenIdAsync(
+        ClientWebSocket socket,
+        string verifyCode,
+        Action<long> setSeq,
+        Action<string> onBindingStatus,
+        CancellationToken ct)
     {
         while (true)
         {
@@ -444,27 +458,43 @@ public class QqWebSocketHelper
             if (!root.TryGetProperty("d", out var d))
                 continue;
 
+            Logger.LogInformation("QQ 群绑定收到网关事件：{EventType}", eventType);
+
             // 保存消息序列号用于心跳包
             if (root.TryGetProperty("s", out var sElement) && sElement.TryGetInt64(out var sVal))
                 setSeq(sVal);
 
-            if (eventType == "GROUP_AT_MESSAGE_CREATE")
+            // QQ 当前实际可能将群内 @消息以 GROUP_MESSAGE_CREATE 推送，
+            // 即使消息中包含 @机器人；同时兼容官方文档中的 GROUP_AT_MESSAGE_CREATE。
+            if (eventType == "GROUP_AT_MESSAGE_CREATE" || eventType == "GROUP_MESSAGE_CREATE")
             {
                 // 群聊消息事件：校验消息内容是否包含验证码，返回 group_openid
                 var groupOpenId = ExtractString(d, "group_openid");
+                var content = ExtractString(d, "content");
+                var isVerifyCodeMatched = content?.Contains(verifyCode) == true;
+                Logger.LogInformation(
+                    "QQ 群绑定收到群 @ 消息：包含群 OpenID={HasGroupOpenId}，验证码匹配={IsVerifyCodeMatched}",
+                    !string.IsNullOrWhiteSpace(groupOpenId),
+                    isVerifyCodeMatched);
                 if (!string.IsNullOrWhiteSpace(groupOpenId))
                 {
-                    var content = ExtractString(d, "content");
-                    if (content != null && content.Contains(verifyCode))
+                    if (isVerifyCodeMatched)
                         return groupOpenId;
                 }
+
+                onBindingStatus(isVerifyCodeMatched
+                    ? "已收到群内 @机器人消息，但未获取到群 OpenID，请重试"
+                    : "已收到群内 @机器人消息，但验证码不匹配，请发送当前显示的验证码");
             }
             else if (eventType == "GROUP_ADD_ROBOT")
             {
                 // 机器人被加入群聊事件：直接提取 group_openid
                 var groupOpenId = ExtractOpenId(d, "group_openid");
+                Logger.LogInformation("QQ 群绑定收到机器人入群事件：包含群 OpenID={HasGroupOpenId}", !string.IsNullOrWhiteSpace(groupOpenId));
                 if (!string.IsNullOrWhiteSpace(groupOpenId))
                     return groupOpenId;
+
+                onBindingStatus("已收到机器人入群事件，但未获取到群 OpenID，请重试");
             }
         }
     }
