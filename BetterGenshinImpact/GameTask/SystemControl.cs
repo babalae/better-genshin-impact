@@ -30,26 +30,29 @@ public class SystemControl
     {
         var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
 
-        // 其他设置：窗口检测增强兜底（默认关闭，关闭时走原始路径；开启时兜底优先）
-        if (TaskContext.Instance().Config.OtherConfig.WindowDetectFallbackEnabled)
+        // 其他设置：窗口类名优先检测（默认关闭，关闭时走原始进程名+MainWindowHandle 路径）
+        // 开启后：①按窗口类名枚举 → ②按进程枚举最大可见窗口 → ③原版方式（均未命中才回退）
+        if (TaskContext.Instance().Config.OtherConfig.WindowClassDetectPreferred)
         {
+            // ①优先：按窗口类名 EnumWindows 枚举（不看标题，规避标题变化），同会话优先
             var handle = FindWindowByUnityWndClass(processNames);
             if (handle != 0)
             {
-                Logger.LogInformation("[窗口检测] 兜底①按窗口类名枚举命中，句柄={Handle}", handle);
+                Logger.LogInformation("[窗口检测] ①按窗口类名枚举命中，句柄={Handle}", handle);
                 return handle;
             }
 
+            // ②次选：白名单进程拥有的可见窗口中客户区最大者，同会话优先
             handle = FindLargestVisibleWindowByProcessName(processNames);
             if (handle != 0)
             {
-                Logger.LogInformation("[窗口检测] 兜底②按进程枚举最大可见窗口命中，句柄={Handle}", handle);
+                Logger.LogInformation("[窗口检测] ②按进程枚举最大可见窗口命中，句柄={Handle}", handle);
                 return handle;
             }
 
-            // 兜底未命中，回退旧逻辑（进程名 + MainWindowHandle）
+            // 仍未命中，回退原版逻辑（进程名 + MainWindowHandle）
             handle = FindHandleByProcessName(processNames.ToArray());
-            Logger.LogInformation("[窗口检测] 兜底未命中，回退旧逻辑，句柄={Handle}", handle);
+            Logger.LogInformation("[窗口检测] 未命中，回退旧逻辑，句柄={Handle}", handle);
             return handle;
         }
 
@@ -57,7 +60,7 @@ public class SystemControl
     }
 
     /// <summary>
-    /// 兜底①：按窗口类名 EnumWindows 枚举顶层可见窗口（不看窗口标题，规避标题变化），
+    /// ①优先：按窗口类名 EnumWindows 枚举顶层可见窗口（不看窗口标题，规避标题变化），
     /// 再经 GetWindowThreadProcessId 反查进程名，须在游戏进程名白名单内；
     /// 同会话命中直接返回，否则记住第一个跨会话命中继续枚举（多开/多会话时同会话优先）
     /// </summary>
@@ -105,7 +108,7 @@ public class SystemControl
             catch (Exception ex)
             {
                 // ArgumentException 已单独接走，落到这里的多为跨会话/提权进程访问被拒
-                Logger.LogDebug(ex, "[窗口检测] 兜底①读取窗口进程信息失败（pid={Pid}）", (int)pid);
+                Logger.LogDebug(ex, "[窗口检测] ①读取窗口进程信息失败（pid={Pid}）", (int)pid);
                 return true;
             }
 
@@ -121,7 +124,7 @@ public class SystemControl
     }
 
     /// <summary>
-    /// 兜底②：对游戏进程名白名单内的所有进程（不依赖 MainWindowHandle）
+    /// ②次选：对游戏进程名白名单内的所有进程（不依赖 MainWindowHandle）
     /// EnumWindows 枚举其名下的可见顶层窗口，取客户区面积最大者；
     /// 存在同会话进程时只在本会话窗口里选（多开/多会话时同会话优先）
     /// </summary>

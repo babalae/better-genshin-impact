@@ -12,9 +12,9 @@ public partial class OtherConfig : ObservableObject
     //调度器任务和部分独立任务，失去焦点，自动激活游戏窗口
     [ObservableProperty]
     private bool _restoreFocusOnLostEnabled = false;
-    //窗口检测增强兜底：开启后优先按窗口类名/进程枚举检测原神窗口（同会话优先），未命中再回退旧的进程名+主窗口句柄方式（即时生效，每次查找窗口时读取）
+    //窗口类名优先检测：原版仅靠进程名+MainWindowHandle 查找游戏窗口，该句柄为 0 或指向错误窗口时会找不到。开启后优先按窗口类名枚举检测，未命中再按进程枚举取客户区最大的可见窗口，仍不命中才回退原版方式。即时生效（每次查找窗口时读取），默认关闭，关闭时行为与旧版完全一致
     [ObservableProperty]
-    private bool _windowDetectFallbackEnabled = false;
+    private bool _windowClassDetectPreferred = false;
     //自动领取派遣任务城市
     [ObservableProperty]
     private string _autoFetchDispatchAdventurersGuildCountry = "无";
