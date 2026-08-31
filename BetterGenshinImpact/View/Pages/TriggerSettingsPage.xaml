@@ -9,6 +9,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
       Title="HomePage"
       d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
       d:DesignHeight="950"
@@ -117,7 +118,7 @@
         <TextBlock Margin="0,0,0,12"
                    FontSize="18"
                    FontWeight="SemiBold"
-                   Text="实时触发的自动化任务设置" />
+                   Text="{i18n:T 实时触发的自动化任务设置}" />
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon HandWave24}">
@@ -134,12 +135,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动拾取"
+                                  Text="{i18n:T 自动拾取}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="根据选择的名单模式，自动按下 F 拾取/交互"
+                                  Text="{i18n:T 根据选择的名单模式，自动按下 F 拾取/交互}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -189,12 +190,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择自动拾取文字识别引擎"
+                                  Text="{i18n:T 选择自动拾取文字识别引擎}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Paddle可识别所有文字,速度慢,消耗少;Yap可识别部分文字,快且准,消耗大"
+                                  Text="{i18n:T Paddle可识别所有文字，速度慢，消耗少；Yap可识别部分文字，快且准，消耗大}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -206,11 +207,11 @@
                 </Grid>
                 <StackPanel Margin="16,16,16,8">
                     <ui:TextBlock FontTypography="BodyStrong"
-                                  Text="黑白名单模式"
+                                  Text="{i18n:T 黑白名单模式}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Margin="0,2,0,0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择自动拾取的基础行为；两种模式互斥，切换后立即生效"
+                                  Text="{i18n:T 选择自动拾取的基础行为；两种模式互斥，切换后立即生效}"
                                   TextWrapping="Wrap" />
                 </StackPanel>
 
@@ -235,11 +236,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="BodyStrong"
-                                                  Text="黑名单模式"
+                                                  Text="{i18n:T 黑名单模式}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Margin="0,4,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                  Text="除明确设置为“不拾取”的内容外，其余内容均会拾取"
+                                                  Text="{i18n:T 除明确设置为“不拾取”的内容外，其余内容均会拾取}"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
@@ -273,7 +274,7 @@
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal">
                                         <ui:TextBlock FontTypography="BodyStrong"
-                                                      Text="白名单模式"
+                                                      Text="{i18n:T 白名单模式}"
                                                       TextWrapping="Wrap" />
                                         <Border Margin="8,0,0,0"
                                                 Padding="6,2"
@@ -282,12 +283,12 @@
                                                 CornerRadius="4">
                                             <ui:TextBlock FontSize="11"
                                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
-                                                          Text="推荐" />
+                                                          Text="{i18n:T 推荐}" />
                                         </Border>
                                     </StackPanel>
                                     <ui:TextBlock Margin="0,4,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                  Text="只拾取列表中的文本，其他文本全部忽略"
+                                                  Text="{i18n:T 只拾取列表中的文本，其他文本全部忽略}"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
@@ -314,19 +315,19 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="黑名单模式规则"
+                                      Text="{i18n:T 黑名单模式规则}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="在独立窗口中配置拾取、不拾取及模糊匹配规则"
+                                      Text="{i18n:T 在独立窗口中配置拾取、不拾取及模糊匹配规则}"
                                       TextWrapping="Wrap" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.Column="1"
                                    Margin="0,0,8,0"
                                    Command="{Binding OpenBlacklistModeConfigCommand}"
-                                   Content="配置规则"
+                                   Content="{i18n:T 配置规则}"
                                    Icon="{ui:SymbolIcon Settings24}" />
                     </Grid>
                 </StackPanel>
@@ -344,19 +345,19 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="白名单模式规则"
+                                      Text="{i18n:T 白名单模式规则}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="在独立窗口中配置拾取列表和精确不拾取规则"
+                                      Text="{i18n:T 在独立窗口中配置拾取列表和精确不拾取规则}"
                                       TextWrapping="Wrap" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.Column="1"
                                    Margin="0,0,8,0"
                                    Command="{Binding OpenWhitelistModeConfigCommand}"
-                                   Content="配置规则"
+                                   Content="{i18n:T 配置规则}"
                                    Icon="{ui:SymbolIcon Settings24}" />
                     </Grid>
                 </StackPanel>
@@ -372,12 +373,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义拾取按键"
+                                  Text="{i18n:T 自定义拾取按键}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认为 F，自带了 E 和 G 按键，需要改成其他键的请阅读文档"
+                                  Text="{i18n:T 默认为 F，自带了 E 和 G 按键，需要改成其他键的请阅读文档}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -408,12 +409,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动剧情"
+                                  Text="{i18n:T 自动剧情}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速跳过剧情文本、自动选择选项、自动提交物品等"
+                                  Text="{i18n:T 快速跳过剧情文本、自动选择选项、自动提交物品等}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -435,12 +436,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用后台模式（会只用交互键进行剧情）"
+                                  Text="{i18n:T 启用后台模式（会只用交互键进行剧情）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏请不要最小化，不在对话中的时候鼠标会自动吸附回游戏中"
+                                  Text="{i18n:T 游戏请不要最小化，不在对话中的时候鼠标会自动吸附回游戏中}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -460,12 +461,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="后台剧情结束后自动切回游戏前台"
+                                  Text="{i18n:T 后台剧情结束后自动切回游戏前台}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="仅在后台模式生效，识别到对话结束后会自动激活原神窗口"
+                                  Text="{i18n:T 仅在后台模式生效，识别到对话结束后会自动激活原神窗口}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -486,12 +487,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="画中画窗口（建议和后台模式同时开启）"
+                                  Text="{i18n:T 画中画窗口（建议和后台模式同时开启）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏失焦时展示小窗，滚轮缩放，左键返回游戏，右键关闭"
+                                  Text="{i18n:T 游戏失焦时展示小窗，滚轮缩放，左键返回游戏，右键关闭}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -545,12 +546,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速跳过对话文本"
+                                  Text="{i18n:T 快速跳过对话文本}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你要听完整的主线语音的话，可以关闭此功能"
+                                  Text="{i18n:T 如果你要听完整的主线语音的话，可以关闭此功能}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -570,12 +571,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义优先对话选项"
+                                  Text="{i18n:T 自定义优先对话选项}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先级高于下边的 选择选项优先级"
+                                  Text="{i18n:T 优先级高于下边的 选择选项优先级}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -605,13 +606,13 @@
                     <ui:TextBlock Grid.Row="0"  
                                   Grid.Column="0"  
                                   FontTypography="Body"  
-                                  Text="自定义优先选项文本"  
+                                  Text="{i18n:T 自定义优先选项文本}"  
                                   TextWrapping="Wrap" />  
                     <ui:TextBlock Grid.Row="1"  
                                   Grid.Column="0"  
                                   Margin="0,-10,0,0"  
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"  
-                                  Text="多个选项用分号(中英文)分隔，或者换行"  
+                                  Text="{i18n:T 多个选项用分号(中英文)分隔，或者换行}"  
                                   TextWrapping="Wrap" />  
                     <ui:TextBox Grid.Row="0"  
                                 Grid.RowSpan="2"  
@@ -636,12 +637,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择选项优先级"
+                                  Text="{i18n:T 选择选项优先级}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="进入对话后，对话选项的选择方式"
+                                  Text="{i18n:T 进入对话后，对话选项的选择方式}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -662,12 +663,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择对话选项前的延迟（毫秒）"
+                                  Text="{i18n:T 选择对话选项前的延迟（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动剧情的情况下，依旧能够看清楚选项"
+                                  Text="{i18n:T 方便在自动剧情的情况下，依旧能够看清楚选项}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -688,12 +689,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="听完语音后再选择对话选项"
+                                  Text="{i18n:T 听完语音后再选择对话选项}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="通过游戏进程音频的人声检测判断台词结束；等待数秒仍未检测到语音时继续，无法读取游戏声音时使用上方固定延迟"
+                                  Text="{i18n:T 通过游戏进程音频的人声检测判断台词结束；等待数秒仍未检测到语音时继续，无法读取游戏声音时使用上方固定延迟}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -713,12 +714,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="语音结束检测最大等待（秒）"
+                                  Text="{i18n:T 语音结束检测最大等待（秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="超过该时间仍未检测到语音结束时会继续选择，避免卡住剧情"
+                                  Text="{i18n:T 超过该时间仍未检测到语音结束时会继续选择，避免卡住剧情}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -739,12 +740,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="点击对话框确认按钮之前的延迟（毫秒）"
+                                  Text="{i18n:T 点击对话框确认按钮之前的延迟（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动剧情的情况下，依旧能够看完全部对话框文字"
+                                  Text="{i18n:T 方便在自动剧情的情况下，依旧能够看完全部对话框文字}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -765,12 +766,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动提交物品"
+                                  Text="{i18n:T 自动提交物品}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="对话过程中出现提交物品界面，会自动提交，支持多个物品"
+                                  Text="{i18n:T 对话过程中出现提交物品界面，会自动提交，支持多个物品}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -790,12 +791,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动关闭弹出页"
+                                  Text="{i18n:T 自动关闭弹出页}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="关闭对话过程中出现的弹出页面，可能会误关地图、相机"
+                                  Text="{i18n:T 关闭对话过程中出现的弹出页面，可能会误关地图、相机}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -815,12 +816,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="凯瑟琳 - 自动领取『每日委托』奖励"
+                                  Text="{i18n:T 凯瑟琳 - 自动领取『每日委托』奖励}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在与凯瑟琳对话时，会自动“领取『每日委托』奖励"
+                                  Text="{i18n:T 在与凯瑟琳对话时，会自动“领取『每日委托』奖励}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -841,12 +842,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="凯瑟琳 - 自动重新派遣"
+                                  Text="{i18n:T 凯瑟琳 - 自动重新派遣}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动领取已完成探索的奖励，并重新派遣"
+                                  Text="{i18n:T 自动领取已完成探索的奖励，并重新派遣}"
                                   TextWrapping="Wrap" />
                     <!--<ui:Button
                         Grid.Row="0"
@@ -883,12 +884,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动邀约"
+                                  Text="{i18n:T 自动邀约}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动剧情开启的情况下此功能才会生效，自动选择邀约选项"
+                                  Text="{i18n:T 自动剧情开启的情况下此功能才会生效，自动选择邀约选项}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -910,12 +911,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="存在跳过按钮时自动点击"
+                                  Text="{i18n:T 存在跳过按钮时自动点击}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="邀约过程中左上角存在跳过按钮时候，自动点击跳过"
+                                  Text="{i18n:T 邀约过程中左上角存在跳过按钮时候，自动点击跳过}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -935,12 +936,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择邀约分支（不支持气泡联想选择）"
+                                  Text="{i18n:T 选择邀约分支（不支持气泡联想选择）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="会按照选择分支的关键词进行选项选择"
+                                  Text="{i18n:T 会按照选择分支的关键词进行选项选择}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -968,12 +969,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择邀约选项前的延迟（毫秒）"
+                                  Text="{i18n:T 选择邀约选项前的延迟（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动邀约的情况下，依旧能够看清楚选项"
+                                  Text="{i18n:T 方便在自动邀约的情况下，依旧能够看清楚选项}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1001,12 +1002,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="半自动钓鱼"
+                                  Text="{i18n:T 半自动钓鱼}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="半自动钓鱼需要手动抛竿（全自动钓鱼已迁移至独立任务下）"
+                                  Text="{i18n:T 半自动钓鱼需要手动抛竿（全自动钓鱼已迁移至独立任务下）}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1028,14 +1029,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="全自动钓鱼已迁移至独立任务下"
+                                  Text="{i18n:T 全自动钓鱼已迁移至独立任务下}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        全自动钓鱼已迁移至独立任务下，请到独立任务页配合快捷键使用
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 全自动钓鱼已迁移至独立任务下，请到独立任务页配合快捷键使用}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1058,14 +1057,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动吃药"
+                                  Text="{i18n:T 自动吃药}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        检测角色红血状态，自动使用便携营养袋回复生命值
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 检测角色红血状态，自动使用便携营养袋回复生命值}" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -1086,12 +1083,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="触发时间间隔（毫秒）"
+                                  Text="{i18n:T 触发时间间隔（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="多少时间检查一次是否红血或需要复活"
+                                  Text="{i18n:T 多少时间检查一次是否红血或需要复活}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1111,12 +1108,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="吃药时间间隔（毫秒）"
+                                  Text="{i18n:T 吃药时间间隔（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="防止频繁吃药"
+                                  Text="{i18n:T 防止频繁吃药}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1145,12 +1142,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速传送"
+                                  Text="{i18n:T 快速传送}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在大地图上点击传送点（或列表中有传送点）时，自动点击传送"
+                                  Text="{i18n:T 在大地图上点击传送点（或列表中有传送点）时，自动点击传送}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1172,12 +1169,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="点击候选列表传送点的间隔时间（毫秒）"
+                                  Text="{i18n:T 点击候选列表传送点的间隔时间（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="普通用户请不要修改此配置，需要根据文字识别耗时配置，太低会导致点击失败"
+                                  Text="{i18n:T 普通用户请不要修改此配置，需要根据文字识别耗时配置，太低会导致点击失败}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1198,12 +1195,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="等待右侧传送弹出界面的时间（毫秒）"
+                                  Text="{i18n:T 等待右侧传送弹出界面的时间（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="普通用户请不要修改此配置，不建议低于80ms，太低会导致传送按钮识别不到"
+                                  Text="{i18n:T 普通用户请不要修改此配置，不建议低于80ms，太低会导致传送按钮识别不到}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1224,18 +1221,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用快捷键传送"
+                                  Text="{i18n:T 启用快捷键传送}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        按下
+                        <Run Text="{i18n:T 按下}" />
                         <Hyperlink Command="{Binding GoToHotKeyPageCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            [手动触发快速传送触发快捷键]
+                            <Run Text="{i18n:T [手动触发快速传送触发快捷键]}" />
                         </Hyperlink>
-                        后才进行快速传送
+                        <Run Text="{i18n:T 后才进行快速传送}" />
                     </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1263,14 +1260,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图遮罩"
+                                  Text="{i18n:T 地图遮罩}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        在遮罩窗口中显示大地图位置与标点信息
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 在遮罩窗口中显示大地图位置与标点信息}" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -1291,12 +1286,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用小地图遮罩"
+                                  Text="{i18n:T 启用小地图遮罩}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在小地图上显示点位"
+                                  Text="{i18n:T 在小地图上显示点位}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1325,14 +1320,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="冷却提示"
+                                  Text="{i18n:T 冷却提示}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        在头像旁显示角色元素战技剩余冷却时间
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 在头像旁显示角色元素战技剩余冷却时间}" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -1353,18 +1346,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="角色 CD 配置"
+                                  Text="{i18n:T 角色 CD 配置}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap"
-                                  Text="填写此项，为指定的角色配置未识别到 CD 数字时的默认值。如玛薇卡开 E 会显示摩托车，识别不到CD。" />
+                                  Text="{i18n:T 填写此项，为指定的角色配置未识别到 CD 数字时的默认值。如玛薇卡开 E 会显示摩托车，识别不到CD。}" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="10,0,24,0"
-                               Content="前往配置"
+                               Content="{i18n:T 前往配置}"
                                Icon="{ui:SymbolIcon Settings24}"
                                Command="{Binding EditSkillCdConfigCommand}" />
                 </Grid>
@@ -1380,13 +1373,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用战技时触发"
+                                  Text="{i18n:T 使用战技时触发}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap"
-                                  Text="使用战技时也进行一次识别，否则仅在切人时触发" />
+                                  Text="{i18n:T 使用战技时也进行一次识别，否则仅在切人时触发}" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -1405,13 +1398,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="冷却为0时隐藏"
+                                  Text="{i18n:T 冷却为0时隐藏}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap"
-                                  Text="开启后倒计时为0时会隐藏计时器" />
+                                  Text="{i18n:T 开启后倒计时为0时会隐藏计时器}" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -1433,13 +1426,13 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="计时器样式调节"
+                                          Text="{i18n:T 计时器样式调节}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           TextWrapping="Wrap"
-                                          Text="调整计时器的横坐标、纵坐标、间隔、大小和颜色" />
+                                          Text="{i18n:T 调整计时器的横坐标、纵坐标、间隔、大小和颜色}" />
                         </Grid>
                     </ui:CardExpander.Header>
                     <StackPanel>
@@ -1455,13 +1448,13 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="横坐标"
+                                          Text="{i18n:T 横坐标}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           TextWrapping="Wrap"
-                                          Text="调整计时器在界面上的横坐标，范围：0-1920，默认值1520。" />
+                                          Text="{i18n:T 调整计时器在界面上的横坐标，范围：0-1920，默认值1520。}" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
                                         Grid.Column="1"
@@ -1481,13 +1474,13 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="纵坐标"
+                                          Text="{i18n:T 纵坐标}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           TextWrapping="Wrap"
-                                          Text="调整计时器在界面上的纵坐标，范围：0-1080，默认值245。" />
+                                          Text="{i18n:T 调整计时器在界面上的纵坐标，范围：0-1080，默认值245。}" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
                                         Grid.Column="1"
@@ -1507,13 +1500,13 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="计时器间隔"
+                                          Text="{i18n:T 计时器间隔}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           TextWrapping="Wrap"
-                                          Text="调整计时器之间的间隔，范围：0-200，默认值91.2。" />
+                                          Text="{i18n:T 调整计时器之间的间隔，范围：0-200，默认值91.2。}" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
                                         Grid.Column="1"
@@ -1533,13 +1526,13 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="计时器大小"
+                                          Text="{i18n:T 计时器大小}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           TextWrapping="Wrap"
-                                          Text="调整计时器大小，范围：0-10，默认值1。" />
+                                          Text="{i18n:T 调整计时器大小，范围：0-10，默认值1。}" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
                                         Grid.Column="1"
@@ -1560,12 +1553,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="CD ≥ 0.8s 时数字颜色"
+                                          Text="{i18n:T CD ≥ 0.8s 时数字颜色}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="支持6位或8位 Hex 格式颜色"
+                                          Text="{i18n:T 支持6位或8位 Hex 格式颜色}"
                                           TextWrapping="Wrap" />
                             <!-- 颜色预览 -->
                             <Border Grid.Row="0"
@@ -1603,12 +1596,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="CD ≥ 0.8s 时背景颜色"
+                                          Text="{i18n:T CD ≥ 0.8s 时背景颜色}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="支持6位或8位 Hex 格式颜色"
+                                          Text="{i18n:T 支持6位或8位 Hex 格式颜色}"
                                           TextWrapping="Wrap" />
                             <!-- 颜色预览 -->
                             <Border Grid.Row="0"
@@ -1646,12 +1639,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="CD &lt; 0.8s 时数字颜色"
+                                          Text="{i18n:T CD &lt; 0.8s 时数字颜色}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="支持6位或8位 Hex 格式颜色"
+                                          Text="{i18n:T 支持6位或8位 Hex 格式颜色}"
                                           TextWrapping="Wrap" />
                             <!-- 颜色预览 -->
                             <Border Grid.Row="0"
@@ -1689,12 +1682,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="CD &lt; 0.8s 时背景颜色"
+                                          Text="{i18n:T CD &lt; 0.8s 时背景颜色}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="支持6位或8位 Hex 格式颜色"
+                                          Text="{i18n:T 支持6位或8位 Hex 格式颜色}"
                                           TextWrapping="Wrap" />
                             <!-- 颜色预览 -->
                             <Border Grid.Row="0"

@@ -121,4 +121,5 @@ public partial class OtherConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _uiCultureInfoName = "zh-Hans";
+
 }

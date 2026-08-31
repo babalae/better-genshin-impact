@@ -4,15 +4,14 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
-                 Title="按键绑定设置"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T 按键绑定设置}"
                  Width="800"
                  Height="600"
                  d:DesignHeight="600"
                  d:DesignWidth="800"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterOwner"
@@ -23,7 +22,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0"
-                     Title="按键绑定设置"
+                     Title="{i18n:T 按键绑定设置}"
                      Icon="pack://application:,,,/Assets/logo.ico" />
     </Grid>
 </ui:FluentWindow>

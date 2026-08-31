@@ -5,13 +5,12 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
-                 Title="JSON 编辑器"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T JSON 编辑器}"
                  Width="600"
                  Height="600"
                  d:Background="#D2D2D2"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  Tag="JsonMonoDialog"
                  WindowBackdropType="Mica"
@@ -44,14 +43,14 @@
                     <Button MinWidth="90"
                             Margin="8,0,8,0"
                             Command="{Binding SaveCommand}"
-                            Content="保存" />
+                            Content="{i18n:T 保存}" />
                     <Button MinWidth="90"
                             Command="{Binding CloseCommand}"
-                            Content="关闭" />
+                            Content="{i18n:T 关闭}" />
                 </StackPanel>
             </Grid>
         </Grid>
-        <ui:TitleBar Title="JSON 编辑器">
+        <ui:TitleBar Title="{i18n:T JSON 编辑器}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

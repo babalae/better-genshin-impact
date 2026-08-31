@@ -4,12 +4,11 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  SizeToContent="WidthAndHeight"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="CanMinimize"
                  WindowBackdropType="Mica"
@@ -53,12 +52,12 @@
                            Margin="5"
                            Appearance="Primary"
                            Click="BtnOkClick"
-                           Content="刷新"
+                           Content="{i18n:T 刷新}"
                            IsDefault="True" />
                 <ui:Button Name="BtnCancel"
                            Margin="5"
                            Click="BtnCancelClick"
-                           Content="退出"
+                           Content="{i18n:T 退出}"
                            IsCancel="True" />
             </StackPanel>
         </StackPanel>

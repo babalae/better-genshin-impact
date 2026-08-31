@@ -305,12 +305,12 @@ public class Avatar
 
             using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
-
-            // 切换成功——即使检测到已为目标角色，也补发一次按键，
-            // 防止颜色识别假阳性（如方法3偶发误判）导致实际未切到目标
+            
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                SimulateSwitchAction(Index);
+                // 切换成功——即使检测到已为目标角色，也补发一次按键，
+                // 防止颜色识别假阳性（如方法3偶发误判）导致实际未切到目标
+                // SimulateSwitchAction(Index);
                 return true;
             }
             else

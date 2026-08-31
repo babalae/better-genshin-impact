@@ -8,7 +8,8 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
-                 Title="BetterGI 桌面分身"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T BetterGI 桌面分身}"
                  Width="1280"
                  Height="752"
                  MinWidth="415"
@@ -48,7 +49,7 @@
                              Fill="{Binding ConnectionStatusBrush}"
                              ToolTip="{Binding ConnectionStatusToolTip}" />
                     <TextBlock VerticalAlignment="Center"
-                               Text="BetterGI 桌面分身" />
+                               Text="{i18n:T BetterGI 桌面分身}" />
                 </StackPanel>
             </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
@@ -64,30 +65,30 @@
                                BorderBrush="Transparent"
                                behavior:ResponsiveTitleBarBehavior.CollapseOrder="1"
                                Command="{Binding StartCommand}"
-                               Content="启动"
+                               Content="{i18n:T 启动}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Play24}"
-                               ToolTip="启动并连接 BetterGI 桌面分身" />
+                               ToolTip="{i18n:T 启动并连接 BetterGI 桌面分身}" />
                     <ui:Button Width="80"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
                                behavior:ResponsiveTitleBarBehavior.CollapseOrder="2"
                                Command="{Binding HideCommand}"
-                               Content="隐藏"
+                               Content="{i18n:T 隐藏}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon EyeOff24}"
-                               ToolTip="隐藏窗口并保持 RDP 连接" />
+                               ToolTip="{i18n:T 隐藏窗口并保持 RDP 连接}" />
                     <ui:Button Width="110"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
                                behavior:ResponsiveTitleBarBehavior.CollapseOrder="3"
                                Command="{Binding SwitchWindowCommand}"
-                               Content="切换窗口"
+                               Content="{i18n:T 切换窗口}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
-                               ToolTip="向桌面分身发送 Win+Tab" />
+                               ToolTip="{i18n:T 向桌面分身发送 Win+Tab}" />
                     <ui:Button Width="110"
                                Height="32"
                                Background="Transparent"
@@ -119,25 +120,25 @@
                                        Height="32"
                                        Background="Transparent"
                                        BorderBrush="Transparent"
-                                       Content="控制中心"
+                                       Content="{i18n:T 控制中心}"
                                        CornerRadius="0"
                                        Icon="{ui:SymbolIcon AppsList24}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu>
-                                <ui:MenuItem Header="运行 BetterGI"
+                                <ui:MenuItem Header="{i18n:T 运行 BetterGI}"
                                              Command="{Binding LaunchBetterGiCommand}" />
                                 <ui:MenuItem Header="{Binding WindowSizeModeMenuHeader}"
                                              Command="{Binding ToggleSmallWindowModeCommand}"
                                              ToolTip="{Binding WindowSizeModeMenuToolTip}" />
                                 <Separator />
-                                <ui:MenuItem Header="桌面分辨率">
+                                <ui:MenuItem Header="{i18n:T 桌面分辨率}">
                                     <ui:MenuItem Header="1920 × 1080"
                                                  Command="{Binding SelectDefaultResolutionCommand}"
                                                  IsCheckable="True"
                                                  IsChecked="{Binding IsDefaultResolutionSelected, Mode=OneWay}" />
                                 </ui:MenuItem>
-                                <ui:MenuItem Header="窗口">
-                                    <ui:MenuItem Header="自适应"
+                                <ui:MenuItem Header="{i18n:T 窗口}">
+                                    <ui:MenuItem Header="{i18n:T 自适应}"
                                                  Command="{Binding UseAdaptiveCommand}"
                                                  IsCheckable="True"
                                                  IsChecked="{Binding IsAdaptive, Mode=OneWay}" />
@@ -146,25 +147,25 @@
                                                  IsCheckable="True"
                                                  IsChecked="{Binding IsOneToOne, Mode=OneWay}" />
                                     <Separator />
-                                    <ui:MenuItem Header="保持宽高比"
+                                    <ui:MenuItem Header="{i18n:T 保持宽高比}"
                                                  Command="{Binding ToggleKeepAspectRatioCommand}"
                                                  IsCheckable="True"
                                                  IsChecked="{Binding KeepAspectRatio, Mode=OneWay}" />
                                 </ui:MenuItem>
-                                <ui:MenuItem Header="快捷键">
-                                    <ui:MenuItem Header="系统组合键发送到桌面分身"
+                                <ui:MenuItem Header="{i18n:T 快捷键}">
+                                    <ui:MenuItem Header="{i18n:T 系统组合键发送到桌面分身}"
                                                  Command="{Binding ToggleSendSystemShortcutsToRemoteCommand}"
                                                  IsCheckable="True"
                                                  IsChecked="{Binding SendSystemShortcutsToRemote, Mode=OneWay}"
-                                                 ToolTip="勾选后，Alt+Tab、Windows 键等系统组合键发送到桌面分身；取消勾选后在本机生效。切换时会自动重新连接 RDP。" />
+                                                 ToolTip="{i18n:T 勾选后，Alt+Tab、Windows 键等系统组合键发送到桌面分身；取消勾选后在本机生效。切换时会自动重新连接 RDP。}" />
                                     <Separator />
-                                    <ui:MenuItem Header="发送 Win+D 显示桌面"
+                                    <ui:MenuItem Header="{i18n:T 发送 Win+D 显示桌面}"
                                                  Command="{Binding ShowDesktopCommand}" />
-                                    <ui:MenuItem Header="发送 Win+Tab 切换窗口"
+                                    <ui:MenuItem Header="{i18n:T 发送 Win+Tab 切换窗口}"
                                                  Command="{Binding ShowTaskViewCommand}" />
                                 </ui:MenuItem>
-                                <ui:MenuItem Header="更多">
-                                    <ui:MenuItem Header="以管理员权限启动…"
+                                <ui:MenuItem Header="{i18n:T 更多}">
+                                    <ui:MenuItem Header="{i18n:T 以管理员权限启动…}"
                                                  Command="{Binding LaunchExecutableCommand}"
                                                  Icon="{ui:SymbolIcon Shield24}" />
                                 </ui:MenuItem>
@@ -358,19 +359,19 @@
                                     Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                             <ui:Button MinWidth="132"
                                        Command="{Binding StartCommand}"
-                                       Content="启动并连接"
+                                       Content="{i18n:T 启动并连接}"
                                        Icon="{ui:SymbolIcon Play24}" />
                             <ui:HyperlinkButton Margin="16,0,0,0"
                                                 Padding="8,6"
                                                 Command="{Binding OpenDesktopHelpCommand}"
-                                                Content="查看帮助文档"
+                                                Content="{i18n:T 查看帮助文档}"
                                                 Cursor="Hand" />
                         </StackPanel>
 
                         <TextBlock Margin="0,24,0,0"
                                    HorizontalAlignment="Center"
                                    Foreground="#CCFFFFFF"
-                                   Text="请稍候，关闭完成后窗口会自动隐藏。"
+                                   Text="{i18n:T 请稍候，关闭完成后窗口会自动隐藏。}"
                                    TextAlignment="Center"
                                    Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
@@ -379,13 +380,13 @@
                             <TextBlock HorizontalAlignment="Center"
                                        Foreground="#80FFFFFF"
                                        FontSize="11"
-                                       Text="连接成功后，此处会自动切换为桌面分身画面。"
+                                       Text="{i18n:T 连接成功后，此处会自动切换为桌面分身画面。}"
                                        TextAlignment="Center" />
                             <TextBlock Margin="0,4,0,0"
                                        HorizontalAlignment="Center"
                                        Foreground="#80FFFFFF"
                                        FontSize="11"
-                                       Text="游戏鼠标模式下，按住 Alt 可临时释放并显示本地鼠标。"
+                                       Text="{i18n:T 游戏鼠标模式下，按住 Alt 可临时释放并显示本地鼠标。}"
                                        TextAlignment="Center" />
                         </StackPanel>
 
@@ -393,7 +394,7 @@
                                    HorizontalAlignment="Center"
                                    Foreground="#80FFFFFF"
                                    FontSize="11"
-                                   Text="关闭期间已暂停所有桌面分身操作，以避免状态冲突。"
+                                   Text="{i18n:T 关闭期间已暂停所有桌面分身操作，以避免状态冲突。}"
                                    TextAlignment="Center"
                                    Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
