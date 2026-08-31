@@ -2454,7 +2454,7 @@
                     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="{i18n:T 群 OpenID}" TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 将机器人加入群聊后发消息获取，可点击下方「绑定群」自动获取}" TextWrapping="Wrap" />
+                                  Text="{i18n:T 将机器人加入群聊后发消息获取，或在群里 @机器人 获取，可点击下方「绑定群」自动获取}" TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                                 MinWidth="180" MaxWidth="800" Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.QqGroupOpenId, Mode=TwoWay}"
@@ -2505,7 +2505,7 @@
                     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="{i18n:T 绑定群 OpenID}" TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 点击绑定后，将机器人加入群聊或在群聊中发送显示的验证码，系统将自动获取你的群 OpenID；绑定过程中可点击取消}" TextWrapping="Wrap" />
+                                  Text="{i18n:T 点击绑定后，将机器人加入群聊，或在群里 @机器人 发送显示的验证码，系统将自动获取你的群 OpenID；绑定过程中可点击取消}" TextWrapping="Wrap" />
                     <!-- 绑定/取消按钮：绑定中（IsBindingGroup=true）时切换为"取消"，通过 DataTrigger 切换 Command 和 Content -->
                     <ui:Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                                Margin="0,0,36,0"
@@ -2513,11 +2513,11 @@
                         <ui:Button.Style>
                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                 <Setter Property="Command" Value="{Binding BindGroupQqCommand}" />
-                                <Setter Property="Content" Value="绑定群" />
+                                <Setter Property="Content" Value="{i18n:T 绑定群}" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsBindingGroup}" Value="True">
                                         <Setter Property="Command" Value="{Binding CancelBindGroupQqCommand}" />
-                                        <Setter Property="Content" Value="取消" />
+                                        <Setter Property="Content" Value="{i18n:T 取消}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

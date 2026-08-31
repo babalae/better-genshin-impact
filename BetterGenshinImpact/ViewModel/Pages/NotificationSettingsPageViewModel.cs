@@ -791,7 +791,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                     // 回调在后台线程执行，需要编组回 UI 线程才能更新 ObservableProperty
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        QqStatus = $"请将机器人加入群聊或在群聊中发送验证码 [{code}]";
+                        QqStatus = $"请将机器人加入群聊，或在群里 @机器人 发送验证码 [{code}]";
                     });
                 },
                 _groupBindCts.Token);

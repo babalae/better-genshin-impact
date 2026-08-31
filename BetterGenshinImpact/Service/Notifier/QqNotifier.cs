@@ -75,11 +75,14 @@ public sealed class QqNotifier : INotifier
         try
         {
             var text = GenerateMessage(content);
+            var successCount = 0;
+            var lastError = string.Empty;
             foreach (var target in targets)
             {
                 try
                 {
                     await SendTextAsync(target, text, ct);
+                    successCount++;
 
                     if (content.Screenshot != null)
                     {
@@ -101,9 +104,14 @@ public sealed class QqNotifier : INotifier
                 catch (System.Exception ex)
                 {
                     // 单个目标的文本发送失败时记 Warning 后 continue 下一目标，使 C2C 与群互不影响
+                    lastError = ex.Message;
                     Logger.LogWarning("QQ 文本发送失败（目标 {target}），跳过该目标: {ex}", target, ex.Message);
                 }
             }
+
+            // 全部目标发送失败时向调用方抛出异常，避免通知管理器误报成功
+            if (successCount == 0)
+                throw new NotifierException($"发送 QQ 消息失败: {targets.Count} 个目标全部失败，最后错误: {lastError}");
         }
         catch (NotifierException)
         {

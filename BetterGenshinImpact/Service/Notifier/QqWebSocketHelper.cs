@@ -127,50 +127,56 @@ public class QqWebSocketHelper
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;
 
-        // 1. 获取 access_token
-        var accessToken = await GetAccessTokenAsync(httpClient, appId, clientSecret, ct);
-        // 2. 获取 WebSocket 网关地址
-        var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, ct);
-
-        using var socket = new ClientWebSocket();
-        // 3. 连接网关
-        await socket.ConnectAsync(new Uri(gatewayUrl), ct);
-
-        // 4. 接收 Hello 握手，获取心跳间隔
-        var heartbeatInterval = await ReceiveHelloAsync(socket, ct);
-        // 5. 发送 Identify 鉴权，建立事件订阅
-        await SendIdentifyAsync(socket, accessToken, ct);
-
-        // 6. 网关订阅已建立，此时再显示验证码，确保用户发消息时已经在监听
-        onVerifyCode(verifyCode);
-
-        // 7. 启动后台心跳线程
-        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var seq = 0L;
-        var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, () => Interlocked.Read(ref seq), heartbeatCts.Token);
-
         try
         {
-            // 8. 进入接收循环，等待用户发送验证码或机器人被加入群聊
-            return await ReceiveUntilGroupOpenIdAsync(socket, verifyCode, (s) => { Interlocked.Exchange(ref seq, s); }, ct);
+            // 1. 获取 access_token
+            var accessToken = await GetAccessTokenAsync(httpClient, appId, clientSecret, ct);
+            // 2. 获取 WebSocket 网关地址
+            var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, ct);
+
+            using var socket = new ClientWebSocket();
+            // 3. 连接网关
+            await socket.ConnectAsync(new Uri(gatewayUrl), ct);
+
+            // 4. 接收 Hello 握手，获取心跳间隔
+            var heartbeatInterval = await ReceiveHelloAsync(socket, ct);
+            // 5. 发送 Identify 鉴权，建立事件订阅
+            await SendIdentifyAsync(socket, accessToken, ct);
+            // 6. 等待网关 READY 确认（op=0, t=READY），确保订阅已真正生效，
+            //    避免用户在订阅建立前完成加群导致 GROUP_ADD_ROBOT 事件丢失
+            await ReceiveReadyAsync(socket, ct);
+
+            // 7. 网关订阅已确认就绪，此时再显示验证码，确保用户发消息时已经在监听
+            onVerifyCode(verifyCode);
+
+            // 8. 启动后台心跳线程
+            using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var seq = 0L;
+            var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, () => Interlocked.Read(ref seq), heartbeatCts.Token);
+
+            try
+            {
+                // 9. 进入接收循环，等待用户发送验证码或机器人被加入群聊
+                return await ReceiveUntilGroupOpenIdAsync(socket, verifyCode, (s) => { Interlocked.Exchange(ref seq, s); }, ct);
+            }
+            finally
+            {
+                // 停止心跳
+                heartbeatCts.Cancel();
+                try
+                {
+                    await heartbeatTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // 绑定结束时心跳取消是预期行为
+                }
+            }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            // 内部 60 秒超时触发，不是用户主动取消
-            throw new NotifierException("绑定超时，请在 60 秒内将机器人加入群聊或发送验证码");
-        }
-        finally
-        {
-            // 停止心跳
-            heartbeatCts.Cancel();
-            try
-            {
-                await heartbeatTask;
-            }
-            catch (OperationCanceledException)
-            {
-                // 绑定结束时心跳取消是预期行为
-            }
+            // 内部 60 秒超时触发（覆盖取 token / 连接 / 握手 / 接收全流程），不是用户主动取消
+            throw new NotifierException("绑定超时，请在 60 秒内将机器人加入群聊，或在群里 @机器人 发送验证码");
         }
     }
 
@@ -230,6 +236,39 @@ public class QqWebSocketHelper
             return interval.GetInt32();
 
         return 45000;
+    }
+
+    /// <summary>
+    /// 等待网关 READY 事件（opcode=0, t=READY），确认鉴权与事件订阅已生效。
+    /// 必须在收到 READY 后再提示用户加群/发验证码，否则订阅建立前的事件会丢失。
+    /// </summary>
+    private static async Task ReceiveReadyAsync(ClientWebSocket socket, CancellationToken ct)
+    {
+        while (true)
+        {
+            var payload = await ReceiveMessageAsync(socket, ct);
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("op", out var opElement))
+                continue;
+
+            var op = opElement.GetInt32();
+
+            // op=9 表示鉴权失败
+            if (op == 9)
+                throw new NotifierException("QQ 机器人鉴权失败（op=9），请检查 AppID/AppSecret 与事件权限");
+
+            if (op != 0)
+                continue;
+
+            if (!root.TryGetProperty("t", out var tElement))
+                continue;
+
+            var eventType = tElement.GetString();
+            if (eventType == "READY")
+                return;
+        }
     }
 
     /// <summary>
