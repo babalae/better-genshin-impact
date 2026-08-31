@@ -3647,6 +3647,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -3658,8 +3659,13 @@
                                   TextWrapping="Wrap">
                         决策LLM服务地址（实验）
                     </ui:TextBlock>
-                    <ui:TextBox Grid.Row="1"
-                                Grid.RowSpan="2"
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="3"
                                 Grid.Column="1"
                                 MinWidth="300"
                                 MaxWidth="400"

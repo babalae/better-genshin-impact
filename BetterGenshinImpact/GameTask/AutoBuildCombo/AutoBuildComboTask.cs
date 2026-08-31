@@ -127,6 +127,13 @@ public class AutoBuildComboTask : ISoloTask
             throw new Exception($"LLM 服务地址无效：{config.PlanningLlmEndpoint}", e);
         }
 
+        // 密钥通过 Authorization 头随每个请求发送，非 HTTPS 传输时会在网络中明文暴露；仅豁免本机回环地址（本地中转/本地模型）
+        var isLoopback = endpoint.Host is "localhost" or "127.0.0.1" or "::1" || endpoint.Host.StartsWith("[::1]");
+        if (endpoint.Scheme != Uri.UriSchemeHttps && !isLoopback)
+        {
+            throw new Exception($"LLM 服务地址必须使用 HTTPS（否则密钥将明文传输），本机回环地址除外：{config.PlanningLlmEndpoint}");
+        }
+
         // 在 HTTP 传输层前注入原生 JSON 请求/响应日志，用于查验最终发送给 API 及 API 返回的原始内容
         var openAiOptions = new OpenAIClientOptions
         {
