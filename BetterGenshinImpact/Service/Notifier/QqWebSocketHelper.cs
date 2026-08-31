@@ -142,16 +142,21 @@ public class QqWebSocketHelper
             var heartbeatInterval = await ReceiveHelloAsync(socket, ct);
             // 5. 发送 Identify 鉴权，建立事件订阅
             await SendIdentifyAsync(socket, accessToken, ct);
+
+            // seq 需在等待 READY 前初始化：READY 事件携带的 s 必须保存下来，
+            // 否则首次心跳会发 d=null，而网关要求收到 READY 后的心跳携带最新 s
+            var seq = 0L;
+            var setSeq = (long s) => { Interlocked.Exchange(ref seq, s); };
+
             // 6. 等待网关 READY 确认（op=0, t=READY），确保订阅已真正生效，
             //    避免用户在订阅建立前完成加群导致 GROUP_ADD_ROBOT 事件丢失
-            await ReceiveReadyAsync(socket, ct);
+            await ReceiveReadyAsync(socket, setSeq, ct);
 
             // 7. 网关订阅已确认就绪，此时再显示验证码，确保用户发消息时已经在监听
             onVerifyCode(verifyCode);
 
             // 8. 启动后台心跳线程
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var seq = 0L;
             var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, () => Interlocked.Read(ref seq), heartbeatCts.Token);
 
             try
@@ -241,8 +246,9 @@ public class QqWebSocketHelper
     /// <summary>
     /// 等待网关 READY 事件（opcode=0, t=READY），确认鉴权与事件订阅已生效。
     /// 必须在收到 READY 后再提示用户加群/发验证码，否则订阅建立前的事件会丢失。
+    /// READY 消息携带的序列号 s 通过 setSeq 保存，供后续心跳包使用。
     /// </summary>
-    private static async Task ReceiveReadyAsync(ClientWebSocket socket, CancellationToken ct)
+    private static async Task ReceiveReadyAsync(ClientWebSocket socket, Action<long> setSeq, CancellationToken ct)
     {
         while (true)
         {
@@ -266,8 +272,14 @@ public class QqWebSocketHelper
                 continue;
 
             var eventType = tElement.GetString();
-            if (eventType == "READY")
-                return;
+            if (eventType != "READY")
+                continue;
+
+            // 保存 READY 携带的序列号，心跳包必须使用最新 s（首次连接才允许 d=null）
+            if (root.TryGetProperty("s", out var sElement) && sElement.TryGetInt64(out var sVal))
+                setSeq(sVal);
+
+            return;
         }
     }
 
