@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoBuildCombo;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -130,6 +131,11 @@ public partial class AllConfig : ObservableObject
     ///     自动钓鱼配置
     /// </summary>
     public AutoFishingConfig AutoFishingConfig { get; set; } = new();
+
+    /// <summary>
+    ///     自动连招配置
+    /// </summary>
+    public AutoBuildComboConfig AutoBuildComboConfig { get; set; } = new();
 
     /// <summary>
     ///     快速传送配置
