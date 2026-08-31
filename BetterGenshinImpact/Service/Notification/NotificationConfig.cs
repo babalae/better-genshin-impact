@@ -343,6 +343,11 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _qqOpenId = string.Empty;
 
     /// <summary>
+    ///     群聊 OpenID（群聊场景）
+    /// </summary>
+    [ObservableProperty] private string _qqGroupOpenId = string.Empty;
+
+    /// <summary>
     ///     微信 Clawbot 通知是否启用
     /// </summary>
     [ObservableProperty] private bool _wechatClawbotNotificationEnabled;

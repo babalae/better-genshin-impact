@@ -101,6 +101,80 @@ public class QqWebSocketHelper
     }
 
     /// <summary>
+    /// 连接 QQ 网关，等待用户发送验证码或机器人被加入群聊，自动获取群 OpenID。
+    /// 成功返回群 OpenID，失败抛出 <see cref="NotifierException"/>。
+    /// </summary>
+    /// <param name="appId">QQ 开放平台 AppID</param>
+    /// <param name="clientSecret">QQ 开放平台 AppSecret</param>
+    /// <param name="onVerifyCode">生成验证码后的回调，用于 UI 提示用户发送该验证码</param>
+    /// <param name="cancellationToken">取消令牌（用户点击取消时触发）</param>
+    public static async Task<string> BindGroupAsync(
+        string appId,
+        string clientSecret,
+        Action<string> onVerifyCode,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(appId))
+            throw new NotifierException("QQ AppID 为空");
+
+        if (string.IsNullOrWhiteSpace(clientSecret))
+            throw new NotifierException("QQ AppSecret 为空");
+
+        var verifyCode = GenerateVerifyCode();
+
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
+        var ct = timeoutCts.Token;
+
+        // 1. 获取 access_token
+        var accessToken = await GetAccessTokenAsync(httpClient, appId, clientSecret, ct);
+        // 2. 获取 WebSocket 网关地址
+        var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, ct);
+
+        using var socket = new ClientWebSocket();
+        // 3. 连接网关
+        await socket.ConnectAsync(new Uri(gatewayUrl), ct);
+
+        // 4. 接收 Hello 握手，获取心跳间隔
+        var heartbeatInterval = await ReceiveHelloAsync(socket, ct);
+        // 5. 发送 Identify 鉴权，建立事件订阅
+        await SendIdentifyAsync(socket, accessToken, ct);
+
+        // 6. 网关订阅已建立，此时再显示验证码，确保用户发消息时已经在监听
+        onVerifyCode(verifyCode);
+
+        // 7. 启动后台心跳线程
+        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var seq = 0L;
+        var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, () => Interlocked.Read(ref seq), heartbeatCts.Token);
+
+        try
+        {
+            // 8. 进入接收循环，等待用户发送验证码或机器人被加入群聊
+            return await ReceiveUntilGroupOpenIdAsync(socket, verifyCode, (s) => { Interlocked.Exchange(ref seq, s); }, ct);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // 内部 60 秒超时触发，不是用户主动取消
+            throw new NotifierException("绑定超时，请在 60 秒内将机器人加入群聊或发送验证码");
+        }
+        finally
+        {
+            // 停止心跳
+            heartbeatCts.Cancel();
+            try
+            {
+                await heartbeatTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // 绑定结束时心跳取消是预期行为
+            }
+        }
+    }
+
+    /// <summary>
     /// 生成 4 位随机数字验证码，用于用户确认身份。
     /// </summary>
     private static string GenerateVerifyCode()
@@ -286,6 +360,62 @@ public class QqWebSocketHelper
         }
 
         return current.ValueKind == JsonValueKind.String ? current.GetString() : null;
+    }
+
+    /// <summary>
+    /// 接收循环，等待用户发送验证码或机器人被加入群聊，提取 group_openid。
+    /// 用于群聊绑定场景，监听 GROUP_AT_MESSAGE_CREATE 和 GROUP_ADD_ROBOT 事件。
+    /// </summary>
+    private static async Task<string> ReceiveUntilGroupOpenIdAsync(ClientWebSocket socket, string verifyCode, Action<long> setSeq, CancellationToken ct)
+    {
+        while (true)
+        {
+            var payload = await ReceiveMessageAsync(socket, ct);
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("op", out var opElement))
+                continue;
+
+            var op = opElement.GetInt32();
+
+            // op=9 表示鉴权失败，通常是机器人没有申请群聊事件权限
+            if (op == 9)
+                throw new NotifierException("QQ 机器人未开通群聊事件权限，请在开放平台申请");
+
+            if (op != 0)
+                continue;
+
+            if (!root.TryGetProperty("t", out var tElement))
+                continue;
+
+            var eventType = tElement.GetString();
+            if (!root.TryGetProperty("d", out var d))
+                continue;
+
+            // 保存消息序列号用于心跳包
+            if (root.TryGetProperty("s", out var sElement) && sElement.TryGetInt64(out var sVal))
+                setSeq(sVal);
+
+            if (eventType == "GROUP_AT_MESSAGE_CREATE")
+            {
+                // 群聊消息事件：校验消息内容是否包含验证码，返回 group_openid
+                var groupOpenId = ExtractString(d, "group_openid");
+                if (!string.IsNullOrWhiteSpace(groupOpenId))
+                {
+                    var content = ExtractString(d, "content");
+                    if (content != null && content.Contains(verifyCode))
+                        return groupOpenId;
+                }
+            }
+            else if (eventType == "GROUP_ADD_ROBOT")
+            {
+                // 机器人被加入群聊事件：直接提取 group_openid
+                var groupOpenId = ExtractOpenId(d, "group_openid");
+                if (!string.IsNullOrWhiteSpace(groupOpenId))
+                    return groupOpenId;
+            }
+        }
     }
 
     /// <summary>
