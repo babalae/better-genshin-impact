@@ -2,28 +2,27 @@ using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Violeta.Controls;
-using System.Linq; 
+using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Group;
 using System;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.View.Pages;
 
 public partial class OneDragonFlowPage
 {
     public OneDragonFlowViewModel ViewModel { get; }
-    
+
     private readonly Dictionary<CheckBox, string> _checkBoxMappings;
-    
+
     public static readonly List<string> SereniteaPotSchedule = new List<string> { "每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" };
 
     public OneDragonFlowPage(OneDragonFlowViewModel viewModel)
     {
         DataContext = ViewModel = viewModel;
         InitializeComponent();
-        
+
         _checkBoxMappings = new Dictionary<CheckBox, string>
         {
             { ClothCheckBox, "布匹" },
@@ -35,34 +34,10 @@ public partial class OneDragonFlowPage
             { ExpBottleBigCheckBox, "祝圣精华" },
             { ExpBottleSmallCheckBox, "祝圣油膏" }
         };
-        
+
         // 监听ViewModel的属性变化
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-        Loaded += OnPageLoaded;
-        Unloaded += OnPageUnloaded;
-    }
-
-    private void OnPageLoaded(object sender, RoutedEventArgs e)
-    {
-        // 每次页面重新进入时，让 ViewModel 触发一次 OnLoaded（命令行/刷新循环），避免在 NavigationCache 模式下不复用构造函数导致刷新循环停止。
-        ViewModel?.OnLoaded();
-    }
-
-    private async void OnPageUnloaded(object sender, RoutedEventArgs e)
-    {
-        // 页面卸载时释放服务器日界刷新后台循环的 CancellationTokenSource，
-        // 避免后台任务保持对 ViewModel/TaskList 的引用导致内存泄漏或退出后仍运行。
-        try
-        {
-            if (ViewModel != null)
-            {
-                await ViewModel.StopDailyRefreshLoopAsync(true).ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[OneDragonFlowPage] StopDailyRefreshLoopAsync error: {ex.Message}");
-        }
+        // 页面 Loaded/Unloaded 生命周期通过 XAML 中的 b:EventTrigger 绑定命令处理
     }
     
     private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

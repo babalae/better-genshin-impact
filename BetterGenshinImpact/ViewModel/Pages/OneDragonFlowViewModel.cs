@@ -62,12 +62,10 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private bool _shouldShowTaskConditionPopup = false;
 
     /// <summary>
-    /// 条件弹窗当前正在编辑的原始任务 Id（非副本）。
-    /// 为空或 null 表示当前未处于条件编辑状态。
+    /// 条件弹窗当前正在编辑的原始任务引用（非副本）。
+    /// 为 null 表示当前未处于条件编辑状态。
     /// </summary>
-    private string? _conditionEditingTargetId;
-
-    private OneDragonTaskCondition? _conditionEditingBackup;
+    private OneDragonTaskItem? _conditionEditingTarget;
 
     /// <summary>
     /// 服务器 4:00 日界刷新调度器：在到达下一个服务器游戏日时刷新 TaskList 中所有任务的 ShouldRunToday。
@@ -367,6 +365,12 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
+        // 配置切换/重载会重建 TaskList，条件弹窗的编辑目标已失效，直接丢弃避免误写入新配置
+        if (ShouldShowTaskConditionPopup)
+        {
+            CancelTaskCondition();
+        }
+
         TaskList.Clear();
 
         // 旧格式兼容：TaskDefinitions 为空时，TaskEnabledList 键为任务名
@@ -509,19 +513,11 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // 条件弹窗中的编辑副本永远不会参与 TaskList（Add 时才订阅），
-        // 这里加一道 Id 过滤，避免任何误用仍触发保存。
-        if (_conditionEditingTargetId != null &&
-            sender is OneDragonTaskItem item &&
-            item.Id == _conditionEditingTargetId &&
-            e.PropertyName is nameof(OneDragonTaskItem.RunMonday)
-                or nameof(OneDragonTaskItem.RunTuesday)
-                or nameof(OneDragonTaskItem.RunWednesday)
-                or nameof(OneDragonTaskItem.RunThursday)
-                or nameof(OneDragonTaskItem.RunFriday)
-                or nameof(OneDragonTaskItem.RunSaturday)
-                or nameof(OneDragonTaskItem.RunSunday)
-                or nameof(OneDragonTaskItem.HasCondition)
+        // 1) 条件弹窗编辑的是独立副本，不加入 TaskList 订阅，此处按引用防御，避免误触发保存；
+        // 2) HasCondition / ShouldRunToday 为派生属性（由星期字段或 4:00 日界刷新触发），
+        //    其变化不携带新数据，无需触发持久化。
+        if (ReferenceEquals(sender, ConditionEditingTask) ||
+            e.PropertyName is nameof(OneDragonTaskItem.HasCondition)
                 or nameof(OneDragonTaskItem.ShouldRunToday))
         {
             return;
@@ -561,7 +557,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private bool _autoRun = true;
     
     [RelayCommand]
-    internal void OnLoaded()
+    private void OnLoaded()
     {
         StartDailyRefreshLoop();
 
@@ -600,6 +596,14 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    [RelayCommand]
+    private async Task Unloaded()
+    {
+        // 页面卸载时停止服务器日界刷新循环并释放 CancellationTokenSource，
+        // 避免后台任务持有 ViewModel 引用造成泄漏或退出后仍运行。
+        await StopDailyRefreshLoopAsync(true);
+    }
+
     /// <summary>
     /// 启动服务器日界（4:00）刷新循环：每次计算距离下一个服务器 4:00 的剩余时间并等待，
     /// 唤醒后刷新所有任务的 ShouldRunToday / HasCondition 通知，然后为下一个日界重新调度。
@@ -631,7 +635,9 @@ public partial class OneDragonFlowViewModel : ViewModel
                         now = DateTimeOffset.Now;
                     }
 
-                    var next4am = now.Date.AddHours(4);
+                    // now.Date 为 Kind=Unspecified 的 DateTime，直接参与 DateTimeOffset 运算会被按本机时区解释；
+                    // 服务器时区与本机不一致时 delay 会偏差两个时区的差值，必须用 now.Offset 显式重建。
+                    var next4am = new DateTimeOffset(now.Date, now.Offset).AddHours(4);
                     if (now.TimeOfDay >= TimeSpan.FromHours(4))
                     {
                         next4am = next4am.AddDays(1);
@@ -816,7 +822,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
-                    _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
+                    _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{runnableTodayCount}");
                     await new TaskRunner().RunThreadAsync(async () =>
                     {
                         await task.Action();
@@ -1189,8 +1195,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 使用独立副本进行弹窗编辑：副本不加入 TaskList 订阅，不触发自动保存，
         // 用户取消即丢弃副本，确认时才把条件写回原任务。
         ConditionEditingTask = task.CreateConditionEditingClone();
-        _conditionEditingTargetId = task.Id;
-        _conditionEditingBackup = task.ToCondition();
+        _conditionEditingTarget = task;
         ShouldShowTaskConditionPopup = true;
         if (task != SelectedTask)
         {
@@ -1203,20 +1208,24 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         try
         {
-            if (!string.IsNullOrEmpty(_conditionEditingTargetId) && ConditionEditingTask != null)
+            if (_conditionEditingTarget != null && ConditionEditingTask != null)
             {
-                var target = TaskList.FirstOrDefault(t => t.Id == _conditionEditingTargetId);
-                if (target != null)
+                // 引用校验：目标任务必须仍在当前 TaskList 中（配置未被切换）。
+                // 旧格式配置的任务 Id 为任务名，切换配置后按 Id 查找可能命中其它配置的同名任务。
+                if (TaskList.Contains(_conditionEditingTarget))
                 {
-                    target.ApplyCondition(ConditionEditingTask.ToCondition());
+                    _conditionEditingTarget.ApplyCondition(ConditionEditingTask.ToCondition());
                     SaveConfig();
+                }
+                else
+                {
+                    Toast.Warning("配置已切换，本次条件修改已丢弃");
                 }
             }
         }
         finally
         {
-            _conditionEditingTargetId = null;
-            _conditionEditingBackup = null;
+            _conditionEditingTarget = null;
             ConditionEditingTask = null;
             ShouldShowTaskConditionPopup = false;
         }
@@ -1231,9 +1240,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void CancelTaskCondition()
     {
-        // 取消编辑：副本改动直接丢弃，不再 Apply 到原任务。
-        _conditionEditingTargetId = null;
-        _conditionEditingBackup = null;
+        // 取消编辑：副本改动直接丢弃。
+        _conditionEditingTarget = null;
         ConditionEditingTask = null;
         ShouldShowTaskConditionPopup = false;
     }

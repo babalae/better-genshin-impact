@@ -27,7 +27,10 @@
 
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
-            <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
+            <b:InvokeCommandAction Command="{Binding OnLoadedCommand}" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="Unloaded">
+            <b:InvokeCommandAction Command="{Binding UnloadedCommand}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
     
