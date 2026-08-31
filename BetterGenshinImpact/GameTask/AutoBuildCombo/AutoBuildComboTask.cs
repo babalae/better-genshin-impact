@@ -204,7 +204,8 @@ public class AutoBuildComboTask : ISoloTask
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            using var imageRegion = CaptureToRectArea();
+            var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
             if (combatScenes.CheckTeamInitialized())
             {
                 return combatScenes;
