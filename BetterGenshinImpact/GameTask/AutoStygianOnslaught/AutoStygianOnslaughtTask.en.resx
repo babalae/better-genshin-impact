@@ -157,7 +157,7 @@
     <value>Already Ended</value>
   </data>
   <data name="数量不足" xml:space="preserve">
-    <value>insufficient</value>
+    <value>nsufficient</value>
   </data>
   <data name="补充原粹树脂" xml:space="preserve">
     <value>Replenish.*Original.*Resin</value>

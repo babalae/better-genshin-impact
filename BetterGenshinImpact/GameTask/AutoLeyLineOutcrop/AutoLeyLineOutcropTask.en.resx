@@ -121,13 +121,13 @@
     <value>Original Resin</value>
   </data>
   <data name="(接触|地脉|之花)" xml:space="preserve">
-    <value>(ouch|ey Lines|lossom)</value>
+    <value>(ouch|ey Line|lossom)</value>
   </data>
   <data name="复苏" xml:space="preserve">
     <value>Revive</value>
   </data>
   <data name="(地脉|衍出)" xml:space="preserve">
-    <value>ey Lines</value>
+    <value>ey Line</value>
   </data>
   <data name="停止" xml:space="preserve">
     <value>Stop</value>
