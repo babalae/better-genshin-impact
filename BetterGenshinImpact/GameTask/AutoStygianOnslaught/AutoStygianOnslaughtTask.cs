@@ -741,7 +741,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         var textList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
 
         // 检查是否无树脂
-        // 数量不足/补充原粹树脂 sono pattern Regex (contengono .* per EN/FR): Regex.IsMatch, non Contains
+        // 数量不足/补充原粹树脂 是正则模式（EN/FR 的值里含 .*），所以用 Regex.IsMatch 而不是 Contains
         if (textList.Any(t => Regex.IsMatch(t.Text, insufficientQuantityLocalizedString) || Regex.IsMatch(t.Text, replenishOriginalResinLocalizedString)))
         {
             Logger.LogInformation("原粹树脂已用尽");

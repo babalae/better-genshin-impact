@@ -553,9 +553,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 在指定区域轮询 OCR 结果，直到找到匹配 <paramref name="pattern"/>（支持正则）的文本或超时。
     /// 用于 <see cref="BvPage.Locator(string, Rect)"/> 无法表达正则匹配的场景（其内部仅做字面量 Contains 比较）。
-    /// 时序对齐 <see cref="BetterGenshinImpact.GameTask.Common.NewRetry.WaitForAction"/>：ogni iterazione fa PRIMA
-    /// il delay e POI il controllo (mai un controllo a t=0), cosi' il token di cancellazione viene rispettato
-    /// prima di agire e i tempi coincidono con quelli di <see cref="BvLocator.WaitFor"/>/<see cref="BvLocator.TryWaitFor"/>.
+    /// 时序对齐 <see cref="BetterGenshinImpact.GameTask.Common.NewRetry.WaitForAction"/>：每次迭代都先延时再检查
+    /// （绝不在 t=0 检查），这样在动作之前先响应取消令牌，时序也与
+    /// <see cref="BvLocator.WaitFor"/>/<see cref="BvLocator.TryWaitFor"/> 保持一致。
     /// </summary>
     private async Task<List<Region>> WaitForOcrPatternAsync(BvPage page, Rect rect, string pattern, int timeoutMs, int intervalMs = 250)
     {
