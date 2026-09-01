@@ -171,6 +171,7 @@ public partial class PathExecutor
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
+            var isRouteRetry = false;
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -221,7 +222,8 @@ public partial class PathExecutor
                             }
                             else if (waypoint.Action != ActionEnum.UpDownGrabLeaf.Code)
                             {
-                                await MoveTo(waypoint);
+                                // 路线重试时使用基础移动，避免再次触发赶路技能导致重复偏离或状态残留。
+                                await MoveTo(waypoint, !isRouteRetry);
                             }
 
                             await BeforeMoveCloseToTarget(waypoint);
@@ -284,6 +286,7 @@ public partial class PathExecutor
                 }
                 catch (RetryException retryException)
                 {
+                    isRouteRetry = true;
                     StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
@@ -291,6 +294,7 @@ public partial class PathExecutor
                 {
                     //特殊情况下，重试不消耗次数
                     i--;
+                    isRouteRetry = true;
                     StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
@@ -750,7 +754,7 @@ public partial class PathExecutor
 
     public DateTime moveToStartTime;
 
-    public async Task MoveTo(WaypointForTrack waypoint)
+    public async Task MoveTo(WaypointForTrack waypoint, bool enableHurry = true)
     {
         // 切人
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
@@ -927,15 +931,19 @@ public partial class PathExecutor
                 }
             }
 
-            // 赶路逻辑（使用角色技能加速赶路）
-            var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
-            if (hurryOnResult)
+            // 路线重试时禁用角色技能赶路，避免重试再次进入可能导致失败的移动状态。
+            if (enableHurry)
             {
-                // continue 会跳过底部 await Delay(...)，
-                // 导致 async state machine 的 MoveNext() 永不返回，调用栈逐轮叠加直到溢出。
-                // 在此处显式等待以展开栈。
-                await Delay(hurryFrameInterval, ct);
-                continue;
+                // 赶路逻辑（使用角色技能加速赶路）
+                var hurryOnResult = await TryHurryOnAsync(diff, waypoint, distance, screen, num, hurryOnState);
+                if (hurryOnResult)
+                {
+                    // continue 会跳过底部 await Delay(...),
+                    // 导致 async state machine 的 MoveNext() 永不返回，调用栈逐轮叠加直到溢出。
+                    // 在此处显式等待以展开栈。
+                    await Delay(hurryFrameInterval, ct);
+                    continue;
+                }
             }
 
             // 根据指定方式进行移动
