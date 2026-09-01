@@ -71,8 +71,9 @@ public class AutoBuildComboTask : ISoloTask
             var ascii = CsTrees.Display.Display.AsciiTree(root);
             Logger.LogInformation("生成的行为树：\n{Tree}", ascii);
 
-            // 暂存树根，供任务设置页的测试按钮启动/暂停 Tick 循环
+            // 暂存树根与黑板，供任务设置页的测试按钮启动/暂停 Tick 循环、手工扩展树
             AutoBuildComboRuntime.Root = root;
+            AutoBuildComboRuntime.Blackboard = blackboard;
         }
         catch (Exception e)
         {
@@ -181,7 +182,7 @@ public class AutoBuildComboTask : ISoloTask
             - 减少没有意义的组合节点嵌套
             - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree——它就是当前树的状态
             - tree 是 ASCII 树形文本，缩进表示层级
-            - 你必须使用tool_calls而不是reasoning_content来调用工具
+            - 你必须使用tool_calls来调用工具，禁止在reasoning_content中写xml
 
             ## 战术要求
             - 策略的核心是：高价值动作优先执行，未就绪时用下位替代补位，保证整个队伍始终有事可做，因此使用有记忆的Selector作为外层逻辑，然后按优先级顺序直接添加以下类型的子节点
@@ -191,6 +192,7 @@ public class AutoBuildComboTask : ISoloTask
             - 子节点一旦满足检查条件，就保证该节点内动作序列全部跑完，因此全程使用有记忆的组合节点
             - 输出角色可站场，在队伍中分析出一个最适合输出的，并且分析是只打普攻、只打重击、还是有特殊打法，一般仅选用一种即可
             - 辅助角色不打普攻或重击，尤其后台角色。但如果队伍里全是辅助角色，可以根据角色特点安排一个打输出，避免全部角色技能未就绪时发呆
+            - 除非说明了可以不用或不应使用，否则应尽量安排所有角色的E技能和Q技能
             """;
     }
 
