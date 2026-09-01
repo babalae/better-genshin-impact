@@ -838,6 +838,24 @@ public class Avatar
     }
 
     /// <summary>
+    /// 将本角色的技能 CD 时间戳整体后推 <paramref name="frozen"/>（等价于"扣除一段游戏世界冻结时间"）。
+    /// 传送/加载期间游戏暂停、技能 CD 不流逝，但挂钟时间外推 CD 会把这段冻结时间误算成 CD 流逝、
+    /// 导致剩余 CD 偏短。把 LastSkillTime / OcrSkillCd 同步后推 frozen，即可让外推重新对齐真实剩余 CD。
+    /// frozen &lt;= 0 时不做任何操作（保护，避免异常/时钟回拨把 CD 往前拉）。
+    /// </summary>
+    /// <param name="frozen">游戏世界冻结的时长（坐标传送从打开大地图到返回主界面的耗时）。</param>
+    public void ShiftCdBy(TimeSpan frozen)
+    {
+        if (frozen <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        LastSkillTime += frozen;
+        OcrSkillCd += frozen;
+    }
+
+    /// <summary>
     /// 等待技能CD
     /// </summary>
     /// <param name="ct">CancellationToken</param>

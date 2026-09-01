@@ -117,7 +117,7 @@ public class Genshin
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null</param>
     public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
-        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        TpTaskOfficial tpTask = new TpTaskOfficial(CancellationContext.Instance.Cts.Token);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
@@ -134,7 +134,8 @@ public class Genshin
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null。</param>
     public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
     {
-        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        // 强制使用公版传送（TpTaskOfficial），绕开 UseOfficialTeleport 开关。
+        TpTaskOfficial tpTask = new TpTaskOfficial(CancellationContext.Instance.Cts.Token);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
@@ -152,7 +153,8 @@ public class Genshin
     /// <param name="mapName">指定要移动的大地图</param>
     public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
-        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        // 强制使用公版传送（TpTaskOfficial），绕开 UseOfficialTeleport 开关。
+        TpTaskOfficial tpTask = new TpTaskOfficial(CancellationContext.Instance.Cts.Token);
         await tpTask.CheckInBigMapUi();
         // 切换地区
         if (mapName == MapTypes.Teyvat.ToString())
@@ -166,6 +168,9 @@ public class Genshin
             await tpTask.SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
         }
         await tpTask.MoveMapTo(x, y, mapName);
+
+        // 等待地图移动完成（画面稳定）
+        await Delay(500, CancellationContext.Instance.Cts.Token);
     }
 
     /// <summary>
@@ -174,7 +179,9 @@ public class Genshin
     /// <returns>当前大地图缩放等级，范围1.0-6.0</returns>
     public double GetBigMapZoomLevel()
     {
-        TpTask tpTask = new(CancellationContext.Instance.Cts.Token);
+        // 强制使用公版传送（TpTaskOfficial），绕开 UseOfficialTeleport 开关，
+        // 与 SetBigMapZoomLevel 保持一致，避免缩放读取/设置走不同实现。
+        TpTaskOfficial tpTask = new(CancellationContext.Instance.Cts.Token);
         using var capture = CaptureToRectArea();
         return tpTask.GetBigMapZoomLevel(capture);
     }
@@ -192,7 +199,7 @@ public class Genshin
     /// <param name="zoomLevel">目标缩放等级，范围 1.0-6.0</param>
     public async Task SetBigMapZoomLevel(double zoomLevel)
     {
-        TpTask tpTask = new(CancellationContext.Instance.Cts.Token);
+        TpTaskOfficial tpTask = new(CancellationContext.Instance.Cts.Token);
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
     }
@@ -212,7 +219,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap()
     {
-        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        TpTaskOfficial tpTask = new TpTaskOfficial(CancellationContext.Instance.Cts.Token);
         return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
     }
 
@@ -223,7 +230,8 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap(string mapName)
     {
-        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        // 强制使用公版传送（TpTaskOfficial），绕开 UseOfficialTeleport 开关。
+        TpTaskOfficial tpTask = new TpTaskOfficial(CancellationContext.Instance.Cts.Token);
         return tpTask.GetPositionFromBigMap(mapName);
     }
 

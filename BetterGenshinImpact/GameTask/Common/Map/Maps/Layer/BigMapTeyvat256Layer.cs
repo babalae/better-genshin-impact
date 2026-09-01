@@ -19,6 +19,7 @@ public class BigMapTeyvat256Layer : BaseMapLayer
 
     private readonly Size _mapSize256;
     private readonly Feature2D _siftMatcher;
+    private readonly SceneBaseMap _baseMap;
 
     private BigMapTeyvat256Layer(SceneBaseMap baseMap) : base(baseMap)
     {
@@ -33,6 +34,7 @@ public class BigMapTeyvat256Layer : BaseMapLayer
         SplitBlocks = KeyPointFeatureBlockHelper.SplitFeatures(_mapSize256, TeyvatMap.GameMapRows * 4, TeyvatMap.GameMapCols * 4, TrainKeyPoints, TrainDescriptors);
 
         _siftMatcher = baseMap.SiftMatcher;
+        _baseMap = baseMap;
     }
 
     public static BigMapTeyvat256Layer GetInstance(SceneBaseMap baseMap)
@@ -129,6 +131,38 @@ public class BigMapTeyvat256Layer : BaseMapLayer
             return _siftMatcher.KnnMatchRect(TrainKeyPoints, TrainDescriptors, greyBigMapMat);
         }
         return res;
+    }
+
+    /// <summary>
+    /// 区块限定的中心点匹配：只在先验中心附近的区块子集上做全图同款 Match，返回 256 尺度图像坐标中心点。
+    /// genshinCenter：先验中心（原神坐标系）；genshinRadius：允许半径（原神坐标）。
+    /// 区块内匹配失败返回 default（由调用方决定退下一层）。不含合理性校验（校验在调用层做，保持 SRP）。
+    /// </summary>
+    public Point2f GetBigMapPositionInRange(Mat greyBigMapMat, Point2f genshinCenter, double genshinRadius)
+    {
+        var rows = SplitBlocks.Length;
+        if (rows == 0) return default;
+        var cols = SplitBlocks[0].Length;
+
+        // 1. 先验中心：原神坐标 → 2048 尺度图像坐标 → 256 尺度；半径同步换算
+        var centerImg2048 = _baseMap.ConvertGenshinMapCoordinatesToImageCoordinates(genshinCenter);
+        var cx256 = centerImg2048.X / BigMap256ScaleTo2048;
+        var cy256 = centerImg2048.Y / BigMap256ScaleTo2048;
+        var r256 = genshinRadius * _baseMap.MapImageBlockWidthScale / BigMap256ScaleTo2048;
+
+        // 2. 用先验矩形取区块范围（GetCellRange 吃 256 尺度 Rect），复用 expand=1 外扩
+        var priorRect = new Rect((int)(cx256 - r256), (int)(cy256 - r256), (int)(r256 * 2), (int)(r256 * 2));
+        var (rowStart, rowEnd, colStart, colEnd) =
+            KeyPointFeatureBlockHelper.GetCellRange(_mapSize256, rows, cols, priorRect);
+        rowStart -= 1; rowEnd += 1; colStart -= 1; colEnd += 1;
+
+        // 3. 合并该范围区块特征，只在子集上做全图同款 Match（返回 256 尺度中心点）
+        var greyResized = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
+        var merged = KeyPointFeatureBlockHelper.MergeFeaturesInRange(
+            SplitBlocks, TrainDescriptors, rowStart, rowEnd, colStart, colEnd);
+        if (merged.Descriptor == null || merged.KeyPointArray.Length == 0) return default;
+
+        return _siftMatcher.Match(merged.KeyPointArray, merged.Descriptor, greyResized);
     }
 
     private static bool IsValidPoint(Point2f point)

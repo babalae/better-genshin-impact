@@ -36,6 +36,10 @@ public class Navigation
     {
         _instance.SetPrevPosition(x,y);
     }
+    /// <summary>
+    /// 读取最近一次的位置锚点（图像坐标）。供传送分层先验兜底使用，不改任何识别状态。
+    /// </summary>
+    public static (float X, float Y) GetTpPriorPosition() => _instance.GetTpPriorPosition();
 
     public static Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {

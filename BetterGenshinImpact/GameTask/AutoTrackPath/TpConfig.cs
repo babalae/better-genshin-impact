@@ -13,6 +13,9 @@ public partial class TpConfig : ObservableValidator
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
 
     [ObservableProperty]
+    private bool _useOfficialTeleport = true; // 使用公版传送模式（开关，切换两套传送实现；默认走公版，升级用户零感知）
+
+    [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关
 
     [ObservableProperty]
@@ -62,27 +65,20 @@ public partial class TpConfig : ObservableValidator
         OnPropertyChanged(nameof(TeleportOperationDelayPercentage));
     }
 
-    /// <summary>
-    /// 旧配置迁移字段：原先只控制鼠标拖图步进间隔，现在迁移到统一的传送操作间隔。
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int StepIntervalMilliseconds
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(2, 100, ErrorMessage = "恰当的鼠标移动时间间隔:2-100")]
+    private int _stepIntervalMilliseconds = 20; // 鼠标移动时间间隔（快速拖动传送），单位：ms
+    partial void OnStepIntervalMillisecondsChanged(int value)
     {
-        get => 0;
-        set
+        if (value is < 2 or > 100)
         {
-            if (value == 0)
-            {
-                return;
-            }
-
-            TeleportOperationDelayMilliseconds = value is < MinTeleportOperationDelayMilliseconds or > MaxTeleportOperationDelayMilliseconds
-                ? DefaultTeleportOperationDelayMilliseconds
-                : value;
+            StepIntervalMilliseconds = 20;
         }
     }
+
     [ObservableProperty]
-    [NotifyDataErrorInfo] 
+    [NotifyDataErrorInfo]
     [Range(1.0, 6.0)]
     private double _maxZoomLevel = 5.0; // 最大缩放等级
 
@@ -143,9 +139,22 @@ public partial class TpConfig : ObservableValidator
     private double _tolerance = 200; // 允许的移动误差
 
     [ObservableProperty]
-    [NotifyDataErrorInfo] 
+    [NotifyDataErrorInfo]
     [Range(10, 500)]
     private int _maxIterations = 30; // 移动最大次数
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(100, 2000)]
+    private int _maxMouseMove = 300; // 单次移动最大距离（快速拖动传送）
+
+    partial void OnMaxMouseMoveChanged(int value)
+    {
+        if (value is < 100 or > 2000)
+        {
+            MaxMouseMove = 300;
+        }
+    }
 
     [ObservableProperty]
     private double _mapScaleFactor = 2.361;  // 游戏坐标和 mapZoomLevel=1 时的像素比例因子。

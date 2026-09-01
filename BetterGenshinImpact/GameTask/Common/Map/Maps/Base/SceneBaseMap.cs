@@ -48,6 +48,9 @@ public abstract class SceneBaseMap : ISceneMap
     /// </summary>
     private readonly float _mapImageBlockWidthScale = 0;
 
+    /// <summary>特征地图图像块宽度 / 1024 的只读值（提瓦特恒=2），供区块限定匹配做原神↔图像坐标量纲换算。</summary>
+    public float MapImageBlockWidthScale => _mapImageBlockWidthScale;
+
 
     // ReSharper disable once ConvertToPrimaryConstructor
     protected SceneBaseMap(MapTypes type, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
@@ -140,6 +143,13 @@ public abstract class SceneBaseMap : ISceneMap
     {
         return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
     }
+
+    /// <summary>
+    /// 按区块限定范围定位（返回 256 尺度图像坐标中心点）。
+    /// 基类默认返回 default = 本地图不支持区块限定，调用方兜底走全图盲搜。
+    /// 支持区块限定的地图（提瓦特 SIFT）override 此方法转发到分层匹配。
+    /// </summary>
+    public virtual Point2f GetBigMapPositionInRange(Mat greyBigMapMat, Point2f genshinCenter, double genshinRadius) => default;
 
     private static bool IsValidPoint(Point2f point)
     {

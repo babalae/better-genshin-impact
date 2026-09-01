@@ -257,6 +257,11 @@ public partial class AllConfig : ObservableObject
     public TpConfig TpConfig { get; set; } = new();
 
     /// <summary>
+    /// 快速拖动传送（TpTaskFastDrag）专属配置。
+    /// </summary>
+    public TpTaskFastDragConfig TpTaskFastDragConfig { get; set; } = new();
+
+    /// <summary>
     /// 开发者配置
     /// </summary>
     public DevConfig DevConfig { get; set; } = new();
@@ -303,6 +308,7 @@ public partial class AllConfig : ObservableObject
         MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
+        TpTaskFastDragConfig.PropertyChanged += OnAnyPropertyChanged;
         MusicConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;

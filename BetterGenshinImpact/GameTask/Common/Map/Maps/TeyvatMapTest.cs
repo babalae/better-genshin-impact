@@ -48,6 +48,16 @@ public class TeyvatMapTest : SceneBaseMapByTemplateMatch
         return BigMapTeyvat256Layer.GetInstance(this).GetBigMapPosition(greyBigMapMat, expectedCenter256);
     }
 
+    /// <summary>
+    /// 区块限定的中心点匹配（分层先验使用）：转发到 BigMapTeyvat256Layer 的区块匹配。
+    /// 与茶包版 TeyvatMapTest 保持一致，使快速拖动传送的分层先验（第一/第二层）在
+    /// 模板匹配测试地图上也生效，而非落到底层基类的 default 返回空。
+    /// </summary>
+    public override Point2f GetBigMapPositionInRange(Mat greyBigMapMat, Point2f genshinCenter, double genshinRadius)
+    {
+        return BigMapTeyvat256Layer.GetInstance(this).GetBigMapPositionInRange(greyBigMapMat, genshinCenter, genshinRadius);
+    }
+
     public override Rect GetBigMapRect(Mat greyBigMapMat)
     {
         return BigMapTeyvat256Layer.GetInstance(this).GetBigMapRect(greyBigMapMat);

@@ -15,6 +15,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -102,6 +103,10 @@ public class TaskRunner
         {
             End();
             _logger.LogInformation("→ {Text}", _name + "任务结束");
+
+            // [传送标记] 任务结束 = 位置上下文结束：清空快速传送 "上次成功传送地图" 标记，
+            // 下一次任务首传走切区（保守），避免跨任务陈旧标记误跳过（teleport-fastdrag-skip-last-successful-map spec）。
+            TpTaskFastDrag.ResetLastSuccessfulTeleportMap();
 
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();

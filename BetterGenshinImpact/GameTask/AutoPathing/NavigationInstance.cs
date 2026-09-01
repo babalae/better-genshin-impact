@@ -13,6 +13,8 @@ public class NavigationInstance
 {
     private float _prevX = -1;
     private float _prevY = -1;
+    private float _tpPriorX = -1;
+    private float _tpPriorY = -1;
     private DateTime _captureTime = DateTime.MinValue;
     public void Reset()
     {
@@ -22,7 +24,13 @@ public class NavigationInstance
     public void SetPrevPosition(float x, float y)
     {
         (_prevX, _prevY) = (x, y);
+        _tpPriorX = x;  // 同步更新传送先验缓存
+        _tpPriorY = y;
+        // 不重置 _consecutiveFailCount，因为 SetPrevPosition 是外部设置参考点，不代表匹配成功
     }
+
+    /// <summary>只读取最近的传送先验锚点（图像坐标）。供传送分层先验兜底使用，不改任何识别状态。</summary>
+    public (float X, float Y) GetTpPriorPosition() => (_tpPriorX, _tpPriorY);
 
     public Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {

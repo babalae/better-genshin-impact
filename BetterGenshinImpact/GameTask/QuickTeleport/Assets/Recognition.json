@@ -18,6 +18,12 @@
       "roi": "rect(cw - 107 * s, 19 * s, 58 * s, 58 * s)",
       "draw": false
     },
+    "MapCloseButtonWhite": {
+      "type": "TemplateMatch",
+      "template": "MapCloseButtonWhite.png",
+      "roi": "rect(cw - 80 * s, 5 * s, 70 * s, 70 * s)",
+      "draw": true
+    },
     "MapSettingsButton": {
       "type": "TemplateMatch",
       "template": "MapSettingsButton.png",
@@ -42,6 +48,36 @@
       "template": "MapUndergroundToGroundButton.png",
       "roi": "rect(cw - 120 * s, 250 * s, 90 * s, 570 * s)",
       "draw": false
+    },
+    "MapScaleButtonFastDrag": {
+      "type": "TemplateMatch",
+      "template": "MapScaleButtonFastDrag.png",
+      "roi": "rect(30 * s, 440 * s, 40 * s, 200 * s)",
+      "useMask": true,
+      "maskColor": "#00FF00",
+      "TemplateMatchMode": "SqDiffNormed",
+      "threshold": 0.95,
+      "draw": true
+    },
+    "MapUndergroundSwitchButtonFastDrag": {
+      "type": "TemplateMatch",
+      "template": "MapUndergroundSwitchButtonFastDrag.png",
+      "roi": "rect(cw - 120 * s, 250 * s, 90 * s, 570 * s)",
+      "use3Channels": true,
+      "useMask": true,
+      "maskColor": "#00FF00",
+      "threshold": 0.8,
+      "draw": true
+    },
+    "MapUndergroundToGroundButtonFastDrag": {
+      "type": "TemplateMatch",
+      "template": "MapUndergroundToGroundButtonFastDrag.png",
+      "roi": "rect(cw - 120 * s, 250 * s, 90 * s, 570 * s)",
+      "use3Channels": true,
+      "useMask": true,
+      "maskColor": "#00FF00",
+      "threshold": 0.85,
+      "draw": true
     }
   }
 }

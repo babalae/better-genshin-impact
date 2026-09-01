@@ -1324,6 +1324,36 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
+                <!-- ===== 模式切换开关（始终显示） ===== -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 使用公版传送}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后使用公版传送，关闭后使用快速拖动模式。}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     HorizontalAlignment="Right"
+                                     Margin="0,0,38,0"
+                                     IsChecked="{Binding Config.TpConfig.UseOfficialTeleport, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- ===== 公版传送设置项（UseOfficialTeleport 为 true 时显示） ===== -->
+                <StackPanel Visibility="{Binding Config.TpConfig.UseOfficialTeleport, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1422,6 +1452,67 @@
                                    Text="{Binding Config.TpConfig.TeleportOperationDelayMilliseconds, StringFormat={}({0} ms)}" />
                     </StackPanel>
                 </Grid>
+                </StackPanel>
+
+                <!-- ===== 快速拖动传送设置项（UseOfficialTeleport 为 false 时显示） ===== -->
+                <StackPanel Visibility="{Binding Config.TpConfig.UseOfficialTeleport, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 鼠标移动的时间间隔（毫秒）}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 【2-100】数字越小移动鼠标越快，另下方整体延时如果提供导致拖动慢，可减少这个数值}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="90"
+                                    Margin="0,0,36,0"
+                                    VerticalContentAlignment="Center"
+                                    HorizontalContentAlignment="Center"
+                                    Text="{Binding Config.TpConfig.StepIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 传送整体识别延时}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 推荐0即自动适配，范围1~5，传送异常可尝试调高至2以上}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="100"
+                                    MaxWidth="100"
+                                    Margin="0,0,38,0"
+                                    HorizontalContentAlignment="Center"
+                                    Text="{Binding Config.TpTaskFastDragConfig.MapZoomDistanceForce, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                    </Grid>
+                </StackPanel>
             </StackPanel>
         </ui:CardExpander>
 
