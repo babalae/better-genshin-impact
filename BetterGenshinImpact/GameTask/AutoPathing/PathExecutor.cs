@@ -303,6 +303,8 @@ public partial class PathExecutor
                     // 不管咋样，松开所有按键
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Mouse.RightButtonUp();
+                    // 赶路技能可能按住冲刺键，重试时即使跳过赶路逻辑也必须释放。
+                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
                 }
             }
