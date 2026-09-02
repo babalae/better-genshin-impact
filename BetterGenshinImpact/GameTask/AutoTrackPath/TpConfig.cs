@@ -68,12 +68,12 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     [NotifyDataErrorInfo]
     [Range(2, 100, ErrorMessage = "恰当的鼠标移动时间间隔:2-100")]
-    private int _stepIntervalMilliseconds = 20; // 鼠标移动时间间隔（快速拖动传送），单位：ms
+    private int _stepIntervalMilliseconds = 10; // 鼠标移动时间间隔（快速拖动传送），单位：ms
     partial void OnStepIntervalMillisecondsChanged(int value)
     {
         if (value is < 2 or > 100)
         {
-            StepIntervalMilliseconds = 20;
+            StepIntervalMilliseconds = 10;
         }
     }
 
