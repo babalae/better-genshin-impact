@@ -22,6 +22,7 @@ public sealed class OverlayMetricsService : IDisposable
     private static readonly TimeSpan HardwareRefreshInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan GpuQueryResetInterval = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan PeakProcessingCostWindow = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan StaleCpuBaselineInterval = TimeSpan.FromSeconds(5);
 
     private readonly ILogger<OverlayMetricsService> _logger = App.GetLogger<OverlayMetricsService>();
     private readonly IConfigService? _configService = App.GetService<IConfigService>();
@@ -127,6 +128,33 @@ public sealed class OverlayMetricsService : IDisposable
         config.EnsureOverlayMetricItems();
         MaintainGpuMetricsLifecycle(config);
         var now = DateTime.UtcNow;
+
+        // 遮罩总开关关闭时不构建快照也不查询传感器；到达节流窗口或强制刷新时清一次统计基线，
+        // 避免重新开启后"跳过次数"把关闭期间的累计值当成瞬时速率，并在状态翻转时推送一次空快照清掉遮罩残留。
+        if (!config.ShowOverlayMetrics)
+        {
+            if (!force && now - _lastPublishTime < PublishInterval)
+            {
+                return;
+            }
+
+            bool needNotify;
+            lock (_locker)
+            {
+                _lastPublishedSkippedTicks = _skippedTicks;
+                _lastPublishTime = now;
+                needNotify = !ReferenceEquals(CurrentSnapshot, OverlayMetricsSnapshot.Empty);
+                CurrentSnapshot = OverlayMetricsSnapshot.Empty;
+            }
+
+            if (needNotify)
+            {
+                MetricsUpdated?.Invoke(this, OverlayMetricsSnapshot.Empty);
+            }
+
+            return;
+        }
+
         // 即使实时触发器高频运行，遮罩只需要半秒级更新；手动刷新和配置变更用 force 立即同步。
         if (!force && now - _lastPublishTime < PublishInterval)
         {
@@ -209,8 +237,8 @@ public sealed class OverlayMetricsService : IDisposable
         AddMetric(items, config, OverlayMetricItem.GpuUsage, _gpuUsage, value => $"{value:0}%");
         AddMetric(items, config, OverlayMetricItem.CpuUsage, _cpuUsage, value => $"{value:0}%");
         AddMetric(items, config, OverlayMetricItem.MemoryUsage, _memoryUsage, value => $"{value:0}%");
-        AddMetric(items, config, OverlayMetricItem.BgiMemoryUsage, GetBgiMemoryMb(), value => FormatMemory(value));
-        AddMetric(items, config, OverlayMetricItem.BgiCpuUsage, GetBgiCpuPercent(), value => $"{value:F1}%");
+        AddMetric(items, config, OverlayMetricItem.BgiMemoryUsage, GetBgiMemoryMb, FormatMemory);
+        AddMetric(items, config, OverlayMetricItem.BgiCpuUsage, GetBgiCpuPercent, value => $"{value:F1}%");
 
         return items.Count == 0 ? OverlayMetricsSnapshot.Empty : new OverlayMetricsSnapshot(items);
     }
@@ -224,6 +252,17 @@ public sealed class OverlayMetricsService : IDisposable
         }
 
         items.Add(new OverlayMetricDisplayItem(OverlayMetricItemDefaults.GetDisplayName(item), formatter(value.Value)));
+    }
+
+    // 进程级查询等昂贵采样必须走本惰性重载：未勾选对应指标时不执行取值，与硬件指标的门控语义保持一致。
+    private static void AddMetric(List<OverlayMetricDisplayItem> items, MaskWindowConfig config, OverlayMetricItem item, Func<double?> valueProvider, Func<double, string> formatter)
+    {
+        if (!config.IsOverlayMetricEnabled(item))
+        {
+            return;
+        }
+
+        AddMetric(items, config, item, valueProvider(), formatter);
     }
 
     private void RecordPeakProcessingCost(double processingCostMs, DateTime now)
@@ -497,6 +536,14 @@ public sealed class OverlayMetricsService : IDisposable
 
             var cpuDelta = (currentCpuTime - _lastBgiCpuTime).TotalSeconds;
             var timeDelta = (now - _lastBgiCpuSampleTime).TotalSeconds;
+
+            // 指标停用期间或休眠恢复后基线已过期，跨大时间窗的平均值会明显偏离当前负载，只重建基线不发布
+            if (timeDelta > StaleCpuBaselineInterval.TotalSeconds)
+            {
+                _lastBgiCpuTime = currentCpuTime;
+                _lastBgiCpuSampleTime = now;
+                return null;
+            }
 
             _lastBgiCpuTime = currentCpuTime;
             _lastBgiCpuSampleTime = now;
