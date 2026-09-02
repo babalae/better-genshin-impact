@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,6 +20,9 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 public class QuickSereniteaPotTask
 {
+    private const int MaxGadgetPageCount = 20;
+    private const int MaxScrollToTopPageCount = 20;
+
     /// <summary>
     /// 快捷键兼容入口。
     /// </summary>
@@ -36,7 +40,7 @@ public class QuickSereniteaPotTask
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先启动");
+            UIDispatcherHelper.Invoke(() => Toast.Warning("请先启动"));
             return false;
         }
 
@@ -152,11 +156,13 @@ public class QuickSereniteaPotTask
     private static async Task<bool> FindAndClickPotIcon(CancellationToken ct)
     {
         var gridParams = GridParams.Templates[GridScreenName.Gadget];
-        await ScrollToTop(gridParams, ct);
+        if (!await ScrollToTop(gridParams, ct))
+        {
+            return false;
+        }
 
         var scroller = new GridScroller(gridParams, TaskControl.Logger, Simulation.SendInput, ct);
-        var page = 1;
-        while (true)
+        for (var page = 1; page <= MaxGadgetPageCount; page++)
         {
             for (var attempt = 1; attempt <= 3; attempt++)
             {
@@ -173,13 +179,12 @@ public class QuickSereniteaPotTask
 
             if (!await scroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
             {
-                break;
+                TaskControl.Logger.LogWarning("快速进出尘歌壶:检查小道具 {PageCount} 页后仍未检测到壶", page);
+                return false;
             }
-
-            page++;
         }
 
-        TaskControl.Logger.LogWarning("快速进出尘歌壶:检查小道具 {PageCount} 页后仍未检测到壶", page);
+        TaskControl.Logger.LogWarning("快速进出尘歌壶:达到小道具扫描安全上限 {PageCount} 页后仍未检测到壶", MaxGadgetPageCount);
         return false;
     }
 
@@ -188,13 +193,14 @@ public class QuickSereniteaPotTask
     /// </summary>
     /// <param name="gridParams">小道具网格参数。</param>
     /// <param name="ct">用于取消任务的令牌。</param>
-    private static async Task ScrollToTop(GridParams gridParams, CancellationToken ct)
+    /// <returns>确认到达列表顶部时返回 true；达到安全上限时返回 false。</returns>
+    private static async Task<bool> ScrollToTop(GridParams gridParams, CancellationToken ct)
     {
         using var capture = TaskControl.CaptureToRectArea(forceNew: true);
         using var grid = capture.DeriveCrop(gridParams.Roi);
         grid.Move();
 
-        while (true)
+        for (var page = 1; page <= MaxScrollToTopPageCount; page++)
         {
             using var previousCapture = TaskControl.CaptureToRectArea(forceNew: true);
             using var previousGrid = previousCapture.DeriveCrop(gridParams.Roi);
@@ -214,10 +220,20 @@ public class QuickSereniteaPotTask
                     out _,
                     logger: TaskControl.Logger))
             {
-                break;
+                await TaskControl.Delay(300, ct);
+                return true;
             }
+
+            for (var i = 0; i < gridParams.S2Round; i++)
+            {
+                Simulation.SendInput.Mouse.VerticalScroll(2);
+                await TaskControl.Delay(gridParams.RoundMilliseconds, ct);
+            }
+
+            await TaskControl.Delay(300, ct);
         }
 
-        await TaskControl.Delay(300, ct);
+        TaskControl.Logger.LogWarning("快速进出尘歌壶:达到回顶安全上限 {PageCount} 页，无法确认已到达小道具列表顶部", MaxScrollToTopPageCount);
+        return false;
     }
 }
