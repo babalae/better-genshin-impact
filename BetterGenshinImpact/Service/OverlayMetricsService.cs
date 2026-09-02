@@ -148,6 +148,10 @@ public sealed class OverlayMetricsService : IDisposable
                     _cpuUsage = null;
                     _gpuUsage = null;
                     _memoryUsage = null;
+                    // BGI CPU 是惰性取值、不走硬件刷新，停用不到 5s 时陈旧基线分支不会触发，
+                    // 需在此一并清掉平滑值与基线，否则重开后首次读数仍带停用前值 70% 权重。
+                    _bgiCpuPercent = null;
+                    _lastBgiCpuSampleTime = DateTime.MinValue;
                     _lastPublishedSkippedTicks = _skippedTicks;
                     _lastPublishTime = now;
                     needNotify = !ReferenceEquals(CurrentSnapshot, OverlayMetricsSnapshot.Empty);
