@@ -1,6 +1,8 @@
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
@@ -29,7 +31,7 @@ public class QuickSereniteaPotTask
     /// </summary>
     public static void Done()
     {
-        _ = Task.Run(() => Start(CancellationToken.None));
+        new TaskRunner().FireAndForget(() => Start(CancellationContext.Instance.Cts.Token));
     }
 
     /// <summary>
