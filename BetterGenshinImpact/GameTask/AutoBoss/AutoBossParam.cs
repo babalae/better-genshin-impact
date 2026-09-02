@@ -1,3 +1,4 @@
+using System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
 
@@ -91,7 +92,12 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     /// 战斗超时
     /// </summary>
     public int Timeout { get; set; } = 240;
-    
+
+    /// <summary>
+    /// 每次成功领取奖励后的回调，仅供一条龙持久化累计成功次数。
+    /// </summary>
+    internal Action? RewardClaimedCallback { get; set; }
+
     /// <summary>
     /// 使用当前全局 AutoBoss 配置创建参数，主要用于 JS 无参构造和一条龙默认启动。
     /// </summary>

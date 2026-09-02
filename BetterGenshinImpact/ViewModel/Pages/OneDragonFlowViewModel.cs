@@ -475,8 +475,18 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private void ConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        SaveConfig();
-        WriteConfig(SelectedConfig);
+        if (sender is not OneDragonFlowConfig config)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(config, SelectedConfig))
+        {
+            SaveConfig();
+            return;
+        }
+
+        WriteConfig(config);
     }
 
     public void WriteConfig(OneDragonFlowConfig? config)
