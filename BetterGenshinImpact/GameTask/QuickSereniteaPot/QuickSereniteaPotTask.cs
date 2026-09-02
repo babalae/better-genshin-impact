@@ -19,20 +19,18 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 public class QuickSereniteaPotTask
 {
-    private const int MaxGadgetPageCount = 5;
-    private const int ScrollToTopCount = 40;
-
     /// <summary>
     /// 快捷键兼容入口。
     /// </summary>
     public static void Done()
     {
-        Task.Run(() => Start(CancellationToken.None)).GetAwaiter().GetResult();
+        _ = Task.Run(() => Start(CancellationToken.None));
     }
 
     /// <summary>
     /// 尝试放置尘歌壶并触发进入或离开交互。
     /// </summary>
+    /// <param name="ct">用于取消任务的令牌。</param>
     /// <returns>成功触发进入或离开尘歌壶时返回 true。</returns>
     public static async Task<bool> Start(CancellationToken ct)
     {
@@ -135,6 +133,10 @@ public class QuickSereniteaPotTask
         }
     }
 
+    /// <summary>
+    /// 检查背包当前是否位于小道具页。
+    /// </summary>
+    /// <returns>小道具页已选中时返回 true。</returns>
     private static bool IsGadgetPageOpen()
     {
         using var capture = TaskControl.CaptureToRectArea(forceNew: true);
@@ -142,16 +144,20 @@ public class QuickSereniteaPotTask
         return gadgetTab.IsExist();
     }
 
+    /// <summary>
+    /// 从小道具列表顶部开始逐页查找并点击尘歌壶。
+    /// </summary>
+    /// <param name="ct">用于取消任务的令牌。</param>
+    /// <returns>找到并点击尘歌壶时返回 true。</returns>
     private static async Task<bool> FindAndClickPotIcon(CancellationToken ct)
     {
         var gridParams = GridParams.Templates[GridScreenName.Gadget];
         await ScrollToTop(gridParams, ct);
 
         var scroller = new GridScroller(gridParams, TaskControl.Logger, Simulation.SendInput, ct);
-        var scannedPageCount = 0;
-        for (var page = 1; page <= MaxGadgetPageCount; page++)
+        var page = 1;
+        while (true)
         {
-            scannedPageCount = page;
             for (var attempt = 1; attempt <= 3; attempt++)
             {
                 await TaskControl.Delay(attempt == 1 ? 500 : 300, ct);
@@ -165,29 +171,53 @@ public class QuickSereniteaPotTask
                 }
             }
 
-            if (page == MaxGadgetPageCount ||
-                !await scroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
+            if (!await scroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
             {
                 break;
             }
+
+            page++;
         }
 
-        TaskControl.Logger.LogWarning("快速进出尘歌壶:检查小道具 {PageCount} 页后仍未检测到壶", scannedPageCount);
+        TaskControl.Logger.LogWarning("快速进出尘歌壶:检查小道具 {PageCount} 页后仍未检测到壶", page);
         return false;
     }
 
+    /// <summary>
+    /// 持续向上滚动小道具列表，直到网格内容不再移动。
+    /// </summary>
+    /// <param name="gridParams">小道具网格参数。</param>
+    /// <param name="ct">用于取消任务的令牌。</param>
     private static async Task ScrollToTop(GridParams gridParams, CancellationToken ct)
     {
         using var capture = TaskControl.CaptureToRectArea(forceNew: true);
         using var grid = capture.DeriveCrop(gridParams.Roi);
         grid.Move();
 
-        for (var i = 0; i < ScrollToTopCount; i++)
+        while (true)
         {
-            Simulation.SendInput.Mouse.VerticalScroll(2);
-            await TaskControl.Delay(20, ct);
+            using var previousCapture = TaskControl.CaptureToRectArea(forceNew: true);
+            using var previousGrid = previousCapture.DeriveCrop(gridParams.Roi);
+
+            for (var i = 0; i < gridParams.S1Round; i++)
+            {
+                Simulation.SendInput.Mouse.VerticalScroll(2);
+                await TaskControl.Delay(gridParams.RoundMilliseconds, ct);
+            }
+
+            await TaskControl.Delay(300, ct);
+            using var currentCapture = TaskControl.CaptureToRectArea(forceNew: true);
+            using var currentGrid = currentCapture.DeriveCrop(gridParams.Roi);
+            if (!GridScroller.IsScrolling(
+                    previousGrid.CacheGreyMat,
+                    currentGrid.CacheGreyMat,
+                    out _,
+                    logger: TaskControl.Logger))
+            {
+                break;
+            }
         }
 
-        await TaskControl.Delay(500, ct);
+        await TaskControl.Delay(300, ct);
     }
 }
