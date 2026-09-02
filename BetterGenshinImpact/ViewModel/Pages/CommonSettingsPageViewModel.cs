@@ -99,8 +99,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
-    [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
+    [ObservableProperty] private FrozenDictionary<string, string> _uiLanguageDict =
         new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it", "vi"  }
+            .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
+
+    public FrozenDictionary<string, string> GameLanguageDict { get; } =
+        new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it" }
             .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
 
     public string SelectedCountry

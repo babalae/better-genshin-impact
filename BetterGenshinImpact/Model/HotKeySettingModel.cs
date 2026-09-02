@@ -25,7 +25,7 @@ public partial class HotKeySettingModel : ObservableObject
     /// </summary>
     [ObservableProperty] private HotKeyTypeEnum _hotKeyType;
 
-    [ObservableProperty] private string _hotKeyTypeName;
+    [ObservableProperty] private string _hotKeyTypeName = string.Empty;
 
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _children = [];
