@@ -88,6 +88,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     [ObservableProperty] private bool _isWechatClawbotBinding;
 
     /// <summary>
+    /// 是否正在执行群 QQ 绑定流程
+    /// </summary>
+    [ObservableProperty] private bool _isBindingGroup;
+
+    /// <summary>
     /// 绑定流程的取消令牌源，用于用户点击取消时中断 WebSocket 连接
     /// </summary>
     private CancellationTokenSource? _bindCts;
@@ -96,6 +101,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     /// 微信 Clawbot 登录/绑定流程的取消令牌源
     /// </summary>
     private CancellationTokenSource? _wechatClawbotBindCts;
+
+    /// <summary>
+    /// 群 QQ 绑定流程的取消令牌源
+    /// </summary>
+    private CancellationTokenSource? _groupBindCts;
 
     /// <summary>
     /// 构造通知设置页 ViewModel，并订阅微信 Clawbot 推送会话过期事件，
@@ -745,6 +755,85 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     private void OnCancelBindWechatClawbot()
     {
         _wechatClawbotBindCts?.Cancel();
+    }
+
+    /// <summary>
+    /// 绑定 QQ 群按钮。连接 QQ 网关，等待用户将机器人加入群聊或发送验证码，自动回填群 OpenID。
+    /// 支持取消（用户点击取消时中断 WebSocket 连接）。
+    /// 超时（60 秒）时提示用户重试。
+    /// </summary>
+    [RelayCommand]
+    private async Task OnBindGroupQq()
+    {
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqAppId))
+        {
+            Toast.Error("请先填写 QQ AppID");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqClientSecret))
+        {
+            Toast.Error("请先填写 QQ AppSecret");
+            return;
+        }
+
+        IsBindingGroup = true;
+        QqStatus = "正在连接 QQ 网关…";
+        _groupBindCts = new CancellationTokenSource();
+
+        try
+        {
+            var groupOpenId = await QqWebSocketHelper.BindGroupAsync(
+                Config.NotificationConfig.QqAppId,
+                Config.NotificationConfig.QqClientSecret,
+                code =>
+                {
+                    // 回调在后台线程执行，需要编组回 UI 线程才能更新 ObservableProperty
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        QqStatus = $"请将机器人加入群聊，或在群里 @机器人 发送验证码 [{code}]";
+                    });
+                },
+                status =>
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        QqStatus = status;
+                    });
+                },
+                _groupBindCts.Token);
+
+            // 绑定成功，自动回填群 OpenID（配置自动保存 + 刷新通知器）
+            Config.NotificationConfig.QqGroupOpenId = groupOpenId;
+            QqStatus = "群绑定成功";
+            Toast.Success("QQ 群绑定成功");
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户主动点击取消
+            QqStatus = "已取消群绑定";
+        }
+        catch (System.Exception ex)
+        {
+            // 超时或其他错误（超时已被 BindGroupAsync 转为 NotifierException）
+            QqStatus = $"群绑定失败：{ex.Message}";
+            Toast.Error($"群绑定失败：{ex.Message}");
+        }
+        finally
+        {
+            IsBindingGroup = false;
+            _groupBindCts?.Dispose();
+            _groupBindCts = null;
+        }
+    }
+
+    /// <summary>
+    /// 取消群 QQ 绑定按钮：取消 WebSocket 连接，中断绑定流程。
+    /// </summary>
+    [RelayCommand]
+    private void OnCancelBindGroupQq()
+    {
+        _groupBindCts?.Cancel();
     }
 
     [RelayCommand]
