@@ -22,6 +22,7 @@ public class QuickSereniteaPotTask
 {
     private const int MaxGadgetPageCount = 20;
     private const int MaxScrollToTopPageCount = 20;
+    private static readonly SemaphoreSlim ExecutionLock = new(1, 1);
 
     /// <summary>
     /// 快捷键兼容入口。
@@ -38,19 +39,25 @@ public class QuickSereniteaPotTask
     /// <returns>成功触发进入或离开尘歌壶时返回 true。</returns>
     public static async Task<bool> Start(CancellationToken ct)
     {
-        if (!TaskContext.Instance().IsInitialized)
+        if (!await ExecutionLock.WaitAsync(0, ct))
         {
-            UIDispatcherHelper.Invoke(() => Toast.Warning("请先启动"));
-            return false;
-        }
-
-        if (!SystemControl.IsGenshinImpactActiveByProcess())
-        {
+            TaskControl.Logger.LogWarning("快速进出尘歌壶:已有任务正在执行，忽略重复触发");
             return false;
         }
 
         try
         {
+            if (!TaskContext.Instance().IsInitialized)
+            {
+                UIDispatcherHelper.Invoke(() => Toast.Warning("请先启动"));
+                return false;
+            }
+
+            if (!SystemControl.IsGenshinImpactActiveByProcess())
+            {
+                return false;
+            }
+
             await AutoArtifactSalvageTask.OpenInventory(
                 GridScreenName.Gadget,
                 Simulation.SendInput,
@@ -134,6 +141,7 @@ public class QuickSereniteaPotTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
+            ExecutionLock.Release();
         }
     }
 
