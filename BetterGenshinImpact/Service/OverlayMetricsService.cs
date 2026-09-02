@@ -141,10 +141,22 @@ public sealed class OverlayMetricsService : IDisposable
             bool needNotify;
             lock (_locker)
             {
-                _lastPublishedSkippedTicks = _skippedTicks;
-                _lastPublishTime = now;
-                needNotify = !ReferenceEquals(CurrentSnapshot, OverlayMetricsSnapshot.Empty);
-                CurrentSnapshot = OverlayMetricsSnapshot.Empty;
+                // 开关判定在锁外，提交前复核一次：防止读到 false 后 UI 已重新开启并发布新快照，被本调用覆盖为空。
+                if (!config.ShowOverlayMetrics)
+                {
+                    // 硬件读数一并清空，避免重新开启时短暂显示停用前的陈旧值（重开后约 1s 内按新基线刷新）。
+                    _cpuUsage = null;
+                    _gpuUsage = null;
+                    _memoryUsage = null;
+                    _lastPublishedSkippedTicks = _skippedTicks;
+                    _lastPublishTime = now;
+                    needNotify = !ReferenceEquals(CurrentSnapshot, OverlayMetricsSnapshot.Empty);
+                    CurrentSnapshot = OverlayMetricsSnapshot.Empty;
+                }
+                else
+                {
+                    needNotify = false;
+                }
             }
 
             if (needNotify)
@@ -542,6 +554,8 @@ public sealed class OverlayMetricsService : IDisposable
             {
                 _lastBgiCpuTime = currentCpuTime;
                 _lastBgiCpuSampleTime = now;
+                // 旧平滑值保留会给停用前的读数 70% 权重，一并清掉让新窗口从首个样本重新开始
+                _bgiCpuPercent = null;
                 return null;
             }
 

@@ -293,6 +293,7 @@
   "勾选后改用内置路线，不通过冒险之证定位地脉花。": "Se selezionato, usa il percorso integrato invece di localizzare il Fiore geomantico tramite il Manuale d'Avventura.",
   "勾选后，Alt+Tab、Windows 键等系统组合键发送到桌面分身；取消勾选后在本机生效。切换时会自动重新连接 RDP。": "Se selezionato, combinazioni di sistema come Alt+Tab e il tasto Windows vengono inviate al Desktop virtuale; se deselezionato, hanno effetto su questo PC. Al cambio si riconnette automaticamente a RDP.",
   "勾选需要显示在指标栏里的项目。顺序和遮罩中的显示顺序一致。": "Seleziona le voci da mostrare nella barra metriche. L'ordine coincide con quello nell'overlay.",
+  "注意：游戏帧率使用系统级 ETW 追踪采样。采样会话可能残留在系统中并占用资源，重启电脑后可清除。": "Nota: il frame rate del gioco usa tracciamento ETW a livello di sistema. Se l'app viene terminata forzatamente, la sessione di campionamento può rimanere nel sistema e occupare risorse; riavviando il PC viene eliminata.",
   "北": "Nord",
   "匹配参数": "Parametri di corrispondenza",
   "匹配算法": "Algoritmo di corrispondenza",

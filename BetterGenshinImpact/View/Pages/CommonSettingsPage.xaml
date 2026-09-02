@@ -479,7 +479,7 @@
                                         <ui:TextBlock Grid.Row="3"
                                                       Margin="0,8,0,0"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="{i18n:T 注意：游戏帧率用系统级 ETW 追踪采样。采样会话可能残留系统中占用资源，重启电脑清除}"
+                                                      Text="{i18n:T 注意：游戏帧率使用系统级 ETW 追踪采样。采样会话可能残留在系统中并占用资源，重启电脑后可清除。}"
                                                       TextWrapping="Wrap" />
                                     </Grid>
                                     <ItemsControl ItemsSource="{Binding Items}">

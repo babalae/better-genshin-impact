@@ -293,6 +293,7 @@
   "勾选后改用内置路线，不通过冒险之证定位地脉花。": "When checked, use built-in routes instead of locating Ley Line Blossoms via the Adventurer Handbook.",
   "勾选后，Alt+Tab、Windows 键等系统组合键发送到桌面分身；取消勾选后在本机生效。切换时会自动重新连接 RDP。": "When checked, system shortcuts such as Alt+Tab and the Windows key are sent to the virtual desktop; when unchecked, they apply locally. RDP reconnects automatically on toggle.",
   "勾选需要显示在指标栏里的项目。顺序和遮罩中的显示顺序一致。": "Check items to show in the metrics bar. Order matches the overlay.",
+  "注意：游戏帧率使用系统级 ETW 追踪采样。采样会话可能残留在系统中并占用资源，重启电脑后可清除。": "Note: game FPS uses system-level ETW tracing. A sampling session may remain in the system and consume resources if the app is force-killed; restarting the computer clears it.",
   "北": "North",
   "匹配参数": "Match Parameters",
   "匹配算法": "Match Algorithm",
