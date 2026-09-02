@@ -182,13 +182,13 @@ public class CheckRewardsTask
                 await Delay(200, ct);
 
                 var opened = await NewRetry.WaitForElementAppear(
-                    GetConfirmRa(true, "每日委托奖励"),
+                    GetConfirmRa(true, _dailyCommissionRewardsString),
                     () =>
                     {
                         Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
                         using var screen = CaptureToRectArea();
                         var ra = screen.FindMulti(GetConfirmRa())
-                            .FirstOrDefault(btn => btn.Text == "委托");
+                            .FirstOrDefault(btn => Regex.IsMatch(btn.Text.Trim(), $"^(?:{_commissionsButtonString})$", RegexOptions.IgnoreCase));
                         ra?.Click();
                     }, ct, 4, 1000);
 
