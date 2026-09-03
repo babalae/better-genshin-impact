@@ -145,11 +145,15 @@ public class AutoBuildComboTask : ISoloTask
         var openAiClient = new OpenAIClient(new ApiKeyCredential(config.ApiKey), openAiOptions);
         IChatClient client = openAiClient.GetChatClient(config.ModelName).AsIChatClient();
 
-        // 紧贴 provider 装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗
+        // MEAI 自带 tree 字段裁剪装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗
         client = new CompactResultChatClient(client);
 
-        // 紧贴工具循环装饰：记录每轮对话内容，便于观察 FunctionInvokingChatClient 的中间多轮过程
+        // 对话记录装饰：逐轮记录发给 LLM 与 LLM 发出的内容（回退解析前的原始响应，含藏在 reasoning/文本里的 XML 原文），便于观察 FunctionInvokingChatClient 的中间多轮过程
         client = new ConversationLoggingChatClient(client);
+
+        // XML 工具调用回退解析装饰：解析模型塞进 reasoning/文本里的 XML tool_calls 并注入单独的 tool_calls 字段；
+        // 放在记录层外层，回退解析告警会先于"LLM 发出"日志打印
+        client = new XmlToolCallFallbackParseChatClient(client);
 
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
         return new FunctionInvokingChatClient(client)
@@ -176,19 +180,22 @@ public class AutoBuildComboTask : ISoloTask
             {{tagPairSection}}
 
             ## 建树规范
-            - 树一开始就是可用的，直接使用并完成它
-            - avatarName 必须使用"当前队伍"中列出的角色名
+            - 树一开始就是可用的，不必调用 Reset ，直接使用并完成它，最后一步必须调用 BuildTree 来构建
+            - avatarName 必须使用“当前队伍”中列出的角色名
             - 每层打开的作用域（组合节点、黑板）退出前必须使用一次End来关闭，所有作用域关闭后才可调用 BuildTree 来构建树
             - 减少没有意义的组合节点嵌套
             - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree——它就是当前树的状态
-            - tree 是 ASCII 树形文本，缩进表示层级
-            - 你必须使用tool_calls来调用工具，禁止在reasoning_content中写xml
+            - tree 是树形文本，缩进表示层级
 
             ## 战术要求
-            - 策略的核心是：高价值动作优先执行，未就绪时用下位替代补位，保证整个队伍始终有事可做，因此使用有记忆的Selector作为外层逻辑，然后按优先级顺序直接添加以下类型的子节点
-                - 单独使用元素战技或元素爆发，直接使用 UseXXXIfReady 作为叶子节点。战技在使用后会进入冷却、爆发在使用后会进入充能，由于行为树会持续Tick，下一次就会执行下位替代，从而自然地产生元素反应或随机Combo
-                - 普攻/重击等基础动作永远可用，可直接作为叶子节点直接添加，或添加一个有记忆的Sequence，其中排列2个以上的动作节点
-                - 如有特别需要，可以设计复杂的连招序列：可添加一个有记忆的Sequence，先连续使用多个 IsXXXReady 检查，所有检查添加完后，再按顺序使用 UseXXX 或多段普攻或多段重击。在可用性满足的情况下，这样就总是能打出稳定顺序的Combo
+            - 策略的核心是：包含不同角色动作的连招优先检查冷却和充能并执行，单一角色的动作其次，保证整个队伍始终有事可做，因此使用有记忆的Selector作为外层逻辑，然后按优先级顺序直接添加以下类型的子节点
+                1. 单独使用元素战技或元素爆发，直接使用 UseXXXIfReady 作为叶子节点
+                    - 战技在使用后会进入冷却、爆发在使用后会进入充能，所以下一次就会被拦截，从而在执行其他兄弟节点
+                    - 由于各角色冷却和充能所需时间的不一致，外层Selector对于战技或爆发子节点的执行并没有严格的顺序
+                2. 普攻/重击等基础动作永远可用，可直接作为叶子节点直接添加，或添加一个有记忆的Sequence，其中排列2个以上的动作节点
+                3. 连招序列，使用有记忆的 Sequence 作为子节点
+                    - 在连招序列中，先连续添加多个 IsXXXReady 进行冷却和充能的检查，所有检查添加完后，再按顺序使用 UseXXX 或基础动作作为子节点
+                    - 这样连招序列在运行时，一旦满足了所有检查，就会持续运行其后的子节点，这样就总是能打出稳定顺序的连招
             - 子节点一旦满足检查条件，就保证该节点内动作序列全部跑完，因此全程使用有记忆的组合节点
             - 输出角色可站场，在队伍中分析出一个最适合输出的，并且分析是只打普攻、只打重击、还是有特殊打法，一般仅选用一种即可
             - 辅助角色不打普攻或重击，尤其后台角色。但如果队伍里全是辅助角色，可以根据角色特点安排一个打输出，避免全部角色技能未就绪时发呆
