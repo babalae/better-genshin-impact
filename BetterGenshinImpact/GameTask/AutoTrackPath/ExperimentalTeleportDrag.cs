@@ -23,7 +23,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double EarlyStopMargin = 40d;
     private const double EmaWeight = 0.4d;
     private const double InitialDragStrengthScale = 0.2d;
-    private const int StableTimeoutMilliseconds = 1200;
     private const double StableDifferenceThreshold = 1.5d;
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
@@ -125,7 +124,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             ratioSource);
 
         GameCaptureRegion.GameRegionMove((_, scale) => (start.X * scale, start.Y * scale));
-        await Delay(GetOperationDelay(40), ct);
+        await Delay(GetOperationInterval(), ct);
         GetCursorPosition(out var cursorBefore);
 
         var steps = Math.Clamp(
@@ -138,11 +137,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             config.ExperimentalTeleportDragStepIntervalMilliseconds,
             TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
             TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
-        var releaseDelay = GetOperationDelay(50);
+        var releaseDelay = GetOperationInterval();
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(GetOperationDelay(50), ct);
+            await Delay(GetOperationInterval(), ct);
             for (var i = 1; i <= steps; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -172,6 +171,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
 
+        await Delay(GetOperationInterval(), ct);
         GetCursorPosition(out var cursorAfter);
         var inputScale = Math.Max(TaskContext.Instance().SystemInfo.ScaleTo1080PRatio, 1e-6d);
         var actualX = (cursorAfter.X - cursorBefore.X) / inputScale;
@@ -265,27 +265,28 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         DesktopRegion.DesktopRegionMove(
             realRect.X + buttonX * realScale,
             realRect.Y + initialY * realScale);
-        await Delay(GetOperationDelay(50), ct);
+        await Delay(GetOperationInterval(), ct);
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(GetOperationDelay(50), ct);
+            await Delay(GetOperationInterval(), ct);
             DesktopRegion.DesktopRegionMove(
                 realRect.X + buttonX * realScale,
                 realRect.Y + targetY * realScale);
-            await Delay(GetOperationDelay(50), ct);
+            await Delay(GetOperationInterval(), ct);
         }
         finally
         {
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
 
-        await Delay(GetOperationDelay(50), ct);
+        await Delay(GetOperationInterval(), ct);
     }
 
     public async Task WaitForStableMapAsync()
     {
-        var timeout = GetOperationDelay(StableTimeoutMilliseconds);
+        var timeout = GetMapStabilityTimeout();
+        var detectionInterval = GetMapStabilityInterval();
         const double threshold = StableDifferenceThreshold;
         var deadline = Environment.TickCount64 + timeout;
         Mat? previous = null;
@@ -330,7 +331,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                     previous = current.Clone();
                 }
 
-                await Delay(GetOperationDelay(35), ct);
+                await Delay(detectionInterval, ct);
             }
         }
         finally
@@ -474,6 +475,30 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             TpConfig.MaxTeleportOperationDelayMilliseconds);
         return Math.Max(1, (int)Math.Round(
             baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
+    }
+
+    private int GetOperationInterval()
+    {
+        return Math.Clamp(
+            config.ExperimentalTeleportOperationIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportOperationIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportOperationIntervalMilliseconds);
+    }
+
+    private int GetMapStabilityInterval()
+    {
+        return Math.Clamp(
+            config.ExperimentalTeleportMapStabilityIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportMapStabilityIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportMapStabilityIntervalMilliseconds);
+    }
+
+    private int GetMapStabilityTimeout()
+    {
+        return Math.Clamp(
+            config.ExperimentalTeleportMapStabilityTimeoutMilliseconds,
+            TpConfig.MinExperimentalTeleportMapStabilityTimeoutMilliseconds,
+            TpConfig.MaxExperimentalTeleportMapStabilityTimeoutMilliseconds);
     }
 
     private void LogDetailed(string message, params object?[] args)

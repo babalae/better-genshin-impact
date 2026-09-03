@@ -1382,6 +1382,25 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center"
                                       FontTypography="Body"
+                                      Text="{i18n:T 理论拖动距离修正倍率}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="1"
+                                      MaxDecimalPlaces="2"
+                                      Minimum="0.1"
+                                      SmallChange="0.1"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportDragDistanceCorrection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
                                       Text="{i18n:T 拖动步进间隔（毫秒）}" />
                         <ui:NumberBox Grid.Column="1"
                                       AcceptsExpression="False"
@@ -1393,6 +1412,101 @@
                                       TextAlignment="Right"
                                       ValidationMode="InvalidInputOverwritten"
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportDragStepIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 状态识别轮询间隔（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="500"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="10"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 状态切换等待上限（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="5000"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="500"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 操作间延时（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="500"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="10"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportOperationIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 地图稳定检测间隔（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="500"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="10"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportMapStabilityIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 地图稳定等待上限（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="5000"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="500"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportMapStabilityTimeoutMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Grid Margin="0,4">
                         <Grid.ColumnDefinitions>

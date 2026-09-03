@@ -303,17 +303,25 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 return;
             }
 
-            var deltaX = _config.MapScaleFactor * (target.X - currentCenter.X) / currentZoom;
-            var deltaY = _config.MapScaleFactor * (target.Y - currentCenter.Y) / currentZoom;
+            var distanceCorrection = double.IsFinite(_config.ExperimentalTeleportDragDistanceCorrection)
+                ? Math.Clamp(
+                    _config.ExperimentalTeleportDragDistanceCorrection,
+                    TpConfig.MinExperimentalTeleportDragDistanceCorrection,
+                    TpConfig.MaxExperimentalTeleportDragDistanceCorrection)
+                : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
+            // 先修正理论地图位移，DragAsync 再使用 EMA 将地图位移换算为鼠标输入。
+            var deltaX = _config.MapScaleFactor * (target.X - currentCenter.X) / currentZoom * distanceCorrection;
+            var deltaY = _config.MapScaleFactor * (target.Y - currentCenter.Y) / currentZoom * distanceCorrection;
             var mouseDistance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
             LogDetailed(
-                "实验传送定位轮次：iteration={Iteration} center=({CenterX:0.0},{CenterY:0.0}) target=({TargetX:0.0},{TargetY:0.0}) zoom={Zoom:0.00} delta=({DeltaX:0.0},{DeltaY:0.0}) distance={Distance:0.0}",
+                "实验传送定位轮次：iteration={Iteration} center=({CenterX:0.0},{CenterY:0.0}) target=({TargetX:0.0},{TargetY:0.0}) zoom={Zoom:0.00} correction={Correction:0.00} delta=({DeltaX:0.0},{DeltaY:0.0}) distance={Distance:0.0}",
                 iteration + 1,
                 currentCenter.X,
                 currentCenter.Y,
                 target.X,
                 target.Y,
                 currentZoom,
+                distanceCorrection,
                 deltaX,
                 deltaY,
                 mouseDistance);
@@ -334,8 +342,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                         targetZoom,
                         previousZoom,
                         currentZoom);
-                    deltaX = _config.MapScaleFactor * (target.X - currentCenter.X) / currentZoom;
-                    deltaY = _config.MapScaleFactor * (target.Y - currentCenter.Y) / currentZoom;
+                    deltaX = _config.MapScaleFactor * (target.X - currentCenter.X) / currentZoom * distanceCorrection;
+                    deltaY = _config.MapScaleFactor * (target.Y - currentCenter.Y) / currentZoom * distanceCorrection;
                 }
             }
 

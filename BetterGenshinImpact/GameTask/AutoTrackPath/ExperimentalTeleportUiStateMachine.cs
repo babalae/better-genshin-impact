@@ -61,11 +61,7 @@ internal sealed class ExperimentalTeleportUiContext
 internal sealed class ExperimentalTeleportUiStateMachine
 {
     private const int UnknownRecheckDelayMilliseconds = 200;
-    private const int ExpectedStateTimeoutMilliseconds = 500;
-    private const int ExpectedStateDetectionIntervalMilliseconds = 50;
     private const int StateTransitionSettleDelayMilliseconds = 100;
-    private const int AreaAtlasMatchTimeoutMilliseconds = 500;
-    private const int AreaAtlasMatchIntervalMilliseconds = 50;
     private const int CandidateClickRetryCount = 2;
     private const int ConfirmClickRetryCount = 2;
     private const int UnknownRecoveryRetryCount = 2;
@@ -228,7 +224,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
                 {
                     await Delay(
                         Math.Min(
-                            GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds),
+                            GetStateRecognitionInterval(),
                             fallbackDelay - (int)elapsed),
                         _cancellationToken);
                     return DetectCurrentState(context);
@@ -310,7 +306,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
             }
 
             LogDetailed("实验传送地区 OCR 未命中，保持国家列表继续重试：{Area}", areaName);
-            await Delay(GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds), _cancellationToken);
+            await Delay(GetStateRecognitionInterval(), _cancellationToken);
             return DetectCurrentState(context);
         }
 
@@ -353,7 +349,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
             {
                 await Delay(
                     Math.Min(
-                        GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds),
+                        GetStateRecognitionInterval(),
                         retryDelay - (int)elapsed),
                     _cancellationToken);
                 return DetectCurrentState(context);
@@ -392,8 +388,8 @@ internal sealed class ExperimentalTeleportUiStateMachine
         ExperimentalTeleportUiState expectedState,
         string operation)
     {
-        var timeout = GetDetectionTimeout(ExpectedStateTimeoutMilliseconds);
-        var interval = GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds);
+        var timeout = GetStateTransitionTimeout();
+        var interval = GetStateRecognitionInterval();
         var stopwatch = Stopwatch.StartNew();
         var detectedState = DetectCurrentState(context);
         if (detectedState == expectedState)
@@ -524,8 +520,8 @@ internal sealed class ExperimentalTeleportUiStateMachine
 
     private async Task<bool> WaitForAreaAtlasMatchAsync(string? areaName)
     {
-        var timeout = GetDetectionTimeout(AreaAtlasMatchTimeoutMilliseconds);
-        var interval = GetOperationDelay(AreaAtlasMatchIntervalMilliseconds);
+        var timeout = GetStateTransitionTimeout();
+        var interval = GetStateRecognitionInterval();
         var stopwatch = Stopwatch.StartNew();
         while (true)
         {
@@ -594,9 +590,20 @@ internal sealed class ExperimentalTeleportUiStateMachine
             baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
     }
 
-    private int GetDetectionTimeout(int baseTimeout)
+    private int GetStateRecognitionInterval()
     {
-        return Math.Max(baseTimeout, GetOperationDelay(baseTimeout));
+        return Math.Clamp(
+            _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportStateRecognitionIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportStateRecognitionIntervalMilliseconds);
+    }
+
+    private int GetStateTransitionTimeout()
+    {
+        return Math.Clamp(
+            _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,
+            TpConfig.MinExperimentalTeleportStateTransitionTimeoutMilliseconds,
+            TpConfig.MaxExperimentalTeleportStateTransitionTimeoutMilliseconds);
     }
 
     private void LogDetailed(string message, params object?[] args)
