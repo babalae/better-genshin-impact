@@ -427,6 +427,33 @@ public class TpTask
         return (target.X, target.Y);
     }
 
+    /// <summary>
+    /// 实验传送完成地图定位后，复用主线的安全点选、候选面板处理和完成校验。
+    /// </summary>
+    internal async Task<(double, double)> CompleteExperimentalTeleport(
+        double tpX,
+        double tpY,
+        string mapName,
+        bool force,
+        double finalZoomLevel)
+    {
+        var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
+        LogTeleportTarget(target);
+
+        var clickView = await PrepareTeleportClickView(
+            target.MapName,
+            target.TargetTp,
+            target.X,
+            target.Y,
+            finalZoomLevel);
+        var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
+        await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
+        await WaitForTeleportCompletion(throwOnTimeout: true);
+        s_lastSuccessfulTeleportMapName = target.MapName;
+        Navigation.SetPrevPosition((float)target.X, (float)target.Y);
+        return (target.X, target.Y);
+    }
+
     private TeleportTargetContext ResolveTeleportTarget(double tpX, double tpY, string mapName, bool force)
     {
         var nTpPoints = GetNearestNTpPoints(tpX, tpY, mapName, 2);
@@ -913,7 +940,7 @@ public class TpTask
         return Math.Clamp(zoomLevel, MinTeleportZoomLevel, GetDisplayTpPointZoomLevel(mapName));
     }
 
-    private double GetCurrentBigMapZoomLevel()
+    internal double GetCurrentBigMapZoomLevel()
     {
         using var capture = CaptureToRectArea();
         return GetBigMapZoomLevel(capture);
@@ -1031,7 +1058,7 @@ public class TpTask
     /// <summary>
     ///     检查传送是否完成，未完成则等待
     /// </summary>
-    private async Task WaitForTeleportCompletion()
+    private async Task WaitForTeleportCompletion(bool throwOnTimeout = false)
     {
         var stopwatch = Stopwatch.StartNew();
         var observedLoadingState = false;
@@ -1082,6 +1109,10 @@ public class TpTask
         }
 
         Logger.LogWarning("传送等待超时，换台电脑吧");
+        if (throwOnTimeout)
+        {
+            throw new TimeoutException("传送等待超时，未确认返回主界面");
+        }
     }
 
     private bool IsGameRegionPointInClickableArea(double clickX, double clickY, double requiredVisibleRadius = 0)
@@ -1225,6 +1256,11 @@ public class TpTask
 
     public async Task<(double, double)> Tp(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
+        if (_tpConfig.UseExperimentalTeleport)
+        {
+            return await ExperimentalTeleportTask.Run(ct, tpX, tpY, mapName, force);
+        }
+
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(TeleportTimeoutMs);
         try
@@ -2170,7 +2206,7 @@ public class TpTask
         return GetBigMapCenterPoint(mapName, null);
     }
 
-    private Point2f GetBigMapCenterPoint(string mapName, Point2f? expectedCenterPoint)
+    internal Point2f GetBigMapCenterPoint(string mapName, Point2f? expectedCenterPoint)
     {
         // 判断是否在地图界面
         using var ra = CaptureToRectArea();
@@ -2570,7 +2606,7 @@ public class TpTask
                 .Take(12));
     }
 
-    private async Task SwitchToGroundMapLayerIfNeeded()
+    internal async Task SwitchToGroundMapLayerIfNeeded()
     {
         var layerSwitchClicked = false;
         var groundLayerClicked = false;

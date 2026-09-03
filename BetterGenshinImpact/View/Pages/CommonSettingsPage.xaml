@@ -1336,6 +1336,130 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="{i18n:T 启用实验性传送}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 使用快速拖图与地区模板匹配，关闭时保持现有传送逻辑}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.TpConfig.UseExperimentalTeleport, Mode=TwoWay}" />
+                </Grid>
+
+                <StackPanel Margin="16,0,52,8"
+                            Visibility="{Binding Config.TpConfig.UseExperimentalTeleport, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Margin="0,4,0,8"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Text="{i18n:T 实验性传送参数}" />
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 失败重试次数}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="5"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="1"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 点击缩放等级上限}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="6"
+                                      MaxDecimalPlaces="1"
+                                      Minimum="1"
+                                      SmallChange="0.1"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportMinZoomLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 地图稳定等待上限（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="5000"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="200"
+                                      SmallChange="100"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportStableTimeoutMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 地图稳定差异阈值}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="20"
+                                      MaxDecimalPlaces="1"
+                                      Minimum="0.1"
+                                      SmallChange="0.1"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportStableDifferenceThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 地区模板匹配阈值}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="0.99"
+                                      MaxDecimalPlaces="2"
+                                      Minimum="0.5"
+                                      SmallChange="0.01"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportTemplateMatchThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                </StackPanel>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="{i18n:T 地图移动过程中是否缩放地图}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"

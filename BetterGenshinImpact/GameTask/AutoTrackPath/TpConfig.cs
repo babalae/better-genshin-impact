@@ -13,6 +13,34 @@ public partial class TpConfig : ObservableValidator
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
 
     [ObservableProperty]
+    private bool _useExperimentalTeleport;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(1, 5, ErrorMessage = "实验传送重试次数：1-5")]
+    private int _experimentalTeleportRetryCount = 3;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(1.0, 6.0, ErrorMessage = "实验传送最小缩放等级：1.0-6.0")]
+    private double _experimentalTeleportMinZoomLevel = 2.0;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(200, 5000, ErrorMessage = "地图稳定等待上限：200-5000 ms")]
+    private int _experimentalTeleportStableTimeoutMilliseconds = 1200;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(0.1, 20.0, ErrorMessage = "地图稳定差异阈值：0.1-20.0")]
+    private double _experimentalTeleportStableDifferenceThreshold = 1.5;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(0.5, 0.99, ErrorMessage = "地区模板匹配阈值：0.50-0.99")]
+    private double _experimentalTeleportTemplateMatchThreshold = 0.8;
+
+    [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关
 
     [ObservableProperty]

@@ -13,6 +13,8 @@ public class NavigationInstance
 {
     private float _prevX = -1;
     private float _prevY = -1;
+    private float _teleportPriorX = -1;
+    private float _teleportPriorY = -1;
     private DateTime _captureTime = DateTime.MinValue;
     public void Reset()
     {
@@ -22,6 +24,12 @@ public class NavigationInstance
     public void SetPrevPosition(float x, float y)
     {
         (_prevX, _prevY) = (x, y);
+        (_teleportPriorX, _teleportPriorY) = (x, y);
+    }
+
+    public (float X, float Y) GetTeleportPositionPrior()
+    {
+        return (_teleportPriorX, _teleportPriorY);
     }
 
     public Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
