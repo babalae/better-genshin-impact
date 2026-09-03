@@ -22,8 +22,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double SafeMargin = 50d;
     private const double EarlyStopMargin = 40d;
     private const double EmaWeight = 0.4d;
-    private static double s_relativeMoveRatio;
-    private static double s_relativeMoveInitialStrength = double.NaN;
+    private const double InitialDragStrengthScale = 0.2d;
+    private const double ZoomButtonX = 47d;
+    private const double ZoomStartY = 468d;
+    private const double ZoomEndY = 612d;
+    private double _relativeMoveMultiplier = double.NaN;
+    private double _relativeMoveInitialStrength = double.NaN;
 
     private static readonly Rect2d[] DangerRects =
     [
@@ -37,9 +41,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
     private static readonly Rect2d SnezhnayaDangerRect = new(797, 984, 330, 96);
 
-    internal readonly record struct DragResult(double DeltaX, double DeltaY)
+    internal readonly record struct DragResult(
+        double InputDeltaX,
+        double InputDeltaY,
+        double CursorDeltaX,
+        double CursorDeltaY)
     {
-        public bool Moved => Math.Abs(DeltaX) + Math.Abs(DeltaY) >= 2d;
+        public bool Moved => Math.Abs(CursorDeltaX) + Math.Abs(CursorDeltaY) >= 2d;
     }
 
     public bool IsTargetSafelyClickable(
@@ -63,30 +71,23 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     public async Task<DragResult> DragAsync(double requestedDeltaX, double requestedDeltaY, string? country)
     {
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var initialDragStrength = double.IsFinite(config.ExperimentalTeleportInitialDragStrength)
+        var initialDragStrengthMultiplier = double.IsFinite(config.ExperimentalTeleportInitialDragStrength)
             ? Math.Clamp(
                 config.ExperimentalTeleportInitialDragStrength,
                 TpConfig.MinExperimentalTeleportInitialDragStrength,
                 TpConfig.MaxExperimentalTeleportInitialDragStrength)
             : TpConfig.DefaultExperimentalTeleportInitialDragStrength;
-        if (config.MapDragUseRelativeMove &&
-            (!double.IsFinite(s_relativeMoveInitialStrength) ||
-             Math.Abs(s_relativeMoveInitialStrength - initialDragStrength) > 1e-6d))
-        {
-            s_relativeMoveInitialStrength = initialDragStrength;
-            s_relativeMoveRatio = 0d;
-        }
+        var initialDragStrength = initialDragStrengthMultiplier * InitialDragStrengthScale;
+        EnsureRelativeMoveMultiplier(initialDragStrength);
 
         var moveRatio = config.MapDragUseRelativeMove
-            ? s_relativeMoveRatio > 0
-                ? 1d / s_relativeMoveRatio
-                : initialDragStrength
+            ? _relativeMoveMultiplier
             : 1d;
         var ratioSource = !config.MapDragUseRelativeMove
             ? "absolute"
-            : s_relativeMoveRatio > 0
-                ? "ema"
-                : "configured";
+            : Math.Abs(_relativeMoveMultiplier - initialDragStrength) <= 1e-6d
+                ? "configured"
+                : "ema";
         var desiredX = requestedDeltaX * moveRatio;
         var desiredY = requestedDeltaY * moveRatio;
         if (!TryCreateSafeRunway(
@@ -171,15 +172,65 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var inputScale = Math.Max(TaskContext.Instance().SystemInfo.ScaleTo1080PRatio, 1e-6d);
         var actualX = (cursorAfter.X - cursorBefore.X) / inputScale;
         var actualY = (cursorAfter.Y - cursorBefore.Y) / inputScale;
-        UpdateRelativeMoveRatio(end.X - start.X, end.Y - start.Y, actualX, actualY);
         Logger.LogDebug(
-            "实验传送拖动完成：intended=({IntendedX:0.0},{IntendedY:0.0}) actual=({ActualX:0.0},{ActualY:0.0}) calibratedRatio={CalibratedRatio:0.000}",
+            "实验传送拖动完成：input=({InputX:0.0},{InputY:0.0}) cursor=({CursorX:0.0},{CursorY:0.0}) multiplier={Multiplier:0.000}",
             end.X - start.X,
             end.Y - start.Y,
             actualX,
             actualY,
-            s_relativeMoveRatio);
-        return new DragResult(actualX, actualY);
+            _relativeMoveMultiplier);
+        return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY);
+    }
+
+    public void UpdateRelativeMoveMultiplier(
+        double inputX,
+        double inputY,
+        double actualMapScreenX,
+        double actualMapScreenY)
+    {
+        if (!config.MapDragUseRelativeMove)
+        {
+            return;
+        }
+
+        var initialStrengthMultiplier = double.IsFinite(config.ExperimentalTeleportInitialDragStrength)
+            ? Math.Clamp(
+                config.ExperimentalTeleportInitialDragStrength,
+                TpConfig.MinExperimentalTeleportInitialDragStrength,
+                TpConfig.MaxExperimentalTeleportInitialDragStrength)
+            : TpConfig.DefaultExperimentalTeleportInitialDragStrength;
+        EnsureRelativeMoveMultiplier(initialStrengthMultiplier * InitialDragStrengthScale);
+
+        var inputLength = Math.Sqrt(inputX * inputX + inputY * inputY);
+        var actualLength = Math.Sqrt(
+            actualMapScreenX * actualMapScreenX + actualMapScreenY * actualMapScreenY);
+        var directionDot = inputX * actualMapScreenX + inputY * actualMapScreenY;
+        if (inputLength < 20d || actualLength < 5d || directionDot <= 0d)
+        {
+            Logger.LogDebug(
+                "实验传送跳过拖动倍率样本：inputLength={InputLength:0.0} actualLength={ActualLength:0.0} directionDot={DirectionDot:0.0}",
+                inputLength,
+                actualLength,
+                directionDot);
+            return;
+        }
+
+        var observedMultiplier = inputLength / actualLength;
+        if (!double.IsFinite(observedMultiplier) || observedMultiplier is < 0.02d or > 1d)
+        {
+            Logger.LogDebug(
+                "实验传送跳过异常拖动倍率样本：observed={ObservedMultiplier:0.000}",
+                observedMultiplier);
+            return;
+        }
+
+        var previousMultiplier = _relativeMoveMultiplier;
+        _relativeMoveMultiplier = previousMultiplier * (1d - EmaWeight) + observedMultiplier * EmaWeight;
+        Logger.LogDebug(
+            "实验传送更新拖动倍率：previous={PreviousMultiplier:0.000} observed={ObservedMultiplier:0.000} next={NextMultiplier:0.000}",
+            previousMultiplier,
+            observedMultiplier,
+            _relativeMoveMultiplier);
     }
 
     public async Task AdjustMapZoomLevelAsync(double zoomLevel, double targetZoomLevel)
@@ -191,16 +242,9 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             return;
         }
 
-        var startY = config.ExperimentalTeleportZoomStartY;
-        var endY = config.ExperimentalTeleportZoomEndY;
-        if (startY >= endY)
-        {
-            throw new InvalidOperationException($"实验传送缩放滑轨坐标无效：start={startY}, end={endY}");
-        }
-
-        var initialY = startY + (endY - startY) * (zoomLevel - 1d) / 5d;
-        var targetY = startY + (endY - startY) * (targetZoomLevel - 1d) / 5d;
-        var buttonX = config.ExperimentalTeleportZoomButtonX + 10d;
+        var initialY = ZoomStartY + (ZoomEndY - ZoomStartY) * (zoomLevel - 1d) / 5d;
+        var targetY = ZoomStartY + (ZoomEndY - ZoomStartY) * (targetZoomLevel - 1d) / 5d;
+        var buttonX = ZoomButtonX + 10d;
         var realRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
         var realScale = Math.Max(1e-6d, realRect.Width / 1920d);
 
@@ -249,36 +293,39 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             while (Environment.TickCount64 < deadline)
             {
                 ct.ThrowIfCancellationRequested();
-                using var capture = CaptureToRectArea();
-                var roi = BuildStableRegion(capture.CacheGreyMat.Width, capture.CacheGreyMat.Height);
-                using var currentView = new Mat(capture.CacheGreyMat, roi);
-                using var current = currentView.Clone();
-                if (previous != null)
                 {
-                    using var difference = new Mat();
-                    Cv2.Absdiff(previous, current, difference);
-                    lastDifference = Cv2.Mean(difference).Val0;
-                    if (lastDifference <= threshold)
+                    using var capture = CaptureToRectArea();
+                    var roi = BuildStableRegion(capture.CacheGreyMat.Width, capture.CacheGreyMat.Height);
+                    using var currentView = new Mat(capture.CacheGreyMat, roi);
+                    using var current = currentView.Clone();
+                    if (previous != null)
                     {
-                        stableFrames++;
-                        if (stableFrames >= 2)
+                        using var difference = new Mat();
+                        Cv2.Absdiff(previous, current, difference);
+                        lastDifference = Cv2.Mean(difference).Val0;
+                        if (lastDifference <= threshold)
                         {
-                            Logger.LogDebug(
-                                "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} threshold={Threshold:0.000}",
-                                Environment.TickCount64 - startedAt,
-                                lastDifference,
-                                threshold);
-                            return;
+                            stableFrames++;
+                            if (stableFrames >= 2)
+                            {
+                                Logger.LogDebug(
+                                    "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} threshold={Threshold:0.000}",
+                                    Environment.TickCount64 - startedAt,
+                                    lastDifference,
+                                    threshold);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            stableFrames = 0;
                         }
                     }
-                    else
-                    {
-                        stableFrames = 0;
-                    }
+
+                    previous?.Dispose();
+                    previous = current.Clone();
                 }
 
-                previous?.Dispose();
-                previous = current.Clone();
                 await Delay(35, ct);
             }
         }
@@ -434,32 +481,18 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         User32.GetCursorPos(out point);
     }
 
-    private void UpdateRelativeMoveRatio(
-        double intendedX,
-        double intendedY,
-        double actualX,
-        double actualY)
+    private void EnsureRelativeMoveMultiplier(double initialDragStrength)
     {
         if (!config.MapDragUseRelativeMove)
         {
             return;
         }
 
-        var intended = Math.Abs(intendedX) >= Math.Abs(intendedY) ? intendedX : intendedY;
-        var actual = Math.Abs(intendedX) >= Math.Abs(intendedY) ? actualX : actualY;
-        if (Math.Abs(intended) < 20d)
+        if (!double.IsFinite(_relativeMoveInitialStrength) ||
+            Math.Abs(_relativeMoveInitialStrength - initialDragStrength) > 1e-6d)
         {
-            return;
+            _relativeMoveInitialStrength = initialDragStrength;
+            _relativeMoveMultiplier = initialDragStrength;
         }
-
-        var measured = Math.Abs(actual / intended);
-        if (measured is < 0.5d or > 3d)
-        {
-            return;
-        }
-
-        s_relativeMoveRatio = s_relativeMoveRatio > 0
-            ? s_relativeMoveRatio * (1d - EmaWeight) + measured * EmaWeight
-            : measured;
     }
 }

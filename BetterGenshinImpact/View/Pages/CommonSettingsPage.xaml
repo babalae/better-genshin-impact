@@ -1461,10 +1461,10 @@
                                       Text="{i18n:T 相对拖动初始力度倍率}" />
                         <ui:NumberBox Grid.Column="1"
                                       AcceptsExpression="False"
-                                      Maximum="3"
+                                      Maximum="5"
                                       MaxDecimalPlaces="2"
-                                      Minimum="0.5"
-                                      SmallChange="0.05"
+                                      Minimum="0.1"
+                                      SmallChange="0.1"
                                       SpinButtonPlacementMode="Hidden"
                                       TextAlignment="Right"
                                       ValidationMode="InvalidInputOverwritten"
@@ -1488,63 +1488,6 @@
                                       TextAlignment="Right"
                                       ValidationMode="InvalidInputOverwritten"
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportDragReleaseDelayMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 缩放滑块 X 坐标}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="300"
-                                      MaxDecimalPlaces="0"
-                                      Minimum="0"
-                                      SmallChange="1"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportZoomButtonX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 缩放滑轨起点 Y 坐标}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="1080"
-                                      MaxDecimalPlaces="0"
-                                      Minimum="0"
-                                      SmallChange="1"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportZoomStartY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 缩放滑轨终点 Y 坐标}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="1080"
-                                      MaxDecimalPlaces="0"
-                                      Minimum="0"
-                                      SmallChange="1"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportZoomEndY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                 </StackPanel>
 

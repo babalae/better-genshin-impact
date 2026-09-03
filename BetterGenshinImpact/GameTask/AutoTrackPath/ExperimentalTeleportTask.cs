@@ -19,7 +19,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -68,6 +67,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
     private readonly TpTask _host;
     private readonly ExperimentalTeleportDrag _drag;
     private readonly ExperimentalTeleportRegionAtlas _regionAtlas;
+    private readonly ExperimentalTeleportUiStateMachine _uiStateMachine;
 
     private ExperimentalTeleportTask(CancellationToken ct)
     {
@@ -75,7 +75,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         _config = TaskContext.Instance().Config.TpConfig;
         _host = new TpTask(ct);
         _drag = new ExperimentalTeleportDrag(_config, ct);
-        _regionAtlas = new ExperimentalTeleportRegionAtlas(_config, ct);
+        _regionAtlas = new ExperimentalTeleportRegionAtlas(_config);
+        _uiStateMachine = new ExperimentalTeleportUiStateMachine(_host, _regionAtlas, _config, ct);
     }
 
     public static async Task<(double, double)> Run(
@@ -126,7 +127,6 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             }
             catch (TpPointNotActivate ex)
             {
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(GetOperationDelay(300), _ct);
                 Logger.LogWarning("{Message}  重试", ex.Message);
             }
@@ -158,7 +158,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         bool force)
     {
         var navigationPrior = GetNavigationPrior(mapName);
-        await _host.OpenBigMapUi(1, mapName);
+        await _uiStateMachine.EnsureMapMainAsync(mapName);
         await _host.SwitchToGroundMapLayerIfNeeded();
 
         var target = ResolveTarget(tpX, tpY, mapName, force);
@@ -191,7 +191,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             mapName,
             force,
             finalZoomLevel,
-            _drag.AdjustMapZoomLevelAsync);
+            _drag.AdjustMapZoomLevelAsync,
+            _uiStateMachine);
         s_lastTarget = new Point2f((float)result.Item1, (float)result.Item2);
         s_lastMapName = mapName;
         return result;
@@ -265,15 +266,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
 
     private async Task SwitchAreaWithFallback(string areaName, string mapName)
     {
-        if (await _regionAtlas.TrySwitchAsync(areaName))
-        {
-            return;
-        }
-
-        Logger.LogDebug("实验传送地区图集未命中，回退 OCR：{Area}", areaName);
-        await _host.OpenBigMapUi(1, mapName);
-        await _host.SwitchToGroundMapLayerIfNeeded();
-        await _host.SwitchArea(areaName);
+        await _uiStateMachine.SwitchAreaAsync(areaName, mapName);
     }
 
     private async Task MoveTargetIntoClickableArea(TeleportTarget target, Point2f? initialPrior)
@@ -353,8 +346,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
 
             await _drag.WaitForStableMapAsync();
             var predictedCenter = new Point2f(
-                (float)(currentCenter.X + dragResult.DeltaX * currentZoom / _config.MapScaleFactor),
-                (float)(currentCenter.Y + dragResult.DeltaY * currentZoom / _config.MapScaleFactor));
+                (float)(currentCenter.X + dragResult.CursorDeltaX * currentZoom / _config.MapScaleFactor),
+                (float)(currentCenter.Y + dragResult.CursorDeltaY * currentZoom / _config.MapScaleFactor));
             var recognizedCenter = TryRecognizeCenter(target.MapName, predictedCenter);
             if (recognizedCenter == null)
             {
@@ -362,11 +355,25 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 return;
             }
 
+            var actualMapScreenX =
+                (recognizedCenter.Value.X - currentCenter.X) * _config.MapScaleFactor / currentZoom;
+            var actualMapScreenY =
+                (recognizedCenter.Value.Y - currentCenter.Y) * _config.MapScaleFactor / currentZoom;
+            _drag.UpdateRelativeMoveMultiplier(
+                dragResult.InputDeltaX,
+                dragResult.InputDeltaY,
+                actualMapScreenX,
+                actualMapScreenY);
+
             Logger.LogDebug(
-                "实验传送拖动定位完成：iteration={Iteration} moved=({MovedX:0.0},{MovedY:0.0}) predicted=({PredictedX:0.0},{PredictedY:0.0}) recognized=({RecognizedX:0.0},{RecognizedY:0.0})",
+                "实验传送拖动定位完成：iteration={Iteration} input=({InputX:0.0},{InputY:0.0}) cursor=({CursorX:0.0},{CursorY:0.0}) map=({MapX:0.0},{MapY:0.0}) predicted=({PredictedX:0.0},{PredictedY:0.0}) recognized=({RecognizedX:0.0},{RecognizedY:0.0})",
                 iteration + 1,
-                dragResult.DeltaX,
-                dragResult.DeltaY,
+                dragResult.InputDeltaX,
+                dragResult.InputDeltaY,
+                dragResult.CursorDeltaX,
+                dragResult.CursorDeltaY,
+                actualMapScreenX,
+                actualMapScreenY,
                 predictedCenter.X,
                 predictedCenter.Y,
                 recognizedCenter.Value.X,
