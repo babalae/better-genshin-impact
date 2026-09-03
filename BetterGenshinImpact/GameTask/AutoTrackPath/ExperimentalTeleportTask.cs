@@ -312,7 +312,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                     TpConfig.MinExperimentalTeleportDragDistanceCorrection,
                     TpConfig.MaxExperimentalTeleportDragDistanceCorrection)
                 : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
-            // 先修正理论地图位移，DragAsync 再使用 EMA 将地图位移换算为鼠标输入。
+            // 先修正理论地图位移，DragAsync 再使用配置的固定倍率换算为鼠标输入。
             var deltaX = _config.MapScaleFactor * (target.X - currentCenter.X) / currentZoom * distanceCorrection;
             var deltaY = _config.MapScaleFactor * (target.Y - currentCenter.Y) / currentZoom * distanceCorrection;
             var mouseDistance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -353,7 +353,6 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var dragResult = await _drag.DragAsync(deltaX, deltaY, target.Country);
             if (!dragResult.Moved)
             {
-                _drag.ReportMapMovementOutcome(false);
                 LogDetailed("实验传送未找到可用拖动跑道，将交由主线定位兜底");
                 return;
             }
@@ -378,13 +377,6 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var movementDirection =
                 dragResult.InputDeltaX * actualMapScreenX + dragResult.InputDeltaY * actualMapScreenY;
             var movementWasValid = actualMapScreenLength >= 5d && movementDirection > 0d;
-            _drag.ReportMapMovementOutcome(movementWasValid);
-            _drag.UpdateRelativeMoveMultiplier(
-                dragResult.InputDeltaX,
-                dragResult.InputDeltaY,
-                actualMapScreenX,
-                actualMapScreenY);
-
             LogDetailed(
                 "实验传送拖动定位完成：iteration={Iteration} input=({InputX:0.0},{InputY:0.0}) " +
                 "cursor=({CursorX:0.0},{CursorY:0.0}) map=({MapX:0.0},{MapY:0.0}) mapDistance={MapDistance:0.0} " +
@@ -421,15 +413,12 @@ internal sealed class ExperimentalTeleportTask : IDisposable
     private void LogExperimentalConfigSnapshot()
     {
         LogDetailed(
-            "实验传送配置快照：relativeMove={RelativeMove} zoomEnabled={ZoomEnabled} mapScale={MapScale:0.000} " +
+            "实验传送配置快照：inputMode=absolute-screen zoomEnabled={ZoomEnabled} mapScale={MapScale:0.000} " +
             "precision={Precision:0.000} maxIterations={MaxIterations} zoomOutDistance={ZoomOutDistance} zoomInDistance={ZoomInDistance} " +
             "initialStrength={InitialStrength:0.000} initialStrengthScale={InitialStrengthScale:0.000} distanceCorrection={DistanceCorrection:0.000} " +
-            "emaWeight={EmaWeight:0.000} lossSlowdown={LossSlowdown:0.000} recovery={Recovery:0.000} " +
-            "maxStepDistance={MaxStepDistance} maxDragSteps={MaxDragSteps} stepProfile={StepProfile:0.000} " +
-            "stepInterval={StepInterval}ms stateInterval={StateInterval}ms stateTimeout={StateTimeout}ms " +
+            "maxStepDistance={MaxStepDistance} stepInterval={StepInterval}ms stateInterval={StateInterval}ms stateTimeout={StateTimeout}ms " +
             "operationInterval={OperationInterval}ms stabilityInterval={StabilityInterval}ms stabilityTimeout={StabilityTimeout}ms " +
             "baseOperationDelay={BaseOperationDelay}ms detailedLogs={DetailedLogs}",
-            _config.MapDragUseRelativeMove,
             _config.MapZoomEnabled,
             _config.MapScaleFactor,
             _config.PrecisionThreshold,
@@ -439,12 +428,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             _config.ExperimentalTeleportInitialDragStrength,
             _config.ExperimentalTeleportInitialDragStrengthScale,
             _config.ExperimentalTeleportDragDistanceCorrection,
-            _config.ExperimentalTeleportEmaWeight,
-            _config.ExperimentalTeleportInputLossSlowdownFactor,
-            _config.ExperimentalTeleportInputRecoveryFactor,
             _config.ExperimentalTeleportMaxSingleStepDistancePixels,
-            _config.ExperimentalTeleportMaxDragSteps,
-            _config.ExperimentalTeleportStepProfileFactor,
             _config.ExperimentalTeleportDragStepIntervalMilliseconds,
             _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
             _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,

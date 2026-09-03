@@ -1420,25 +1420,6 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center"
                                       FontTypography="Body"
-                                      Text="{i18n:T EMA 权重}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="0.95"
-                                      MaxDecimalPlaces="2"
-                                      Minimum="0.05"
-                                      SmallChange="0.05"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportEmaWeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
                                       Text="{i18n:T 单步最大输入距离（像素）}" />
                         <ui:NumberBox Grid.Column="1"
                                       AcceptsExpression="False"
@@ -1450,82 +1431,6 @@
                                       TextAlignment="Right"
                                       ValidationMode="InvalidInputOverwritten"
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportMaxSingleStepDistancePixels, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 单次最大拖动步数}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="240"
-                                      MaxDecimalPlaces="0"
-                                      Minimum="36"
-                                      SmallChange="1"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportMaxDragSteps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 步进曲线系数}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="2"
-                                      MaxDecimalPlaces="2"
-                                      Minimum="1"
-                                      SmallChange="0.1"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportStepProfileFactor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 输入丢失减速系数}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="3"
-                                      MaxDecimalPlaces="2"
-                                      Minimum="1"
-                                      SmallChange="0.1"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportInputLossSlowdownFactor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center"
-                                      FontTypography="Body"
-                                      Text="{i18n:T 输入正常恢复系数}" />
-                        <ui:NumberBox Grid.Column="1"
-                                      AcceptsExpression="False"
-                                      Maximum="1"
-                                      MaxDecimalPlaces="2"
-                                      Minimum="0.5"
-                                      SmallChange="0.05"
-                                      SpinButtonPlacementMode="Hidden"
-                                      TextAlignment="Right"
-                                      ValidationMode="InvalidInputOverwritten"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportInputRecoveryFactor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Grid Margin="0,4">
                         <Grid.ColumnDefinitions>
