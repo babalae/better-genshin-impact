@@ -195,7 +195,9 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             force,
             finalZoomLevel,
             _drag.AdjustMapZoomLevelAsync,
-            _uiStateMachine);
+            _uiStateMachine,
+            () => RecoverTargetAfterZoomAsync(target),
+            _drag.WaitForStableMapAsync);
         s_lastTarget = new Point2f((float)result.Item1, (float)result.Item2);
         s_lastMapName = mapName;
         return result;
@@ -409,6 +411,11 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         Logger.LogWarning(
             "实验传送快速定位达到轮次上限，将交由主线定位兜底：maxIterations={MaxIterations}",
             Math.Min(_config.MaxIterations, MaximumFastDragIterations));
+    }
+
+    private Task RecoverTargetAfterZoomAsync(TeleportTarget target)
+    {
+        return MoveTargetIntoClickableArea(target, null);
     }
 
     private void LogExperimentalConfigSnapshot()

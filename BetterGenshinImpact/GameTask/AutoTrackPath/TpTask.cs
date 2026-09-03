@@ -515,7 +515,9 @@ public class TpTask
         bool force,
         double finalZoomLevel,
         Func<double, double, Task> zoomAdjuster,
-        ExperimentalTeleportUiStateMachine uiStateMachine)
+        ExperimentalTeleportUiStateMachine uiStateMachine,
+        Func<Task>? experimentalMapRecovery = null,
+        Func<Task>? experimentalMapStabilityWait = null)
     {
         _experimentalZoomAdjuster = zoomAdjuster;
         _allowExperimentalRawMapClickFallback = true;
@@ -529,7 +531,9 @@ public class TpTask
                 target.TargetTp,
                 target.X,
                 target.Y,
-                finalZoomLevel);
+                finalZoomLevel,
+                experimentalMapRecovery,
+                experimentalMapStabilityWait);
             var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
             await uiStateMachine.ConfirmTeleportAsync(
                 target.MapName,
@@ -672,7 +676,9 @@ public class TpTask
             target.TargetTp,
             target.X,
             target.Y,
-            target.FinalClickZoomLevel);
+            target.FinalClickZoomLevel,
+            null,
+            null);
     }
 
     private async Task<TeleportClickView> PrepareTeleportClickView(
@@ -680,7 +686,9 @@ public class TpTask
         GiTpPosition? targetTp,
         double targetX,
         double targetY,
-        double finalZoomLevel)
+        double finalZoomLevel,
+        Func<Task>? experimentalMapRecovery,
+        Func<Task>? experimentalMapStabilityWait)
     {
         var moveZoomAdjusted = false;
         var stopAtDisplayZoomLevel = false;
@@ -692,12 +700,43 @@ public class TpTask
             if (evaluation.View != null)
             {
                 var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
-                if (stopAtDisplayZoomLevel || !ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel))
+                var shouldAdjustFinalZoom = !stopAtDisplayZoomLevel &&
+                                            ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel);
+                if (!shouldAdjustFinalZoom)
                 {
+                    if (experimentalMapRecovery != null &&
+                        !IsExperimentalTargetIconVisible(mapName, targetTp, evaluation.View))
+                    {
+                        var nextZoomLevel = GetExperimentalIconRecoveryZoomLevel(
+                            evaluation.View.ZoomLevel,
+                            targetFinalZoomLevel,
+                            mapName);
+                        if (!IsZoomCloseEnough(evaluation.View.ZoomLevel, nextZoomLevel))
+                        {
+                            LogExperimentalDetailed(
+                                "实验传送目标图标未显示，继续缩放：current={CurrentZoom:0.00} next={NextZoom:0.00} " +
+                                "targetFinal={TargetFinalZoom:0.00}",
+                                evaluation.View.ZoomLevel,
+                                nextZoomLevel,
+                                targetFinalZoomLevel);
+                            await AdjustTeleportZoomLevelTo(nextZoomLevel);
+                            if (experimentalMapStabilityWait != null)
+                            {
+                                await experimentalMapStabilityWait();
+                            }
+                            continue;
+                        }
+
+                        LogExperimentalDetailed(
+                            "实验传送目标图标未显示但已达到最小缩放，保留当前点选：zoom={ZoomLevel:0.00}",
+                            evaluation.View.ZoomLevel);
+                    }
+
                     return evaluation.View;
                 }
 
-                if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
+                if (experimentalMapRecovery == null &&
+                    !IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
                     await Delay(TeleportClickableAreaRetryDelayMs, ct);
@@ -705,6 +744,10 @@ public class TpTask
                 }
 
                 var adjustedZoomLevel = await AdjustTeleportZoomLevelTo(targetFinalZoomLevel);
+                if (experimentalMapStabilityWait != null)
+                {
+                    await experimentalMapStabilityWait();
+                }
                 if (!IsZoomCloseEnough(adjustedZoomLevel, targetFinalZoomLevel))
                 {
                     if (!IsTeleportPointDisplayZoomLevelReached(adjustedZoomLevel, mapName))
@@ -734,6 +777,21 @@ public class TpTask
                     lastEvaluation?.ZoomLevel ?? GetCurrentBigMapZoomLevel(),
                     lastEvaluation?.FailureReason ?? "未知");
                 throw new Exception("目标传送点位于不可点击区域，传送失败");
+            }
+
+            if (experimentalMapRecovery != null)
+            {
+                LogExperimentalDetailed(
+                    "实验传送缩放/点选后目标不在安全区，重新拖动定位：click=({ClickX:0.0},{ClickY:0.0}) " +
+                    "radius={Radius:0.0} zoom={ZoomLevel:0.00} reason={Reason}",
+                    evaluation.ClickX,
+                    evaluation.ClickY,
+                    evaluation.RequiredVisibleRadius,
+                    evaluation.ZoomLevel,
+                    evaluation.FailureReason);
+                await experimentalMapRecovery();
+                await Delay(TeleportClickableAreaRetryDelayMs, ct);
+                continue;
             }
 
             if (!moveZoomAdjusted)
@@ -846,6 +904,60 @@ public class TpTask
             ClickX = clickX,
             ClickY = clickY,
         };
+    }
+
+    private bool IsExperimentalTargetIconVisible(
+        string mapName,
+        GiTpPosition? targetTp,
+        TeleportClickView clickView)
+    {
+        if (targetTp == null)
+        {
+            return true;
+        }
+
+        var targetIconTypes = GetMapIconTypesForTargetType(targetTp.Type ?? string.Empty)
+            .ToHashSet(StringComparer.Ordinal);
+        if (targetIconTypes.Count == 0)
+        {
+            return true;
+        }
+
+        using var capture = CaptureToRectArea();
+        var searchRect = new Rect(0, 0, capture.Width, capture.Height);
+        var searchRadius = Math.Max(45d * _zoomOutMax1080PRatio, 24d);
+        var icons = GetMapIconsInRect(
+            capture,
+            searchRect,
+            clickView.ClickX,
+            clickView.ClickY,
+            searchRadius,
+            targetIconTypes);
+        LogExperimentalDetailed(
+            "实验传送目标图标可见性：map={MapName} targetId={TargetId} type={TargetType} " +
+            "click=({ClickX:0.0},{ClickY:0.0}) searchRadius={SearchRadius:0.0} matches={Matches}",
+            mapName,
+            targetTp.Id,
+            targetTp.Type ?? "未指定",
+            clickView.ClickX,
+            clickView.ClickY,
+            searchRadius,
+            icons.Count);
+        return icons.Count > 0;
+    }
+
+    private double GetExperimentalIconRecoveryZoomLevel(
+        double currentZoomLevel,
+        double targetFinalZoomLevel,
+        string mapName)
+    {
+        var minimumZoomLevel = Math.Max(
+            MinTeleportZoomLevel,
+            Math.Min(targetFinalZoomLevel, GetDisplayTpPointZoomLevel(mapName)));
+        var candidateZoomLevel = Math.Max(
+            minimumZoomLevel,
+            currentZoomLevel - MapPositionRecognitionRecoveryZoomStep);
+        return Math.Min(currentZoomLevel, candidateZoomLevel);
     }
 
     private bool ShouldAdjustTeleportFinalZoom(TeleportClickView clickView, double targetZoomLevel)
@@ -1871,6 +1983,14 @@ public class TpTask
         return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
             ? MoonCanonDisplayTpPointZoomLevel
             : DefaultDisplayTpPointZoomLevel;
+    }
+
+    private void LogExperimentalDetailed(string message, params object?[] args)
+    {
+        if (_tpConfig.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(message, args);
+        }
     }
 
     private static int GetBigMapOpenTimeoutMilliseconds(string? mapName)
