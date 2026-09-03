@@ -58,10 +58,17 @@ public sealed class OverlayMetricsService : IDisposable
 
     public OverlayMetricsSnapshot CurrentSnapshot { get; private set; } = OverlayMetricsSnapshot.Empty;
 
+    /// <summary>
+    /// 性能指标遮罩开关的缓存，所有采样入口的统一门控：
+    /// 未勾选时不加锁、不读配置、不发布；开关变化经 PropertyChanged 同步到本属性。
+    /// </summary>
+    public bool IsEnabled { get; private set; }
+
     public OverlayMetricsService()
     {
         _maskWindowConfig = _configService?.Get().MaskWindowConfig;
         _maskWindowConfig?.EnsureOverlayMetricItems();
+        IsEnabled = _maskWindowConfig?.ShowOverlayMetrics == true;
         if (_maskWindowConfig != null)
         {
             _maskWindowConfig.PropertyChanged += MaskWindowConfigOnPropertyChanged;
@@ -70,6 +77,11 @@ public sealed class OverlayMetricsService : IDisposable
 
     public void UpdateGameFps(double fps)
     {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         lock (_locker)
         {
             _gameFps = fps;
@@ -80,6 +92,11 @@ public sealed class OverlayMetricsService : IDisposable
 
     public void RecordSkippedTick()
     {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         lock (_locker)
         {
             _skippedTicks++;
@@ -90,6 +107,11 @@ public sealed class OverlayMetricsService : IDisposable
 
     public void RecordDispatcherTick(double processingCostMs, double captureCostMs, double triggerCostMs)
     {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         lock (_locker)
         {
             RecordPeakProcessingCost(processingCostMs, DateTime.UtcNow);
@@ -111,7 +133,34 @@ public sealed class OverlayMetricsService : IDisposable
         if (e.PropertyName is nameof(MaskWindowConfig.ShowOverlayMetrics)
             or nameof(MaskWindowConfig.OverlayMetricItems))
         {
+            SyncEnabledState();
             TryPublish(force: true, refreshHardware: false);
+        }
+    }
+
+    private void SyncEnabledState()
+    {
+        var enabled = _maskWindowConfig?.ShowOverlayMetrics == true;
+        if (IsEnabled == enabled)
+        {
+            return;
+        }
+
+        IsEnabled = enabled;
+        if (!enabled)
+        {
+            // 关闭时清空瞬态采样值，重新打开后由新采样自然回填，避免短暂展示关闭前的旧数据。
+            lock (_locker)
+            {
+                _processingCostSamples.Clear();
+                _gameFps = null;
+                _processingCostMs = null;
+                _peakProcessingCostMs = null;
+                _captureCostMs = null;
+                _triggerCostMs = null;
+                _skippedTicks = 0;
+                _lastPublishedSkippedTicks = 0;
+            }
         }
     }
 
