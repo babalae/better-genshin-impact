@@ -23,6 +23,9 @@ public class NotificationEvent(string code, string msg)
     public static readonly NotificationEvent DomainStart = new("domain.start", "自动秘境启动");
     public static readonly NotificationEvent DomainEnd = new("domain.end", "自动秘境结束");
     public static readonly NotificationEvent DomainRetry = new("domain.retry", "自动秘境重试");
+    public static readonly NotificationEvent LeyLineStart = new("leyline.start", "自动地脉花启动");
+    public static readonly NotificationEvent LeyLineEnd = new("leyline.end", "自动地脉花结束");
+    public static readonly NotificationEvent LeyLineInfo = new("leyline.info", "自动地脉花详情");
     public static readonly NotificationEvent TaskCancel = new("task.cancel", "任务启动");
     public static readonly NotificationEvent TaskError = new("task.error", "任务错误");
     public static readonly NotificationEvent GroupStart = new("group.start", "配置组启动");
