@@ -134,6 +134,10 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
         var inputDistance = Math.Sqrt(
             Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+        var requestedDistance = Math.Sqrt(
+            requestedDeltaX * requestedDeltaX + requestedDeltaY * requestedDeltaY);
+        var desiredDistance = Math.Sqrt(desiredX * desiredX + desiredY * desiredY);
+        var runwayRatio = desiredDistance <= 1e-6d ? 0d : inputDistance / desiredDistance;
         var maxSingleStepDistance = Math.Clamp(
             config.ExperimentalTeleportMaxSingleStepDistancePixels,
             TpConfig.MinExperimentalTeleportMaxSingleStepDistancePixels,
@@ -156,6 +160,38 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var movedY = 0d;
         var stepDelay = GetAdaptiveStepInterval();
         var releaseDelay = GetOperationInterval();
+        LogDetailed(
+            "实验传送拖动参数：theory=({TheoryX:0.0},{TheoryY:0.0}) theoryDistance={TheoryDistance:0.0} " +
+            "emaMultiplier={EmaMultiplier:0.000} emaSource={EmaSource} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
+            "desiredDistance={DesiredDistance:0.0} runwayDistance={RunwayDistance:0.0} runwayRatio={RunwayRatio:0.000} " +
+            "runwayDelta=({RunwayDeltaX:0.0},{RunwayDeltaY:0.0}) " +
+            "maxStepDistance={MaxStepDistance:0.0} profileFactor={ProfileFactor:0.000} steps={Steps} " +
+            "configuredStepDelay={ConfiguredStepDelay}ms adaptiveStepMultiplier={AdaptiveStepMultiplier:0.000} " +
+            "effectiveStepDelay={EffectiveStepDelay}ms operationDelay={OperationDelay}ms releaseDelay={ReleaseDelay}ms",
+            requestedDeltaX,
+            requestedDeltaY,
+            requestedDistance,
+            moveRatio,
+            ratioSource,
+            desiredX,
+            desiredY,
+            desiredDistance,
+            inputDistance,
+            runwayRatio,
+            end.X - start.X,
+            end.Y - start.Y,
+            maxSingleStepDistance,
+            stepProfileFactor,
+            steps,
+            Math.Clamp(
+                config.ExperimentalTeleportDragStepIntervalMilliseconds,
+                TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
+                TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds),
+            _adaptiveStepIntervalMultiplier,
+            stepDelay,
+            GetOperationInterval(),
+            releaseDelay);
+        var dragStartedAt = Environment.TickCount64;
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
@@ -194,13 +230,24 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var inputScale = Math.Max(TaskContext.Instance().SystemInfo.ScaleTo1080PRatio, 1e-6d);
         var actualX = (cursorAfter.X - cursorBefore.X) / inputScale;
         var actualY = (cursorAfter.Y - cursorBefore.Y) / inputScale;
+        var actualCursorDistance = Math.Sqrt(actualX * actualX + actualY * actualY);
+        var plannedInputDistance = inputDistance;
+        var inputCompletionRatio = plannedInputDistance <= 1e-6d
+            ? 0d
+            : actualCursorDistance / plannedInputDistance;
         LogDetailed(
-            "实验传送拖动完成：input=({InputX:0.0},{InputY:0.0}) cursor=({CursorX:0.0},{CursorY:0.0}) multiplier={Multiplier:0.000}",
+            "实验传送拖动完成：input=({InputX:0.0},{InputY:0.0}) plannedDistance={PlannedDistance:0.0} " +
+            "cursor=({CursorX:0.0},{CursorY:0.0}) actualDistance={ActualDistance:0.0} completionRatio={CompletionRatio:0.000} " +
+            "multiplier={Multiplier:0.000} elapsed={ElapsedMilliseconds}ms",
             end.X - start.X,
             end.Y - start.Y,
+            plannedInputDistance,
             actualX,
             actualY,
-            _relativeMoveMultiplier);
+            actualCursorDistance,
+            inputCompletionRatio,
+            _relativeMoveMultiplier,
+            Environment.TickCount64 - dragStartedAt);
         return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY);
     }
 
@@ -282,26 +329,45 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 TpConfig.MaxExperimentalTeleportInputRecoveryFactor)
             : TpConfig.DefaultExperimentalTeleportInputRecoveryFactor;
 
+        var configuredStepInterval = Math.Clamp(
+            config.ExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+        var previousMultiplier = _adaptiveStepIntervalMultiplier;
         if (moved)
         {
             _adaptiveStepIntervalMultiplier = Math.Max(
                 1d,
                 _adaptiveStepIntervalMultiplier * recoveryFactor);
+            LogDetailed(
+                "实验传送地图移动有效，自适应步进恢复：moved={Moved} previousMultiplier={PreviousMultiplier:0.000} " +
+                "recoveryFactor={RecoveryFactor:0.000} multiplier={Multiplier:0.000} configuredStepDelay={ConfiguredStepDelay}ms " +
+                "effectiveStepDelay={EffectiveStepDelay}ms",
+                moved,
+                previousMultiplier,
+                recoveryFactor,
+                _adaptiveStepIntervalMultiplier,
+                configuredStepInterval,
+                GetAdaptiveStepInterval());
             return;
         }
 
-        var configuredStepInterval = Math.Clamp(
-            config.ExperimentalTeleportDragStepIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
         var maximumMultiplier = TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds /
                                 (double)configuredStepInterval;
         _adaptiveStepIntervalMultiplier = Math.Min(
             maximumMultiplier,
             _adaptiveStepIntervalMultiplier * slowdownFactor);
         LogDetailed(
-            "实验传送检测到地图未移动，增加拖动步进间隔：multiplier={Multiplier:0.000}",
-            _adaptiveStepIntervalMultiplier);
+            "实验传送检测到地图未移动，增加拖动步进间隔：moved={Moved} previousMultiplier={PreviousMultiplier:0.000} " +
+            "slowdownFactor={SlowdownFactor:0.000} multiplier={Multiplier:0.000} configuredStepDelay={ConfiguredStepDelay}ms " +
+            "effectiveStepDelay={EffectiveStepDelay}ms maximumMultiplier={MaximumMultiplier:0.000}",
+            moved,
+            previousMultiplier,
+            slowdownFactor,
+            _adaptiveStepIntervalMultiplier,
+            configuredStepInterval,
+            GetAdaptiveStepInterval(),
+            maximumMultiplier);
     }
 
     public async Task AdjustMapZoomLevelAsync(double zoomLevel, double targetZoomLevel)
@@ -381,10 +447,15 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                             if (stableFrames >= 2)
                             {
                                 LogDetailed(
-                                    "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} threshold={Threshold:0.000}",
+                                    "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} " +
+                                    "threshold={Threshold:0.000} stableFrames={StableFrames} detectionInterval={DetectionInterval}ms " +
+                                    "timeout={Timeout}ms",
                                     Environment.TickCount64 - startedAt,
                                     lastDifference,
-                                    threshold);
+                                    threshold,
+                                    stableFrames,
+                                    detectionInterval,
+                                    timeout);
                                 return;
                             }
                         }
@@ -407,10 +478,15 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         }
 
         LogDetailed(
-            "实验传送地图稳定等待达到上限：timeout={TimeoutMilliseconds}ms lastDifference={Difference:0.000} threshold={Threshold:0.000}",
+            "实验传送地图稳定等待达到上限：elapsed={ElapsedMilliseconds}ms timeout={TimeoutMilliseconds}ms " +
+            "lastDifference={Difference:0.000} threshold={Threshold:0.000} stableFrames={StableFrames} " +
+            "detectionInterval={DetectionInterval}ms",
+            Environment.TickCount64 - startedAt,
             timeout,
             lastDifference,
-            threshold);
+            threshold,
+            stableFrames,
+            detectionInterval);
     }
 
     private static bool TryCreateSafeRunway(

@@ -392,9 +392,18 @@ internal sealed class ExperimentalTeleportUiStateMachine
         var interval = GetStateRecognitionInterval();
         var stopwatch = Stopwatch.StartNew();
         var detectedState = DetectCurrentState(context);
+        var pollCount = 1;
+        var lastLoggedState = detectedState;
+        LogDetailed(
+            "实验传送状态检测：operation={Operation} expected={ExpectedState} detected={DetectedState} poll={PollCount} elapsed={ElapsedMilliseconds}ms",
+            operation,
+            expectedState,
+            detectedState,
+            pollCount,
+            stopwatch.ElapsedMilliseconds);
         if (detectedState == expectedState)
         {
-            LogExpectedStateReached(operation, expectedState, stopwatch.ElapsedMilliseconds);
+            LogExpectedStateReached(operation, expectedState, stopwatch.ElapsedMilliseconds, pollCount);
             return detectedState;
         }
 
@@ -410,19 +419,36 @@ internal sealed class ExperimentalTeleportUiStateMachine
             var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
             await Delay(Math.Min(interval, remaining), _cancellationToken);
             detectedState = DetectCurrentState(context);
+            pollCount++;
+            if (detectedState != lastLoggedState)
+            {
+                LogDetailed(
+                    "实验传送状态检测结果变化：operation={Operation} expected={ExpectedState} detected={DetectedState} " +
+                    "poll={PollCount} elapsed={ElapsedMilliseconds}ms",
+                    operation,
+                    expectedState,
+                    detectedState,
+                    pollCount,
+                    stopwatch.ElapsedMilliseconds);
+                lastLoggedState = detectedState;
+            }
             if (detectedState == expectedState)
             {
-                LogExpectedStateReached(operation, expectedState, stopwatch.ElapsedMilliseconds);
+                LogExpectedStateReached(operation, expectedState, stopwatch.ElapsedMilliseconds, pollCount);
                 return detectedState;
             }
         }
 
         LogDetailed(
-            "实验传送等待预期状态超时：operation={Operation} expected={ExpectedState} accepted={DetectedState} timeout={TimeoutMilliseconds}ms",
+            "实验传送等待预期状态超时：operation={Operation} expected={ExpectedState} accepted={DetectedState} " +
+            "timeout={TimeoutMilliseconds}ms elapsed={ElapsedMilliseconds}ms interval={IntervalMilliseconds}ms polls={PollCount}",
             operation,
             expectedState,
             detectedState,
-            timeout);
+            timeout,
+            stopwatch.ElapsedMilliseconds,
+            interval,
+            pollCount);
         return detectedState;
     }
 
@@ -571,13 +597,17 @@ internal sealed class ExperimentalTeleportUiStateMachine
     private void LogExpectedStateReached(
         string operation,
         ExperimentalTeleportUiState expectedState,
-        long elapsedMilliseconds)
+        long elapsedMilliseconds,
+        int pollCount)
     {
         LogDetailed(
-            "实验传送达到预期状态：operation={Operation} state={State} elapsed={ElapsedMilliseconds}ms",
+            "实验传送达到预期状态：operation={Operation} state={State} elapsed={ElapsedMilliseconds}ms " +
+            "interval={IntervalMilliseconds}ms polls={PollCount}",
             operation,
             expectedState,
-            elapsedMilliseconds);
+            elapsedMilliseconds,
+            GetStateRecognitionInterval(),
+            pollCount);
     }
 
     private int GetOperationDelay(int baseDelay)

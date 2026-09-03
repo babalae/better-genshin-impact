@@ -159,6 +159,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         string mapName,
         bool force)
     {
+        LogExperimentalConfigSnapshot();
         var navigationPrior = GetNavigationPrior(mapName);
         await _uiStateMachine.EnsureMapMainAsync(mapName);
         await _host.SwitchToGroundMapLayerIfNeeded();
@@ -374,7 +375,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 actualMapScreenX * actualMapScreenX + actualMapScreenY * actualMapScreenY);
             var movementDirection =
                 dragResult.InputDeltaX * actualMapScreenX + dragResult.InputDeltaY * actualMapScreenY;
-            _drag.ReportMapMovementOutcome(actualMapScreenLength >= 5d && movementDirection > 0d);
+            var movementWasValid = actualMapScreenLength >= 5d && movementDirection > 0d;
+            _drag.ReportMapMovementOutcome(movementWasValid);
             _drag.UpdateRelativeMoveMultiplier(
                 dragResult.InputDeltaX,
                 dragResult.InputDeltaY,
@@ -382,7 +384,10 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 actualMapScreenY);
 
             LogDetailed(
-                "实验传送拖动定位完成：iteration={Iteration} input=({InputX:0.0},{InputY:0.0}) cursor=({CursorX:0.0},{CursorY:0.0}) map=({MapX:0.0},{MapY:0.0}) predicted=({PredictedX:0.0},{PredictedY:0.0}) recognized=({RecognizedX:0.0},{RecognizedY:0.0})",
+                "实验传送拖动定位完成：iteration={Iteration} input=({InputX:0.0},{InputY:0.0}) " +
+                "cursor=({CursorX:0.0},{CursorY:0.0}) map=({MapX:0.0},{MapY:0.0}) mapDistance={MapDistance:0.0} " +
+                "directionDot={DirectionDot:0.0} validMovement={ValidMovement} predicted=({PredictedX:0.0},{PredictedY:0.0}) " +
+                "recognized=({RecognizedX:0.0},{RecognizedY:0.0})",
                 iteration + 1,
                 dragResult.InputDeltaX,
                 dragResult.InputDeltaY,
@@ -390,6 +395,9 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 dragResult.CursorDeltaY,
                 actualMapScreenX,
                 actualMapScreenY,
+                actualMapScreenLength,
+                movementDirection,
+                movementWasValid,
                 predictedCenter.X,
                 predictedCenter.Y,
                 recognizedCenter.Value.X,
@@ -401,6 +409,43 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         Logger.LogWarning(
             "实验传送快速定位达到轮次上限，将交由主线定位兜底：maxIterations={MaxIterations}",
             Math.Min(_config.MaxIterations, MaximumFastDragIterations));
+    }
+
+    private void LogExperimentalConfigSnapshot()
+    {
+        LogDetailed(
+            "实验传送配置快照：relativeMove={RelativeMove} zoomEnabled={ZoomEnabled} mapScale={MapScale:0.000} " +
+            "precision={Precision:0.000} maxIterations={MaxIterations} zoomOutDistance={ZoomOutDistance} zoomInDistance={ZoomInDistance} " +
+            "initialStrength={InitialStrength:0.000} initialStrengthScale={InitialStrengthScale:0.000} distanceCorrection={DistanceCorrection:0.000} " +
+            "emaWeight={EmaWeight:0.000} lossSlowdown={LossSlowdown:0.000} recovery={Recovery:0.000} " +
+            "maxStepDistance={MaxStepDistance} maxDragSteps={MaxDragSteps} stepProfile={StepProfile:0.000} " +
+            "stepInterval={StepInterval}ms stateInterval={StateInterval}ms stateTimeout={StateTimeout}ms " +
+            "operationInterval={OperationInterval}ms stabilityInterval={StabilityInterval}ms stabilityTimeout={StabilityTimeout}ms " +
+            "baseOperationDelay={BaseOperationDelay}ms detailedLogs={DetailedLogs}",
+            _config.MapDragUseRelativeMove,
+            _config.MapZoomEnabled,
+            _config.MapScaleFactor,
+            _config.PrecisionThreshold,
+            _config.MaxIterations,
+            _config.MapZoomOutDistance,
+            _config.MapZoomInDistance,
+            _config.ExperimentalTeleportInitialDragStrength,
+            _config.ExperimentalTeleportInitialDragStrengthScale,
+            _config.ExperimentalTeleportDragDistanceCorrection,
+            _config.ExperimentalTeleportEmaWeight,
+            _config.ExperimentalTeleportInputLossSlowdownFactor,
+            _config.ExperimentalTeleportInputRecoveryFactor,
+            _config.ExperimentalTeleportMaxSingleStepDistancePixels,
+            _config.ExperimentalTeleportMaxDragSteps,
+            _config.ExperimentalTeleportStepProfileFactor,
+            _config.ExperimentalTeleportDragStepIntervalMilliseconds,
+            _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
+            _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,
+            _config.ExperimentalTeleportOperationIntervalMilliseconds,
+            _config.ExperimentalTeleportMapStabilityIntervalMilliseconds,
+            _config.ExperimentalTeleportMapStabilityTimeoutMilliseconds,
+            _config.TeleportOperationDelayMilliseconds,
+            _config.ExperimentalTeleportDetailedLogs);
     }
 
     private Point2f? TryRecognizeCenter(string mapName, Point2f? prior)
