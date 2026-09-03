@@ -17,6 +17,9 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 0;
     public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
     public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 50;
+    public const double MinExperimentalTeleportInitialDragStrength = 0.5d;
+    public const double MaxExperimentalTeleportInitialDragStrength = 3d;
+    public const double DefaultExperimentalTeleportInitialDragStrength = 1d;
     public const int DefaultExperimentalTeleportZoomButtonX = 47;
     public const int DefaultExperimentalTeleportZoomStartY = 468;
     public const int DefaultExperimentalTeleportZoomEndY = 612;
@@ -48,6 +51,23 @@ public partial class TpConfig : ObservableValidator
     [NotifyDataErrorInfo]
     [Range(0.5, 0.99, ErrorMessage = "地区模板匹配阈值：0.50-0.99")]
     private double _experimentalTeleportTemplateMatchThreshold = 0.8;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportInitialDragStrength,
+        MaxExperimentalTeleportInitialDragStrength,
+        ErrorMessage = "实验传送初始拖动力度：0.5-3.0")]
+    private double _experimentalTeleportInitialDragStrength = DefaultExperimentalTeleportInitialDragStrength;
+
+    partial void OnExperimentalTeleportInitialDragStrengthChanged(double value)
+    {
+        if (!double.IsFinite(value) ||
+            value is < MinExperimentalTeleportInitialDragStrength or > MaxExperimentalTeleportInitialDragStrength)
+        {
+            ExperimentalTeleportInitialDragStrength = DefaultExperimentalTeleportInitialDragStrength;
+        }
+    }
 
     [ObservableProperty]
     [NotifyDataErrorInfo]

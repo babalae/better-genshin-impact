@@ -1458,6 +1458,25 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center"
                                       FontTypography="Body"
+                                      Text="{i18n:T 相对拖动初始力度倍率}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="3"
+                                      MaxDecimalPlaces="2"
+                                      Minimum="0.5"
+                                      SmallChange="0.05"
+                                      SpinButtonPlacementMode="Hidden"
+                                      TextAlignment="Right"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportInitialDragStrength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
                                       Text="{i18n:T 拖动结束松键延迟（毫秒）}" />
                         <ui:NumberBox Grid.Column="1"
                                       AcceptsExpression="False"

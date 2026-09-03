@@ -23,6 +23,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double EarlyStopMargin = 40d;
     private const double EmaWeight = 0.4d;
     private static double s_relativeMoveRatio;
+    private static double s_relativeMoveInitialStrength = double.NaN;
 
     private static readonly Rect2d[] DangerRects =
     [
@@ -62,9 +63,30 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     public async Task<DragResult> DragAsync(double requestedDeltaX, double requestedDeltaY, string? country)
     {
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var moveRatio = config.MapDragUseRelativeMove && s_relativeMoveRatio > 0
-            ? 1d / s_relativeMoveRatio
+        var initialDragStrength = double.IsFinite(config.ExperimentalTeleportInitialDragStrength)
+            ? Math.Clamp(
+                config.ExperimentalTeleportInitialDragStrength,
+                TpConfig.MinExperimentalTeleportInitialDragStrength,
+                TpConfig.MaxExperimentalTeleportInitialDragStrength)
+            : TpConfig.DefaultExperimentalTeleportInitialDragStrength;
+        if (config.MapDragUseRelativeMove &&
+            (!double.IsFinite(s_relativeMoveInitialStrength) ||
+             Math.Abs(s_relativeMoveInitialStrength - initialDragStrength) > 1e-6d))
+        {
+            s_relativeMoveInitialStrength = initialDragStrength;
+            s_relativeMoveRatio = 0d;
+        }
+
+        var moveRatio = config.MapDragUseRelativeMove
+            ? s_relativeMoveRatio > 0
+                ? 1d / s_relativeMoveRatio
+                : initialDragStrength
             : 1d;
+        var ratioSource = !config.MapDragUseRelativeMove
+            ? "absolute"
+            : s_relativeMoveRatio > 0
+                ? "ema"
+                : "configured";
         var desiredX = requestedDeltaX * moveRatio;
         var desiredY = requestedDeltaY * moveRatio;
         if (!TryCreateSafeRunway(
@@ -87,7 +109,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         }
 
         Logger.LogDebug(
-            "实验传送开始拖动：mode={Mode} requested=({RequestedX:0.0},{RequestedY:0.0}) runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) ratio={Ratio:0.000}",
+            "实验传送开始拖动：mode={Mode} requested=({RequestedX:0.0},{RequestedY:0.0}) runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) ratio={Ratio:0.000} source={RatioSource}",
             config.MapDragUseRelativeMove ? "relative" : "absolute",
             requestedDeltaX,
             requestedDeltaY,
@@ -95,7 +117,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             start.Y,
             end.X,
             end.Y,
-            moveRatio);
+            moveRatio,
+            ratioSource);
 
         GameCaptureRegion.GameRegionMove((_, scale) => (start.X * scale, start.Y * scale));
         await Delay(GetOperationDelay(40), ct);
