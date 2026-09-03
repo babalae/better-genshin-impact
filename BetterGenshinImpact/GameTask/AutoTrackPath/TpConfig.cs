@@ -11,6 +11,7 @@ public partial class TpConfig : ObservableValidator
     public const int MinTeleportOperationDelayMilliseconds = 2;
     public const int MaxTeleportOperationDelayMilliseconds = 100;
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
+
     public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 2;
     public const int MaxExperimentalTeleportDragStepIntervalMilliseconds = 100;
     public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 20;
@@ -29,18 +30,13 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportOperationIntervalMilliseconds = 10;
     public const int MaxExperimentalTeleportOperationIntervalMilliseconds = 500;
     public const int DefaultExperimentalTeleportOperationIntervalMilliseconds = 50;
-    public const int MinExperimentalTeleportMapStabilityIntervalMilliseconds = 10;
-    public const int MaxExperimentalTeleportMapStabilityIntervalMilliseconds = 500;
-    public const int DefaultExperimentalTeleportMapStabilityIntervalMilliseconds = 35;
-    public const int MinExperimentalTeleportMapStabilityTimeoutMilliseconds = 500;
-    public const int MaxExperimentalTeleportMapStabilityTimeoutMilliseconds = 5000;
-    public const int DefaultExperimentalTeleportMapStabilityTimeoutMilliseconds = 1200;
     public const double MinExperimentalTeleportInitialDragStrengthScale = 0.05d;
     public const double MaxExperimentalTeleportInitialDragStrengthScale = 1d;
     public const double DefaultExperimentalTeleportInitialDragStrengthScale = 0.2d;
     public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
     public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
     public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 48;
+
     [ObservableProperty]
     private bool _useExperimentalTeleport;
 
@@ -49,16 +45,13 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportInitialDragStrength,
-        MaxExperimentalTeleportInitialDragStrength,
+    [Range(MinExperimentalTeleportInitialDragStrength, MaxExperimentalTeleportInitialDragStrength,
         ErrorMessage = "实验传送初始拖动力度：0.1-5.0")]
     private double _experimentalTeleportInitialDragStrength = DefaultExperimentalTeleportInitialDragStrength;
 
     partial void OnExperimentalTeleportInitialDragStrengthChanged(double value)
     {
-        if (!double.IsFinite(value) ||
-            value is < MinExperimentalTeleportInitialDragStrength or > MaxExperimentalTeleportInitialDragStrength)
+        if (!double.IsFinite(value) || value is < MinExperimentalTeleportInitialDragStrength or > MaxExperimentalTeleportInitialDragStrength)
         {
             ExperimentalTeleportInitialDragStrength = DefaultExperimentalTeleportInitialDragStrength;
         }
@@ -66,16 +59,13 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportDragDistanceCorrection,
-        MaxExperimentalTeleportDragDistanceCorrection,
+    [Range(MinExperimentalTeleportDragDistanceCorrection, MaxExperimentalTeleportDragDistanceCorrection,
         ErrorMessage = "实验传送理论拖动距离修正：0.1-1.0")]
     private double _experimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
 
     partial void OnExperimentalTeleportDragDistanceCorrectionChanged(double value)
     {
-        if (!double.IsFinite(value) ||
-            value is < MinExperimentalTeleportDragDistanceCorrection or > MaxExperimentalTeleportDragDistanceCorrection)
+        if (!double.IsFinite(value) || value is < MinExperimentalTeleportDragDistanceCorrection or > MaxExperimentalTeleportDragDistanceCorrection)
         {
             ExperimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
         }
@@ -83,9 +73,7 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportDragStepIntervalMilliseconds,
-        MaxExperimentalTeleportDragStepIntervalMilliseconds,
+    [Range(MinExperimentalTeleportDragStepIntervalMilliseconds, MaxExperimentalTeleportDragStepIntervalMilliseconds,
         ErrorMessage = "实验传送拖动步进间隔：2-100 ms")]
     private int _experimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
 
@@ -99,107 +87,55 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportStateRecognitionIntervalMilliseconds,
-        MaxExperimentalTeleportStateRecognitionIntervalMilliseconds,
+    [Range(MinExperimentalTeleportStateRecognitionIntervalMilliseconds, MaxExperimentalTeleportStateRecognitionIntervalMilliseconds,
         ErrorMessage = "实验传送状态识别轮询间隔：10-500 ms")]
-    private int _experimentalTeleportStateRecognitionIntervalMilliseconds =
-        DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
+    private int _experimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
 
     partial void OnExperimentalTeleportStateRecognitionIntervalMillisecondsChanged(int value)
     {
         if (value is < MinExperimentalTeleportStateRecognitionIntervalMilliseconds or > MaxExperimentalTeleportStateRecognitionIntervalMilliseconds)
         {
-            ExperimentalTeleportStateRecognitionIntervalMilliseconds =
-                DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
+            ExperimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
         }
     }
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportStateTransitionTimeoutMilliseconds,
-        MaxExperimentalTeleportStateTransitionTimeoutMilliseconds,
+    [Range(MinExperimentalTeleportStateTransitionTimeoutMilliseconds, MaxExperimentalTeleportStateTransitionTimeoutMilliseconds,
         ErrorMessage = "实验传送状态切换等待上限：500-5000 ms")]
-    private int _experimentalTeleportStateTransitionTimeoutMilliseconds =
-        DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
+    private int _experimentalTeleportStateTransitionTimeoutMilliseconds = DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
 
     partial void OnExperimentalTeleportStateTransitionTimeoutMillisecondsChanged(int value)
     {
         if (value is < MinExperimentalTeleportStateTransitionTimeoutMilliseconds or > MaxExperimentalTeleportStateTransitionTimeoutMilliseconds)
         {
-            ExperimentalTeleportStateTransitionTimeoutMilliseconds =
-                DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
+            ExperimentalTeleportStateTransitionTimeoutMilliseconds = DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
         }
     }
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportOperationIntervalMilliseconds,
-        MaxExperimentalTeleportOperationIntervalMilliseconds,
+    [Range(MinExperimentalTeleportOperationIntervalMilliseconds, MaxExperimentalTeleportOperationIntervalMilliseconds,
         ErrorMessage = "实验传送操作间隔：10-500 ms")]
-    private int _experimentalTeleportOperationIntervalMilliseconds =
-        DefaultExperimentalTeleportOperationIntervalMilliseconds;
+    private int _experimentalTeleportOperationIntervalMilliseconds = DefaultExperimentalTeleportOperationIntervalMilliseconds;
 
     partial void OnExperimentalTeleportOperationIntervalMillisecondsChanged(int value)
     {
         if (value is < MinExperimentalTeleportOperationIntervalMilliseconds or > MaxExperimentalTeleportOperationIntervalMilliseconds)
         {
-            ExperimentalTeleportOperationIntervalMilliseconds =
-                DefaultExperimentalTeleportOperationIntervalMilliseconds;
+            ExperimentalTeleportOperationIntervalMilliseconds = DefaultExperimentalTeleportOperationIntervalMilliseconds;
         }
     }
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportMapStabilityIntervalMilliseconds,
-        MaxExperimentalTeleportMapStabilityIntervalMilliseconds,
-        ErrorMessage = "实验传送地图稳定检测间隔：10-500 ms")]
-    private int _experimentalTeleportMapStabilityIntervalMilliseconds =
-        DefaultExperimentalTeleportMapStabilityIntervalMilliseconds;
-
-    partial void OnExperimentalTeleportMapStabilityIntervalMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportMapStabilityIntervalMilliseconds or > MaxExperimentalTeleportMapStabilityIntervalMilliseconds)
-        {
-            ExperimentalTeleportMapStabilityIntervalMilliseconds =
-                DefaultExperimentalTeleportMapStabilityIntervalMilliseconds;
-        }
-    }
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportMapStabilityTimeoutMilliseconds,
-        MaxExperimentalTeleportMapStabilityTimeoutMilliseconds,
-        ErrorMessage = "实验传送地图稳定等待上限：500-5000 ms")]
-    private int _experimentalTeleportMapStabilityTimeoutMilliseconds =
-        DefaultExperimentalTeleportMapStabilityTimeoutMilliseconds;
-
-    partial void OnExperimentalTeleportMapStabilityTimeoutMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportMapStabilityTimeoutMilliseconds or > MaxExperimentalTeleportMapStabilityTimeoutMilliseconds)
-        {
-            ExperimentalTeleportMapStabilityTimeoutMilliseconds =
-                DefaultExperimentalTeleportMapStabilityTimeoutMilliseconds;
-        }
-    }
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportInitialDragStrengthScale,
-        MaxExperimentalTeleportInitialDragStrengthScale,
+    [Range(MinExperimentalTeleportInitialDragStrengthScale, MaxExperimentalTeleportInitialDragStrengthScale,
         ErrorMessage = "实验传送初始力度换算系数：0.05-1.0")]
-    private double _experimentalTeleportInitialDragStrengthScale =
-        DefaultExperimentalTeleportInitialDragStrengthScale;
+    private double _experimentalTeleportInitialDragStrengthScale = DefaultExperimentalTeleportInitialDragStrengthScale;
 
     partial void OnExperimentalTeleportInitialDragStrengthScaleChanged(double value)
     {
-        if (!double.IsFinite(value) ||
-            value is < MinExperimentalTeleportInitialDragStrengthScale or > MaxExperimentalTeleportInitialDragStrengthScale)
+        if (!double.IsFinite(value) || value is < MinExperimentalTeleportInitialDragStrengthScale or > MaxExperimentalTeleportInitialDragStrengthScale)
         {
             ExperimentalTeleportInitialDragStrengthScale = DefaultExperimentalTeleportInitialDragStrengthScale;
         }
@@ -207,12 +143,9 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(
-        MinExperimentalTeleportMaxSingleStepDistancePixels,
-        MaxExperimentalTeleportMaxSingleStepDistancePixels,
+    [Range(MinExperimentalTeleportMaxSingleStepDistancePixels, MaxExperimentalTeleportMaxSingleStepDistancePixels,
         ErrorMessage = "实验传送单步最大输入距离：16-200 px")]
-    private int _experimentalTeleportMaxSingleStepDistancePixels =
-        DefaultExperimentalTeleportMaxSingleStepDistancePixels;
+    private int _experimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
 
     partial void OnExperimentalTeleportMaxSingleStepDistancePixelsChanged(int value)
     {

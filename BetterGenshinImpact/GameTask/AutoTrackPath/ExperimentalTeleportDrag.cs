@@ -15,13 +15,12 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
 /// <summary>
-/// 实验传送专用的地图拖动与画面稳定检测。
+/// 实验传送专用的地图拖动与缩放滑块操作。
 /// </summary>
 internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToken ct)
 {
     private const double SafeMargin = 50d;
     private const double EarlyStopMargin = 40d;
-    private const double StableDifferenceThreshold = 1.5d;
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
@@ -84,10 +83,16 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 TpConfig.MinExperimentalTeleportInitialDragStrengthScale,
                 TpConfig.MaxExperimentalTeleportInitialDragStrengthScale)
             : TpConfig.DefaultExperimentalTeleportInitialDragStrengthScale;
+        var distanceCorrection = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection)
+            ? Math.Clamp(
+                config.ExperimentalTeleportDragDistanceCorrection,
+                TpConfig.MinExperimentalTeleportDragDistanceCorrection,
+                TpConfig.MaxExperimentalTeleportDragDistanceCorrection)
+            : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
         var moveRatio = initialDragStrengthMultiplier * initialDragStrengthScale;
         const string ratioSource = "configured";
-        var desiredX = requestedDeltaX * moveRatio;
-        var desiredY = requestedDeltaY * moveRatio;
+        var desiredX = requestedDeltaX * distanceCorrection * moveRatio;
+        var desiredY = requestedDeltaY * distanceCorrection * moveRatio;
         if (!TryCreateSafeRunway(
                 desiredX,
                 desiredY,
@@ -270,79 +275,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         await Delay(GetOperationInterval(), ct);
     }
 
-    public async Task WaitForStableMapAsync()
-    {
-        var timeout = GetMapStabilityTimeout();
-        var detectionInterval = GetMapStabilityInterval();
-        const double threshold = StableDifferenceThreshold;
-        var deadline = Environment.TickCount64 + timeout;
-        Mat? previous = null;
-        var stableFrames = 0;
-        var lastDifference = double.NaN;
-        var startedAt = Environment.TickCount64;
-        try
-        {
-            while (Environment.TickCount64 < deadline)
-            {
-                ct.ThrowIfCancellationRequested();
-                {
-                    using var capture = CaptureToRectArea();
-                    var roi = BuildStableRegion(capture.CacheGreyMat.Width, capture.CacheGreyMat.Height);
-                    using var currentView = new Mat(capture.CacheGreyMat, roi);
-                    using var current = currentView.Clone();
-                    if (previous != null)
-                    {
-                        using var difference = new Mat();
-                        Cv2.Absdiff(previous, current, difference);
-                        lastDifference = Cv2.Mean(difference).Val0;
-                        if (lastDifference <= threshold)
-                        {
-                            stableFrames++;
-                            if (stableFrames >= 2)
-                            {
-                                LogDetailed(
-                                    "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} " +
-                                    "threshold={Threshold:0.000} stableFrames={StableFrames} detectionInterval={DetectionInterval}ms " +
-                                    "timeout={Timeout}ms",
-                                    Environment.TickCount64 - startedAt,
-                                    lastDifference,
-                                    threshold,
-                                    stableFrames,
-                                    detectionInterval,
-                                    timeout);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            stableFrames = 0;
-                        }
-                    }
-
-                    previous?.Dispose();
-                    previous = current.Clone();
-                }
-
-                await Delay(detectionInterval, ct);
-            }
-        }
-        finally
-        {
-            previous?.Dispose();
-        }
-
-        LogDetailed(
-            "实验传送地图稳定等待达到上限：elapsed={ElapsedMilliseconds}ms timeout={TimeoutMilliseconds}ms " +
-            "lastDifference={Difference:0.000} threshold={Threshold:0.000} stableFrames={StableFrames} " +
-            "detectionInterval={DetectionInterval}ms",
-            Environment.TickCount64 - startedAt,
-            timeout,
-            lastDifference,
-            threshold,
-            stableFrames,
-            detectionInterval);
-    }
-
     private static bool TryCreateSafeRunway(
         double requestedX,
         double requestedY,
@@ -455,47 +387,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                y <= (rect.Bottom + margin) * scaleY;
     }
 
-    private static Rect BuildStableRegion(int width, int height)
-    {
-        var x = (int)Math.Round(width * 0.30d);
-        var y = (int)Math.Round(height * 0.24d);
-        var regionWidth = Math.Max(1, (int)Math.Round(width * 0.40d));
-        var regionHeight = Math.Max(1, (int)Math.Round(height * 0.52d));
-        return new Rect(x, y, Math.Min(regionWidth, width - x), Math.Min(regionHeight, height - y));
-    }
-
-    private int GetOperationDelay(int baseDelay)
-    {
-        var configured = Math.Clamp(
-            config.TeleportOperationDelayMilliseconds,
-            TpConfig.MinTeleportOperationDelayMilliseconds,
-            TpConfig.MaxTeleportOperationDelayMilliseconds);
-        return Math.Max(1, (int)Math.Round(
-            baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
-    }
-
     private int GetOperationInterval()
     {
         return Math.Clamp(
             config.ExperimentalTeleportOperationIntervalMilliseconds,
             TpConfig.MinExperimentalTeleportOperationIntervalMilliseconds,
             TpConfig.MaxExperimentalTeleportOperationIntervalMilliseconds);
-    }
-
-    private int GetMapStabilityInterval()
-    {
-        return Math.Clamp(
-            config.ExperimentalTeleportMapStabilityIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportMapStabilityIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportMapStabilityIntervalMilliseconds);
-    }
-
-    private int GetMapStabilityTimeout()
-    {
-        return Math.Clamp(
-            config.ExperimentalTeleportMapStabilityTimeoutMilliseconds,
-            TpConfig.MinExperimentalTeleportMapStabilityTimeoutMilliseconds,
-            TpConfig.MaxExperimentalTeleportMapStabilityTimeoutMilliseconds);
     }
 
     private int GetStepInterval()

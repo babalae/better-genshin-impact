@@ -37,14 +37,6 @@ public class Navigation
         _instance.SetPrevPosition(x,y);
     }
 
-    /// <summary>
-    /// 获取最近一次有效位置，供实验传送作为只读定位先验。
-    /// </summary>
-    public static (float X, float Y) GetTeleportPositionPrior()
-    {
-        return _instance.GetTeleportPositionPrior();
-    }
-
     public static Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
         return _instance.GetPosition(imageRegion, mapName, mapMatchMethod);

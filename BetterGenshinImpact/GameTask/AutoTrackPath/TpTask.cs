@@ -60,10 +60,8 @@ public class TpTask
     private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
     private const int DefaultBigMapOpenTimeoutMs = 5000;
     private const int MoonCanonBigMapOpenTimeoutMs = 8000;
-    private const int BigMapOpenRepressIntervalMs = 1500;
-    private const int MinimumBigMapOpenRepressIntervalMs = 500;
-    private const int BigMapOpenDetectionIntervalMs = 50;
     private const int UiRecognitionPollIntervalMs = 80;
+    private const int BigMapOpenCheckIntervalMs = UiRecognitionPollIntervalMs;
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
@@ -116,8 +114,9 @@ public class TpTask
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
+    private Func<int, int, Task<ExperimentalTeleportDrag.DragResult>>? _experimentalDrag;
     private Func<double, double, Task>? _experimentalZoomAdjuster;
-    private bool _allowExperimentalRawMapClickFallback;
+    private ExperimentalTeleportUiStateMachine? _experimentalUiStateMachine;
 
     private sealed class MapChooseCandidate
     {
@@ -277,32 +276,19 @@ public class TpTask
 
     internal bool IsExperimentalTeleportDetails(ImageRegion imageRegion)
     {
-        using var teleportButton = imageRegion.Find(
-            GetQuickTeleportRecognitionObject("TeleportButton", imageRegion));
+        using var teleportButton = imageRegion.Find(GetQuickTeleportRecognitionObject("TeleportButton", imageRegion));
         return teleportButton.IsExist();
-    }
-
-    internal bool IsExperimentalMapMain(ImageRegion imageRegion)
-    {
-        if (!Bv.IsInBigMapUi(imageRegion))
-        {
-            return false;
-        }
-
-        return HasExperimentalMapMainControls(imageRegion);
     }
 
     internal bool HasExperimentalMapMainControls(ImageRegion imageRegion)
     {
-        using var mapCloseButton = imageRegion.Find(
-            GetQuickTeleportRecognitionObject("MapCloseButton", imageRegion));
+        using var mapCloseButton = imageRegion.Find(GetQuickTeleportRecognitionObject("MapCloseButton", imageRegion));
         if (mapCloseButton.IsExist())
         {
             return true;
         }
 
-        using var mapChooseButton = imageRegion.Find(
-            GetQuickTeleportRecognitionObject("MapChoose", imageRegion));
+        using var mapChooseButton = imageRegion.Find(GetQuickTeleportRecognitionObject("MapChoose", imageRegion));
         return mapChooseButton.IsExist();
     }
 
@@ -313,25 +299,20 @@ public class TpTask
 
     internal async Task<bool> TryClickExperimentalMapChooseCandidate(GiTpPosition? targetTp)
     {
-        using (var imageRegion = CaptureToRectArea())
+        using var imageRegion = CaptureToRectArea();
+        var candidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
+        if (candidate == null)
         {
-            var candidate = GetPreferredMapChooseCandidate(imageRegion, targetTp);
-            if (candidate == null)
-            {
-                return false;
-            }
-
-            ClickMapChooseCandidate(imageRegion, candidate);
+            return false;
         }
 
-        await Delay(MapChooseCandidateClickDelayMs, ct);
+        await ClickMapChooseCandidate(imageRegion, candidate);
         return true;
     }
 
     internal void OpenExperimentalAreaList()
     {
-        GameCaptureRegion.GameRegionClick((rect, scale) =>
-            (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
     }
 
     internal async Task PressExperimentalTeleportConfirmKey()
@@ -339,9 +320,101 @@ public class TpTask
         await PressTeleportConfirmKey();
     }
 
-    internal async Task HandleExperimentalLoadingInterruption()
+    internal async Task<(double, double)> RunExperimentalTeleport(
+        double tpX,
+        double tpY,
+        string mapName,
+        bool force,
+        ExperimentalTeleportDrag drag,
+        ExperimentalTeleportUiStateMachine uiStateMachine)
     {
-        await _blessingOfTheWelkinMoonTask.Start(ct);
+        _experimentalDrag = (x, y) => drag.DragAsync(x, y, null);
+        _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
+        _experimentalUiStateMachine = uiStateMachine;
+        try
+        {
+            await uiStateMachine.EnsureMapMainAsync(mapName);
+            return await TpWithRetries(tpX, tpY, mapName, force);
+        }
+        finally
+        {
+            _experimentalUiStateMachine = null;
+            _experimentalZoomAdjuster = null;
+            _experimentalDrag = null;
+        }
+    }
+
+    internal async Task OpenExperimentalBigMapUi(string? mapName)
+    {
+        if (IsInBigMapUi())
+        {
+            return;
+        }
+
+        var timeout = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
+        var repressInterval = Math.Max(500, GetTeleportOperationDelay(1500));
+        var detectionInterval = GetTeleportOperationDelay(50);
+        var stopwatch = Stopwatch.StartNew();
+        var pressCount = 0;
+        while (stopwatch.ElapsedMilliseconds < timeout)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+            pressCount++;
+            var probeDeadline = Math.Min(timeout, stopwatch.ElapsedMilliseconds + repressInterval);
+            while (stopwatch.ElapsedMilliseconds < probeDeadline)
+            {
+                using var capture = CaptureToRectArea();
+                if (Bv.IsInBigMapUi(capture))
+                {
+                    LogExperimentalDetailed("实验传送打开大地图成功：press={PressCount} elapsed={ElapsedMilliseconds}ms", pressCount, stopwatch.ElapsedMilliseconds);
+                    return;
+                }
+
+                if (!Bv.IsInMainUi(capture))
+                {
+                    break;
+                }
+
+                var remaining = (int)Math.Min(
+                    int.MaxValue,
+                    probeDeadline - stopwatch.ElapsedMilliseconds);
+                if (remaining > 0)
+                {
+                    await Delay(Math.Min(detectionInterval, remaining), ct);
+                }
+            }
+
+            while (stopwatch.ElapsedMilliseconds < timeout)
+            {
+                using var capture = CaptureToRectArea();
+                if (Bv.IsInBigMapUi(capture))
+                {
+                    LogExperimentalDetailed("实验传送打开大地图成功：press={PressCount} elapsed={ElapsedMilliseconds}ms", pressCount, stopwatch.ElapsedMilliseconds);
+                    return;
+                }
+
+                if (Bv.IsInMainUi(capture))
+                {
+                    break;
+                }
+
+                var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
+                if (remaining > 0)
+                {
+                    await Delay(Math.Min(detectionInterval, remaining), ct);
+                }
+            }
+        }
+
+        throw new TimeoutException($"按 M {pressCount} 次后大地图仍未出现");
+    }
+
+    private void LogExperimentalDetailed(string message, params object?[] args)
+    {
+        if (_tpConfig.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(message, args);
+        }
     }
 
     /// <summary>
@@ -498,59 +571,23 @@ public class TpTask
 
         var clickView = await PrepareTeleportClickView(target);
         var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
-        await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
-        await WaitForTeleportCompletion();
-
-        s_lastSuccessfulTeleportMapName = target.MapName;
-        return (target.X, target.Y);
-    }
-
-    /// <summary>
-    /// 实验传送完成地图定位后，复用主线的安全点选、候选面板处理和完成校验。
-    /// </summary>
-    internal async Task<(double, double)> CompleteExperimentalTeleport(
-        double tpX,
-        double tpY,
-        string mapName,
-        bool force,
-        double finalZoomLevel,
-        Func<double, double, Task> zoomAdjuster,
-        ExperimentalTeleportUiStateMachine uiStateMachine,
-        Func<Task>? experimentalMapRecovery = null,
-        Func<Task>? experimentalMapStabilityWait = null)
-    {
-        _experimentalZoomAdjuster = zoomAdjuster;
-        _allowExperimentalRawMapClickFallback = true;
-        try
+        if (_experimentalUiStateMachine is { } experimentalUiStateMachine)
         {
-            var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
-            LogTeleportTarget(target);
-
-            var clickView = await PrepareTeleportClickView(
-                target.MapName,
-                target.TargetTp,
-                target.X,
-                target.Y,
-                finalZoomLevel,
-                experimentalMapRecovery,
-                experimentalMapStabilityWait);
-            var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
-            await uiStateMachine.ConfirmTeleportAsync(
+            await experimentalUiStateMachine.ConfirmTeleportAsync(
                 target.MapName,
                 target.TargetTp,
                 fallbackCandidate is { } candidate
                     ? () => ClickAbsoluteMapCandidate(candidate)
                     : null);
-            Logger.LogInformation("传送完成");
-            s_lastSuccessfulTeleportMapName = target.MapName;
-            Navigation.SetPrevPosition((float)target.X, (float)target.Y);
-            return (target.X, target.Y);
         }
-        finally
+        else
         {
-            _experimentalZoomAdjuster = null;
-            _allowExperimentalRawMapClickFallback = false;
+            await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
+            await WaitForTeleportCompletion();
         }
+
+        s_lastSuccessfulTeleportMapName = target.MapName;
+        return (target.X, target.Y);
     }
 
     private TeleportTargetContext ResolveTeleportTarget(double tpX, double tpY, string mapName, bool force)
@@ -676,9 +713,7 @@ public class TpTask
             target.TargetTp,
             target.X,
             target.Y,
-            target.FinalClickZoomLevel,
-            null,
-            null);
+            target.FinalClickZoomLevel);
     }
 
     private async Task<TeleportClickView> PrepareTeleportClickView(
@@ -686,9 +721,7 @@ public class TpTask
         GiTpPosition? targetTp,
         double targetX,
         double targetY,
-        double finalZoomLevel,
-        Func<Task>? experimentalMapRecovery,
-        Func<Task>? experimentalMapStabilityWait)
+        double finalZoomLevel)
     {
         var moveZoomAdjusted = false;
         var stopAtDisplayZoomLevel = false;
@@ -700,43 +733,12 @@ public class TpTask
             if (evaluation.View != null)
             {
                 var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
-                var shouldAdjustFinalZoom = !stopAtDisplayZoomLevel &&
-                                            ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel);
-                if (!shouldAdjustFinalZoom)
+                if (stopAtDisplayZoomLevel || !ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel))
                 {
-                    if (experimentalMapRecovery != null &&
-                        !IsExperimentalTargetIconVisible(mapName, targetTp, evaluation.View))
-                    {
-                        var nextZoomLevel = GetExperimentalIconRecoveryZoomLevel(
-                            evaluation.View.ZoomLevel,
-                            targetFinalZoomLevel,
-                            mapName);
-                        if (!IsZoomCloseEnough(evaluation.View.ZoomLevel, nextZoomLevel))
-                        {
-                            LogExperimentalDetailed(
-                                "实验传送目标图标未显示，继续缩放：current={CurrentZoom:0.00} next={NextZoom:0.00} " +
-                                "targetFinal={TargetFinalZoom:0.00}",
-                                evaluation.View.ZoomLevel,
-                                nextZoomLevel,
-                                targetFinalZoomLevel);
-                            await AdjustTeleportZoomLevelTo(nextZoomLevel);
-                            if (experimentalMapStabilityWait != null)
-                            {
-                                await experimentalMapStabilityWait();
-                            }
-                            continue;
-                        }
-
-                        LogExperimentalDetailed(
-                            "实验传送目标图标未显示但已达到最小缩放，保留当前点选：zoom={ZoomLevel:0.00}",
-                            evaluation.View.ZoomLevel);
-                    }
-
                     return evaluation.View;
                 }
 
-                if (experimentalMapRecovery == null &&
-                    !IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
+                if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
                     await Delay(TeleportClickableAreaRetryDelayMs, ct);
@@ -744,10 +746,6 @@ public class TpTask
                 }
 
                 var adjustedZoomLevel = await AdjustTeleportZoomLevelTo(targetFinalZoomLevel);
-                if (experimentalMapStabilityWait != null)
-                {
-                    await experimentalMapStabilityWait();
-                }
                 if (!IsZoomCloseEnough(adjustedZoomLevel, targetFinalZoomLevel))
                 {
                     if (!IsTeleportPointDisplayZoomLevelReached(adjustedZoomLevel, mapName))
@@ -779,21 +777,6 @@ public class TpTask
                 throw new Exception("目标传送点位于不可点击区域，传送失败");
             }
 
-            if (experimentalMapRecovery != null)
-            {
-                LogExperimentalDetailed(
-                    "实验传送缩放/点选后目标不在安全区，重新拖动定位：click=({ClickX:0.0},{ClickY:0.0}) " +
-                    "radius={Radius:0.0} zoom={ZoomLevel:0.00} reason={Reason}",
-                    evaluation.ClickX,
-                    evaluation.ClickY,
-                    evaluation.RequiredVisibleRadius,
-                    evaluation.ZoomLevel,
-                    evaluation.FailureReason);
-                await experimentalMapRecovery();
-                await Delay(TeleportClickableAreaRetryDelayMs, ct);
-                continue;
-            }
-
             if (!moveZoomAdjusted)
             {
                 moveZoomAdjusted = true;
@@ -807,24 +790,6 @@ public class TpTask
             await Delay(TeleportClickableAreaRetryDelayMs, ct);
         }
 
-        var finalEvaluation = EvaluateTeleportClickView(mapName, targetTp, targetX, targetY);
-        if (finalEvaluation.View != null)
-        {
-            var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
-            if (stopAtDisplayZoomLevel || !ShouldAdjustTeleportFinalZoom(finalEvaluation.View, targetFinalZoomLevel))
-            {
-                Logger.LogDebug("目标传送点在最后一次调整后进入可点击区域");
-                return finalEvaluation.View;
-            }
-        }
-
-        Logger.LogWarning(
-            "目标传送点调整次数耗尽，传送失败：click=({ClickX:0.0},{ClickY:0.0}) radius={Radius:0.0} zoom={ZoomLevel:0.00} reason={Reason}",
-            finalEvaluation.ClickX,
-            finalEvaluation.ClickY,
-            finalEvaluation.RequiredVisibleRadius,
-            finalEvaluation.ZoomLevel,
-            finalEvaluation.FailureReason ?? "仍需进一步缩放或移动");
         throw new Exception("目标传送点位于不可点击区域，传送失败");
     }
 
@@ -904,60 +869,6 @@ public class TpTask
             ClickX = clickX,
             ClickY = clickY,
         };
-    }
-
-    private bool IsExperimentalTargetIconVisible(
-        string mapName,
-        GiTpPosition? targetTp,
-        TeleportClickView clickView)
-    {
-        if (targetTp == null)
-        {
-            return true;
-        }
-
-        var targetIconTypes = GetMapIconTypesForTargetType(targetTp.Type ?? string.Empty)
-            .ToHashSet(StringComparer.Ordinal);
-        if (targetIconTypes.Count == 0)
-        {
-            return true;
-        }
-
-        using var capture = CaptureToRectArea();
-        var searchRect = new Rect(0, 0, capture.Width, capture.Height);
-        var searchRadius = Math.Max(45d * _zoomOutMax1080PRatio, 24d);
-        var icons = GetMapIconsInRect(
-            capture,
-            searchRect,
-            clickView.ClickX,
-            clickView.ClickY,
-            searchRadius,
-            targetIconTypes);
-        LogExperimentalDetailed(
-            "实验传送目标图标可见性：map={MapName} targetId={TargetId} type={TargetType} " +
-            "click=({ClickX:0.0},{ClickY:0.0}) searchRadius={SearchRadius:0.0} matches={Matches}",
-            mapName,
-            targetTp.Id,
-            targetTp.Type ?? "未指定",
-            clickView.ClickX,
-            clickView.ClickY,
-            searchRadius,
-            icons.Count);
-        return icons.Count > 0;
-    }
-
-    private double GetExperimentalIconRecoveryZoomLevel(
-        double currentZoomLevel,
-        double targetFinalZoomLevel,
-        string mapName)
-    {
-        var minimumZoomLevel = Math.Max(
-            MinTeleportZoomLevel,
-            Math.Min(targetFinalZoomLevel, GetDisplayTpPointZoomLevel(mapName)));
-        var candidateZoomLevel = Math.Max(
-            minimumZoomLevel,
-            currentZoomLevel - MapPositionRecognitionRecoveryZoomStep);
-        return Math.Min(currentZoomLevel, candidateZoomLevel);
     }
 
     private bool ShouldAdjustTeleportFinalZoom(TeleportClickView clickView, double targetZoomLevel)
@@ -1135,17 +1046,6 @@ public class TpTask
             return new AbsoluteMapClickCandidate(clickX, clickY);
         }
 
-        if (_allowExperimentalRawMapClickFallback)
-        {
-            Logger.LogWarning(
-                "实验传送绝对坐标校正不可用，回退 PR 原始坐标点选：reason={Reason} raw=({ClickX:0.0},{ClickY:0.0})",
-                failureReason,
-                clickView.ClickX,
-                clickView.ClickY);
-            clickCapture.ClickTo(clickView.ClickX, clickView.ClickY);
-            return null;
-        }
-
         Logger.LogWarning("目标传送点绝对坐标定位失败：{Reason}", failureReason);
         throw new TpPointNotActivate(failureReason);
     }
@@ -1176,7 +1076,7 @@ public class TpTask
         return Math.Clamp(zoomLevel, MinTeleportZoomLevel, GetDisplayTpPointZoomLevel(mapName));
     }
 
-    internal double GetCurrentBigMapZoomLevel()
+    private double GetCurrentBigMapZoomLevel()
     {
         using var capture = CaptureToRectArea();
         return GetBigMapZoomLevel(capture);
@@ -1294,7 +1194,7 @@ public class TpTask
     /// <summary>
     ///     检查传送是否完成，未完成则等待
     /// </summary>
-    private async Task WaitForTeleportCompletion(bool throwOnTimeout = false)
+    private async Task WaitForTeleportCompletion()
     {
         var stopwatch = Stopwatch.StartNew();
         var observedLoadingState = false;
@@ -1345,10 +1245,6 @@ public class TpTask
         }
 
         Logger.LogWarning("传送等待超时，换台电脑吧");
-        if (throwOnTimeout)
-        {
-            throw new TimeoutException("传送等待超时，未确认返回主界面");
-        }
     }
 
     private bool IsGameRegionPointInClickableArea(double clickX, double clickY, double requiredVisibleRadius = 0)
@@ -1443,7 +1339,7 @@ public class TpTask
         if (!await TryToOpenBigMapUi(mapName))
         {
             await new ReturnMainUiTask().Start(ct);
-            await Delay(GetTeleportOperationDelay(500), ct);
+            await Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
@@ -1461,88 +1357,10 @@ public class TpTask
             return true;
         }
 
-        var timeoutMilliseconds = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
-        var repressIntervalMilliseconds = Math.Max(
-            MinimumBigMapOpenRepressIntervalMs,
-            GetTeleportOperationDelay(BigMapOpenRepressIntervalMs));
-        var detectionIntervalMilliseconds = GetTeleportOperationDelay(BigMapOpenDetectionIntervalMs);
-        var stopwatch = Stopwatch.StartNew();
-        var pressCount = 0;
-
-        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds)
-        {
-            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-            pressCount++;
-            var probeDeadline = Math.Min(
-                stopwatch.ElapsedMilliseconds + repressIntervalMilliseconds,
-                timeoutMilliseconds);
-            var leftMainUi = false;
-
-            while (stopwatch.ElapsedMilliseconds < probeDeadline)
-            {
-                using var capture = CaptureToRectArea();
-                if (Bv.IsInBigMapUi(capture))
-                {
-                    Logger.LogDebug(
-                        "大地图已打开：按 M {PressCount} 次，耗时 {ElapsedMilliseconds}ms",
-                        pressCount,
-                        stopwatch.ElapsedMilliseconds);
-                    return true;
-                }
-
-                if (!Bv.IsInMainUi(capture))
-                {
-                    leftMainUi = true;
-                    break;
-                }
-
-                var remainingProbeMilliseconds = probeDeadline - stopwatch.ElapsedMilliseconds;
-                if (remainingProbeMilliseconds > 0)
-                {
-                    await Delay(
-                        (int)Math.Min(detectionIntervalMilliseconds, remainingProbeMilliseconds),
-                        ct);
-                }
-            }
-
-            if (!leftMainUi)
-            {
-                if (stopwatch.ElapsedMilliseconds >= timeoutMilliseconds)
-                {
-                    break;
-                }
-
-                Logger.LogDebug(
-                    "按 M 后 {IntervalMilliseconds}ms 大地图仍未出现且始终处于主界面，执行第 {NextPressCount} 次补按",
-                    repressIntervalMilliseconds,
-                    pressCount + 1);
-                continue;
-            }
-
-            Logger.LogDebug(
-                "按 M 后已离开主界面，停止补按并等待大地图渲染：press={PressCount} elapsed={ElapsedMilliseconds}ms",
-                pressCount,
-                stopwatch.ElapsedMilliseconds);
-            var remainingMilliseconds = Math.Max(
-                0,
-                timeoutMilliseconds - (int)stopwatch.ElapsedMilliseconds);
-            if (await WaitForBigMapUiAppear(remainingMilliseconds, detectionIntervalMilliseconds))
-            {
-                Logger.LogDebug(
-                    "大地图已打开：按 M {PressCount} 次，耗时 {ElapsedMilliseconds}ms",
-                    pressCount,
-                    stopwatch.ElapsedMilliseconds);
-                return true;
-            }
-
-            break;
-        }
-
-        Logger.LogWarning(
-            "按 M {PressCount} 次后大地图仍未出现，等待已达上限 {TimeoutMilliseconds}ms",
-            pressCount,
-            timeoutMilliseconds);
-        return false;
+        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+        await Delay(100, ct);
+        var opened = await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
+        return opened;
     }
 
     private bool IsInBigMapUi()
@@ -1551,9 +1369,7 @@ public class TpTask
         return Bv.IsInBigMapUi(capture);
     }
 
-    private async Task<bool> WaitForBigMapUiAppear(
-        int timeoutMilliseconds,
-        int detectionIntervalMilliseconds)
+    private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds)
     {
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
@@ -1563,11 +1379,7 @@ public class TpTask
                 return true;
             }
 
-            var remainingMilliseconds = timeoutMilliseconds - (int)stopwatch.ElapsedMilliseconds;
-            if (remainingMilliseconds > 0)
-            {
-                await Delay(Math.Min(detectionIntervalMilliseconds, remainingMilliseconds), ct);
-            }
+            await Delay(BigMapOpenCheckIntervalMs, ct);
         }
 
         return false;
@@ -1985,14 +1797,6 @@ public class TpTask
             : DefaultDisplayTpPointZoomLevel;
     }
 
-    private void LogExperimentalDetailed(string message, params object?[] args)
-    {
-        if (_tpConfig.ExperimentalTeleportDetailedLogs)
-        {
-            Logger.LogDebug(message, args);
-        }
-    }
-
     private static int GetBigMapOpenTimeoutMilliseconds(string? mapName)
     {
         return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
@@ -2046,9 +1850,9 @@ public class TpTask
     /// <param name="targetZoomLevel">目标缩放等级：1.0-6.0，浮点数。</param>
     public async Task AdjustMapZoomLevel(double zoomLevel, double targetZoomLevel)
     {
-        if (_experimentalZoomAdjuster != null)
+        if (_experimentalZoomAdjuster is { } experimentalZoomAdjuster)
         {
-            await _experimentalZoomAdjuster(zoomLevel, targetZoomLevel);
+            await experimentalZoomAdjuster(zoomLevel, targetZoomLevel);
             return;
         }
 
@@ -2253,6 +2057,21 @@ public class TpTask
 
     private async Task<(int SentDeltaX, int SentDeltaY, int Steps, double StartX, double StartY, double EndX, double EndY, double ActualDeltaX, double ActualDeltaY)> MouseMoveMap(int pixelDeltaX, int pixelDeltaY)
     {
+        if (_experimentalDrag is { } experimentalDrag)
+        {
+            var result = await experimentalDrag(pixelDeltaX, pixelDeltaY);
+            return (
+                (int)Math.Round(result.InputDeltaX),
+                (int)Math.Round(result.InputDeltaY),
+                0,
+                0,
+                0,
+                0,
+                0,
+                result.CursorDeltaX,
+                result.CursorDeltaY);
+        }
+
         // 起点向预期拖动方向的反方向偏移，并保留随机性；位移按可拖动地图区域裁剪。
         double startX = 0;
         double startY = 0;
@@ -2540,7 +2359,7 @@ public class TpTask
         return GetBigMapCenterPoint(mapName, null);
     }
 
-    internal Point2f GetBigMapCenterPoint(string mapName, Point2f? expectedCenterPoint)
+    private Point2f GetBigMapCenterPoint(string mapName, Point2f? expectedCenterPoint)
     {
         // 判断是否在地图界面
         using var ra = CaptureToRectArea();
@@ -2801,6 +2620,12 @@ public class TpTask
 
     internal async Task SwitchArea(string areaName)
     {
+        if (_experimentalUiStateMachine is { } experimentalUiStateMachine)
+        {
+            await experimentalUiStateMachine.SwitchAreaAsync(areaName, MapTypes.Teyvat.ToString());
+            return;
+        }
+
         if (await TrySwitchArea(areaName))
         {
             return;
@@ -2824,32 +2649,18 @@ public class TpTask
         while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            Rect? clickedCandidateRect = null;
-            using (var ra = CaptureToRectArea())
+            using var ra = CaptureToRectArea();
+            var list = FindSwitchAreaCandidates(ra);
+            candidatesText = FormatSwitchAreaCandidateTexts(list);
+            var matchRect = list
+                .OrderByDescending(r => r.Y)
+                .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
+            if (matchRect != null)
             {
-                var list = FindSwitchAreaCandidates(ra);
-                try
-                {
-                    candidatesText = FormatSwitchAreaCandidateTexts(list);
-                    var matchRect = list
-                        .OrderByDescending(r => r.Y)
-                        .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
-                    if (matchRect != null)
-                    {
-                        clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
-                        matchRect.Click();
-                    }
-                }
-                finally
-                {
-                    list.ForEach(candidate => candidate.Dispose());
-                }
-            }
-
-            if (clickedCandidateRect is { } clickedRect)
-            {
+                var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
+                matchRect.Click();
                 await Delay(50, ct);
-                await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedRect);
+                await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
                 return true;
@@ -2875,21 +2686,10 @@ public class TpTask
         while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            bool clickedCandidateStillVisible;
-            using (var capture = CaptureToRectArea())
-            {
-                var candidates = FindSwitchAreaCandidates(capture);
-                try
-                {
-                    clickedCandidateStillVisible = candidates.Any(candidate =>
-                        IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
-                        IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
-                }
-                finally
-                {
-                    candidates.ForEach(candidate => candidate.Dispose());
-                }
-            }
+            using var capture = CaptureToRectArea();
+            var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
+                IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
+                IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
 
             if (!clickedCandidateStillVisible &&
                 stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
@@ -2970,7 +2770,7 @@ public class TpTask
                 .Take(12));
     }
 
-    internal async Task SwitchToGroundMapLayerIfNeeded()
+    private async Task SwitchToGroundMapLayerIfNeeded()
     {
         var layerSwitchClicked = false;
         var groundLayerClicked = false;
@@ -3630,8 +3430,7 @@ public class TpTask
             return null;
         }
 
-        ClickMapChooseCandidate(imageRegion, candidate);
-        await Delay(MapChooseCandidateClickDelayMs, ct);
+        await ClickMapChooseCandidate(imageRegion, candidate);
         return candidate;
     }
 
@@ -3896,14 +3695,14 @@ public class TpTask
             Math.Abs(candidate.IconRect.Y - iconRect.Y) <= 6);
     }
 
-    private static void ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
+    private async Task ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
         // 候选列表有个动画，识别到以后一定要再等一会点击
         var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
         await Delay(time < 200 ? 200 : time, ct);
         Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
-        await Delay(150, ct);
+        await Delay(MapChooseCandidateClickDelayMs, ct);
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)
