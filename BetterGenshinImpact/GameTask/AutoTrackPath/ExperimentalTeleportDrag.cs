@@ -2,6 +2,8 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -74,8 +76,26 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 out var start,
                 out var end))
         {
+            Logger.LogDebug(
+                "实验传送无法生成安全拖动跑道：requested=({RequestedX:0.0},{RequestedY:0.0}) adjusted=({AdjustedX:0.0},{AdjustedY:0.0}) country={Country}",
+                requestedDeltaX,
+                requestedDeltaY,
+                desiredX,
+                desiredY,
+                country ?? "未指定");
             return default;
         }
+
+        Logger.LogDebug(
+            "实验传送开始拖动：mode={Mode} requested=({RequestedX:0.0},{RequestedY:0.0}) runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) ratio={Ratio:0.000}",
+            config.MapDragUseRelativeMove ? "relative" : "absolute",
+            requestedDeltaX,
+            requestedDeltaY,
+            start.X,
+            start.Y,
+            end.X,
+            end.Y,
+            moveRatio);
 
         GameCaptureRegion.GameRegionMove((_, scale) => (start.X * scale, start.Y * scale));
         await Delay(GetOperationDelay(40), ct);
@@ -87,6 +107,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             36);
         var movedX = 0d;
         var movedY = 0d;
+        var stepDelay = GetOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds);
+        var releaseDelay = Math.Clamp(
+            config.ExperimentalTeleportDragReleaseDelayMilliseconds,
+            TpConfig.MinExperimentalTeleportDragReleaseDelayMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
@@ -111,7 +136,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                         ((start.X + movedX) * scale, (start.Y + movedY) * scale));
                 }
 
-                await Delay(GetOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds), ct);
+                await Delay(i < steps ? stepDelay : releaseDelay, ct);
             }
         }
         finally
@@ -124,7 +149,67 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var actualX = (cursorAfter.X - cursorBefore.X) / inputScale;
         var actualY = (cursorAfter.Y - cursorBefore.Y) / inputScale;
         UpdateRelativeMoveRatio(end.X - start.X, end.Y - start.Y, actualX, actualY);
+        Logger.LogDebug(
+            "实验传送拖动完成：intended=({IntendedX:0.0},{IntendedY:0.0}) actual=({ActualX:0.0},{ActualY:0.0}) calibratedRatio={CalibratedRatio:0.000}",
+            end.X - start.X,
+            end.Y - start.Y,
+            actualX,
+            actualY,
+            s_relativeMoveRatio);
         return new DragResult(actualX, actualY);
+    }
+
+    public async Task AdjustMapZoomLevelAsync(double zoomLevel, double targetZoomLevel)
+    {
+        zoomLevel = Math.Clamp(zoomLevel, 1d, 6d);
+        targetZoomLevel = Math.Clamp(targetZoomLevel, 1d, 6d);
+        if (Math.Abs(zoomLevel - targetZoomLevel) <= config.PrecisionThreshold)
+        {
+            return;
+        }
+
+        var startY = config.ExperimentalTeleportZoomStartY;
+        var endY = config.ExperimentalTeleportZoomEndY;
+        if (startY >= endY)
+        {
+            throw new InvalidOperationException($"实验传送缩放滑轨坐标无效：start={startY}, end={endY}");
+        }
+
+        var initialY = startY + (endY - startY) * (zoomLevel - 1d) / 5d;
+        var targetY = startY + (endY - startY) * (targetZoomLevel - 1d) / 5d;
+        var buttonX = config.ExperimentalTeleportZoomButtonX + 10d;
+        var realRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
+        var realScale = Math.Max(1e-6d, realRect.Width / 1920d);
+
+        Logger.LogDebug(
+            "实验传送滑块缩放：before={BeforeZoom:0.00} target={TargetZoom:0.00} from=({StartX:0.0},{InitialY:0.0}) to=({TargetX:0.0},{TargetY:0.0}) scale={Scale:0.000}",
+            zoomLevel,
+            targetZoomLevel,
+            buttonX,
+            initialY,
+            buttonX,
+            targetY,
+            realScale);
+
+        DesktopRegion.DesktopRegionMove(
+            realRect.X + buttonX * realScale,
+            realRect.Y + initialY * realScale);
+        await Delay(GetOperationDelay(50), ct);
+        try
+        {
+            Simulation.SendInput.Mouse.LeftButtonDown();
+            await Delay(GetOperationDelay(50), ct);
+            DesktopRegion.DesktopRegionMove(
+                realRect.X + buttonX * realScale,
+                realRect.Y + targetY * realScale);
+            await Delay(GetOperationDelay(50), ct);
+        }
+        finally
+        {
+            Simulation.SendInput.Mouse.LeftButtonUp();
+        }
+
+        await Delay(GetOperationDelay(50), ct);
     }
 
     public async Task WaitForStableMapAsync()
@@ -134,6 +219,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var deadline = Environment.TickCount64 + timeout;
         Mat? previous = null;
         var stableFrames = 0;
+        var lastDifference = double.NaN;
+        var startedAt = Environment.TickCount64;
         try
         {
             while (Environment.TickCount64 < deadline)
@@ -147,11 +234,17 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 {
                     using var difference = new Mat();
                     Cv2.Absdiff(previous, current, difference);
-                    if (Cv2.Mean(difference).Val0 <= threshold)
+                    lastDifference = Cv2.Mean(difference).Val0;
+                    if (lastDifference <= threshold)
                     {
                         stableFrames++;
                         if (stableFrames >= 2)
                         {
+                            Logger.LogDebug(
+                                "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} threshold={Threshold:0.000}",
+                                Environment.TickCount64 - startedAt,
+                                lastDifference,
+                                threshold);
                             return;
                         }
                     }
@@ -170,6 +263,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         {
             previous?.Dispose();
         }
+
+        Logger.LogDebug(
+            "实验传送地图稳定等待达到上限：timeout={TimeoutMilliseconds}ms lastDifference={Difference:0.000} threshold={Threshold:0.000}",
+            timeout,
+            lastDifference,
+            threshold);
     }
 
     private static bool TryCreateSafeRunway(

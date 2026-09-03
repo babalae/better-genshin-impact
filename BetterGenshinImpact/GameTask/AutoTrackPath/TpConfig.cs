@@ -11,6 +11,15 @@ public partial class TpConfig : ObservableValidator
     public const int MinTeleportOperationDelayMilliseconds = 2;
     public const int MaxTeleportOperationDelayMilliseconds = 100;
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
+    public const int MinBigMapOpenRepressIntervalMilliseconds = 100;
+    public const int MaxBigMapOpenRepressIntervalMilliseconds = 5000;
+    public const int DefaultBigMapOpenRepressIntervalMilliseconds = 500;
+    public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 0;
+    public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
+    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 50;
+    public const int DefaultExperimentalTeleportZoomButtonX = 47;
+    public const int DefaultExperimentalTeleportZoomStartY = 468;
+    public const int DefaultExperimentalTeleportZoomEndY = 612;
 
     [ObservableProperty]
     private bool _useExperimentalTeleport;
@@ -39,6 +48,77 @@ public partial class TpConfig : ObservableValidator
     [NotifyDataErrorInfo]
     [Range(0.5, 0.99, ErrorMessage = "地区模板匹配阈值：0.50-0.99")]
     private double _experimentalTeleportTemplateMatchThreshold = 0.8;
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportDragReleaseDelayMilliseconds,
+        MaxExperimentalTeleportDragReleaseDelayMilliseconds,
+        ErrorMessage = "实验传送拖动松键延迟：0-500 ms")]
+    private int _experimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
+
+    partial void OnExperimentalTeleportDragReleaseDelayMillisecondsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportDragReleaseDelayMilliseconds or > MaxExperimentalTeleportDragReleaseDelayMilliseconds)
+        {
+            ExperimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(0, 300, ErrorMessage = "实验传送缩放滑块 X 坐标：0-300")]
+    private int _experimentalTeleportZoomButtonX = DefaultExperimentalTeleportZoomButtonX;
+
+    partial void OnExperimentalTeleportZoomButtonXChanged(int value)
+    {
+        if (value is < 0 or > 300)
+        {
+            ExperimentalTeleportZoomButtonX = DefaultExperimentalTeleportZoomButtonX;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(0, 1080, ErrorMessage = "实验传送缩放滑轨起点 Y 坐标：0-1080")]
+    private int _experimentalTeleportZoomStartY = DefaultExperimentalTeleportZoomStartY;
+
+    partial void OnExperimentalTeleportZoomStartYChanged(int value)
+    {
+        if (value is < 0 or > 1080)
+        {
+            ExperimentalTeleportZoomStartY = DefaultExperimentalTeleportZoomStartY;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(0, 1080, ErrorMessage = "实验传送缩放滑轨终点 Y 坐标：0-1080")]
+    private int _experimentalTeleportZoomEndY = DefaultExperimentalTeleportZoomEndY;
+
+    partial void OnExperimentalTeleportZoomEndYChanged(int value)
+    {
+        if (value is < 0 or > 1080)
+        {
+            ExperimentalTeleportZoomEndY = DefaultExperimentalTeleportZoomEndY;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinBigMapOpenRepressIntervalMilliseconds,
+        MaxBigMapOpenRepressIntervalMilliseconds,
+        ErrorMessage = "大地图补按间隔：100-5000 ms")]
+    private int _bigMapOpenRepressIntervalMilliseconds = DefaultBigMapOpenRepressIntervalMilliseconds;
+
+    partial void OnBigMapOpenRepressIntervalMillisecondsChanged(int value)
+    {
+        if (value is < MinBigMapOpenRepressIntervalMilliseconds or > MaxBigMapOpenRepressIntervalMilliseconds)
+        {
+            BigMapOpenRepressIntervalMilliseconds = DefaultBigMapOpenRepressIntervalMilliseconds;
+        }
+    }
 
     [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关

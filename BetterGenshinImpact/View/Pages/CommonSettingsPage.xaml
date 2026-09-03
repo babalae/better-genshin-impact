@@ -1446,7 +1446,111 @@
                                       ValidationMode="InvalidInputOverwritten"
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportTemplateMatchThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 拖动结束松键延迟（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="500"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="0"
+                                      SmallChange="10"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportDragReleaseDelayMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 缩放滑块 X 坐标}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="300"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="0"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportZoomButtonX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 缩放滑轨起点 Y 坐标}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="1080"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="0"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportZoomStartY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center"
+                                      FontTypography="Body"
+                                      Text="{i18n:T 缩放滑轨终点 Y 坐标}" />
+                        <ui:NumberBox Grid.Column="1"
+                                      AcceptsExpression="False"
+                                      Maximum="1080"
+                                      MaxDecimalPlaces="0"
+                                      Minimum="0"
+                                      SmallChange="1"
+                                      SpinButtonPlacementMode="Inline"
+                                      ValidationMode="InvalidInputOverwritten"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportZoomEndY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
                 </StackPanel>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="120" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 大地图补按间隔（毫秒）}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 按 M 后若界面始终停留在主界面，将按此间隔补按；单次开图总等待上限保持不变}"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  AcceptsExpression="False"
+                                  Maximum="5000"
+                                  MaxDecimalPlaces="0"
+                                  Minimum="100"
+                                  SmallChange="100"
+                                  SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding Config.TpConfig.BigMapOpenRepressIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
 
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

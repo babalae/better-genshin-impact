@@ -35,6 +35,11 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
+internal sealed class TeleportTargetLocalizationException(string message, Exception? innerException = null)
+    : Exception(message, innerException)
+{
+}
+
 /// <summary>
 /// 传送任务
 /// </summary>
@@ -109,6 +114,8 @@ public class TpTask
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
+    private Func<double, double, Task>? _experimentalZoomAdjuster;
+    private bool _allowExperimentalRawMapClickFallback;
 
     private sealed class MapChooseCandidate
     {
@@ -435,23 +442,41 @@ public class TpTask
         double tpY,
         string mapName,
         bool force,
-        double finalZoomLevel)
+        double finalZoomLevel,
+        Func<double, double, Task> zoomAdjuster)
     {
-        var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
-        LogTeleportTarget(target);
+        _experimentalZoomAdjuster = zoomAdjuster;
+        _allowExperimentalRawMapClickFallback = true;
+        try
+        {
+            var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
+            LogTeleportTarget(target);
 
-        var clickView = await PrepareTeleportClickView(
-            target.MapName,
-            target.TargetTp,
-            target.X,
-            target.Y,
-            finalZoomLevel);
-        var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
-        await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
-        await WaitForTeleportCompletion(throwOnTimeout: true);
-        s_lastSuccessfulTeleportMapName = target.MapName;
-        Navigation.SetPrevPosition((float)target.X, (float)target.Y);
-        return (target.X, target.Y);
+            var clickView = await PrepareTeleportClickView(
+                target.MapName,
+                target.TargetTp,
+                target.X,
+                target.Y,
+                finalZoomLevel);
+            var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
+            try
+            {
+                await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
+            }
+            catch (TeleportPanelNotOpenedException ex) when (_allowExperimentalRawMapClickFallback)
+            {
+                throw new TeleportTargetLocalizationException(ex.Message, ex);
+            }
+            await WaitForTeleportCompletion(throwOnTimeout: true);
+            s_lastSuccessfulTeleportMapName = target.MapName;
+            Navigation.SetPrevPosition((float)target.X, (float)target.Y);
+            return (target.X, target.Y);
+        }
+        finally
+        {
+            _experimentalZoomAdjuster = null;
+            _allowExperimentalRawMapClickFallback = false;
+        }
     }
 
     private TeleportTargetContext ResolveTeleportTarget(double tpX, double tpY, string mapName, bool force)
@@ -654,6 +679,24 @@ public class TpTask
             await Delay(TeleportClickableAreaRetryDelayMs, ct);
         }
 
+        var finalEvaluation = EvaluateTeleportClickView(mapName, targetTp, targetX, targetY);
+        if (finalEvaluation.View != null)
+        {
+            var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
+            if (stopAtDisplayZoomLevel || !ShouldAdjustTeleportFinalZoom(finalEvaluation.View, targetFinalZoomLevel))
+            {
+                Logger.LogDebug("目标传送点在最后一次调整后进入可点击区域");
+                return finalEvaluation.View;
+            }
+        }
+
+        Logger.LogWarning(
+            "目标传送点调整次数耗尽，传送失败：click=({ClickX:0.0},{ClickY:0.0}) radius={Radius:0.0} zoom={ZoomLevel:0.00} reason={Reason}",
+            finalEvaluation.ClickX,
+            finalEvaluation.ClickY,
+            finalEvaluation.RequiredVisibleRadius,
+            finalEvaluation.ZoomLevel,
+            finalEvaluation.FailureReason ?? "仍需进一步缩放或移动");
         throw new Exception("目标传送点位于不可点击区域，传送失败");
     }
 
@@ -908,6 +951,17 @@ public class TpTask
         {
             clickCapture.ClickTo(clickView.ClickX, clickView.ClickY);
             return new AbsoluteMapClickCandidate(clickX, clickY);
+        }
+
+        if (_allowExperimentalRawMapClickFallback)
+        {
+            Logger.LogWarning(
+                "实验传送绝对坐标校正不可用，回退 PR 原始坐标点选：reason={Reason} raw=({ClickX:0.0},{ClickY:0.0})",
+                failureReason,
+                clickView.ClickX,
+                clickView.ClickY);
+            clickCapture.ClickTo(clickView.ClickX, clickView.ClickY);
+            return null;
         }
 
         Logger.LogWarning("目标传送点绝对坐标定位失败：{Reason}", failureReason);
@@ -1225,10 +1279,82 @@ public class TpTask
             return true;
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-        await Delay(100, ct);
-        var opened = await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
-        return opened;
+        var timeoutMilliseconds = GetBigMapOpenTimeoutMilliseconds(mapName);
+        var repressIntervalMilliseconds = Math.Clamp(
+            _tpConfig.BigMapOpenRepressIntervalMilliseconds,
+            TpConfig.MinBigMapOpenRepressIntervalMilliseconds,
+            TpConfig.MaxBigMapOpenRepressIntervalMilliseconds);
+        var stopwatch = Stopwatch.StartNew();
+        var pressCount = 0;
+
+        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+            pressCount++;
+            var probeDeadline = Math.Min(
+                stopwatch.ElapsedMilliseconds + repressIntervalMilliseconds,
+                timeoutMilliseconds);
+            var leftMainUi = false;
+
+            while (stopwatch.ElapsedMilliseconds < probeDeadline)
+            {
+                using var capture = CaptureToRectArea();
+                if (Bv.IsInBigMapUi(capture))
+                {
+                    Logger.LogDebug(
+                        "大地图已打开：按 M {PressCount} 次，耗时 {ElapsedMilliseconds}ms",
+                        pressCount,
+                        stopwatch.ElapsedMilliseconds);
+                    return true;
+                }
+
+                if (!Bv.IsInMainUi(capture))
+                {
+                    leftMainUi = true;
+                    break;
+                }
+
+                await Delay(BigMapOpenCheckIntervalMs, ct);
+            }
+
+            if (!leftMainUi)
+            {
+                if (stopwatch.ElapsedMilliseconds >= timeoutMilliseconds)
+                {
+                    break;
+                }
+
+                Logger.LogDebug(
+                    "按 M 后 {IntervalMilliseconds}ms 大地图仍未出现且始终处于主界面，执行第 {NextPressCount} 次补按",
+                    repressIntervalMilliseconds,
+                    pressCount + 1);
+                continue;
+            }
+
+            Logger.LogDebug(
+                "按 M 后已离开主界面，停止补按并等待大地图渲染：press={PressCount} elapsed={ElapsedMilliseconds}ms",
+                pressCount,
+                stopwatch.ElapsedMilliseconds);
+            var remainingMilliseconds = Math.Max(
+                0,
+                timeoutMilliseconds - (int)stopwatch.ElapsedMilliseconds);
+            if (await WaitForBigMapUiAppear(remainingMilliseconds))
+            {
+                Logger.LogDebug(
+                    "大地图已打开：按 M {PressCount} 次，耗时 {ElapsedMilliseconds}ms",
+                    pressCount,
+                    stopwatch.ElapsedMilliseconds);
+                return true;
+            }
+
+            break;
+        }
+
+        Logger.LogWarning(
+            "按 M {PressCount} 次后大地图仍未出现，等待已达上限 {TimeoutMilliseconds}ms",
+            pressCount,
+            timeoutMilliseconds);
+        return false;
     }
 
     private bool IsInBigMapUi()
@@ -1718,6 +1844,12 @@ public class TpTask
     /// <param name="targetZoomLevel">目标缩放等级：1.0-6.0，浮点数。</param>
     public async Task AdjustMapZoomLevel(double zoomLevel, double targetZoomLevel)
     {
+        if (_experimentalZoomAdjuster != null)
+        {
+            await _experimentalZoomAdjuster(zoomLevel, targetZoomLevel);
+            return;
+        }
+
         targetZoomLevel = ClampBigMapZoomLevel(targetZoomLevel);
         zoomLevel = IsFinite(zoomLevel) ? ClampBigMapZoomLevel(zoomLevel) : GetCurrentBigMapZoomLevel();
         var currentZoomLevel = zoomLevel;

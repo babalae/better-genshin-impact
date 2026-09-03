@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
@@ -26,6 +27,8 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
     private const double GridStepX = 300d;
     private const double GridStepY = 105d;
     private const double GridValidationTolerance = 75d;
+    private const int MenuOpenTimeoutMilliseconds = 1000;
+    private const int MenuOpenPollIntervalMilliseconds = 80;
 
     private static readonly IReadOnlyDictionary<string, int> AreaIndexes =
         new Dictionary<string, int>(StringComparer.Ordinal)
@@ -75,23 +78,36 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
         }
 
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-        await Delay(GetOperationDelay(100), _ct);
 
         try
         {
-            using var capture = CaptureToRectArea();
-            if (!TryFind(capture.SrcMat, areaIndex, out var hit))
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.ElapsedMilliseconds < MenuOpenTimeoutMilliseconds)
             {
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(GetOperationDelay(80), _ct);
-                return false;
+                _ct.ThrowIfCancellationRequested();
+                using var capture = CaptureToRectArea();
+                if (TryFind(capture.SrcMat, areaIndex, out var hit))
+                {
+                    GameCaptureRegion.GameRegionClick((_, scale) =>
+                        ((hit.X + hit.Width / 2d) * scale, (hit.Y + hit.Height / 2d) * scale));
+                    await Delay(GetOperationDelay(160), _ct);
+                    Logger.LogInformation(
+                        "实验传送通过图集切换到区域：{Area}，菜单等待 {ElapsedMilliseconds}ms",
+                        areaName,
+                        stopwatch.ElapsedMilliseconds);
+                    return true;
+                }
+
+                await Delay(MenuOpenPollIntervalMilliseconds, _ct);
             }
 
-            GameCaptureRegion.GameRegionClick((_, scale) =>
-                ((hit.X + hit.Width / 2d) * scale, (hit.Y + hit.Height / 2d) * scale));
-            await Delay(GetOperationDelay(160), _ct);
-            Logger.LogInformation("实验传送通过图集切换到区域：{Area}", areaName);
-            return true;
+            Logger.LogDebug(
+                "实验传送地区菜单等待达到上限，图集未命中：area={Area} timeout={TimeoutMilliseconds}ms",
+                areaName,
+                MenuOpenTimeoutMilliseconds);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            await Delay(GetOperationDelay(80), _ct);
+            return false;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
