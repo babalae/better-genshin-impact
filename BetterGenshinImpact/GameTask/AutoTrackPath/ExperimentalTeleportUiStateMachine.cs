@@ -1,11 +1,9 @@
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Common.StateMachine;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
@@ -46,25 +44,32 @@ internal sealed class ExperimentalTeleportUiContext
     public Action? FallbackClick { get; init; }
     public bool FallbackUsed { get; set; }
     public int CandidateClickAttempts { get; set; }
+    public int ConfirmClickAttempts { get; set; }
+    public int UnknownRecoveryAttempts { get; set; }
     public bool UseAreaOcr { get; set; }
     public bool UnknownDelayStarted { get; set; }
     public long UnknownDetectedAt { get; set; }
-    public bool UnknownRecheckReady { get; set; }
     public bool LoadingObserved { get; set; }
+    public bool LoadingFallbackLogged { get; set; }
     public long ConfirmIssuedAt { get; set; }
     public long NextBlessingCheckAt { get; set; }
 }
 
 /// <summary>
-/// 实验传送的 UI 识别、恢复和传送完成状态机。
+/// 实验传送专用的 UI 状态循环。
 /// </summary>
 internal sealed class ExperimentalTeleportUiStateMachine
-    : StateMachineBase<ExperimentalTeleportUiState, ExperimentalTeleportUiContext>
 {
     private const int UnknownRecheckDelayMilliseconds = 200;
+    private const int ExpectedStateTimeoutMilliseconds = 500;
+    private const int ExpectedStateDetectionIntervalMilliseconds = 50;
+    private const int StateTransitionSettleDelayMilliseconds = 100;
     private const int AreaAtlasMatchTimeoutMilliseconds = 500;
     private const int AreaAtlasMatchIntervalMilliseconds = 50;
     private const int CandidateClickRetryCount = 2;
+    private const int ConfirmClickRetryCount = 2;
+    private const int UnknownRecoveryRetryCount = 2;
+    private const int MaximumStateIterations = 1000;
     private const int TeleportMinimumCompletionMilliseconds = 1000;
     private const int TeleportLoadingFallbackMilliseconds = 5000;
     private const int BlessingCheckIntervalMilliseconds = 1000;
@@ -73,12 +78,6 @@ internal sealed class ExperimentalTeleportUiStateMachine
     private readonly ExperimentalTeleportRegionAtlas _regionAtlas;
     private readonly TpConfig _config;
     private readonly CancellationToken _cancellationToken;
-    private ExperimentalTeleportUiContext? _activeContext;
-
-    protected override ILogger Logger => TaskControl.Logger;
-    protected override int DefaultDetectionInterval => 100;
-    protected override int StateMachineLoopInterval => 100;
-    protected override int DefaultIntermediateTransitionTimeout => 60_000;
 
     public ExperimentalTeleportUiStateMachine(
         TpTask host,
@@ -90,57 +89,6 @@ internal sealed class ExperimentalTeleportUiStateMachine
         _regionAtlas = regionAtlas;
         _config = config;
         _cancellationToken = cancellationToken;
-
-        RegisterStateMethodsByAttribute();
-        RegisterStateTransitions(
-            (ExperimentalTeleportUiState.Unknown1,
-            [
-                ExperimentalTeleportUiState.TeleportDetails,
-                ExperimentalTeleportUiState.TeleportCandidateList,
-                ExperimentalTeleportUiState.AreaList,
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.MainWorld,
-                ExperimentalTeleportUiState.Loading,
-                ExperimentalTeleportUiState.Unknown2,
-            ]),
-            (ExperimentalTeleportUiState.Unknown2,
-            [
-                ExperimentalTeleportUiState.MainWorld,
-            ]),
-            (ExperimentalTeleportUiState.MainWorld,
-            [
-                ExperimentalTeleportUiState.AreaList,
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.Unknown1,
-            ]),
-            (ExperimentalTeleportUiState.MapMain,
-            [
-                ExperimentalTeleportUiState.AreaList,
-                ExperimentalTeleportUiState.TeleportCandidateList,
-                ExperimentalTeleportUiState.TeleportDetails,
-                ExperimentalTeleportUiState.Unknown1,
-            ]),
-            (ExperimentalTeleportUiState.AreaList,
-            [
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.Unknown1,
-            ]),
-            (ExperimentalTeleportUiState.TeleportCandidateList,
-            [
-                ExperimentalTeleportUiState.TeleportDetails,
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.Unknown1,
-            ]),
-            (ExperimentalTeleportUiState.TeleportDetails,
-            [
-                ExperimentalTeleportUiState.Loading,
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.Unknown1,
-            ]),
-            (ExperimentalTeleportUiState.Loading,
-            [
-                ExperimentalTeleportUiState.MainWorld,
-            ]));
     }
 
     public Task EnsureMapMainAsync(string mapName)
@@ -151,12 +99,14 @@ internal sealed class ExperimentalTeleportUiStateMachine
                 Operation = ExperimentalTeleportUiOperation.EnsureMapMain,
                 MapName = mapName,
             },
+            ExperimentalTeleportUiState.MapMain,
             ExperimentalTeleportUiState.MapMain);
     }
 
     public async Task SwitchAreaAsync(string areaName, string mapName)
     {
         await EnsureMapMainAsync(mapName);
+
         var openAreaListContext = new ExperimentalTeleportUiContext
         {
             Operation = ExperimentalTeleportUiOperation.OpenAreaList,
@@ -165,7 +115,9 @@ internal sealed class ExperimentalTeleportUiStateMachine
         };
         await RunPhaseAsync(
             openAreaListContext,
-            ExperimentalTeleportUiState.AreaList);
+            ExperimentalTeleportUiState.AreaList,
+            ExperimentalTeleportUiState.MapMain);
+
         await RunPhaseAsync(
             new ExperimentalTeleportUiContext
             {
@@ -174,7 +126,8 @@ internal sealed class ExperimentalTeleportUiStateMachine
                 AreaName = areaName,
                 UseAreaOcr = openAreaListContext.UseAreaOcr,
             },
-            ExperimentalTeleportUiState.MapMain);
+            ExperimentalTeleportUiState.MapMain,
+            ExperimentalTeleportUiState.AreaList);
     }
 
     public Task ConfirmTeleportAsync(string mapName, GiTpPosition targetTp, Action? fallbackClick)
@@ -187,189 +140,128 @@ internal sealed class ExperimentalTeleportUiStateMachine
                 TargetTp = targetTp,
                 FallbackClick = fallbackClick,
             },
-            ExperimentalTeleportUiState.MainWorld);
+            ExperimentalTeleportUiState.MainWorld,
+            ExperimentalTeleportUiState.TeleportDetails);
     }
 
     private async Task RunPhaseAsync(
         ExperimentalTeleportUiContext context,
-        ExperimentalTeleportUiState targetState)
+        ExperimentalTeleportUiState targetState,
+        ExperimentalTeleportUiState initialExpectedState)
     {
-        _activeContext = context;
-        Initialize(_cancellationToken, ExperimentalTeleportUiState.Unknown1);
-        await RunStateMachineUntil(context, targetState);
-    }
+        ResetUnknownDetection(context);
+        LogDetailed(
+            "========== 实验传送状态循环启动，目标状态：{TargetState}，入口预期：{ExpectedState} ==========",
+            targetState,
+            initialExpectedState);
 
-    [StateDetector(ExperimentalTeleportUiState.TeleportDetails, Order = 10)]
-    private bool DetectTeleportDetails(ImageRegion imageRegion)
-    {
-        return CanDetectKnownState() && _host.IsExperimentalTeleportDetails(imageRegion);
-    }
-
-    [StateDetector(ExperimentalTeleportUiState.TeleportCandidateList, Order = 20)]
-    private bool DetectTeleportCandidateList(ImageRegion imageRegion)
-    {
-        return CanDetectKnownState() &&
-               _host.HasExperimentalMapChooseCandidate(imageRegion, _activeContext?.TargetTp);
-    }
-
-    [StateDetector(ExperimentalTeleportUiState.AreaList, Order = 30)]
-    private bool DetectAreaList(ImageRegion imageRegion)
-    {
-        return CanDetectKnownState() &&
-               Bv.IsInBigMapUi(imageRegion) &&
-               !_host.HasExperimentalMapMainControls(imageRegion);
-    }
-
-    [StateDetector(ExperimentalTeleportUiState.MapMain, Order = 40)]
-    private bool DetectMapMain(ImageRegion imageRegion)
-    {
-        return CanDetectKnownState() && _host.IsExperimentalMapMain(imageRegion);
-    }
-
-    [StateDetector(ExperimentalTeleportUiState.MainWorld, Order = 50)]
-    private bool DetectMainWorld(ImageRegion imageRegion)
-    {
-        if (!CanDetectKnownState())
+        var currentState = await WaitForExpectedStateAsync(context, initialExpectedState, "阶段入口");
+        for (var iteration = 0; iteration < MaximumStateIterations; iteration++)
         {
-            return false;
-        }
-
-        var context = _activeContext;
-        if (context?.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport)
-        {
-            if (context.ConfirmIssuedAt <= 0)
+            _cancellationToken.ThrowIfCancellationRequested();
+            if (currentState == targetState)
             {
-                return false;
+                LogDetailed(
+                    "========== 实验传送状态循环完成，到达目标状态：{State} ==========",
+                    currentState);
+                return;
             }
 
-            var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
-            if (context.LoadingObserved)
+            LogDetailed(
+                "实验传送状态循环迭代 {Iteration}，当前状态：{State}",
+                iteration,
+                currentState);
+            var previousState = currentState;
+            currentState = await HandleStateAsync(context, currentState);
+            if (currentState != previousState)
             {
-                if (elapsed < TeleportMinimumCompletionMilliseconds)
-                {
-                    return false;
-                }
-            }
-            else if (elapsed < GetOperationDelay(TeleportLoadingFallbackMilliseconds))
-            {
-                return false;
+                await Delay(GetOperationDelay(StateTransitionSettleDelayMilliseconds), _cancellationToken);
             }
         }
 
-        var isMainWorld = Bv.IsInMainUi(imageRegion);
-        if (isMainWorld &&
-            context?.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&
-            !context.LoadingObserved)
-        {
-            Logger.LogWarning(
-                "实验传送确认后未识别到 Loading，但已等待 {ElapsedMilliseconds}ms 并回到主界面，按传送成功处理",
-                Environment.TickCount64 - context.ConfirmIssuedAt);
-        }
-
-        return isMainWorld;
+        throw new InvalidOperationException(
+            $"实验传送状态循环达到最大迭代次数 {MaximumStateIterations}，未到达目标状态 {targetState}");
     }
 
-    [StateDetector(ExperimentalTeleportUiState.Loading, Order = 60)]
-    private bool DetectLoading(ImageRegion imageRegion)
+    private Task<ExperimentalTeleportUiState> HandleStateAsync(
+        ExperimentalTeleportUiContext context,
+        ExperimentalTeleportUiState state)
     {
-        var context = _activeContext;
-        if (!CanDetectKnownState() ||
-            context?.Operation != ExperimentalTeleportUiOperation.ConfirmTeleport ||
-            context.ConfirmIssuedAt <= 0 ||
-            Bv.IsInBigMapUi(imageRegion) ||
-            Bv.IsInMainUi(imageRegion))
+        return state switch
         {
-            return false;
-        }
-
-        context.LoadingObserved = true;
-        return true;
+            ExperimentalTeleportUiState.Unknown1 => HandleUnknown1Async(context),
+            ExperimentalTeleportUiState.Unknown2 => HandleUnknown2Async(context),
+            ExperimentalTeleportUiState.MainWorld => HandleMainWorldAsync(context),
+            ExperimentalTeleportUiState.MapMain => HandleMapMainAsync(context),
+            ExperimentalTeleportUiState.AreaList => HandleAreaListAsync(context),
+            ExperimentalTeleportUiState.TeleportCandidateList => HandleTeleportCandidateListAsync(context),
+            ExperimentalTeleportUiState.TeleportDetails => HandleTeleportDetailsAsync(context),
+            ExperimentalTeleportUiState.Loading => HandleLoadingAsync(context),
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+        };
     }
 
-    [StateDetector(ExperimentalTeleportUiState.Unknown2, Order = 90)]
-    private bool DetectUnknown2(ImageRegion _)
+    private async Task<ExperimentalTeleportUiState> HandleUnknown1Async(
+        ExperimentalTeleportUiContext context)
     {
-        return _activeContext?.UnknownRecheckReady == true;
-    }
-
-    [StateDetector(ExperimentalTeleportUiState.Unknown1, Order = 100)]
-    private bool DetectUnknown1(ImageRegion imageRegion)
-    {
-        if (CurrentState != ExperimentalTeleportUiState.Unknown1 &&
-            IsCurrentStateStillVisible(imageRegion))
-        {
-            return false;
-        }
-
-        if (_activeContext is { } context)
-        {
-            context.UnknownDelayStarted = true;
-            context.UnknownDetectedAt = Environment.TickCount64;
-            context.UnknownRecheckReady = false;
-        }
-
-        return true;
-    }
-
-    [StateHandler(ExperimentalTeleportUiState.Unknown1, RetryTimes = 2)]
-    private async Task<StateHandlerResult> HandleUnknown1(ExperimentalTeleportUiContext context)
-    {
-        if (!context.UnknownDelayStarted)
-        {
-            context.UnknownDelayStarted = true;
-            context.UnknownDetectedAt = Environment.TickCount64;
-        }
-
         var recheckDelay = GetOperationDelay(UnknownRecheckDelayMilliseconds);
         var elapsed = Environment.TickCount64 - context.UnknownDetectedAt;
-        var remainingDelay = Math.Max(0, recheckDelay - (int)elapsed);
-        if (remainingDelay > 0)
+        var remaining = Math.Max(0, recheckDelay - (int)elapsed);
+        if (remaining > 0)
         {
-            await Delay(remainingDelay, _cancellationToken);
+            await Delay(remaining, _cancellationToken);
         }
 
-        context.UnknownRecheckReady = true;
-        return StateHandlerResult.Success;
+        return DetectCurrentState(context);
     }
 
-    [StateHandler(ExperimentalTeleportUiState.Unknown2, RetryTimes = 2)]
-    private async Task<StateHandlerResult> HandleUnknown2(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleUnknown2Async(
+        ExperimentalTeleportUiContext context)
     {
         if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport)
         {
+            if (context.ConfirmIssuedAt > 0)
+            {
+                var fallbackDelay = GetOperationDelay(TeleportLoadingFallbackMilliseconds);
+                var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
+                if (elapsed < fallbackDelay)
+                {
+                    await Delay(
+                        Math.Min(
+                            GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds),
+                            fallbackDelay - (int)elapsed),
+                        _cancellationToken);
+                    return DetectCurrentState(context);
+                }
+            }
+
             throw new TeleportTargetLocalizationException("传送点交互界面连续两次无法识别");
         }
 
-        ResetUnknownDetection(context);
+        if (++context.UnknownRecoveryAttempts > UnknownRecoveryRetryCount)
+        {
+            throw new InvalidOperationException("实验传送界面恢复次数达到上限");
+        }
+
         await new ReturnMainUiTask().Start(_cancellationToken);
-        using var capture = CaptureToRectArea();
-        return Bv.IsInMainUi(capture)
-            ? StateHandlerResult.SuccessTo(ExperimentalTeleportUiState.MainWorld)
-            : StateHandlerResult.Retry;
+        return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MainWorld, "未知界面恢复");
     }
 
-    [StateHandler(ExperimentalTeleportUiState.MainWorld, RetryTimes = 2, TransitionTimeout = 5000)]
-    private async Task<StateHandlerResult> HandleMainWorld(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleMainWorldAsync(
+        ExperimentalTeleportUiContext context)
     {
-        ResetUnknownDetection(context);
         await _host.OpenBigMapUi(1, context.MapName);
-        return StateHandlerResult.SuccessTo(
-            ExperimentalTeleportUiState.AreaList,
-            ExperimentalTeleportUiState.MapMain,
-            ExperimentalTeleportUiState.Unknown1);
+        return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "打开大地图");
     }
 
-    [StateHandler(ExperimentalTeleportUiState.MapMain, RetryTimes = 2, TransitionTimeout = 1500)]
-    private async Task<StateHandlerResult> HandleMapMain(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleMapMainAsync(
+        ExperimentalTeleportUiContext context)
     {
-        ResetUnknownDetection(context);
         if (context.Operation == ExperimentalTeleportUiOperation.OpenAreaList)
         {
             _host.OpenExperimentalAreaList();
             context.UseAreaOcr = !await WaitForAreaAtlasMatchAsync(context.AreaName);
-            return StateHandlerResult.SuccessTo(
-                ExperimentalTeleportUiState.AreaList,
-                ExperimentalTeleportUiState.Unknown1);
+            return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.AreaList, "打开国家列表");
         }
 
         if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport)
@@ -381,19 +273,15 @@ internal sealed class ExperimentalTeleportUiStateMachine
 
             context.FallbackUsed = true;
             context.FallbackClick();
-            return StateHandlerResult.SuccessTo(
-                ExperimentalTeleportUiState.TeleportDetails,
-                ExperimentalTeleportUiState.TeleportCandidateList,
-                ExperimentalTeleportUiState.Unknown1);
+            return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.TeleportDetails, "重新点击传送点");
         }
 
-        return StateHandlerResult.Wait;
+        return await WaitForExpectedStateAsync(context, GetExpectedState(context.Operation), "地图主界面处理");
     }
 
-    [StateHandler(ExperimentalTeleportUiState.AreaList, RetryTimes = 2, TransitionTimeout = 1500)]
-    private async Task<StateHandlerResult> HandleAreaList(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleAreaListAsync(
+        ExperimentalTeleportUiContext context)
     {
-        ResetUnknownDetection(context);
         if (context.Operation == ExperimentalTeleportUiOperation.SelectArea &&
             context.AreaName is { } areaName)
         {
@@ -407,46 +295,36 @@ internal sealed class ExperimentalTeleportUiStateMachine
 
                 if (clicked)
                 {
-                    await Delay(GetOperationDelay(160), _cancellationToken);
-                    return StateHandlerResult.SuccessTo(
-                        ExperimentalTeleportUiState.MapMain,
-                        ExperimentalTeleportUiState.Unknown1);
+                    return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "图集选择国家");
                 }
 
                 context.UseAreaOcr = true;
-                Logger.LogDebug("实验传送地区图集点击前匹配丢失，保持国家列表并切换 OCR：{Area}", areaName);
+                LogDetailed(
+                    "实验传送地区图集点击前匹配丢失，保持国家列表并切换 OCR：{Area}",
+                    areaName);
             }
 
-            _cancellationToken.ThrowIfCancellationRequested();
             if (await _host.TrySelectExperimentalArea(areaName))
             {
-                return StateHandlerResult.SuccessTo(
-                    ExperimentalTeleportUiState.MapMain,
-                    ExperimentalTeleportUiState.Unknown1);
+                return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "OCR 选择国家");
             }
 
-            Logger.LogDebug("实验传送地区 OCR 未命中，保持国家列表继续重试：{Area}", areaName);
-            return StateHandlerResult.Wait;
+            LogDetailed("实验传送地区 OCR 未命中，保持国家列表继续重试：{Area}", areaName);
+            await Delay(GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds), _cancellationToken);
+            return DetectCurrentState(context);
         }
 
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(GetOperationDelay(80), _cancellationToken);
-        return StateHandlerResult.SuccessTo(
-            ExperimentalTeleportUiState.MapMain,
-            ExperimentalTeleportUiState.Unknown1);
+        return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "关闭国家列表");
     }
 
-    [StateHandler(ExperimentalTeleportUiState.TeleportCandidateList, RetryTimes = CandidateClickRetryCount + 1, TransitionTimeout = 1500)]
-    private async Task<StateHandlerResult> HandleTeleportCandidateList(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleTeleportCandidateListAsync(
+        ExperimentalTeleportUiContext context)
     {
-        ResetUnknownDetection(context);
         if (context.Operation != ExperimentalTeleportUiOperation.ConfirmTeleport)
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await Delay(GetOperationDelay(80), _cancellationToken);
-            return StateHandlerResult.SuccessTo(
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.Unknown1);
+            return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "关闭传送点候选列表");
         }
 
         if (++context.CandidateClickAttempts > CandidateClickRetryCount ||
@@ -455,57 +333,198 @@ internal sealed class ExperimentalTeleportUiStateMachine
             throw new TpPointNotActivate("传送点候选列表中没有可用目标");
         }
 
-        return StateHandlerResult.SuccessTo(
-            ExperimentalTeleportUiState.TeleportDetails,
-            ExperimentalTeleportUiState.Unknown1);
+        return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.TeleportDetails, "选择传送点候选");
     }
 
-    [StateHandler(ExperimentalTeleportUiState.TeleportDetails, RetryTimes = 2, TransitionTimeout = 5000)]
-    private async Task<StateHandlerResult> HandleTeleportDetails(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleTeleportDetailsAsync(
+        ExperimentalTeleportUiContext context)
     {
-        ResetUnknownDetection(context);
         if (context.Operation != ExperimentalTeleportUiOperation.ConfirmTeleport)
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await Delay(GetOperationDelay(80), _cancellationToken);
-            return StateHandlerResult.SuccessTo(
-                ExperimentalTeleportUiState.MapMain,
-                ExperimentalTeleportUiState.Unknown1);
+            return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "关闭传送详情");
+        }
+
+        if (context.ConfirmIssuedAt > 0)
+        {
+            var retryDelay = GetOperationDelay(TeleportLoadingFallbackMilliseconds);
+            var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
+            if (elapsed < retryDelay)
+            {
+                await Delay(
+                    Math.Min(
+                        GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds),
+                        retryDelay - (int)elapsed),
+                    _cancellationToken);
+                return DetectCurrentState(context);
+            }
+        }
+
+        if (++context.ConfirmClickAttempts > ConfirmClickRetryCount)
+        {
+            throw new TeleportTargetLocalizationException("传送确认操作达到重试上限");
         }
 
         await _host.PressExperimentalTeleportConfirmKey();
+        context.LoadingObserved = false;
+        context.LoadingFallbackLogged = false;
         context.ConfirmIssuedAt = Environment.TickCount64;
-        context.NextBlessingCheckAt = context.ConfirmIssuedAt + BlessingCheckIntervalMilliseconds;
-        return StateHandlerResult.SuccessTo(
-            ExperimentalTeleportUiState.Loading,
-            ExperimentalTeleportUiState.MainWorld);
+        context.NextBlessingCheckAt =
+            context.ConfirmIssuedAt + GetOperationDelay(BlessingCheckIntervalMilliseconds);
+        return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.Loading, "确认传送");
     }
 
-    [StateHandler(ExperimentalTeleportUiState.Loading)]
-    private async Task<StateHandlerResult> HandleLoading(ExperimentalTeleportUiContext context)
+    private async Task<ExperimentalTeleportUiState> HandleLoadingAsync(
+        ExperimentalTeleportUiContext context)
     {
         if (Environment.TickCount64 >= context.NextBlessingCheckAt)
         {
             await _host.HandleExperimentalLoadingInterruption();
-            context.NextBlessingCheckAt = Environment.TickCount64 + BlessingCheckIntervalMilliseconds;
+            context.NextBlessingCheckAt =
+                Environment.TickCount64 + GetOperationDelay(BlessingCheckIntervalMilliseconds);
         }
 
-        return StateHandlerResult.Wait;
+        return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MainWorld, "等待传送完成");
     }
 
-    private int GetOperationDelay(int baseDelay)
+    private async Task<ExperimentalTeleportUiState> WaitForExpectedStateAsync(
+        ExperimentalTeleportUiContext context,
+        ExperimentalTeleportUiState expectedState,
+        string operation)
     {
-        var configured = Math.Clamp(
-            _config.TeleportOperationDelayMilliseconds,
-            TpConfig.MinTeleportOperationDelayMilliseconds,
-            TpConfig.MaxTeleportOperationDelayMilliseconds);
-        return Math.Max(1, (int)Math.Round(
-            baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
+        var timeout = GetDetectionTimeout(ExpectedStateTimeoutMilliseconds);
+        var interval = GetOperationDelay(ExpectedStateDetectionIntervalMilliseconds);
+        var stopwatch = Stopwatch.StartNew();
+        var detectedState = DetectCurrentState(context);
+        if (detectedState == expectedState)
+        {
+            LogExpectedStateReached(operation, expectedState, stopwatch.ElapsedMilliseconds);
+            return detectedState;
+        }
+
+        LogDetailed(
+            "实验传送状态与预期不符：operation={Operation} expected={ExpectedState} detected={DetectedState}，继续检测最多 {TimeoutMilliseconds}ms",
+            operation,
+            expectedState,
+            detectedState,
+            timeout);
+        while (stopwatch.ElapsedMilliseconds < timeout)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
+            await Delay(Math.Min(interval, remaining), _cancellationToken);
+            detectedState = DetectCurrentState(context);
+            if (detectedState == expectedState)
+            {
+                LogExpectedStateReached(operation, expectedState, stopwatch.ElapsedMilliseconds);
+                return detectedState;
+            }
+        }
+
+        LogDetailed(
+            "实验传送等待预期状态超时：operation={Operation} expected={ExpectedState} accepted={DetectedState} timeout={TimeoutMilliseconds}ms",
+            operation,
+            expectedState,
+            detectedState,
+            timeout);
+        return detectedState;
+    }
+
+    private ExperimentalTeleportUiState DetectCurrentState(ExperimentalTeleportUiContext context)
+    {
+        using var capture = CaptureToRectArea();
+
+        if (_host.IsExperimentalTeleportDetails(capture))
+        {
+            return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportDetails);
+        }
+
+        if (_host.HasExperimentalMapChooseCandidate(capture, context.TargetTp))
+        {
+            return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportCandidateList);
+        }
+
+        var isInBigMapUi = Bv.IsInBigMapUi(capture);
+        if (isInBigMapUi)
+        {
+            return AcceptKnownState(
+                context,
+                _host.HasExperimentalMapMainControls(capture)
+                    ? ExperimentalTeleportUiState.MapMain
+                    : ExperimentalTeleportUiState.AreaList);
+        }
+
+        var isInMainUi = Bv.IsInMainUi(capture);
+        if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&
+            context.ConfirmIssuedAt > 0)
+        {
+            var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
+            if (isInMainUi)
+            {
+                if (context.LoadingObserved &&
+                    elapsed >= GetOperationDelay(TeleportMinimumCompletionMilliseconds))
+                {
+                    return AcceptKnownState(context, ExperimentalTeleportUiState.MainWorld);
+                }
+
+                if (!context.LoadingObserved &&
+                    elapsed >= GetOperationDelay(TeleportLoadingFallbackMilliseconds))
+                {
+                    if (!context.LoadingFallbackLogged)
+                    {
+                        context.LoadingFallbackLogged = true;
+                        Logger.LogWarning(
+                            "实验传送确认后未识别到 Loading，但已等待 {ElapsedMilliseconds}ms 并处于主界面，按传送成功处理",
+                            elapsed);
+                    }
+
+                    return AcceptKnownState(context, ExperimentalTeleportUiState.MainWorld);
+                }
+            }
+            else
+            {
+                context.LoadingObserved = true;
+                return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
+            }
+
+            return ResolveUnknownState(context);
+        }
+
+        if (context.Operation != ExperimentalTeleportUiOperation.ConfirmTeleport && isInMainUi)
+        {
+            return AcceptKnownState(context, ExperimentalTeleportUiState.MainWorld);
+        }
+
+        return ResolveUnknownState(context);
+    }
+
+    private static ExperimentalTeleportUiState AcceptKnownState(
+        ExperimentalTeleportUiContext context,
+        ExperimentalTeleportUiState state)
+    {
+        ResetUnknownDetection(context);
+        context.UnknownRecoveryAttempts = 0;
+        return state;
+    }
+
+    private ExperimentalTeleportUiState ResolveUnknownState(ExperimentalTeleportUiContext context)
+    {
+        if (!context.UnknownDelayStarted)
+        {
+            context.UnknownDelayStarted = true;
+            context.UnknownDetectedAt = Environment.TickCount64;
+            return ExperimentalTeleportUiState.Unknown1;
+        }
+
+        return Environment.TickCount64 - context.UnknownDetectedAt >=
+               GetOperationDelay(UnknownRecheckDelayMilliseconds)
+            ? ExperimentalTeleportUiState.Unknown2
+            : ExperimentalTeleportUiState.Unknown1;
     }
 
     private async Task<bool> WaitForAreaAtlasMatchAsync(string? areaName)
     {
-        var timeout = GetOperationDelay(AreaAtlasMatchTimeoutMilliseconds);
+        var timeout = GetDetectionTimeout(AreaAtlasMatchTimeoutMilliseconds);
         var interval = GetOperationDelay(AreaAtlasMatchIntervalMilliseconds);
         var stopwatch = Stopwatch.StartNew();
         while (true)
@@ -519,7 +538,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
 
             if (isVisible)
             {
-                Logger.LogDebug(
+                LogDetailed(
                     "实验传送地区图集已就绪：area={Area} elapsed={ElapsedMilliseconds}ms",
                     areaName ?? "未指定",
                     stopwatch.ElapsedMilliseconds);
@@ -529,7 +548,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
             var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
             if (remaining <= 0)
             {
-                Logger.LogDebug(
+                LogDetailed(
                     "实验传送地区图集等待超时，保持国家列表并切换 OCR：area={Area} timeout={TimeoutMilliseconds}ms",
                     areaName ?? "未指定",
                     timeout);
@@ -540,35 +559,57 @@ internal sealed class ExperimentalTeleportUiStateMachine
         }
     }
 
-    private bool CanDetectKnownState()
+    private static ExperimentalTeleportUiState GetExpectedState(
+        ExperimentalTeleportUiOperation operation)
     {
-        var context = _activeContext;
-        return context == null ||
-               !context.UnknownDelayStarted ||
-               CurrentState != ExperimentalTeleportUiState.Unknown1 ||
-               context.UnknownRecheckReady ||
-               Environment.TickCount64 - context.UnknownDetectedAt >=
-               GetOperationDelay(UnknownRecheckDelayMilliseconds);
+        return operation switch
+        {
+            ExperimentalTeleportUiOperation.EnsureMapMain => ExperimentalTeleportUiState.MapMain,
+            ExperimentalTeleportUiOperation.OpenAreaList => ExperimentalTeleportUiState.AreaList,
+            ExperimentalTeleportUiOperation.SelectArea => ExperimentalTeleportUiState.MapMain,
+            ExperimentalTeleportUiOperation.ConfirmTeleport => ExperimentalTeleportUiState.TeleportDetails,
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
+        };
     }
 
-    private bool IsCurrentStateStillVisible(ImageRegion imageRegion)
+    private void LogExpectedStateReached(
+        string operation,
+        ExperimentalTeleportUiState expectedState,
+        long elapsedMilliseconds)
     {
-        return CurrentState switch
+        LogDetailed(
+            "实验传送达到预期状态：operation={Operation} state={State} elapsed={ElapsedMilliseconds}ms",
+            operation,
+            expectedState,
+            elapsedMilliseconds);
+    }
+
+    private int GetOperationDelay(int baseDelay)
+    {
+        var configured = Math.Clamp(
+            _config.TeleportOperationDelayMilliseconds,
+            TpConfig.MinTeleportOperationDelayMilliseconds,
+            TpConfig.MaxTeleportOperationDelayMilliseconds);
+        return Math.Max(1, (int)Math.Round(
+            baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
+    }
+
+    private int GetDetectionTimeout(int baseTimeout)
+    {
+        return Math.Max(baseTimeout, GetOperationDelay(baseTimeout));
+    }
+
+    private void LogDetailed(string message, params object?[] args)
+    {
+        if (_config.ExperimentalTeleportDetailedLogs)
         {
-            ExperimentalTeleportUiState.MainWorld => DetectMainWorld(imageRegion),
-            ExperimentalTeleportUiState.MapMain => DetectMapMain(imageRegion),
-            ExperimentalTeleportUiState.AreaList => DetectAreaList(imageRegion),
-            ExperimentalTeleportUiState.TeleportCandidateList => DetectTeleportCandidateList(imageRegion),
-            ExperimentalTeleportUiState.TeleportDetails => DetectTeleportDetails(imageRegion),
-            ExperimentalTeleportUiState.Loading => DetectLoading(imageRegion),
-            _ => false,
-        };
+            Logger.LogDebug(message, args);
+        }
     }
 
     private static void ResetUnknownDetection(ExperimentalTeleportUiContext context)
     {
         context.UnknownDelayStarted = false;
         context.UnknownDetectedAt = 0;
-        context.UnknownRecheckReady = false;
     }
 }

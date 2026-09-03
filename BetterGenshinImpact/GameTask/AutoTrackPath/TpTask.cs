@@ -60,8 +60,10 @@ public class TpTask
     private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
     private const int DefaultBigMapOpenTimeoutMs = 5000;
     private const int MoonCanonBigMapOpenTimeoutMs = 8000;
+    private const int BigMapOpenRepressIntervalMs = 1500;
+    private const int MinimumBigMapOpenRepressIntervalMs = 500;
+    private const int BigMapOpenDetectionIntervalMs = 50;
     private const int UiRecognitionPollIntervalMs = 80;
-    private const int BigMapOpenCheckIntervalMs = UiRecognitionPollIntervalMs;
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
@@ -535,6 +537,7 @@ public class TpTask
                 fallbackCandidate is { } candidate
                     ? () => ClickAbsoluteMapCandidate(candidate)
                     : null);
+            Logger.LogInformation("传送完成");
             s_lastSuccessfulTeleportMapName = target.MapName;
             Navigation.SetPrevPosition((float)target.X, (float)target.Y);
             return (target.X, target.Y);
@@ -1328,7 +1331,7 @@ public class TpTask
         if (!await TryToOpenBigMapUi(mapName))
         {
             await new ReturnMainUiTask().Start(ct);
-            await Delay(500, ct);
+            await Delay(GetTeleportOperationDelay(500), ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
@@ -1346,11 +1349,11 @@ public class TpTask
             return true;
         }
 
-        var timeoutMilliseconds = GetBigMapOpenTimeoutMilliseconds(mapName);
-        var repressIntervalMilliseconds = Math.Clamp(
-            _tpConfig.BigMapOpenRepressIntervalMilliseconds,
-            TpConfig.MinBigMapOpenRepressIntervalMilliseconds,
-            TpConfig.MaxBigMapOpenRepressIntervalMilliseconds);
+        var timeoutMilliseconds = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
+        var repressIntervalMilliseconds = Math.Max(
+            MinimumBigMapOpenRepressIntervalMs,
+            GetTeleportOperationDelay(BigMapOpenRepressIntervalMs));
+        var detectionIntervalMilliseconds = GetTeleportOperationDelay(BigMapOpenDetectionIntervalMs);
         var stopwatch = Stopwatch.StartNew();
         var pressCount = 0;
 
@@ -1381,7 +1384,13 @@ public class TpTask
                     break;
                 }
 
-                await Delay(BigMapOpenCheckIntervalMs, ct);
+                var remainingProbeMilliseconds = probeDeadline - stopwatch.ElapsedMilliseconds;
+                if (remainingProbeMilliseconds > 0)
+                {
+                    await Delay(
+                        (int)Math.Min(detectionIntervalMilliseconds, remainingProbeMilliseconds),
+                        ct);
+                }
             }
 
             if (!leftMainUi)
@@ -1405,7 +1414,7 @@ public class TpTask
             var remainingMilliseconds = Math.Max(
                 0,
                 timeoutMilliseconds - (int)stopwatch.ElapsedMilliseconds);
-            if (await WaitForBigMapUiAppear(remainingMilliseconds))
+            if (await WaitForBigMapUiAppear(remainingMilliseconds, detectionIntervalMilliseconds))
             {
                 Logger.LogDebug(
                     "大地图已打开：按 M {PressCount} 次，耗时 {ElapsedMilliseconds}ms",
@@ -1430,7 +1439,9 @@ public class TpTask
         return Bv.IsInBigMapUi(capture);
     }
 
-    private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds)
+    private async Task<bool> WaitForBigMapUiAppear(
+        int timeoutMilliseconds,
+        int detectionIntervalMilliseconds)
     {
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
@@ -1440,7 +1451,11 @@ public class TpTask
                 return true;
             }
 
-            await Delay(BigMapOpenCheckIntervalMs, ct);
+            var remainingMilliseconds = timeoutMilliseconds - (int)stopwatch.ElapsedMilliseconds;
+            if (remainingMilliseconds > 0)
+            {
+                await Delay(Math.Min(detectionIntervalMilliseconds, remainingMilliseconds), ct);
+            }
         }
 
         return false;

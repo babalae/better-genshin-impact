@@ -23,6 +23,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double EarlyStopMargin = 40d;
     private const double EmaWeight = 0.4d;
     private const double InitialDragStrengthScale = 0.2d;
+    private const int StableTimeoutMilliseconds = 1200;
+    private const double StableDifferenceThreshold = 1.5d;
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
@@ -32,6 +34,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private static readonly Rect2d[] DangerRects =
     [
         new(0, 0, 400, 430),
+        new(0, 430, 110, 260),
         new(930, 0, 990, 100),
         new(1515, 929, 405, 151),
         new(0, 960, 105, 120),
@@ -99,7 +102,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 out var start,
                 out var end))
         {
-            Logger.LogDebug(
+            LogDetailed(
                 "实验传送无法生成安全拖动跑道：requested=({RequestedX:0.0},{RequestedY:0.0}) adjusted=({AdjustedX:0.0},{AdjustedY:0.0}) country={Country}",
                 requestedDeltaX,
                 requestedDeltaY,
@@ -109,7 +112,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             return default;
         }
 
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送开始拖动：mode={Mode} requested=({RequestedX:0.0},{RequestedY:0.0}) runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) ratio={Ratio:0.000} source={RatioSource}",
             config.MapDragUseRelativeMove ? "relative" : "absolute",
             requestedDeltaX,
@@ -131,14 +134,15 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             36);
         var movedX = 0d;
         var movedY = 0d;
-        var stepDelay = GetOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds);
-        var releaseDelay = Math.Clamp(
-            config.ExperimentalTeleportDragReleaseDelayMilliseconds,
-            TpConfig.MinExperimentalTeleportDragReleaseDelayMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
+        var stepDelay = Math.Clamp(
+            config.ExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+        var releaseDelay = GetOperationDelay(50);
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
+            await Delay(GetOperationDelay(50), ct);
             for (var i = 1; i <= steps; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -172,7 +176,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var inputScale = Math.Max(TaskContext.Instance().SystemInfo.ScaleTo1080PRatio, 1e-6d);
         var actualX = (cursorAfter.X - cursorBefore.X) / inputScale;
         var actualY = (cursorAfter.Y - cursorBefore.Y) / inputScale;
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送拖动完成：input=({InputX:0.0},{InputY:0.0}) cursor=({CursorX:0.0},{CursorY:0.0}) multiplier={Multiplier:0.000}",
             end.X - start.X,
             end.Y - start.Y,
@@ -207,7 +211,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var directionDot = inputX * actualMapScreenX + inputY * actualMapScreenY;
         if (inputLength < 20d || actualLength < 5d || directionDot <= 0d)
         {
-            Logger.LogDebug(
+            LogDetailed(
                 "实验传送跳过拖动倍率样本：inputLength={InputLength:0.0} actualLength={ActualLength:0.0} directionDot={DirectionDot:0.0}",
                 inputLength,
                 actualLength,
@@ -218,7 +222,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var observedMultiplier = inputLength / actualLength;
         if (!double.IsFinite(observedMultiplier) || observedMultiplier is < 0.02d or > 1d)
         {
-            Logger.LogDebug(
+            LogDetailed(
                 "实验传送跳过异常拖动倍率样本：observed={ObservedMultiplier:0.000}",
                 observedMultiplier);
             return;
@@ -226,7 +230,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
         var previousMultiplier = _relativeMoveMultiplier;
         _relativeMoveMultiplier = previousMultiplier * (1d - EmaWeight) + observedMultiplier * EmaWeight;
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送更新拖动倍率：previous={PreviousMultiplier:0.000} observed={ObservedMultiplier:0.000} next={NextMultiplier:0.000}",
             previousMultiplier,
             observedMultiplier,
@@ -248,7 +252,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var realRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
         var realScale = Math.Max(1e-6d, realRect.Width / 1920d);
 
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送滑块缩放：before={BeforeZoom:0.00} target={TargetZoom:0.00} from=({StartX:0.0},{InitialY:0.0}) to=({TargetX:0.0},{TargetY:0.0}) scale={Scale:0.000}",
             zoomLevel,
             targetZoomLevel,
@@ -281,8 +285,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
     public async Task WaitForStableMapAsync()
     {
-        var timeout = Math.Clamp(config.ExperimentalTeleportStableTimeoutMilliseconds, 200, 5000);
-        var threshold = Math.Clamp(config.ExperimentalTeleportStableDifferenceThreshold, 0.1d, 20d);
+        var timeout = GetOperationDelay(StableTimeoutMilliseconds);
+        const double threshold = StableDifferenceThreshold;
         var deadline = Environment.TickCount64 + timeout;
         Mat? previous = null;
         var stableFrames = 0;
@@ -308,7 +312,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                             stableFrames++;
                             if (stableFrames >= 2)
                             {
-                                Logger.LogDebug(
+                                LogDetailed(
                                     "实验传送地图已稳定：elapsed={ElapsedMilliseconds}ms difference={Difference:0.000} threshold={Threshold:0.000}",
                                     Environment.TickCount64 - startedAt,
                                     lastDifference,
@@ -326,7 +330,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                     previous = current.Clone();
                 }
 
-                await Delay(35, ct);
+                await Delay(GetOperationDelay(35), ct);
             }
         }
         finally
@@ -334,7 +338,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             previous?.Dispose();
         }
 
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送地图稳定等待达到上限：timeout={TimeoutMilliseconds}ms lastDifference={Difference:0.000} threshold={Threshold:0.000}",
             timeout,
             lastDifference,
@@ -350,11 +354,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         out Point2d start,
         out Point2d end)
     {
-        var candidates = GetRunwayCandidates(width, height, requestedX, requestedY);
         for (var ratio = 1d; ratio >= 0.18d; ratio *= 0.82d)
         {
             var deltaX = requestedX * ratio;
             var deltaY = requestedY * ratio;
+            var candidates = GetRunwayCandidates(width, height, deltaX, deltaY);
             foreach (var candidate in candidates)
             {
                 var candidateEnd = new Point2d(candidate.X + deltaX, candidate.Y + deltaY);
@@ -384,12 +388,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var preferredY = deltaY >= 0 ? top : bottom;
         return
         [
-            new(preferredX, preferredY),
-            new(preferredX, height * 0.55d),
-            new(width * 0.5d, preferredY),
             new(width * 0.5d - deltaX / 2d, height * 0.55d - deltaY / 2d),
             new(width * 0.38d, height * 0.72d),
             new(width * 0.62d, height * 0.72d),
+            new(width * 0.5d, height * 0.55d),
+            new(preferredX, height * 0.55d),
+            new(width * 0.5d, preferredY),
+            new(preferredX, preferredY),
         ];
     }
 
@@ -469,6 +474,14 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             TpConfig.MaxTeleportOperationDelayMilliseconds);
         return Math.Max(1, (int)Math.Round(
             baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
+    }
+
+    private void LogDetailed(string message, params object?[] args)
+    {
+        if (config.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(message, args);
+        }
     }
 
     private static double EaseOut(double value)

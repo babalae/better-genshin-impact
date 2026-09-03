@@ -21,6 +21,7 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
     private const double GridStepX = 300d;
     private const double GridStepY = 105d;
     private const double GridValidationTolerance = 75d;
+    private const double TemplateMatchThreshold = 0.8d;
     private static readonly IReadOnlyDictionary<string, int> AreaIndexes =
         new Dictionary<string, int>(StringComparer.Ordinal)
         {
@@ -85,7 +86,7 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "实验传送地区列表模板检测失败");
+            LogDetailed(ex, "实验传送地区列表模板检测失败");
             return false;
         }
     }
@@ -105,12 +106,12 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
             }
 
             imageRegion.ClickTo(hit.X, hit.Y, hit.Width, hit.Height);
-            Logger.LogInformation("实验传送通过图集选择区域：{Area}", areaName);
+            LogDetailed("实验传送通过图集选择区域：{Area}", areaName);
             return true;
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "实验传送地区模板匹配失败：{Area}", areaName);
+            LogDetailed(ex, "实验传送地区模板匹配失败：{Area}", areaName);
             return false;
         }
     }
@@ -125,7 +126,6 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
 
         var tileWidth = _atlas.Width / 16;
         var tileHeight = _atlas.Height / 2;
-        var threshold = Math.Clamp(_config.ExperimentalTeleportTemplateMatchThreshold, 0.5d, 0.99d);
         for (var variant = 0; variant < 2; variant++)
         {
             if (variant == 1 && areaIndex == 15)
@@ -141,7 +141,7 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
             using var result = new Mat();
             Cv2.MatchTemplate(search, template, result, TemplateMatchModes.CCoeffNormed);
             Cv2.MinMaxLoc(result, out _, out var score, out _, out var location);
-            if (score < threshold)
+            if (score < TemplateMatchThreshold)
             {
                 continue;
             }
@@ -180,6 +180,22 @@ internal sealed class ExperimentalTeleportRegionAtlas : IDisposable
         }
 
         return false;
+    }
+
+    private void LogDetailed(string message, params object?[] args)
+    {
+        if (_config.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(message, args);
+        }
+    }
+
+    private void LogDetailed(Exception exception, string message, params object?[] args)
+    {
+        if (_config.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(exception, message, args);
+        }
     }
 
     public void Dispose()

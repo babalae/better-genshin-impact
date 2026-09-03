@@ -11,12 +11,9 @@ public partial class TpConfig : ObservableValidator
     public const int MinTeleportOperationDelayMilliseconds = 2;
     public const int MaxTeleportOperationDelayMilliseconds = 100;
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
-    public const int MinBigMapOpenRepressIntervalMilliseconds = 100;
-    public const int MaxBigMapOpenRepressIntervalMilliseconds = 5000;
-    public const int DefaultBigMapOpenRepressIntervalMilliseconds = 500;
-    public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 0;
-    public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
-    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 50;
+    public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 2;
+    public const int MaxExperimentalTeleportDragStepIntervalMilliseconds = 100;
+    public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 20;
     public const double MinExperimentalTeleportInitialDragStrength = 0.1d;
     public const double MaxExperimentalTeleportInitialDragStrength = 5d;
     public const double DefaultExperimentalTeleportInitialDragStrength = 1d;
@@ -24,29 +21,7 @@ public partial class TpConfig : ObservableValidator
     private bool _useExperimentalTeleport;
 
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(1, 5, ErrorMessage = "实验传送重试次数：1-5")]
-    private int _experimentalTeleportRetryCount = 3;
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(1.0, 6.0, ErrorMessage = "实验传送最小缩放等级：1.0-6.0")]
-    private double _experimentalTeleportMinZoomLevel = 2.0;
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(200, 5000, ErrorMessage = "地图稳定等待上限：200-5000 ms")]
-    private int _experimentalTeleportStableTimeoutMilliseconds = 1200;
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(0.1, 20.0, ErrorMessage = "地图稳定差异阈值：0.1-20.0")]
-    private double _experimentalTeleportStableDifferenceThreshold = 1.5;
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(0.5, 0.99, ErrorMessage = "地区模板匹配阈值：0.50-0.99")]
-    private double _experimentalTeleportTemplateMatchThreshold = 0.8;
+    private bool _experimentalTeleportDetailedLogs;
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
@@ -68,32 +43,16 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     [NotifyDataErrorInfo]
     [Range(
-        MinExperimentalTeleportDragReleaseDelayMilliseconds,
-        MaxExperimentalTeleportDragReleaseDelayMilliseconds,
-        ErrorMessage = "实验传送拖动松键延迟：0-500 ms")]
-    private int _experimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
+        MinExperimentalTeleportDragStepIntervalMilliseconds,
+        MaxExperimentalTeleportDragStepIntervalMilliseconds,
+        ErrorMessage = "实验传送拖动步进间隔：2-100 ms")]
+    private int _experimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
 
-    partial void OnExperimentalTeleportDragReleaseDelayMillisecondsChanged(int value)
+    partial void OnExperimentalTeleportDragStepIntervalMillisecondsChanged(int value)
     {
-        if (value is < MinExperimentalTeleportDragReleaseDelayMilliseconds or > MaxExperimentalTeleportDragReleaseDelayMilliseconds)
+        if (value is < MinExperimentalTeleportDragStepIntervalMilliseconds or > MaxExperimentalTeleportDragStepIntervalMilliseconds)
         {
-            ExperimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
-        }
-    }
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(
-        MinBigMapOpenRepressIntervalMilliseconds,
-        MaxBigMapOpenRepressIntervalMilliseconds,
-        ErrorMessage = "大地图补按间隔：100-5000 ms")]
-    private int _bigMapOpenRepressIntervalMilliseconds = DefaultBigMapOpenRepressIntervalMilliseconds;
-
-    partial void OnBigMapOpenRepressIntervalMillisecondsChanged(int value)
-    {
-        if (value is < MinBigMapOpenRepressIntervalMilliseconds or > MaxBigMapOpenRepressIntervalMilliseconds)
-        {
-            BigMapOpenRepressIntervalMilliseconds = DefaultBigMapOpenRepressIntervalMilliseconds;
+            ExperimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
         }
     }
 

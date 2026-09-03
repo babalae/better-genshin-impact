@@ -29,7 +29,9 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 internal sealed class ExperimentalTeleportTask : IDisposable
 {
     private const int TeleportTimeoutMilliseconds = 60_000;
+    private const int RetryCount = 3;
     private const int MaximumFastDragIterations = 12;
+    private const double FinalZoomLevelLimit = 2d;
     private const double DefaultDisplayZoomLevel = 4.4d;
     private const double MoonCanonDisplayZoomLevel = 3d;
     private const double AdjacentPointDistanceFactor = 30d;
@@ -108,7 +110,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         string mapName,
         bool force)
     {
-        var retryCount = Math.Clamp(_config.ExperimentalTeleportRetryCount, 1, 5);
+        const int retryCount = RetryCount;
         for (var attempt = 1; attempt <= retryCount; attempt++)
         {
             try
@@ -141,7 +143,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                     attempt,
                     retryCount,
                     ex.Message);
-                Logger.LogDebug(ex, "实验传送失败异常详情（第 {Attempt}/{RetryCount} 次）", attempt, retryCount);
+                LogDetailed(ex, "实验传送失败异常详情（第 {Attempt}/{RetryCount} 次）", attempt, retryCount);
                 Simulation.SendInput.Mouse.LeftButtonUp();
                 await new ReturnMainUiTask().Start(_ct);
                 await Delay(GetOperationDelay(1000), _ct);
@@ -162,7 +164,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         await _host.SwitchToGroundMapLayerIfNeeded();
 
         var target = ResolveTarget(tpX, tpY, mapName, force);
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送目标：map={MapName} request=({RequestX:0.0},{RequestY:0.0}) target=({TargetX:0.0},{TargetY:0.0}) country={Country} neighbor={NeighborDistance:0.0} force={Force}",
             mapName,
             tpX,
@@ -179,7 +181,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         await MoveTargetIntoClickableArea(target, initialPrior);
 
         var finalZoomLevel = GetFinalZoomLevel(target);
-        Logger.LogDebug(
+        LogDetailed(
             "实验传送进入最终点选：map={MapName} target=({TargetX:0.0},{TargetY:0.0}) zoom={ZoomLevel:0.00}",
             mapName,
             target.X,
@@ -230,7 +232,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var currentCenter = TryRecognizeCenter(target.MapName, navigationPrior ?? GetLastTargetPrior(target.MapName));
             if (currentCenter is { } center && !ShouldSwitchCountry(target, center))
             {
-                Logger.LogDebug(
+                LogDetailed(
                     "实验传送沿用当前地区：country={Country} center=({CenterX:0.0},{CenterY:0.0})",
                     target.Country ?? "未指定",
                     center.X,
@@ -240,11 +242,11 @@ internal sealed class ExperimentalTeleportTask : IDisposable
 
             if (string.IsNullOrWhiteSpace(target.Country))
             {
-                Logger.LogDebug("实验传送目标没有国家信息，跳过地区切换");
+                LogDetailed("实验传送目标没有国家信息，跳过地区切换");
                 return currentCenter;
             }
 
-            Logger.LogDebug(
+            LogDetailed(
                 "实验传送切换地区：country={Country} currentCenter={CurrentCenter}",
                 target.Country,
                 currentCenter?.ToString() ?? "未识别");
@@ -254,12 +256,12 @@ internal sealed class ExperimentalTeleportTask : IDisposable
 
         if (string.Equals(s_lastMapName, target.MapName, StringComparison.Ordinal))
         {
-            Logger.LogDebug("实验传送沿用独立地图：map={MapName}", target.MapName);
+            LogDetailed("实验传送沿用独立地图：map={MapName}", target.MapName);
             return GetLastTargetPrior(target.MapName);
         }
 
         var areaName = MapTypesExtensions.ParseFromName(target.MapName).GetDescription();
-        Logger.LogDebug("实验传送切换独立地图：map={MapName} area={Area}", target.MapName, areaName);
+        LogDetailed("实验传送切换独立地图：map={MapName} area={Area}", target.MapName, areaName);
         await SwitchAreaWithFallback(areaName, target.MapName);
         return null;
     }
@@ -274,7 +276,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         var center = TryRecognizeCenter(target.MapName, initialPrior);
         if (center == null)
         {
-            Logger.LogDebug("实验传送未取得初始地图中心，将交由主线定位兜底");
+            LogDetailed("实验传送未取得初始地图中心，将交由主线定位兜底");
             return;
         }
 
@@ -292,7 +294,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                     currentZoom,
                     target.Country))
             {
-                Logger.LogDebug(
+                LogDetailed(
                     "实验传送目标已进入安全点击区：iteration={Iteration} center=({CenterX:0.0},{CenterY:0.0}) zoom={Zoom:0.00}",
                     iteration,
                     currentCenter.X,
@@ -304,7 +306,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var deltaX = _config.MapScaleFactor * (target.X - currentCenter.X) / currentZoom;
             var deltaY = _config.MapScaleFactor * (target.Y - currentCenter.Y) / currentZoom;
             var mouseDistance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
-            Logger.LogDebug(
+            LogDetailed(
                 "实验传送定位轮次：iteration={Iteration} center=({CenterX:0.0},{CenterY:0.0}) target=({TargetX:0.0},{TargetY:0.0}) zoom={Zoom:0.00} delta=({DeltaX:0.0},{DeltaY:0.0}) distance={Distance:0.0}",
                 iteration + 1,
                 currentCenter.X,
@@ -326,7 +328,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                     await _drag.AdjustMapZoomLevelAsync(currentZoom, targetZoom);
                     await _drag.WaitForStableMapAsync();
                     currentZoom = _host.GetCurrentBigMapZoomLevel();
-                    Logger.LogDebug(
+                    LogDetailed(
                         "实验传送缩放完成：iteration={Iteration} requested={RequestedZoom:0.00} before={BeforeZoom:0.00} actual={ActualZoom:0.00}",
                         iteration + 1,
                         targetZoom,
@@ -340,7 +342,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var dragResult = await _drag.DragAsync(deltaX, deltaY, target.Country);
             if (!dragResult.Moved)
             {
-                Logger.LogDebug("实验传送未找到可用拖动跑道，将交由主线定位兜底");
+                LogDetailed("实验传送未找到可用拖动跑道，将交由主线定位兜底");
                 return;
             }
 
@@ -351,7 +353,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var recognizedCenter = TryRecognizeCenter(target.MapName, predictedCenter);
             if (recognizedCenter == null)
             {
-                Logger.LogDebug("实验传送拖动后位置识别失败，将交由主线定位兜底");
+                LogDetailed("实验传送拖动后位置识别失败，将交由主线定位兜底");
                 return;
             }
 
@@ -365,7 +367,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 actualMapScreenX,
                 actualMapScreenY);
 
-            Logger.LogDebug(
+            LogDetailed(
                 "实验传送拖动定位完成：iteration={Iteration} input=({InputX:0.0},{InputY:0.0}) cursor=({CursorX:0.0},{CursorY:0.0}) map=({MapX:0.0},{MapY:0.0}) predicted=({PredictedX:0.0},{PredictedY:0.0}) recognized=({RecognizedX:0.0},{RecognizedY:0.0})",
                 iteration + 1,
                 dragResult.InputDeltaX,
@@ -395,7 +397,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Logger.LogDebug(ex, "实验传送识别大地图中心失败：{MapName}", mapName);
+            LogDetailed(ex, "实验传送识别大地图中心失败：{MapName}", mapName);
             return null;
         }
     }
@@ -449,9 +451,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
 
     private double GetFinalZoomLevel(TeleportTarget target)
     {
-        var configuredLimit = Math.Clamp(_config.ExperimentalTeleportMinZoomLevel, 1d, 6d);
         var zoom = Math.Max(target.NeighborDistance / AdjacentPointDistanceFactor, 1d);
-        zoom = Math.Min(zoom, configuredLimit);
+        zoom = Math.Min(zoom, FinalZoomLevelLimit);
 
         var special = GetSpecialAdjacentPoints().FirstOrDefault(point =>
             Math.Abs(point.X - target.X) <= SpecialPointTolerance &&
@@ -513,6 +514,22 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             TpConfig.MaxTeleportOperationDelayMilliseconds);
         return Math.Max(1, (int)Math.Round(
             baseDelay * configured / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
+    }
+
+    private void LogDetailed(string message, params object?[] args)
+    {
+        if (_config.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(message, args);
+        }
+    }
+
+    private void LogDetailed(Exception exception, string message, params object?[] args)
+    {
+        if (_config.ExperimentalTeleportDetailedLogs)
+        {
+            Logger.LogDebug(exception, message, args);
+        }
     }
 
     private static double Distance(Point2f point, double x, double y)
