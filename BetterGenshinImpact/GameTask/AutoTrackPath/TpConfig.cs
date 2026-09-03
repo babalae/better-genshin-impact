@@ -35,6 +35,27 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportMapStabilityTimeoutMilliseconds = 500;
     public const int MaxExperimentalTeleportMapStabilityTimeoutMilliseconds = 5000;
     public const int DefaultExperimentalTeleportMapStabilityTimeoutMilliseconds = 1200;
+    public const double MinExperimentalTeleportInitialDragStrengthScale = 0.05d;
+    public const double MaxExperimentalTeleportInitialDragStrengthScale = 1d;
+    public const double DefaultExperimentalTeleportInitialDragStrengthScale = 0.2d;
+    public const double MinExperimentalTeleportEmaWeight = 0.05d;
+    public const double MaxExperimentalTeleportEmaWeight = 0.95d;
+    public const double DefaultExperimentalTeleportEmaWeight = 0.4d;
+    public const double MinExperimentalTeleportInputLossSlowdownFactor = 1d;
+    public const double MaxExperimentalTeleportInputLossSlowdownFactor = 3d;
+    public const double DefaultExperimentalTeleportInputLossSlowdownFactor = 1.5d;
+    public const double MinExperimentalTeleportInputRecoveryFactor = 0.5d;
+    public const double MaxExperimentalTeleportInputRecoveryFactor = 1d;
+    public const double DefaultExperimentalTeleportInputRecoveryFactor = 0.9d;
+    public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
+    public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
+    public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 48;
+    public const int MinExperimentalTeleportMaxDragSteps = 36;
+    public const int MaxExperimentalTeleportMaxDragSteps = 240;
+    public const int DefaultExperimentalTeleportMaxDragSteps = 120;
+    public const double MinExperimentalTeleportStepProfileFactor = 1d;
+    public const double MaxExperimentalTeleportStepProfileFactor = 2d;
+    public const double DefaultExperimentalTeleportStepProfileFactor = 1.5d;
     [ObservableProperty]
     private bool _useExperimentalTeleport;
 
@@ -178,6 +199,127 @@ public partial class TpConfig : ObservableValidator
         {
             ExperimentalTeleportMapStabilityTimeoutMilliseconds =
                 DefaultExperimentalTeleportMapStabilityTimeoutMilliseconds;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportInitialDragStrengthScale,
+        MaxExperimentalTeleportInitialDragStrengthScale,
+        ErrorMessage = "实验传送初始力度换算系数：0.05-1.0")]
+    private double _experimentalTeleportInitialDragStrengthScale =
+        DefaultExperimentalTeleportInitialDragStrengthScale;
+
+    partial void OnExperimentalTeleportInitialDragStrengthScaleChanged(double value)
+    {
+        if (!double.IsFinite(value) ||
+            value is < MinExperimentalTeleportInitialDragStrengthScale or > MaxExperimentalTeleportInitialDragStrengthScale)
+        {
+            ExperimentalTeleportInitialDragStrengthScale = DefaultExperimentalTeleportInitialDragStrengthScale;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportEmaWeight,
+        MaxExperimentalTeleportEmaWeight,
+        ErrorMessage = "实验传送 EMA 权重：0.05-0.95")]
+    private double _experimentalTeleportEmaWeight = DefaultExperimentalTeleportEmaWeight;
+
+    partial void OnExperimentalTeleportEmaWeightChanged(double value)
+    {
+        if (!double.IsFinite(value) ||
+            value is < MinExperimentalTeleportEmaWeight or > MaxExperimentalTeleportEmaWeight)
+        {
+            ExperimentalTeleportEmaWeight = DefaultExperimentalTeleportEmaWeight;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportInputLossSlowdownFactor,
+        MaxExperimentalTeleportInputLossSlowdownFactor,
+        ErrorMessage = "实验传送输入丢失减速系数：1.0-3.0")]
+    private double _experimentalTeleportInputLossSlowdownFactor =
+        DefaultExperimentalTeleportInputLossSlowdownFactor;
+
+    partial void OnExperimentalTeleportInputLossSlowdownFactorChanged(double value)
+    {
+        if (!double.IsFinite(value) ||
+            value is < MinExperimentalTeleportInputLossSlowdownFactor or > MaxExperimentalTeleportInputLossSlowdownFactor)
+        {
+            ExperimentalTeleportInputLossSlowdownFactor = DefaultExperimentalTeleportInputLossSlowdownFactor;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportInputRecoveryFactor,
+        MaxExperimentalTeleportInputRecoveryFactor,
+        ErrorMessage = "实验传送输入正常恢复系数：0.5-1.0")]
+    private double _experimentalTeleportInputRecoveryFactor =
+        DefaultExperimentalTeleportInputRecoveryFactor;
+
+    partial void OnExperimentalTeleportInputRecoveryFactorChanged(double value)
+    {
+        if (!double.IsFinite(value) ||
+            value is < MinExperimentalTeleportInputRecoveryFactor or > MaxExperimentalTeleportInputRecoveryFactor)
+        {
+            ExperimentalTeleportInputRecoveryFactor = DefaultExperimentalTeleportInputRecoveryFactor;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportMaxSingleStepDistancePixels,
+        MaxExperimentalTeleportMaxSingleStepDistancePixels,
+        ErrorMessage = "实验传送单步最大输入距离：16-200 px")]
+    private int _experimentalTeleportMaxSingleStepDistancePixels =
+        DefaultExperimentalTeleportMaxSingleStepDistancePixels;
+
+    partial void OnExperimentalTeleportMaxSingleStepDistancePixelsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportMaxSingleStepDistancePixels or > MaxExperimentalTeleportMaxSingleStepDistancePixels)
+        {
+            ExperimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportMaxDragSteps,
+        MaxExperimentalTeleportMaxDragSteps,
+        ErrorMessage = "实验传送单次最大步数：36-240")]
+    private int _experimentalTeleportMaxDragSteps = DefaultExperimentalTeleportMaxDragSteps;
+
+    partial void OnExperimentalTeleportMaxDragStepsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportMaxDragSteps or > MaxExperimentalTeleportMaxDragSteps)
+        {
+            ExperimentalTeleportMaxDragSteps = DefaultExperimentalTeleportMaxDragSteps;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(
+        MinExperimentalTeleportStepProfileFactor,
+        MaxExperimentalTeleportStepProfileFactor,
+        ErrorMessage = "实验传送步进曲线系数：1.0-2.0")]
+    private double _experimentalTeleportStepProfileFactor = DefaultExperimentalTeleportStepProfileFactor;
+
+    partial void OnExperimentalTeleportStepProfileFactorChanged(double value)
+    {
+        if (!double.IsFinite(value) ||
+            value is < MinExperimentalTeleportStepProfileFactor or > MaxExperimentalTeleportStepProfileFactor)
+        {
+            ExperimentalTeleportStepProfileFactor = DefaultExperimentalTeleportStepProfileFactor;
         }
     }
 

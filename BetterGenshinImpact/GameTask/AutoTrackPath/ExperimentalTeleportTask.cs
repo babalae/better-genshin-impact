@@ -350,6 +350,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             var dragResult = await _drag.DragAsync(deltaX, deltaY, target.Country);
             if (!dragResult.Moved)
             {
+                _drag.ReportMapMovementOutcome(false);
                 LogDetailed("实验传送未找到可用拖动跑道，将交由主线定位兜底");
                 return;
             }
@@ -369,6 +370,11 @@ internal sealed class ExperimentalTeleportTask : IDisposable
                 (recognizedCenter.Value.X - currentCenter.X) * _config.MapScaleFactor / currentZoom;
             var actualMapScreenY =
                 (recognizedCenter.Value.Y - currentCenter.Y) * _config.MapScaleFactor / currentZoom;
+            var actualMapScreenLength = Math.Sqrt(
+                actualMapScreenX * actualMapScreenX + actualMapScreenY * actualMapScreenY);
+            var movementDirection =
+                dragResult.InputDeltaX * actualMapScreenX + dragResult.InputDeltaY * actualMapScreenY;
+            _drag.ReportMapMovementOutcome(actualMapScreenLength >= 5d && movementDirection > 0d);
             _drag.UpdateRelativeMoveMultiplier(
                 dragResult.InputDeltaX,
                 dragResult.InputDeltaY,

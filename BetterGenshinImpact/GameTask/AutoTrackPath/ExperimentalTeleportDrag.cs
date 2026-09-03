@@ -21,14 +21,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 {
     private const double SafeMargin = 50d;
     private const double EarlyStopMargin = 40d;
-    private const double EmaWeight = 0.4d;
-    private const double InitialDragStrengthScale = 0.2d;
     private const double StableDifferenceThreshold = 1.5d;
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
     private double _relativeMoveMultiplier = double.NaN;
     private double _relativeMoveInitialStrength = double.NaN;
+    private double _adaptiveStepIntervalMultiplier = 1d;
 
     private static readonly Rect2d[] DangerRects =
     [
@@ -79,7 +78,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 TpConfig.MinExperimentalTeleportInitialDragStrength,
                 TpConfig.MaxExperimentalTeleportInitialDragStrength)
             : TpConfig.DefaultExperimentalTeleportInitialDragStrength;
-        var initialDragStrength = initialDragStrengthMultiplier * InitialDragStrengthScale;
+        var initialDragStrengthScale = double.IsFinite(config.ExperimentalTeleportInitialDragStrengthScale)
+            ? Math.Clamp(
+                config.ExperimentalTeleportInitialDragStrengthScale,
+                TpConfig.MinExperimentalTeleportInitialDragStrengthScale,
+                TpConfig.MaxExperimentalTeleportInitialDragStrengthScale)
+            : TpConfig.DefaultExperimentalTeleportInitialDragStrengthScale;
+        var initialDragStrength = initialDragStrengthMultiplier * initialDragStrengthScale;
         EnsureRelativeMoveMultiplier(initialDragStrength);
 
         var moveRatio = config.MapDragUseRelativeMove
@@ -127,16 +132,29 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         await Delay(GetOperationInterval(), ct);
         GetCursorPosition(out var cursorBefore);
 
+        var inputDistance = Math.Sqrt(
+            Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+        var maxSingleStepDistance = Math.Clamp(
+            config.ExperimentalTeleportMaxSingleStepDistancePixels,
+            TpConfig.MinExperimentalTeleportMaxSingleStepDistancePixels,
+            TpConfig.MaxExperimentalTeleportMaxSingleStepDistancePixels);
+        var maxDragSteps = Math.Clamp(
+            config.ExperimentalTeleportMaxDragSteps,
+            TpConfig.MinExperimentalTeleportMaxDragSteps,
+            TpConfig.MaxExperimentalTeleportMaxDragSteps);
+        var stepProfileFactor = double.IsFinite(config.ExperimentalTeleportStepProfileFactor)
+            ? Math.Clamp(
+                config.ExperimentalTeleportStepProfileFactor,
+                TpConfig.MinExperimentalTeleportStepProfileFactor,
+                TpConfig.MaxExperimentalTeleportStepProfileFactor)
+            : TpConfig.DefaultExperimentalTeleportStepProfileFactor;
         var steps = Math.Clamp(
-            (int)Math.Ceiling(Math.Sqrt(Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2)) / 48d),
+            (int)Math.Ceiling(inputDistance * stepProfileFactor / maxSingleStepDistance),
             5,
-            36);
+            maxDragSteps);
         var movedX = 0d;
         var movedY = 0d;
-        var stepDelay = Math.Clamp(
-            config.ExperimentalTeleportDragStepIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+        var stepDelay = GetAdaptiveStepInterval();
         var releaseDelay = GetOperationInterval();
         try
         {
@@ -145,7 +163,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             for (var i = 1; i <= steps; i++)
             {
                 ct.ThrowIfCancellationRequested();
-                var progress = EaseOut(i / (double)steps);
+                var progress = SmoothStep(i / (double)steps);
                 var nextX = (end.X - start.X) * progress;
                 var nextY = (end.Y - start.Y) * progress;
                 var stepX = nextX - movedX;
@@ -203,7 +221,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 TpConfig.MinExperimentalTeleportInitialDragStrength,
                 TpConfig.MaxExperimentalTeleportInitialDragStrength)
             : TpConfig.DefaultExperimentalTeleportInitialDragStrength;
-        EnsureRelativeMoveMultiplier(initialStrengthMultiplier * InitialDragStrengthScale);
+        var initialDragStrengthScale = double.IsFinite(config.ExperimentalTeleportInitialDragStrengthScale)
+            ? Math.Clamp(
+                config.ExperimentalTeleportInitialDragStrengthScale,
+                TpConfig.MinExperimentalTeleportInitialDragStrengthScale,
+                TpConfig.MaxExperimentalTeleportInitialDragStrengthScale)
+            : TpConfig.DefaultExperimentalTeleportInitialDragStrengthScale;
+        EnsureRelativeMoveMultiplier(initialStrengthMultiplier * initialDragStrengthScale);
 
         var inputLength = Math.Sqrt(inputX * inputX + inputY * inputY);
         var actualLength = Math.Sqrt(
@@ -228,13 +252,56 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             return;
         }
 
+        var emaWeight = double.IsFinite(config.ExperimentalTeleportEmaWeight)
+            ? Math.Clamp(
+                config.ExperimentalTeleportEmaWeight,
+                TpConfig.MinExperimentalTeleportEmaWeight,
+                TpConfig.MaxExperimentalTeleportEmaWeight)
+            : TpConfig.DefaultExperimentalTeleportEmaWeight;
         var previousMultiplier = _relativeMoveMultiplier;
-        _relativeMoveMultiplier = previousMultiplier * (1d - EmaWeight) + observedMultiplier * EmaWeight;
+        _relativeMoveMultiplier = previousMultiplier * (1d - emaWeight) + observedMultiplier * emaWeight;
         LogDetailed(
             "实验传送更新拖动倍率：previous={PreviousMultiplier:0.000} observed={ObservedMultiplier:0.000} next={NextMultiplier:0.000}",
             previousMultiplier,
             observedMultiplier,
             _relativeMoveMultiplier);
+    }
+
+    public void ReportMapMovementOutcome(bool moved)
+    {
+        var slowdownFactor = double.IsFinite(config.ExperimentalTeleportInputLossSlowdownFactor)
+            ? Math.Clamp(
+                config.ExperimentalTeleportInputLossSlowdownFactor,
+                TpConfig.MinExperimentalTeleportInputLossSlowdownFactor,
+                TpConfig.MaxExperimentalTeleportInputLossSlowdownFactor)
+            : TpConfig.DefaultExperimentalTeleportInputLossSlowdownFactor;
+        var recoveryFactor = double.IsFinite(config.ExperimentalTeleportInputRecoveryFactor)
+            ? Math.Clamp(
+                config.ExperimentalTeleportInputRecoveryFactor,
+                TpConfig.MinExperimentalTeleportInputRecoveryFactor,
+                TpConfig.MaxExperimentalTeleportInputRecoveryFactor)
+            : TpConfig.DefaultExperimentalTeleportInputRecoveryFactor;
+
+        if (moved)
+        {
+            _adaptiveStepIntervalMultiplier = Math.Max(
+                1d,
+                _adaptiveStepIntervalMultiplier * recoveryFactor);
+            return;
+        }
+
+        var configuredStepInterval = Math.Clamp(
+            config.ExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+        var maximumMultiplier = TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds /
+                                (double)configuredStepInterval;
+        _adaptiveStepIntervalMultiplier = Math.Min(
+            maximumMultiplier,
+            _adaptiveStepIntervalMultiplier * slowdownFactor);
+        LogDetailed(
+            "实验传送检测到地图未移动，增加拖动步进间隔：multiplier={Multiplier:0.000}",
+            _adaptiveStepIntervalMultiplier);
     }
 
     public async Task AdjustMapZoomLevelAsync(double zoomLevel, double targetZoomLevel)
@@ -501,6 +568,16 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             TpConfig.MaxExperimentalTeleportMapStabilityTimeoutMilliseconds);
     }
 
+    private int GetAdaptiveStepInterval()
+    {
+        var configured = Math.Clamp(
+            config.ExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+        var adaptive = (int)Math.Round(configured * _adaptiveStepIntervalMultiplier);
+        return Math.Clamp(adaptive, configured, TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+    }
+
     private void LogDetailed(string message, params object?[] args)
     {
         if (config.ExperimentalTeleportDetailedLogs)
@@ -509,9 +586,9 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         }
     }
 
-    private static double EaseOut(double value)
+    private static double SmoothStep(double value)
     {
-        return 1d - Math.Pow(1d - value, 3d);
+        return value * value * (3d - 2d * value);
     }
 
     private static void GetCursorPosition(out POINT point)
