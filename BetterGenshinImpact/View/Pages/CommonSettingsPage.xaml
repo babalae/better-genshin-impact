@@ -1441,16 +1441,6 @@
                             Visibility="{Binding Config.TpConfig.UseExperimentalTeleport, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Margin="0,4,0,8" FontSize="14" FontWeight="SemiBold" Text="{i18n:T 实验性传送参数}" />
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 初始拖动力度倍率}" />
-                        <ui:NumberBox Grid.Column="1" Minimum="0.1" Maximum="5" MaxDecimalPlaces="2" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportInitialDragStrength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 初始力度换算系数}" />
-                        <ui:NumberBox Grid.Column="1" Minimum="0.05" Maximum="1" MaxDecimalPlaces="2" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportInitialDragStrengthScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </Grid>
-                    <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 理论拖动距离修正倍率}" />
                         <ui:NumberBox Grid.Column="1" Minimum="0.1" Maximum="1" MaxDecimalPlaces="2" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportDragDistanceCorrection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />

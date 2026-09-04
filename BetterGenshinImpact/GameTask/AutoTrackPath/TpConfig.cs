@@ -15,9 +15,6 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 2;
     public const int MaxExperimentalTeleportDragStepIntervalMilliseconds = 100;
     public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 20;
-    public const double MinExperimentalTeleportInitialDragStrength = 0.1d;
-    public const double MaxExperimentalTeleportInitialDragStrength = 5d;
-    public const double DefaultExperimentalTeleportInitialDragStrength = 1d;
     public const double MinExperimentalTeleportDragDistanceCorrection = 0.1d;
     public const double MaxExperimentalTeleportDragDistanceCorrection = 1d;
     public const double DefaultExperimentalTeleportDragDistanceCorrection = 0.8d;
@@ -30,9 +27,6 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportOperationIntervalMilliseconds = 10;
     public const int MaxExperimentalTeleportOperationIntervalMilliseconds = 500;
     public const int DefaultExperimentalTeleportOperationIntervalMilliseconds = 50;
-    public const double MinExperimentalTeleportInitialDragStrengthScale = 0.05d;
-    public const double MaxExperimentalTeleportInitialDragStrengthScale = 1d;
-    public const double DefaultExperimentalTeleportInitialDragStrengthScale = 0.2d;
     public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
     public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
     public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 48;
@@ -42,20 +36,6 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     private bool _experimentalTeleportDetailedLogs;
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportInitialDragStrength, MaxExperimentalTeleportInitialDragStrength,
-        ErrorMessage = "实验传送初始拖动力度：0.1-5.0")]
-    private double _experimentalTeleportInitialDragStrength = DefaultExperimentalTeleportInitialDragStrength;
-
-    partial void OnExperimentalTeleportInitialDragStrengthChanged(double value)
-    {
-        if (!double.IsFinite(value) || value is < MinExperimentalTeleportInitialDragStrength or > MaxExperimentalTeleportInitialDragStrength)
-        {
-            ExperimentalTeleportInitialDragStrength = DefaultExperimentalTeleportInitialDragStrength;
-        }
-    }
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
@@ -124,20 +104,6 @@ public partial class TpConfig : ObservableValidator
         if (value is < MinExperimentalTeleportOperationIntervalMilliseconds or > MaxExperimentalTeleportOperationIntervalMilliseconds)
         {
             ExperimentalTeleportOperationIntervalMilliseconds = DefaultExperimentalTeleportOperationIntervalMilliseconds;
-        }
-    }
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportInitialDragStrengthScale, MaxExperimentalTeleportInitialDragStrengthScale,
-        ErrorMessage = "实验传送初始力度换算系数：0.05-1.0")]
-    private double _experimentalTeleportInitialDragStrengthScale = DefaultExperimentalTeleportInitialDragStrengthScale;
-
-    partial void OnExperimentalTeleportInitialDragStrengthScaleChanged(double value)
-    {
-        if (!double.IsFinite(value) || value is < MinExperimentalTeleportInitialDragStrengthScale or > MaxExperimentalTeleportInitialDragStrengthScale)
-        {
-            ExperimentalTeleportInitialDragStrengthScale = DefaultExperimentalTeleportInitialDragStrengthScale;
         }
     }
 

@@ -71,28 +71,15 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var systemInfo = TaskContext.Instance().SystemInfo;
         var captureRect = systemInfo.ScaleMax1080PCaptureRect;
         var realCaptureRect = systemInfo.CaptureAreaRect;
-        var initialDragStrengthMultiplier = double.IsFinite(config.ExperimentalTeleportInitialDragStrength)
-            ? Math.Clamp(
-                config.ExperimentalTeleportInitialDragStrength,
-                TpConfig.MinExperimentalTeleportInitialDragStrength,
-                TpConfig.MaxExperimentalTeleportInitialDragStrength)
-            : TpConfig.DefaultExperimentalTeleportInitialDragStrength;
-        var initialDragStrengthScale = double.IsFinite(config.ExperimentalTeleportInitialDragStrengthScale)
-            ? Math.Clamp(
-                config.ExperimentalTeleportInitialDragStrengthScale,
-                TpConfig.MinExperimentalTeleportInitialDragStrengthScale,
-                TpConfig.MaxExperimentalTeleportInitialDragStrengthScale)
-            : TpConfig.DefaultExperimentalTeleportInitialDragStrengthScale;
         var distanceCorrection = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection)
             ? Math.Clamp(
                 config.ExperimentalTeleportDragDistanceCorrection,
                 TpConfig.MinExperimentalTeleportDragDistanceCorrection,
                 TpConfig.MaxExperimentalTeleportDragDistanceCorrection)
             : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
-        var moveRatio = initialDragStrengthMultiplier * initialDragStrengthScale;
         const string ratioSource = "configured";
-        var desiredX = requestedDeltaX * distanceCorrection * moveRatio;
-        var desiredY = requestedDeltaY * distanceCorrection * moveRatio;
+        var desiredX = requestedDeltaX * distanceCorrection;
+        var desiredY = requestedDeltaY * distanceCorrection;
         if (!TryCreateSafeRunway(
                 desiredX,
                 desiredY,
@@ -130,7 +117,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             screenStart.Y,
             screenEnd.X,
             screenEnd.Y,
-            moveRatio,
+            distanceCorrection,
             ratioSource);
 
         MoveToCapturePoint(start, captureRect, realCaptureRect);
@@ -157,14 +144,14 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var releaseDelay = DragBoundaryDelayMilliseconds;
         LogDetailed(
             "实验传送拖动参数：theory=({TheoryX:0.0},{TheoryY:0.0}) theoryDistance={TheoryDistance:0.0} " +
-            "moveMultiplier={MoveMultiplier:0.000} multiplierSource={MultiplierSource} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
+            "distanceCorrection={DistanceCorrection:0.000} correctionSource={CorrectionSource} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
             "desiredDistance={DesiredDistance:0.0} runwayDistance={RunwayDistance:0.0} runwayRatio={RunwayRatio:0.000} " +
             "runwayDelta=({RunwayDeltaX:0.0},{RunwayDeltaY:0.0}) " +
             "maxStepDistance={MaxStepDistance:0.0} steps={Steps} stepDelay={StepDelay}ms boundaryDelay={BoundaryDelay}ms",
             requestedDeltaX,
             requestedDeltaY,
             requestedDistance,
-            moveRatio,
+            distanceCorrection,
             ratioSource,
             desiredX,
             desiredY,
@@ -224,7 +211,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             actualY,
             actualCursorDistance,
             inputCompletionRatio,
-            moveRatio,
+            distanceCorrection,
             Environment.TickCount64 - dragStartedAt);
         return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY);
     }

@@ -351,58 +351,49 @@ public class TpTask
             return;
         }
 
+        Simulation.ReleaseAllKey();
+        await Delay(GetTeleportOperationDelay(20), ct);
         var timeout = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
-        var repressInterval = Math.Max(500, GetTeleportOperationDelay(1500));
+        var repressInterval = Math.Max(500, GetTeleportOperationDelay(500));
         var detectionInterval = GetTeleportOperationDelay(50);
         var stopwatch = Stopwatch.StartNew();
         var pressCount = 0;
+        var nextPressAt = 0L;
         while (stopwatch.ElapsedMilliseconds < timeout)
         {
-            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-            pressCount++;
-            var probeDeadline = Math.Min(timeout, stopwatch.ElapsedMilliseconds + repressInterval);
-            while (stopwatch.ElapsedMilliseconds < probeDeadline)
+            ct.ThrowIfCancellationRequested();
+            using (var capture = CaptureToRectArea())
             {
-                using var capture = CaptureToRectArea();
                 if (Bv.IsInBigMapUi(capture))
                 {
                     LogExperimentalDetailed("实验传送打开大地图成功：press={PressCount} elapsed={ElapsedMilliseconds}ms", pressCount, stopwatch.ElapsedMilliseconds);
                     return;
-                }
-
-                if (!Bv.IsInMainUi(capture))
-                {
-                    break;
-                }
-
-                var remaining = (int)Math.Min(
-                    int.MaxValue,
-                    probeDeadline - stopwatch.ElapsedMilliseconds);
-                if (remaining > 0)
-                {
-                    await Delay(Math.Min(detectionInterval, remaining), ct);
                 }
             }
 
-            while (stopwatch.ElapsedMilliseconds < timeout)
+            var elapsed = stopwatch.ElapsedMilliseconds;
+            if (elapsed >= nextPressAt)
             {
-                using var capture = CaptureToRectArea();
-                if (Bv.IsInBigMapUi(capture))
+                Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                pressCount++;
+                nextPressAt = elapsed + repressInterval;
+                if (pressCount > 1)
                 {
-                    LogExperimentalDetailed("实验传送打开大地图成功：press={PressCount} elapsed={ElapsedMilliseconds}ms", pressCount, stopwatch.ElapsedMilliseconds);
-                    return;
+                    LogExperimentalDetailed(
+                        "按 M 后 {IntervalMilliseconds}ms 大地图仍未出现，执行第 {PressCount} 次补按",
+                        repressInterval,
+                        pressCount);
                 }
 
-                if (Bv.IsInMainUi(capture))
-                {
-                    break;
-                }
+                continue;
+            }
 
-                var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
-                if (remaining > 0)
-                {
-                    await Delay(Math.Min(detectionInterval, remaining), ct);
-                }
+            var remaining = (int)Math.Min(
+                int.MaxValue,
+                Math.Min(nextPressAt, timeout) - elapsed);
+            if (remaining > 0)
+            {
+                await Delay(Math.Min(detectionInterval, remaining), ct);
             }
         }
 

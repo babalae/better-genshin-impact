@@ -73,11 +73,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         }
 
         Logger.LogDebug(
-            "实验传送配置：initialStrength={InitialStrength:0.00} strengthScale={StrengthScale:0.00} " +
-            "distanceCorrection={DistanceCorrection:0.00} maxStep={MaxStep} stepInterval={StepInterval}ms " +
+            "实验传送配置：distanceCorrection={DistanceCorrection:0.00} maxStep={MaxStep} stepInterval={StepInterval}ms " +
             "stateInterval={StateInterval}ms stateTimeout={StateTimeout}ms operationInterval={OperationInterval}ms",
-            _config.ExperimentalTeleportInitialDragStrength,
-            _config.ExperimentalTeleportInitialDragStrengthScale,
             _config.ExperimentalTeleportDragDistanceCorrection,
             _config.ExperimentalTeleportMaxSingleStepDistancePixels,
             _config.ExperimentalTeleportDragStepIntervalMilliseconds,
