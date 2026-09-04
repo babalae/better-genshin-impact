@@ -74,6 +74,7 @@ public class TpTask
     private const double MapDragFastStepRatio = 0.42d;
     private const double MapDragFastDistanceRatio = 0.85d;
     private const double MapClickSafeMargin = 35d;
+    private const double MapCenterTargetTolerancePixels = 4d;
     private const double NearbyMapIconPatternMinSearchRadius = 120d;
     private const double NearbyMapIconPatternMaxSearchRadius = 260d;
     private const double NearbyMapIconPatternNeighborDistanceRatio = 1.3d;
@@ -373,6 +374,33 @@ public class TpTask
         try
         {
             return await TpWithRetries(tpX, tpY, mapName, force);
+        }
+        finally
+        {
+            _experimentalUiStateMachine = null;
+            _experimentalZoomAdjuster = null;
+            _experimentalDrag = null;
+        }
+    }
+
+    /// <summary>
+    /// 执行只操作大地图的实验性流程，不执行传送点选择和传送确认。
+    /// </summary>
+    internal async Task RunExperimentalMapOperation(string mapName, Func<Task> operation)
+    {
+        var drag = new ExperimentalTeleportDrag(_tpConfig, ct);
+        var uiStateMachine = new ExperimentalTeleportUiStateMachine(this, _tpConfig, ct);
+        _experimentalDrag = async (x, y) =>
+        {
+            var forbiddenStartRects = GetExperimentalDragStartForbiddenRects();
+            return await drag.DragAsync(x, y, null, forbiddenStartRects);
+        };
+        _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
+        _experimentalUiStateMachine = uiStateMachine;
+        try
+        {
+            await uiStateMachine.EnsureMapMainAsync(mapName);
+            await operation();
         }
         finally
         {
@@ -1522,7 +1550,12 @@ public class TpTask
     /// <param name="finalZoomLevel">到达目标点的最小缩放等级，只在 MapZoomEnabled 为 True 生效</param>
     public async Task MoveMapTo(double x, double y, string mapName, double finalZoomLevel = 2)
     {
-        await MoveMapToCore(x, y, mapName, finalZoomLevel, true, 0);
+        await MoveMapToCore(x, y, mapName, finalZoomLevel, true, 0, false);
+    }
+
+    internal async Task MoveMapToCentered(double x, double y, string mapName, double finalZoomLevel = 2)
+    {
+        await MoveMapToCore(x, y, mapName, finalZoomLevel, true, 0, true);
     }
 
     /// <summary>
@@ -1547,9 +1580,21 @@ public class TpTask
         clickCapture.ClickTo(clickX, clickY);
     }
 
+    internal async Task ClickMapPointCentered(double x, double y, string mapName)
+    {
+        await MoveMapToCentered(x, y, mapName);
+        if (!TryGetClickableTargetPosition(mapName, x, y, 0, out _, out var clickX, out var clickY))
+        {
+            throw new Exception($"目标点未移动到地图中心可点击区域：map={mapName}, target=({x:0.##},{y:0.##})");
+        }
+
+        using var clickCapture = CaptureToRectArea();
+        clickCapture.ClickTo(clickX, clickY);
+    }
+
     private async Task MoveMapToTeleportClickArea(double x, double y, string mapName, double requiredVisibleRadius)
     {
-        await MoveMapToCore(x, y, mapName, MinTeleportZoomLevel, false, requiredVisibleRadius);
+        await MoveMapToCore(x, y, mapName, MinTeleportZoomLevel, false, requiredVisibleRadius, false);
     }
 
     private async Task MoveMapToCore(
@@ -1558,7 +1603,8 @@ public class TpTask
         string mapName,
         double finalZoomLevel,
         bool allowZoom,
-        double requiredVisibleRadius)
+        double requiredVisibleRadius,
+        bool targetAtCenter)
     {
         // 参数初始化
         double minZoomLevel = ClampTeleportZoomLevel(finalZoomLevel);
@@ -1585,26 +1631,45 @@ public class TpTask
         // 开始移动并放大地图
         for (var iteration = 0; iteration < _tpConfig.MaxIterations; iteration++)
         {
-            var targetClickable = TryGetClickableTargetPosition(mapName, x, y, requiredVisibleRadius, out var targetBigMapRect, out _, out _);
-            if (targetClickable)
+            Rect targetBigMapRect;
+            if (targetAtCenter)
             {
-                if (allowZoom && _tpConfig.MapZoomEnabled && currentZoomLevel > minZoomLevel + _tpConfig.PrecisionThreshold)
+                if (!TryGetTargetCenterMoveState(
+                        mapName,
+                        x,
+                        y,
+                        currentZoomLevel,
+                        out targetBigMapRect,
+                        out moveState,
+                        out _,
+                        out _))
                 {
-                    await AdjustMapZoomLevel(currentZoomLevel, minZoomLevel);
-                    currentZoomLevel = GetCurrentBigMapZoomLevel();
-                    if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var recognizedState))
-                    {
-                        moveState = recognizedState;
-                        exceptionTimes = 0;
-                    }
-
-                    if (!TryGetClickableTargetPosition(mapName, x, y, requiredVisibleRadius, out _, out _, out _))
-                    {
-                        continue;
-                    }
+                    throw new MapPositionNotRecognizedException("无法计算目标居中位置");
                 }
+            }
+            else
+            {
+                var targetClickable = TryGetClickableTargetPosition(mapName, x, y, requiredVisibleRadius, out targetBigMapRect, out _, out _);
+                if (targetClickable)
+                {
+                    if (allowZoom && _tpConfig.MapZoomEnabled && currentZoomLevel > minZoomLevel + _tpConfig.PrecisionThreshold)
+                    {
+                        await AdjustMapZoomLevel(currentZoomLevel, minZoomLevel);
+                        currentZoomLevel = GetCurrentBigMapZoomLevel();
+                        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var recognizedState))
+                        {
+                            moveState = recognizedState;
+                            exceptionTimes = 0;
+                        }
 
-                break;
+                        if (!TryGetClickableTargetPosition(mapName, x, y, requiredVisibleRadius, out _, out _, out _))
+                        {
+                            continue;
+                        }
+                    }
+
+                    break;
+                }
             }
 
             if (allowZoom && _tpConfig.MapZoomEnabled)
@@ -1623,22 +1688,45 @@ public class TpTask
                 }
             }
 
-            // 非常接近目标点，不再进一步调整
-            if (moveState.MouseDistance < _tpConfig.Tolerance)
+            if (targetAtCenter)
             {
-                if (requiredVisibleRadius <= 0 ||
-                    !TryGetMoveStateForTargetScreenPosition(
+                if (!TryGetTargetCenterMoveState(
                         mapName,
-                        targetBigMapRect,
                         x,
                         y,
-                        _captureRect.Width / 2d,
-                        _captureRect.Height / 2d,
                         currentZoomLevel,
-                        out moveState) ||
-                    moveState.MouseDistance < 3)
+                        out targetBigMapRect,
+                        out moveState,
+                        out var targetClickX,
+                        out var targetClickY))
+                {
+                    throw new MapPositionNotRecognizedException("无法确认目标居中位置");
+                }
+
+                if (IsTargetAtMapCenter(targetClickX, targetClickY))
                 {
                     break;
+                }
+            }
+            else
+            {
+                // 非常接近目标点，不再进一步调整
+                if (moveState.MouseDistance < _tpConfig.Tolerance)
+                {
+                    if (requiredVisibleRadius <= 0 ||
+                        !TryGetMoveStateForTargetScreenPosition(
+                            mapName,
+                            targetBigMapRect,
+                            x,
+                            y,
+                            _captureRect.Width / 2d,
+                            _captureRect.Height / 2d,
+                            currentZoomLevel,
+                            out moveState) ||
+                        moveState.MouseDistance < 3)
+                    {
+                        break;
+                    }
                 }
             }
 
@@ -1753,6 +1841,53 @@ public class TpTask
         {
             return false;
         }
+    }
+
+    private bool TryGetTargetCenterMoveState(
+        string mapName,
+        double targetX,
+        double targetY,
+        double currentZoomLevel,
+        out Rect bigMapInAllMapRect,
+        out MapMoveState moveState,
+        out double targetClickX,
+        out double targetClickY)
+    {
+        bigMapInAllMapRect = default;
+        moveState = default;
+        targetClickX = 0;
+        targetClickY = 0;
+        try
+        {
+            bigMapInAllMapRect = GetBigMapRect(mapName);
+            (targetClickX, targetClickY) = ConvertToGameRegionPosition(
+                mapName,
+                bigMapInAllMapRect,
+                targetX,
+                targetY);
+            return TryGetMoveStateForTargetScreenPosition(
+                mapName,
+                bigMapInAllMapRect,
+                targetX,
+                targetY,
+                _captureRect.Width / 2d,
+                _captureRect.Height / 2d,
+                currentZoomLevel,
+                out moveState);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsTargetAtMapCenter(double targetClickX, double targetClickY)
+    {
+        var centerX = _captureRect.Width / 2d;
+        var centerY = _captureRect.Height / 2d;
+        var tolerance = MapCenterTargetTolerancePixels * _zoomOutMax1080PRatio;
+        return Math.Abs(targetClickX - centerX) <= tolerance &&
+               Math.Abs(targetClickY - centerY) <= tolerance;
     }
 
     private bool TryGetRecognizedMoveMapState(
