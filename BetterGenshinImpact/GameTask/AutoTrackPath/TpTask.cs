@@ -2019,7 +2019,7 @@ public class TpTask
             TpConfig.MinTeleportOperationDelayMilliseconds,
             TpConfig.MaxTeleportOperationDelayMilliseconds);
         var scaledDelay = defaultDelayMilliseconds * configuredDelay /
-                          TpConfig.DefaultTeleportOperationDelayMilliseconds;
+                          (double)TpConfig.DefaultTeleportOperationDelayMilliseconds;
         return Math.Max(1, (int)Math.Round(scaledDelay));
     }
 

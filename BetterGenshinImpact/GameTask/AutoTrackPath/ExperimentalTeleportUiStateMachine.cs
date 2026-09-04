@@ -443,7 +443,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
             1,
             (int)Math.Round(
                 baseDelay * configured /
-                TpConfig.DefaultTeleportOperationDelayMilliseconds));
+                (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
     }
 
     private int GetStateRecognitionInterval() => Math.Clamp(
