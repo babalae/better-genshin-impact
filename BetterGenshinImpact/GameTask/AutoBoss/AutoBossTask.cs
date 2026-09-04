@@ -221,7 +221,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         try
         {
-            await OpenBigMapForResinCheck();
+            await _returnMainUiTask.Start(_ct);
 
             OriginalResinInfo originalResin;
             try
@@ -266,72 +266,46 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
-    /// 使用用户配置的打开地图按键进入大地图，识别右上角原粹树脂数量，并在结束后回到主界面。
+    /// 打开大地图并通过树脂详情中的全部恢复时间反推当前原粹树脂。
     /// </summary>
-    /// <returns>识别到的原粹树脂数量；识别失败时返回 null。</returns>
-    private async Task<int?> TryRecognizeOriginalResinCountInBigMap()
-    {
-        try
-        {
-            await OpenBigMapForResinCheck();
-            try
-            {
-                var originalResin = await RecognizeOriginalResinInfoFromBigMap();
-                return originalResin.Count;
-            }
-            catch (Exception e) when (e is not OperationCanceledException)
-            {
-                _logger.LogWarning("{Name}：战前原粹树脂预检失败，将继续通过领奖界面兜底，原因：{Reason}", Name, e.Message);
-                return null;
-            }
-        }
-        finally
-        {
-            await _returnMainUiTask.Start(_ct);
-        }
-    }
-
-    /// <summary>
-    /// 释放输入并打开大地图界面，用于在右上角读取原粹树脂数量。
-    /// </summary>
-    private async Task OpenBigMapForResinCheck()
-    {
-        await new TpTask(_ct).OpenBigMapUi();
-    }
-
-    /// <summary>
-    /// AutoBoss 专用大地图原粹树脂识别：点击右上角树脂图标后，通过全部恢复时间反推剩余树脂。
-    /// </summary>
-    /// <returns>当前剩余原粹树脂。</returns>
     private async Task<OriginalResinInfo> RecognizeOriginalResinInfoFromBigMap()
     {
-        using var capture = CaptureToRectArea();
-        using var resinIconSearchRegion = capture.DeriveCrop(ScaleRect(1200, 25, 580, 50));
-        var resinIconRegion = resinIconSearchRegion.Find(LoadRecognitionObject("OriginalResinTopIcon"));
-        if (resinIconRegion.IsEmpty())
-        {
-            throw new InvalidOperationException("未找到原粹树脂图标");
-        }
+        var page = new BvPage(_ct);
+        //树脂图标
+        var resinIconLocator = page
+            .Locator(LoadRecognitionObject("OriginalResinTopIcon"))
+            .WithRoi(ScaleRect(1200, 25, 580, 50));
+        
+        await page.Flow()
+            //按B打开地图直到识别到树脂图标
+            .Do((Action)(() =>
+            {
+                if (!resinIconLocator.IsExist())
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                }
+            })).Until(resinIconLocator)
+            //点击树脂图标直到识别到目标文本
+            .Click().UntilAnyText(new[] { "全部恢复", "原粹树脂已完全恢复" }, ScaleRect(1180, 75, 620, 200))
+            .Run();
 
-        var iconLeft = resinIconSearchRegion.X + resinIconRegion.Left;
-        var iconRight = resinIconSearchRegion.X + resinIconRegion.Right;
-        var iconBottom = resinIconSearchRegion.Y + resinIconRegion.Bottom;
-
-        resinIconRegion.Click();
-        await Delay(500, _ct);
-
+        //根据树脂图标位置偏移，计算出体力恢复时间的弹窗位置
+        var resinIconRegion = (await resinIconLocator.WaitFor()).First();
+        var detailRect = new Rect(resinIconRegion.Left - 13, resinIconRegion.Bottom + 29, 220, 150);
+        
+        //根据弹窗位置 OCR 出当前树脂上限和全部恢复时间，反推当前原粹树脂
         using var clickedCapture = CaptureToRectArea();
-        var resinLimit = RecognizeOriginalResinLimit(clickedCapture, iconRight);
-        var fullRecoveryTime = RecognizeFullRecoveryTime(clickedCapture, iconLeft, iconBottom);
+        var resinLimit = RecognizeOriginalResinLimit(clickedCapture, resinIconRegion.Right);
+        var fullRecoveryTime = RecognizeFullRecoveryTime(clickedCapture, detailRect);
         var missingResin = (int)Math.Ceiling(fullRecoveryTime.TotalSeconds / OriginalResinRecoveryInterval.TotalSeconds);
         if (missingResin > resinLimit)
         {
             throw new InvalidOperationException($"计算缺失树脂 {missingResin} 超过树脂上限 {resinLimit}");
         }
 
-        var originalResin = resinLimit - missingResin;
-        _logger.LogInformation("{Name}：剩余树脂 {Count}", Name, originalResin);
-        return new OriginalResinInfo(originalResin, resinLimit);
+        var originalResin = new OriginalResinInfo(resinLimit - missingResin, resinLimit);
+        _logger.LogInformation("{Name}：剩余树脂 {Count}", Name, originalResin.Count);
+        return originalResin;
     }
 
     /// <summary>
@@ -361,14 +335,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 读取树脂详情弹窗中的全部恢复时间；已完全恢复时返回零时长。
     /// </summary>
-    private TimeSpan RecognizeFullRecoveryTime(ImageRegion capture, int resinIconLeft, int resinIconBottom)
+    private TimeSpan RecognizeFullRecoveryTime(ImageRegion capture, Rect detailRect)
     {
-        // 该偏移来自截图实际像素，不随 AssetScale 缩放。
-        var detailRect = new Rect(
-            resinIconLeft - 13,
-            resinIconBottom + 29,
-            220,
-            150);
         using var detailRegion = capture.DeriveCrop(detailRect);
         var result = OcrFactory.Paddle.OcrResult(detailRegion.SrcMat);
         var text = string.Concat(result.Regions
