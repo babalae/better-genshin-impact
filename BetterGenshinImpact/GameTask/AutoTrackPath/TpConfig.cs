@@ -24,9 +24,18 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
     public const int MaxExperimentalTeleportStateTransitionTimeoutMilliseconds = 5000;
     public const int DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
+    public const int MinExperimentalTeleportMapOpenTimeoutMilliseconds = 1000;
+    public const int MaxExperimentalTeleportMapOpenTimeoutMilliseconds = 10000;
+    public const int DefaultExperimentalTeleportMapOpenTimeoutMilliseconds = 5000;
     public const int MinExperimentalTeleportMapOpenRepressIntervalMilliseconds = 500;
     public const int MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds = 5000;
     public const int DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds = 1000;
+    public const int MinExperimentalTeleportDragStartDelayMilliseconds = 10;
+    public const int MaxExperimentalTeleportDragStartDelayMilliseconds = 500;
+    public const int DefaultExperimentalTeleportDragStartDelayMilliseconds = 50;
+    public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 10;
+    public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
+    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 50;
     public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
     public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
     public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 48;
@@ -95,6 +104,20 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
+    [Range(MinExperimentalTeleportMapOpenTimeoutMilliseconds, MaxExperimentalTeleportMapOpenTimeoutMilliseconds,
+        ErrorMessage = "实验传送打开地图总超时：1000-10000 ms")]
+    private int _experimentalTeleportMapOpenTimeoutMilliseconds = DefaultExperimentalTeleportMapOpenTimeoutMilliseconds;
+
+    partial void OnExperimentalTeleportMapOpenTimeoutMillisecondsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportMapOpenTimeoutMilliseconds or > MaxExperimentalTeleportMapOpenTimeoutMilliseconds)
+        {
+            ExperimentalTeleportMapOpenTimeoutMilliseconds = DefaultExperimentalTeleportMapOpenTimeoutMilliseconds;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
     [Range(MinExperimentalTeleportMapOpenRepressIntervalMilliseconds, MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds,
         ErrorMessage = "实验传送打开地图补按 M 间隔：500-5000 ms")]
     private int _experimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
@@ -104,6 +127,34 @@ public partial class TpConfig : ObservableValidator
         if (value is < MinExperimentalTeleportMapOpenRepressIntervalMilliseconds or > MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds)
         {
             ExperimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(MinExperimentalTeleportDragStartDelayMilliseconds, MaxExperimentalTeleportDragStartDelayMilliseconds,
+        ErrorMessage = "实验传送按下左键后开始拖动延迟：10-500 ms")]
+    private int _experimentalTeleportDragStartDelayMilliseconds = DefaultExperimentalTeleportDragStartDelayMilliseconds;
+
+    partial void OnExperimentalTeleportDragStartDelayMillisecondsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportDragStartDelayMilliseconds or > MaxExperimentalTeleportDragStartDelayMilliseconds)
+        {
+            ExperimentalTeleportDragStartDelayMilliseconds = DefaultExperimentalTeleportDragStartDelayMilliseconds;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(MinExperimentalTeleportDragReleaseDelayMilliseconds, MaxExperimentalTeleportDragReleaseDelayMilliseconds,
+        ErrorMessage = "实验传送拖动结束后松开左键延迟：10-500 ms")]
+    private int _experimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
+
+    partial void OnExperimentalTeleportDragReleaseDelayMillisecondsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportDragReleaseDelayMilliseconds or > MaxExperimentalTeleportDragReleaseDelayMilliseconds)
+        {
+            ExperimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
         }
     }
 

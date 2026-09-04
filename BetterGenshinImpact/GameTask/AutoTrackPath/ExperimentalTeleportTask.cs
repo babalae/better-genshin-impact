@@ -75,14 +75,18 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         Logger.LogDebug(
             "实验传送配置：distanceCorrection={DistanceCorrection:0.00} maxStep={MaxStep} stepInterval={StepInterval}ms " +
             "stateInterval={StateInterval}ms stateTimeout={StateTimeout}ms teleportOperationDelay={TeleportOperationDelay}ms " +
-            "mapOpenRepressInterval={MapOpenRepressInterval}ms",
+            "mapOpenTimeout={MapOpenTimeout}ms mapOpenRepressInterval={MapOpenRepressInterval}ms " +
+            "dragStartDelay={DragStartDelay}ms dragReleaseDelay={DragReleaseDelay}ms",
             _config.ExperimentalTeleportDragDistanceCorrection,
             _config.ExperimentalTeleportMaxSingleStepDistancePixels,
             _config.ExperimentalTeleportDragStepIntervalMilliseconds,
             _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
             _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,
             _config.TeleportOperationDelayMilliseconds,
-            _config.ExperimentalTeleportMapOpenRepressIntervalMilliseconds);
+            _config.ExperimentalTeleportMapOpenTimeoutMilliseconds,
+            _config.ExperimentalTeleportMapOpenRepressIntervalMilliseconds,
+            _config.ExperimentalTeleportDragStartDelayMilliseconds,
+            _config.ExperimentalTeleportDragReleaseDelayMilliseconds);
     }
 
     public void Dispose()

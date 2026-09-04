@@ -392,7 +392,7 @@ public class TpTask
 
         Simulation.ReleaseAllKey();
         await Delay(GetTeleportOperationDelay(20), ct);
-        var timeout = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
+        var timeout = GetExperimentalMapOpenTimeoutMilliseconds(mapName);
         var repressInterval = Math.Clamp(
             _tpConfig.ExperimentalTeleportMapOpenRepressIntervalMilliseconds,
             TpConfig.MinExperimentalTeleportMapOpenRepressIntervalMilliseconds,
@@ -1871,6 +1871,18 @@ public class TpTask
         return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
             ? MoonCanonBigMapOpenTimeoutMs
             : DefaultBigMapOpenTimeoutMs;
+    }
+
+    private int GetExperimentalMapOpenTimeoutMilliseconds(string? mapName)
+    {
+        var configuredTimeout = Math.Clamp(
+            _tpConfig.ExperimentalTeleportMapOpenTimeoutMilliseconds,
+            TpConfig.MinExperimentalTeleportMapOpenTimeoutMilliseconds,
+            TpConfig.MaxExperimentalTeleportMapOpenTimeoutMilliseconds);
+        var mapRatio = string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
+            ? MoonCanonBigMapOpenTimeoutMs / (double)DefaultBigMapOpenTimeoutMs
+            : 1d;
+        return Math.Max(1, (int)Math.Round(configuredTimeout * mapRatio));
     }
 
     /// <summary>

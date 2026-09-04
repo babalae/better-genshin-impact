@@ -107,6 +107,14 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var screenStart = ToScreenPoint(start, captureRect, realCaptureRect);
         var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect);
         var boundaryDelay = GetOperationInterval();
+        var dragStartDelay = Math.Clamp(
+            config.ExperimentalTeleportDragStartDelayMilliseconds,
+            TpConfig.MinExperimentalTeleportDragStartDelayMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragStartDelayMilliseconds);
+        var dragReleaseDelay = Math.Clamp(
+            config.ExperimentalTeleportDragReleaseDelayMilliseconds,
+            TpConfig.MinExperimentalTeleportDragReleaseDelayMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
 
         LogDetailed(
             "实验传送开始拖动：mode=absolute-screen requested=({RequestedX:0.0},{RequestedY:0.0}) " +
@@ -153,13 +161,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var movedX = 0d;
         var movedY = 0d;
         var stepDelay = GetStepInterval();
-        var releaseDelay = boundaryDelay;
         LogDetailed(
             "实验传送拖动参数：theory=({TheoryX:0.0},{TheoryY:0.0}) theoryDistance={TheoryDistance:0.0} " +
             "distanceCorrection={DistanceCorrection:0.000} correctionSource={CorrectionSource} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
             "desiredDistance={DesiredDistance:0.0} runwayDistance={RunwayDistance:0.0} runwayRatio={RunwayRatio:0.000} " +
             "runwayDelta=({RunwayDeltaX:0.0},{RunwayDeltaY:0.0}) " +
-            "maxStepDistance={MaxStepDistance:0.0} steps={Steps} stepDelay={StepDelay}ms boundaryDelay={BoundaryDelay}ms",
+            "maxStepDistance={MaxStepDistance:0.0} steps={Steps} stepDelay={StepDelay}ms " +
+            "boundaryDelay={BoundaryDelay}ms dragStartDelay={DragStartDelay}ms dragReleaseDelay={DragReleaseDelay}ms",
             requestedDeltaX,
             requestedDeltaY,
             requestedDistance,
@@ -175,12 +183,14 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             maxSingleStepDistance,
             steps,
             stepDelay,
-            releaseDelay);
+            boundaryDelay,
+            dragStartDelay,
+            dragReleaseDelay);
         var dragStartedAt = Environment.TickCount64;
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(boundaryDelay, ct);
+            await Delay(dragStartDelay, ct);
             for (var i = 1; i <= steps; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -195,7 +205,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                     captureRect,
                     realCaptureRect);
 
-                await Delay(i < steps ? stepDelay : releaseDelay, ct);
+                await Delay(i < steps ? stepDelay : dragReleaseDelay, ct);
             }
         }
         finally
