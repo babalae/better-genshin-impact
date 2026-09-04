@@ -47,6 +47,18 @@ public partial class TpConfig : ObservableValidator
     private bool _experimentalTeleportDetailedLogs = false;
 
     [ObservableProperty]
+    [property: JsonConverter(typeof(JsonStringEnumConverter<ExperimentalTeleportDragSafetyLevel>))]
+    private ExperimentalTeleportDragSafetyLevel _experimentalTeleportDragSafetyLevel = ExperimentalTeleportDragSafetyLevel.Balanced;
+
+    partial void OnExperimentalTeleportDragSafetyLevelChanged(ExperimentalTeleportDragSafetyLevel value)
+    {
+        if (!Enum.IsDefined(value))
+        {
+            ExperimentalTeleportDragSafetyLevel = ExperimentalTeleportDragSafetyLevel.Balanced;
+        }
+    }
+
+    [ObservableProperty]
     [NotifyDataErrorInfo]
     [Range(MinExperimentalTeleportDragDistanceCorrection, MaxExperimentalTeleportDragDistanceCorrection,
         ErrorMessage = "实验传送理论拖动距离修正：0.1-1.0")]

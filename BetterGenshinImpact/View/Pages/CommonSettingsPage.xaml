@@ -7,6 +7,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
+      xmlns:tp="clr-namespace:BetterGenshinImpact.GameTask.AutoTrackPath"
       xmlns:media="clr-namespace:System.Windows.Media;assembly=PresentationCore"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
@@ -1444,6 +1445,14 @@
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 理论拖动距离修正倍率}" />
                         <ui:NumberBox Grid.Column="1" Minimum="0.1" Maximum="1" MaxDecimalPlaces="2" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportDragDistanceCorrection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 拖动路径安全等级}" />
+                        <ComboBox Grid.Column="1" SelectedValue="{Binding Config.TpConfig.ExperimentalTeleportDragSafetyLevel, Mode=TwoWay}" SelectedValuePath="Tag">
+                            <ComboBoxItem Tag="{x:Static tp:ExperimentalTeleportDragSafetyLevel.Conservative}" Content="{i18n:T 保守}" />
+                            <ComboBoxItem Tag="{x:Static tp:ExperimentalTeleportDragSafetyLevel.Balanced}" Content="{i18n:T 平衡}" />
+                            <ComboBoxItem Tag="{x:Static tp:ExperimentalTeleportDragSafetyLevel.Overlimit}" Content="{i18n:T 超限}" />
+                        </ComboBox>
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 单步最大输入距离（像素）}" />

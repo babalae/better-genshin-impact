@@ -84,15 +84,44 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         const string ratioSource = "configured";
         var desiredX = requestedDeltaX * distanceCorrection;
         var desiredY = requestedDeltaY * distanceCorrection;
-        if (!TryCreateSafeRunway(
+        Point2d selectedStart = default;
+        Point2d selectedEnd = default;
+        var runwayCreated = config.ExperimentalTeleportDragSafetyLevel switch
+        {
+            ExperimentalTeleportDragSafetyLevel.Conservative => TryCreateSafeRunway(
                 desiredX,
                 desiredY,
                 captureRect.Width,
                 captureRect.Height,
                 country,
                 forbiddenStartRects,
-                out var start,
-                out var end))
+                out selectedStart,
+                out selectedEnd),
+            ExperimentalTeleportDragSafetyLevel.Balanced => TryCreateRelaxedRunway(
+                desiredX,
+                desiredY,
+                captureRect.Width,
+                captureRect.Height,
+                country,
+                forbiddenStartRects,
+                allowEndOutsideScreen: false,
+                out selectedStart,
+                out selectedEnd),
+            ExperimentalTeleportDragSafetyLevel.Overlimit => TryCreateRelaxedRunway(
+                desiredX,
+                desiredY,
+                captureRect.Width,
+                captureRect.Height,
+                country,
+                forbiddenStartRects,
+                allowEndOutsideScreen: true,
+                out selectedStart,
+                out selectedEnd),
+            _ => false,
+        };
+        var start = selectedStart;
+        var end = selectedEnd;
+        if (!runwayCreated)
         {
             LogDetailed(
                 "实验传送无法生成安全拖动跑道：requested=({RequestedX:0.0},{RequestedY:0.0}) adjusted=({AdjustedX:0.0},{AdjustedY:0.0}) country={Country}",
@@ -104,8 +133,9 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             return default;
         }
 
+        var allowEndOutsideScreen = config.ExperimentalTeleportDragSafetyLevel == ExperimentalTeleportDragSafetyLevel.Overlimit;
         var screenStart = ToScreenPoint(start, captureRect, realCaptureRect);
-        var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect);
+        var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect, clampToCapture: !allowEndOutsideScreen);
         var boundaryDelay = GetOperationInterval();
         var dragStartDelay = Math.Clamp(
             config.ExperimentalTeleportDragStartDelayMilliseconds,
@@ -117,10 +147,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
 
         LogDetailed(
-            "实验传送开始拖动：mode=absolute-screen requested=({RequestedX:0.0},{RequestedY:0.0}) " +
+            "实验传送开始拖动：mode={Mode} requested=({RequestedX:0.0},{RequestedY:0.0}) " +
             "runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) " +
             "screenRunway=({ScreenStartX:0.0},{ScreenStartY:0.0})->({ScreenEndX:0.0},{ScreenEndY:0.0}) " +
             "ratio={Ratio:0.000} source={RatioSource}",
+            allowEndOutsideScreen ? "relative-overlimit" : "absolute-screen",
             requestedDeltaX,
             requestedDeltaY,
             start.X,
@@ -160,6 +191,10 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             int.MaxValue);
         var movedX = 0d;
         var movedY = 0d;
+        var movedScreenX = 0;
+        var movedScreenY = 0;
+        var screenScaleX = realCaptureRect.Width / Math.Max(1d, captureRect.Width);
+        var screenScaleY = realCaptureRect.Height / Math.Max(1d, captureRect.Height);
         var stepDelay = GetStepInterval();
         LogDetailed(
             "实验传送拖动参数：theory=({TheoryX:0.0},{TheoryY:0.0}) theoryDistance={TheoryDistance:0.0} " +
@@ -200,10 +235,24 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 movedX = nextX;
                 movedY = nextY;
 
-                MoveToCapturePoint(
-                    new Point2d(start.X + movedX, start.Y + movedY),
-                    captureRect,
-                    realCaptureRect);
+                if (allowEndOutsideScreen)
+                {
+                    // 超限终点可能超出桌面，使用相对输入避免绝对坐标裁剪。
+                    var targetScreenX = (int)Math.Round(nextX * screenScaleX);
+                    var targetScreenY = (int)Math.Round(nextY * screenScaleY);
+                    Simulation.SendInput.Mouse.MoveMouseBy(
+                        targetScreenX - movedScreenX,
+                        targetScreenY - movedScreenY);
+                    movedScreenX = targetScreenX;
+                    movedScreenY = targetScreenY;
+                }
+                else
+                {
+                    MoveToCapturePoint(
+                        new Point2d(start.X + movedX, start.Y + movedY),
+                        captureRect,
+                        realCaptureRect);
+                }
 
                 await Delay(i < steps ? stepDelay : dragReleaseDelay, ct);
             }
@@ -315,6 +364,201 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         start = default;
         end = default;
         return false;
+    }
+
+    private static bool TryCreateRelaxedRunway(
+        double requestedX,
+        double requestedY,
+        int width,
+        int height,
+        string? country,
+        IReadOnlyList<Rect2d>? forbiddenStartRects,
+        bool allowEndOutsideScreen,
+        out Point2d start,
+        out Point2d end)
+    {
+        var requestedDistance = Math.Sqrt(requestedX * requestedX + requestedY * requestedY);
+        if (!double.IsFinite(requestedDistance) || width <= 0 || height <= 0)
+        {
+            start = default;
+            end = default;
+            return false;
+        }
+
+        var directionX = requestedDistance <= 1e-6d ? 0d : requestedX / requestedDistance;
+        var directionY = requestedDistance <= 1e-6d ? 0d : requestedY / requestedDistance;
+        var bestScore = double.NegativeInfinity;
+        var bestLength = double.NegativeInfinity;
+        var found = false;
+        start = default;
+        end = default;
+        foreach (var candidate in GetRelaxedStartCandidates(
+                     width,
+                     height,
+                     requestedX,
+                     requestedY,
+                     country,
+                     forbiddenStartRects))
+        {
+            if (!IsSafePoint(candidate.X, candidate.Y, width, height, SafeMargin, country) ||
+                IsForbiddenStartPoint(candidate, forbiddenStartRects, width, height))
+            {
+                continue;
+            }
+
+            var boundaryDistance = GetScreenBoundaryDistance(candidate, directionX, directionY, width, height);
+            var length = allowEndOutsideScreen
+                ? requestedDistance
+                : Math.Min(requestedDistance, boundaryDistance);
+            if (!double.IsFinite(length) || length < 0d)
+            {
+                continue;
+            }
+
+            // 先按可用边界距离选起点，保证平衡与超限模式采用一致的起点策略。
+            if (boundaryDistance > bestScore + 1e-6d ||
+                Math.Abs(boundaryDistance - bestScore) <= 1e-6d && length > bestLength)
+            {
+                bestScore = boundaryDistance;
+                bestLength = length;
+                start = candidate;
+                end = new Point2d(
+                    candidate.X + directionX * length,
+                    candidate.Y + directionY * length);
+                found = true;
+            }
+        }
+
+        if (found)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<Point2d> GetRelaxedStartCandidates(
+        int width,
+        int height,
+        double requestedX,
+        double requestedY,
+        string? country,
+        IReadOnlyList<Rect2d>? forbiddenStartRects)
+    {
+        var scaleX = width / 1920d;
+        var scaleY = height / 1080d;
+        var minX = SafeMargin * scaleX;
+        var maxX = width - SafeMargin * scaleX;
+        var minY = SafeMargin * scaleY;
+        var maxY = height - SafeMargin * scaleY;
+        var xValues = new List<double>
+        {
+            minX,
+            minX + 1d,
+            width * 0.25d,
+            width * 0.5d,
+            width * 0.75d,
+            maxX - 1d,
+            maxX,
+        };
+        var yValues = new List<double>
+        {
+            minY,
+            minY + 1d,
+            height * 0.25d,
+            height * 0.5d,
+            height * 0.75d,
+            maxY - 1d,
+            maxY,
+        };
+
+        void AddExcludedRectBoundaries(Rect2d rect, double margin)
+        {
+            xValues.Add((rect.X - margin) * scaleX - 1d);
+            xValues.Add((rect.Right + margin) * scaleX + 1d);
+            yValues.Add((rect.Y - margin) * scaleY - 1d);
+            yValues.Add((rect.Bottom + margin) * scaleY + 1d);
+        }
+
+        foreach (var danger in DangerRects)
+        {
+            AddExcludedRectBoundaries(danger, SafeMargin);
+        }
+
+        if (string.Equals(country, "至冬", StringComparison.Ordinal))
+        {
+            AddExcludedRectBoundaries(SnezhnayaDangerRect, SafeMargin);
+        }
+
+        if (forbiddenStartRects is not null)
+        {
+            foreach (var forbidden in forbiddenStartRects)
+            {
+                AddExcludedRectBoundaries(forbidden, 0d);
+            }
+        }
+
+        var candidates = new List<Point2d>(xValues.Count * yValues.Count + 4);
+        foreach (var x in xValues)
+        {
+            foreach (var y in yValues)
+            {
+                candidates.Add(new Point2d(
+                    Math.Clamp(x, minX, maxX),
+                    Math.Clamp(y, minY, maxY)));
+            }
+        }
+
+        // 目标反方向边缘点优先覆盖大位移场景，其他候选仍由边界距离评分决定。
+        var distance = Math.Sqrt(requestedX * requestedX + requestedY * requestedY);
+        if (distance > 1e-6d && double.IsFinite(distance))
+        {
+            var directionX = requestedX / distance;
+            var directionY = requestedY / distance;
+            candidates.Add(new Point2d(
+                directionX > 0d ? minX : directionX < 0d ? maxX : width * 0.5d,
+                directionY > 0d ? minY : directionY < 0d ? maxY : height * 0.5d));
+        }
+
+        candidates.Add(new Point2d(width * 0.5d, height * 0.55d));
+        candidates.Add(new Point2d(width * 0.38d, height * 0.72d));
+        candidates.Add(new Point2d(width * 0.62d, height * 0.72d));
+        return candidates;
+    }
+
+    private static double GetScreenBoundaryDistance(
+        Point2d start,
+        double directionX,
+        double directionY,
+        int width,
+        int height)
+    {
+        var scaleX = width / 1920d;
+        var scaleY = height / 1080d;
+        var minX = SafeMargin * scaleX;
+        var maxX = width - SafeMargin * scaleX;
+        var minY = SafeMargin * scaleY;
+        var maxY = height - SafeMargin * scaleY;
+        var distance = double.PositiveInfinity;
+        if (directionX > 1e-9d)
+        {
+            distance = Math.Min(distance, (maxX - start.X) / directionX);
+        }
+        else if (directionX < -1e-9d)
+        {
+            distance = Math.Min(distance, (minX - start.X) / directionX);
+        }
+
+        if (directionY > 1e-9d)
+        {
+            distance = Math.Min(distance, (maxY - start.Y) / directionY);
+        }
+        else if (directionY < -1e-9d)
+        {
+            distance = Math.Min(distance, (minY - start.Y) / directionY);
+        }
+
+        return Math.Max(0d, distance);
     }
 
     private static bool IsForbiddenStartPoint(
@@ -455,10 +699,14 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         DesktopRegion.DesktopRegionMove(screenPoint.X, screenPoint.Y);
     }
 
-    private static Point2d ToScreenPoint(Point2d point, Rect captureRect, RECT realCaptureRect)
+    private static Point2d ToScreenPoint(
+        Point2d point,
+        Rect captureRect,
+        RECT realCaptureRect,
+        bool clampToCapture = true)
     {
-        var x = Math.Clamp(point.X, 0d, captureRect.Width);
-        var y = Math.Clamp(point.Y, 0d, captureRect.Height);
+        var x = clampToCapture ? Math.Clamp(point.X, 0d, captureRect.Width) : point.X;
+        var y = clampToCapture ? Math.Clamp(point.Y, 0d, captureRect.Height) : point.Y;
         return new Point2d(
             realCaptureRect.X + x * realCaptureRect.Width / Math.Max(1d, captureRect.Width),
             realCaptureRect.Y + y * realCaptureRect.Height / Math.Max(1d, captureRect.Height));
