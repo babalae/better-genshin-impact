@@ -636,6 +636,7 @@ public class TpTask
                 fallbackCandidate is { } candidate
                     ? () => ClickAbsoluteMapCandidate(candidate)
                     : null);
+            Logger.LogInformation("传送完成");
         }
         else
         {

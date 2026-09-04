@@ -44,7 +44,7 @@ public partial class TpConfig : ObservableValidator
     private bool _useExperimentalTeleport;
 
     [ObservableProperty]
-    private bool _experimentalTeleportDetailedLogs;
+    private bool _experimentalTeleportDetailedLogs = false;
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
