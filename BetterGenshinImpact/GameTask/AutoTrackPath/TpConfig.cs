@@ -24,9 +24,9 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
     public const int MaxExperimentalTeleportStateTransitionTimeoutMilliseconds = 5000;
     public const int DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
-    public const int MinExperimentalTeleportOperationIntervalMilliseconds = 10;
-    public const int MaxExperimentalTeleportOperationIntervalMilliseconds = 500;
-    public const int DefaultExperimentalTeleportOperationIntervalMilliseconds = 50;
+    public const int MinExperimentalTeleportMapOpenRepressIntervalMilliseconds = 500;
+    public const int MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds = 5000;
+    public const int DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds = 1000;
     public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
     public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
     public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 48;
@@ -95,15 +95,15 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportOperationIntervalMilliseconds, MaxExperimentalTeleportOperationIntervalMilliseconds,
-        ErrorMessage = "实验传送操作间隔：10-500 ms")]
-    private int _experimentalTeleportOperationIntervalMilliseconds = DefaultExperimentalTeleportOperationIntervalMilliseconds;
+    [Range(MinExperimentalTeleportMapOpenRepressIntervalMilliseconds, MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds,
+        ErrorMessage = "实验传送打开地图补按 M 间隔：500-5000 ms")]
+    private int _experimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
 
-    partial void OnExperimentalTeleportOperationIntervalMillisecondsChanged(int value)
+    partial void OnExperimentalTeleportMapOpenRepressIntervalMillisecondsChanged(int value)
     {
-        if (value is < MinExperimentalTeleportOperationIntervalMilliseconds or > MaxExperimentalTeleportOperationIntervalMilliseconds)
+        if (value is < MinExperimentalTeleportMapOpenRepressIntervalMilliseconds or > MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds)
         {
-            ExperimentalTeleportOperationIntervalMilliseconds = DefaultExperimentalTeleportOperationIntervalMilliseconds;
+            ExperimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
         }
     }
 

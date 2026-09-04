@@ -410,10 +410,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
     private int GetOperationInterval()
     {
-        return Math.Clamp(
-            config.ExperimentalTeleportOperationIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportOperationIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportOperationIntervalMilliseconds);
+        var configuredDelay = Math.Clamp(
+            config.TeleportOperationDelayMilliseconds,
+            TpConfig.MinTeleportOperationDelayMilliseconds,
+            TpConfig.MaxTeleportOperationDelayMilliseconds);
+        var scaledDelay = 50d * configuredDelay / TpConfig.DefaultTeleportOperationDelayMilliseconds;
+        return Math.Max(1, (int)Math.Round(scaledDelay));
     }
 
     private int GetStepInterval()

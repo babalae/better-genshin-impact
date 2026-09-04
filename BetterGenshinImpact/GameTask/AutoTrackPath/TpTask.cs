@@ -393,7 +393,10 @@ public class TpTask
         Simulation.ReleaseAllKey();
         await Delay(GetTeleportOperationDelay(20), ct);
         var timeout = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
-        var repressInterval = Math.Max(500, GetTeleportOperationDelay(500));
+        var repressInterval = Math.Clamp(
+            _tpConfig.ExperimentalTeleportMapOpenRepressIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportMapOpenRepressIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds);
         var detectionInterval = GetExperimentalStateRecognitionInterval();
         var stopwatch = Stopwatch.StartNew();
         var pressCount = 0;
@@ -2012,11 +2015,11 @@ public class TpTask
         }
 
         var configuredDelay = Math.Clamp(
-            _tpConfig.ExperimentalTeleportOperationIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportOperationIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportOperationIntervalMilliseconds);
+            _tpConfig.TeleportOperationDelayMilliseconds,
+            TpConfig.MinTeleportOperationDelayMilliseconds,
+            TpConfig.MaxTeleportOperationDelayMilliseconds);
         var scaledDelay = defaultDelayMilliseconds * configuredDelay /
-                          (double)TpConfig.DefaultExperimentalTeleportOperationIntervalMilliseconds;
+                          TpConfig.DefaultTeleportOperationDelayMilliseconds;
         return Math.Max(1, (int)Math.Round(scaledDelay));
     }
 

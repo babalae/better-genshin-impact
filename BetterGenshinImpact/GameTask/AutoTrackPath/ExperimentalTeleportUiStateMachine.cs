@@ -436,14 +436,14 @@ internal sealed class ExperimentalTeleportUiStateMachine
     private int GetOperationDelay(int baseDelay)
     {
         var configured = Math.Clamp(
-            _config.ExperimentalTeleportOperationIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportOperationIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportOperationIntervalMilliseconds);
+            _config.TeleportOperationDelayMilliseconds,
+            TpConfig.MinTeleportOperationDelayMilliseconds,
+            TpConfig.MaxTeleportOperationDelayMilliseconds);
         return Math.Max(
             1,
             (int)Math.Round(
                 baseDelay * configured /
-                (double)TpConfig.DefaultExperimentalTeleportOperationIntervalMilliseconds));
+                TpConfig.DefaultTeleportOperationDelayMilliseconds));
     }
 
     private int GetStateRecognitionInterval() => Math.Clamp(

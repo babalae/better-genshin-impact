@@ -1466,9 +1466,9 @@
                                       Value="{Binding Config.TpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 实验操作间隔（毫秒）}" />
-                        <ui:NumberBox Grid.Column="1" Minimum="10" Maximum="500" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
-                                      Value="{Binding Config.TpConfig.ExperimentalTeleportOperationIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 打开地图补按 M 间隔（毫秒）}" />
+                        <ui:NumberBox Grid.Column="1" Minimum="500" Maximum="5000" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportMapOpenRepressIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 输出详细日志}" />
