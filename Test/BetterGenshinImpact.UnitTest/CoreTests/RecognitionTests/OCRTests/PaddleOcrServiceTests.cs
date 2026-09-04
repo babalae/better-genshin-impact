@@ -21,6 +21,9 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("en", "Katheryne")]
         [InlineData("en", "Clickany where to   close", "Click.*any.*where.*to.*close")]
         [InlineData("en", "2-Star Artifacts", "2-Star.*Artifacts")]
+        [InlineData("en", "Realm Depot", "Realm.*Depot")]
+        [InlineData("en", "Set Includes", "Set.*Includes")]
+        [InlineData("en", "unable to obtain Companionship EXP", "unable.*to.*obtain.*Companionship.*EXP")]
         [InlineData("zh-Hant", "凱瑟琳")]
         [InlineData("zh-Hant", "委託", "委[託話]")]
         [InlineData("zh-Hant", "挑戰,達成", "挑戰.*達成")]
@@ -58,6 +61,10 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("it", "Incarichi")]
         [InlineData("it", "Pesca")]
         [InlineData("it", "Katheryne")]
+        // GoToSereniteaPotTask: both are regex patterns, and the affinity one is the longest
+        // free-text match in the suite, so it is the most fragile to an OCR mis-read.
+        [InlineData("fr", "Bazar du royaume", "Bazar.*du.*royaume")]
+        [InlineData("fr", "impossible d'obtenir de l'EXP d'affinité", "impossible.*d.obtenir.*de.*l.EXP.*d.af+init[eé]")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>
