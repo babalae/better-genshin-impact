@@ -94,7 +94,6 @@ public class TpTask
     private const int TeleportClickableAreaRetryCount = 5;
     private const int TeleportClickableAreaRetryDelayMs = 80;
     private const int BigMapRectRetryIntervalMs = 150;
-    private const int MapLayerVerificationPollIntervalMs = UiRecognitionPollIntervalMs;
     private const int MapGroundLayerSwitchTimeoutMs = 3000;
     private const int TeleportPanelMinimumTimeoutMs = 900;
     private const int TeleportPanelInitialDelayMs = 200;
@@ -333,7 +332,6 @@ public class TpTask
         _experimentalUiStateMachine = uiStateMachine;
         try
         {
-            await uiStateMachine.EnsureMapMainAsync(mapName);
             return await TpWithRetries(tpX, tpY, mapName, force);
         }
         finally
@@ -348,6 +346,7 @@ public class TpTask
     {
         if (IsInBigMapUi())
         {
+            LogExperimentalDetailed("实验传送打开大地图：检测到已处于大地图");
             return;
         }
 
@@ -355,7 +354,7 @@ public class TpTask
         await Delay(GetTeleportOperationDelay(20), ct);
         var timeout = GetTeleportOperationDelay(GetBigMapOpenTimeoutMilliseconds(mapName));
         var repressInterval = Math.Max(500, GetTeleportOperationDelay(500));
-        var detectionInterval = GetTeleportOperationDelay(50);
+        var detectionInterval = GetExperimentalStateRecognitionInterval();
         var stopwatch = Stopwatch.StartNew();
         var pressCount = 0;
         var nextPressAt = 0L;
@@ -377,7 +376,11 @@ public class TpTask
                 Simulation.SendInput.SimulateAction(GIActions.OpenMap);
                 pressCount++;
                 nextPressAt = elapsed + repressInterval;
-                if (pressCount > 1)
+                if (pressCount == 1)
+                {
+                    LogExperimentalDetailed("实验传送按 M：press=1");
+                }
+                else
                 {
                     LogExperimentalDetailed(
                         "按 M 后 {IntervalMilliseconds}ms 大地图仍未出现，执行第 {PressCount} 次补按",
@@ -508,6 +511,18 @@ public class TpTask
     /// <param name="retryCount">重试次数</param>
     public async Task OpenBigMapUi(int retryCount = 3, string? mapName = null)
     {
+        if (_experimentalUiStateMachine is { } experimentalUiStateMachine)
+        {
+            await experimentalUiStateMachine.EnsureMapMainAsync(mapName ?? MapTypes.Teyvat.ToString());
+            return;
+        }
+
+        if (_tpConfig.UseExperimentalTeleport)
+        {
+            await OpenExperimentalBigMapUi(mapName);
+            return;
+        }
+
         for (var i = 0; i < retryCount; i++)
         {
             try
@@ -552,8 +567,16 @@ public class TpTask
     {
         ClearRememberedAreaSwitchCenterPoint();
 
-        // 1. 确认在地图界面，并在传送入口统一切回地表图层
-        await OpenBigMapUi(1, mapName);
+        // 1. 确认在地图界面，并在传送入口统一切回地表图层。
+        // 实验模式必须由状态机负责打开地图，才能使用补按 M 与状态轮询逻辑。
+        if (_experimentalUiStateMachine is { } experimentalUiStateMachine)
+        {
+            await experimentalUiStateMachine.EnsureMapMainAsync(mapName);
+        }
+        else
+        {
+            await OpenBigMapUi(1, mapName);
+        }
         await SwitchToGroundMapLayerIfNeeded();
 
         var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
@@ -732,7 +755,7 @@ public class TpTask
                 if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
-                    await Delay(TeleportClickableAreaRetryDelayMs, ct);
+                    await Delay(GetExperimentalOperationDelay(TeleportClickableAreaRetryDelayMs), ct);
                     continue;
                 }
 
@@ -778,7 +801,7 @@ public class TpTask
             }
 
             await MoveMapToTeleportClickArea(targetX, targetY, mapName, evaluation.RequiredVisibleRadius);
-            await Delay(TeleportClickableAreaRetryDelayMs, ct);
+            await Delay(GetExperimentalOperationDelay(TeleportClickableAreaRetryDelayMs), ct);
         }
 
         throw new Exception("目标传送点位于不可点击区域，传送失败");
@@ -1326,6 +1349,18 @@ public class TpTask
 
     public async Task CheckInBigMapUi(string? mapName = null)
     {
+        if (_experimentalUiStateMachine is { } experimentalUiStateMachine)
+        {
+            await experimentalUiStateMachine.EnsureMapMainAsync(mapName ?? MapTypes.Teyvat.ToString());
+            return;
+        }
+
+        if (_tpConfig.UseExperimentalTeleport)
+        {
+            await OpenExperimentalBigMapUi(mapName);
+            return;
+        }
+
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi(mapName))
         {
@@ -1414,7 +1449,7 @@ public class TpTask
                 // 未激活点位的详情面板会遮挡后续地图操作，重试前先关闭。
                 // 最后一次失败也需要执行清理，避免影响脚本组中的下一个任务。
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(300, ct);
+                await Delay(GetExperimentalOperationDelay(300), ct);
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
             }
@@ -1426,7 +1461,7 @@ public class TpTask
             {
                 Logger.LogDebug(e, e.Message);
                 Logger.LogWarning("传送异常" + e.Message);
-                await Delay(300, ct);
+                await Delay(GetExperimentalOperationDelay(300), ct);
             }
         }
 
@@ -1570,7 +1605,7 @@ public class TpTask
             int effectiveMoveMouseY = GetDisplayScaleAdjustedMouseDelta(moveMouseY);
 
             var mouseMoveResult = await MouseMoveMap(effectiveMoveMouseX, effectiveMoveMouseY);
-            await Delay(30, ct);
+            await Delay(GetExperimentalOperationDelay(30), ct);
 
             // 推算理论上的移动后坐标 (惯性预测)
             Point2f predictedPoint = moveState.CenterPoint + new Point2f(
@@ -1916,12 +1951,60 @@ public class TpTask
 
     private int GetTeleportOperationDelay(int defaultDelayMilliseconds)
     {
+        if (_experimentalUiStateMachine != null)
+        {
+            return GetExperimentalOperationDelay(defaultDelayMilliseconds);
+        }
+
         var configuredDelay = Math.Clamp(
             _tpConfig.TeleportOperationDelayMilliseconds,
             TpConfig.MinTeleportOperationDelayMilliseconds,
             TpConfig.MaxTeleportOperationDelayMilliseconds);
         var scaledDelay = defaultDelayMilliseconds * configuredDelay / (double)TpConfig.DefaultTeleportOperationDelayMilliseconds;
         return Math.Max(1, (int)Math.Round(scaledDelay));
+    }
+
+    private int GetExperimentalOperationDelay(int defaultDelayMilliseconds)
+    {
+        if (_experimentalUiStateMachine == null)
+        {
+            return defaultDelayMilliseconds;
+        }
+
+        var configuredDelay = Math.Clamp(
+            _tpConfig.ExperimentalTeleportOperationIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportOperationIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportOperationIntervalMilliseconds);
+        var scaledDelay = defaultDelayMilliseconds * configuredDelay /
+                          (double)TpConfig.DefaultExperimentalTeleportOperationIntervalMilliseconds;
+        return Math.Max(1, (int)Math.Round(scaledDelay));
+    }
+
+    private int GetExperimentalStateRecognitionInterval()
+    {
+        if (_experimentalUiStateMachine == null)
+        {
+            return UiRecognitionPollIntervalMs;
+        }
+
+        return Math.Clamp(
+            _tpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
+            TpConfig.MinExperimentalTeleportStateRecognitionIntervalMilliseconds,
+            TpConfig.MaxExperimentalTeleportStateRecognitionIntervalMilliseconds);
+    }
+
+    private int GetExperimentalStateTransitionTimeout(int minimumMilliseconds)
+    {
+        if (_experimentalUiStateMachine == null)
+        {
+            return minimumMilliseconds;
+        }
+
+        var configuredTimeout = Math.Clamp(
+            _tpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds,
+            TpConfig.MinExperimentalTeleportStateTransitionTimeoutMilliseconds,
+            TpConfig.MaxExperimentalTeleportStateTransitionTimeoutMilliseconds);
+        return Math.Max(minimumMilliseconds, configuredTimeout);
     }
 
     private void UpdateMapZoomWheelCalibration(int wheelNotches, double zoomDelta)
@@ -2637,7 +2720,8 @@ public class TpTask
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
+        var candidateTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaCandidateTimeoutMs);
+        while (stopwatch.ElapsedMilliseconds < candidateTimeout)
         {
             ct.ThrowIfCancellationRequested();
             using var ra = CaptureToRectArea();
@@ -2650,14 +2734,14 @@ public class TpTask
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
-                await Delay(50, ct);
+                await Delay(GetExperimentalOperationDelay(50), ct);
                 await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
                 return true;
             }
 
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await Delay(GetExperimentalStateRecognitionInterval(), ct);
         }
 
         Logger.LogWarning(
@@ -2674,7 +2758,9 @@ public class TpTask
     {
         var stopwatch = Stopwatch.StartNew();
         var consecutiveMissingChecks = 0;
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
+        var selectionTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaSelectionTimeoutMs);
+        var selectionMinimumWait = GetExperimentalOperationDelay(SwitchAreaSelectionMinimumWaitMs);
+        while (stopwatch.ElapsedMilliseconds < selectionTimeout)
         {
             ct.ThrowIfCancellationRequested();
             using var capture = CaptureToRectArea();
@@ -2683,7 +2769,7 @@ public class TpTask
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
 
             if (!clickedCandidateStillVisible &&
-                stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
+                stopwatch.ElapsedMilliseconds >= selectionMinimumWait)
             {
                 consecutiveMissingChecks++;
                 if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
@@ -2696,7 +2782,7 @@ public class TpTask
                 consecutiveMissingChecks = 0;
             }
 
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await Delay(GetExperimentalStateRecognitionInterval(), ct);
         }
 
         Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
@@ -2765,10 +2851,11 @@ public class TpTask
     {
         var layerSwitchClicked = false;
         var groundLayerClicked = false;
-        // 图层按钮的出现、展开和选中都有固定时长的界面动画，不能随传送操作速度缩短。
-        var retryInterval = MapLayerVerificationPollIntervalMs;
+        // 实验模式使用独立状态识别轮询，原版保持原有间隔。
+        var retryInterval = GetExperimentalStateRecognitionInterval();
+        var switchTimeout = GetExperimentalStateTransitionTimeout(MapGroundLayerSwitchTimeoutMs);
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < MapGroundLayerSwitchTimeoutMs)
+        while (stopwatch.ElapsedMilliseconds < switchTimeout)
         {
             using var capture = CaptureToRectArea();
             using var groundButton = capture.Find(
@@ -2799,7 +2886,7 @@ public class TpTask
 
             if (!isUnderground)
             {
-                if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= MapLayerVerificationPollIntervalMs * 2)
+                if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= retryInterval * 2)
                 {
                     return;
                 }
@@ -2891,7 +2978,7 @@ public class TpTask
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await Delay(GetExperimentalStateRecognitionInterval(), ct);
 
             var screen = CaptureToRectArea();
             using var ownedScreen = screen;
@@ -2930,7 +3017,7 @@ public class TpTask
     private async Task PressTeleportConfirmKey()
     {
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
-        await Delay(30, ct);
+        await Delay(GetExperimentalOperationDelay(30), ct);
     }
 
     private List<NearbyMapIcon> GetMapIconsInRect(
@@ -3693,7 +3780,7 @@ public class TpTask
         await Delay(time < 200 ? 200 : time, ct);
         Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
-        await Delay(MapChooseCandidateClickDelayMs, ct);
+        await Delay(GetExperimentalOperationDelay(MapChooseCandidateClickDelayMs), ct);
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)

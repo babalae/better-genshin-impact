@@ -24,7 +24,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
-    private const int DragBoundaryDelayMilliseconds = 50;
 
     private static readonly Rect2d[] DangerRects =
     [
@@ -101,6 +100,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
         var screenStart = ToScreenPoint(start, captureRect, realCaptureRect);
         var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect);
+        var boundaryDelay = GetOperationInterval();
 
         LogDetailed(
             "实验传送开始拖动：mode=absolute-screen requested=({RequestedX:0.0},{RequestedY:0.0}) " +
@@ -121,7 +121,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             ratioSource);
 
         MoveToCapturePoint(start, captureRect, realCaptureRect);
-        await Delay(DragBoundaryDelayMilliseconds, ct);
+        await Delay(boundaryDelay, ct);
         GetCursorPosition(out var cursorBefore);
 
         var inputDistance = Math.Sqrt(
@@ -141,7 +141,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var movedX = 0d;
         var movedY = 0d;
         var stepDelay = GetStepInterval();
-        var releaseDelay = DragBoundaryDelayMilliseconds;
+        var releaseDelay = boundaryDelay;
         LogDetailed(
             "实验传送拖动参数：theory=({TheoryX:0.0},{TheoryY:0.0}) theoryDistance={TheoryDistance:0.0} " +
             "distanceCorrection={DistanceCorrection:0.000} correctionSource={CorrectionSource} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
@@ -168,7 +168,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(DragBoundaryDelayMilliseconds, ct);
+            await Delay(boundaryDelay, ct);
             for (var i = 1; i <= steps; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -191,7 +191,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
 
-        await Delay(DragBoundaryDelayMilliseconds, ct);
+        await Delay(boundaryDelay, ct);
         GetCursorPosition(out var cursorAfter);
         var actualX = (cursorAfter.X - cursorBefore.X) * captureRect.Width / Math.Max(1d, realCaptureRect.Width);
         var actualY = (cursorAfter.Y - cursorBefore.Y) * captureRect.Height / Math.Max(1d, realCaptureRect.Height);
