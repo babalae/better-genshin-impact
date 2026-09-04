@@ -390,18 +390,12 @@ public class CombatScenes : IDisposable
     /// <returns>返回配置中有效的角色名</returns>
     public List<string> UpdateActionSchedulerByCd(string cdConfig)
     {
-        if (string.IsNullOrEmpty(cdConfig))
-        {
-            return [];
-        }
-
         List<string> names = [];
         foreach (var t in Avatars)
         {
             var mCd = Avatar.ParseActionSchedulerByCd(t.Name, cdConfig);
-            // 手动cd不为0，不是麦当劳不是0
+            t.ManualSkillCd = mCd ?? -1;
             if (mCd is null) continue;
-            t.ManualSkillCd = (double)mCd;
             names.Add(t.Name);
         }
 
