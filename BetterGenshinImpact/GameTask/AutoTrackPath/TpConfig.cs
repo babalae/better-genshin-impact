@@ -14,10 +14,10 @@ public partial class TpConfig : ObservableValidator
 
     public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 2;
     public const int MaxExperimentalTeleportDragStepIntervalMilliseconds = 100;
-    public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 20;
+    public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 3;
     public const double MinExperimentalTeleportDragDistanceCorrection = 0.1d;
     public const double MaxExperimentalTeleportDragDistanceCorrection = 1d;
-    public const double DefaultExperimentalTeleportDragDistanceCorrection = 0.8d;
+    public const double DefaultExperimentalTeleportDragDistanceCorrection = 1d;
     public const int MinExperimentalTeleportStateRecognitionIntervalMilliseconds = 10;
     public const int MaxExperimentalTeleportStateRecognitionIntervalMilliseconds = 500;
     public const int DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds = 50;
@@ -32,13 +32,13 @@ public partial class TpConfig : ObservableValidator
     public const int DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds = 1000;
     public const int MinExperimentalTeleportDragStartDelayMilliseconds = 10;
     public const int MaxExperimentalTeleportDragStartDelayMilliseconds = 500;
-    public const int DefaultExperimentalTeleportDragStartDelayMilliseconds = 50;
+    public const int DefaultExperimentalTeleportDragStartDelayMilliseconds = 25;
     public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 10;
     public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
-    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 50;
+    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 75;
     public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
     public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
-    public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 48;
+    public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 150;
 
     [ObservableProperty]
     private bool _useExperimentalTeleport;
