@@ -1524,6 +1524,13 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             return;
         }
 
+        if (AutoBossData.ShouldRerunRoute(_taskParam.BossName))
+        {
+            _logger.LogInformation("{Name}：重新执行完整路线靠近首领", Name);
+            await RunPathingFile($"{_taskParam.BossName}前往.json");
+            return;
+        }
+
         _logger.LogInformation("{Name}：重新靠近首领位置并等待 4 秒", Name);
         var routePath = BuildPathingAssetPath($"{_taskParam.BossName}前往.json");
         var originalTask = PathingTask.BuildFromFilePath(routePath) ?? throw new Exception($"路径文件解析失败：{routePath}");

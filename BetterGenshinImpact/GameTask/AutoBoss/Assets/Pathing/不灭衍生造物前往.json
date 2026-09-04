@@ -1,0 +1,59 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "https://github.com/1004452714",
+        "name": "DarkFlameMaster"
+      }
+    ],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1788555902054,
+    "map_match_method": "SIFT",
+    "map_name": "Teyvat",
+    "name": "不灭衍生造物前往",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "locked": false,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 7163.7637,
+      "y": 9309.7236
+    },
+    {
+      "action": "log_output",
+      "action_params": "受限于地图追踪支持，存在位置偏移的情况是正常的，开战后boss会主动靠近",
+      "id": 2,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 7162.5387,
+      "y": 9310.8765
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 3,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 7151.4766,
+      "y": 9321.6953
+    },
+    {
+      "action": "combat_script",
+      "action_params": "keydown(w),keydown(shift),wait(15),keyup(w),keyup(shift)",
+      "id": 4,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 7160.3281,
+      "y": 9333.8125
+    }
+  ]
+}
