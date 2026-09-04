@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -23,6 +24,7 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using OpenCvSharp.Features2D;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2106,6 +2108,86 @@ public class TpTask
     public Point2f GetPositionFromBigMap(string mapName)
     {
         return GetBigMapCenterPoint(mapName);
+    }
+
+    public (MapTypes MapType, Point2f Position) GetPositionFromCurrentBigMap()
+    {
+        const int minGoodMatches = 7;
+        const int minInliers = 6;
+        const double minInlierRatio = 0.5;
+        const double minWinnerScoreRatio = 1.5;
+
+        using var ra = CaptureToRectArea();
+        using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
+        if (!mapScaleButtonRa.IsExist())
+        {
+            throw new InvalidOperationException("当前不在地图界面");
+        }
+
+        using var sift = SIFT.Create();
+        using var queryDescriptors = new Mat();
+        sift.DetectAndCompute(ra.CacheGreyMat, null, out var queryKeyPoints, queryDescriptors);
+
+        using var teyvatQueryMat = ResizeHelper.Resize(ra.CacheGreyMat, 1d / 4);
+        using var teyvatQueryDescriptors = new Mat();
+        sift.DetectAndCompute(teyvatQueryMat, null, out var teyvatQueryKeyPoints, teyvatQueryDescriptors);
+
+        var candidates = new List<(MapTypes MapType, SceneBaseMap Map, FeatureMatchResult Match, double Score)>();
+        foreach (var mapType in Enum.GetValues<MapTypes>())
+        {
+            try
+            {
+                var map = (SceneBaseMap)MapManager.GetMap(mapType, _mapMatchingMethod);
+                var match = mapType == MapTypes.Teyvat
+                    ? map.GetBigMapPositionMatchResult(teyvatQueryKeyPoints, teyvatQueryDescriptors, teyvatQueryMat.Size())
+                    : map.GetBigMapPositionMatchResult(queryKeyPoints, queryDescriptors, ra.CacheGreyMat.Size());
+                if (match.GoodMatchCount < minGoodMatches || match.InlierCount < minInliers)
+                {
+                    continue;
+                }
+
+                var inlierRatio = (double)match.InlierCount / match.GoodMatchCount;
+                if (inlierRatio < minInlierRatio)
+                {
+                    continue;
+                }
+
+                candidates.Add((mapType, map, match, match.InlierCount * inlierRatio));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "自动识别大地图时，{MapType} 特征匹配失败", mapType);
+            }
+        }
+
+        var rankedCandidates = candidates.OrderByDescending(x => x.Score).ToList();
+        if (rankedCandidates.Count == 0)
+        {
+            throw new MapPositionNotRecognizedException("无法识别当前大地图类型");
+        }
+
+        var best = rankedCandidates[0];
+        if (rankedCandidates.Count > 1 && best.Score < rankedCandidates[1].Score * minWinnerScoreRatio)
+        {
+            throw new MapPositionNotRecognizedException(
+                $"当前大地图类型识别结果不唯一：{best.MapType} / {rankedCandidates[1].MapType}");
+        }
+
+        var imagePoint = best.Match.CenterPoint;
+        if (best.MapType == MapTypes.Teyvat)
+        {
+            imagePoint = new Point2f(
+                imagePoint.X * TeyvatMap.BigMap256ScaleTo2048,
+                imagePoint.Y * TeyvatMap.BigMap256ScaleTo2048);
+        }
+
+        var position = best.Map.ConvertImageCoordinatesToGenshinMapCoordinates(imagePoint);
+        if (position is not { } recognizedPosition)
+        {
+            throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
+        }
+
+        return (best.MapType, recognizedPosition);
     }
 
     private Point2f GetPositionFromBigMap(string mapName, Point2f expectedCenterPoint)

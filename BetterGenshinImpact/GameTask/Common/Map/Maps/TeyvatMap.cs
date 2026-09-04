@@ -46,6 +46,24 @@ public class TeyvatMap : SceneBaseMap
         return SiftMatcher.Match(layer.TrainKeyPoints, layer.TrainDescriptors, greyBigMapMat);
     }
 
+    public override FeatureMatchResult GetBigMapPositionMatchResult(Mat greyBigMapMat)
+    {
+        using var resizedGrey = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
+        var layer = BigMapTeyvat256Layer.GetInstance(this);
+        return SiftMatcher.MatchWithQuality(layer.TrainKeyPoints, layer.TrainDescriptors, resizedGrey);
+    }
+
+    public override FeatureMatchResult GetBigMapPositionMatchResult(KeyPoint[] queryKeyPoints, Mat queryDescriptors, Size querySize)
+    {
+        var layer = BigMapTeyvat256Layer.GetInstance(this);
+        return SiftMatcher.MatchWithQuality(
+            layer.TrainKeyPoints,
+            layer.TrainDescriptors,
+            queryKeyPoints,
+            queryDescriptors,
+            querySize);
+    }
+
     public override Point2f GetBigMapPosition(Mat greyBigMapMat, Point2f expectedCenter)
     {
         var expectedCenter256 = new Point2f(
