@@ -309,6 +309,42 @@ public class TpTask
         return true;
     }
 
+    internal IReadOnlyList<Rect2d> GetExperimentalDragStartForbiddenRects()
+    {
+        using var imageRegion = CaptureToRectArea();
+        var searchRect = new Rect(0, 0, imageRegion.Width, imageRegion.Height);
+        var forbiddenIconTypes = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "TeleportWaypoint",
+            "Goddess",
+            "Domain",
+        };
+        var icons = GetMapIconsInRect(
+            imageRegion,
+            searchRect,
+            imageRegion.Width / 2d,
+            imageRegion.Height / 2d,
+            double.PositiveInfinity,
+            forbiddenIconTypes);
+        var scaleX = imageRegion.Width / 1920d;
+        var scaleY = imageRegion.Height / 1080d;
+        var forbiddenRects = icons
+            .Select(icon => new Rect2d(
+                icon.CenterX / Math.Max(scaleX, 1e-6d) - 40d,
+                icon.CenterY / Math.Max(scaleY, 1e-6d) - 40d,
+                80d,
+                80d))
+            .ToList();
+
+        LogExperimentalDetailed(
+            "实验传送拖动起点图标避让：count={Count} rects={Rects}",
+            forbiddenRects.Count,
+            string.Join(
+                ";",
+                forbiddenRects.Select(rect => $"({rect.X:0.0},{rect.Y:0.0},80,80)")));
+        return forbiddenRects;
+    }
+
     internal void OpenExperimentalAreaList()
     {
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
@@ -327,7 +363,11 @@ public class TpTask
         ExperimentalTeleportDrag drag,
         ExperimentalTeleportUiStateMachine uiStateMachine)
     {
-        _experimentalDrag = (x, y) => drag.DragAsync(x, y, null);
+        _experimentalDrag = async (x, y) =>
+        {
+            var forbiddenStartRects = GetExperimentalDragStartForbiddenRects();
+            return await drag.DragAsync(x, y, null, forbiddenStartRects);
+        };
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         try

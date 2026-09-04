@@ -65,7 +65,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         return IsSafePoint(clickX, clickY, rect.Width, rect.Height, EarlyStopMargin, country);
     }
 
-    public async Task<DragResult> DragAsync(double requestedDeltaX, double requestedDeltaY, string? country)
+    public async Task<DragResult> DragAsync(
+        double requestedDeltaX,
+        double requestedDeltaY,
+        string? country,
+        IReadOnlyList<Rect2d>? forbiddenStartRects = null)
     {
         var systemInfo = TaskContext.Instance().SystemInfo;
         var captureRect = systemInfo.ScaleMax1080PCaptureRect;
@@ -85,6 +89,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 captureRect.Width,
                 captureRect.Height,
                 country,
+                forbiddenStartRects,
                 out var start,
                 out var end))
         {
@@ -119,6 +124,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             screenEnd.Y,
             distanceCorrection,
             ratioSource);
+
+        LogDetailed(
+            "实验传送拖动起点避让：forbiddenCount={ForbiddenCount} start=({StartX:0.0},{StartY:0.0})",
+            forbiddenStartRects?.Count ?? 0,
+            start.X,
+            start.Y);
 
         MoveToCapturePoint(start, captureRect, realCaptureRect);
         await Delay(boundaryDelay, ct);
@@ -268,6 +279,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         int width,
         int height,
         string? country,
+        IReadOnlyList<Rect2d>? forbiddenStartRects,
         out Point2d start,
         out Point2d end)
     {
@@ -279,7 +291,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             foreach (var candidate in candidates)
             {
                 var candidateEnd = new Point2d(candidate.X + deltaX, candidate.Y + deltaY);
-                if (IsSafeSegment(candidate, candidateEnd, width, height, country))
+                if (IsSafeSegment(candidate, candidateEnd, width, height, country) &&
+                    !IsForbiddenStartPoint(candidate, forbiddenStartRects, width, height))
                 {
                     start = candidate;
                     end = candidateEnd;
@@ -291,6 +304,26 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         start = default;
         end = default;
         return false;
+    }
+
+    private static bool IsForbiddenStartPoint(
+        Point2d point,
+        IReadOnlyList<Rect2d>? forbiddenStartRects,
+        int width,
+        int height)
+    {
+        if (forbiddenStartRects is null || forbiddenStartRects.Count == 0)
+        {
+            return false;
+        }
+
+        var scaleX = width / 1920d;
+        var scaleY = height / 1080d;
+        return forbiddenStartRects.Any(rect =>
+            point.X >= rect.X * scaleX &&
+            point.X <= rect.Right * scaleX &&
+            point.Y >= rect.Y * scaleY &&
+            point.Y <= rect.Bottom * scaleY);
     }
 
     private static IReadOnlyList<Point2d> GetRunwayCandidates(int width, int height, double deltaX, double deltaY)
