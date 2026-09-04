@@ -585,9 +585,9 @@ public class TpTask
 
         var clickView = await PrepareTeleportClickView(target);
         var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
-        if (_experimentalUiStateMachine is { } experimentalUiStateMachine)
+        if (_experimentalUiStateMachine is { } experimentalStateMachine)
         {
-            await experimentalUiStateMachine.ConfirmTeleportAsync(
+            await experimentalStateMachine.ConfirmTeleportAsync(
                 target.MapName,
                 target.TargetTp,
                 fallbackCandidate is { } candidate
