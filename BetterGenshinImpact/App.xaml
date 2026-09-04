@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:bgivc="clr-namespace:BetterGenshinImpact.View.Converters"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta">
     <Application.Resources>
@@ -15,6 +16,13 @@
                 <ResourceDictionary Source="/View/Controls/Drawer/DrawerStyles.xaml" />
                 <ResourceDictionary Source="/View/Controls/Markdown/Resources/MarkdownStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- ===== 中文字符串列表的显示模板 =====
+                 ItemsSource 是中文字符串列表时套上它：下拉项和选中项都按当前语言显示，
+                 而 SelectedItem 及写回配置的值仍然是中文原文。 -->
+            <DataTemplate x:Key="LocalizedStringItemTemplate">
+                <TextBlock Text="{i18n:TValue}" />
+            </DataTemplate>
 
             <!-- ===== 字体 ===== -->
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
