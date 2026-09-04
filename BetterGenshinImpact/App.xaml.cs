@@ -1,25 +1,23 @@
-using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
+// Wine 平台适配
+using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Hutao;
+using BetterGenshinImpact.Service.Hutao.Handlers;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.Service.Tavern;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -28,21 +26,23 @@ using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.Windows;
 using LazyCache;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Abstraction;
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Appearance;
 using Wpf.Ui.Violeta.Controls;
-
-// Wine 平台适配
-using BetterGenshinImpact.Platform.Wine;
-using BetterGenshinImpact.Service.Tavern;
 
 namespace BetterGenshinImpact;
 
@@ -87,6 +87,7 @@ public partial class App : Application
                             retainedFileTimeLimit: TimeSpan.FromDays(21)))
                     .WriteTo.Console(outputTemplate:
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                    .WriteTo.Sink(new HutaoNamedPipeLogEventSink(), LogEventLevel.Information)
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
@@ -121,6 +122,15 @@ public partial class App : Application
                 services.AddSingleton(InstanceBootstrap.Current);
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
+                services.AddSingleton<IPipeRequestHandler, GetContractVersionHandler>();
+                services.AddSingleton<IPipeRequestHandler, StartCaptureHandler>();
+                services.AddSingleton<IPipeRequestHandler, StopCaptureHandler>();
+                services.AddSingleton<IPipeRequestHandler, QueryTaskArrayHandler>();
+                services.AddSingleton<IPipeRequestHandler, StartTaskHandler>();
+                services.AddSingleton<BGINamedPipe>();
+                services.AddHostedService(sp => sp.GetRequiredService<BGINamedPipe>());
+                services.AddSingleton<HutaoNamedPipe>();
+                services.AddSingleton<IHutaoCultivationService, HutaoCultivationService>();
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
