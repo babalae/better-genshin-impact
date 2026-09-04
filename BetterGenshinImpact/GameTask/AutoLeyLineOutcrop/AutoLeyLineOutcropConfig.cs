@@ -43,12 +43,6 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     private int _timeout = 120;
 
     [ObservableProperty]
-    private bool _useAdventurerHandbook = false;
-
-    [ObservableProperty]
-    private bool _isNotification = false;
-
-    [ObservableProperty]
     private bool _isGoToSynthesizer = false;
 
     /// <summary>
