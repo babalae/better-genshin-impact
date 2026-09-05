@@ -21,6 +21,9 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportStateRecognitionIntervalMilliseconds = 10;
     public const int MaxExperimentalTeleportStateRecognitionIntervalMilliseconds = 500;
     public const int DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds = 50;
+    public const int MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 0;
+    public const int MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 5000;
+    public const int DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 200;
     public const int MinExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
     public const int MaxExperimentalTeleportStateTransitionTimeoutMilliseconds = 5000;
     public const int DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
@@ -97,6 +100,20 @@ public partial class TpConfig : ObservableValidator
         if (value is < MinExperimentalTeleportStateRecognitionIntervalMilliseconds or > MaxExperimentalTeleportStateRecognitionIntervalMilliseconds)
         {
             ExperimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyDataErrorInfo]
+    [Range(MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds, MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
+        ErrorMessage = "实验传送状态识别轮询开始前等待：0-5000 ms")]
+    private int _experimentalTeleportStateRecognitionInitialDelayMilliseconds = DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds; // 首次轮询前等待，单位：ms
+
+    partial void OnExperimentalTeleportStateRecognitionInitialDelayMillisecondsChanged(int value)
+    {
+        if (value is < MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds or > MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds)
+        {
+            ExperimentalTeleportStateRecognitionInitialDelayMilliseconds = DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds;
         }
     }
 

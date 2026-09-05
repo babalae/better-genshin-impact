@@ -324,6 +324,14 @@ internal sealed class ExperimentalTeleportUiStateMachine
     {
         var timeout = GetStateTransitionTimeout();
         var interval = GetStateRecognitionInterval();
+        var initialDelay = GetStateRecognitionInitialDelay();
+        // 首次识别前等待界面完成渲染；该等待不计入状态切换超时。
+        if (initialDelay > 0)
+        {
+            await Delay(initialDelay, _cancellationToken);
+        }
+
+        // 首轮识别立即执行，后续识别按配置间隔轮询；超时从首轮识别开始计时。
         var stopwatch = Stopwatch.StartNew();
         var detectedState = ExperimentalTeleportUiState.Unknown1;
         var pollCount = 0;
@@ -331,9 +339,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
         while (stopwatch.ElapsedMilliseconds < timeout)
         {
             _cancellationToken.ThrowIfCancellationRequested();
-            var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
-            await Delay(Math.Min(interval, remaining), _cancellationToken);
-            detectedState = DetectCurrentState(context);
+            detectedState = DetectCurrentState(context, expectedState);
             pollCount++;
             if (detectedState == expectedState)
             {
@@ -345,6 +351,14 @@ internal sealed class ExperimentalTeleportUiStateMachine
                     pollCount);
                 return detectedState;
             }
+
+            var remaining = timeout - (int)stopwatch.ElapsedMilliseconds;
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            await Delay(Math.Min(interval, remaining), _cancellationToken);
         }
 
         LogDetailed(
@@ -356,7 +370,9 @@ internal sealed class ExperimentalTeleportUiStateMachine
         return detectedState;
     }
 
-    private ExperimentalTeleportUiState DetectCurrentState(ExperimentalTeleportUiContext context)
+    private ExperimentalTeleportUiState DetectCurrentState(
+        ExperimentalTeleportUiContext context,
+        ExperimentalTeleportUiState? expectedState = null)
     {
         using var capture = CaptureToRectArea();
         if (_host.IsExperimentalTeleportDetails(capture))
@@ -364,13 +380,18 @@ internal sealed class ExperimentalTeleportUiStateMachine
             return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportDetails);
         }
 
-        if (_host.HasExperimentalMapChooseCandidate(capture, context.TargetTp))
-        {
-            return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportCandidateList);
-        }
-
         if (Bv.IsInBigMapUi(capture))
         {
+            // 候选列表识别包含图标模板匹配和 OCR，仅在确认传送流程中执行，
+            // 避免等待地图/区域状态时每轮都扫描候选列表。
+            if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&
+                (expectedState is null ||
+                 expectedState is ExperimentalTeleportUiState.TeleportCandidateList or ExperimentalTeleportUiState.TeleportDetails)) &&
+                _host.HasExperimentalMapChooseCandidate(capture, context.TargetTp))
+            {
+                return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportCandidateList);
+            }
+
             return AcceptKnownState(
                 context,
                 _host.HasExperimentalMapMainControls(capture)
@@ -378,10 +399,19 @@ internal sealed class ExperimentalTeleportUiStateMachine
                     : ExperimentalTeleportUiState.AreaList);
         }
 
+        // Loading 画面只需要检查固定 ROI；确认传送完成阶段优先执行该检查，
+        // 不必先做候选列表或地图状态识别。
+        if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&
+            context.ConfirmIssuedAt > 0 &&
+            IsLoadingScreen(capture.SrcMat))
+        {
+            context.LoadingObserved = true;
+            return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
+        }
+
         var isInMainUi = Bv.IsInMainUi(capture);
         if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport && context.ConfirmIssuedAt > 0)
         {
-            var isLoadingScreen = IsLoadingScreen(capture.SrcMat);
             var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
             if (isInMainUi)
             {
@@ -403,12 +433,6 @@ internal sealed class ExperimentalTeleportUiStateMachine
             }
             else
             {
-                if (isLoadingScreen)
-                {
-                    context.LoadingObserved = true;
-                    return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
-                }
-
                 return context.LoadingObserved
                     ? ExperimentalTeleportUiState.Loading
                     : ResolveUnknownState(context);
@@ -528,6 +552,11 @@ internal sealed class ExperimentalTeleportUiStateMachine
         _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
         TpConfig.MinExperimentalTeleportStateRecognitionIntervalMilliseconds,
         TpConfig.MaxExperimentalTeleportStateRecognitionIntervalMilliseconds);
+
+    private int GetStateRecognitionInitialDelay() => Math.Clamp(
+        _config.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
+        TpConfig.MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
+        TpConfig.MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds);
 
     private int GetStateTransitionTimeout() => Math.Clamp(
         _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,

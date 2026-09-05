@@ -1470,6 +1470,11 @@
                                  Text="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
+                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 状态识别轮询开始前等待（毫秒）}" />
+                        <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                    </Grid>
+                    <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 状态切换等待上限（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
                                  Text="{Binding Config.TpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />

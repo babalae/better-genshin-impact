@@ -25,6 +25,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
+    private const int MaxStartValidationAttempts = 5;
 
     private static readonly Rect2d[] DangerRects =
     [
@@ -72,7 +73,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         double requestedDeltaX,
         double requestedDeltaY,
         string? country,
-        IReadOnlyList<Rect2d>? forbiddenStartRects = null)
+        IReadOnlyList<Rect2d>? forbiddenStartRects = null,
+        Func<Point2d, IReadOnlyList<Rect2d>>? forbiddenStartProbe = null)
     {
         // 目标已经到位时无需按下鼠标，避免产生无效拖动并触发上层重复识别。
         if (requestedDeltaX == 0d && requestedDeltaY == 0d)
@@ -92,54 +94,86 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         const string ratioSource = "configured";
         var desiredX = requestedDeltaX * distanceCorrection;
         var desiredY = requestedDeltaY * distanceCorrection;
+        var activeForbiddenStartRects = forbiddenStartRects?.ToList() ?? [];
         Point2d selectedStart = default;
         Point2d selectedEnd = default;
-        var runwayCreated = config.ExperimentalTeleportDragSafetyLevel switch
+        var startValidationAttempts = 0;
+        while (true)
         {
-            ExperimentalTeleportDragSafetyLevel.Conservative => TryCreateSafeRunway(
-                desiredX,
-                desiredY,
-                captureRect.Width,
-                captureRect.Height,
-                country,
-                forbiddenStartRects,
-                out selectedStart,
-                out selectedEnd),
-            ExperimentalTeleportDragSafetyLevel.Balanced => TryCreateRelaxedRunway(
-                desiredX,
-                desiredY,
-                captureRect.Width,
-                captureRect.Height,
-                country,
-                forbiddenStartRects,
-                allowEndOutsideScreen: false,
-                out selectedStart,
-                out selectedEnd),
-            ExperimentalTeleportDragSafetyLevel.Overlimit => TryCreateRelaxedRunway(
-                desiredX,
-                desiredY,
-                captureRect.Width,
-                captureRect.Height,
-                country,
-                forbiddenStartRects,
-                allowEndOutsideScreen: true,
-                out selectedStart,
-                out selectedEnd),
-            _ => false,
-        };
+            var runwayCreated = config.ExperimentalTeleportDragSafetyLevel switch
+            {
+                ExperimentalTeleportDragSafetyLevel.Conservative => TryCreateSafeRunway(
+                    desiredX,
+                    desiredY,
+                    captureRect.Width,
+                    captureRect.Height,
+                    country,
+                    activeForbiddenStartRects,
+                    out selectedStart,
+                    out selectedEnd),
+                ExperimentalTeleportDragSafetyLevel.Balanced => TryCreateRelaxedRunway(
+                    desiredX,
+                    desiredY,
+                    captureRect.Width,
+                    captureRect.Height,
+                    country,
+                    activeForbiddenStartRects,
+                    allowEndOutsideScreen: false,
+                    out selectedStart,
+                    out selectedEnd),
+                ExperimentalTeleportDragSafetyLevel.Overlimit => TryCreateRelaxedRunway(
+                    desiredX,
+                    desiredY,
+                    captureRect.Width,
+                    captureRect.Height,
+                    country,
+                    activeForbiddenStartRects,
+                    allowEndOutsideScreen: true,
+                    out selectedStart,
+                    out selectedEnd),
+                _ => false,
+            };
+
+            if (!runwayCreated)
+            {
+                LogDetailed(
+                    "实验传送无法生成安全拖动跑道：requested=({RequestedX:0.0},{RequestedY:0.0}) adjusted=({AdjustedX:0.0},{AdjustedY:0.0}) country={Country}",
+                    requestedDeltaX,
+                    requestedDeltaY,
+                    desiredX,
+                    desiredY,
+                    country ?? "未指定");
+                return default;
+            }
+
+            if (forbiddenStartProbe is null)
+            {
+                break;
+            }
+
+            var discoveredForbiddenRects = forbiddenStartProbe(selectedStart);
+            if (discoveredForbiddenRects is null || discoveredForbiddenRects.Count == 0)
+            {
+                break;
+            }
+
+            activeForbiddenStartRects.AddRange(discoveredForbiddenRects);
+            startValidationAttempts++;
+            LogDetailed(
+                "实验传送起点局部匹配发现禁区，重新选点：attempt={Attempt}/{MaxAttempts} added={AddedCount} total={TotalCount}",
+                startValidationAttempts,
+                MaxStartValidationAttempts,
+                discoveredForbiddenRects.Count,
+                activeForbiddenStartRects.Count);
+            if (startValidationAttempts >= MaxStartValidationAttempts)
+            {
+                LogDetailed("实验传送起点局部匹配重选次数达到上限");
+                return default;
+            }
+        }
+
         var start = selectedStart;
         var end = selectedEnd;
-        if (!runwayCreated)
-        {
-            LogDetailed(
-                "实验传送无法生成安全拖动跑道：requested=({RequestedX:0.0},{RequestedY:0.0}) adjusted=({AdjustedX:0.0},{AdjustedY:0.0}) country={Country}",
-                requestedDeltaX,
-                requestedDeltaY,
-                desiredX,
-                desiredY,
-                country ?? "未指定");
-            return default;
-        }
 
         var allowEndOutsideScreen = config.ExperimentalTeleportDragSafetyLevel == ExperimentalTeleportDragSafetyLevel.Overlimit;
         var screenStart = ToScreenPoint(start, captureRect, realCaptureRect);
@@ -175,7 +209,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
         LogDetailed(
             "实验传送拖动起点避让：forbiddenCount={ForbiddenCount} start=({StartX:0.0},{StartY:0.0})",
-            forbiddenStartRects?.Count ?? 0,
+            activeForbiddenStartRects.Count,
             start.X,
             start.Y);
 

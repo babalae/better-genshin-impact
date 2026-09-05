@@ -79,6 +79,9 @@ public class TpTask
     private const double NearbyMapIconPatternMaxSearchRadius = 260d;
     private const double NearbyMapIconPatternNeighborDistanceRatio = 1.3d;
     private const double AbsoluteMapIconMaxCorrection = 60d;
+    private const int ExperimentalAbsoluteMapIconLimit = 24;
+    private const int ExperimentalObservedMapIconLimit = 48;
+    private const int ExperimentalAbsoluteMapIconMaxTranslationHypotheses = 16;
     private const double AbsoluteMapIconInlierRadius = 14d;
     private const double AbsoluteMapIconOffsetBucketSize = 4d;
     private const int AbsoluteMapIconMaxTranslationHypotheses = 64;
@@ -98,6 +101,7 @@ public class TpTask
     private const int MapGroundLayerSwitchTimeoutMs = 3000;
     private const int TeleportPanelMinimumTimeoutMs = 900;
     private const int TeleportPanelInitialDelayMs = 200;
+    private const int ExperimentalCandidateRecognitionIntervalMs = 160;
     private const int TeleportConfirmTimeoutMs = 5000;
     private const int SwitchAreaCandidateTimeoutMs = 1500;
     private const int SwitchAreaSelectionTimeoutMs = 600;
@@ -111,6 +115,12 @@ public class TpTask
     private const int BlessingCheckIntervalMs = 1000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
+    private static readonly IReadOnlySet<string> ExperimentalDragForbiddenIconTypes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "TeleportWaypoint",
+        "Goddess",
+        "Domain",
+    };
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
@@ -118,6 +128,9 @@ public class TpTask
     private Action? _experimentalDragFailureHandler;
     private Func<double, double, Task>? _experimentalZoomAdjuster;
     private ExperimentalTeleportUiStateMachine? _experimentalUiStateMachine;
+    private Rect? _experimentalBigMapRectCache;
+    private string? _experimentalBigMapRectCacheMapName;
+    private double? _experimentalZoomLevelCache;
 
     private sealed class MapChooseCandidate
     {
@@ -312,39 +325,90 @@ public class TpTask
         return true;
     }
 
-    internal IReadOnlyList<Rect2d> GetExperimentalDragStartForbiddenRects()
+    internal IReadOnlyList<Rect2d> GetExperimentalDragStartForbiddenRects(ImageRegion imageRegion)
     {
-        using var imageRegion = CaptureToRectArea();
         var searchRect = new Rect(0, 0, imageRegion.Width, imageRegion.Height);
-        var forbiddenIconTypes = new HashSet<string>(StringComparer.Ordinal)
+        return FindExperimentalDragStartForbiddenRects(imageRegion, searchRect, null);
+    }
+
+    internal IReadOnlyList<Rect2d> GetExperimentalDragStartForbiddenRects(
+        ImageRegion imageRegion,
+        Point2d selectedStart)
+    {
+        const double searchRadius = 120d;
+        var imageScaleX = imageRegion.Width / 1920d;
+        var imageScaleY = imageRegion.Height / 1080d;
+        var captureScaleX = imageRegion.Width / Math.Max(1d, _captureRect.Width);
+        var captureScaleY = imageRegion.Height / Math.Max(1d, _captureRect.Height);
+        var centerX = selectedStart.X * captureScaleX;
+        var centerY = selectedStart.Y * captureScaleY;
+        var searchRect = new Rect(
+                (int)Math.Round(centerX - searchRadius * imageScaleX),
+                (int)Math.Round(centerY - searchRadius * imageScaleY),
+                (int)Math.Round(searchRadius * 2d * imageScaleX),
+                (int)Math.Round(searchRadius * 2d * imageScaleY))
+            .ClampTo(imageRegion.SrcMat);
+        return FindExperimentalDragStartForbiddenRects(imageRegion, searchRect, selectedStart);
+    }
+
+    private IReadOnlyList<Rect2d> FindExperimentalDragStartForbiddenRects(
+        ImageRegion imageRegion,
+        Rect searchRect,
+        Point2d? selectedStart)
+    {
+        if (searchRect.Width <= 0 || searchRect.Height <= 0)
         {
-            "TeleportWaypoint",
-            "Goddess",
-            "Domain",
-        };
+            return [];
+        }
+
         var icons = GetMapIconsInRect(
             imageRegion,
             searchRect,
-            imageRegion.Width / 2d,
-            imageRegion.Height / 2d,
+            searchRect.X + searchRect.Width / 2d,
+            searchRect.Y + searchRect.Height / 2d,
             double.PositiveInfinity,
-            forbiddenIconTypes);
+            ExperimentalDragForbiddenIconTypes);
         var scaleX = imageRegion.Width / 1920d;
         var scaleY = imageRegion.Height / 1080d;
+        var captureScaleX = _captureRect.Width / 1920d;
+        var captureScaleY = _captureRect.Height / 1080d;
         var forbiddenRects = icons
             .Select(icon => new Rect2d(
                 icon.CenterX / Math.Max(scaleX, 1e-6d) - 40d,
                 icon.CenterY / Math.Max(scaleY, 1e-6d) - 40d,
                 80d,
                 80d))
+            .Where(rect => selectedStart is not { } point ||
+                           point.X >= rect.X * captureScaleX &&
+                           point.X <= rect.Right * captureScaleX &&
+                           point.Y >= rect.Y * captureScaleY &&
+                           point.Y <= rect.Bottom * captureScaleY)
             .ToList();
 
-        LogExperimentalDetailed(
-            "实验传送拖动起点图标避让：count={Count} rects={Rects}",
-            forbiddenRects.Count,
-            string.Join(
-                ";",
-                forbiddenRects.Select(rect => $"({rect.X:0.0},{rect.Y:0.0},80,80)")));
+        var formattedRects = string.Join(
+            ";",
+            forbiddenRects.Select(rect => $"({rect.X:0.0},{rect.Y:0.0},80,80)"));
+        if (selectedStart is { } start)
+        {
+            LogExperimentalDetailed(
+                "实验传送拖动起点图标避让：scope=local start=({StartX:0.0},{StartY:0.0}) search=({SearchX},{SearchY},{SearchWidth},{SearchHeight}) count={Count} rects={Rects}",
+                start.X,
+                start.Y,
+                searchRect.X,
+                searchRect.Y,
+                searchRect.Width,
+                searchRect.Height,
+                forbiddenRects.Count,
+                formattedRects);
+        }
+        else
+        {
+            LogExperimentalDetailed(
+                "实验传送拖动起点图标避让：scope=full count={Count} rects={Rects}",
+                forbiddenRects.Count,
+                formattedRects);
+        }
+
         return forbiddenRects;
     }
 
@@ -369,6 +433,7 @@ public class TpTask
         _experimentalDrag = CreateExperimentalDragDelegate(drag);
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
+        InvalidateExperimentalMapRecognitionCache();
         try
         {
             return await TpWithRetries(tpX, tpY, mapName, force);
@@ -392,6 +457,7 @@ public class TpTask
         _experimentalDrag = CreateExperimentalDragDelegate(drag);
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
+        InvalidateExperimentalMapRecognitionCache();
         try
         {
             await uiStateMachine.EnsureMapMainAsync(mapName);
@@ -435,13 +501,24 @@ public class TpTask
 
         return async (x, y) =>
         {
+            using var imageRegion = CaptureToRectArea();
+            var detectedForbiddenStartRects = new List<Rect2d>();
+            var fullScanUsed = false;
+
+            IReadOnlyList<Rect2d> ProbeForbiddenStart(Point2d selectedStart)
+            {
+                var discovered = GetExperimentalDragStartForbiddenRects(imageRegion, selectedStart);
+                detectedForbiddenStartRects.AddRange(discovered);
+                return discovered;
+            }
+
             ExperimentalTeleportDrag.DragResult result = default;
             for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                var forbiddenStartRects = GetExperimentalDragStartForbiddenRects()
+                var forbiddenStartRects = detectedForbiddenStartRects
                     .Concat(failedStartRects)
                     .ToList();
-                result = await drag.DragAsync(x, y, null, forbiddenStartRects);
+                result = await drag.DragAsync(x, y, null, forbiddenStartRects, ProbeForbiddenStart);
                 lastResult = result;
                 if (result.Moved)
                 {
@@ -453,7 +530,30 @@ public class TpTask
                     !double.IsFinite(result.StartY) ||
                     Math.Abs(result.StartX) + Math.Abs(result.StartY) < 1d)
                 {
-                    break;
+                    if (detectedForbiddenStartRects.Count == 0 || fullScanUsed)
+                    {
+                        break;
+                    }
+
+                    fullScanUsed = true;
+                    detectedForbiddenStartRects.AddRange(GetExperimentalDragStartForbiddenRects(imageRegion));
+                    forbiddenStartRects = detectedForbiddenStartRects
+                        .Concat(failedStartRects)
+                        .ToList();
+                    result = await drag.DragAsync(x, y, null, forbiddenStartRects);
+                    lastResult = result;
+                    if (result.Moved)
+                    {
+                        failedStartRects.Clear();
+                        return result;
+                    }
+
+                    if (!double.IsFinite(result.StartX) ||
+                        !double.IsFinite(result.StartY) ||
+                        Math.Abs(result.StartX) + Math.Abs(result.StartY) < 1d)
+                    {
+                        break;
+                    }
                 }
 
                 if (attempt >= maxAttempts)
@@ -494,14 +594,20 @@ public class TpTask
             TpConfig.MinExperimentalTeleportMapOpenRepressIntervalMilliseconds,
             TpConfig.MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds);
         var detectionInterval = GetExperimentalStateRecognitionInterval();
-        var stopwatch = Stopwatch.StartNew();
         var pressCount = 0;
         var nextPressAt = 0L;
         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
         pressCount++;
         nextPressAt = repressInterval;
         LogExperimentalDetailed("实验传送按 M：press=1");
-        await Delay(Math.Min(detectionInterval, timeout), ct);
+        var initialDelay = GetExperimentalStateRecognitionInitialDelay();
+        // 首次识别前等待地图界面完成渲染；该等待不计入打开地图超时。
+        if (initialDelay > 0)
+        {
+            await Delay(initialDelay, ct);
+        }
+
+        var stopwatch = Stopwatch.StartNew();
         while (stopwatch.ElapsedMilliseconds < timeout)
         {
             ct.ThrowIfCancellationRequested();
@@ -703,6 +809,7 @@ public class TpTask
         bool force = false)
     {
         ClearRememberedAreaSwitchCenterPoint();
+        InvalidateExperimentalMapRecognitionCache();
 
         // 1. 确认在地图界面，并在传送入口统一切回地表图层。
         // 实验模式必须由状态机负责打开地图，才能使用补按 M 与状态轮询逻辑。
@@ -719,6 +826,7 @@ public class TpTask
         var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
         LogTeleportTarget(target);
         await SwitchToTeleportTargetMap(target);
+        InvalidateExperimentalMapRecognitionCache();
 
         var clickView = await PrepareTeleportClickView(target);
         var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
@@ -880,7 +988,10 @@ public class TpTask
         TeleportClickViewEvaluation? lastEvaluation = null;
         for (var retryCount = 0; retryCount <= TeleportClickableAreaRetryCount; retryCount++)
         {
-            var evaluation = EvaluateTeleportClickView(mapName, targetTp, targetX, targetY);
+            using var evaluationCapture = _experimentalUiStateMachine is not null
+                ? CaptureToRectArea()
+                : null;
+            var evaluation = EvaluateTeleportClickView(mapName, targetTp, targetX, targetY, evaluationCapture);
             lastEvaluation = evaluation;
             if (evaluation.View != null)
             {
@@ -954,13 +1065,33 @@ public class TpTask
         string mapName,
         GiTpPosition? targetTp,
         double targetX,
-        double targetY)
+        double targetY,
+        ImageRegion? imageRegion = null)
     {
-        var zoomLevel = GetCurrentBigMapZoomLevel();
+        var zoomLevel = imageRegion is null
+            ? GetCurrentBigMapZoomLevel()
+            : GetBigMapZoomLevel(imageRegion);
         Rect bigMapInAllMapRect;
         try
         {
-            bigMapInAllMapRect = GetBigMapRect(mapName);
+            if (imageRegion is not null)
+            {
+                if (!TryGetBigMapRectFromCapture(imageRegion, mapName, out bigMapInAllMapRect))
+                {
+                    throw new MapPositionNotRecognizedException("大地图范围识别失败");
+                }
+            }
+            else
+            {
+                bigMapInAllMapRect = GetBigMapRect(mapName);
+            }
+
+            if (_experimentalUiStateMachine is not null)
+            {
+                _experimentalZoomLevelCache = zoomLevel;
+                _experimentalBigMapRectCache = bigMapInAllMapRect;
+                _experimentalBigMapRectCacheMapName = mapName;
+            }
         }
         catch
         {
@@ -1240,8 +1371,31 @@ public class TpTask
 
     private double GetCurrentBigMapZoomLevel()
     {
+        if (_experimentalUiStateMachine is not null && _experimentalZoomLevelCache is double cachedZoom)
+        {
+            return cachedZoom;
+        }
+
         using var capture = CaptureToRectArea();
-        return GetBigMapZoomLevel(capture);
+        var zoomLevel = GetBigMapZoomLevel(capture);
+        if (_experimentalUiStateMachine is not null)
+        {
+            _experimentalZoomLevelCache = zoomLevel;
+        }
+
+        return zoomLevel;
+    }
+
+    private void InvalidateExperimentalMapRecognitionCache()
+    {
+        if (_experimentalUiStateMachine is null)
+        {
+            return;
+        }
+
+        _experimentalBigMapRectCache = null;
+        _experimentalBigMapRectCacheMapName = null;
+        _experimentalZoomLevelCache = null;
     }
 
     private async Task ClickTpPointAfterMapPointSelected(
@@ -1279,6 +1433,7 @@ public class TpTask
         }
 
         var stopwatch = Stopwatch.StartNew();
+        long nextCandidateRecognitionAt = 0;
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
         {
             if (i > 0)
@@ -1287,7 +1442,13 @@ public class TpTask
             }
 
             using var teleportCapture = CaptureToRectArea();
-            var result = await HandleTeleportPanel(teleportCapture, targetTp);
+            var allowCandidateRecognition = _experimentalUiStateMachine is null ||
+                                            stopwatch.ElapsedMilliseconds >= nextCandidateRecognitionAt;
+            var result = await HandleTeleportPanel(teleportCapture, targetTp, allowCandidateRecognition);
+            if (_experimentalUiStateMachine is not null && allowCandidateRecognition)
+            {
+                nextCandidateRecognitionAt = stopwatch.ElapsedMilliseconds + ExperimentalCandidateRecognitionIntervalMs;
+            }
             switch (result)
             {
                 case TeleportPanelResult.Confirmed:
@@ -1324,10 +1485,23 @@ public class TpTask
             return double.NaN;
         }
 
-        var nearestNeighbor = scene.Points
-            .Where(tp => !string.Equals(tp.Id, targetTp.Id, StringComparison.Ordinal))
-            .OrderBy(tp => Math.Pow(tp.X - targetX, 2) + Math.Pow(tp.Y - targetY, 2))
-            .FirstOrDefault();
+        GiTpPosition? nearestNeighbor = null;
+        var nearestDistanceSquared = double.MaxValue;
+        foreach (var point in scene.Points)
+        {
+            if (string.Equals(point.Id, targetTp.Id, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var distanceSquared = Math.Pow(point.X - targetX, 2) + Math.Pow(point.Y - targetY, 2);
+            if (distanceSquared < nearestDistanceSquared)
+            {
+                nearestDistanceSquared = distanceSquared;
+                nearestNeighbor = point;
+            }
+        }
+
         if (nearestNeighbor == null)
         {
             return double.NaN;
@@ -2294,6 +2468,7 @@ public class TpTask
         if (_experimentalZoomAdjuster is { } experimentalZoomAdjuster)
         {
             await experimentalZoomAdjuster(zoomLevel, targetZoomLevel);
+            InvalidateExperimentalMapRecognitionCache();
             return;
         }
 
@@ -2354,6 +2529,7 @@ public class TpTask
         }
 
         await Delay(GetMapZoomWheelDelay(wheelNotches), ct);
+        InvalidateExperimentalMapRecognitionCache();
         var afterZoomLevel = GetCurrentBigMapZoomLevel();
         return afterZoomLevel;
     }
@@ -2406,6 +2582,19 @@ public class TpTask
             _tpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
             TpConfig.MinExperimentalTeleportStateRecognitionIntervalMilliseconds,
             TpConfig.MaxExperimentalTeleportStateRecognitionIntervalMilliseconds);
+    }
+
+    private int GetExperimentalStateRecognitionInitialDelay()
+    {
+        if (_experimentalUiStateMachine == null)
+        {
+            return 0;
+        }
+
+        return Math.Clamp(
+            _tpConfig.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
+            TpConfig.MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
+            TpConfig.MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds);
     }
 
     private int GetExperimentalStateTransitionTimeout(int minimumMilliseconds)
@@ -2553,6 +2742,8 @@ public class TpTask
             {
                 throw new MapPositionNotRecognizedException("实验传送拖动未检测到有效鼠标位移");
             }
+
+            InvalidateExperimentalMapRecognitionCache();
 
             return (
                 (int)Math.Round(result.InputDeltaX),
@@ -2809,6 +3000,13 @@ public class TpTask
 
     public Rect GetBigMapRect(string mapName)
     {
+        if (_experimentalUiStateMachine is not null &&
+            _experimentalBigMapRectCache is Rect cachedRect &&
+            string.Equals(_experimentalBigMapRectCacheMapName, mapName, StringComparison.Ordinal))
+        {
+            return cachedRect;
+        }
+
         var rect = new Rect();
         NewRetry.Do(() =>
         {
@@ -2843,6 +3041,12 @@ public class TpTask
         if (rect == default)
         {
             throw new InvalidOperationException("多次重试后，识别大地图位置失败");
+        }
+
+        if (_experimentalUiStateMachine is not null)
+        {
+            _experimentalBigMapRectCache = rect;
+            _experimentalBigMapRectCacheMapName = mapName;
         }
 
         return rect;
@@ -2927,6 +3131,16 @@ public class TpTask
         {
             return false;
         }
+    }
+
+    private bool TryGetBigMapRectFromCapture(
+        ImageRegion imageRegion,
+        string mapName,
+        out Rect bigMapInAllMapRect)
+    {
+        bigMapInAllMapRect = default;
+        using var mapScaleButton = imageRegion.Find(GetQuickTeleportRecognitionObject("MapScaleButton", imageRegion));
+        return mapScaleButton.IsExist() && TryGetBigMapRect(imageRegion, mapName, out bigMapInAllMapRect);
     }
 
     private static bool TryConvertBigMapImageRect(
@@ -3139,9 +3353,18 @@ public class TpTask
     {
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
-        var stopwatch = Stopwatch.StartNew();
+        var isExperimental = _experimentalUiStateMachine != null;
         var candidateTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaCandidateTimeoutMs);
-        await Delay(Math.Min(GetExperimentalStateRecognitionInterval(), candidateTimeout), ct);
+        var initialDelay = isExperimental
+            ? GetExperimentalStateRecognitionInitialDelay()
+            : Math.Min(GetExperimentalStateRecognitionInterval(), candidateTimeout);
+        Stopwatch? stopwatch = isExperimental ? null : Stopwatch.StartNew();
+        if (initialDelay > 0)
+        {
+            await Delay(initialDelay, ct);
+        }
+
+        stopwatch ??= Stopwatch.StartNew();
         while (stopwatch.ElapsedMilliseconds < candidateTimeout)
         {
             ct.ThrowIfCancellationRequested();
@@ -3155,11 +3378,21 @@ public class TpTask
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
+                foreach (var candidate in list)
+                {
+                    candidate.Dispose();
+                }
+
                 await Delay(GetExperimentalOperationDelay(50), ct);
                 await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
                 return true;
+            }
+
+            foreach (var candidate in list)
+            {
+                candidate.Dispose();
             }
 
             await Delay(GetExperimentalStateRecognitionInterval(), ct);
@@ -3177,18 +3410,32 @@ public class TpTask
         string localizedAreaName,
         Rect clickedCandidateRect)
     {
-        var stopwatch = Stopwatch.StartNew();
         var consecutiveMissingChecks = 0;
         var selectionTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaSelectionTimeoutMs);
         var selectionMinimumWait = GetExperimentalOperationDelay(SwitchAreaSelectionMinimumWaitMs);
-        await Delay(Math.Min(GetExperimentalStateRecognitionInterval(), selectionTimeout), ct);
+        var isExperimental = _experimentalUiStateMachine != null;
+        var initialDelay = isExperimental
+            ? GetExperimentalStateRecognitionInitialDelay()
+            : Math.Min(GetExperimentalStateRecognitionInterval(), selectionTimeout);
+        Stopwatch? stopwatch = isExperimental ? null : Stopwatch.StartNew();
+        if (initialDelay > 0)
+        {
+            await Delay(initialDelay, ct);
+        }
+
+        stopwatch ??= Stopwatch.StartNew();
         while (stopwatch.ElapsedMilliseconds < selectionTimeout)
         {
             ct.ThrowIfCancellationRequested();
             using var capture = CaptureToRectArea();
-            var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
+            var candidates = FindSwitchAreaCandidates(capture);
+            var clickedCandidateStillVisible = candidates.Any(candidate =>
                 IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
+            foreach (var candidate in candidates)
+            {
+                candidate.Dispose();
+            }
 
             if (!clickedCandidateStillVisible &&
                 stopwatch.ElapsedMilliseconds >= selectionMinimumWait)
@@ -3276,8 +3523,17 @@ public class TpTask
         // 实验模式使用独立状态识别轮询，原版保持原有间隔。
         var retryInterval = GetExperimentalStateRecognitionInterval();
         var switchTimeout = GetExperimentalStateTransitionTimeout(MapGroundLayerSwitchTimeoutMs);
-        var stopwatch = Stopwatch.StartNew();
-        await Delay(Math.Min(retryInterval, switchTimeout), ct);
+        var isExperimental = _experimentalUiStateMachine != null;
+        var initialDelay = isExperimental
+            ? GetExperimentalStateRecognitionInitialDelay()
+            : Math.Min(retryInterval, switchTimeout);
+        Stopwatch? stopwatch = isExperimental ? null : Stopwatch.StartNew();
+        if (initialDelay > 0)
+        {
+            await Delay(initialDelay, ct);
+        }
+
+        stopwatch ??= Stopwatch.StartNew();
         while (stopwatch.ElapsedMilliseconds < switchTimeout)
         {
             using var capture = CaptureToRectArea();
@@ -3336,7 +3592,8 @@ public class TpTask
 
     private async Task<TeleportPanelResult> HandleTeleportPanel(
         ImageRegion imageRegion,
-        GiTpPosition? targetTp)
+        GiTpPosition? targetTp,
+        bool allowCandidateRecognition = true)
     {
         // 1. 判断是否在地图界面；已离开大地图视为传送已确认。
         var isInBigMapUi = Bv.IsInBigMapUi(imageRegion);
@@ -3357,6 +3614,11 @@ public class TpTask
         // 3. 没点出传送按钮：可能是未激活点/标点的详情面板，或选择传送点选项列表。
         //    先识别并点击与目标匹配的候选；本帧没有有效候选则继续等待，
         //    避免把地图 UI 误匹配当候选点。超时后由调用方视为面板未打开。
+        if (!allowCandidateRecognition)
+        {
+            return TeleportPanelResult.Waiting;
+        }
+
         var candidate = await TryClickMapChooseCandidate(imageRegion, targetTp);
         if (candidate == null)
         {
@@ -3545,13 +3807,56 @@ public class TpTask
         out string failureReason,
         out AbsoluteMapClickFailure failure)
     {
-        var expectedIcons = GetVisibleExpectedMapIcons(target.MapName, clickView.BigMapInAllMapRect);
+        var allExpectedIcons = GetVisibleExpectedMapIcons(target.MapName, clickView.BigMapInAllMapRect);
+        var expectedIcons = allExpectedIcons;
+        if (_experimentalUiStateMachine is not null && expectedIcons.Count > ExperimentalAbsoluteMapIconLimit)
+        {
+            expectedIcons = expectedIcons
+                .OrderBy(icon => GetDistance(icon.ScreenX, icon.ScreenY, clickView.ClickX, clickView.ClickY))
+                .Take(ExperimentalAbsoluteMapIconLimit)
+                .ToList();
+        }
+
         var observedIcons = GetVisibleMapIcons(
             imageRegion,
             clickView.ClickX,
             clickView.ClickY,
             expectedIcons);
+        if (_experimentalUiStateMachine is not null && observedIcons.Count > ExperimentalObservedMapIconLimit)
+        {
+            observedIcons = observedIcons
+                .OrderBy(icon => icon.DistanceToTarget)
+                .Take(ExperimentalObservedMapIconLimit)
+                .ToList();
+        }
+
         var alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
+        if (_experimentalUiStateMachine is not null &&
+            expectedIcons.Count > 0 &&
+            alignment.Pairs.Count == 0)
+        {
+            var allowedIconTypes = expectedIcons
+                .Concat(allExpectedIcons)
+                .SelectMany(icon => icon.IconTypes)
+                .ToHashSet(StringComparer.Ordinal);
+            observedIcons = GetMapIconsInRect(
+                imageRegion,
+                new Rect(0, 0, imageRegion.Width, imageRegion.Height),
+                clickView.ClickX,
+                clickView.ClickY,
+                double.PositiveInfinity,
+                allowedIconTypes);
+            if (observedIcons.Count > ExperimentalObservedMapIconLimit)
+            {
+                observedIcons = observedIcons
+                    .OrderBy(icon => icon.DistanceToTarget)
+                    .Take(ExperimentalObservedMapIconLimit)
+                    .ToList();
+            }
+
+            alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
+        }
+
         (clickX, clickY) = alignment.Transform.Apply(clickView.ClickX, clickView.ClickY);
 
         var uncertainty = GetAbsoluteMapClickUncertainty(alignment);
@@ -3643,14 +3948,48 @@ public class TpTask
             return [];
         }
 
-        var searchRect = new Rect(0, 0, imageRegion.Width, imageRegion.Height);
-        return GetMapIconsInRect(
-            imageRegion,
-            searchRect,
-            targetX,
-            targetY,
-            double.PositiveInfinity,
-            allowedIconTypes);
+        if (_experimentalUiStateMachine is null || expectedIcons.Count == 0)
+        {
+            return GetMapIconsInRect(
+                imageRegion,
+                new Rect(0, 0, imageRegion.Width, imageRegion.Height),
+                targetX,
+                targetY,
+                double.PositiveInfinity,
+                allowedIconTypes);
+        }
+
+        var searchRadius = AbsoluteMapIconMaxCorrection * _zoomOutMax1080PRatio;
+        var localResult = new List<NearbyMapIcon>();
+        foreach (var expected in expectedIcons)
+        {
+            var searchRect = new Rect(
+                (int)Math.Round(expected.ScreenX - searchRadius),
+                (int)Math.Round(expected.ScreenY - searchRadius),
+                (int)Math.Round(searchRadius * 2),
+                (int)Math.Round(searchRadius * 2))
+                .ClampTo(imageRegion.SrcMat);
+            if (searchRect.Width <= 0 || searchRect.Height <= 0)
+            {
+                continue;
+            }
+
+            foreach (var icon in GetMapIconsInRect(
+                         imageRegion,
+                         searchRect,
+                         targetX,
+                         targetY,
+                         double.PositiveInfinity,
+                         allowedIconTypes))
+            {
+                AddNearbyMapIcon(localResult, icon);
+            }
+        }
+
+        return localResult
+            .OrderBy(icon => icon.CenterY)
+            .ThenBy(icon => icon.CenterX)
+            .ToList();
     }
 
     private AbsoluteMapIconAlignment EstimateAbsoluteMapIconAlignment(
@@ -3666,6 +4005,13 @@ public class TpTask
         }
 
         var hypotheses = BuildAbsoluteMapIconTranslationHypotheses(expectedIcons, observedIcons);
+        if (_experimentalUiStateMachine is not null &&
+            hypotheses.Count > ExperimentalAbsoluteMapIconMaxTranslationHypotheses)
+        {
+            hypotheses = hypotheses
+                .Take(ExperimentalAbsoluteMapIconMaxTranslationHypotheses)
+                .ToList();
+        }
         var bestTransform = identity;
         var bestPairs = identityPairs;
         foreach (var hypothesis in hypotheses)
