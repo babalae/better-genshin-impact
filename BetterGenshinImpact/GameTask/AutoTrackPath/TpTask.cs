@@ -1999,12 +1999,19 @@ public class TpTask
         string mapName,
         double currentZoomLevel)
     {
+        MapMoveState moveState;
         if (TryConsumeLastAreaSwitchCenterPoint(mapName, out var switchedCenterPoint))
         {
             return (GetMoveMapState(switchedCenterPoint, x, y, currentZoomLevel), currentZoomLevel);
         }
 
-        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out var moveState))
+        if (_tpConfig.UseExperimentalTeleport &&
+            TryGetTeleportPriorMoveMapState(mapName, x, y, currentZoomLevel, out moveState))
+        {
+            return (moveState, currentZoomLevel);
+        }
+
+        if (TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out moveState))
         {
             return (moveState, currentZoomLevel);
         }
@@ -2033,6 +2040,46 @@ public class TpTask
         }
 
         throw new Exception("初始识别失败且切换区域后依然无效");
+    }
+
+    private bool TryGetTeleportPriorMoveMapState(
+        string mapName,
+        double x,
+        double y,
+        double currentZoomLevel,
+        out MapMoveState moveState)
+    {
+        moveState = default;
+        var (priorX, priorY) = Navigation.GetTpPriorPosition();
+        if (!float.IsFinite(priorX) || !float.IsFinite(priorY) || priorX <= 0 || priorY <= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var map = MapManager.GetMap(mapName, _mapMatchingMethod);
+            var prior = map.ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(priorX, priorY));
+            if (prior is not Point2f priorGenshin || priorGenshin.IsEmpty())
+            {
+                return false;
+            }
+
+            var centerPoint = GetPositionFromBigMap(mapName, priorGenshin);
+            moveState = GetMoveMapState(centerPoint, x, y, currentZoomLevel);
+            Logger.LogDebug(
+                "实验传送使用独立先验定位大地图中心：prior=({PriorX:0.0},{PriorY:0.0}) center=({CenterX:0.0},{CenterY:0.0})",
+                priorGenshin.X,
+                priorGenshin.Y,
+                centerPoint.X,
+                centerPoint.Y);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug("实验传送独立先验定位失败，回退常规识别：{Message}", ex.Message);
+            return false;
+        }
     }
 
     private async Task<(bool Success, MapMoveState MoveState, double ZoomLevel)> TryRecoverMoveMapStateByZoom(
