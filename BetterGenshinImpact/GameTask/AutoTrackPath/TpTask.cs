@@ -2536,6 +2536,11 @@ public class TpTask
 
     private int GetMapZoomWheelDelay(int wheelNotches)
     {
+        if (_experimentalUiStateMachine is not null)
+        {
+            return GetExperimentalOperationDelay(100);
+        }
+
         var delay = 90 + Math.Min(120, Math.Abs(wheelNotches) * 8);
         return Math.Max(MapZoomWheelMeasureMinDelayMs, delay);
     }

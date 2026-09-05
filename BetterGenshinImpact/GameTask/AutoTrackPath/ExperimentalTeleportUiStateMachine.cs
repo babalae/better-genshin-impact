@@ -58,8 +58,8 @@ internal sealed class ExperimentalTeleportUiContext
 /// </summary>
 internal sealed class ExperimentalTeleportUiStateMachine
 {
-    private const int UnknownRecheckDelayMilliseconds = 200;
-    private const int StateTransitionSettleDelayMilliseconds = 100;
+    private const int UnknownRecheckDelayMilliseconds = 100;
+    private const int StateTransitionSettleDelayMilliseconds = 50;
     private const int CandidateClickRetryCount = 2;
     private const int ConfirmClickRetryCount = 2;
     private const int UnknownRecoveryRetryCount = 2;
