@@ -25,6 +25,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
+    private const double OverlimitDistanceCorrection = 0.5d;
     private const int MaxStartValidationAttempts = 5;
 
     private static readonly Rect2d[] DangerRects =
@@ -91,9 +92,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 TpConfig.MinExperimentalTeleportDragDistanceCorrection,
                 TpConfig.MaxExperimentalTeleportDragDistanceCorrection)
             : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
-        const string ratioSource = "configured";
-        var desiredX = requestedDeltaX * distanceCorrection;
-        var desiredY = requestedDeltaY * distanceCorrection;
+        var isOverlimit = config.ExperimentalTeleportDragSafetyLevel == ExperimentalTeleportDragSafetyLevel.Overlimit;
+        var effectiveDistanceCorrection = isOverlimit
+            ? distanceCorrection * OverlimitDistanceCorrection
+            : distanceCorrection;
+        var ratioSource = isOverlimit ? "configured*overlimit" : "configured";
+        var desiredX = requestedDeltaX * effectiveDistanceCorrection;
+        var desiredY = requestedDeltaY * effectiveDistanceCorrection;
         var activeForbiddenStartRects = forbiddenStartRects?.ToList() ?? [];
         Point2d selectedStart = default;
         Point2d selectedEnd = default;
@@ -204,7 +209,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             screenStart.Y,
             screenEnd.X,
             screenEnd.Y,
-            distanceCorrection,
+            effectiveDistanceCorrection,
             ratioSource);
 
         LogDetailed(
@@ -248,7 +253,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             requestedDeltaX,
             requestedDeltaY,
             requestedDistance,
-            distanceCorrection,
+            effectiveDistanceCorrection,
             ratioSource,
             desiredX,
             desiredY,
@@ -324,7 +329,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             actualY,
             actualCursorDistance,
             inputCompletionRatio,
-            distanceCorrection,
+            effectiveDistanceCorrection,
             Environment.TickCount64 - dragStartedAt);
         return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY, start.X, start.Y);
     }
