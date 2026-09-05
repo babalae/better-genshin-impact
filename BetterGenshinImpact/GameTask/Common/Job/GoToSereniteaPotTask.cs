@@ -200,12 +200,27 @@ internal class GoToSereniteaPotTask
     private async Task<bool> IntoSereniteaPotByBag(CancellationToken ct)
     {
         // 尝试使用背包的壶进入。
-        QuickSereniteaPotTask.Done();
+        if (!await QuickSereniteaPotTask.Start(ct))
+        {
+            Logger.LogWarning("领取尘歌壶奖励:通过背包触发进入尘歌壶失败");
+            return false;
+        }
+
         await Delay(5000, ct); // 在点击壶之后的特殊加载页面会有 mainUI
-        await Bv.WaitForMainUi(ct);
+        if (!await Bv.WaitForMainUi(ct))
+        {
+            Logger.LogWarning("领取尘歌壶奖励:进入尘歌壶后未检测到主界面");
+            return false;
+        }
+
         // 判断是否在尘歌壶中
-        using var ra0 = CaptureToRectArea();
-        if (ra0.Find(ElementRecognition.Get("FingerIcon", ra0)).IsExist())
+        var fingerIconFound = await NewRetry.WaitForAction(() =>
+        {
+            using var capture = CaptureToRectArea();
+            using var fingerIcon = capture.Find(ElementRecognition.Get("FingerIcon", capture));
+            return fingerIcon.IsExist();
+        }, ct, 5, 500);
+        if (fingerIconFound)
         {
             await Delay(1000, ct);
             // 尝试获取尘歌壶名称
