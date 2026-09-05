@@ -50,7 +50,7 @@ public partial class ConfigGroupPresetWindowViewModel : ObservableObject
                 break;
             case ConfigGroupPresetApplyStatus.MissingDependencies:
                 await ThemedMessageBox.ShowAsync(
-                    $"无法应用预制菜“{preset.Name}”。\n\n缺失依赖：\n- {string.Join("\n- ", result.MissingDependencies)}\n\n请前往订阅上述依赖后再重试。",
+                    $"无法应用预制菜“{preset.Name}”。\n\n依赖不满足：\n- {string.Join("\n- ", result.MissingDependencies)}\n\n请前往订阅上述依赖后再重试。",
                     "预制菜依赖不完整");
                 break;
             case ConfigGroupPresetApplyStatus.Conflict:

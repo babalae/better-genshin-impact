@@ -29,4 +29,7 @@ public sealed class ConfigGroupPresetDependency
 
     /// <summary>相对于对应 User 子目录的路径，使用 / 作为分隔符。</summary>
     public string Path { get; set; } = string.Empty;
+
+    /// <summary>Javascript 依赖要求的最低版本（语义化版本）。留空表示只检查是否安装。</summary>
+    public string? MinVersion { get; set; }
 }

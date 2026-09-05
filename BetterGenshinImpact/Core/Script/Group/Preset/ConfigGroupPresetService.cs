@@ -1,5 +1,7 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Project;
 using Microsoft.Extensions.Logging;
+using Semver;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -116,7 +118,10 @@ public sealed class ConfigGroupPresetService
                 var displayName = string.IsNullOrWhiteSpace(dependency.Name)
                     ? dependency.Path
                     : dependency.Name;
-                missing.Add($"{dependency.Type}: {displayName}");
+                var versionRequirement = string.IsNullOrWhiteSpace(dependency.MinVersion)
+                    ? string.Empty
+                    : $"（需要版本 >= {dependency.MinVersion}）";
+                missing.Add($"{dependency.Type}: {displayName}{versionRequirement}");
             }
         }
 
@@ -193,7 +198,36 @@ public sealed class ConfigGroupPresetService
         if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
 
         if (type is "javascript" or "js")
-            return Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "manifest.json"));
+        {
+            var manifestPath = Path.Combine(fullPath, "manifest.json");
+            if (!Directory.Exists(fullPath) || !File.Exists(manifestPath))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(dependency.MinVersion))
+            {
+                return true;
+            }
+
+            try
+            {
+                var manifest = Manifest.FromJson(File.ReadAllText(manifestPath));
+                if (string.IsNullOrWhiteSpace(manifest.Version))
+                {
+                    return false;
+                }
+
+                var requiredVersion = SemVersion.Parse(dependency.MinVersion);
+                var installedVersion = SemVersion.Parse(manifest.Version);
+                return installedVersion.ComparePrecedenceTo(requiredVersion) >= 0;
+            }
+            catch
+            {
+                // 版本要求或脚本版本无法解析时，按依赖不满足处理。
+                return false;
+            }
+        }
         return File.Exists(fullPath) || Directory.Exists(fullPath);
     }
 

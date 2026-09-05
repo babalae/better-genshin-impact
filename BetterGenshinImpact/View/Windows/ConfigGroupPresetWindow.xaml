@@ -131,6 +131,7 @@
                                             <Run Text="{Binding Type}" />
                                             <Run Text=": " />
                                             <Run Text="{Binding Name}" />
+                                            <Run Text="{Binding MinVersion, StringFormat=（最低版本 ≥ {0}）}" />
                                         </TextBlock>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

@@ -12,7 +12,8 @@
     {
       "type": "Javascript",
       "name": "自动锻造魔矿",
-      "path": "铁匠铺"
+      "path": "铁匠铺",
+      "min_version": "2.3.1"
     }
   ]
 }

@@ -42,7 +42,8 @@ BetterGenshinImpact/
     {
       "type": "Javascript",
       "name": "自动锻造魔矿",
-      "path": "铁匠铺"
+      "path": "铁匠铺",
+      "min_version": "2.3.1"
     }
   ]
 }
@@ -70,8 +71,9 @@ BetterGenshinImpact/
 ```json
 {
   "type": "Javascript",
-  "name": "自动晶蝶",
-  "path": "AutoCrystalfly"
+  "name": "自动锻造魔矿",
+  "path": "铁匠铺",
+  "min_version": "2.3.1"
 }
 ```
 
@@ -81,8 +83,9 @@ BetterGenshinImpact/
   - Javascript：`User/JsScript/<path>`，目录中必须存在 `manifest.json`；
   - Pathing：`User/AutoPathing/<path>`，文件或目录存在即可；
   - KeyMouse：`User/KeyMouseScript/<path>`，文件或目录存在即可。
+- `min_version` 仅用于 Javascript 依赖，表示允许应用预制菜的最低脚本版本。留空时只检查脚本是否安装，以兼容已有预制菜。
 
-应用预制菜时只进行本地完整性检查。如果依赖不完整，界面会列出缺失项并提示用户前往订阅，不会自动订阅、跳转或修改订阅状态。
+应用预制菜时只进行本地完整性检查。Javascript 依赖填写 `min_version` 后，会读取脚本 `manifest.json` 中的 `version` 并按语义化版本比较；脚本版本、最低版本无法解析或实际版本较低时，均视为依赖不满足。界面会列出缺失或版本不满足的依赖并提示用户前往订阅，不会自动订阅、跳转或修改订阅状态。
 
 ## 编写配置组 JSON
 
