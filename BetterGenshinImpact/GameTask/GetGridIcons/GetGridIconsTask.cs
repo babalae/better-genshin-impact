@@ -111,23 +111,7 @@ public class GetGridIconsTask : ISoloTask
                 if (fileNames.Add(fileName))
                 {
                     string filePath = Path.Combine(directory, $"{fileName}.png");
-                    Thread saveThread = new Thread(() =>
-                    {
-                        try
-                        {
-                            using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                            {
-                                itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
-                            }
-                            logger.LogInformation("图片保存成功：{Text}", fileName);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogError(e, "图片保存失败：{Text}", fileName);
-                        }
-                    });
-                    saveThread.IsBackground = true; // 设置为后台线程
-                    saveThread.Start();
+                    SaveGridIconAsync(filePath, fileName, itemRegion.SrcMat);
                 }
                 else
                 {
@@ -206,24 +190,8 @@ public class GetGridIconsTask : ISoloTask
             if (fileNames.Add(fileName))
             {
                 string filePath = Path.Combine(directory, $"{fileName}.png");
-                Thread saveThread = new Thread(() =>
-                {
-                    try
-                    {
-                        using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion);
-                            img125.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
-                        }
-                        logger.LogInformation("图片保存成功：{Text}", fileName);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogError(e, "图片保存失败：{Text}", fileName);
-                    }
-                });
-                saveThread.IsBackground = true; // 设置为后台线程
-                saveThread.Start();
+                using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion);
+                SaveGridIconAsync(filePath, fileName, img125);
             }
             else
             {
@@ -237,6 +205,34 @@ public class GetGridIconsTask : ISoloTask
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// 在调用线程立刻深拷贝像素，后台线程只使用这份私有 <see cref="Mat"/>。
+    /// 不取得 <paramref name="src"/> 的所有权，调用返回后外部释放 <paramref name="src"/> 不影响保存。
+    /// </summary>
+    private void SaveGridIconAsync(string filePath, string fileName, Mat src)
+    {
+        Mat privateMat = src.Clone();
+        Thread saveThread = new Thread(() =>
+        {
+            try
+            {
+                using (privateMat)
+                using (var bitmap = privateMat.ToBitmap())
+                using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    bitmap.Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                logger.LogInformation("图片保存成功：{Text}", fileName);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "图片保存失败：{Text}", fileName);
+            }
+        });
+        saveThread.IsBackground = true;
+        saveThread.Start();
     }
 
     internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion, ISystemInfo? systemInfo = null)
