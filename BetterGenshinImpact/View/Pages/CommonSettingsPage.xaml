@@ -1462,7 +1462,7 @@
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 拖动步进间隔（毫秒）}" />
                         <ui:NumberBox Grid.Column="1" Minimum="2" Maximum="100" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
-                                      Text="{Binding Config.TpConfig.ExperimentalTeleportDragStepIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportDragStepIntervalMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 状态识别轮询间隔（毫秒）}" />
@@ -1487,7 +1487,7 @@
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 按下左键后开始拖动延迟（毫秒）}" />
                         <ui:NumberBox Grid.Column="1" Minimum="10" Maximum="500" MaxDecimalPlaces="0" SpinButtonPlacementMode="Hidden" TextAlignment="Right"
-                                      Text="{Binding Config.TpConfig.ExperimentalTeleportDragStartDelayMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                      Value="{Binding Config.TpConfig.ExperimentalTeleportDragStartDelayMilliseconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 拖动结束后松开左键延迟（毫秒）}" />
