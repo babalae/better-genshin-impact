@@ -3,6 +3,8 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoFight;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.ObjectModel;
@@ -80,6 +82,47 @@ public partial class HotKeySettingModel : ObservableObject
         OnKeyPressAction = onKeyPressAction;
         IsHold = isHold;
         SwitchHotkeyTypeEnabled = !isHold;
+
+        // 初始化遮罩显示勾选状态：直接写 backing field，避免触发 OnShowOnOverlayChanged 把初始值写回配置
+        try
+        {
+            _showOnOverlay = TaskContext.Instance().Config.MaskWindowConfig.IsOverlayHotkeyEnabled(configPropertyName);
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+            _showOnOverlay = false;
+        }
+    }
+
+    /// <summary>
+    /// 是否在遮罩快捷键速查条上显示该快捷键。
+    /// 持久化到 MaskWindowConfig.OverlayHotkeyItems（key 为 ConfigPropertyName）。
+    /// 注意：目录行走单参构造，ConfigPropertyName 为 null，属性恒为 false 且变更被忽略。
+    /// </summary>
+    [ObservableProperty]
+    private bool _showOnOverlay;
+
+    partial void OnShowOnOverlayChanged(bool value)
+    {
+        // 目录行/未携带配置属性名的行：防御性忽略，避免 NullReferenceException
+        // （TreeListView 会为目录行实例化同一个 CellTemplate）
+        if (IsDirectory || string.IsNullOrEmpty(ConfigPropertyName))
+        {
+            return;
+        }
+
+        try
+        {
+            TaskContext.Instance().Config.MaskWindowConfig.SetOverlayHotkeyEnabled(ConfigPropertyName, value);
+            // 通知遮罩重算速查条。勾选是离散点击操作，无需防抖；
+            // 遮罩侧 handler 已通过 UIDispatcherHelper.Invoke 回到 UI 线程，线程安全。
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", value, "快捷键遮罩显示变更"));
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
     }
 
     public void RegisterHotKey()

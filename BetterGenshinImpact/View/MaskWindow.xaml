@@ -151,12 +151,7 @@
                             <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
                         </MultiBinding>
                     </overlay:AdjustableOverlayItem.Width>
-                    <overlay:AdjustableOverlayItem.Height>
-                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
-                            <Binding Path="Config.MaskWindowConfig.StatusListHeightRatio" />
-                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
-                        </MultiBinding>
-                    </overlay:AdjustableOverlayItem.Height>
+                    <!-- 高度不固定：状态栏改为可换行、随内容自适应增长（StatusListHeightRatio 语义降级为拖拽时的初始参考） -->
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="LayoutCommitted">
                             <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}"
@@ -178,32 +173,35 @@
                             </DropShadowEffect.Opacity>
                         </DropShadowEffect>
                     </overlay:AdjustableOverlayItem.Effect>
-                    <ui:ListView ItemsSource="{Binding StatusList}"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 d:ItemsSource="{d:SampleData}">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="Focusable" Value="False" />
-                                <Setter Property="IsHitTestVisible" Value="False" />
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                        <ListView.ItemsPanel>
+                    <ItemsControl ItemsSource="{Binding StatusList}"
+                                  Background="Transparent"
+                                  IsHitTestVisible="False">
+                        <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
+                                <!-- 可换行：徽章追加后超出宽度自动折行，不再被静默裁剪 -->
+                                <WrapPanel />
                             </ItemsPanelTemplate>
-                        </ListView.ItemsPanel>
-                        <ListView.ItemTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel.Resources>
-                                        <Style TargetType="{x:Type TextBlock}">
-                                            <Setter Property="Margin" Value="0,0,8,0" />
-                                        </Style>
-                                    </StackPanel.Resources>
-                                    <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
+                                <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
+                                    <TextBlock x:Name="StatusIcon" FontFamily="{StaticResource FgiIconFontFamily}"
                                                Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
                                                Text="{Binding Name}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <!-- 启用项图标微光：增强"正在工作"的感知（DropShadowEffect 为 CPU 渲染，仅启用项生效） -->
+                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect BlurRadius="5" ShadowDepth="0" Opacity="0.75" Color="#FFFFFF" />
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
                                         <TextBlock.FontSize>
                                             <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
                                                 <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
@@ -221,10 +219,142 @@
                                             </MultiBinding>
                                         </TextBlock.Foreground>
                                     </TextBlock>
+                                    <!-- 快捷键徽章：已绑定且生效时显示按键胶囊，未绑定时收起不占位 -->
+                                    <Border Margin="4,0,0,0"
+                                            Padding="3,0"
+                                            CornerRadius="3"
+                                            Background="#22FFFFFF"
+                                            BorderThickness="1"
+                                            BorderBrush="{Binding Foreground, ElementName=StatusIcon}"
+                                            Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HotkeyText}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <!--  总开关关闭时全部隐藏  -->
+                                                    <DataTrigger Binding="{Binding DataContext.Config.MaskWindowConfig.StatusHotkeyBadgeEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <!-- 键名用默认字体（图标字体显示不了普通字母） -->
+                                        <TextBlock Text="{Binding HotkeyText}"
+                                                   Foreground="{Binding Foreground, ElementName=StatusIcon}">
+                                            <TextBlock.FontSize>
+                                                <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.LogFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                </MultiBinding>
+                                            </TextBlock.FontSize>
+                                        </TextBlock>
+                                    </Border>
                                 </StackPanel>
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ui:ListView>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </overlay:AdjustableOverlayItem>
+
+                <!--  快捷键速查条：右下角可拖拽面板，列出已绑定且实际生效的快捷键；空集合整体隐藏不占位  -->
+                <overlay:AdjustableOverlayItem x:Name="HotkeyBarWrapper"
+                                               Padding="4,2"
+                                               MinWidth="160"
+                                               MinHeight="24"
+                                               IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
+                                               LayoutKey="HotkeyBar"
+                                               SnapsToDevicePixels="True"
+                                               UseLayoutRounding="True"
+                                               Visibility="{Binding IsHotkeyBarVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.HotkeyBarLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.HotkeyBarTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <overlay:AdjustableOverlayItem.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.HotkeyBarWidthRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Width>
+                    <overlay:AdjustableOverlayItem.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.HotkeyBarHeightRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Height>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="LayoutCommitted">
+                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}"
+                                                   PassEventArgsToCommand="True" />
+                        </b:EventTrigger>
+                        <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                            <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                    <ItemsControl HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Top"
+                                  ClipToBounds="True"
+                                  IsHitTestVisible="False"
+                                  ItemsSource="{Binding OverlayHotkeyDisplayItems}"
+                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!--  行高随内容自适应；默认面板高度约 3 行，超出换行  -->
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                    <!--  键名胶囊  -->
+                                    <Border Padding="3,0"
+                                            CornerRadius="3"
+                                            Background="#22FFFFFF"
+                                            BorderThickness="1"
+                                            BorderBrush="{Binding DataContext.Config.MaskWindowConfig.HotkeyBarTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}}">
+                                        <TextBlock Text="{Binding HotkeyText}"
+                                                   Foreground="{Binding DataContext.Config.MaskWindowConfig.HotkeyBarTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}}">
+                                            <TextBlock.FontSize>
+                                                <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.HotkeyBarFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.LogFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                </MultiBinding>
+                                            </TextBlock.FontSize>
+                                        </TextBlock>
+                                    </Border>
+                                    <TextBlock Margin="4,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding DisplayName}"
+                                               Foreground="{Binding DataContext.Config.MaskWindowConfig.HotkeyBarTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ColorStringToBrushConverter}}">
+                                        <TextBlock.FontSize>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.HotkeyBarFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.LogFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.FontSize>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </overlay:AdjustableOverlayItem>
 
                 <overlay:AdjustableOverlayItem x:Name="LogTextBoxWrapper"
@@ -512,7 +642,7 @@
                             <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
                         </TextBlock.Effect>
                     </TextBlock>
-                    <TextBlock Text="{i18n:T 可以调整日志框、状态栏控件的位置和大小}"
+                    <TextBlock Text="{i18n:T 可以调整日志框、状态栏、指标栏、快捷键速查条的位置和大小}"
                                Margin="0,8,0,0"
                                FontSize="22"
                                FontWeight="SemiBold"

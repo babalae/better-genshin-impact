@@ -17,6 +17,7 @@ public partial class MaskWindowConfig : ObservableObject
     public const string DefaultTransparentColor = "#00000000";
     public const string DefaultPanelBorderColor = "#33000000";
     public const string DefaultLogTextColor = "LightGray";
+    public const string DefaultLogColorTheme = "Literate";
     public const string DefaultStatusDisabledTextColor = "LightGray";
     public const string DefaultStatusEnabledTextColor = "LightGreen";
     public const string DefaultMetricsTextColor = "LightGray";
@@ -32,6 +33,14 @@ public partial class MaskWindowConfig : ObservableObject
     public const int MaxCrosshairSize = 1000;
     public const int MinCrosshairGap = 0;
     public const int MaxCrosshairGap = 1000;
+
+    // 快捷键速查条（HotkeyBar）：与状态栏同高、右下角与状态栏对称。
+    // 状态栏 TopRatio 上移至 766/1080 以预留换行空间，速查条与之对齐。
+    public const string DefaultHotkeyBarTextColor = "LightGray";
+    public const double DefaultHotkeyBarLeftRatio = 1420.0 / 1920;
+    public const double DefaultHotkeyBarTopRatio = 766.0 / 1080;
+    public const double DefaultHotkeyBarWidthRatio = 480.0 / 1920;
+    public const double DefaultHotkeyBarHeightRatio = 58.0 / 1080;
 
     // 指标栏布局和遮罩里其它元素一样按 1920x1080 折算比例保存，默认放在状态栏/日志上方以避开游戏底部 UI。
     public const double DefaultMetricsLeftRatio = 20.0 / 1920;
@@ -301,6 +310,13 @@ public partial class MaskWindowConfig : ObservableObject
     [ObservableProperty]
     private double _logFontSize = 12;
 
+    /// <summary>
+    /// 遮罩日志配色主题：Literate（默认，按级别着色）/ Grayscale（灰阶）/ Colored（高对比彩色）。
+    /// 日志管道在启动时构建，修改后需重启软件生效。
+    /// </summary>
+    [ObservableProperty]
+    private string _logColorTheme = DefaultLogColorTheme;
+
     [ObservableProperty]
     private bool _logShadowEnabled = true;
 
@@ -448,8 +464,9 @@ public partial class MaskWindowConfig : ObservableObject
     [ObservableProperty]
     private double _statusListLeftRatio = 20.0 / 1920;
 
+    // 上移自 790/1080：状态栏改为可换行、高度自适应后，需预留约 2 行增长空间以避开日志框（822/1080）
     [ObservableProperty]
-    private double _statusListTopRatio = 790.0 / 1080;
+    private double _statusListTopRatio = 766.0 / 1080;
 
     [ObservableProperty]
     private double _statusListWidthRatio = 480.0 / 1920;
@@ -469,12 +486,59 @@ public partial class MaskWindowConfig : ObservableObject
     [ObservableProperty]
     private double _metricsHeightRatio = DefaultMetricsHeightRatio;
 
+    /// <summary>
+    /// 是否显示快捷键速查条（遮罩右下角的可拖拽面板）
+    /// </summary>
+    [ObservableProperty]
+    private bool _showHotkeyBar = true;
+
+    /// <summary>
+    /// 状态栏功能项是否显示已绑定的快捷键徽章
+    /// </summary>
+    [ObservableProperty]
+    private bool _statusHotkeyBadgeEnabled = true;
+
+    /// <summary>
+    /// 速查条是否排除状态栏已显示的那 5 个实时任务开关项（去重），默认关闭即两处都显示
+    /// </summary>
+    [ObservableProperty]
+    private bool _hotkeyBarExcludeStatusItems = false;
+
+    [ObservableProperty]
+    private double _hotkeyBarLeftRatio = DefaultHotkeyBarLeftRatio;
+
+    [ObservableProperty]
+    private double _hotkeyBarTopRatio = DefaultHotkeyBarTopRatio;
+
+    [ObservableProperty]
+    private double _hotkeyBarWidthRatio = DefaultHotkeyBarWidthRatio;
+
+    [ObservableProperty]
+    private double _hotkeyBarHeightRatio = DefaultHotkeyBarHeightRatio;
+
+    [ObservableProperty]
+    private string _hotkeyBarTextColor = DefaultHotkeyBarTextColor;
+
+    [ObservableProperty]
+    private double _hotkeyBarFontSize = 12;
+
+    // 配置文件里使用 string key（HotKeyConfig 属性名），读取后由 EnsureOverlayHotkeyItems 约束回固定集合。
+    public Dictionary<string, bool> OverlayHotkeyItems { get; set; } = OverlayHotkeyItemDefaults.CreateDefaultItems();
+
     public void ResetOverlayMetricsLayout()
     {
         MetricsLeftRatio = DefaultMetricsLeftRatio;
         MetricsTopRatio = DefaultMetricsTopRatio;
         MetricsWidthRatio = DefaultMetricsWidthRatio;
         MetricsHeightRatio = DefaultMetricsHeightRatio;
+    }
+
+    public void ResetOverlayHotkeyLayout()
+    {
+        HotkeyBarLeftRatio = DefaultHotkeyBarLeftRatio;
+        HotkeyBarTopRatio = DefaultHotkeyBarTopRatio;
+        HotkeyBarWidthRatio = DefaultHotkeyBarWidthRatio;
+        HotkeyBarHeightRatio = DefaultHotkeyBarHeightRatio;
     }
 
     public void ResetOverlayStyle()
@@ -492,6 +556,7 @@ public partial class MaskWindowConfig : ObservableObject
         LogTextColor = DefaultLogTextColor;
         LogFontFamily = DefaultOverlayMonoFontFamily;
         LogFontSize = 12;
+        LogColorTheme = DefaultLogColorTheme;
         LogShadowEnabled = true;
         LogShadowColor = DefaultShadowColor;
         LogShadowOpacity = 0.4;
@@ -536,6 +601,13 @@ public partial class MaskWindowConfig : ObservableObject
         RecognitionLineStrokeThickness = 2;
         RecognitionTextColor = DefaultRecognitionTextColor;
         RecognitionTextFontSize = 36;
+
+        ShowHotkeyBar = true;
+        StatusHotkeyBadgeEnabled = true;
+        HotkeyBarExcludeStatusItems = false;
+        HotkeyBarTextColor = DefaultHotkeyBarTextColor;
+        HotkeyBarFontSize = 12;
+        ResetOverlayHotkeyLayout();
     }
 
     public void MigrateLegacyOverlayMetricsLayout()
@@ -605,6 +677,43 @@ public partial class MaskWindowConfig : ObservableObject
         EnsureOverlayMetricItems();
         OverlayMetricItems[item.ToString()] = enabled;
         OnPropertyChanged(nameof(OverlayMetricItems));
+    }
+
+    /// <summary>
+    /// 补齐缺少的快捷键项、移除非法 key（防止配置被篡改导致 UI 渲染任意字符串）。
+    /// key 为 HotKeyConfig 上的快捷键属性名字符串。
+    /// </summary>
+    public void EnsureOverlayHotkeyItems()
+    {
+        OverlayHotkeyItems ??= [];
+
+        foreach (var item in OverlayHotkeyItemDefaults.AllItems)
+        {
+            if (!OverlayHotkeyItems.ContainsKey(item))
+            {
+                OverlayHotkeyItems[item] = OverlayHotkeyItemDefaults.IsEnabledByDefault(item);
+            }
+        }
+
+        var validKeys = OverlayHotkeyItemDefaults.AllItems.ToHashSet();
+        foreach (var key in OverlayHotkeyItems.Keys.Where(key => !validKeys.Contains(key)).ToList())
+        {
+            OverlayHotkeyItems.Remove(key);
+        }
+    }
+
+    public bool IsOverlayHotkeyEnabled(string configPropertyName)
+    {
+        return OverlayHotkeyItems != null && OverlayHotkeyItems.TryGetValue(configPropertyName, out var enabled)
+            ? enabled
+            : OverlayHotkeyItemDefaults.IsEnabledByDefault(configPropertyName);
+    }
+
+    public void SetOverlayHotkeyEnabled(string configPropertyName, bool enabled)
+    {
+        EnsureOverlayHotkeyItems();
+        OverlayHotkeyItems[configPropertyName] = enabled;
+        OnPropertyChanged(nameof(OverlayHotkeyItems));
     }
 }
 

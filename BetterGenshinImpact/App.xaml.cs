@@ -35,6 +35,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Abstraction;
+using Serilog.Sinks.RichTextBox.Themes;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Appearance;
@@ -92,8 +93,15 @@ public partial class App : Application
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
                 if (all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true })
                 {
+                    // 日志主题在管道构建时固定，运行期修改 LogColorTheme 需重启生效
                     loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
-                        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+                        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                        theme: all.MaskWindowConfig.LogColorTheme switch
+                        {
+                            "Grayscale" => RichTextBoxConsoleTheme.Grayscale,
+                            "Colored" => RichTextBoxConsoleTheme.Colored,
+                            _ => RichTextBoxConsoleTheme.Literate
+                        });
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
