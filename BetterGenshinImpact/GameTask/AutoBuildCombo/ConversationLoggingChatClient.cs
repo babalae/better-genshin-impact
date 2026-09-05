@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
 
@@ -16,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
 /// 用于观察 FunctionInvokingChatClient 的中间多轮过程。
 /// 必须放在 FunctionInvokingChatClient 内层，这样工具调用循环的每次请求都会经过此处
 /// </summary>
-internal class ConversationLoggingChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
+internal class ConversationLoggingChatClient(IChatClient innerClient, ILogger logger) : DelegatingChatClient(innerClient)
 {
     private int _round;
 
@@ -26,11 +25,11 @@ internal class ConversationLoggingChatClient(IChatClient innerClient) : Delegati
     public override async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var round = Interlocked.Increment(ref _round);
-        Logger.LogInformation("── 第 {Round} 轮 · 发给 LLM ──\n{Messages}", round, FormatRequestDelta(messages));
+        logger.LogInformation("── 第 {Round} 轮 · 发给 LLM ──\n{Messages}", round, FormatRequestDelta(messages));
 
         var response = await InnerClient.GetResponseAsync(messages, options, cancellationToken);
 
-        Logger.LogInformation("── 第 {Round} 轮 · LLM 发出 ──\n{Messages}", round, FormatMessages(response.Messages));
+        logger.LogInformation("── 第 {Round} 轮 · LLM 发出 ──\n{Messages}", round, FormatMessages(response.Messages));
         return response;
     }
 

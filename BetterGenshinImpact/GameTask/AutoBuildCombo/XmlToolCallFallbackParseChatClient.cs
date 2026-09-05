@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
 
@@ -19,7 +18,7 @@ namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
 /// 放在 ConversationLoggingChatClient 外层：记录层看到的是回退解析前的原始响应（XML 原文保留在 reasoning/文本里），
 /// 注入的 FunctionCallContent 则通过本类的回退解析告警日志体现
 /// </summary>
-internal class XmlToolCallFallbackParseChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
+internal class XmlToolCallFallbackParseChatClient(IChatClient innerClient, ILogger logger) : DelegatingChatClient(innerClient)
 {
     private int _round;
 
@@ -133,14 +132,14 @@ internal class XmlToolCallFallbackParseChatClient(IChatClient innerClient) : Del
             {
                 assistantMessage.Contents.Add(call);
             }
-            Logger.LogWarning(
+            logger.LogWarning(
                 "── 第 {Round} 轮 · 回退解析：从 reasoning 文本中解析出 {Count} 个 XML 工具调用并注入单独的 tool_calls 字段：{Calls} ──",
                 round, fallbackCalls.Count,
                 string.Join("; ", fallbackCalls.Select(c => $"{c.Name}({string.Join(", ", c.Arguments?.Select(kv => $"{kv.Key}={kv.Value}") ?? [])})")));
         }
         else if (unparsed.Length > 0)
         {
-            Logger.LogWarning(
+            logger.LogWarning(
                 "── 第 {Round} 轮 · 检测到 LLM 在 reasoning 文本中输出未支持的工具调用格式（未走单独的 tool_calls 字段，本轮将提前结束）──\n{Hidden}",
                 round, unparsed.ToString());
         }

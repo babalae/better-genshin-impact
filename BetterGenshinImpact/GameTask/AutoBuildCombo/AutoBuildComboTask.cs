@@ -28,7 +28,6 @@ public class AutoBuildComboTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-        AutoBuildComboBuilder? builder = null;
         try
         {
             Logger.LogInformation("{Name}任务启动", Name);
@@ -39,7 +38,37 @@ public class AutoBuildComboTask : ISoloTask
             Logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
 
             var config = TaskContext.Instance().Config.AutoBuildComboConfig;
-            var chatClient = CreateChatClient(config);
+            var (root, blackboard) = await BuildComboTreeAsync(avatarNames, config, Logger, ct);
+
+            // 树构建完成后直接把队伍信息写入黑板
+            blackboard.GrantExclusiveWrite<CombatScenes>(null!, "CombatScenes").Set(combatScenes);
+
+            // 暂存树根与黑板，供任务设置页的测试按钮启动/暂停 Tick 循环、手工扩展树
+            AutoBuildComboRuntime.Root = root;
+            AutoBuildComboRuntime.Blackboard = blackboard;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "{Name}任务异常", Name);
+            throw;
+        }
+        finally
+        {
+            Logger.LogInformation("{Name}任务结束", Name);
+        }
+    }
+
+    /// <summary>
+    /// 从已知队伍角色名开始，调用 LLM 通过 Function Calling 逐节点构建连招行为树（不含角色识别，可脱离游戏运行）
+    /// 日志由调用方注入：主任务传 TaskControl.Logger，单测可传自定义实现，避免触及主程序静态初始化
+    /// 返回树根与黑板；异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
+    /// </summary>
+    public static async Task<(Behaviour Root, Blackboard Blackboard)> BuildComboTreeAsync(List<string> avatarNames, AutoBuildComboConfig config, ILogger logger, CancellationToken ct)
+    {
+        AutoBuildComboBuilder? builder = null;
+        try
+        {
+            var chatClient = CreateChatClient(config, logger);
 
             var blackboard = new Blackboard();
             builder = new AutoBuildComboBuilder().WithBlackboard(blackboard);
@@ -53,63 +82,48 @@ public class AutoBuildComboTask : ISoloTask
 
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, BuildInstructions(avatarNames)),
+                new(ChatRole.System, BuildInstructions(avatarNames, logger)),
                 new(ChatRole.User, $"请为当前队伍构建战斗策略行为树"),
             };
             var options = new ChatOptions { Tools = aiFunctions };
 
-            Logger.LogInformation("开始调用 LLM 构建行为树（模型：{Model}）", config.ModelName);
+            logger.LogInformation("开始调用 LLM 构建行为树（模型：{Model}）", config.ModelName);
             var response = await chatClient.GetResponseAsync(messages, options, ct);
-            Logger.LogInformation("LLM 返回：{Text}", response.Text);
+            logger.LogInformation("LLM 返回：{Text}", response.Text);
 
             // LLM 已通过 BuildTree 工具完成构建；此处再次 Build 获取根节点用于打印
             var root = builder.Build();
 
-            // 树构建完成后直接把队伍信息写入黑板
-            blackboard.GrantExclusiveWrite<CombatScenes>(null!, "CombatScenes").Set(combatScenes);
-
             var ascii = CsTrees.Display.Display.AsciiTree(root);
-            Logger.LogInformation("生成的行为树：\n{Tree}", ascii);
+            logger.LogInformation("生成的行为树：\n{Tree}", ascii);
 
-            // 暂存树根与黑板，供任务设置页的测试按钮启动/暂停 Tick 循环、手工扩展树
-            AutoBuildComboRuntime.Root = root;
-            AutoBuildComboRuntime.Blackboard = blackboard;
+            return (root, blackboard);
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "{Name}任务异常", Name);
-            TryLogTreePreview(builder);
-            throw;
-        }
-        finally
+            logger.LogError(e, "建树异常");
+            if (builder is not null)
         {
-            Logger.LogInformation("{Name}任务结束", Name);
-        }
-    }
-
-    /// <summary>
-    /// 异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
-    /// </summary>
-    private void TryLogTreePreview(AutoBuildComboBuilder? builder)
-    {
-        if (builder is null)
-            return;
         try
         {
             // Preview 不消耗 builder，未关闭作用域以占位节点呈现并自动回滚
-            var root = builder.Preview();
-            Logger.LogInformation("异常时的行为树预览：\n{Tree}", CsTrees.Display.Display.AsciiTree(root));
+                    var preview = builder.Preview();
+                    logger.LogInformation("异常时的行为树预览：\n{Tree}", CsTrees.Display.Display.AsciiTree(preview));
         }
         catch (Exception ex)
         {
-            Logger.LogWarning("行为树预览失败：{Message}", ex.Message);
+                    logger.LogWarning("行为树预览失败：{Message}", ex.Message);
+        }
+    }
+
+            throw;
         }
     }
 
     /// <summary>
     /// 根据 LLM 配置创建带工具调用循环的 IChatClient
     /// </summary>
-    private IChatClient CreateChatClient(AutoBuildComboConfig config)
+    private static IChatClient CreateChatClient(AutoBuildComboConfig config, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(config.PlanningLlmEndpoint) ||
             string.IsNullOrWhiteSpace(config.ModelName) ||
@@ -149,11 +163,11 @@ public class AutoBuildComboTask : ISoloTask
         client = new CompactResultChatClient(client);
 
         // 对话记录装饰：逐轮记录发给 LLM 与 LLM 发出的内容（回退解析前的原始响应，含藏在 reasoning/文本里的 XML 原文），便于观察 FunctionInvokingChatClient 的中间多轮过程
-        client = new ConversationLoggingChatClient(client);
+        client = new ConversationLoggingChatClient(client, logger);
 
         // XML 工具调用回退解析装饰：解析模型塞进 reasoning/文本里的 XML tool_calls 并注入单独的 tool_calls 字段；
         // 放在记录层外层，回退解析告警会先于"LLM 发出"日志打印
-        client = new XmlToolCallFallbackParseChatClient(client);
+        client = new XmlToolCallFallbackParseChatClient(client, logger);
 
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
         return new FunctionInvokingChatClient(client)
@@ -165,7 +179,7 @@ public class AutoBuildComboTask : ISoloTask
     /// <summary>
     /// 构建给 LLM 的系统指令（静态内容，配合 provider 端前缀缓存）
     /// </summary>
-    private static string BuildInstructions(List<string> avatarNames)
+    private static string BuildInstructions(List<string> avatarNames, ILogger logger)
     {
         // 只展开与当前队伍标签相关的交叉描述，无匹配内容时整段省略
         var tagPairSection = AvatarProfiles.BuildTagPairSection(avatarNames);
@@ -174,7 +188,7 @@ public class AutoBuildComboTask : ISoloTask
             你的做法是先仔细分析并输出简要的设计思路和行为树草图，然后通过工具调用进行构建，最终调用 BuildTree 完成构建。
 
             ## 当前队伍
-            {{AvatarProfiles.BuildTeamSection(avatarNames)}}
+            {{AvatarProfiles.BuildTeamSection(avatarNames, logger)}}
 
             ## 元素反应
             {{tagPairSection}}

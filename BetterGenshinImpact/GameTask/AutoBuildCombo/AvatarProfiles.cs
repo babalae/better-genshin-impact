@@ -233,7 +233,7 @@ internal static class AvatarProfiles
     /// 把队伍展开成提示词的"当前队伍"段落
     /// 有档案的角色展开为"名字：X元素角色、月兆角色等（顿号连接），描述"；缺失档案的角色只列名字并记日志
     /// </summary>
-    public static string BuildTeamSection(List<string> avatarNames)
+    public static string BuildTeamSection(List<string> avatarNames, ILogger logger)
     {
         var lines = new List<string>();
         foreach (var name in avatarNames)
@@ -253,7 +253,7 @@ internal static class AvatarProfiles
             }
             else
             {
-                Logger.LogWarning("角色 {Name} 无内置战术描述，提示词中将只列出名字", name);
+                logger.LogWarning("角色 {Name} 无内置战术描述，提示词中将只列出名字", name);
                 lines.Add($"- {name}");
             }
         }
