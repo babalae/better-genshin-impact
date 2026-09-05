@@ -115,6 +115,7 @@ public class TpTask
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
     private Func<int, int, Task<ExperimentalTeleportDrag.DragResult>>? _experimentalDrag;
+    private Action? _experimentalDragFailureHandler;
     private Func<double, double, Task>? _experimentalZoomAdjuster;
     private ExperimentalTeleportUiStateMachine? _experimentalUiStateMachine;
 
@@ -364,11 +365,7 @@ public class TpTask
         ExperimentalTeleportDrag drag,
         ExperimentalTeleportUiStateMachine uiStateMachine)
     {
-        _experimentalDrag = async (x, y) =>
-        {
-            var forbiddenStartRects = GetExperimentalDragStartForbiddenRects();
-            return await drag.DragAsync(x, y, null, forbiddenStartRects);
-        };
+        _experimentalDrag = CreateExperimentalDragDelegate(drag);
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         try
@@ -380,6 +377,7 @@ public class TpTask
             _experimentalUiStateMachine = null;
             _experimentalZoomAdjuster = null;
             _experimentalDrag = null;
+            _experimentalDragFailureHandler = null;
         }
     }
 
@@ -390,11 +388,7 @@ public class TpTask
     {
         var drag = new ExperimentalTeleportDrag(_tpConfig, ct);
         var uiStateMachine = new ExperimentalTeleportUiStateMachine(this, _tpConfig, ct);
-        _experimentalDrag = async (x, y) =>
-        {
-            var forbiddenStartRects = GetExperimentalDragStartForbiddenRects();
-            return await drag.DragAsync(x, y, null, forbiddenStartRects);
-        };
+        _experimentalDrag = CreateExperimentalDragDelegate(drag);
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         try
@@ -407,7 +401,80 @@ public class TpTask
             _experimentalUiStateMachine = null;
             _experimentalZoomAdjuster = null;
             _experimentalDrag = null;
+            _experimentalDragFailureHandler = null;
         }
+    }
+
+    private Func<int, int, Task<ExperimentalTeleportDrag.DragResult>> CreateExperimentalDragDelegate(
+        ExperimentalTeleportDrag drag)
+    {
+        const int maxAttempts = 3;
+        const double failedStartRadius = 40d;
+        var failedStartRects = new List<Rect2d>();
+        ExperimentalTeleportDrag.DragResult lastResult = default;
+        _experimentalDragFailureHandler = () =>
+        {
+            if (!double.IsFinite(lastResult.StartX) ||
+                !double.IsFinite(lastResult.StartY) ||
+                Math.Abs(lastResult.StartX) + Math.Abs(lastResult.StartY) < 1d)
+            {
+                return;
+            }
+
+            failedStartRects.Add(new Rect2d(
+                lastResult.StartX - failedStartRadius,
+                lastResult.StartY - failedStartRadius,
+                failedStartRadius * 2d,
+                failedStartRadius * 2d));
+            LogExperimentalDetailed(
+                "实验传送拖动识别失败，禁用当前起点：start=({StartX:0.0},{StartY:0.0})",
+                lastResult.StartX,
+                lastResult.StartY);
+        };
+
+        return async (x, y) =>
+        {
+            ExperimentalTeleportDrag.DragResult result = default;
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                var forbiddenStartRects = GetExperimentalDragStartForbiddenRects()
+                    .Concat(failedStartRects)
+                    .ToList();
+                result = await drag.DragAsync(x, y, null, forbiddenStartRects);
+                lastResult = result;
+                if (result.Moved)
+                {
+                    failedStartRects.Clear();
+                    return result;
+                }
+
+                if (!double.IsFinite(result.StartX) ||
+                    !double.IsFinite(result.StartY) ||
+                    Math.Abs(result.StartX) + Math.Abs(result.StartY) < 1d)
+                {
+                    break;
+                }
+
+                if (attempt >= maxAttempts)
+                {
+                    break;
+                }
+
+                failedStartRects.Add(new Rect2d(
+                    result.StartX - failedStartRadius,
+                    result.StartY - failedStartRadius,
+                    failedStartRadius * 2d,
+                    failedStartRadius * 2d));
+                LogExperimentalDetailed(
+                    "实验传送拖动无效，切换起点重试：attempt={Attempt}/{MaxAttempts} start=({StartX:0.0},{StartY:0.0})",
+                    attempt + 1,
+                    maxAttempts,
+                    result.StartX,
+                    result.StartY);
+            }
+
+            return result;
+        };
     }
 
     internal async Task OpenExperimentalBigMapUi(string? mapName)
@@ -429,6 +496,11 @@ public class TpTask
         var stopwatch = Stopwatch.StartNew();
         var pressCount = 0;
         var nextPressAt = 0L;
+        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+        pressCount++;
+        nextPressAt = repressInterval;
+        LogExperimentalDetailed("实验传送按 M：press=1");
+        await Delay(Math.Min(detectionInterval, timeout), ct);
         while (stopwatch.ElapsedMilliseconds < timeout)
         {
             ct.ThrowIfCancellationRequested();
@@ -447,17 +519,10 @@ public class TpTask
                 Simulation.SendInput.SimulateAction(GIActions.OpenMap);
                 pressCount++;
                 nextPressAt = elapsed + repressInterval;
-                if (pressCount == 1)
-                {
-                    LogExperimentalDetailed("实验传送按 M：press=1");
-                }
-                else
-                {
-                    LogExperimentalDetailed(
-                        "按 M 后 {IntervalMilliseconds}ms 大地图仍未出现，执行第 {PressCount} 次补按",
-                        repressInterval,
-                        pressCount);
-                }
+                LogExperimentalDetailed(
+                    "按 M 后 {IntervalMilliseconds}ms 大地图仍未出现，执行第 {PressCount} 次补按",
+                    repressInterval,
+                    pressCount);
 
                 continue;
             }
@@ -1287,6 +1352,7 @@ public class TpTask
         var consecutiveNonUiChecks = 0;
         var consecutiveMainUiChecks = 0;
         long nextBlessingCheckAt = BlessingCheckIntervalMs;
+        await Delay(Math.Min(TeleportLoadingPollIntervalMs, TeleportTimeoutMs), ct);
         while (stopwatch.ElapsedMilliseconds < TeleportTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
@@ -1470,6 +1536,7 @@ public class TpTask
     private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds)
     {
         var stopwatch = Stopwatch.StartNew();
+        await Delay(Math.Min(BigMapOpenCheckIntervalMs, timeoutMilliseconds), ct);
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
         {
             if (IsInBigMapUi())
@@ -1740,9 +1807,24 @@ public class TpTask
             await Delay(GetExperimentalOperationDelay(30), ct);
 
             // 推算理论上的移动后坐标 (惯性预测)
+            // 实验拖动会回读真实光标位移。优先使用实际位移，避免 DPI 缩放、输入裁剪
+            // 或系统鼠标加速导致计划位移与地图实际移动不一致；回读无效时再退回计划值。
+            double predictionDeltaX = mouseMoveResult.SentDeltaX;
+            double predictionDeltaY = mouseMoveResult.SentDeltaY;
+            var actualDeltaDistance = Math.Sqrt(
+                mouseMoveResult.ActualDeltaX * mouseMoveResult.ActualDeltaX +
+                mouseMoveResult.ActualDeltaY * mouseMoveResult.ActualDeltaY);
+            if (_experimentalDrag is not null &&
+                double.IsFinite(actualDeltaDistance) &&
+                actualDeltaDistance >= 2d)
+            {
+                predictionDeltaX = mouseMoveResult.ActualDeltaX;
+                predictionDeltaY = mouseMoveResult.ActualDeltaY;
+            }
+
             Point2f predictedPoint = moveState.CenterPoint + new Point2f(
-                (float)(mouseMoveResult.SentDeltaX * currentZoomLevel / _tpConfig.MapScaleFactor),
-                (float)(mouseMoveResult.SentDeltaY * currentZoomLevel / _tpConfig.MapScaleFactor));
+                (float)(predictionDeltaX * currentZoomLevel / _tpConfig.MapScaleFactor),
+                (float)(predictionDeltaY * currentZoomLevel / _tpConfig.MapScaleFactor));
 
             try
             {
@@ -1750,7 +1832,7 @@ public class TpTask
 
                 // 计算识别坐标与预测坐标的偏差
                 double jumpDistance = Math.Sqrt(Math.Pow(newCenterPoint.X - predictedPoint.X, 2) + Math.Pow(newCenterPoint.Y - predictedPoint.Y, 2));
-                double expectedMoveLen = Math.Sqrt(mouseMoveResult.SentDeltaX * mouseMoveResult.SentDeltaX + mouseMoveResult.SentDeltaY * mouseMoveResult.SentDeltaY) * currentZoomLevel / _tpConfig.MapScaleFactor;
+                double expectedMoveLen = Math.Sqrt(predictionDeltaX * predictionDeltaX + predictionDeltaY * predictionDeltaY) * currentZoomLevel / _tpConfig.MapScaleFactor;
                 double predictedDeltaX = predictedPoint.X - moveState.CenterPoint.X;
                 double predictedDeltaY = predictedPoint.Y - moveState.CenterPoint.Y;
                 double actualDeltaX = newCenterPoint.X - moveState.CenterPoint.X;
@@ -1769,6 +1851,7 @@ public class TpTask
             }
             catch (MapPositionNotRecognizedException)
             {
+                _experimentalDragFailureHandler?.Invoke();
                 exceptionTimes++;
                 if (exceptionTimes > 5)
                 {
@@ -2325,6 +2408,11 @@ public class TpTask
         if (_experimentalDrag is { } experimentalDrag)
         {
             var result = await experimentalDrag(pixelDeltaX, pixelDeltaY);
+            if (!result.Moved)
+            {
+                throw new MapPositionNotRecognizedException("实验传送拖动未检测到有效鼠标位移");
+            }
+
             return (
                 (int)Math.Round(result.InputDeltaX),
                 (int)Math.Round(result.InputDeltaY),
@@ -2912,6 +3000,7 @@ public class TpTask
         var candidatesText = "";
         var stopwatch = Stopwatch.StartNew();
         var candidateTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaCandidateTimeoutMs);
+        await Delay(Math.Min(GetExperimentalStateRecognitionInterval(), candidateTimeout), ct);
         while (stopwatch.ElapsedMilliseconds < candidateTimeout)
         {
             ct.ThrowIfCancellationRequested();
@@ -2951,6 +3040,7 @@ public class TpTask
         var consecutiveMissingChecks = 0;
         var selectionTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaSelectionTimeoutMs);
         var selectionMinimumWait = GetExperimentalOperationDelay(SwitchAreaSelectionMinimumWaitMs);
+        await Delay(Math.Min(GetExperimentalStateRecognitionInterval(), selectionTimeout), ct);
         while (stopwatch.ElapsedMilliseconds < selectionTimeout)
         {
             ct.ThrowIfCancellationRequested();
@@ -3046,6 +3136,7 @@ public class TpTask
         var retryInterval = GetExperimentalStateRecognitionInterval();
         var switchTimeout = GetExperimentalStateTransitionTimeout(MapGroundLayerSwitchTimeoutMs);
         var stopwatch = Stopwatch.StartNew();
+        await Delay(Math.Min(retryInterval, switchTimeout), ct);
         while (stopwatch.ElapsedMilliseconds < switchTimeout)
         {
             using var capture = CaptureToRectArea();

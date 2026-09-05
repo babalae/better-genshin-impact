@@ -316,13 +316,8 @@ internal sealed class ExperimentalTeleportUiStateMachine
         var timeout = GetStateTransitionTimeout();
         var interval = GetStateRecognitionInterval();
         var stopwatch = Stopwatch.StartNew();
-        var detectedState = DetectCurrentState(context);
-        var pollCount = 1;
-        if (detectedState == expectedState)
-        {
-            LogDetailed("实验传送达到预期状态：operation={Operation} state={State} elapsed=0ms polls=1", operation, expectedState);
-            return detectedState;
-        }
+        var detectedState = ExperimentalTeleportUiState.Unknown1;
+        var pollCount = 0;
 
         while (stopwatch.ElapsedMilliseconds < timeout)
         {

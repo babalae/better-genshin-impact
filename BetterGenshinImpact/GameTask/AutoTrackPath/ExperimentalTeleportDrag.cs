@@ -43,7 +43,9 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         double InputDeltaX,
         double InputDeltaY,
         double CursorDeltaX,
-        double CursorDeltaY)
+        double CursorDeltaY,
+        double StartX,
+        double StartY)
     {
         public bool Moved => Math.Abs(CursorDeltaX) + Math.Abs(CursorDeltaY) >= 2d;
     }
@@ -72,6 +74,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         string? country,
         IReadOnlyList<Rect2d>? forbiddenStartRects = null)
     {
+        // 目标已经到位时无需按下鼠标，避免产生无效拖动并触发上层重复识别。
+        if (requestedDeltaX == 0d && requestedDeltaY == 0d)
+        {
+            return default;
+        }
+
         var systemInfo = TaskContext.Instance().SystemInfo;
         var captureRect = systemInfo.ScaleMax1080PCaptureRect;
         var realCaptureRect = systemInfo.CaptureAreaRect;
@@ -284,7 +292,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             inputCompletionRatio,
             distanceCorrection,
             Environment.TickCount64 - dragStartedAt);
-        return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY);
+        return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY, start.X, start.Y);
     }
 
     public async Task AdjustMapZoomLevelAsync(double zoomLevel, double targetZoomLevel)
