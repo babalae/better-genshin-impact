@@ -11,9 +11,9 @@ BetterGenshinImpact/
 └─ Assets/
    └─ Config/
       └─ Preset/
-         └─ 自动晶蝶日常/
+         └─ 打铁/
             ├─ manifest.json
-            ├─ 自动晶蝶日常.json
+            ├─ 打铁.json
             └─ README.md
 ```
 
@@ -30,19 +30,19 @@ BetterGenshinImpact/
 ```json
 {
   "manifest_version": 1,
-  "id": "preset.crystalfly.daily",
-  "name": "自动晶蝶日常",
+  "id": "preset.bettergi.smithing",
+  "name": "打铁",
   "version": "1.0.0",
   "min_bgi_version": "0.64.2",
-  "description": "执行自动晶蝶采集任务的日常配置组。",
-  "authors": ["作者名称"],
-  "config_group_file": "自动晶蝶日常.json",
+  "description": "返回七天神像切换队伍并自动锻造魔矿的示例配置组。",
+  "authors": ["BetterGI"],
+  "config_group_file": "打铁.json",
   "readme_file": "README.md",
   "dependencies": [
     {
       "type": "Javascript",
-      "name": "自动晶蝶",
-      "path": "AutoCrystalfly"
+      "name": "自动锻造魔矿",
+      "path": "铁匠铺"
     }
   ]
 }
@@ -86,20 +86,20 @@ BetterGenshinImpact/
 
 ## 编写配置组 JSON
 
-配置组 JSON 使用调度器现有的 `ScriptGroup` 格式。建议先在调度器中手动创建并配置一个配置组，再导出或参考其 JSON 内容，避免遗漏任务配置字段。
+配置组 JSON 使用调度器现有的 `ScriptGroup` 格式。仓库中的 [打铁.json](../../BetterGenshinImpact/Assets/Config/Preset/打铁/打铁.json) 是一个从实际调度器配置整理而来的完整示例；建议先在调度器中手动创建并配置一个配置组，再导出或参考其 JSON 内容，避免遗漏任务配置字段。下面仅展示结构摘录。
 
 最小示例：
 
 ```json
 {
   "index": 0,
-  "name": "自动晶蝶日常",
+  "name": "打铁",
   "config": {},
   "projects": [
     {
       "index": 0,
-      "name": "自动晶蝶",
-      "folderName": "AutoCrystalfly",
+      "name": "自动锻造魔矿",
+      "folderName": "铁匠铺",
       "type": "Javascript",
       "status": "Enabled",
       "schedule": "Daily",
