@@ -23,6 +23,7 @@ internal sealed class InstanceRequestHandler
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
     private readonly Action<string[]> _enqueueActivation;
     private readonly Action<WebViewMessage> _dispatchWebViewMessage;
+    private readonly Action _requestShutdown;
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<Guid, InstanceIpcEnvelope> _activationResponses = new();
 
@@ -32,6 +33,7 @@ internal sealed class InstanceRequestHandler
         RelativeMouseMessageHandler relativeMouseMessageHandler,
         Action<string[]> enqueueActivation,
         Action<WebViewMessage> dispatchWebViewMessage,
+        Action requestShutdown,
         ILogger logger)
     {
         _context = context;
@@ -39,6 +41,7 @@ internal sealed class InstanceRequestHandler
         _relativeMouseMessageHandler = relativeMouseMessageHandler;
         _enqueueActivation = enqueueActivation;
         _dispatchWebViewMessage = dispatchWebViewMessage;
+        _requestShutdown = requestShutdown;
         _logger = logger;
     }
 
@@ -76,6 +79,8 @@ internal sealed class InstanceRequestHandler
                         request,
                         cancellationToken).ConfigureAwait(false),
                 InstanceOperations.WebViewMessage => HandleWebViewMessage(connection, request),
+                InstanceOperations.ApplicationShutdown =>
+                    HandleApplicationShutdown(connection, request),
                 _ => InstanceIpcEnvelope.Failure(
                     request,
                     "unsupported_operation",
@@ -382,6 +387,33 @@ internal sealed class InstanceRequestHandler
         var message = request.Data?.ToObject<WebViewMessage>(InstanceIpcProtocol.Serializer)
                       ?? throw new ArgumentException("WebView 消息缺少数据。");
         _dispatchWebViewMessage(message);
+        return InstanceIpcEnvelope.Response(request);
+    }
+
+    /// <summary>
+    /// 仅根实例处理：已注册的客户端（桌面分身 / WebView）请求关闭根实例自身。
+    /// 用于桌面分身的一条龙任务完成后，连同主身 BGI 一起退出。
+    /// </summary>
+    private InstanceIpcEnvelope HandleApplicationShutdown(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        if (_context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有根实例可以处理关闭请求。");
+        }
+
+        var requester = RequireRegisteredEndpoint(connection);
+        if (requester.InstanceType == BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有已登记的客户端可以请求关闭根实例。");
+        }
+
+        _logger.LogInformation(
+            "收到客户端关闭根实例请求：进程 {ProcessId}，Session {SessionId}",
+            requester.ProcessId,
+            requester.WindowsSessionId);
+        _requestShutdown();
         return InstanceIpcEnvelope.Response(request);
     }
 

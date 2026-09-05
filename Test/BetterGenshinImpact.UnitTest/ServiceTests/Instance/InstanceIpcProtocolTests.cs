@@ -195,4 +195,127 @@ public class InstanceIpcProtocolTests
 
         Assert.Equal(expected, result);
     }
+
+    [Fact]
+    public void CommandLineParser_ShouldRunOneDragonInChildSession()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--instance",
+            "childSession",
+            "bettergi://startOneDragon",
+            "我的配置"
+        ]);
+
+        Assert.Equal(BetterGiInstanceType.ChildSession, options.InstanceType);
+        Assert.True(options.HasExplicitInstanceType);
+        Assert.Equal(CommandLineAction.StartOneDragon, options.Action);
+        Assert.Equal("我的配置", options.OneDragonConfigName);
+        Assert.True(options.HasTaskArgs);
+        Assert.True(options.ShouldDeferGameStart);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldRunStartGroupsInChildSession()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--instance",
+            "childSession",
+            "--startGroups",
+            "组1",
+            "组2"
+        ]);
+
+        Assert.Equal(BetterGiInstanceType.ChildSession, options.InstanceType);
+        Assert.Equal(CommandLineAction.StartGroups, options.Action);
+        Assert.Equal(new[] { "组1", "组2" }, options.GroupNames);
+        Assert.True(options.HasTaskArgs);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldRunTaskProgressInChildSession()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--instance",
+            "childSession",
+            "--TaskProgress",
+            "每日"
+        ]);
+
+        Assert.Equal(BetterGiInstanceType.ChildSession, options.InstanceType);
+        Assert.Equal(CommandLineAction.TaskProgress, options.Action);
+        Assert.Equal(new[] { "每日" }, options.GroupNames);
+        Assert.True(options.HasTaskArgs);
+    }
+
+    [Fact]
+    public void ApplicationShutdown_Operation_ShouldBeDefined()
+    {
+        Assert.Equal("instance.shutdownRoot", InstanceOperations.ApplicationShutdown);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldDetectCloseOnCompleteInChildSession()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--instance",
+            "childSession",
+            "bettergi://startOneDragon",
+            "我的配置",
+            "--close-on-complete"
+        ]);
+
+        Assert.Equal(BetterGiInstanceType.ChildSession, options.InstanceType);
+        Assert.Equal(CommandLineAction.StartOneDragon, options.Action);
+        Assert.Equal("我的配置", options.OneDragonConfigName);
+        Assert.True(options.HasTaskArgs);
+        Assert.True(options.CloseOnComplete);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldDetectStartCloneTaskAndForwardArguments()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--start-clone-task",
+            "bettergi://startOneDragon",
+            "我的配置"
+        ]);
+
+        Assert.Equal(BetterGiInstanceType.Primary, options.InstanceType);
+        // 根实例自身不执行任务，仅负责拉起桌面分身。
+        Assert.Equal(CommandLineAction.None, options.Action);
+        Assert.False(options.HasTaskArgs);
+        Assert.True(options.HasStartCloneTask);
+        Assert.Equal(
+            new[] { "bettergi://startOneDragon", "我的配置" },
+            options.CloneTaskArguments);
+    }
+
+    [Fact]
+    public void CommandLineParser_ShouldNotMisparseStartCloneTaskAsStartAction()
+    {
+        var options = CommandLineOptions.Parse(
+        [
+            "BetterGI.exe",
+            "--start-clone-task",
+            "--startGroups",
+            "组1",
+            "组2"
+        ]);
+
+        Assert.Equal(CommandLineAction.None, options.Action);
+        Assert.True(options.HasStartCloneTask);
+        Assert.Equal(
+            new[] { "--startGroups", "组1", "组2" },
+            options.CloneTaskArguments);
+    }
 }

@@ -1,0 +1,46 @@
+name: Build & Test (PR)
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# 仅做编译与单元测试，不需要任何仓库写权限；显式收紧以遵循最小权限原则。
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Unit Test
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Restore
+        run: dotnet restore BetterGenshinImpact/BetterGenshinImpact.csproj
+
+      - name: Build application
+        run: dotnet build BetterGenshinImpact/BetterGenshinImpact.csproj -c Debug --no-restore
+
+      - name: Restore unit tests
+        run: dotnet restore Test/BetterGenshinImpact.UnitTest/BetterGenshinImpact.UnitTest.csproj
+
+      - name: Build unit tests
+        run: dotnet build Test/BetterGenshinImpact.UnitTest/BetterGenshinImpact.UnitTest.csproj -c Debug --no-restore
+
+      # 仅运行与本次改动直接相关的测试类（InstanceIpcProtocolTests）。
+      # 注：仓库内 GameTaskTests / OCRTests / Assets 相关测试依赖截图、模型与资源文件，
+      # 在 CI 环境中因缺少这些资源而预存在失败，与本次改动无关。本步骤只验证本次 PR 的代码路径。
+      - name: Run unit tests
+        run: dotnet test Test/BetterGenshinImpact.UnitTest/BetterGenshinImpact.UnitTest.csproj -c Debug --no-build --no-restore --verbosity normal --filter "FullyQualifiedName~InstanceIpcProtocolTests"
