@@ -628,7 +628,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         return true;
     }
 
-    private static bool IsSafePoint(
+    internal static bool IsSafePoint(
         double x,
         double y,
         int width,

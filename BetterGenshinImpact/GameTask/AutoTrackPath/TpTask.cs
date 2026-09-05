@@ -208,6 +208,7 @@ public class TpTask
     {
         public required string MapName { get; init; }
         public required Rect BigMapInAllMapRect { get; init; }
+        public string? Country { get; init; }
         public double TargetX { get; init; }
         public double TargetY { get; init; }
         public double ClickX { get; init; }
@@ -937,7 +938,12 @@ public class TpTask
                 }
             }
 
-            await MoveMapToTeleportClickArea(targetX, targetY, mapName, evaluation.RequiredVisibleRadius);
+            await MoveMapToTeleportClickArea(
+                targetX,
+                targetY,
+                mapName,
+                evaluation.RequiredVisibleRadius,
+                targetTp?.Country);
             await Delay(GetExperimentalOperationDelay(TeleportClickableAreaRetryDelayMs), ct);
         }
 
@@ -988,7 +994,7 @@ public class TpTask
             };
         }
 
-        if (!IsGameRegionPointInClickableArea(clickX, clickY, requiredVisibleRadius))
+        if (!IsGameRegionPointInClickableArea(clickX, clickY, requiredVisibleRadius, targetTp?.Country))
         {
             return new TeleportClickViewEvaluation
             {
@@ -1006,6 +1012,7 @@ public class TpTask
             {
                 MapName = mapName,
                 BigMapInAllMapRect = bigMapInAllMapRect,
+                Country = targetTp?.Country,
                 TargetX = targetX,
                 TargetY = targetY,
                 ClickX = clickX,
@@ -1063,7 +1070,11 @@ public class TpTask
     {
         var (predictedClickX, predictedClickY) = PredictTeleportClickPositionAfterZoom(clickView, targetZoomLevel);
         var predictedRequiredVisibleRadius = GetTeleportRequiredVisibleRadiusAfterZoom(clickView, targetZoomLevel);
-        return IsGameRegionPointInClickableArea(predictedClickX, predictedClickY, predictedRequiredVisibleRadius);
+        return IsGameRegionPointInClickableArea(
+            predictedClickX,
+            predictedClickY,
+            predictedRequiredVisibleRadius,
+            clickView.Country);
     }
 
     private (double ClickX, double ClickY) PredictTeleportClickPositionAfterZoom(TeleportClickView clickView, double targetZoomLevel)
@@ -1399,8 +1410,23 @@ public class TpTask
         Logger.LogWarning("传送等待超时，换台电脑吧");
     }
 
-    private bool IsGameRegionPointInClickableArea(double clickX, double clickY, double requiredVisibleRadius = 0)
+    private bool IsGameRegionPointInClickableArea(
+        double clickX,
+        double clickY,
+        double requiredVisibleRadius = 0,
+        string? country = null)
     {
+        if (_tpConfig.UseExperimentalTeleport)
+        {
+            return ExperimentalTeleportDrag.IsSafePoint(
+                clickX,
+                clickY,
+                _captureRect.Width,
+                _captureRect.Height,
+                MapClickSafeMargin + Math.Max(0, requiredVisibleRadius),
+                country);
+        }
+
         var safeMargin = MapClickSafeMargin * _zoomOutMax1080PRatio;
         var requiredRadius = Math.Max(0, requiredVisibleRadius);
         var edgeMargin = safeMargin + requiredRadius;
@@ -1439,7 +1465,8 @@ public class TpTask
         double requiredVisibleRadius,
         out Rect bigMapInAllMapRect,
         out double clickX,
-        out double clickY)
+        out double clickY,
+        string? country = null)
     {
         bigMapInAllMapRect = default;
         clickX = 0;
@@ -1454,7 +1481,7 @@ public class TpTask
             }
 
             (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, x, y);
-            if (!IsGameRegionPointInClickableArea(clickX, clickY, requiredVisibleRadius))
+            if (!IsGameRegionPointInClickableArea(clickX, clickY, requiredVisibleRadius, country))
             {
                 return false;
             }
@@ -1659,9 +1686,22 @@ public class TpTask
         clickCapture.ClickTo(clickX, clickY);
     }
 
-    private async Task MoveMapToTeleportClickArea(double x, double y, string mapName, double requiredVisibleRadius)
+    private async Task MoveMapToTeleportClickArea(
+        double x,
+        double y,
+        string mapName,
+        double requiredVisibleRadius,
+        string? country)
     {
-        await MoveMapToCore(x, y, mapName, MinTeleportZoomLevel, false, requiredVisibleRadius, false);
+        await MoveMapToCore(
+            x,
+            y,
+            mapName,
+            MinTeleportZoomLevel,
+            false,
+            requiredVisibleRadius,
+            false,
+            country);
     }
 
     private async Task MoveMapToCore(
@@ -1671,7 +1711,8 @@ public class TpTask
         double finalZoomLevel,
         bool allowZoom,
         double requiredVisibleRadius,
-        bool targetAtCenter)
+        bool targetAtCenter,
+        string? country = null)
     {
         // 参数初始化
         double minZoomLevel = ClampTeleportZoomLevel(finalZoomLevel);
@@ -1716,7 +1757,15 @@ public class TpTask
             }
             else
             {
-                var targetClickable = TryGetClickableTargetPosition(mapName, x, y, requiredVisibleRadius, out targetBigMapRect, out _, out _);
+                var targetClickable = TryGetClickableTargetPosition(
+                    mapName,
+                    x,
+                    y,
+                    requiredVisibleRadius,
+                    out targetBigMapRect,
+                    out _,
+                    out _,
+                    country);
                 if (targetClickable)
                 {
                     if (allowZoom && _tpConfig.MapZoomEnabled && currentZoomLevel > minZoomLevel + _tpConfig.PrecisionThreshold)
@@ -1729,7 +1778,15 @@ public class TpTask
                             exceptionTimes = 0;
                         }
 
-                        if (!TryGetClickableTargetPosition(mapName, x, y, requiredVisibleRadius, out _, out _, out _))
+                        if (!TryGetClickableTargetPosition(
+                                mapName,
+                                x,
+                                y,
+                                requiredVisibleRadius,
+                                out _,
+                                out _,
+                                out _,
+                                country))
                         {
                             continue;
                         }
@@ -3468,7 +3525,11 @@ public class TpTask
                 clickView.NearestNeighborScreenDistance * AbsoluteMapClickNeighborErrorRatio)
             : double.PositiveInfinity;
 
-        if (!IsGameRegionPointInClickableArea(clickX, clickY, clickView.RequiredVisibleRadius))
+        if (!IsGameRegionPointInClickableArea(
+                clickX,
+                clickY,
+                clickView.RequiredVisibleRadius,
+                clickView.Country))
         {
             failureReason = "校正后的目标坐标不在可点击区域";
             failure = AbsoluteMapClickFailure.OutsideClickableArea;
