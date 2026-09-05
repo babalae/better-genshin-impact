@@ -159,6 +159,9 @@
                     <ui:Button Margin="0,0,0,12"
                                Command="{Binding AddScriptGroupCommand}"
                                Content="{i18n:T 新增配置组}" />
+                    <ui:Button Margin="0,0,0,12"
+                               Command="{Binding OpenConfigGroupPresetsCommand}"
+                               Content="{i18n:T 浏览内置预设配置组}" />
                     <!--  示例配置组  -->
                     <!--<ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
@@ -243,6 +246,7 @@
                                 <MenuItem Header="{i18n:T 清空}" Command="{Binding ClearTasksCommand}" />
                                 <MenuItem Header="{i18n:T 日志分析}" Command="{Binding OpenLogParseCommand}" />
                                 <MenuItem Header="{i18n:T 打开脚本仓库}" Command="{Binding OpenLocalScriptRepoCommand}" />
+                                <MenuItem Header="{i18n:T 内置预设配置组}" Command="{Binding OpenConfigGroupPresetsCommand}" />
                                 <MenuItem Header="{i18n:T 根据文件夹更新}" Command="{Binding UpdateTasksCommand}" />
                                 <MenuItem Header="{i18n:T 任务倒序排列}" Command="{Binding ReverseTaskOrderCommand}" />
                                 <MenuItem Header="{i18n:T 导出根据控制文件修改任务}" Command="{Binding ExportMergerJsonsCommand}" />

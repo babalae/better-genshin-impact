@@ -1,0 +1,19 @@
+{
+  "manifest_version": 1,
+  "id": "preset.bettergi.smithing",
+  "name": "打铁",
+  "version": "1.0.0",
+  "min_bgi_version": "0.64.2",
+  "description": "自动锻造魔矿的示例配置组。",
+  "authors": ["BetterGI"],
+  "config_group_file": "打铁.json",
+  "readme_file": "README.md",
+  "dependencies": [
+    {
+      "type": "Javascript",
+      "name": "自动锻造魔矿",
+      "path": "铁匠铺",
+      "min_version": "2.3.1"
+    }
+  ]
+}

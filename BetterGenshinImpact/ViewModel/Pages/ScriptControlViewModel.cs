@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Script.Group.Preset;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
@@ -16,8 +17,10 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.Windows.Editable;
+using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -54,6 +57,8 @@ public partial class ScriptControlViewModel : ViewModel
 
     private readonly IScriptService _scriptService;
 
+    private readonly ConfigGroupPresetService _presetService;
+
     /// <summary>
     /// 配置组配置
     /// </summary>
@@ -75,11 +80,25 @@ public partial class ScriptControlViewModel : ViewModel
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService)
+    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService,
+        ConfigGroupPresetService presetService)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
+        _presetService = presetService;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
+        WeakReferenceMessenger.Default.Register<RefreshDataMessage>(this, (r, m) => ReadScriptGroup());
+    }
+
+    [RelayCommand]
+    private void OpenConfigGroupPresets()
+    {
+        var window = new ConfigGroupPresetWindow(_presetService)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        WindowHelper.CenterOnVisibleOwner(window);
+        window.ShowDialog();
     }
 
     [RelayCommand]
