@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Job;
+using OpenCvSharp;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
@@ -65,6 +66,14 @@ internal sealed class ExperimentalTeleportUiStateMachine
     private const int MaximumStateIterations = 1000;
     private const int TeleportMinimumCompletionMilliseconds = 1000;
     private const int TeleportLoadingFallbackMilliseconds = 5000;
+    private const double LoadingSaturationStdThreshold = 25d;
+    private const double LoadingExtremeGrayRatioThreshold = 0.85d;
+    private const int LoadingDarkGrayUpperBound = 70;
+    private const int LoadingLightGrayLowerBound = 220;
+    private const int LoadingRoiX1080P = 480;
+    private const int LoadingRoiY1080P = 80;
+    private const int LoadingRoiWidth1080P = 960;
+    private const int LoadingRoiHeight1080P = 540;
 
     private readonly TpTask _host;
     private readonly TpConfig _config;
@@ -372,6 +381,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
         var isInMainUi = Bv.IsInMainUi(capture);
         if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport && context.ConfirmIssuedAt > 0)
         {
+            var isLoadingScreen = IsLoadingScreen(capture.SrcMat);
             var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
             if (isInMainUi)
             {
@@ -393,8 +403,15 @@ internal sealed class ExperimentalTeleportUiStateMachine
             }
             else
             {
-                context.LoadingObserved = true;
-                return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
+                if (isLoadingScreen)
+                {
+                    context.LoadingObserved = true;
+                    return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
+                }
+
+                return context.LoadingObserved
+                    ? ExperimentalTeleportUiState.Loading
+                    : ResolveUnknownState(context);
             }
 
             return ResolveUnknownState(context);
@@ -403,6 +420,72 @@ internal sealed class ExperimentalTeleportUiStateMachine
         return context.Operation != ExperimentalTeleportUiOperation.ConfirmTeleport && isInMainUi
             ? AcceptKnownState(context, ExperimentalTeleportUiState.MainWorld)
             : ResolveUnknownState(context);
+    }
+
+    private static bool IsLoadingScreen(Mat bgr)
+    {
+        if (bgr.Empty())
+        {
+            return false;
+        }
+
+        var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var roiX = Math.Clamp((int)Math.Round(LoadingRoiX1080P * scale), 0, bgr.Width);
+        var roiY = Math.Clamp((int)Math.Round(LoadingRoiY1080P * scale), 0, bgr.Height);
+        var roiWidth = Math.Min(
+            (int)Math.Round(LoadingRoiWidth1080P * scale),
+            bgr.Width - roiX);
+        var roiHeight = Math.Min(
+            (int)Math.Round(LoadingRoiHeight1080P * scale),
+            bgr.Height - roiY);
+        if (roiWidth <= 0 || roiHeight <= 0)
+        {
+            return false;
+        }
+
+        using var roi = new Mat(bgr, new Rect(roiX, roiY, roiWidth, roiHeight));
+        using var gray = new Mat();
+        using var darkMask = new Mat();
+        using var lightMask = new Mat();
+        Mat? hsv = null;
+        try
+        {
+            if (roi.Channels() == 1)
+            {
+                roi.CopyTo(gray);
+            }
+            else
+            {
+                hsv = new Mat();
+                Cv2.CvtColor(roi, hsv, ColorConversionCodes.BGR2HSV);
+                Cv2.CvtColor(roi, gray, ColorConversionCodes.BGR2GRAY);
+            }
+
+            var saturationStd = 0d;
+            if (hsv is not null)
+            {
+                Cv2.MeanStdDev(hsv, out _, out var stdDev);
+                saturationStd = stdDev.Val1;
+            }
+
+            var total = gray.Rows * gray.Cols;
+            if (total <= 0)
+            {
+                return false;
+            }
+
+            Cv2.Threshold(gray, darkMask, LoadingDarkGrayUpperBound, 255, ThresholdTypes.BinaryInv);
+            Cv2.Threshold(gray, lightMask, LoadingLightGrayLowerBound, 255, ThresholdTypes.Binary);
+            var darkRatio = (double)Cv2.CountNonZero(darkMask) / total;
+            var lightRatio = (double)Cv2.CountNonZero(lightMask) / total;
+            return saturationStd < LoadingSaturationStdThreshold &&
+                   (darkRatio >= LoadingExtremeGrayRatioThreshold ||
+                    lightRatio >= LoadingExtremeGrayRatioThreshold);
+        }
+        finally
+        {
+            hsv?.Dispose();
+        }
     }
 
     private static ExperimentalTeleportUiState AcceptKnownState(
