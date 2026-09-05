@@ -400,19 +400,19 @@ internal sealed class ExperimentalTeleportUiStateMachine
                     : ExperimentalTeleportUiState.AreaList);
         }
 
-        // Loading 画面只需要检查固定 ROI；确认传送完成阶段优先执行该检查，
-        // 不必先做候选列表或地图状态识别。
-        if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&
-            context.ConfirmIssuedAt > 0 &&
-            IsLoadingScreen(capture.SrcMat))
-        {
-            context.LoadingObserved = true;
-            return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
-        }
-
+        // 亮度特征在部分场景中也可能呈现近似纯暗画面，必须与主界面识别组合，
+        // 只有“亮度符合 Loading 且当前不是主界面”时才记录 Loading 状态。
         var isInMainUi = Bv.IsInMainUi(capture);
         if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport && context.ConfirmIssuedAt > 0)
         {
+            // Loading 画面只需要检查固定 ROI；确认传送完成阶段优先执行该检查，
+            // 不必先做候选列表或地图状态识别。
+            if (!isInMainUi && IsLoadingScreen(capture.SrcMat))
+            {
+                context.LoadingObserved = true;
+                return AcceptKnownState(context, ExperimentalTeleportUiState.Loading);
+            }
+
             var elapsed = Environment.TickCount64 - context.ConfirmIssuedAt;
             if (isInMainUi)
             {
