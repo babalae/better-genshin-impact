@@ -50,7 +50,7 @@
                             <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="{i18n:T 功能}">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ui:TreeRowExpander Content="{Binding FunctionName}" />
+                                        <ui:TreeRowExpander Content="{Binding DisplayFunctionName}" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
@@ -60,7 +60,7 @@
                                         <ui:Button Height="33"
                                                    VerticalAlignment="Center"
                                                    Command="{Binding SwitchHotKeyTypeCommand}"
-                                                   Content="{Binding HotKeyTypeName, Mode=OneWay}"
+                                                    Content="{Binding DisplayHotKeyTypeName, Mode=OneWay}"
                                                    IsEnabled="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}"
                                                    Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
                                     </DataTemplate>

@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fischless.HotkeyCapture;
@@ -24,12 +25,16 @@ public partial class HotKeySettingModel : ObservableObject
     /// </summary>
     [ObservableProperty] private HotKeyTypeEnum _hotKeyType;
 
-    [ObservableProperty] private string _hotKeyTypeName;
+    [ObservableProperty] private string _hotKeyTypeName = string.Empty;
 
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _children = [];
 
     public string FunctionName { get; set; }
+
+    public string DisplayFunctionName => I18nService.Instance.Translate(FunctionName);
+
+    public string DisplayHotKeyTypeName => I18nService.Instance.Translate(HotKeyTypeName);
 
     public bool IsExpanded => true;
 
@@ -80,6 +85,17 @@ public partial class HotKeySettingModel : ObservableObject
         OnKeyPressAction = onKeyPressAction;
         IsHold = isHold;
         SwitchHotkeyTypeEnabled = !isHold;
+    }
+
+    partial void OnHotKeyTypeNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(DisplayHotKeyTypeName));
+    }
+
+    public void RefreshDisplayNames()
+    {
+        OnPropertyChanged(nameof(DisplayFunctionName));
+        OnPropertyChanged(nameof(DisplayHotKeyTypeName));
     }
 
     public void RegisterHotKey()

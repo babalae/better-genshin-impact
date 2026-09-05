@@ -53,7 +53,7 @@
                               Width="200"
                               Margin="0,0,36,0"
                               DisplayMemberPath="Value"
-                              ItemsSource="{Binding LanguageDict}"
+                              ItemsSource="{Binding UiLanguageDict}"
                               SelectedItem="{Binding Config.OtherConfig.UiCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
                               SelectedValuePath="Key">
                         <b:Interaction.Triggers>
@@ -93,7 +93,7 @@
                               Width="200"
                               Margin="0,0,36,0"
                               DisplayMemberPath="Value"
-                              ItemsSource="{Binding LanguageDict}"
+                              ItemsSource="{Binding GameLanguageDict}"
                               SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
                               SelectedValuePath="Key">
                         <b:Interaction.Triggers>
