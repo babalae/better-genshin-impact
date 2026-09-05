@@ -34,7 +34,7 @@ BetterGenshinImpact/
   "name": "打铁",
   "version": "1.0.0",
   "min_bgi_version": "0.64.2",
-  "description": "返回七天神像切换队伍并自动锻造魔矿的示例配置组。",
+  "description": "自动锻造魔矿的示例配置组。",
   "authors": ["BetterGI"],
   "config_group_file": "打铁.json",
   "readme_file": "README.md",

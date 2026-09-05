@@ -151,20 +151,6 @@
   },
   "projects": [
     {
-      "name": "返回七天神像切换指定队伍加速版",
-      "folderName": "AcceleratedEditionSwitchParty",
-      "jsScriptSettingsObject": {
-        "partyName": "采集"
-      },
-      "index": 1,
-      "type": "Javascript",
-      "status": "Enabled",
-      "schedule": "Daily",
-      "runNum": 1,
-      "allowJsNotification": true,
-      "allowJsHTTPHash": ""
-    },
-    {
       "name": "自动锻造魔矿",
       "folderName": "铁匠铺",
       "jsScriptSettingsObject": {
@@ -173,7 +159,7 @@
         "secondaryOre": "水晶块",
         "forgedOrNot": "是"
       },
-      "index": 2,
+      "index": 1,
       "type": "Javascript",
       "status": "Enabled",
       "schedule": "Daily",
