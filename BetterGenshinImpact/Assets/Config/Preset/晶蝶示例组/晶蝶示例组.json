@@ -1,0 +1,17 @@
+{
+  "index": 0,
+  "name": "晶蝶示例组",
+  "config": {},
+  "projects": [
+    {
+      "index": 0,
+      "name": "自动晶蝶",
+      "folderName": "AutoCrystalfly",
+      "type": "Javascript",
+      "status": "Enabled",
+      "schedule": "Daily",
+      "runNum": 1,
+      "jsScriptSettingsObject": {}
+    }
+  ]
+}
