@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToken ct)
 {
     private const double SafeMargin = 50d;
-    private const double EarlyStopMargin = 40d;
+    internal const double EarlyStopMargin = 40d;
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;

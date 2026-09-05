@@ -1917,7 +1917,44 @@ public class TpTask
 
                 moveState = GetMoveMapState(predictedPoint, x, y, currentZoomLevel);
             }
+
+            if (!targetAtCenter &&
+                iteration > 0 &&
+                _tpConfig.UseExperimentalTeleport &&
+                IsExperimentalTargetSafelyClickable(
+                    x,
+                    y,
+                    moveState.CenterPoint,
+                    currentZoomLevel,
+                    country))
+            {
+                Logger.LogDebug("实验传送目标已进入安全点击区，提前结束拖动：iteration={Iteration}", iteration + 1);
+                break;
+            }
         }
+    }
+
+    private bool IsExperimentalTargetSafelyClickable(
+        double targetX,
+        double targetY,
+        Point2f center,
+        double zoomLevel,
+        string? country)
+    {
+        if (zoomLevel <= 0)
+        {
+            return false;
+        }
+
+        var clickX = _captureRect.Width / 2d - _tpConfig.MapScaleFactor * (targetX - center.X) / zoomLevel;
+        var clickY = _captureRect.Height / 2d - _tpConfig.MapScaleFactor * (targetY - center.Y) / zoomLevel;
+        return ExperimentalTeleportDrag.IsSafePoint(
+            clickX,
+            clickY,
+            _captureRect.Width,
+            _captureRect.Height,
+            ExperimentalTeleportDrag.EarlyStopMargin,
+            country);
     }
 
     private MapMoveState GetMoveMapState(
