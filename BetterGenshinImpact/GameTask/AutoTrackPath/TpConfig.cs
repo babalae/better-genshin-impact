@@ -12,11 +12,11 @@ public partial class TpConfig : ObservableValidator
     public const int MaxTeleportOperationDelayMilliseconds = 100;
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
 
-    public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 2;
+    public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 1;
     public const int MaxExperimentalTeleportDragStepIntervalMilliseconds = 100;
     public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 3;
     public const double MinExperimentalTeleportDragDistanceCorrection = 0.1d;
-    public const double MaxExperimentalTeleportDragDistanceCorrection = 1d;
+    public const double MaxExperimentalTeleportDragDistanceCorrection = 2d;
     public const double DefaultExperimentalTeleportDragDistanceCorrection = 1d;
     public const int MinExperimentalTeleportStateRecognitionIntervalMilliseconds = 10;
     public const int MaxExperimentalTeleportStateRecognitionIntervalMilliseconds = 500;
@@ -39,8 +39,8 @@ public partial class TpConfig : ObservableValidator
     public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 10;
     public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
     public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 75;
-    public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 16;
-    public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 200;
+    public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 10;
+    public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 300;
     public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 150;
 
     [ObservableProperty]
@@ -64,7 +64,7 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     [NotifyDataErrorInfo]
     [Range(MinExperimentalTeleportDragDistanceCorrection, MaxExperimentalTeleportDragDistanceCorrection,
-        ErrorMessage = "实验传送理论拖动距离修正：0.1-1.0")]
+        ErrorMessage = "实验传送理论拖动距离修正：0.1-2.0")]
     private double _experimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
 
     partial void OnExperimentalTeleportDragDistanceCorrectionChanged(double value)
@@ -78,7 +78,7 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     [NotifyDataErrorInfo]
     [Range(MinExperimentalTeleportDragStepIntervalMilliseconds, MaxExperimentalTeleportDragStepIntervalMilliseconds,
-        ErrorMessage = "实验传送拖动步进间隔：2-100 ms")]
+        ErrorMessage = "实验传送拖动步进间隔：1-100 ms")]
     private int _experimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
 
     partial void OnExperimentalTeleportDragStepIntervalMillisecondsChanged(int value)
@@ -190,7 +190,7 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     [NotifyDataErrorInfo]
     [Range(MinExperimentalTeleportMaxSingleStepDistancePixels, MaxExperimentalTeleportMaxSingleStepDistancePixels,
-        ErrorMessage = "实验传送单步最大输入距离：16-200 px")]
+        ErrorMessage = "实验传送单步最大输入距离：10-300 px")]
     private int _experimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
 
     partial void OnExperimentalTeleportMaxSingleStepDistancePixelsChanged(int value)

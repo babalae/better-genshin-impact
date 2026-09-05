@@ -358,14 +358,22 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             realRect.X + buttonX * realScale,
             realRect.Y + initialY * realScale);
         await Delay(GetOperationInterval(), ct);
+        var dragStartDelay = Math.Clamp(
+            config.ExperimentalTeleportDragStartDelayMilliseconds,
+            TpConfig.MinExperimentalTeleportDragStartDelayMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragStartDelayMilliseconds);
+        var dragReleaseDelay = Math.Clamp(
+            config.ExperimentalTeleportDragReleaseDelayMilliseconds,
+            TpConfig.MinExperimentalTeleportDragReleaseDelayMilliseconds,
+            TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(GetOperationInterval(), ct);
+            await Delay(dragStartDelay, ct);
             DesktopRegion.DesktopRegionMove(
                 realRect.X + buttonX * realScale,
                 realRect.Y + targetY * realScale);
-            await Delay(GetOperationInterval(), ct);
+            await Delay(dragReleaseDelay, ct);
         }
         finally
         {
