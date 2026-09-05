@@ -636,7 +636,10 @@ public class Avatar
         }
     }
 
-    private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
+    /// <summary>
+    /// 通过 ONNX 分类器判断当前场上角色的Q爆发是否就绪（仅对场上角色有效）
+    /// </summary>
+    internal static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
         using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).QRectForClassify);
         var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
