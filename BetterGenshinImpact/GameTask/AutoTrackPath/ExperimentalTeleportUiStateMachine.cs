@@ -386,7 +386,8 @@ internal sealed class ExperimentalTeleportUiStateMachine
             // 避免等待地图/区域状态时每轮都扫描候选列表。
             if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&
                 (expectedState is null ||
-                 expectedState is ExperimentalTeleportUiState.TeleportCandidateList or ExperimentalTeleportUiState.TeleportDetails)) &&
+                 expectedState == ExperimentalTeleportUiState.TeleportCandidateList ||
+                 expectedState == ExperimentalTeleportUiState.TeleportDetails) &&
                 _host.HasExperimentalMapChooseCandidate(capture, context.TargetTp))
             {
                 return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportCandidateList);
