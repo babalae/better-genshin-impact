@@ -22,7 +22,8 @@ public static class AutoBossData
             ["须弥"] = ["掣电树", "半永恒统辖矩阵", "翠翎恐蕈", "风蚀沙虫", "无相之草", "深罪浸礼者", "兆载永劫龙兽"],
             ["枫丹"] = ["歌裴莉娅的葬送", "科培琉司的劫罚", "实验性场力发生装置", "魔像督军", "千年珍珠骏麟", "水形幻人", "铁甲熔火帝皇"],
             ["纳塔"] = ["金焰绒翼龙暴君", "灵觉隐修的迷者", "秘源机兵·构型械", "秘源机兵·统御械", "熔岩辉龙像", "深邃摹结株", "贪食匿叶龙山王"],
-            ["挪德卡莱"] = ["蕴光月守宫", "深黯魇语之主", "超重型陆巡舰·机动战垒", "霜夜巡天灵主", "蕴光月幻蝶", "重拳出击鸭"]
+            ["挪德卡莱"] = ["蕴光月守宫", "深黯魇语之主", "超重型陆巡舰·机动战垒", "霜夜巡天灵主", "蕴光月幻蝶", "重拳出击鸭"],
+            ["至冬"] = ["不灭衍生造物", "嵌合翼骏狮"]
         };
 
     /// <summary>
@@ -54,6 +55,14 @@ public static class AutoBossData
     ];
 
     /// <summary>
+    /// 战斗后需要重新执行完整前往路线的 Boss。
+    /// </summary>
+    public static readonly HashSet<string> RerunRouteBosses =
+    [
+        "不灭衍生造物"
+    ];
+
+    /// <summary>
     /// 判断 Boss 是否在支持列表中。
     /// </summary>
     /// <param name="bossName">Boss 名称。</param>
@@ -81,5 +90,13 @@ public static class AutoBossData
     public static bool IsNoPathingSupportBoss(string bossName)
     {
         return NoPathingSupportBosses.Contains(bossName);
+    }
+
+    /// <summary>
+    /// 判断 Boss 战斗后是否需要重新执行完整前往路线。
+    /// </summary>
+    public static bool ShouldRerunRoute(string bossName)
+    {
+        return RerunRouteBosses.Contains(bossName);
     }
 }
