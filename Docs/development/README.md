@@ -4,4 +4,4 @@
 
 ## 文档列表
 
-- [调度器预制菜编写说明](config-group-preset.md)
+- [调度器预设配置组编写说明](config-group-preset.md)

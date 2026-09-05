@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace BetterGenshinImpact.Core.Script.Group.Preset;
 
 /// <summary>
-/// 本体内置预制菜的描述文件。它与 Javascript 项目的 Manifest 分开，避免要求存在 main.js。
+/// 本体内置预设配置组的描述文件。它与 Javascript 项目的 Manifest 分开，避免要求存在 main.js。
 /// </summary>
 public sealed class ConfigGroupPresetManifest
 {

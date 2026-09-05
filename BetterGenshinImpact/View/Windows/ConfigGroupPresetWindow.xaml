@@ -6,7 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:markdown="clr-namespace:BetterGenshinImpact.View.Controls.Markdown"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
-                 Title="{i18n:T 内置预制菜}"
+                 Title="{i18n:T 内置预设配置组}"
                  Width="960"
                  Height="640"
                  MinWidth="760"
@@ -22,7 +22,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="{i18n:T 内置预制菜}">
+        <ui:TitleBar Grid.Row="0" Title="{i18n:T 内置预设配置组}">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="AppsList24" />
             </ui:TitleBar.Icon>
@@ -48,7 +48,7 @@
                     </Grid.RowDefinitions>
                     <TextBlock Margin="4,2,4,8"
                                FontWeight="SemiBold"
-                               Text="{i18n:T 选择预制菜}" />
+                               Text="{i18n:T 选择预设配置组}" />
                     <ListView Grid.Row="1"
                               ItemsSource="{Binding Presets}"
                               SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
@@ -57,7 +57,9 @@
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="4,6">
-                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                    <TextBlock FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               Text="{Binding Name}" />
                                     <TextBlock Margin="0,2,0,0"
                                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                                Text="{Binding Version}" />
@@ -78,7 +80,7 @@
                     <TextBlock HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                               Text="{i18n:T 请从左侧选择一个预制菜}">
+                               Text="{i18n:T 请从左侧选择一个预设配置组}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -147,7 +149,7 @@
                                    Margin="0,12,0,0"
                                    HorizontalAlignment="Left"
                                    Command="{Binding ApplyPresetCommand}"
-                                   Content="{i18n:T 应用预制菜}" />
+                                   Content="{i18n:T 应用预设配置组}" />
                     </Grid>
                 </Grid>
             </Border>

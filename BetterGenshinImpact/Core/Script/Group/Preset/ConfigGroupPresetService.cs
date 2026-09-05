@@ -11,7 +11,7 @@ using System.Text.Json;
 namespace BetterGenshinImpact.Core.Script.Group.Preset;
 
 /// <summary>
-/// 扫描和应用本体内置预制菜。依赖只做本地完整性检查，不修改脚本仓库订阅状态。
+/// 扫描和应用本体内置预设配置组。依赖只做本地完整性检查，不修改脚本仓库订阅状态。
 /// </summary>
 public sealed class ConfigGroupPresetService
 {
@@ -47,7 +47,7 @@ public sealed class ConfigGroupPresetService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "读取内置预制菜失败: {Directory}", directory);
+                _logger.LogWarning(ex, "读取内置预设配置组失败: {Directory}", directory);
             }
         }
 
@@ -60,18 +60,18 @@ public sealed class ConfigGroupPresetService
         var manifestPath = Path.Combine(directory, "manifest.json");
         if (!File.Exists(manifestPath))
         {
-            throw new FileNotFoundException("预制菜 manifest.json 不存在", manifestPath);
+            throw new FileNotFoundException("预设配置组 manifest.json 不存在", manifestPath);
         }
 
         var manifest = JsonSerializer.Deserialize<ConfigGroupPresetManifest>(
             File.ReadAllText(manifestPath), Global.ManifestJsonOptions)
-            ?? throw new InvalidDataException("预制菜 manifest.json 为空或格式错误");
+            ?? throw new InvalidDataException("预设配置组 manifest.json 为空或格式错误");
 
         ValidateManifest(manifest);
         var directoryName = new DirectoryInfo(directory).Name;
         if (!string.Equals(directoryName, manifest.Name, StringComparison.Ordinal))
         {
-            throw new InvalidDataException("预制菜目录名必须与 manifest 中的 name 一致");
+            throw new InvalidDataException("预设配置组目录名必须与 manifest 中的 name 一致");
         }
         var configFile = string.IsNullOrWhiteSpace(manifest.ConfigGroupFile)
             ? $"{manifest.Name}.json"
@@ -79,13 +79,13 @@ public sealed class ConfigGroupPresetService
         var configPath = ResolveInside(directory, configFile);
         if (!File.Exists(configPath))
         {
-            throw new FileNotFoundException("预制菜配置组文件不存在", configPath);
+            throw new FileNotFoundException("预设配置组配置文件不存在", configPath);
         }
 
         var group = ScriptGroup.FromJson(File.ReadAllText(configPath));
         if (!string.Equals(group.Name, manifest.Name, StringComparison.Ordinal))
         {
-            throw new InvalidDataException("预制菜名称与配置组 name 不一致");
+            throw new InvalidDataException("预设配置组名称与配置组 name 不一致");
         }
 
         string? readmePath = null;
@@ -155,7 +155,7 @@ public sealed class ConfigGroupPresetService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "应用内置预制菜失败: {Name}", item.Name);
+            _logger.LogError(ex, "应用内置预设配置组失败: {Name}", item.Name);
             return new ConfigGroupPresetApplyResult(
                 ConfigGroupPresetApplyStatus.Failed, [], ex.Message);
         }
@@ -171,11 +171,11 @@ public sealed class ConfigGroupPresetService
 
     private static string ResolveInside(string directory, string relativePath)
     {
-        if (Path.IsPathRooted(relativePath)) throw new InvalidDataException("预制菜文件路径不能是绝对路径");
+        if (Path.IsPathRooted(relativePath)) throw new InvalidDataException("预设配置组文件路径不能是绝对路径");
         var fullPath = Path.GetFullPath(Path.Combine(directory, relativePath.Replace('/', Path.DirectorySeparatorChar)));
         var prefix = directory.EndsWith(Path.DirectorySeparatorChar) ? directory : directory + Path.DirectorySeparatorChar;
         if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("预制菜文件路径超出预制菜目录");
+            throw new InvalidDataException("预设配置组文件路径超出预设配置组目录");
         return fullPath;
     }
 
@@ -243,7 +243,7 @@ public sealed class ConfigGroupPresetService
             }
             catch
             {
-                // 无效的用户文件不会阻止预制菜应用。
+                // 无效的用户文件不会阻止预设配置组应用。
             }
         }
 

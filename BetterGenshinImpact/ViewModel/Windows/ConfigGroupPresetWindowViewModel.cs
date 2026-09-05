@@ -12,7 +12,7 @@ using Wpf.Ui.Violeta.Controls;
 namespace BetterGenshinImpact.ViewModel.Windows;
 
 /// <summary>
-/// 调度器内置预制菜浏览窗口的数据和操作。
+/// 调度器内置预设配置组浏览窗口的数据和操作。
 /// </summary>
 public partial class ConfigGroupPresetWindowViewModel : ObservableObject
 {
@@ -45,13 +45,13 @@ public partial class ConfigGroupPresetWindowViewModel : ObservableObject
         switch (result.Status)
         {
             case ConfigGroupPresetApplyStatus.Success:
-                Toast.Success($"预制菜 {preset.Name} 已应用到调度器");
+                Toast.Success($"预设配置组 {preset.Name} 已应用到调度器");
                 WeakReferenceMessenger.Default.Send(new RefreshDataMessage("Refresh"));
                 break;
             case ConfigGroupPresetApplyStatus.MissingDependencies:
                 await ThemedMessageBox.ShowAsync(
-                    $"无法应用预制菜“{preset.Name}”。\n\n依赖不满足：\n- {string.Join("\n- ", result.MissingDependencies)}\n\n请前往订阅上述依赖后再重试。",
-                    "预制菜依赖不完整");
+                    $"无法应用预设配置组“{preset.Name}”。\n\n依赖不满足：\n- {string.Join("\n- ", result.MissingDependencies)}\n\n请前往订阅上述依赖后再重试。",
+                    "预设配置组依赖不完整");
                 break;
             case ConfigGroupPresetApplyStatus.Conflict:
                 await ThemedMessageBox.ShowAsync(
@@ -60,7 +60,7 @@ public partial class ConfigGroupPresetWindowViewModel : ObservableObject
                 break;
             default:
                 await ThemedMessageBox.ShowAsync(
-                    result.ErrorMessage ?? "预制菜应用失败。", "预制菜应用失败");
+                    result.ErrorMessage ?? "预设配置组应用失败。", "预设配置组应用失败");
                 break;
         }
     }
