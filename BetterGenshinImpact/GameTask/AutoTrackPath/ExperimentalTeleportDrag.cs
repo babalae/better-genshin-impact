@@ -69,6 +69,42 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         return IsSafePoint(clickX, clickY, rect.Width, rect.Height, EarlyStopMargin, country);
     }
 
+    internal bool CanCompleteSingleDrag(
+        double requestedDeltaX,
+        double requestedDeltaY,
+        string? country = null)
+    {
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var correction = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection) &&
+                         config.ExperimentalTeleportDragDistanceCorrection > 0
+            ? config.ExperimentalTeleportDragDistanceCorrection
+            : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
+        var desiredX = requestedDeltaX * correction;
+        var desiredY = requestedDeltaY * correction;
+        var desiredDistance = Math.Sqrt(desiredX * desiredX + desiredY * desiredY);
+        if (!double.IsFinite(desiredDistance))
+        {
+            return false;
+        }
+
+        if (!TryCreateRelaxedRunway(
+                desiredX,
+                desiredY,
+                captureRect.Width,
+                captureRect.Height,
+                country,
+                null,
+                out var start,
+                out var end))
+        {
+            return false;
+        }
+
+        var runwayDistance = Math.Sqrt(
+            Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+        return runwayDistance + 1e-6d >= desiredDistance;
+    }
+
     public async Task<DragResult> DragAsync(
         double requestedDeltaX,
         double requestedDeltaY,

@@ -125,12 +125,15 @@ public class TpTask
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
     private Func<int, int, Task<ExperimentalTeleportDrag.DragResult>>? _experimentalDrag;
+    private ExperimentalTeleportDrag? _experimentalDragController;
     private Action? _experimentalDragFailureHandler;
     private Func<double, double, Task>? _experimentalZoomAdjuster;
     private ExperimentalTeleportUiStateMachine? _experimentalUiStateMachine;
     private Rect? _experimentalBigMapRectCache;
     private string? _experimentalBigMapRectCacheMapName;
     private double? _experimentalZoomLevelCache;
+    private GiTpPosition? _experimentalTargetTp;
+    private string? _experimentalTargetMapName;
 
     private sealed class MapChooseCandidate
     {
@@ -372,6 +375,9 @@ public class TpTask
         var scaleY = imageRegion.Height / 1080d;
         var captureScaleX = _captureRect.Width / 1920d;
         var captureScaleY = _captureRect.Height / 1080d;
+        // 目标图标坐标只需从当前截图和地图矩形计算一次；不要在每个候选图标上重复做
+        // MapScaleButton 识别和大地图矩形匹配，这些操作明显比矩形比较更昂贵。
+        var hasTargetIconCenter = TryGetExperimentalTargetIconCenter(imageRegion, out var targetIconCenter);
         var forbiddenRects = icons
             .Select(icon => new Rect2d(
                 icon.CenterX / Math.Max(scaleX, 1e-6d) - 40d,
@@ -383,6 +389,11 @@ public class TpTask
                            point.X <= rect.Right * captureScaleX &&
                            point.Y >= rect.Y * captureScaleY &&
                            point.Y <= rect.Bottom * captureScaleY)
+            // 目标传送点图标是后续要点击的对象，不应被当作拖动完成后的危险图标。
+            // 拖动起点扫描仍避让其他传送点图标，避免按下时误触发点位面板。
+            .Where(rect => !hasTargetIconCenter ||
+                           Math.Abs(rect.X + rect.Width / 2d - targetIconCenter.X) > 60d ||
+                           Math.Abs(rect.Y + rect.Height / 2d - targetIconCenter.Y) > 60d)
             .ToList();
 
         var formattedRects = string.Join(
@@ -412,6 +423,36 @@ public class TpTask
         return forbiddenRects;
     }
 
+    private bool TryGetExperimentalTargetIconCenter(ImageRegion imageRegion, out Point2d targetIconCenter)
+    {
+        targetIconCenter = default;
+        try
+        {
+            if (_experimentalTargetTp is null ||
+                string.IsNullOrEmpty(_experimentalTargetMapName) ||
+                !TryGetBigMapRectFromCapture(imageRegion, _experimentalTargetMapName, out var mapRect))
+            {
+                return false;
+            }
+
+            var (targetX, targetY) = ConvertToGameRegionPosition(
+                _experimentalTargetMapName,
+                mapRect,
+                _experimentalTargetTp.X,
+                _experimentalTargetTp.Y);
+            var scaleX = imageRegion.Width / 1920d;
+            var scaleY = imageRegion.Height / 1080d;
+            targetIconCenter = new Point2d(
+                targetX / Math.Max(scaleX, 1e-6d),
+                targetY / Math.Max(scaleY, 1e-6d));
+            return double.IsFinite(targetIconCenter.X) && double.IsFinite(targetIconCenter.Y);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     internal void OpenExperimentalAreaList()
     {
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
@@ -431,6 +472,7 @@ public class TpTask
         ExperimentalTeleportUiStateMachine uiStateMachine)
     {
         _experimentalDrag = CreateExperimentalDragDelegate(drag);
+        _experimentalDragController = drag;
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         InvalidateExperimentalMapRecognitionCache();
@@ -443,6 +485,7 @@ public class TpTask
             _experimentalUiStateMachine = null;
             _experimentalZoomAdjuster = null;
             _experimentalDrag = null;
+            _experimentalDragController = null;
             _experimentalDragFailureHandler = null;
         }
     }
@@ -455,6 +498,7 @@ public class TpTask
         var drag = new ExperimentalTeleportDrag(_tpConfig, ct);
         var uiStateMachine = new ExperimentalTeleportUiStateMachine(this, _tpConfig, ct);
         _experimentalDrag = CreateExperimentalDragDelegate(drag);
+        _experimentalDragController = drag;
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         InvalidateExperimentalMapRecognitionCache();
@@ -468,6 +512,7 @@ public class TpTask
             _experimentalUiStateMachine = null;
             _experimentalZoomAdjuster = null;
             _experimentalDrag = null;
+            _experimentalDragController = null;
             _experimentalDragFailureHandler = null;
         }
     }
@@ -518,7 +563,7 @@ public class TpTask
                 var forbiddenStartRects = detectedForbiddenStartRects
                     .Concat(failedStartRects)
                     .ToList();
-                result = await drag.DragAsync(x, y, null, forbiddenStartRects, ProbeForbiddenStart);
+                result = await drag.DragAsync(x, y, _experimentalTargetTp?.Country, forbiddenStartRects, ProbeForbiddenStart);
                 lastResult = result;
                 if (result.Moved)
                 {
@@ -540,7 +585,7 @@ public class TpTask
                     forbiddenStartRects = detectedForbiddenStartRects
                         .Concat(failedStartRects)
                         .ToList();
-                    result = await drag.DragAsync(x, y, null, forbiddenStartRects);
+                    result = await drag.DragAsync(x, y, _experimentalTargetTp?.Country, forbiddenStartRects);
                     lastResult = result;
                     if (result.Moved)
                     {
@@ -822,7 +867,16 @@ public class TpTask
 
         var target = ResolveTeleportTarget(tpX, tpY, mapName, force);
         LogTeleportTarget(target);
-        await SwitchToTeleportTargetMap(target);
+        _experimentalTargetTp = target.Force ? null : target.TargetTp;
+        _experimentalTargetMapName = target.MapName;
+        if (_experimentalUiStateMachine is not null)
+        {
+            await PrepareExperimentalTeleportMap(target);
+        }
+        else
+        {
+            await SwitchToTeleportTargetMap(target);
+        }
         InvalidateExperimentalMapRecognitionCache();
 
         var clickView = await PrepareTeleportClickView(target);
@@ -955,6 +1009,140 @@ public class TpTask
 
             await SwitchArea(areaName);
         }
+    }
+
+    private async Task PrepareExperimentalTeleportMap(TeleportTargetContext target)
+    {
+        if (!string.Equals(target.MapName, MapTypes.Teyvat.ToString(), StringComparison.Ordinal))
+        {
+            await SwitchToTeleportTargetMap(target);
+            return;
+        }
+
+        if (!TryGetExperimentalCurrentMapState(target.MapName, out var currentCenter, out var currentZoom))
+        {
+            await Delay(GetTeleportOperationDelay(100), ct);
+            if (!TryGetExperimentalCurrentMapState(target.MapName, out currentCenter, out currentZoom))
+            {
+                // 严格只重试一次当前位置识别。旧的 SwitchRecentlyCountryMap 会再次
+                // 读取当前位置，既增加开销，也违背本流程的重试次数约定；此处在无法
+                // 获取当前位置时直接依据目标国家（强制坐标则取最近国家）切换。
+                var fallbackCountry = target.Country;
+                if (string.IsNullOrWhiteSpace(fallbackCountry) &&
+                    TryGetNearestCountryCenter(target.X, target.Y, out var nearestCountry, out _))
+                {
+                    fallbackCountry = nearestCountry;
+                }
+
+                Logger.LogDebug(
+                    "实验传送当前位置识别失败，跳过第三次识别并回退国家切换：country={Country}",
+                    fallbackCountry ?? "未确定");
+                if (!string.IsNullOrWhiteSpace(fallbackCountry))
+                {
+                    await SwitchArea(fallbackCountry);
+                }
+
+                return;
+            }
+        }
+
+        if (CanReachTargetInSingleExperimentalDrag(target, currentCenter, currentZoom))
+        {
+            Logger.LogDebug("实验传送当前视野一次拖动可达目标，跳过缩放和国家切换");
+            return;
+        }
+
+        if (TryGetNearestCountryCenter(target.X, target.Y, out var country, out var countryCenter))
+        {
+            var currentDistance = GetDistance(currentCenter.X, currentCenter.Y, target.X, target.Y);
+            var countryDistance = GetDistance(countryCenter.X, countryCenter.Y, target.X, target.Y);
+            if (currentDistance - 1000d > countryDistance)
+            {
+                Logger.LogDebug(
+                    "实验传送距离不足，切换到国家中心：country={Country} currentDistance={CurrentDistance:0.0} countryDistance={CountryDistance:0.0}",
+                    country,
+                    currentDistance,
+                    countryDistance);
+                await SwitchArea(country);
+                currentCenter = countryCenter;
+            }
+        }
+
+        // 国家切换可能改变地图界面状态，不能复用切换前的缩放缓存。
+        InvalidateExperimentalMapRecognitionCache();
+        currentZoom = GetCurrentBigMapZoomLevel();
+        if (!CanReachTargetInSingleExperimentalDrag(target, currentCenter, currentZoom))
+        {
+            var widestMapZoom = GetTeleportTravelZoomLevel();
+            if (!IsZoomCloseEnough(currentZoom, widestMapZoom))
+            {
+                Logger.LogDebug("实验传送一次拖动仍不可达，缩放到最小地图：from={CurrentZoom:0.00} to={TargetZoom:0.00}", currentZoom, widestMapZoom);
+                await AdjustMapZoomLevel(currentZoom, widestMapZoom);
+            }
+        }
+    }
+
+    private bool TryGetExperimentalCurrentMapState(
+        string mapName,
+        out Point2f center,
+        out double zoomLevel)
+    {
+        center = default;
+        zoomLevel = 0;
+        try
+        {
+            center = GetPositionFromBigMap(mapName);
+            zoomLevel = GetCurrentBigMapZoomLevel();
+            return center.IsEmpty() == false && IsFinite(zoomLevel) && zoomLevel > 0;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogDebug("实验传送获取当前地图坐标失败：{Message}", ex.Message);
+            return false;
+        }
+    }
+
+    private bool CanReachTargetInSingleExperimentalDrag(
+        TeleportTargetContext target,
+        Point2f currentCenter,
+        double zoomLevel)
+    {
+        if (_experimentalDragController is null || !IsFinite(zoomLevel) || zoomLevel <= 0)
+        {
+            return false;
+        }
+
+        var requestedDeltaX = _tpConfig.MapScaleFactor * (target.X - currentCenter.X) / zoomLevel;
+        var requestedDeltaY = _tpConfig.MapScaleFactor * (target.Y - currentCenter.Y) / zoomLevel;
+        return _experimentalDragController.CanCompleteSingleDrag(requestedDeltaX, requestedDeltaY, target.Country);
+    }
+
+    private static bool TryGetNearestCountryCenter(
+        double targetX,
+        double targetY,
+        out string country,
+        out Point2f center)
+    {
+        country = string.Empty;
+        center = default;
+        var nearestDistance = double.MaxValue;
+        foreach (var (name, position) in MapLazyAssets.Get().CountryPositions)
+        {
+            if (position.Length < 2)
+            {
+                continue;
+            }
+
+            var candidateDistance = GetDistance(position[0], position[1], targetX, targetY);
+            if (candidateDistance < nearestDistance)
+            {
+                nearestDistance = candidateDistance;
+                country = name;
+                center = new Point2f((float)position[0], (float)position[1]);
+            }
+        }
+
+        return !string.IsNullOrEmpty(country);
     }
 
     private static bool ShouldForceSwitchFromIndependentMapToTeyvat()
