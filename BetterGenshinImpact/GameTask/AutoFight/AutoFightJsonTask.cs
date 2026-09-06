@@ -494,6 +494,8 @@ public class AutoFightJsonTask : ISoloTask
         }
         finally
         {
+            // 战斗可能在创建 fightTask 前因复活/恢复异常退出，统一清理战斗状态。
+            AutoFightTask.FightStatusFlag = false;
             AvatarRecognition.ClearCurrentAutoFightParam();
         }
     }
@@ -539,6 +541,11 @@ public class AutoFightJsonTask : ISoloTask
 
             // 更新当前角色名，供后续无指定角色动作使用
             _currentAvatarName = character;
+        }
+        catch (RetryException)
+        {
+            // 复活/恢复信号必须传递给 PathExecutor，以便重跑当前路径段。
+            throw;
         }
         catch (Exception e)
         {
@@ -594,7 +601,8 @@ public class AutoFightJsonTask : ISoloTask
             }
             catch (RetryException e)
             {
-                Logger.LogWarning("战斗前动作重试异常，跳过此动作继续：{Msg}", e.Message);
+                Logger.LogWarning("战斗前动作要求中断当前战斗：{Msg}", e.Message);
+                throw;
             }
             Logger.LogInformation("战斗前动作：{Action}", preAction);
             await Delay(300, _ct);
