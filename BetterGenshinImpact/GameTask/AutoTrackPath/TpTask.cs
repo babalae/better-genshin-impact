@@ -798,7 +798,8 @@ public class TpTask
 
         await MouseMoveMap(
             GetDisplayScaleAdjustedMouseDelta(moveMouseX),
-            GetDisplayScaleAdjustedMouseDelta(moveMouseY));
+            GetDisplayScaleAdjustedMouseDelta(moveMouseY),
+            GetVisibleTeleportPointRects(clickView.MapName, clickView.BigMapInAllMapRect));
     }
 
     private async Task<bool> AdjustInitialTeleportMoveZoomLevel(string mapName, double targetX, double targetY)
@@ -1411,7 +1412,10 @@ public class TpTask
             int effectiveMoveMouseX = GetDisplayScaleAdjustedMouseDelta(moveMouseX);
             int effectiveMoveMouseY = GetDisplayScaleAdjustedMouseDelta(moveMouseY);
 
-            var mouseMoveResult = await MouseMoveMap(effectiveMoveMouseX, effectiveMoveMouseY);
+            var mouseMoveResult = await MouseMoveMap(
+                effectiveMoveMouseX,
+                effectiveMoveMouseY,
+                GetVisibleTeleportPointRects(mapName, targetBigMapRect));
             await Delay(30, ct);
 
             // 推算理论上的移动后坐标 (惯性预测)
@@ -1888,20 +1892,11 @@ public class TpTask
         return true;
     }
 
-    private async Task<(int SentDeltaX, int SentDeltaY, int Steps, double StartX, double StartY, double EndX, double EndY, double ActualDeltaX, double ActualDeltaY)> MouseMoveMap(int pixelDeltaX, int pixelDeltaY)
+    private async Task<(int SentDeltaX, int SentDeltaY, int Steps, double StartX, double StartY, double EndX, double EndY, double ActualDeltaX, double ActualDeltaY)> MouseMoveMap(
+        int pixelDeltaX,
+        int pixelDeltaY,
+        IReadOnlyList<Rect> teleportRects)
     {
-        // 每次拖动前重新识别，避免地图移动或缩放后使用过期的传送点矩形。
-        List<Rect> teleportRects;
-        using (var capture = CaptureToRectArea())
-        {
-            teleportRects = GetMapIconsInRect(
-                    capture,
-                    new Rect(0, 0, capture.Width, capture.Height),
-                    0, 0, double.PositiveInfinity)
-                .Select(icon => icon.Rect)
-                .ToList();
-        }
-
         // 起点向预期拖动方向的反方向偏移，并保留随机性；位移按可拖动地图区域裁剪。
         double startX = 0;
         double startY = 0;
@@ -2942,6 +2937,28 @@ public class TpTask
         }
 
         return result;
+    }
+
+    private List<Rect> GetVisibleTeleportPointRects(string mapName, Rect bigMapInAllMapRect)
+    {
+        return GetVisibleExpectedMapIcons(mapName, bigMapInAllMapRect)
+            .Select(expected =>
+            {
+                var templates = _assets.MapChooseIconGreyMatList
+                    .Where((_, index) => expected.IconTypes.Contains(
+                        GetMapChooseIconType(GetMapChooseIconFileName(_assets.MapChooseIconRoList[index]))))
+                    .Where(template => !template.Empty())
+                    .ToList();
+                var width = templates.Count == 0 ? 0 : templates.Max(template => template.Width);
+                var height = templates.Count == 0 ? 0 : templates.Max(template => template.Height);
+                return new Rect(
+                    (int)Math.Round(expected.ScreenX - width / 2d),
+                    (int)Math.Round(expected.ScreenY - height / 2d),
+                    width,
+                    height);
+            })
+            .Where(rect => rect.Width > 0 && rect.Height > 0)
+            .ToList();
     }
 
     private List<NearbyMapIcon> GetVisibleMapIcons(
