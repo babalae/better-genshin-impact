@@ -7,7 +7,6 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
-      xmlns:tp="clr-namespace:BetterGenshinImpact.GameTask.AutoTrackPath"
       xmlns:media="clr-namespace:System.Windows.Media;assembly=PresentationCore"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
@@ -1401,26 +1400,14 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Orientation="Horizontal">
-                        <Slider Width="180"
-                                VerticalAlignment="Center"
-                                IsSnapToTickEnabled="True"
-                                Maximum="100"
-                                Minimum="2"
-                                TickFrequency="1"
-                                Value="{Binding Config.TpConfig.TeleportOperationDelayMilliseconds, Mode=TwoWay}" />
-                        <TextBlock MinWidth="48"
-                                   Margin="12,0,0,0"
+                        <TextBox Width="120"
+                                 TextAlignment="Right"
+                                 Text="{Binding Config.TpConfig.TeleportOperationDelayMultiplier, Mode=TwoWay}" />
+                        <TextBlock Margin="6,0,0,0"
                                    VerticalAlignment="Center"
                                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                    FontSize="14"
-                                   Text="{Binding Config.TpConfig.TeleportOperationDelayPercentage, StringFormat={}{0}%}" />
-                        <TextBlock MinWidth="58"
-                                   Margin="6,0,0,0"
-                                   VerticalAlignment="Center"
-                                   FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
-                                   FontSize="14"
-                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                   Text="{Binding Config.TpConfig.TeleportOperationDelayMilliseconds, StringFormat={}({0} ms)}" />
+                                   Text="x" />
                     </StackPanel>
                 </Grid>
                 <Grid Margin="16">
@@ -1444,60 +1431,52 @@
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 理论拖动距离修正倍率}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragDistanceCorrection, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
-                    </Grid>
-                    <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 拖动路径安全等级}" />
-                        <ComboBox Grid.Column="1" SelectedValue="{Binding Config.TpConfig.ExperimentalTeleportDragSafetyLevel, Mode=TwoWay}" SelectedValuePath="Tag">
-                            <ComboBoxItem Tag="{x:Static tp:ExperimentalTeleportDragSafetyLevel.Conservative}" Content="{i18n:T 保守}" />
-                            <ComboBoxItem Tag="{x:Static tp:ExperimentalTeleportDragSafetyLevel.Balanced}" Content="{i18n:T 平衡}" />
-                            <ComboBoxItem Tag="{x:Static tp:ExperimentalTeleportDragSafetyLevel.Overlimit}" Content="{i18n:T 超限}" />
-                        </ComboBox>
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragDistanceCorrection, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 单步最大输入距离（像素）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportMaxSingleStepDistancePixels, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportMaxSingleStepDistancePixels, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 拖动步进间隔（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragStepIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragStepIntervalMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 状态识别轮询间隔（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 状态识别轮询开始前等待（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 状态切换等待上限（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 打开地图总超时（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportMapOpenTimeoutMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportMapOpenTimeoutMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 打开地图补按 M 间隔（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportMapOpenRepressIntervalMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportMapOpenRepressIntervalMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 按下左键后开始拖动延迟（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragStartDelayMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragStartDelayMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 拖动结束后松开左键延迟（毫秒）}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
-                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragReleaseDelayMilliseconds, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                                 Text="{Binding Config.TpConfig.ExperimentalTeleportDragReleaseDelayMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 输出详细日志}" />

@@ -25,7 +25,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double ZoomButtonX = 47d;
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
-    private const double OverlimitDistanceCorrection = 0.5d;
     private const int MaxStartValidationAttempts = 5;
 
     private static readonly Rect2d[] DangerRects =
@@ -86,17 +85,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var systemInfo = TaskContext.Instance().SystemInfo;
         var captureRect = systemInfo.ScaleMax1080PCaptureRect;
         var realCaptureRect = systemInfo.CaptureAreaRect;
-        var distanceCorrection = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection)
-            ? Math.Clamp(
-                config.ExperimentalTeleportDragDistanceCorrection,
-                TpConfig.MinExperimentalTeleportDragDistanceCorrection,
-                TpConfig.MaxExperimentalTeleportDragDistanceCorrection)
+        var distanceCorrection = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection) &&
+                                  config.ExperimentalTeleportDragDistanceCorrection > 0
+            ? config.ExperimentalTeleportDragDistanceCorrection
             : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
-        var isOverlimit = config.ExperimentalTeleportDragSafetyLevel == ExperimentalTeleportDragSafetyLevel.Overlimit;
-        var effectiveDistanceCorrection = isOverlimit
-            ? distanceCorrection * OverlimitDistanceCorrection
-            : distanceCorrection;
-        var ratioSource = isOverlimit ? "configured*overlimit" : "configured";
+        var effectiveDistanceCorrection = distanceCorrection;
         var desiredX = requestedDeltaX * effectiveDistanceCorrection;
         var desiredY = requestedDeltaY * effectiveDistanceCorrection;
         var activeForbiddenStartRects = forbiddenStartRects?.ToList() ?? [];
@@ -105,39 +98,15 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var startValidationAttempts = 0;
         while (true)
         {
-            var runwayCreated = config.ExperimentalTeleportDragSafetyLevel switch
-            {
-                ExperimentalTeleportDragSafetyLevel.Conservative => TryCreateSafeRunway(
-                    desiredX,
-                    desiredY,
-                    captureRect.Width,
-                    captureRect.Height,
-                    country,
-                    activeForbiddenStartRects,
-                    out selectedStart,
-                    out selectedEnd),
-                ExperimentalTeleportDragSafetyLevel.Balanced => TryCreateRelaxedRunway(
-                    desiredX,
-                    desiredY,
-                    captureRect.Width,
-                    captureRect.Height,
-                    country,
-                    activeForbiddenStartRects,
-                    allowEndOutsideScreen: false,
-                    out selectedStart,
-                    out selectedEnd),
-                ExperimentalTeleportDragSafetyLevel.Overlimit => TryCreateRelaxedRunway(
-                    desiredX,
-                    desiredY,
-                    captureRect.Width,
-                    captureRect.Height,
-                    country,
-                    activeForbiddenStartRects,
-                    allowEndOutsideScreen: true,
-                    out selectedStart,
-                    out selectedEnd),
-                _ => false,
-            };
+            var runwayCreated = TryCreateRelaxedRunway(
+                desiredX,
+                desiredY,
+                captureRect.Width,
+                captureRect.Height,
+                country,
+                activeForbiddenStartRects,
+                out selectedStart,
+                out selectedEnd);
 
             if (!runwayCreated)
             {
@@ -180,25 +149,16 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var start = selectedStart;
         var end = selectedEnd;
 
-        var allowEndOutsideScreen = config.ExperimentalTeleportDragSafetyLevel == ExperimentalTeleportDragSafetyLevel.Overlimit;
         var screenStart = ToScreenPoint(start, captureRect, realCaptureRect);
-        var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect, clampToCapture: !allowEndOutsideScreen);
+        var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect, clampToCapture: true);
         var boundaryDelay = GetOperationInterval();
-        var dragStartDelay = Math.Clamp(
-            config.ExperimentalTeleportDragStartDelayMilliseconds,
-            TpConfig.MinExperimentalTeleportDragStartDelayMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragStartDelayMilliseconds);
-        var dragReleaseDelay = Math.Clamp(
-            config.ExperimentalTeleportDragReleaseDelayMilliseconds,
-            TpConfig.MinExperimentalTeleportDragReleaseDelayMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
+        var dragStartDelay = Math.Max(1, config.ExperimentalTeleportDragStartDelayMilliseconds);
+        var dragReleaseDelay = Math.Max(1, config.ExperimentalTeleportDragReleaseDelayMilliseconds);
 
         LogDetailed(
-            "实验传送开始拖动：mode={Mode} requested=({RequestedX:0.0},{RequestedY:0.0}) " +
+            "实验传送开始拖动：requested=({RequestedX:0.0},{RequestedY:0.0}) " +
             "runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) " +
-            "screenRunway=({ScreenStartX:0.0},{ScreenStartY:0.0})->({ScreenEndX:0.0},{ScreenEndY:0.0}) " +
-            "ratio={Ratio:0.000} source={RatioSource}",
-            allowEndOutsideScreen ? "relative-overlimit" : "absolute-screen",
+            "screenRunway=({ScreenStartX:0.0},{ScreenStartY:0.0})->({ScreenEndX:0.0},{ScreenEndY:0.0})",
             requestedDeltaX,
             requestedDeltaY,
             start.X,
@@ -208,9 +168,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             screenStart.X,
             screenStart.Y,
             screenEnd.X,
-            screenEnd.Y,
-            effectiveDistanceCorrection,
-            ratioSource);
+            screenEnd.Y);
 
         LogDetailed(
             "实验传送拖动起点避让：forbiddenCount={ForbiddenCount} start=({StartX:0.0},{StartY:0.0})",
@@ -228,24 +186,17 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             requestedDeltaX * requestedDeltaX + requestedDeltaY * requestedDeltaY);
         var desiredDistance = Math.Sqrt(desiredX * desiredX + desiredY * desiredY);
         var runwayRatio = desiredDistance <= 1e-6d ? 0d : inputDistance / desiredDistance;
-        var maxSingleStepDistance = Math.Clamp(
-            config.ExperimentalTeleportMaxSingleStepDistancePixels,
-            TpConfig.MinExperimentalTeleportMaxSingleStepDistancePixels,
-            TpConfig.MaxExperimentalTeleportMaxSingleStepDistancePixels);
+        var maxSingleStepDistance = Math.Max(1, config.ExperimentalTeleportMaxSingleStepDistancePixels);
         var steps = Math.Clamp(
             (int)Math.Ceiling(inputDistance / maxSingleStepDistance),
             1,
             int.MaxValue);
         var movedX = 0d;
         var movedY = 0d;
-        var movedScreenX = 0;
-        var movedScreenY = 0;
-        var screenScaleX = realCaptureRect.Width / Math.Max(1d, captureRect.Width);
-        var screenScaleY = realCaptureRect.Height / Math.Max(1d, captureRect.Height);
         var stepDelay = GetStepInterval();
         LogDetailed(
             "实验传送拖动参数：theory=({TheoryX:0.0},{TheoryY:0.0}) theoryDistance={TheoryDistance:0.0} " +
-            "distanceCorrection={DistanceCorrection:0.000} correctionSource={CorrectionSource} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
+            "distanceCorrection={DistanceCorrection:0.000} desiredInput=({DesiredX:0.0},{DesiredY:0.0}) " +
             "desiredDistance={DesiredDistance:0.0} runwayDistance={RunwayDistance:0.0} runwayRatio={RunwayRatio:0.000} " +
             "runwayDelta=({RunwayDeltaX:0.0},{RunwayDeltaY:0.0}) " +
             "maxStepDistance={MaxStepDistance:0.0} steps={Steps} stepDelay={StepDelay}ms " +
@@ -254,7 +205,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             requestedDeltaY,
             requestedDistance,
             effectiveDistanceCorrection,
-            ratioSource,
             desiredX,
             desiredY,
             desiredDistance,
@@ -282,24 +232,10 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 movedX = nextX;
                 movedY = nextY;
 
-                if (allowEndOutsideScreen)
-                {
-                    // 超限终点可能超出桌面，使用相对输入避免绝对坐标裁剪。
-                    var targetScreenX = (int)Math.Round(nextX * screenScaleX);
-                    var targetScreenY = (int)Math.Round(nextY * screenScaleY);
-                    Simulation.SendInput.Mouse.MoveMouseBy(
-                        targetScreenX - movedScreenX,
-                        targetScreenY - movedScreenY);
-                    movedScreenX = targetScreenX;
-                    movedScreenY = targetScreenY;
-                }
-                else
-                {
-                    MoveToCapturePoint(
-                        new Point2d(start.X + movedX, start.Y + movedY),
-                        captureRect,
-                        realCaptureRect);
-                }
+                MoveToCapturePoint(
+                    new Point2d(start.X + movedX, start.Y + movedY),
+                    captureRect,
+                    realCaptureRect);
 
                 await Delay(i < steps ? stepDelay : dragReleaseDelay, ct);
             }
@@ -363,14 +299,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             realRect.X + buttonX * realScale,
             realRect.Y + initialY * realScale);
         await Delay(GetOperationInterval(), ct);
-        var dragStartDelay = Math.Clamp(
-            config.ExperimentalTeleportDragStartDelayMilliseconds,
-            TpConfig.MinExperimentalTeleportDragStartDelayMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragStartDelayMilliseconds);
-        var dragReleaseDelay = Math.Clamp(
-            config.ExperimentalTeleportDragReleaseDelayMilliseconds,
-            TpConfig.MinExperimentalTeleportDragReleaseDelayMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragReleaseDelayMilliseconds);
+        var dragStartDelay = Math.Max(1, config.ExperimentalTeleportDragStartDelayMilliseconds);
+        var dragReleaseDelay = Math.Max(1, config.ExperimentalTeleportDragReleaseDelayMilliseconds);
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
@@ -388,39 +318,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         await Delay(GetOperationInterval(), ct);
     }
 
-    private static bool TryCreateSafeRunway(
-        double requestedX,
-        double requestedY,
-        int width,
-        int height,
-        string? country,
-        IReadOnlyList<Rect2d>? forbiddenStartRects,
-        out Point2d start,
-        out Point2d end)
-    {
-        for (var ratio = 1d; ratio >= 0.18d; ratio *= 0.82d)
-        {
-            var deltaX = requestedX * ratio;
-            var deltaY = requestedY * ratio;
-            var candidates = GetRunwayCandidates(width, height, deltaX, deltaY);
-            foreach (var candidate in candidates)
-            {
-                var candidateEnd = new Point2d(candidate.X + deltaX, candidate.Y + deltaY);
-                if (IsSafeSegment(candidate, candidateEnd, width, height, country) &&
-                    !IsForbiddenStartPoint(candidate, forbiddenStartRects, width, height))
-                {
-                    start = candidate;
-                    end = candidateEnd;
-                    return true;
-                }
-            }
-        }
-
-        start = default;
-        end = default;
-        return false;
-    }
-
     private static bool TryCreateRelaxedRunway(
         double requestedX,
         double requestedY,
@@ -428,7 +325,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         int height,
         string? country,
         IReadOnlyList<Rect2d>? forbiddenStartRects,
-        bool allowEndOutsideScreen,
         out Point2d start,
         out Point2d end)
     {
@@ -462,15 +358,13 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             }
 
             var boundaryDistance = GetScreenBoundaryDistance(candidate, directionX, directionY, width, height);
-            var length = allowEndOutsideScreen
-                ? requestedDistance
-                : Math.Min(requestedDistance, boundaryDistance);
+            var length = Math.Min(requestedDistance, boundaryDistance);
             if (!double.IsFinite(length) || length < 0d)
             {
                 continue;
             }
 
-            // 先按可用边界距离选起点，保证平衡与超限模式采用一致的起点策略。
+            // 按可用边界距离选择起点，尽量为本次拖动留出完整空间。
             if (boundaryDistance > bestScore + 1e-6d ||
                 Math.Abs(boundaryDistance - bestScore) <= 1e-6d && length > bestLength)
             {
@@ -636,45 +530,6 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             point.Y <= rect.Bottom * scaleY);
     }
 
-    private static IReadOnlyList<Point2d> GetRunwayCandidates(int width, int height, double deltaX, double deltaY)
-    {
-        var scaleX = width / 1920d;
-        var scaleY = height / 1080d;
-        var left = SafeMargin * scaleX;
-        var right = width - SafeMargin * scaleX;
-        var top = SafeMargin * scaleY;
-        var bottom = height - SafeMargin * scaleY;
-        var preferredX = deltaX >= 0 ? left : right;
-        var preferredY = deltaY >= 0 ? top : bottom;
-        return
-        [
-            new(width * 0.5d - deltaX / 2d, height * 0.55d - deltaY / 2d),
-            new(width * 0.38d, height * 0.72d),
-            new(width * 0.62d, height * 0.72d),
-            new(width * 0.5d, height * 0.55d),
-            new(preferredX, height * 0.55d),
-            new(width * 0.5d, preferredY),
-            new(preferredX, preferredY),
-        ];
-    }
-
-    private static bool IsSafeSegment(Point2d start, Point2d end, int width, int height, string? country)
-    {
-        const int samples = 20;
-        for (var i = 0; i <= samples; i++)
-        {
-            var t = i / (double)samples;
-            var x = start.X + (end.X - start.X) * t;
-            var y = start.Y + (end.Y - start.Y) * t;
-            if (!IsSafePoint(x, y, width, height, SafeMargin, country))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     internal static bool IsSafePoint(
         double x,
         double y,
@@ -719,20 +574,15 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
     private int GetOperationInterval()
     {
-        var configuredDelay = Math.Clamp(
-            config.TeleportOperationDelayMilliseconds,
-            TpConfig.MinTeleportOperationDelayMilliseconds,
-            TpConfig.MaxTeleportOperationDelayMilliseconds);
-        var scaledDelay = 50d * configuredDelay / TpConfig.DefaultTeleportOperationDelayMilliseconds;
-        return Math.Max(1, (int)Math.Round(scaledDelay));
+        var scaledDelay = 50d * config.TeleportOperationDelayMultiplier;
+        return !double.IsFinite(scaledDelay) || scaledDelay >= int.MaxValue
+            ? int.MaxValue
+            : Math.Max(1, (int)Math.Round(scaledDelay));
     }
 
     private int GetStepInterval()
     {
-        return Math.Clamp(
-            config.ExperimentalTeleportDragStepIntervalMilliseconds,
-            TpConfig.MinExperimentalTeleportDragStepIntervalMilliseconds,
-            TpConfig.MaxExperimentalTeleportDragStepIntervalMilliseconds);
+        return Math.Max(1, config.ExperimentalTeleportDragStepIntervalMilliseconds);
     }
 
     private void LogDetailed(string message, params object?[] args)

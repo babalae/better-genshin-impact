@@ -8,39 +8,17 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
 public partial class TpConfig : ObservableValidator
 {
-    public const int MinTeleportOperationDelayMilliseconds = 2;
-    public const int MaxTeleportOperationDelayMilliseconds = 100;
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
 
-    public const int MinExperimentalTeleportDragStepIntervalMilliseconds = 1;
-    public const int MaxExperimentalTeleportDragStepIntervalMilliseconds = 100;
     public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 3;
-    public const double MinExperimentalTeleportDragDistanceCorrection = 0.1d;
-    public const double MaxExperimentalTeleportDragDistanceCorrection = 2d;
     public const double DefaultExperimentalTeleportDragDistanceCorrection = 1d;
-    public const int MinExperimentalTeleportStateRecognitionIntervalMilliseconds = 10;
-    public const int MaxExperimentalTeleportStateRecognitionIntervalMilliseconds = 500;
     public const int DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds = 50;
-    public const int MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 0;
-    public const int MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 5000;
     public const int DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 200;
-    public const int MinExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
-    public const int MaxExperimentalTeleportStateTransitionTimeoutMilliseconds = 5000;
     public const int DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
-    public const int MinExperimentalTeleportMapOpenTimeoutMilliseconds = 1000;
-    public const int MaxExperimentalTeleportMapOpenTimeoutMilliseconds = 10000;
     public const int DefaultExperimentalTeleportMapOpenTimeoutMilliseconds = 5000;
-    public const int MinExperimentalTeleportMapOpenRepressIntervalMilliseconds = 500;
-    public const int MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds = 5000;
     public const int DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds = 1000;
-    public const int MinExperimentalTeleportDragStartDelayMilliseconds = 10;
-    public const int MaxExperimentalTeleportDragStartDelayMilliseconds = 500;
     public const int DefaultExperimentalTeleportDragStartDelayMilliseconds = 25;
-    public const int MinExperimentalTeleportDragReleaseDelayMilliseconds = 10;
-    public const int MaxExperimentalTeleportDragReleaseDelayMilliseconds = 500;
     public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 75;
-    public const int MinExperimentalTeleportMaxSingleStepDistancePixels = 10;
-    public const int MaxExperimentalTeleportMaxSingleStepDistancePixels = 300;
     public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 150;
 
     [ObservableProperty]
@@ -50,156 +28,34 @@ public partial class TpConfig : ObservableValidator
     private bool _experimentalTeleportDetailedLogs = false;
 
     [ObservableProperty]
-    [property: JsonConverter(typeof(JsonStringEnumConverter<ExperimentalTeleportDragSafetyLevel>))]
-    private ExperimentalTeleportDragSafetyLevel _experimentalTeleportDragSafetyLevel = ExperimentalTeleportDragSafetyLevel.Balanced;
-
-    partial void OnExperimentalTeleportDragSafetyLevelChanged(ExperimentalTeleportDragSafetyLevel value)
-    {
-        if (!Enum.IsDefined(value))
-        {
-            ExperimentalTeleportDragSafetyLevel = ExperimentalTeleportDragSafetyLevel.Balanced;
-        }
-    }
-
-    [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportDragDistanceCorrection, MaxExperimentalTeleportDragDistanceCorrection,
-        ErrorMessage = "实验传送理论拖动距离修正：0.1-2.0")]
     private double _experimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
 
-    partial void OnExperimentalTeleportDragDistanceCorrectionChanged(double value)
-    {
-        if (!double.IsFinite(value) || value is < MinExperimentalTeleportDragDistanceCorrection or > MaxExperimentalTeleportDragDistanceCorrection)
-        {
-            ExperimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportDragStepIntervalMilliseconds, MaxExperimentalTeleportDragStepIntervalMilliseconds,
-        ErrorMessage = "实验传送拖动步进间隔：1-100 ms")]
     private int _experimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
 
-    partial void OnExperimentalTeleportDragStepIntervalMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportDragStepIntervalMilliseconds or > MaxExperimentalTeleportDragStepIntervalMilliseconds)
-        {
-            ExperimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportStateRecognitionIntervalMilliseconds, MaxExperimentalTeleportStateRecognitionIntervalMilliseconds,
-        ErrorMessage = "实验传送状态识别轮询间隔：10-500 ms")]
     private int _experimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
 
-    partial void OnExperimentalTeleportStateRecognitionIntervalMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportStateRecognitionIntervalMilliseconds or > MaxExperimentalTeleportStateRecognitionIntervalMilliseconds)
-        {
-            ExperimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds, MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
-        ErrorMessage = "实验传送状态识别轮询开始前等待：0-5000 ms")]
     private int _experimentalTeleportStateRecognitionInitialDelayMilliseconds = DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds; // 首次轮询前等待，单位：ms
 
-    partial void OnExperimentalTeleportStateRecognitionInitialDelayMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds or > MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds)
-        {
-            ExperimentalTeleportStateRecognitionInitialDelayMilliseconds = DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportStateTransitionTimeoutMilliseconds, MaxExperimentalTeleportStateTransitionTimeoutMilliseconds,
-        ErrorMessage = "实验传送状态切换等待上限：500-5000 ms")]
     private int _experimentalTeleportStateTransitionTimeoutMilliseconds = DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
 
-    partial void OnExperimentalTeleportStateTransitionTimeoutMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportStateTransitionTimeoutMilliseconds or > MaxExperimentalTeleportStateTransitionTimeoutMilliseconds)
-        {
-            ExperimentalTeleportStateTransitionTimeoutMilliseconds = DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportMapOpenTimeoutMilliseconds, MaxExperimentalTeleportMapOpenTimeoutMilliseconds,
-        ErrorMessage = "实验传送打开地图总超时：1000-10000 ms")]
     private int _experimentalTeleportMapOpenTimeoutMilliseconds = DefaultExperimentalTeleportMapOpenTimeoutMilliseconds;
 
-    partial void OnExperimentalTeleportMapOpenTimeoutMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportMapOpenTimeoutMilliseconds or > MaxExperimentalTeleportMapOpenTimeoutMilliseconds)
-        {
-            ExperimentalTeleportMapOpenTimeoutMilliseconds = DefaultExperimentalTeleportMapOpenTimeoutMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportMapOpenRepressIntervalMilliseconds, MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds,
-        ErrorMessage = "实验传送打开地图补按 M 间隔：500-5000 ms")]
     private int _experimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
 
-    partial void OnExperimentalTeleportMapOpenRepressIntervalMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportMapOpenRepressIntervalMilliseconds or > MaxExperimentalTeleportMapOpenRepressIntervalMilliseconds)
-        {
-            ExperimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportDragStartDelayMilliseconds, MaxExperimentalTeleportDragStartDelayMilliseconds,
-        ErrorMessage = "实验传送按下左键后开始拖动延迟：10-500 ms")]
     private int _experimentalTeleportDragStartDelayMilliseconds = DefaultExperimentalTeleportDragStartDelayMilliseconds;
 
-    partial void OnExperimentalTeleportDragStartDelayMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportDragStartDelayMilliseconds or > MaxExperimentalTeleportDragStartDelayMilliseconds)
-        {
-            ExperimentalTeleportDragStartDelayMilliseconds = DefaultExperimentalTeleportDragStartDelayMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportDragReleaseDelayMilliseconds, MaxExperimentalTeleportDragReleaseDelayMilliseconds,
-        ErrorMessage = "实验传送拖动结束后松开左键延迟：10-500 ms")]
     private int _experimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
 
-    partial void OnExperimentalTeleportDragReleaseDelayMillisecondsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportDragReleaseDelayMilliseconds or > MaxExperimentalTeleportDragReleaseDelayMilliseconds)
-        {
-            ExperimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
-        }
-    }
-
     [ObservableProperty]
-    [NotifyDataErrorInfo]
-    [Range(MinExperimentalTeleportMaxSingleStepDistancePixels, MaxExperimentalTeleportMaxSingleStepDistancePixels,
-        ErrorMessage = "实验传送单步最大输入距离：10-300 px")]
     private int _experimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
-
-    partial void OnExperimentalTeleportMaxSingleStepDistancePixelsChanged(int value)
-    {
-        if (value is < MinExperimentalTeleportMaxSingleStepDistancePixels or > MaxExperimentalTeleportMaxSingleStepDistancePixels)
-        {
-            ExperimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
-        }
-    }
 
     [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关
@@ -233,22 +89,49 @@ public partial class TpConfig : ObservableValidator
     }
     
     [ObservableProperty]
-    [NotifyDataErrorInfo] 
-    [Range(MinTeleportOperationDelayMilliseconds, MaxTeleportOperationDelayMilliseconds, ErrorMessage = "恰当的传送操作间隔:2-100")]
-    private int _teleportOperationDelayMilliseconds = DefaultTeleportOperationDelayMilliseconds; // 传送操作速度基准间隔，单位：ms
+    private double _teleportOperationDelayMultiplier = 1.0d;
 
     [JsonIgnore]
-    public int TeleportOperationDelayPercentage =>
-        TeleportOperationDelayMilliseconds * 100 / DefaultTeleportOperationDelayMilliseconds;
-
-    partial void OnTeleportOperationDelayMillisecondsChanged(int value)
+    public int TeleportOperationDelayMilliseconds
     {
-        if (value is < MinTeleportOperationDelayMilliseconds or > MaxTeleportOperationDelayMilliseconds)
+        get
         {
-            TeleportOperationDelayMilliseconds = DefaultTeleportOperationDelayMilliseconds;
-        }
+            if (!double.IsFinite(TeleportOperationDelayMultiplier) || TeleportOperationDelayMultiplier <= 0)
+            {
+                return 1;
+            }
 
+            var milliseconds = DefaultTeleportOperationDelayMilliseconds * TeleportOperationDelayMultiplier;
+            return milliseconds >= int.MaxValue
+                ? int.MaxValue
+                : Math.Max(1, (int)Math.Round(milliseconds));
+        }
+    }
+
+    [JsonIgnore]
+    public double TeleportOperationDelayPercentage => TeleportOperationDelayMultiplier * 100d;
+
+    partial void OnTeleportOperationDelayMultiplierChanged(double value)
+    {
+        OnPropertyChanged(nameof(TeleportOperationDelayMilliseconds));
         OnPropertyChanged(nameof(TeleportOperationDelayPercentage));
+    }
+
+    /// <summary>
+    /// 旧配置迁移字段：原先保存的是传送操作间隔毫秒数，现在迁移为倍率。
+    /// </summary>
+    [JsonPropertyName("TeleportOperationDelayMilliseconds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int LegacyTeleportOperationDelayMilliseconds
+    {
+        get => 0;
+        set
+        {
+            if (value > 0)
+            {
+                TeleportOperationDelayMultiplier = value / (double)DefaultTeleportOperationDelayMilliseconds;
+            }
+        }
     }
 
     /// <summary>
@@ -265,9 +148,7 @@ public partial class TpConfig : ObservableValidator
                 return;
             }
 
-            TeleportOperationDelayMilliseconds = value is < MinTeleportOperationDelayMilliseconds or > MaxTeleportOperationDelayMilliseconds
-                ? DefaultTeleportOperationDelayMilliseconds
-                : value;
+            TeleportOperationDelayMultiplier = value / (double)DefaultTeleportOperationDelayMilliseconds;
         }
     }
     [ObservableProperty]

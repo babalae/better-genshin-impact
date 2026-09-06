@@ -538,31 +538,20 @@ internal sealed class ExperimentalTeleportUiStateMachine
 
     private int GetOperationDelay(int baseDelay)
     {
-        var configured = Math.Clamp(
-            _config.TeleportOperationDelayMilliseconds,
-            TpConfig.MinTeleportOperationDelayMilliseconds,
-            TpConfig.MaxTeleportOperationDelayMilliseconds);
-        return Math.Max(
-            1,
-            (int)Math.Round(
-                baseDelay * configured /
-                (double)TpConfig.DefaultTeleportOperationDelayMilliseconds));
+        var scaledDelay = baseDelay * _config.TeleportOperationDelayMultiplier;
+        return !double.IsFinite(scaledDelay) || scaledDelay >= int.MaxValue
+            ? int.MaxValue
+            : Math.Max(1, (int)Math.Round(scaledDelay));
     }
 
-    private int GetStateRecognitionInterval() => Math.Clamp(
-        _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
-        TpConfig.MinExperimentalTeleportStateRecognitionIntervalMilliseconds,
-        TpConfig.MaxExperimentalTeleportStateRecognitionIntervalMilliseconds);
+    private int GetStateRecognitionInterval() => Math.Max(
+        1, _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds);
 
-    private int GetStateRecognitionInitialDelay() => Math.Clamp(
-        _config.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
-        TpConfig.MinExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
-        TpConfig.MaxExperimentalTeleportStateRecognitionInitialDelayMilliseconds);
+    private int GetStateRecognitionInitialDelay() => Math.Max(
+        0, _config.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds);
 
-    private int GetStateTransitionTimeout() => Math.Clamp(
-        _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,
-        TpConfig.MinExperimentalTeleportStateTransitionTimeoutMilliseconds,
-        TpConfig.MaxExperimentalTeleportStateTransitionTimeoutMilliseconds);
+    private int GetStateTransitionTimeout() => Math.Max(
+        1, _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds);
 
     private void LogDetailed(string message, params object?[] args)
     {
