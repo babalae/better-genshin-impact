@@ -1,7 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.Core.Script.Group.Preset;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
@@ -22,6 +21,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -57,7 +57,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     private readonly IScriptService _scriptService;
 
-    private readonly ConfigGroupPresetService _presetService;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// 配置组配置
@@ -81,11 +81,11 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService,
-        ConfigGroupPresetService presetService)
+        IServiceProvider serviceProvider)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
-        _presetService = presetService;
+        _serviceProvider = serviceProvider;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
         WeakReferenceMessenger.Default.Register<RefreshDataMessage>(this, (r, m) => ReadScriptGroup());
     }
@@ -93,10 +93,8 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OpenConfigGroupPresets()
     {
-        var window = new ConfigGroupPresetWindow(_presetService)
-        {
-            Owner = Application.Current.MainWindow
-        };
+        var window = _serviceProvider.GetRequiredService<ConfigGroupPresetWindow>();
+        window.Owner = Application.Current.MainWindow;
         WindowHelper.CenterOnVisibleOwner(window);
         window.ShowDialog();
     }

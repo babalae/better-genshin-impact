@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Script.Group.Preset;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Message;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -14,7 +15,7 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 /// <summary>
 /// 调度器内置预设配置组浏览窗口的数据和操作。
 /// </summary>
-public partial class ConfigGroupPresetWindowViewModel : ObservableObject
+public partial class ConfigGroupPresetWindowViewModel : ViewModel
 {
     private readonly ConfigGroupPresetService _presetService;
 

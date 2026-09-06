@@ -7,9 +7,12 @@ namespace BetterGenshinImpact.View.Windows;
 
 public partial class ConfigGroupPresetWindow : FluentWindow
 {
-    public ConfigGroupPresetWindow(ConfigGroupPresetService presetService)
+    public ConfigGroupPresetWindowViewModel ViewModel { get; }
+
+    public ConfigGroupPresetWindow(ConfigGroupPresetWindowViewModel viewModel)
     {
-        DataContext = new ConfigGroupPresetWindowViewModel(presetService);
+        ViewModel = viewModel;
+        DataContext = this;
         InitializeComponent();
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
     }

@@ -138,6 +138,8 @@ public partial class App : Application
                 services.AddSingleton<ChildSessionService>();
                 services.AddTransient<ChildSessionWindowViewModel>();
                 services.AddTransient<ChildSessionWindow>();
+                services.AddTransient<ConfigGroupPresetWindowViewModel>();
+                services.AddTransient<ConfigGroupPresetWindow>();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();

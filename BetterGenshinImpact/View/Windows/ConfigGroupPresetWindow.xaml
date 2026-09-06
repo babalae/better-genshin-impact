@@ -5,6 +5,7 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:markdown="clr-namespace:BetterGenshinImpact.View.Controls.Markdown"
+                 xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  Title="{i18n:T 内置预设配置组}"
                  Width="960"
@@ -28,7 +29,10 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <Grid Grid.Row="1" Margin="16,8,16,16">
+        <Grid Grid.Row="1"
+              Margin="16,8,16,16"
+              DataContext="{Binding ViewModel}"
+              d:DataContext="{d:DesignInstance Type=viewModel:ConfigGroupPresetWindowViewModel}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="12" />
