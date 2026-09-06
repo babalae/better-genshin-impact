@@ -46,6 +46,8 @@ internal sealed class TeleportTargetLocalizationException(string message, Except
 public class TpTask
 {
     private readonly QuickTeleportAssets _assets;
+    // 地区列表模板按需加载，避免普通传送路径承担额外的 PNG/Mat 初始化开销。
+    private SwitchAreaRegionAssets? _switchAreaRegionAssets;
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
@@ -3524,6 +3526,8 @@ public class TpTask
     internal async Task<bool> TrySelectExperimentalArea(string areaName)
     {
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
+        // PR 模板是简体中文文字。其它语言直接走本地化 OCR，避免每轮先做无效模板匹配。
+        var canUseSwitchAreaTemplate = string.Equals(minCountryLocalized, areaName, StringComparison.Ordinal);
         var candidatesText = "";
         var isExperimental = _experimentalUiStateMachine != null;
         var candidateTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaCandidateTimeoutMs);
@@ -3541,6 +3545,21 @@ public class TpTask
         {
             ct.ThrowIfCancellationRequested();
             using var ra = CaptureToRectArea();
+
+            // 模板匹配只针对当前目标地区执行；模板不可用或未命中时保留 OCR 兜底。
+            var templateHit = canUseSwitchAreaTemplate
+                ? TryMatchSwitchAreaTemplate(ra, areaName)
+                : null;
+            if (templateHit is { } templateRect)
+            {
+                ra.ClickTo(templateRect.X, templateRect.Y, templateRect.Width, templateRect.Height);
+                await Delay(GetExperimentalOperationDelay(50), ct);
+                await WaitForTemplateAreaSelectionApplied(areaName);
+                RememberAreaSwitchCenterPoint(areaName);
+                Logger.LogInformation("切换到区域（模板匹配）：{Country}", areaName);
+                return true;
+            }
+
             var list = FindSwitchAreaCandidates(ra);
             candidatesText = FormatSwitchAreaCandidateTexts(list);
             var matchRect = list
@@ -3575,6 +3594,74 @@ public class TpTask
             areaName,
             string.IsNullOrWhiteSpace(candidatesText) ? "无" : candidatesText);
         return false;
+    }
+
+    /// <summary>
+    /// 地区列表模板匹配。模板或资源缺失时返回 null，由调用方继续走 OCR。
+    /// 捕获区域尺寸、素材缺失等可恢复问题不能中断传送流程。
+    /// </summary>
+    private Rect? TryMatchSwitchAreaTemplate(ImageRegion imageRegion, string areaName)
+    {
+        try
+        {
+            _switchAreaRegionAssets ??= SwitchAreaRegionAssets.Get(_captureRect.Width, _captureRect.Height);
+            return _switchAreaRegionAssets.MatchInAllCells(imageRegion, areaName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "地区列表模板匹配不可用，回退 OCR：{Country}", areaName);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 模板点击后的轻量确认。只重复检测目标模板是否消失，不再执行国家名称 OCR。
+    /// 若模板在动画期间始终不可见，则把点击结果交给状态机继续确认/重试。
+    /// </summary>
+    private async Task WaitForTemplateAreaSelectionApplied(string areaName)
+    {
+        var selectionTimeout = GetExperimentalStateTransitionTimeout(SwitchAreaSelectionTimeoutMs);
+        var selectionMinimumWait = GetExperimentalOperationDelay(SwitchAreaSelectionMinimumWaitMs);
+        var initialDelay = GetExperimentalStateRecognitionInitialDelay();
+        if (initialDelay > 0)
+        {
+            await Delay(initialDelay, ct);
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        var seenAfterClick = false;
+        var consecutiveMissingChecks = 0;
+        while (stopwatch.ElapsedMilliseconds < selectionTimeout)
+        {
+            ct.ThrowIfCancellationRequested();
+            using var capture = CaptureToRectArea();
+            var stillVisible = TryMatchSwitchAreaTemplate(capture, areaName).HasValue;
+            if (stillVisible)
+            {
+                seenAfterClick = true;
+                consecutiveMissingChecks = 0;
+            }
+            else if (seenAfterClick && stopwatch.ElapsedMilliseconds >= selectionMinimumWait)
+            {
+                consecutiveMissingChecks++;
+                if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                consecutiveMissingChecks = 0;
+            }
+
+            await Delay(GetExperimentalStateRecognitionInterval(), ct);
+        }
+
+        Logger.LogDebug("模板地区选择确认达到上限：{Country}", areaName);
     }
 
     private async Task WaitForAreaSelectionApplied(

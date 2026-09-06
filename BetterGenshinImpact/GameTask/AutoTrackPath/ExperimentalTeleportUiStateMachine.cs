@@ -263,10 +263,10 @@ internal sealed class ExperimentalTeleportUiStateMachine
         {
             if (await _host.TrySelectExperimentalArea(areaName))
             {
-                return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "OCR 选择国家");
+                return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MapMain, "选择国家");
             }
 
-            LogDetailed("实验传送地区 OCR 未命中，保持国家列表继续重试：{Area}", areaName);
+            LogDetailed("实验传送地区未命中，保持国家列表继续重试：{Area}", areaName);
             await Delay(GetStateRecognitionInterval(), _cancellationToken);
             return DetectCurrentState(context);
         }
