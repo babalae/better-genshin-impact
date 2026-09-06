@@ -1811,6 +1811,7 @@ public class TpTask
         double forbiddenWidth,
         double forbiddenHeight,
         double avoidPadding,
+        IReadOnlyList<Rect> teleportRects,
         out double startX,
         out double startY)
     {
@@ -1832,6 +1833,11 @@ public class TpTask
             x = Math.Clamp(x, startMinX, startMaxX);
             y = Math.Clamp(y, startMinY, startMaxY);
             if (!IsSafePoint(x, y) || !IsSafePoint(x + deltaX, y + deltaY))
+            {
+                return;
+            }
+
+            if (teleportRects.Any(rect => x >= rect.Left && x < rect.Right && y >= rect.Top && y < rect.Bottom))
             {
                 return;
             }
@@ -1884,6 +1890,18 @@ public class TpTask
 
     private async Task<(int SentDeltaX, int SentDeltaY, int Steps, double StartX, double StartY, double EndX, double EndY, double ActualDeltaX, double ActualDeltaY)> MouseMoveMap(int pixelDeltaX, int pixelDeltaY)
     {
+        // 每次拖动前重新识别，避免地图移动或缩放后使用过期的传送点矩形。
+        List<Rect> teleportRects;
+        using (var capture = CaptureToRectArea())
+        {
+            teleportRects = GetMapIconsInRect(
+                    capture,
+                    new Rect(0, 0, capture.Width, capture.Height),
+                    0, 0, double.PositiveInfinity)
+                .Select(icon => icon.Rect)
+                .ToList();
+        }
+
         // 起点向预期拖动方向的反方向偏移，并保留随机性；位移按可拖动地图区域裁剪。
         double startX = 0;
         double startY = 0;
@@ -1945,6 +1963,7 @@ public class TpTask
                         forbiddenWidth,
                         forbiddenHeight,
                         avoidPadding,
+                        teleportRects,
                         out startX,
                         out startY))
                 {
