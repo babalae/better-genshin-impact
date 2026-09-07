@@ -921,9 +921,13 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
             _gpuTexture?.Dispose();
             _gpuTexture = null;
             _drawVs?.Dispose();
+            _drawVs = null;
             _drawPs?.Dispose();
+            _drawPs = null;
             _drawSampler?.Dispose();
+            _drawSampler = null;
             _drawCb?.Dispose();
+            _drawCb = null;
             _packCs?.Dispose();
             _packCs = null;
             _packCb?.Dispose();
