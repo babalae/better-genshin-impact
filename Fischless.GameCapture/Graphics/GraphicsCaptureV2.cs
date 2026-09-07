@@ -418,7 +418,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
     private void EnsurePackResourcesLocked(SharpDX.Direct3D11.Device device, int width, int height)
     {
-        var bytes = (width * height * 3 + 3) & ~3;   // BGR24 字节流，向上圆整到 4 字节
+        var bytes = ((width * height + 3) / 4) * 12; // 每 4 像素由 shader 固定写入 3 个 dword，按组取整避免末组 UAV 越界
         if (_packGpuBuf != null && _packGpuBuf.Description.SizeInBytes == bytes) return;
 
         _packUav?.Dispose();
