@@ -14,6 +14,9 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 internal sealed class ExperimentalTeleportTask : IDisposable
 {
     private const int TeleportTimeoutMilliseconds = 60_000;
+    private const int MaximumTeleportAttempts = 3;
+    private const int StateTransitionBudgetPerAttempt = 10;
+    private const int TimeoutSafetyMarginMilliseconds = 5_000;
 
     private readonly TpConfig _config;
     private readonly TpTask _host;
@@ -36,7 +39,8 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         bool force)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TeleportTimeoutMilliseconds);
+        var timeoutMilliseconds = GetTeleportTimeoutMilliseconds();
+        timeoutCts.CancelAfter(timeoutMilliseconds);
         using var task = new ExperimentalTeleportTask(timeoutCts.Token);
         try
         {
@@ -45,8 +49,39 @@ internal sealed class ExperimentalTeleportTask : IDisposable
         catch (OperationCanceledException ex) when (
             !cancellationToken.IsCancellationRequested && timeoutCts.IsCancellationRequested)
         {
-            throw new TimeoutException($"实验传送超过 {TeleportTimeoutMilliseconds / 1000} 秒", ex);
+            throw new TimeoutException($"实验传送超过 {timeoutMilliseconds / 1000} 秒", ex);
         }
+    }
+
+    private static int GetTeleportTimeoutMilliseconds()
+    {
+        var config = TaskContext.Instance().Config.TpConfig;
+        var mapOpenTimeout = config.GetEffectiveExperimentalTeleportMapOpenTimeoutMilliseconds();
+        var stateTransitionTimeout = config.GetEffectiveExperimentalTeleportStateTransitionTimeoutMilliseconds();
+        var initialDelay = config.GetEffectiveExperimentalTeleportStateRecognitionInitialDelayMilliseconds();
+        var operationDelay = config.TeleportOperationDelayMilliseconds;
+
+        long perAttempt = mapOpenTimeout;
+        perAttempt = SaturatingAdd(perAttempt, SaturatingMultiply(stateTransitionTimeout, StateTransitionBudgetPerAttempt));
+        perAttempt = SaturatingAdd(perAttempt, SaturatingMultiply(initialDelay, StateTransitionBudgetPerAttempt));
+        perAttempt = SaturatingAdd(perAttempt, SaturatingMultiply(operationDelay, StateTransitionBudgetPerAttempt));
+        perAttempt = SaturatingAdd(perAttempt, TimeoutSafetyMarginMilliseconds);
+
+        var total = SaturatingMultiply(perAttempt, MaximumTeleportAttempts);
+        total = Math.Max(TeleportTimeoutMilliseconds, total);
+        return total >= int.MaxValue ? int.MaxValue : (int)Math.Max(1L, total);
+    }
+
+    private static long SaturatingAdd(long left, long right)
+    {
+        return left >= long.MaxValue - right ? long.MaxValue : left + right;
+    }
+
+    private static long SaturatingMultiply(long value, int multiplier)
+    {
+        return value <= 0 || multiplier <= 0 || value > long.MaxValue / multiplier
+            ? value <= 0 ? 0 : long.MaxValue
+            : value * multiplier;
     }
 
     private async Task<(double, double)> RunAsync(

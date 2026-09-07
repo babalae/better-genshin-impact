@@ -44,32 +44,112 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     private double _experimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
 
+    partial void OnExperimentalTeleportDragDistanceCorrectionChanged(double value)
+    {
+        if (!double.IsFinite(value) || value <= 0d)
+        {
+            ExperimentalTeleportDragDistanceCorrection = DefaultExperimentalTeleportDragDistanceCorrection;
+        }
+    }
+
     [ObservableProperty]
     private int _experimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
+
+    partial void OnExperimentalTeleportDragStepIntervalMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportDragStepIntervalMilliseconds = DefaultExperimentalTeleportDragStepIntervalMilliseconds;
+        }
+    }
 
     [ObservableProperty]
     private int _experimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
 
+    partial void OnExperimentalTeleportStateRecognitionIntervalMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportStateRecognitionIntervalMilliseconds = DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds;
+        }
+    }
+
     [ObservableProperty]
     private int _experimentalTeleportStateRecognitionInitialDelayMilliseconds = DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds; // 首次轮询前等待，单位：ms
+
+    partial void OnExperimentalTeleportStateRecognitionInitialDelayMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportStateRecognitionInitialDelayMilliseconds = DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds;
+        }
+    }
 
     [ObservableProperty]
     private int _experimentalTeleportStateTransitionTimeoutMilliseconds = DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
 
+    partial void OnExperimentalTeleportStateTransitionTimeoutMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportStateTransitionTimeoutMilliseconds = DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds;
+        }
+    }
+
     [ObservableProperty]
     private int _experimentalTeleportMapOpenTimeoutMilliseconds = DefaultExperimentalTeleportMapOpenTimeoutMilliseconds;
+
+    partial void OnExperimentalTeleportMapOpenTimeoutMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportMapOpenTimeoutMilliseconds = DefaultExperimentalTeleportMapOpenTimeoutMilliseconds;
+        }
+    }
 
     [ObservableProperty]
     private int _experimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
 
+    partial void OnExperimentalTeleportMapOpenRepressIntervalMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportMapOpenRepressIntervalMilliseconds = DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds;
+        }
+    }
+
     [ObservableProperty]
     private int _experimentalTeleportDragStartDelayMilliseconds = DefaultExperimentalTeleportDragStartDelayMilliseconds;
+
+    partial void OnExperimentalTeleportDragStartDelayMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportDragStartDelayMilliseconds = DefaultExperimentalTeleportDragStartDelayMilliseconds;
+        }
+    }
 
     [ObservableProperty]
     private int _experimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
 
+    partial void OnExperimentalTeleportDragReleaseDelayMillisecondsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportDragReleaseDelayMilliseconds = DefaultExperimentalTeleportDragReleaseDelayMilliseconds;
+        }
+    }
+
     [ObservableProperty]
     private int _experimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
+
+    partial void OnExperimentalTeleportMaxSingleStepDistancePixelsChanged(int value)
+    {
+        if (value <= 0)
+        {
+            ExperimentalTeleportMaxSingleStepDistancePixels = DefaultExperimentalTeleportMaxSingleStepDistancePixels;
+        }
+    }
 
     [ObservableProperty]
     private bool _mapZoomEnabled = true; // 地图缩放开关
@@ -127,6 +207,12 @@ public partial class TpConfig : ObservableValidator
 
     partial void OnTeleportOperationDelayMultiplierChanged(double value)
     {
+        if (!double.IsFinite(value) || value <= 0d)
+        {
+            TeleportOperationDelayMultiplier = 1.0d;
+            return;
+        }
+
         OnPropertyChanged(nameof(TeleportOperationDelayMilliseconds));
         OnPropertyChanged(nameof(TeleportOperationDelayPercentage));
     }
@@ -134,7 +220,7 @@ public partial class TpConfig : ObservableValidator
     /// <summary>
     /// 旧配置迁移字段：原先保存的是传送操作间隔毫秒数，现在迁移为倍率。
     /// </summary>
-    [JsonPropertyName("TeleportOperationDelayMilliseconds")]
+    [JsonPropertyName("teleportOperationDelayMilliseconds")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int LegacyTeleportOperationDelayMilliseconds
     {
