@@ -364,7 +364,8 @@ internal sealed class ExperimentalTeleportUiStateMachine
             _cancellationToken.ThrowIfCancellationRequested();
             detectedState = DetectCurrentState(context, expectedState);
             pollCount++;
-            if (detectedState == expectedState)
+            if (detectedState == expectedState ||
+                detectedState == ExperimentalTeleportUiState.TeleportUnavailable)
             {
                 LogDetailed(
                     "实验传送达到预期状态：operation={Operation} state={State} elapsed={ElapsedMilliseconds}ms polls={Polls}",
