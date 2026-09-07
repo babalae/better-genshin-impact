@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Wpf.Ui.Violeta.Controls;
 
@@ -42,7 +43,7 @@ public static class DomainCascadingItems
 
     private static IReadOnlyList<ICascadingItem> BuildItems()
     {
-        return MapLazyAssets.Get().CountryToDomains.Keys
+        var items = MapLazyAssets.Get().CountryToDomains.Keys
             .Reverse()
             .Select(country => (ICascadingItem)new CascadingItem(
                 country,
@@ -56,6 +57,14 @@ public static class DomainCascadingItems
                     })
             ))
             .ToList();
+        items.Insert(0, new CascadingItem("自动选择", new ICascadingItem[]
+        {
+            new CascadingItem(AutoDomainTask.DevelopmentGuideOption)
+            {
+                Tag = AutoDomainTask.DevelopmentGuideOption
+            }
+        }));
+        return items;
     }
 
     private static string FormatRewards(IEnumerable<string> rewards)
