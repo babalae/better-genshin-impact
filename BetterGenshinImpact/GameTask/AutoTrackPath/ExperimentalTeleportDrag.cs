@@ -139,7 +139,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                                   config.ExperimentalTeleportDragDistanceCorrection > 0
             ? config.ExperimentalTeleportDragDistanceCorrection
             : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
-        var effectiveDistanceCorrection = distanceCorrection;
+        // TpTask 在进入实验拖动前会将输入距离换算为 DPI 逻辑坐标；这里还原为实际屏幕拖动距离。
+        var dpiScale = double.IsFinite(TaskContext.Instance().DpiScale) && TaskContext.Instance().DpiScale > 0
+            ? TaskContext.Instance().DpiScale
+            : 1d;
+        var effectiveDistanceCorrection = distanceCorrection * dpiScale;
         var desiredX = requestedDeltaX * effectiveDistanceCorrection;
         var desiredY = requestedDeltaY * effectiveDistanceCorrection;
         var activeForbiddenStartRects = forbiddenStartRects?.ToList() ?? [];
