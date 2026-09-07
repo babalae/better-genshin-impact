@@ -59,9 +59,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate int PutMinUpdateIntervalDelegate(IntPtr pThis, long duration);
 
-    // 单一 staging：消费时从最新帧表面提交 GPU 拷贝并同 tick 阻塞 Map（等待通常亚毫秒级）。
-    // 消费被 _captureGate 串行化，单块 staging 即安全
-    private Texture2D? _stagingTexture;
+    // BGR24 打包四件套见上方字段；消费被 _captureGate 串行化，单块 staging buffer 即安全
 
     // 单飞闸门：并发消费方逐个进入
     private readonly object _captureGate = new();
@@ -73,6 +71,43 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
     // 避免对旧内容重复 GPU/PCIe 回读空转。缓存常建：每次消费新帧时 CvtColor 写入缓存 + 克隆给消费者
     private Mat? _cachedBgr;
     private long _cachedFrameTs;         // 缓存内容对应的帧时间戳
+
+    // BGR24 打包（GPU 完成颜色转换与打包，CPU 免 CvtColor；回读量 8.3→6.2MB -25%）
+    private ComputeShader? _packCs;
+    private SharpDX.Direct3D11.Buffer? _packCb;           // uint4 dims（W,H,total,0），Dynamic
+    private SharpDX.Direct3D11.Buffer? _packGpuBuf;       // 打包结果（GPU），StructuredBuffer<uint>
+    private UnorderedAccessView? _packUav;
+    private SharpDX.Direct3D11.Buffer? _packStagingBuf;   // CPU 可读副本（Staging）
+
+    // 注意：SharpDX Compile(string) 用 StringToHGlobalAnsi + 字符数当字节数，非 ASCII 字符
+    // （如中文注释）会把源码尾部截断导致 FXC 编译失败——此字符串内必须保持纯 ASCII
+    private const string PackShaderSrc = @"
+        cbuffer cb : register(b0) { uint4 dims; }   // x=W y=H z=total
+        Texture2D<float4> src : register(t0);
+        RWStructuredBuffer<uint> outBuf : register(u0);
+        [numthreads(64,1,1)]
+        void main_cs(uint3 dt : SV_DispatchThreadID)
+        {
+            uint p = dt.x * 4;                       // 4 pixels/thread = 12 bytes = 3 aligned dwords
+            if (p >= dims.z) return;
+            uint bc[4]; uint gc[4]; uint rc[4];
+            [unroll]
+            for (uint k = 0; k < 4; ++k)
+            {
+                uint idx = p + k;
+                uint x = idx % dims.x;
+                uint y = idx / dims.x;
+                float4 px = src.Load(int3(x, y, 0)); // B8G8R8A8 auto-swizzled: px.x=R px.y=G px.z=B
+                bc[k] = (uint)(saturate(px.z) * 255.0f + 0.5f);
+                gc[k] = (uint)(saturate(px.y) * 255.0f + 0.5f);
+                rc[k] = (uint)(saturate(px.x) * 255.0f + 0.5f);
+            }
+            uint o = p / 4 * 3;                      // group base (bytes) -> dword index, 4-byte aligned
+            outBuf[o + 0] = bc[0] | (gc[0] << 8)  | (rc[0] << 16) | (bc[1] << 24);
+            outBuf[o + 1] = gc[1] | (rc[1] << 8)  | (bc[2] << 16) | (gc[2] << 24);
+            outBuf[o + 2] = rc[2] | (bc[3] << 8)  | (gc[3] << 16) | (rc[3] << 24);
+        }
+    ";
 
     // 单 GPU 广播源：FrameArrived（DWM 写完、所有权刚释放的时机）用像素着色器一次 draw 渲染写入
     // （FFmpeg gfxcapture 同款）。实测：消费时刻直接从跨进程表面回读会固定等待一个 DWM 周期（~20ms/帧），
@@ -109,9 +144,9 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
     private long _diagFrames;
     private long _diagCacheHits;
     private long _diagRecreates;
-    private double _sumStageMs;
+    private double _sumPackMs;
+    private double _sumCopyMs;
     private double _sumMapMs;
-    private double _sumCvtMs;
     private double _sumCloneMs;
 
     public void Dispose()
@@ -334,7 +369,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 SampleDescription = new SampleDescription(1, 0),
                 Usage = ResourceUsage.Default,
                 CpuAccessFlags = CpuAccessFlags.None,
-                BindFlags = BindFlags.RenderTarget,
+                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
                 OptionFlags = ResourceOptionFlags.None,
             });
             _gpuTextureRtv = new RenderTargetView(device, _gpuTexture);
@@ -363,14 +398,31 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
         _drawCb = new SharpDX.Direct3D11.Buffer(device, 16, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
     }
 
-    private void EnsureStagingTextureLocked(SharpDX.Direct3D11.Device device, int width, int height)
+    private void EnsurePackResourcesLocked(SharpDX.Direct3D11.Device device, int width, int height)
     {
-        if (_stagingTexture == null || _stagingTexture.Description.Width != width ||
-            _stagingTexture.Description.Height != height)
+        var bytes = (width * height * 3 + 3) & ~3;   // BGR24 字节流，向上圆整到 4 字节
+        if (_packGpuBuf != null && _packGpuBuf.Description.SizeInBytes == bytes) return;
+
+        _packUav?.Dispose();
+        _packGpuBuf?.Dispose();
+        _packStagingBuf?.Dispose();
+
+        _packCs ??= new ComputeShader(device, ShaderBytecode.Compile(PackShaderSrc, "main_cs", "cs_5_0"));
+        _packCb ??= new SharpDX.Direct3D11.Buffer(device, 16, ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+        _packGpuBuf = new SharpDX.Direct3D11.Buffer(device, bytes, ResourceUsage.Default, BindFlags.UnorderedAccess, CpuAccessFlags.None, ResourceOptionFlags.BufferStructured, 4);
+        // structured buffer 的 UAV 描述必须显式给出（Format=Unknown），否则驱动可能拒绝
+        _packUav = new UnorderedAccessView(device, _packGpuBuf, new UnorderedAccessViewDescription
         {
-            _stagingTexture?.Dispose();
-            _stagingTexture = Direct3D11Helper.CreateStagingTexture(device, width, height, null);
-        }
+            Format = Format.Unknown,
+            Dimension = UnorderedAccessViewDimension.Buffer,
+            Buffer = new UnorderedAccessViewDescription.BufferResource
+            {
+                FirstElement = 0,
+                ElementCount = bytes / 4,
+                Flags = UnorderedAccessViewBufferFlags.None,
+            },
+        });
+        _packStagingBuf = new SharpDX.Direct3D11.Buffer(device, bytes, ResourceUsage.Staging, BindFlags.None, CpuAccessFlags.Read, ResourceOptionFlags.BufferStructured, 4);
     }
 
     private static void HandleSharpDxError(SharpDXException e)
@@ -413,10 +465,14 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                         Monitor.Wait(_lock);
                     }
 
+                    _packUav?.Dispose();
+                    _packUav = null;
+                    _packGpuBuf?.Dispose();
+                    _packGpuBuf = null;
+                    _packStagingBuf?.Dispose();
+                    _packStagingBuf = null;
                     _gpuTexture?.Dispose();
                     _gpuTexture = null;
-                    _stagingTexture?.Dispose();
-                    _stagingTexture = null;
                     _cachedBgr?.Dispose();
                     _cachedBgr = null;
                     _cachedFrameTs = 0;
@@ -520,11 +576,13 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
         // 单飞闸门：并发消费方逐个进入
         lock (_captureGate)
         {
-            // 阶段1（持 _lock）：状态校验、无新到达判定、从广播纹理提交拷贝到 staging（同 tick）。
-            // 临界区仅微秒级命令提交
+            // 阶段1（持 _lock）：状态校验、无新到达判定、GPU 打包 BGR24 + 拷入 staging buffer（同 tick）。
+            // 临界区仅命令提交
             SharpDX.Direct3D11.Device? d3dDevice = null;
             RECT? rect;
             long frameTs;
+            int gpuW = 0;
+            int gpuH = 0;
             var isCacheHit = false;
             lock (_lock)
             {
@@ -538,12 +596,39 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 if (!isCacheHit)
                 {
                     d3dDevice = _gpuTexture.Device;
+                    gpuW = _gpuTexture.Description.Width;
+                    gpuH = _gpuTexture.Description.Height;
 
-                    EnsureStagingTextureLocked(d3dDevice, _gpuTexture.Description.Width, _gpuTexture.Description.Height);
+                    EnsurePackResourcesLocked(d3dDevice, gpuW, gpuH);
                     var context = d3dDevice.ImmediateContext;
+                    var total = gpuW * gpuH;
+
+                    // dims 常量（WriteDiscard：cb 可能仍绑定在上一帧 compute 槽上）
                     var ts1 = Stopwatch.GetTimestamp();
-                    context.CopyResource(_gpuTexture, _stagingTexture);
-                    _sumStageMs += (Stopwatch.GetTimestamp() - ts1) * 1000.0 / Stopwatch.Frequency;
+                    var cbMap = context.MapSubresource(_packCb, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None);
+                    Marshal.WriteInt32(cbMap.DataPointer, 0, gpuW);
+                    Marshal.WriteInt32(cbMap.DataPointer, 4, gpuH);
+                    Marshal.WriteInt32(cbMap.DataPointer, 8, total);
+                    context.UnmapSubresource(_packCb, 0);
+
+                    // GPU 打包 BGR24 → staging buffer（异步入队，阶段2 Map 等待完成）
+                    var ts2 = Stopwatch.GetTimestamp();
+                    using var srv = new ShaderResourceView(d3dDevice, _gpuTexture);
+                    var groups = (total / 4 + 63) / 64;
+                    context.ComputeShader.Set(_packCs);
+                    context.ComputeShader.SetShaderResource(0, srv);
+                    context.ComputeShader.SetUnorderedAccessView(0, _packUav);
+                    context.ComputeShader.SetConstantBuffer(0, _packCb);
+                    context.Dispatch(groups, 1, 1);
+                    context.ComputeShader.SetShaderResource(0, null);
+                    context.ComputeShader.SetUnorderedAccessView(0, null);
+                    context.ComputeShader.Set(null);
+                    _sumPackMs += (Stopwatch.GetTimestamp() - ts2) * 1000.0 / Stopwatch.Frequency;
+
+                    // 拷入 CPU 可读的 staging buffer
+                    var ts3 = Stopwatch.GetTimestamp();
+                    context.CopyResource(_packGpuBuf, _packStagingBuf);
+                    _sumCopyMs += (Stopwatch.GetTimestamp() - ts3) * 1000.0 / Stopwatch.Frequency;
                 }
 
                 // 两条路径都计为在途：Stop/尺寸变化销毁 staging/_cachedBgr 前必须等其归零
@@ -555,8 +640,8 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 {
                     Debug.WriteLine(
                         $"[WGC V2][diag] ticks={_diagTicks} arrivals={_diagFrames} cacheHits={_diagCacheHits} recreates={_diagRecreates} " +
-                        $"avgMs: stage={_sumStageMs / 100:0.00} map={_sumMapMs / 100:0.00} cvt={_sumCvtMs / 100:0.00} clone={_sumCloneMs / 100:0.00}");
-                    _sumStageMs = _sumMapMs = _sumCvtMs = _sumCloneMs = 0;
+                        $"avgMs: pack={_sumPackMs / 100:0.00} copy={_sumCopyMs / 100:0.00} map={_sumMapMs / 100:0.00} clone={_sumCloneMs / 100:0.00}");
+                    _sumPackMs = _sumCopyMs = _sumMapMs = _sumCloneMs = 0;
                 }
             }
 
@@ -573,30 +658,27 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 }
                 else
                 {
-                    // 阶段2（锁外）：Map 本次提交的 staging（同 tick，等待 GPU 拷贝通常亚毫秒级）。
-                    // 缓存常建：CvtColor 结果写入缓存，消费者拿克隆副本（后续无新帧的 tick 走零流量克隆路径）
+                    // 阶段2（锁外）：Map staging buffer——内容已是 GPU 打包好的 BGR24（= CV_8UC3 内存布局），
+                    // 直接包装读取并写入缓存 + 克隆给消费者（CPU 零转换）
                     var context = d3dDevice!.ImmediateContext;
-                    var stagingDesc = _stagingTexture!.Description;
                     var ts2 = Stopwatch.GetTimestamp();
-                    var dataBox = context.MapSubresource(_stagingTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+                    var dataBox = context.MapSubresource(_packStagingBuf, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
                     _sumMapMs += (Stopwatch.GetTimestamp() - ts2) * 1000.0 / Stopwatch.Frequency;
                     try
                     {
-                        var ts3 = Stopwatch.GetTimestamp();
-                        using var bgra = Mat.FromPixelData(stagingDesc.Height, stagingDesc.Width, MatType.CV_8UC4, dataBox.DataPointer, dataBox.RowPitch);
-                        EnsureCache(stagingDesc.Width, stagingDesc.Height);
-                        Cv2.CvtColor(bgra, _cachedBgr!, ColorConversionCodes.BGRA2BGR);
+                        using var bgr = Mat.FromPixelData(gpuH, gpuW, MatType.CV_8UC3, dataBox.DataPointer, gpuW * 3);
+                        EnsureCache(gpuW, gpuH);
+                        bgr.CopyTo(_cachedBgr!);
                         _cachedFrameTs = frameTs;
-                        _sumCvtMs += (Stopwatch.GetTimestamp() - ts3) * 1000.0 / Stopwatch.Frequency;
 
                         var ts4 = Stopwatch.GetTimestamp();
-                        target = AcquireBgrMat(stagingDesc.Height, stagingDesc.Width);
+                        target = AcquireBgrMat(gpuH, gpuW);
                         _cachedBgr!.CopyTo(target);
                         _sumCloneMs += (Stopwatch.GetTimestamp() - ts4) * 1000.0 / Stopwatch.Frequency;
                     }
                     finally
                     {
-                        context.UnmapSubresource(_stagingTexture, 0);
+                        context.UnmapSubresource(_packStagingBuf, 0);
                     }
                 }
 
@@ -772,8 +854,16 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
             _drawPs?.Dispose();
             _drawSampler?.Dispose();
             _drawCb?.Dispose();
-            _stagingTexture?.Dispose();
-            _stagingTexture = null;
+            _packCs?.Dispose();
+            _packCs = null;
+            _packCb?.Dispose();
+            _packCb = null;
+            _packUav?.Dispose();
+            _packUav = null;
+            _packGpuBuf?.Dispose();
+            _packGpuBuf = null;
+            _packStagingBuf?.Dispose();
+            _packStagingBuf = null;
             _cachedBgr?.Dispose();
             _cachedBgr = null;
             _cachedFrameTs = 0;
