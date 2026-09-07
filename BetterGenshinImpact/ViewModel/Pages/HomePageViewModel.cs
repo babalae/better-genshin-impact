@@ -57,11 +57,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    /// <summary>
-    ///     当前捕获方式是否为 WGC V2（用于控制 V2 专属设置的可见性）
-    /// </summary>
-    [ObservableProperty] private bool _isWgcV2CaptureMode;
-
     [ObservableProperty] private bool _taskDispatcherEnabled = false;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
@@ -105,14 +100,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
         Config = configService.Get();
-        Config.PropertyChanged += (_, args) =>
-        {
-            if (args.PropertyName == nameof(AllConfig.CaptureMode))
-            {
-                UpdateWgcV2CaptureModeVisible();
-            }
-        };
-        UpdateWgcV2CaptureModeVisible();
         ReadGameInstallPath();
         InitializeBannerImage();
 
@@ -364,11 +351,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
                 TaskDispatcherEnabled = true;
             }
         }
-    }
-
-    private void UpdateWgcV2CaptureModeVisible()
-    {
-        IsWgcV2CaptureMode = Config.CaptureMode == CaptureModes.WindowsGraphicsCaptureV2.ToString();
     }
 
     private CaptureModes GetCaptureMode()
