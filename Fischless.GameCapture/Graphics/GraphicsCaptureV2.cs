@@ -13,6 +13,8 @@ using SharpDX;
 using SharpDX.D3DCompiler;
 using SharpDX.DXGI;
 
+// 部分设计参考 FFmpeg 的 WGC 捕获实现（libavfilter/vsrc_gfxcapture_winrt.cpp，LGPL-2.1-or-later）
+
 namespace Fischless.GameCapture.Graphics;
 
 public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
