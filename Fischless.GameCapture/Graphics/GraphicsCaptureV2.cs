@@ -656,7 +656,8 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                         // GPU 打包 BGR24 → staging buffer（异步入队，阶段2 Map 等待完成）
                         var ts2 = Stopwatch.GetTimestamp();
                         using var srv = new ShaderResourceView(d3dDevice, _gpuTexture);
-                        var groups = (total / 4 + 63) / 64;
+                        var pixelGroups = (total + 3) / 4;   // 向上取整，与 EnsurePackResourcesLocked 的缓冲区分配一致
+                        var groups = (pixelGroups + 63) / 64;
                         context.ComputeShader.Set(_packCs);
                         context.ComputeShader.SetShaderResource(0, srv);
                         context.ComputeShader.SetUnorderedAccessView(0, _packUav);
