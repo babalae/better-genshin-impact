@@ -67,7 +67,7 @@ internal sealed class ExperimentalTeleportTask : IDisposable
 
     private void LogConfigSnapshot()
     {
-        if (!_config.ExperimentalTeleportDetailedLogs)
+        if (!_config.IsExperimentalTeleportDetailedLoggingEnabled)
         {
             return;
         }
@@ -77,17 +77,17 @@ internal sealed class ExperimentalTeleportTask : IDisposable
             "stateInterval={StateInterval}ms stateInitialDelay={StateInitialDelay}ms stateTimeout={StateTimeout}ms teleportOperationDelay={TeleportOperationDelay}ms " +
             "mapOpenTimeout={MapOpenTimeout}ms mapOpenRepressInterval={MapOpenRepressInterval}ms " +
             "dragStartDelay={DragStartDelay}ms dragReleaseDelay={DragReleaseDelay}ms",
-            _config.ExperimentalTeleportDragDistanceCorrection,
-            _config.ExperimentalTeleportMaxSingleStepDistancePixels,
-            _config.ExperimentalTeleportDragStepIntervalMilliseconds,
-            _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds,
-            _config.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds,
-            _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds,
+            _config.GetEffectiveExperimentalTeleportDragDistanceCorrection(),
+            _config.GetEffectiveExperimentalTeleportMaxSingleStepDistancePixels(),
+            _config.GetEffectiveExperimentalTeleportDragStepIntervalMilliseconds(),
+            _config.GetEffectiveExperimentalTeleportStateRecognitionIntervalMilliseconds(),
+            _config.GetEffectiveExperimentalTeleportStateRecognitionInitialDelayMilliseconds(),
+            _config.GetEffectiveExperimentalTeleportStateTransitionTimeoutMilliseconds(),
             _config.TeleportOperationDelayMilliseconds,
-            _config.ExperimentalTeleportMapOpenTimeoutMilliseconds,
-            _config.ExperimentalTeleportMapOpenRepressIntervalMilliseconds,
-            _config.ExperimentalTeleportDragStartDelayMilliseconds,
-            _config.ExperimentalTeleportDragReleaseDelayMilliseconds);
+            _config.GetEffectiveExperimentalTeleportMapOpenTimeoutMilliseconds(),
+            _config.GetEffectiveExperimentalTeleportMapOpenRepressIntervalMilliseconds(),
+            _config.GetEffectiveExperimentalTeleportDragStartDelayMilliseconds(),
+            _config.GetEffectiveExperimentalTeleportDragReleaseDelayMilliseconds());
     }
 
     public void Dispose()

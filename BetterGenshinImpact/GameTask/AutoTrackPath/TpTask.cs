@@ -630,7 +630,7 @@ public class TpTask
         Simulation.ReleaseAllKey();
         await Delay(GetTeleportOperationDelay(20), ct);
         var timeout = GetExperimentalMapOpenTimeoutMilliseconds(mapName);
-        var repressInterval = Math.Max(1, _tpConfig.ExperimentalTeleportMapOpenRepressIntervalMilliseconds);
+        var repressInterval = _tpConfig.GetEffectiveExperimentalTeleportMapOpenRepressIntervalMilliseconds();
         var detectionInterval = GetExperimentalStateRecognitionInterval();
         var pressCount = 0;
         var nextPressAt = 0L;
@@ -686,7 +686,7 @@ public class TpTask
 
     private void LogExperimentalDetailed(string message, params object?[] args)
     {
-        if (_tpConfig.ExperimentalTeleportDetailedLogs)
+        if (_tpConfig.IsExperimentalTeleportDetailedLoggingEnabled)
         {
             Logger.LogDebug(message, args);
         }
@@ -2591,11 +2591,27 @@ public class TpTask
 
     private int GetExperimentalMapOpenTimeoutMilliseconds(string? mapName)
     {
-        var configuredTimeout = Math.Max(1, _tpConfig.ExperimentalTeleportMapOpenTimeoutMilliseconds);
+        var configuredTimeout = _tpConfig.GetEffectiveExperimentalTeleportMapOpenTimeoutMilliseconds();
         var mapRatio = string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
             ? MoonCanonBigMapOpenTimeoutMs / (double)DefaultBigMapOpenTimeoutMs
             : 1d;
-        return Math.Max(1, (int)Math.Round(configuredTimeout * mapRatio));
+        var scaledTimeout = configuredTimeout * mapRatio;
+        if (!double.IsFinite(scaledTimeout))
+        {
+            return scaledTimeout > 0 ? int.MaxValue : int.MinValue;
+        }
+
+        if (scaledTimeout >= int.MaxValue)
+        {
+            return int.MaxValue;
+        }
+
+        if (scaledTimeout <= int.MinValue)
+        {
+            return int.MinValue;
+        }
+
+        return (int)Math.Round(scaledTimeout);
     }
 
     /// <summary>
@@ -2757,7 +2773,7 @@ public class TpTask
             return UiRecognitionPollIntervalMs;
         }
 
-        return Math.Max(1, _tpConfig.ExperimentalTeleportStateRecognitionIntervalMilliseconds);
+        return _tpConfig.GetEffectiveExperimentalTeleportStateRecognitionIntervalMilliseconds();
     }
 
     private int GetExperimentalStateRecognitionInitialDelay()
@@ -2767,7 +2783,7 @@ public class TpTask
             return 0;
         }
 
-        return Math.Max(0, _tpConfig.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds);
+        return _tpConfig.GetEffectiveExperimentalTeleportStateRecognitionInitialDelayMilliseconds();
     }
 
     private int GetExperimentalStateTransitionTimeout(int minimumMilliseconds)
@@ -2777,7 +2793,7 @@ public class TpTask
             return minimumMilliseconds;
         }
 
-        return Math.Max(minimumMilliseconds, _tpConfig.ExperimentalTeleportStateTransitionTimeoutMilliseconds);
+        return _tpConfig.GetEffectiveExperimentalTeleportStateTransitionTimeoutMilliseconds();
     }
 
     private void UpdateMapZoomWheelCalibration(int wheelNotches, double zoomDelta)

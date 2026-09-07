@@ -544,18 +544,18 @@ internal sealed class ExperimentalTeleportUiStateMachine
             : Math.Max(1, (int)Math.Round(scaledDelay));
     }
 
-    private int GetStateRecognitionInterval() => Math.Max(
-        1, _config.ExperimentalTeleportStateRecognitionIntervalMilliseconds);
+    private int GetStateRecognitionInterval() =>
+        _config.GetEffectiveExperimentalTeleportStateRecognitionIntervalMilliseconds();
 
-    private int GetStateRecognitionInitialDelay() => Math.Max(
-        0, _config.ExperimentalTeleportStateRecognitionInitialDelayMilliseconds);
+    private int GetStateRecognitionInitialDelay() =>
+        _config.GetEffectiveExperimentalTeleportStateRecognitionInitialDelayMilliseconds();
 
-    private int GetStateTransitionTimeout() => Math.Max(
-        1, _config.ExperimentalTeleportStateTransitionTimeoutMilliseconds);
+    private int GetStateTransitionTimeout() =>
+        _config.GetEffectiveExperimentalTeleportStateTransitionTimeoutMilliseconds();
 
     private void LogDetailed(string message, params object?[] args)
     {
-        if (_config.ExperimentalTeleportDetailedLogs)
+        if (_config.IsExperimentalTeleportDetailedLoggingEnabled)
         {
             Logger.LogDebug(message, args);
         }

@@ -87,10 +87,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         string? country = null)
     {
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var correction = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection) &&
-                         config.ExperimentalTeleportDragDistanceCorrection > 0
-            ? config.ExperimentalTeleportDragDistanceCorrection
-            : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
+        var correction = config.GetEffectiveExperimentalTeleportDragDistanceCorrection();
         var desiredX = requestedDeltaX * correction;
         var desiredY = requestedDeltaY * correction;
         var desiredDistance = Math.Sqrt(desiredX * desiredX + desiredY * desiredY);
@@ -135,10 +132,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var systemInfo = TaskContext.Instance().SystemInfo;
         var captureRect = systemInfo.ScaleMax1080PCaptureRect;
         var realCaptureRect = systemInfo.CaptureAreaRect;
-        var distanceCorrection = double.IsFinite(config.ExperimentalTeleportDragDistanceCorrection) &&
-                                  config.ExperimentalTeleportDragDistanceCorrection > 0
-            ? config.ExperimentalTeleportDragDistanceCorrection
-            : TpConfig.DefaultExperimentalTeleportDragDistanceCorrection;
+        var distanceCorrection = config.GetEffectiveExperimentalTeleportDragDistanceCorrection();
         // TpTask 在进入实验拖动前会将输入距离换算为 DPI 逻辑坐标；这里还原为实际屏幕拖动距离。
         var dpiScale = double.IsFinite(TaskContext.Instance().DpiScale) && TaskContext.Instance().DpiScale > 0
             ? TaskContext.Instance().DpiScale
@@ -262,8 +256,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var screenStart = ToScreenPoint(start, captureRect, realCaptureRect);
         var screenEnd = ToScreenPoint(end, captureRect, realCaptureRect, clampToCapture: true);
         var boundaryDelay = GetOperationInterval();
-        var dragStartDelay = Math.Max(1, config.ExperimentalTeleportDragStartDelayMilliseconds);
-        var dragReleaseDelay = Math.Max(1, config.ExperimentalTeleportDragReleaseDelayMilliseconds);
+        var dragStartDelay = config.GetEffectiveExperimentalTeleportDragStartDelayMilliseconds();
+        var dragReleaseDelay = config.GetEffectiveExperimentalTeleportDragReleaseDelayMilliseconds();
 
         LogDetailed(
             "实验传送开始拖动：requested=({RequestedX:0.0},{RequestedY:0.0}) " +
@@ -296,9 +290,11 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             requestedDeltaX * requestedDeltaX + requestedDeltaY * requestedDeltaY);
         var desiredDistance = Math.Sqrt(desiredX * desiredX + desiredY * desiredY);
         var runwayRatio = desiredDistance <= 1e-6d ? 0d : inputDistance / desiredDistance;
-        var maxSingleStepDistance = Math.Max(1, config.ExperimentalTeleportMaxSingleStepDistancePixels);
+        var maxSingleStepDistance = config.GetEffectiveExperimentalTeleportMaxSingleStepDistancePixels();
         var steps = Math.Clamp(
-            (int)Math.Ceiling(inputDistance / maxSingleStepDistance),
+            maxSingleStepDistance > 0
+                ? (int)Math.Ceiling(inputDistance / maxSingleStepDistance)
+                : 1,
             1,
             int.MaxValue);
         var movedX = 0d;
@@ -409,8 +405,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             realRect.X + buttonX * realScale,
             realRect.Y + initialY * realScale);
         await Delay(GetOperationInterval(), ct);
-        var dragStartDelay = Math.Max(1, config.ExperimentalTeleportDragStartDelayMilliseconds);
-        var dragReleaseDelay = Math.Max(1, config.ExperimentalTeleportDragReleaseDelayMilliseconds);
+        var dragStartDelay = config.GetEffectiveExperimentalTeleportDragStartDelayMilliseconds();
+        var dragReleaseDelay = config.GetEffectiveExperimentalTeleportDragReleaseDelayMilliseconds();
         try
         {
             Simulation.SendInput.Mouse.LeftButtonDown();
@@ -764,12 +760,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
 
     private int GetStepInterval()
     {
-        return Math.Max(1, config.ExperimentalTeleportDragStepIntervalMilliseconds);
+        return config.GetEffectiveExperimentalTeleportDragStepIntervalMilliseconds();
     }
 
     private void LogDetailed(string message, params object?[] args)
     {
-        if (config.ExperimentalTeleportDetailedLogs)
+        if (config.IsExperimentalTeleportDetailedLoggingEnabled)
         {
             Logger.LogDebug(message, args);
         }

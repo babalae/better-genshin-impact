@@ -1425,9 +1425,25 @@
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.UseExperimentalTeleport, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16"
+                      Visibility="{Binding Config.TpConfig.IsExperimentalTeleportAdvancedSwitchVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="{i18n:T 启用实验性传送高级参数}" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 关闭时由传送操作间隔倍率自动计算参数}" TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.TpConfig.UseExperimentalTeleportAdvancedParameters, Mode=TwoWay}" />
+                </Grid>
                 <StackPanel Margin="16,0,52,8"
-                            Visibility="{Binding Config.TpConfig.UseExperimentalTeleport, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Margin="0,4,0,8" FontSize="14" FontWeight="SemiBold" Text="{i18n:T 实验性传送参数}" />
+                            Visibility="{Binding Config.TpConfig.IsExperimentalTeleportAdvancedParametersVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Margin="0,4,0,8" FontSize="14" FontWeight="SemiBold" Text="{i18n:T 实验性传送高级参数}" />
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="120" /></Grid.ColumnDefinitions>
                         <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 理论拖动距离修正倍率}" />
                         <TextBox Grid.Column="1" MinWidth="120" TextAlignment="Right"
@@ -1479,7 +1495,7 @@
                                  Text="{Binding Config.TpConfig.ExperimentalTeleportDragReleaseDelayMilliseconds, Mode=TwoWay}" />
                     </Grid>
                     <Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 输出详细日志}" />
+                        <ui:TextBlock VerticalAlignment="Center" Text="{i18n:T 输出详细调试日志}" />
                         <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding Config.TpConfig.ExperimentalTeleportDetailedLogs, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>

@@ -11,18 +11,32 @@ public partial class TpConfig : ObservableValidator
     public const int DefaultTeleportOperationDelayMilliseconds = 20;
 
     public const int DefaultExperimentalTeleportDragStepIntervalMilliseconds = 3;
-    public const double DefaultExperimentalTeleportDragDistanceCorrection = 1d;
+    public const double DefaultExperimentalTeleportDragDistanceCorrection = 0.95d;
     public const int DefaultExperimentalTeleportStateRecognitionIntervalMilliseconds = 50;
-    public const int DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 200;
+    public const int DefaultExperimentalTeleportStateRecognitionInitialDelayMilliseconds = 100;
     public const int DefaultExperimentalTeleportStateTransitionTimeoutMilliseconds = 500;
     public const int DefaultExperimentalTeleportMapOpenTimeoutMilliseconds = 5000;
-    public const int DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds = 1000;
+    public const int DefaultExperimentalTeleportMapOpenRepressIntervalMilliseconds = 2000;
     public const int DefaultExperimentalTeleportDragStartDelayMilliseconds = 25;
-    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 75;
-    public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 150;
+    public const int DefaultExperimentalTeleportDragReleaseDelayMilliseconds = 150;
+    public const int DefaultExperimentalTeleportMaxSingleStepDistancePixels = 50;
 
     [ObservableProperty]
     private bool _useExperimentalTeleport;
+
+    [ObservableProperty]
+    private bool _useExperimentalTeleportAdvancedParameters;
+
+    partial void OnUseExperimentalTeleportChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsExperimentalTeleportAdvancedSwitchVisible));
+        OnPropertyChanged(nameof(IsExperimentalTeleportAdvancedParametersVisible));
+    }
+
+    partial void OnUseExperimentalTeleportAdvancedParametersChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsExperimentalTeleportAdvancedParametersVisible));
+    }
 
     [ObservableProperty]
     private bool _experimentalTeleportDetailedLogs = false;
@@ -223,4 +237,101 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     [property: JsonIgnore]
     private double _precisionThreshold = 0.05;
+
+    [JsonIgnore]
+    public bool IsExperimentalTeleportAdvancedSwitchVisible => UseExperimentalTeleport;
+
+    [JsonIgnore]
+    public bool IsExperimentalTeleportAdvancedParametersVisible =>
+        UseExperimentalTeleport && UseExperimentalTeleportAdvancedParameters;
+
+    public double GetEffectiveExperimentalTeleportDragDistanceCorrection()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportDragDistanceCorrection
+            : DefaultExperimentalTeleportDragDistanceCorrection;
+    }
+
+    public int GetEffectiveExperimentalTeleportMaxSingleStepDistancePixels()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportMaxSingleStepDistancePixels
+            : DefaultExperimentalTeleportMaxSingleStepDistancePixels;
+    }
+
+    public int GetEffectiveExperimentalTeleportDragStepIntervalMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportDragStepIntervalMilliseconds
+            : ScaleExperimentalTeleportDelay(3d, 1);
+    }
+
+    public int GetEffectiveExperimentalTeleportStateRecognitionIntervalMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportStateRecognitionIntervalMilliseconds
+            : ScaleExperimentalTeleportDelay(50d, 10);
+    }
+
+    public int GetEffectiveExperimentalTeleportStateRecognitionInitialDelayMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportStateRecognitionInitialDelayMilliseconds
+            : ScaleExperimentalTeleportDelay(100d, 20);
+    }
+
+    public int GetEffectiveExperimentalTeleportStateTransitionTimeoutMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportStateTransitionTimeoutMilliseconds
+            : ScaleExperimentalTeleportDelay(500d, 250);
+    }
+
+    public int GetEffectiveExperimentalTeleportMapOpenTimeoutMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportMapOpenTimeoutMilliseconds
+            : ScaleExperimentalTeleportDelay(5000d, 2500);
+    }
+
+    public int GetEffectiveExperimentalTeleportMapOpenRepressIntervalMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportMapOpenRepressIntervalMilliseconds
+            : ScaleExperimentalTeleportDelay(2000d, 750);
+    }
+
+    public int GetEffectiveExperimentalTeleportDragStartDelayMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportDragStartDelayMilliseconds
+            : ScaleExperimentalTeleportDelay(25d, 15);
+    }
+
+    public int GetEffectiveExperimentalTeleportDragReleaseDelayMilliseconds()
+    {
+        return UseExperimentalTeleportAdvancedParameters
+            ? ExperimentalTeleportDragReleaseDelayMilliseconds
+            : ScaleExperimentalTeleportDelay(150d, 75);
+    }
+
+    public bool IsExperimentalTeleportDetailedLoggingEnabled =>
+        UseExperimentalTeleportAdvancedParameters && ExperimentalTeleportDetailedLogs;
+
+    private int ScaleExperimentalTeleportDelay(double baseMilliseconds, int minimumMilliseconds)
+    {
+        var multiplier = TeleportOperationDelayMultiplier;
+        if (!double.IsFinite(multiplier))
+        {
+            multiplier = 1d;
+        }
+
+        var scaled = Math.Ceiling(baseMilliseconds * multiplier);
+        if (!double.IsFinite(scaled) || scaled >= int.MaxValue)
+        {
+            return int.MaxValue;
+        }
+
+        return Math.Max(minimumMilliseconds, (int)scaled);
+    }
 }
