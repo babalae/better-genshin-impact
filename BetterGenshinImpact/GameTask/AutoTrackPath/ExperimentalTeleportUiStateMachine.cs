@@ -24,6 +24,7 @@ internal enum ExperimentalTeleportUiState
     AreaList,
     TeleportCandidateList,
     TeleportDetails,
+    TeleportUnavailable,
     Loading,
 }
 
@@ -51,6 +52,14 @@ internal sealed class ExperimentalTeleportUiContext
     public bool LoadingObserved { get; set; }
     public bool LoadingFallbackLogged { get; set; }
     public long ConfirmIssuedAt { get; set; }
+}
+
+internal sealed class ExperimentalTeleportUnavailableException : Exception
+{
+    public ExperimentalTeleportUnavailableException()
+        : base("传送交互提示未出现可传送按钮")
+    {
+    }
 }
 
 /// <summary>
@@ -182,6 +191,7 @@ internal sealed class ExperimentalTeleportUiStateMachine
             ExperimentalTeleportUiState.AreaList => HandleAreaListAsync(context),
             ExperimentalTeleportUiState.TeleportCandidateList => HandleTeleportCandidateListAsync(context),
             ExperimentalTeleportUiState.TeleportDetails => HandleTeleportDetailsAsync(context),
+            ExperimentalTeleportUiState.TeleportUnavailable => HandleTeleportUnavailableAsync(context),
             ExperimentalTeleportUiState.Loading => HandleLoadingAsync(context),
             _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
         };
@@ -312,6 +322,19 @@ internal sealed class ExperimentalTeleportUiStateMachine
         return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.Loading, "确认传送");
     }
 
+    private async Task<ExperimentalTeleportUiState> HandleTeleportUnavailableAsync(
+        ExperimentalTeleportUiContext context)
+    {
+        if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport)
+        {
+            // 由外层 TpWithRetries 负责累计同一次传送中的出现次数。
+            throw new ExperimentalTeleportUnavailableException();
+        }
+
+        await _host.DismissExperimentalTeleportUnavailablePrompt();
+        return ExperimentalTeleportUiState.MapMain;
+    }
+
     private async Task<ExperimentalTeleportUiState> HandleLoadingAsync(ExperimentalTeleportUiContext context)
     {
         return await WaitForExpectedStateAsync(context, ExperimentalTeleportUiState.MainWorld, "等待传送完成");
@@ -382,6 +405,11 @@ internal sealed class ExperimentalTeleportUiStateMachine
 
         if (Bv.IsInBigMapUi(capture))
         {
+            if (_host.IsExperimentalTeleportUnavailable(capture))
+            {
+                return AcceptKnownState(context, ExperimentalTeleportUiState.TeleportUnavailable);
+            }
+
             // 候选列表识别包含图标模板匹配和 OCR，仅在确认传送流程中执行，
             // 避免等待地图/区域状态时每轮都扫描候选列表。
             if (context.Operation == ExperimentalTeleportUiOperation.ConfirmTeleport &&

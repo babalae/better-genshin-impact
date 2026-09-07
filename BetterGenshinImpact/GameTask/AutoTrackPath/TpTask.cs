@@ -301,6 +301,19 @@ public class TpTask
         return teleportButton.IsExist();
     }
 
+    internal bool IsExperimentalTeleportUnavailable(ImageRegion imageRegion)
+    {
+        using var unavailablePrompt = imageRegion.Find(
+            GetQuickTeleportRecognitionObject("TeleportUnavailablePrompt", imageRegion));
+        return unavailablePrompt.IsExist();
+    }
+
+    internal async Task DismissExperimentalTeleportUnavailablePrompt()
+    {
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+        await Delay(GetExperimentalOperationDelay(200), ct);
+    }
+
     internal bool HasExperimentalMapMainControls(ImageRegion imageRegion)
     {
         using var mapCloseButton = imageRegion.Find(GetQuickTeleportRecognitionObject("MapCloseButton", imageRegion));
@@ -1955,11 +1968,26 @@ public class TpTask
 
     private async Task<(double, double)> TpWithRetries(double tpX, double tpY, string mapName, bool force)
     {
+        var unavailablePromptCount = 0;
         for (var i = 0; i < 3; i++)
         {
             try
             {
                 return await TpOnce(tpX, tpY, mapName, force);
+            }
+            catch (ExperimentalTeleportUnavailableException e)
+            {
+                unavailablePromptCount++;
+                await DismissExperimentalTeleportUnavailablePrompt();
+                if (unavailablePromptCount >= 3)
+                {
+                    throw new TpPointNotActivate("传送点可能未开启");
+                }
+
+                Logger.LogWarning(
+                    "检测到不可传送交互提示，第 {Attempt}/3 次，准备重试：{Message}",
+                    unavailablePromptCount,
+                    e.Message);
             }
             catch (TeleportPanelNotOpenedException e)
             {
