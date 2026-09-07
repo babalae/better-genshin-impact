@@ -129,6 +129,7 @@ public class TpTask
     private Func<int, int, Task<ExperimentalTeleportDrag.DragResult>>? _experimentalDrag;
     private ExperimentalTeleportDrag? _experimentalDragController;
     private Action? _experimentalDragFailureHandler;
+    private Action? _experimentalDragStateResetter;
     private Func<double, double, Task>? _experimentalZoomAdjuster;
     private ExperimentalTeleportUiStateMachine? _experimentalUiStateMachine;
     private Rect? _experimentalBigMapRectCache;
@@ -340,119 +341,83 @@ public class TpTask
         ImageRegion imageRegion,
         Point2d selectedStart)
     {
-        const double searchRadius = 120d;
-        var imageScaleX = imageRegion.Width / 1920d;
-        var imageScaleY = imageRegion.Height / 1080d;
-        var captureScaleX = imageRegion.Width / Math.Max(1d, _captureRect.Width);
-        var captureScaleY = imageRegion.Height / Math.Max(1d, _captureRect.Height);
-        var centerX = selectedStart.X * captureScaleX;
-        var centerY = selectedStart.Y * captureScaleY;
+        var scaleX = _captureRect.Width / 1920d;
+        var scaleY = _captureRect.Height / 1080d;
+        return GetExperimentalDragStartForbiddenRects(
+            imageRegion,
+            new Rect2d(selectedStart.X - 200d * scaleX, selectedStart.Y - 200d * scaleY, 400d * scaleX, 400d * scaleY),
+            null);
+    }
+
+    private IReadOnlyList<Rect2d> GetExperimentalDragStartForbiddenRects(
+        ImageRegion imageRegion,
+        Rect2d selectedRegion,
+        IDictionary<(int X, int Y, int Width, int Height), IReadOnlyList<NearbyMapIcon>>? iconCache)
+    {
+        var imageScaleX = imageRegion.Width / Math.Max(1d, _captureRect.Width);
+        var imageScaleY = imageRegion.Height / Math.Max(1d, _captureRect.Height);
         var searchRect = new Rect(
-                (int)Math.Round(centerX - searchRadius * imageScaleX),
-                (int)Math.Round(centerY - searchRadius * imageScaleY),
-                (int)Math.Round(searchRadius * 2d * imageScaleX),
-                (int)Math.Round(searchRadius * 2d * imageScaleY))
+                (int)Math.Round(selectedRegion.X * imageScaleX),
+                (int)Math.Round(selectedRegion.Y * imageScaleY),
+                (int)Math.Round(selectedRegion.Width * imageScaleX),
+                (int)Math.Round(selectedRegion.Height * imageScaleY))
             .ClampTo(imageRegion.SrcMat);
-        return FindExperimentalDragStartForbiddenRects(imageRegion, searchRect, selectedStart);
+        return FindExperimentalDragStartForbiddenRects(imageRegion, searchRect, iconCache);
     }
 
     private IReadOnlyList<Rect2d> FindExperimentalDragStartForbiddenRects(
         ImageRegion imageRegion,
         Rect searchRect,
-        Point2d? selectedStart)
+        IDictionary<(int X, int Y, int Width, int Height), IReadOnlyList<NearbyMapIcon>>? iconCache)
     {
         if (searchRect.Width <= 0 || searchRect.Height <= 0)
         {
             return [];
         }
 
-        var icons = GetMapIconsInRect(
-            imageRegion,
-            searchRect,
-            searchRect.X + searchRect.Width / 2d,
-            searchRect.Y + searchRect.Height / 2d,
-            double.PositiveInfinity,
-            ExperimentalDragForbiddenIconTypes);
+        var cacheKey = (searchRect.X, searchRect.Y, searchRect.Width, searchRect.Height);
+        IReadOnlyList<NearbyMapIcon> icons;
+        if (iconCache is not null && iconCache.TryGetValue(cacheKey, out var cachedIcons))
+        {
+            icons = cachedIcons;
+        }
+        else
+        {
+            icons = GetMapIconsInRect(
+                imageRegion,
+                searchRect,
+                searchRect.X + searchRect.Width / 2d,
+                searchRect.Y + searchRect.Height / 2d,
+                double.PositiveInfinity,
+                ExperimentalDragForbiddenIconTypes);
+            if (iconCache is not null)
+            {
+                iconCache[cacheKey] = icons;
+            }
+        }
         var scaleX = imageRegion.Width / 1920d;
         var scaleY = imageRegion.Height / 1080d;
-        var captureScaleX = _captureRect.Width / 1920d;
-        var captureScaleY = _captureRect.Height / 1080d;
-        // 目标图标坐标只需从当前截图和地图矩形计算一次；不要在每个候选图标上重复做
-        // MapScaleButton 识别和大地图矩形匹配，这些操作明显比矩形比较更昂贵。
-        var hasTargetIconCenter = TryGetExperimentalTargetIconCenter(imageRegion, out var targetIconCenter);
         var forbiddenRects = icons
             .Select(icon => new Rect2d(
                 icon.CenterX / Math.Max(scaleX, 1e-6d) - 40d,
                 icon.CenterY / Math.Max(scaleY, 1e-6d) - 40d,
                 80d,
                 80d))
-            .Where(rect => selectedStart is not { } point ||
-                           point.X >= rect.X * captureScaleX &&
-                           point.X <= rect.Right * captureScaleX &&
-                           point.Y >= rect.Y * captureScaleY &&
-                           point.Y <= rect.Bottom * captureScaleY)
-            // 目标传送点图标是后续要点击的对象，不应被当作拖动完成后的危险图标。
-            // 拖动起点扫描仍避让其他传送点图标，避免按下时误触发点位面板。
-            .Where(rect => !hasTargetIconCenter ||
-                           Math.Abs(rect.X + rect.Width / 2d - targetIconCenter.X) > 60d ||
-                           Math.Abs(rect.Y + rect.Height / 2d - targetIconCenter.Y) > 60d)
             .ToList();
 
         var formattedRects = string.Join(
             ";",
             forbiddenRects.Select(rect => $"({rect.X:0.0},{rect.Y:0.0},80,80)"));
-        if (selectedStart is { } start)
-        {
-            LogExperimentalDetailed(
-                "实验传送拖动起点图标避让：scope=local start=({StartX:0.0},{StartY:0.0}) search=({SearchX},{SearchY},{SearchWidth},{SearchHeight}) count={Count} rects={Rects}",
-                start.X,
-                start.Y,
-                searchRect.X,
-                searchRect.Y,
-                searchRect.Width,
-                searchRect.Height,
-                forbiddenRects.Count,
-                formattedRects);
-        }
-        else
-        {
-            LogExperimentalDetailed(
-                "实验传送拖动起点图标避让：scope=full count={Count} rects={Rects}",
-                forbiddenRects.Count,
-                formattedRects);
-        }
+        LogExperimentalDetailed(
+            "实验传送拖动起点图标避让：scope=local search=({SearchX},{SearchY},{SearchWidth},{SearchHeight}) count={Count} rects={Rects}",
+            searchRect.X,
+            searchRect.Y,
+            searchRect.Width,
+            searchRect.Height,
+            forbiddenRects.Count,
+            formattedRects);
 
         return forbiddenRects;
-    }
-
-    private bool TryGetExperimentalTargetIconCenter(ImageRegion imageRegion, out Point2d targetIconCenter)
-    {
-        targetIconCenter = default;
-        try
-        {
-            if (_experimentalTargetTp is null ||
-                string.IsNullOrEmpty(_experimentalTargetMapName) ||
-                !TryGetBigMapRectFromCapture(imageRegion, _experimentalTargetMapName, out var mapRect))
-            {
-                return false;
-            }
-
-            var (targetX, targetY) = ConvertToGameRegionPosition(
-                _experimentalTargetMapName,
-                mapRect,
-                _experimentalTargetTp.X,
-                _experimentalTargetTp.Y);
-            var scaleX = imageRegion.Width / 1920d;
-            var scaleY = imageRegion.Height / 1080d;
-            targetIconCenter = new Point2d(
-                targetX / Math.Max(scaleX, 1e-6d),
-                targetY / Math.Max(scaleY, 1e-6d));
-            return double.IsFinite(targetIconCenter.X) && double.IsFinite(targetIconCenter.Y);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     internal void OpenExperimentalAreaList()
@@ -489,6 +454,7 @@ public class TpTask
             _experimentalDrag = null;
             _experimentalDragController = null;
             _experimentalDragFailureHandler = null;
+            _experimentalDragStateResetter = null;
         }
     }
 
@@ -516,6 +482,7 @@ public class TpTask
             _experimentalDrag = null;
             _experimentalDragController = null;
             _experimentalDragFailureHandler = null;
+            _experimentalDragStateResetter = null;
         }
     }
 
@@ -525,7 +492,9 @@ public class TpTask
         const int maxAttempts = 3;
         const double failedStartRadius = 40d;
         var failedStartRects = new List<Rect2d>();
+        var attemptedStartCandidates = new HashSet<(int X, int Y)>();
         ExperimentalTeleportDrag.DragResult lastResult = default;
+        _experimentalDragStateResetter = failedStartRects.Clear;
         _experimentalDragFailureHandler = () =>
         {
             if (!double.IsFinite(lastResult.StartX) ||
@@ -535,11 +504,13 @@ public class TpTask
                 return;
             }
 
-            failedStartRects.Add(new Rect2d(
-                lastResult.StartX - failedStartRadius,
-                lastResult.StartY - failedStartRadius,
-                failedStartRadius * 2d,
-                failedStartRadius * 2d));
+            AddExperimentalForbiddenRect(
+                failedStartRects,
+                new Rect2d(
+                    lastResult.StartX - failedStartRadius,
+                    lastResult.StartY - failedStartRadius,
+                    failedStartRadius * 2d,
+                    failedStartRadius * 2d));
             LogExperimentalDetailed(
                 "实验传送拖动识别失败，禁用当前起点：start=({StartX:0.0},{StartY:0.0})",
                 lastResult.StartX,
@@ -548,14 +519,19 @@ public class TpTask
 
         return async (x, y) =>
         {
+            attemptedStartCandidates.Clear();
             using var imageRegion = CaptureToRectArea();
             var detectedForbiddenStartRects = new List<Rect2d>();
+            var localProbeCache = new Dictionary<(int X, int Y, int Width, int Height), IReadOnlyList<NearbyMapIcon>>();
             var fullScanUsed = false;
 
-            IReadOnlyList<Rect2d> ProbeForbiddenStart(Point2d selectedStart)
+            IReadOnlyList<Rect2d> ProbeForbiddenStart(Rect2d selectedRegion)
             {
-                var discovered = GetExperimentalDragStartForbiddenRects(imageRegion, selectedStart);
-                detectedForbiddenStartRects.AddRange(discovered);
+                var discovered = GetExperimentalDragStartForbiddenRects(imageRegion, selectedRegion, localProbeCache);
+                foreach (var rect in discovered)
+                {
+                    AddExperimentalForbiddenRect(detectedForbiddenStartRects, rect);
+                }
                 return discovered;
             }
 
@@ -565,11 +541,18 @@ public class TpTask
                 var forbiddenStartRects = detectedForbiddenStartRects
                     .Concat(failedStartRects)
                     .ToList();
-                result = await drag.DragAsync(x, y, _experimentalTargetTp?.Country, forbiddenStartRects, ProbeForbiddenStart);
+                result = await drag.DragAsync(
+                    x,
+                    y,
+                    _experimentalTargetTp?.Country,
+                    forbiddenStartRects,
+                    ProbeForbiddenStart,
+                    attemptedStartCandidates);
                 lastResult = result;
                 if (result.Moved)
                 {
                     failedStartRects.Clear();
+                    attemptedStartCandidates.Clear();
                     return result;
                 }
 
@@ -583,15 +566,24 @@ public class TpTask
                     }
 
                     fullScanUsed = true;
-                    detectedForbiddenStartRects.AddRange(GetExperimentalDragStartForbiddenRects(imageRegion));
+                    foreach (var rect in GetExperimentalDragStartForbiddenRects(imageRegion))
+                    {
+                        AddExperimentalForbiddenRect(detectedForbiddenStartRects, rect);
+                    }
                     forbiddenStartRects = detectedForbiddenStartRects
                         .Concat(failedStartRects)
                         .ToList();
-                    result = await drag.DragAsync(x, y, _experimentalTargetTp?.Country, forbiddenStartRects);
+                    result = await drag.DragAsync(
+                        x,
+                        y,
+                        _experimentalTargetTp?.Country,
+                        forbiddenStartRects,
+                        attemptedStartCandidates: attemptedStartCandidates);
                     lastResult = result;
                     if (result.Moved)
                     {
                         failedStartRects.Clear();
+                        attemptedStartCandidates.Clear();
                         return result;
                     }
 
@@ -608,11 +600,13 @@ public class TpTask
                     break;
                 }
 
-                failedStartRects.Add(new Rect2d(
-                    result.StartX - failedStartRadius,
-                    result.StartY - failedStartRadius,
-                    failedStartRadius * 2d,
-                    failedStartRadius * 2d));
+                AddExperimentalForbiddenRect(
+                    failedStartRects,
+                    new Rect2d(
+                        result.StartX - failedStartRadius,
+                        result.StartY - failedStartRadius,
+                        failedStartRadius * 2d,
+                        failedStartRadius * 2d));
                 LogExperimentalDetailed(
                     "实验传送拖动无效，切换起点重试：attempt={Attempt}/{MaxAttempts} start=({StartX:0.0},{StartY:0.0})",
                     attempt + 1,
@@ -1583,6 +1577,7 @@ public class TpTask
         _experimentalBigMapRectCache = null;
         _experimentalBigMapRectCacheMapName = null;
         _experimentalZoomLevelCache = null;
+        _experimentalDragStateResetter?.Invoke();
     }
 
     private async Task ClickTpPointAfterMapPointSelected(
@@ -4525,6 +4520,37 @@ public class TpTask
             icons.Remove(sameIcon);
             icons.Add(newIcon);
         }
+    }
+
+    private static void AddExperimentalForbiddenRect(List<Rect2d> rects, Rect2d candidate)
+    {
+        if (candidate.Width <= 0d || candidate.Height <= 0d)
+        {
+            return;
+        }
+
+        const double mergeMargin = 4d;
+        for (var i = rects.Count - 1; i >= 0; i--)
+        {
+            var existing = rects[i];
+            var overlaps = candidate.X <= existing.X + existing.Width + mergeMargin &&
+                           candidate.X + candidate.Width + mergeMargin >= existing.X &&
+                           candidate.Y <= existing.Y + existing.Height + mergeMargin &&
+                           candidate.Y + candidate.Height + mergeMargin >= existing.Y;
+            if (!overlaps)
+            {
+                continue;
+            }
+
+            var left = Math.Min(existing.X, candidate.X);
+            var top = Math.Min(existing.Y, candidate.Y);
+            var right = Math.Max(existing.X + existing.Width, candidate.X + candidate.Width);
+            var bottom = Math.Max(existing.Y + existing.Height, candidate.Y + candidate.Height);
+            rects[i] = new Rect2d(left, top, right - left, bottom - top);
+            return;
+        }
+
+        rects.Add(candidate);
     }
 
     /// <summary>

@@ -26,6 +26,10 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     private const double ZoomStartY = 468d;
     private const double ZoomEndY = 612d;
     private const int MaxStartValidationAttempts = 5;
+    private const int StartCandidateRandomTopPercent = 30;
+    // 模板匹配区域需要覆盖图标完整尺寸；边缘保留约 65px，实际起点只在内部 270×270 内生成。
+    private const double StartProbeRegionSize1080P = 400d;
+    private const double StartProbeSelectableRegionSize1080P = 270d;
 
     private static readonly Rect2d[] DangerRects =
     [
@@ -50,6 +54,14 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
     {
         public bool Moved => Math.Abs(CursorDeltaX) + Math.Abs(CursorDeltaY) >= 2d;
     }
+
+    private readonly record struct StartCandidate(
+        Point2d Point,
+        double BoundaryDistance,
+        double Length,
+        bool CanComplete,
+        double SafetySlack,
+        int Order);
 
     public bool IsTargetSafelyClickable(
         double targetX,
@@ -94,6 +106,7 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 captureRect.Height,
                 country,
                 null,
+                attemptedStartCandidates: null,
                 out var start,
                 out var end))
         {
@@ -110,7 +123,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         double requestedDeltaY,
         string? country,
         IReadOnlyList<Rect2d>? forbiddenStartRects = null,
-        Func<Point2d, IReadOnlyList<Rect2d>>? forbiddenStartProbe = null)
+        Func<Rect2d, IReadOnlyList<Rect2d>>? forbiddenStartProbe = null,
+        ISet<(int X, int Y)>? attemptedStartCandidates = null)
     {
         // 目标已经到位时无需按下鼠标，避免产生无效拖动并触发上层重复识别。
         if (requestedDeltaX == 0d && requestedDeltaY == 0d)
@@ -132,19 +146,18 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         Point2d selectedStart = default;
         Point2d selectedEnd = default;
         var startValidationAttempts = 0;
+        var probedStartCandidates = new HashSet<(int X, int Y)>();
         while (true)
         {
-            var runwayCreated = TryCreateRelaxedRunway(
+            var rankedAreaCenters = GetOrderedRelaxedStartCandidates(
                 desiredX,
                 desiredY,
                 captureRect.Width,
                 captureRect.Height,
                 country,
                 activeForbiddenStartRects,
-                out selectedStart,
-                out selectedEnd);
-
-            if (!runwayCreated)
+                attemptedStartCandidates);
+            if (rankedAreaCenters.Count == 0)
             {
                 LogDetailed(
                     "实验传送无法生成安全拖动跑道：requested=({RequestedX:0.0},{RequestedY:0.0}) adjusted=({AdjustedX:0.0},{AdjustedY:0.0}) country={Country}",
@@ -156,30 +169,87 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 return default;
             }
 
-            if (forbiddenStartProbe is null)
+            var poolSize = Math.Max(1, (int)Math.Ceiling(
+                rankedAreaCenters.Count * StartCandidateRandomTopPercent / 100d));
+            var areaPool = rankedAreaCenters.Take(poolSize).ToList();
+            var unprobedAreas = areaPool
+                .Where(candidate => !probedStartCandidates.Contains(GetStartCandidateKey(candidate.Point)))
+                .ToList();
+            if (unprobedAreas.Count == 0)
             {
-                break;
+                unprobedAreas = rankedAreaCenters
+                    .Where(candidate => !probedStartCandidates.Contains(GetStartCandidateKey(candidate.Point)))
+                    .ToList();
             }
 
-            var discoveredForbiddenRects = forbiddenStartProbe(selectedStart);
-            if (discoveredForbiddenRects is null || discoveredForbiddenRects.Count == 0)
+            if (unprobedAreas.Count == 0)
             {
-                break;
-            }
-
-            activeForbiddenStartRects.AddRange(discoveredForbiddenRects);
-            startValidationAttempts++;
-            LogDetailed(
-                "实验传送起点局部匹配发现禁区，重新选点：attempt={Attempt}/{MaxAttempts} added={AddedCount} total={TotalCount}",
-                startValidationAttempts,
-                MaxStartValidationAttempts,
-                discoveredForbiddenRects.Count,
-                activeForbiddenStartRects.Count);
-            if (startValidationAttempts >= MaxStartValidationAttempts)
-            {
-                LogDetailed("实验传送起点局部匹配重选次数达到上限");
+                LogDetailed("实验传送起点候选区域均已匹配，停止重复探测");
                 return default;
             }
+
+            var areaCenter = unprobedAreas[Random.Shared.Next(unprobedAreas.Count)];
+            var areaRect = CreateStartProbeRegion(
+                areaCenter.Point,
+                captureRect.Width,
+                captureRect.Height,
+                StartProbeRegionSize1080P);
+            var selectableRect = CreateStartProbeRegion(
+                areaCenter.Point,
+                captureRect.Width,
+                captureRect.Height,
+                StartProbeSelectableRegionSize1080P);
+            var areaKey = GetStartCandidateKey(areaCenter.Point);
+            probedStartCandidates.Add(areaKey);
+
+            if (forbiddenStartProbe is not null)
+            {
+                var discoveredForbiddenRects = forbiddenStartProbe(areaRect);
+                if (discoveredForbiddenRects is { Count: > 0 })
+                {
+                    activeForbiddenStartRects.AddRange(discoveredForbiddenRects);
+                    startValidationAttempts++;
+                    LogDetailed(
+                        "实验传送起点区域匹配发现禁区，重新选点：attempt={Attempt}/{MaxAttempts} added={AddedCount} total={TotalCount}",
+                        startValidationAttempts,
+                        MaxStartValidationAttempts,
+                        discoveredForbiddenRects.Count,
+                        activeForbiddenStartRects.Count);
+                }
+            }
+
+            var rankedStarts = GetOrderedRelaxedStartCandidates(
+                desiredX,
+                desiredY,
+                captureRect.Width,
+                captureRect.Height,
+                country,
+                activeForbiddenStartRects,
+                attemptedStartCandidates,
+                selectableRect);
+            if (rankedStarts.Count == 0)
+            {
+                if (startValidationAttempts >= MaxStartValidationAttempts)
+                {
+                    return default;
+                }
+
+                continue;
+            }
+
+            var startPoolSize = Math.Max(1, (int)Math.Ceiling(
+                rankedStarts.Count * StartCandidateRandomTopPercent / 100d));
+            var startPool = rankedStarts.Take(startPoolSize).ToList();
+            var selected = startPool[Random.Shared.Next(startPool.Count)];
+            attemptedStartCandidates?.Add(GetStartCandidateKey(selected.Point));
+            var distance = Math.Sqrt(desiredX * desiredX + desiredY * desiredY);
+            var directionX = distance <= 1e-6d ? 0d : desiredX / distance;
+            var directionY = distance <= 1e-6d ? 0d : desiredY / distance;
+            selectedStart = selected.Point;
+            selectedEnd = new Point2d(
+                selected.Point.X + directionX * selected.Length,
+                selected.Point.Y + directionY * selected.Length);
+            break;
         }
 
         var start = selectedStart;
@@ -361,9 +431,12 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         int height,
         string? country,
         IReadOnlyList<Rect2d>? forbiddenStartRects,
+        ISet<(int X, int Y)>? attemptedStartCandidates,
         out Point2d start,
         out Point2d end)
     {
+        start = default;
+        end = default;
         var requestedDistance = Math.Sqrt(requestedX * requestedX + requestedY * requestedY);
         if (!double.IsFinite(requestedDistance) || width <= 0 || height <= 0)
         {
@@ -372,23 +445,61 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             return false;
         }
 
+        var rankedCandidates = GetOrderedRelaxedStartCandidates(
+            requestedX,
+            requestedY,
+            width,
+            height,
+            country,
+            forbiddenStartRects,
+            attemptedStartCandidates);
+        if (rankedCandidates.Count == 0)
+        {
+            return false;
+        }
+
+        var selected = rankedCandidates[0];
+        var selectedKey = GetStartCandidateKey(selected.Point);
+        attemptedStartCandidates?.Add(selectedKey);
+        start = selected.Point;
         var directionX = requestedDistance <= 1e-6d ? 0d : requestedX / requestedDistance;
         var directionY = requestedDistance <= 1e-6d ? 0d : requestedY / requestedDistance;
-        var bestScore = double.NegativeInfinity;
-        var bestLength = double.NegativeInfinity;
-        var found = false;
-        start = default;
-        end = default;
-        foreach (var candidate in GetRelaxedStartCandidates(
-                     width,
-                     height,
-                     requestedX,
-                     requestedY,
-                     country,
-                     forbiddenStartRects))
+        end = new Point2d(
+            selected.Point.X + directionX * selected.Length,
+            selected.Point.Y + directionY * selected.Length);
+        return true;
+    }
+
+    private static List<StartCandidate> GetOrderedRelaxedStartCandidates(
+        double requestedX,
+        double requestedY,
+        int width,
+        int height,
+        string? country,
+        IReadOnlyList<Rect2d>? forbiddenStartRects,
+        ISet<(int X, int Y)>? attemptedStartCandidates,
+        Rect2d? candidateRegion = null)
+    {
+        var requestedDistance = Math.Sqrt(requestedX * requestedX + requestedY * requestedY);
+        if (!double.IsFinite(requestedDistance) || width <= 0 || height <= 0)
+        {
+            return [];
+        }
+
+        var directionX = requestedDistance <= 1e-6d ? 0d : requestedX / requestedDistance;
+        var directionY = requestedDistance <= 1e-6d ? 0d : requestedY / requestedDistance;
+        var rankedCandidates = new List<StartCandidate>();
+        var order = 0;
+        foreach (var candidate in GetRelaxedStartCandidates(width, height, requestedX, requestedY, country, forbiddenStartRects, candidateRegion))
         {
             if (!IsSafePoint(candidate.X, candidate.Y, width, height, SafeMargin, country) ||
                 IsForbiddenStartPoint(candidate, forbiddenStartRects, width, height))
+            {
+                continue;
+            }
+
+            var candidateKey = GetStartCandidateKey(candidate);
+            if (attemptedStartCandidates is not null && attemptedStartCandidates.Contains(candidateKey))
             {
                 continue;
             }
@@ -400,26 +511,31 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 continue;
             }
 
-            // 按可用边界距离选择起点，尽量为本次拖动留出完整空间。
-            if (boundaryDistance > bestScore + 1e-6d ||
-                Math.Abs(boundaryDistance - bestScore) <= 1e-6d && length > bestLength)
-            {
-                bestScore = boundaryDistance;
-                bestLength = length;
-                start = candidate;
-                end = new Point2d(
-                    candidate.X + directionX * length,
-                    candidate.Y + directionY * length);
-                found = true;
-            }
+            rankedCandidates.Add(new StartCandidate(
+                candidate,
+                boundaryDistance,
+                length,
+                boundaryDistance + 1e-6d >= requestedDistance,
+                boundaryDistance - requestedDistance,
+                order++));
         }
 
-        if (found)
-        {
-            return true;
-        }
+        var hasCompletingCandidate = rankedCandidates.Any(candidate => candidate.CanComplete);
+        return hasCompletingCandidate
+            ? rankedCandidates
+                .Where(candidate => candidate.CanComplete)
+                .OrderByDescending(candidate => candidate.SafetySlack)
+                .ThenBy(candidate => candidate.Order)
+                .ToList()
+            : rankedCandidates
+                .OrderByDescending(candidate => candidate.BoundaryDistance)
+                .ThenBy(candidate => candidate.Order)
+                .ToList();
+    }
 
-        return false;
+    private static (int X, int Y) GetStartCandidateKey(Point2d point)
+    {
+        return ((int)Math.Round(point.X), (int)Math.Round(point.Y));
     }
 
     private static IReadOnlyList<Point2d> GetRelaxedStartCandidates(
@@ -428,7 +544,8 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         double requestedX,
         double requestedY,
         string? country,
-        IReadOnlyList<Rect2d>? forbiddenStartRects)
+        IReadOnlyList<Rect2d>? forbiddenStartRects,
+        Rect2d? candidateRegion = null)
     {
         var scaleX = width / 1920d;
         var scaleY = height / 1080d;
@@ -436,26 +553,20 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         var maxX = width - SafeMargin * scaleX;
         var minY = SafeMargin * scaleY;
         var maxY = height - SafeMargin * scaleY;
-        var xValues = new List<double>
+        var xValues = candidateRegion is { } region
+            ? CreateRegionSamples(region.X, region.Right)
+            : new List<double> { minX, minX + 1d, width * 0.25d, width * 0.5d, width * 0.75d, maxX - 1d, maxX };
+        var yValues = candidateRegion is { } regionY
+            ? CreateRegionSamples(regionY.Y, regionY.Bottom)
+            : new List<double> { minY, minY + 1d, height * 0.25d, height * 0.5d, height * 0.75d, maxY - 1d, maxY };
+
+        if (candidateRegion is { } selectedRegion)
         {
-            minX,
-            minX + 1d,
-            width * 0.25d,
-            width * 0.5d,
-            width * 0.75d,
-            maxX - 1d,
-            maxX,
-        };
-        var yValues = new List<double>
-        {
-            minY,
-            minY + 1d,
-            height * 0.25d,
-            height * 0.5d,
-            height * 0.75d,
-            maxY - 1d,
-            maxY,
-        };
+            minX = Math.Max(minX, selectedRegion.X);
+            maxX = Math.Min(maxX, selectedRegion.Right);
+            minY = Math.Max(minY, selectedRegion.Y);
+            maxY = Math.Min(maxY, selectedRegion.Bottom);
+        }
 
         void AddExcludedRectBoundaries(Rect2d rect, double margin)
         {
@@ -494,9 +605,9 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             }
         }
 
-        // 目标反方向边缘点优先覆盖大位移场景，其他候选仍由边界距离评分决定。
+        // 目标反方向边缘点优先覆盖大位移场景；区域内选点时严格限制在内部区域。
         var distance = Math.Sqrt(requestedX * requestedX + requestedY * requestedY);
-        if (distance > 1e-6d && double.IsFinite(distance))
+        if (candidateRegion is null && distance > 1e-6d && double.IsFinite(distance))
         {
             var directionX = requestedX / distance;
             var directionY = requestedY / distance;
@@ -505,10 +616,41 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
                 directionY > 0d ? minY : directionY < 0d ? maxY : height * 0.5d));
         }
 
-        candidates.Add(new Point2d(width * 0.5d, height * 0.55d));
-        candidates.Add(new Point2d(width * 0.38d, height * 0.72d));
-        candidates.Add(new Point2d(width * 0.62d, height * 0.72d));
-        return candidates;
+        if (candidateRegion is null)
+        {
+            candidates.Add(new Point2d(width * 0.5d, height * 0.55d));
+            candidates.Add(new Point2d(width * 0.38d, height * 0.72d));
+            candidates.Add(new Point2d(width * 0.62d, height * 0.72d));
+        }
+        return candidates
+            .GroupBy(candidate => ((int)Math.Round(candidate.X), (int)Math.Round(candidate.Y)))
+            .Select(group => group.First())
+            .ToList();
+
+        static List<double> CreateRegionSamples(double left, double right)
+        {
+            var size = Math.Max(0d, right - left);
+            return Enumerable.Range(1, 5)
+                .Select(index => left + size * index / 6d)
+                .ToList();
+        }
+    }
+
+    private static Rect2d CreateStartProbeRegion(
+        Point2d center,
+        int width,
+        int height,
+        double size1080P)
+    {
+        var scaleX = width / 1920d;
+        var scaleY = height / 1080d;
+        var sizeX = size1080P * scaleX;
+        var sizeY = size1080P * scaleY;
+        return new Rect2d(
+            center.X - sizeX / 2d,
+            center.Y - sizeY / 2d,
+            sizeX,
+            sizeY);
     }
 
     private static double GetScreenBoundaryDistance(
