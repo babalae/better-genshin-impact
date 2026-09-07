@@ -205,7 +205,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T '0=跟随触发器间隔；限制 DWM 推帧频率以降低 GPU 占用；仅 Windows 11 24H2 及以上系统生效'}"
+                                  Text="{i18n:T '0=不启用限流；限制 DWM 推帧频率以降低 GPU 占用，默认 50ms（约20fps）；仅 Windows 11 24H2 及以上系统生效'}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -213,6 +213,32 @@
                                 MinWidth="90"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.WgcMinUpdateIntervalMs, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16"
+                      Visibility="{Binding IsWgcV2CaptureMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 'WGC V2 使用 CPU 颜色转换'}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T '默认由 GPU 完成 BGRA→BGR 打包；开启后回退为 CPU 转换，用于对比测试；重启捕获后生效'}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.WgcV2UseCpuConvert, Mode=TwoWay}" />
                 </Grid>
                 <!--<Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
