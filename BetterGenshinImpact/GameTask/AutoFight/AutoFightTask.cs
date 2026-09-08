@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -217,6 +218,33 @@ public class AutoFightTask : ISoloTask
         }
         throw new Exception("识别队伍角色失败（已重试 5 次）");
     }
+
+    /// <summary>
+    /// 盾奶位设置为"自动"时，按盾奶位名单（<see cref="GuardianAvatarListStore"/>）自动匹配盾奶位。
+    /// 名单来源：User/GuardianAvatarList.txt（可编辑）；文件缺失或为空时回退代码内置默认名单。
+    /// 名单顺序即识别优先级（越靠前越优先），与寻路走路开盾使用的条件表相互独立。
+    /// </summary>
+    /// <param name="combatScenes">已识别出当前队伍的战场对象</param>
+    /// <param name="needHold">该角色 E 战技是否需要长按（true=长按，false=短按）</param>
+    /// <returns>命中的盾奶位角色，未命中返回 null</returns>
+    private Avatar? AutoPickGuardianAvatarByConditions(CombatScenes combatScenes, out bool needHold)
+    {
+        needHold = false;
+        foreach (var (name, hold) in GuardianAvatarListStore.Load())
+        {
+            foreach (var avatar in combatScenes.GetAvatars())
+            {
+                if (avatar.Name == name)
+                {
+                    needHold = hold;
+                    return avatar;
+                }
+            }
+        }
+
+        return null;
+    }
+
     // 方法1：判断是否是单个数字
 
     /*public int delayTime=1500;
@@ -293,8 +321,33 @@ public class AutoFightTask : ISoloTask
         var detectDelayTime = _finishDetectConfig.DetectDelayTime;
         
         //盾奶优先功能角色预处理
-        var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
-        
+        // GuardianAvatar：空=关闭；"自动"=按盾奶位名单（User/GuardianAvatarList.txt，文件缺失时用内置默认名单）自动识别几号位是盾奶位；"1"~"4"=手动指定号位
+        Avatar? guardianAvatar = null;
+        var guardianAvatarHold = _taskParam.GuardianAvatarHold;
+        if (!string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar))
+        {
+            if (_taskParam.GuardianAvatar == AutoFightConfig.GuardianAvatarAutoValue)
+            {
+                guardianAvatar = AutoPickGuardianAvatarByConditions(combatScenes, out var autoHold);
+                if (guardianAvatar == null)
+                {
+                    Logger.LogWarning("盾奶位设置为自动，但盾奶位名单（User/GuardianAvatarList.txt）中没有命中当前队伍的盾奶角色，本次战斗不执行盾奶位优先技能，识别结果：{Avatars}",
+                        string.Join(",", combatScenes.GetAvatars().Select(a => a.Name)));
+                }
+                else
+                {
+                    // 自动识别命中时，长按/短按以名单中该角色是否标注"长按"为准（标注长按=长按E，否则短按E）
+                    guardianAvatarHold = autoHold;
+                    Logger.LogInformation("自动识别盾奶位：第{Index}号位 {Name}（{Result}）", guardianAvatar.Index, guardianAvatar.Name,
+                        autoHold ? "长按E" : "短按E");
+                }
+            }
+            else
+            {
+                guardianAvatar = combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
+            }
+        }
+
         AutoFightSeek.RotationCount= 0; // 重置旋转次数
         
         // 基于经验值的战后拾取检测：在战斗过程中异步检测精英怪经验值图标
@@ -348,7 +401,8 @@ public class AutoFightTask : ISoloTask
                         
                         var skipModel = guardianAvatar != null && lastFightName != command.Name;
                         if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,
-                            _taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct,_taskParam.GuardianCombatSkip,_taskParam.BurstEnabled);
+                            _taskParam.GuardianAvatar == AutoFightConfig.GuardianAvatarAutoValue ? guardianAvatar!.Index.ToString() : _taskParam.GuardianAvatar,
+                            guardianAvatarHold,5,ct,_taskParam.GuardianCombatSkip,_taskParam.BurstEnabled);
                         var avatar = combatScenes.SelectAvatar(command.Name);
                         
                         #endregion

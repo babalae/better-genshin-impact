@@ -710,6 +710,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void OnOpenGuardianAvatarList()
+    {
+        var dialog = new GuardianAvatarListDialog
+        {
+            Owner = Application.Current.MainWindow
+        };
+        dialog.ShowDialog();
+    }
+
+    [RelayCommand]
     private async Task OnSwitchArtifactSalvage()
     {
         SwitchArtifactSalvageEnabled = true;
