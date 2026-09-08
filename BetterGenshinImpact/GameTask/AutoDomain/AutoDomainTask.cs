@@ -328,7 +328,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private async Task TpDomain()
     {
-        if (UseDevelopmentGuide)
+        if (_taskParam.DomainName == DevelopmentGuideOption)
         {
             await SelectDevelopmentGuideDestination();
         }
@@ -469,7 +469,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         }
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
-        if (UseDevelopmentGuide)
+        if (_taskParam.DomainName == DevelopmentGuideOption)
         {
             await SelectDevelopmentGuideLevel();
         }

@@ -17,7 +17,6 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 public partial class AutoDomainTask
 {
     public const string DevelopmentGuideOption = "根据提升指南选择秘境";
-    private bool UseDevelopmentGuide => _taskParam.DomainName == DevelopmentGuideOption;
     private string? _guideDomainName;
 
     private static string NormalizeGuideDomainName(string text)
