@@ -199,8 +199,13 @@ public class SwitchPartyTask
                     }
                 }
 
-                Region lowest = partySwitchNameRaList.Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale).OrderBy(r => r.Y).Last();
-                lowest.DrawSelf("底部的队伍");
+                Region? lowest = partySwitchNameRaList.Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale).OrderBy(r => r.Y).LastOrDefault();
+                lowest?.DrawSelf("底部的队伍");
+                if (lowest == null)
+                {
+                    Logger.LogWarning("管理队伍界面无法识别到底部队伍文字，当前识别结果：{Text}", string.Join(" | ", partySwitchNameRaList.Select(r => r.Text)));
+                    break;
+                }
 
                 if (lowest.Y < 777 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
                 {
