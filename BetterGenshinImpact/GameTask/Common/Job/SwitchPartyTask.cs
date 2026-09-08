@@ -189,7 +189,7 @@ public class SwitchPartyTask
                 {
                     if (Regex.IsMatch(textRegion.Text, partyName))
                     {
-                        page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
+                        page.ClickTo(textRegion.Right + 100 * _assetScale, textRegion.Bottom);
                         await Delay(200, ct);
                         Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
                         await ConfirmParty(page, ct, isInPartyViewUi);
