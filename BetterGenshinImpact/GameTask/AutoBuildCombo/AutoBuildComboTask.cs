@@ -23,6 +23,9 @@ public class AutoBuildComboTask : ISoloTask
 {
     public string Name => "自动连招";
 
+    /// <summary>FunctionInvokingChatClient 单次 GetResponseAsync 允许的最大工具调用循环轮数</summary>
+    private const int MaxToolCallIterations = 128;
+
     private CancellationToken _ct;
 
     public async Task Start(CancellationToken ct)
@@ -90,6 +93,16 @@ public class AutoBuildComboTask : ISoloTask
             logger.LogInformation("开始调用 LLM 构建行为树（模型：{Model}）", config.ModelName);
             var response = await chatClient.GetResponseAsync(messages, options, ct);
             logger.LogInformation("LLM 返回：{Text}", response.Text);
+
+            // FunctionInvokingChatClient 正常完成时每个 FunctionCallContent 都有配对 FunctionResultContent（CallId 相同）；
+            // 达到 MaximumIterationsPerRequest 上限时最后一轮调用不执行，是唯一出现无配对调用的退出路径，以此显式报错
+            var executedCallIds = response.Messages.SelectMany(m => m.Contents)
+                .OfType<FunctionResultContent>().Select(r => r.CallId).ToHashSet();
+            if (response.Messages.SelectMany(m => m.Contents).OfType<FunctionCallContent>()
+                .Any(c => !executedCallIds.Contains(c.CallId)))
+            {
+                throw new Exception($"LLM 工具调用循环达到上限（{MaxToolCallIterations} 轮）仍未完成建树，最后响应中还有未执行的工具调用");
+            }
 
             // LLM 已通过 BuildTree 工具完成构建；此处再次 Build 获取根节点用于打印
             var root = builder.Build();
@@ -172,7 +185,7 @@ public class AutoBuildComboTask : ISoloTask
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
         return new FunctionInvokingChatClient(client)
         {
-            MaximumIterationsPerRequest = 128,
+            MaximumIterationsPerRequest = MaxToolCallIterations,
         };
     }
 
