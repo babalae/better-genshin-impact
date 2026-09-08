@@ -83,7 +83,7 @@
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="NCalc" Version="6.2.0" />
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
-		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
+		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.114" />
 		<PackageReference Include="Semver" Version="3.0.0" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />

@@ -299,6 +299,43 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             WindowHelper.ApplyThemeToWindow(Application.Current.MainWindow, themeType);
         }
 
+        // 同步第三方多选控件(Sdl.MultiSelectComboBox)的主题，避免其下拉在深色模式下黑底黑字看不清
+        var isDarkTheme = themeType is ThemeType.DarkNone or ThemeType.DarkMica or ThemeType.DarkAcrylic;
+        try
+        {
+            Sdl.MultiSelectComboBox.Themes.ThemeManager.SetTheme(
+                isDarkTheme
+                    ? Sdl.MultiSelectComboBox.Themes.MultiSelectComboBoxTheme.Dark
+                    : Sdl.MultiSelectComboBox.Themes.MultiSelectComboBoxTheme.Light);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "同步 Sdl.MultiSelectComboBox 主题失败：{Message}", e.Message);
+        }
+
+        // Sdl.MultiSelectComboBox 下拉弹层的边框/背景硬编码使用系统色 SystemColors.WindowBrushKey，
+        // 不会跟随 BetterGI 主题，导致深色模式下“深色底 + 白字”或“白底 + 白字”不可读。
+        // 这里在应用级资源中按主题覆盖该系统色键，使所有实例(含寻路角色设置窗口)一致适配。
+        try
+        {
+            if (Application.Current is not null)
+            {
+                var bg = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x2B, 0x2B, 0x2B) : Colors.White);
+                var frame = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x40, 0x40, 0x40) : Colors.LightGray);
+                var text = new SolidColorBrush(isDarkTheme ? Colors.White : Colors.Black);
+                bg.Freeze();
+                frame.Freeze();
+                text.Freeze();
+                Application.Current.Resources[SystemColors.WindowBrushKey] = bg;
+                Application.Current.Resources[SystemColors.WindowFrameBrushKey] = frame;
+                Application.Current.Resources[SystemColors.WindowTextBrushKey] = text;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "覆盖系统色以适配 Sdl.MultiSelectComboBox 弹层失败：{Message}", e.Message);
+        }
+
         // 根据当前主题更新兑换码按钮的默认前景色（若无更新高亮）
         if (!HasPendingRedeemCodeUpdate)
         {
