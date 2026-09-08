@@ -33,6 +33,14 @@ public partial class OtherConfig : ObservableObject
     [ObservableProperty]
     private Ocr _ocrConfig = new();
     
+    //切换队伍时，单次滑动的距离（单位：栏）
+    [ObservableProperty]
+    private double _switchPartyScrollDistance = 3;
+
+    //切换队伍时，所有硬编码延迟的放大系数，数值越大等待越久（默认1）
+    [ObservableProperty]
+    private double _switchPartyHardcodeDelayFactor = 1;
+    
 
     public partial class AutoRestart : ObservableObject
     {
