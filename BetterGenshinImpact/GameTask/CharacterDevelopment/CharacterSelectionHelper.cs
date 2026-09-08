@@ -36,9 +36,18 @@ internal sealed record CharacterSelectionTarget(
     public bool Matches(string? characterName) =>
         characterName != null && CandidateNames.Contains(characterName, StringComparer.Ordinal);
 
-    public bool MatchesDisplayText(string? text) =>
-        !string.IsNullOrWhiteSpace(text)
-        && CandidateNames.Any(candidate => text.Contains(candidate, StringComparison.Ordinal));
+    public bool MatchesDisplayText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalizedText = text.Trim();
+        return CandidateNames.Any(candidate =>
+            1 - WeaponNameMatcher.LevenshteinDistance(normalizedText, candidate)
+            / (double)Math.Max(normalizedText.Length, candidate.Length) >= 0.5);
+    }
 }
 
 /// <summary>
