@@ -45,7 +45,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
+public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 {
     public string Name => "自动秘境";
 
@@ -328,10 +328,14 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private async Task TpDomain()
     {
+        if (_taskParam.DomainName == DevelopmentGuideOption)
+        {
+            await SelectDevelopmentGuideDestination();
+        }
         // 传送到秘境
         if (!string.IsNullOrEmpty(_taskParam.DomainName))
         {
-            if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
+            if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_guideDomainName ?? _taskParam.DomainName, out var domainPosition))
             {
                 Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
                 await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
@@ -465,7 +469,11 @@ public class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         }
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
-        if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
+        if (_taskParam.DomainName == DevelopmentGuideOption)
+        {
+            await SelectDevelopmentGuideLevel();
+        }
+        else if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
             using var ra0 = CaptureToRectArea();
             using var artifactArea = ra0.Find(RecognitionAssets.Get("AutoFight", "ArtifactArea", ra0)); //检测是否为圣遗物副本
