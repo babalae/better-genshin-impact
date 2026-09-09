@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -45,7 +46,7 @@ public static class GuardianAvatarListStore
 
     /// <summary>
     /// 名单文件读写共用的进程内锁：避免战斗线程读取与设置窗口保存/还原并发时的共享冲突。
-    /// 跨进程（多开、外部编辑器）场景由“临时文件原子替换 + 读取失败回退内置名单”兜底。
+    /// 跨进程（多开、外部编辑器）场景由“唯一临时文件原子替换 + 读取失败回退内置名单”兜底。
     /// </summary>
     private static readonly object FileLock = new();
 
@@ -82,7 +83,7 @@ public static class GuardianAvatarListStore
 
                         if (string.IsNullOrEmpty(name) || !DefaultAutoFightConfig.CombatAvatarNames.Contains(name))
                         {
-                            Console.WriteLine($"盾奶位名单忽略未知角色名：{rawLine.Trim()}");
+                            Log.Debug("盾奶位名单忽略未知角色名：{RawLine}", rawLine.Trim());
                             continue;
                         }
 
@@ -93,7 +94,7 @@ public static class GuardianAvatarListStore
             catch (Exception e)
             {
                 // 文件正被占用/正在写入/被外部编辑器锁定：回退内置默认，不让战斗读取中断
-                Console.WriteLine($"盾奶位名单读取失败，使用内置默认名单：{e.Message}");
+                Log.Warning("盾奶位名单读取失败，本次使用内置默认名单：{Reason}", e.Message);
                 result.Clear();
             }
         }
@@ -109,7 +110,7 @@ public static class GuardianAvatarListStore
 
     /// <summary>
     /// 将名单写回 User 文件（含注释头，便于用户手工编辑）。
-    /// 采用同目录临时文件 + 原子替换，避免写一半时被战斗读取到残缺内容。
+    /// 采用同目录唯一临时文件 + 原子替换，避免写一半时被战斗读取到残缺内容。
     /// </summary>
     public static void Save(IEnumerable<(string Name, bool Hold)> list)
     {
@@ -123,20 +124,7 @@ public static class GuardianAvatarListStore
             sb.AppendLine(hold ? name + "长按" : name);
         }
 
-        var path = Global.Absolute(FileRelativePath);
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir))
-        {
-            Directory.CreateDirectory(dir);
-        }
-
-        lock (FileLock)
-        {
-            // 每次保存使用唯一临时文件名，避免多进程同时保存时互相覆盖同一个 .tmp 文件
-            var tmpPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            File.WriteAllText(tmpPath, sb.ToString(), new UTF8Encoding(false));
-            File.Move(tmpPath, path, true);
-        }
+        WriteAtomic(path: Global.Absolute(FileRelativePath), content: sb.ToString());
     }
 
     /// <summary>
@@ -149,11 +137,18 @@ public static class GuardianAvatarListStore
 
     /// <summary>
     /// 原样保存用户在编辑窗口中的文本（保留注释与排版）到 User 文件。
-    /// 与 <see cref="Save" /> 相同：同目录临时文件 + 原子替换，避免战斗读取到半写内容。
+    /// 与 <see cref="Save" /> 相同：同目录唯一临时文件 + 原子替换，避免战斗读取到半写内容。
     /// </summary>
     public static void SaveRawText(string content)
     {
-        var path = Global.Absolute(FileRelativePath);
+        WriteAtomic(path: Global.Absolute(FileRelativePath), content: content);
+    }
+
+    /// <summary>
+    /// 同目录唯一临时文件 + 原子替换写入；失败时清理残留临时文件后向上抛，由调用方提示用户。
+    /// </summary>
+    private static void WriteAtomic(string path, string content)
+    {
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir))
         {
@@ -164,8 +159,25 @@ public static class GuardianAvatarListStore
         {
             // 每次保存使用唯一临时文件名，避免多进程同时保存时互相覆盖同一个 .tmp 文件
             var tmpPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            File.WriteAllText(tmpPath, content, new UTF8Encoding(false));
-            File.Move(tmpPath, path, true);
+            try
+            {
+                File.WriteAllText(tmpPath, content, new UTF8Encoding(false));
+                File.Move(tmpPath, path, true);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(tmpPath))
+                    {
+                        File.Delete(tmpPath);
+                    }
+                }
+                catch
+                {
+                    // 清理失败不影响结果（文件未替换成功时由调用方处理），忽略即可
+                }
+            }
         }
     }
 }

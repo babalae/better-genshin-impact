@@ -35,6 +35,12 @@ public partial class GuardianAvatarListDialog : FluentWindow
 
         if (app.Windows.Cast<Window>().FirstOrDefault(w => w is GuardianAvatarListDialog) is { } existing)
         {
+            // 已最小化时 Activate 不会自动还原显示，先恢复窗口再激活
+            if (existing.WindowState == WindowState.Minimized)
+            {
+                existing.WindowState = WindowState.Normal;
+            }
+
             existing.Activate();
             return;
         }

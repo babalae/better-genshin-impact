@@ -35,7 +35,16 @@ public partial class GuardianAvatarListViewModel : ObservableObject
             ThemedMessageBox.Error("写入默认名单失败：" + e.Message, "盾奶位名单");
         }
 
-        ListText = Global.ReadAllTextIfExist(GuardianAvatarListStore.FileRelativePath) ?? string.Empty;
+        try
+        {
+            ListText = Global.ReadAllTextIfExist(GuardianAvatarListStore.FileRelativePath) ?? string.Empty;
+        }
+        catch (Exception e)
+        {
+            // 文件被其它进程独占时仍能打开编辑窗口（空内容），避免从构造函数一路抛未处理异常
+            ThemedMessageBox.Error("读取名单失败：" + e.Message, "盾奶位名单");
+            ListText = string.Empty;
+        }
     }
 
     [RelayCommand]
