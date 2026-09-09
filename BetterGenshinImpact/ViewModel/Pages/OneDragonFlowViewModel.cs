@@ -407,11 +407,26 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
+        var configName = SelectedConfig.Name;
+
         // 切换预设时重新从磁盘读取所选配置：用户在运行中外部编辑的文件才能生效，
         // 也避免后续自动保存把内存中的旧值覆盖回文件（#3235）。
-        var diskConfig = ReadOneDragonConfigFromDisk(SelectedConfig.Name);
+        //
+        // SelectedConfig 是预设下拉框的 TwoWay 绑定源：这里赋入新实例后，绑定会异步回写
+        // ComboBox.SelectedItem 并再次触发本命令（且每次重读都会产生新实例）。
+        // 因此重读后先记录配置名，等这次由回写引起的重入到达时按同名直接消费掉，避免持续重读（Code Review #3639）。
+        if (_lastReloadedConfigName == configName)
+        {
+            _lastReloadedConfigName = null;
+            SetSomeSelectedConfig(SelectedConfig);
+            SelectedTask = null;
+            return;
+        }
+
+        var diskConfig = ReadOneDragonConfigFromDisk(configName);
         if (diskConfig != null)
         {
+            _lastReloadedConfigName = configName;
             var index = ConfigList.IndexOf(SelectedConfig);
             if (index >= 0)
             {
@@ -426,7 +441,13 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     /// <summary>
-    /// 按配置名重读 <see cref="OneDragonFlowConfigFolder" /> 下的文件；文件缺失或解析失败时返回 null（沿用内存中的实例）。
+    /// 上一次重读所选预设时记录的配置名，用于拦住 SelectedConfig 回写导致的命令重入。
+    /// </summary>
+    private string? _lastReloadedConfigName;
+
+    /// <summary>
+    /// 按配置名重读 <see cref="OneDragonFlowConfigFolder" /> 下的文件；文件缺失、解析失败或
+    /// 名称与来源文件不一致时返回 null（沿用内存中的实例）。
     /// </summary>
     private OneDragonFlowConfig? ReadOneDragonConfigFromDisk(string configName)
     {
@@ -439,7 +460,16 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             var json = File.ReadAllText(filePath);
-            return JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            // 仅接受与来源文件名一致的非空 Name：否则后续保存会用对象里的 Name 生成路径，
+            // 导致原预设文件未被更新或写入错误的 .json 文件。
+            if (config == null || string.IsNullOrEmpty(config.Name) || config.Name != configName)
+            {
+                _logger.LogDebug("忽略重读的一条龙配置，名称与来源文件不一致: {ConfigName}", configName);
+                return null;
+            }
+
+            return config;
         }
         catch (Exception e)
         {
