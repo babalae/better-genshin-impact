@@ -20,11 +20,19 @@ public partial class GuardianAvatarListViewModel : ObservableObject
 
     public GuardianAvatarListViewModel()
     {
-        var path = Global.Absolute(GuardianAvatarListStore.FileRelativePath);
-        // 文件不存在时先写入默认名单，方便首次打开即可编辑
-        if (!File.Exists(path))
+        // 文件不存在时先写入默认名单，方便首次打开即可编辑；
+        // 写失败（如被其它进程占用）不阻断打开，直接进入只读编辑流程。
+        try
         {
-            GuardianAvatarListStore.Save(GuardianAvatarListStore.Load());
+            var path = Global.Absolute(GuardianAvatarListStore.FileRelativePath);
+            if (!File.Exists(path))
+            {
+                GuardianAvatarListStore.Save(GuardianAvatarListStore.Load());
+            }
+        }
+        catch (Exception e)
+        {
+            ThemedMessageBox.Error("写入默认名单失败：" + e.Message, "盾奶位名单");
         }
 
         ListText = Global.ReadAllTextIfExist(GuardianAvatarListStore.FileRelativePath) ?? string.Empty;
@@ -61,7 +69,7 @@ public partial class GuardianAvatarListViewModel : ObservableObject
 
         try
         {
-            Global.WriteAllText(GuardianAvatarListStore.FileRelativePath, ListText);
+            GuardianAvatarListStore.SaveRawText(ListText);
             Toast.Success("盾奶位名单已保存，下次开战生效");
         }
         catch (Exception e)
@@ -73,8 +81,15 @@ public partial class GuardianAvatarListViewModel : ObservableObject
     [RelayCommand]
     public void RestoreDefault()
     {
-        GuardianAvatarListStore.ResetToDefault();
-        ListText = Global.ReadAllTextIfExist(GuardianAvatarListStore.FileRelativePath) ?? string.Empty;
+        try
+        {
+            GuardianAvatarListStore.ResetToDefault();
+            ListText = Global.ReadAllTextIfExist(GuardianAvatarListStore.FileRelativePath) ?? string.Empty;
+        }
+        catch (Exception e)
+        {
+            ThemedMessageBox.Error("还原默认名单失败：" + e.Message, "盾奶位名单");
+        }
     }
 
     [RelayCommand]

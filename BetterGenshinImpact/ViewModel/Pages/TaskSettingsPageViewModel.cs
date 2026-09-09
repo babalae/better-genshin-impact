@@ -712,11 +712,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenGuardianAvatarList()
     {
-        var dialog = new GuardianAvatarListDialog
-        {
-            Owner = Application.Current.MainWindow
-        };
-        dialog.ShowDialog();
+        GuardianAvatarListDialog.OpenForOwner();
     }
 
     [RelayCommand]

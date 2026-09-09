@@ -122,11 +122,7 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     public void OnOpenGuardianAvatarList()
     {
-        var dialog = new BetterGenshinImpact.View.Windows.GuardianAvatarListDialog
-        {
-            Owner = System.Windows.Application.Current.MainWindow
-        };
-        dialog.ShowDialog();
+        BetterGenshinImpact.View.Windows.GuardianAvatarListDialog.OpenForOwner();
     }
     [RelayCommand]
     public void OnGetExecutionOrder()

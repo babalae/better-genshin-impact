@@ -44,7 +44,13 @@ public static class GuardianAvatarListStore
     };
 
     /// <summary>
-    /// 读取当前生效的盾奶名单（User 文件优先；文件缺失/为空/全注释时回退代码内置默认）。
+    /// 名单文件读写共用的进程内锁：避免战斗线程读取与设置窗口保存/还原并发时的共享冲突。
+    /// 跨进程（多开、外部编辑器）场景由“临时文件原子替换 + 读取失败回退内置名单”兜底。
+    /// </summary>
+    private static readonly object FileLock = new();
+
+    /// <summary>
+    /// 读取当前生效的盾奶名单（User 文件优先；文件缺失/为空/全注释/读取失败时回退代码内置默认）。
     /// 文件中的非法角色名会被跳过并告警。
     /// </summary>
     public static List<(string Name, bool Hold)> Load()
@@ -52,35 +58,47 @@ public static class GuardianAvatarListStore
         var path = Global.Absolute(FileRelativePath);
         var result = new List<(string Name, bool Hold)>();
 
-        if (File.Exists(path))
+        lock (FileLock)
         {
-            foreach (var rawLine in File.ReadAllLines(path, Encoding.UTF8))
+            try
             {
-                var line = rawLine.Trim();
-                if (string.IsNullOrEmpty(line) || line.StartsWith('#'))
+                if (File.Exists(path))
                 {
-                    continue;
-                }
+                    foreach (var rawLine in File.ReadAllLines(path, Encoding.UTF8))
+                    {
+                        var line = rawLine.Trim();
+                        if (string.IsNullOrEmpty(line) || line.StartsWith('#'))
+                        {
+                            continue;
+                        }
 
-                var hold = false;
-                var name = line;
-                if (name.EndsWith("长按", StringComparison.Ordinal))
-                {
-                    hold = true;
-                    name = name[..^"长按".Length].Trim();
-                }
+                        var hold = false;
+                        var name = line;
+                        if (name.EndsWith("长按", StringComparison.Ordinal))
+                        {
+                            hold = true;
+                            name = name[..^"长按".Length].Trim();
+                        }
 
-                if (string.IsNullOrEmpty(name) || !DefaultAutoFightConfig.CombatAvatarNames.Contains(name))
-                {
-                    Console.WriteLine($"盾奶位名单忽略未知角色名：{rawLine.Trim()}");
-                    continue;
-                }
+                        if (string.IsNullOrEmpty(name) || !DefaultAutoFightConfig.CombatAvatarNames.Contains(name))
+                        {
+                            Console.WriteLine($"盾奶位名单忽略未知角色名：{rawLine.Trim()}");
+                            continue;
+                        }
 
-                result.Add((name, hold));
+                        result.Add((name, hold));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // 文件正被占用/正在写入/被外部编辑器锁定：回退内置默认，不让战斗读取中断
+                Console.WriteLine($"盾奶位名单读取失败，使用内置默认名单：{e.Message}");
+                result.Clear();
             }
         }
 
-        // 空名单（文件不存在或没有有效行）时回退到内置默认名单
+        // 空名单（文件不存在、读取失败或没有有效行）时回退到内置默认名单
         if (result.Count == 0)
         {
             result.AddRange(DefaultList);
@@ -91,6 +109,7 @@ public static class GuardianAvatarListStore
 
     /// <summary>
     /// 将名单写回 User 文件（含注释头，便于用户手工编辑）。
+    /// 采用同目录临时文件 + 原子替换，避免写一半时被战斗读取到残缺内容。
     /// </summary>
     public static void Save(IEnumerable<(string Name, bool Hold)> list)
     {
@@ -111,7 +130,12 @@ public static class GuardianAvatarListStore
             Directory.CreateDirectory(dir);
         }
 
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+        lock (FileLock)
+        {
+            var tmpPath = path + ".tmp";
+            File.WriteAllText(tmpPath, sb.ToString(), new UTF8Encoding(false));
+            File.Move(tmpPath, path, true);
+        }
     }
 
     /// <summary>
@@ -120,5 +144,26 @@ public static class GuardianAvatarListStore
     public static void ResetToDefault()
     {
         Save(DefaultList);
+    }
+
+    /// <summary>
+    /// 原样保存用户在编辑窗口中的文本（保留注释与排版）到 User 文件。
+    /// 与 <see cref="Save" /> 相同：同目录临时文件 + 原子替换，避免战斗读取到半写内容。
+    /// </summary>
+    public static void SaveRawText(string content)
+    {
+        var path = Global.Absolute(FileRelativePath);
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        lock (FileLock)
+        {
+            var tmpPath = path + ".tmp";
+            File.WriteAllText(tmpPath, content, new UTF8Encoding(false));
+            File.Move(tmpPath, path, true);
+        }
     }
 }
