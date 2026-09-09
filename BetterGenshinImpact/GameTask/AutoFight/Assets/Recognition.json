@@ -1,5 +1,11 @@
 {
   "objects": {
+    "CondensedResinTopIcon": {
+      "type": "TemplateMatch",
+      "template": "condensed_resin_top_icon.png",
+      "threshold": 0.8,
+      "draw": false
+    },
     "OneP": {
       "type": "TemplateMatch",
       "template": "1p.png",
