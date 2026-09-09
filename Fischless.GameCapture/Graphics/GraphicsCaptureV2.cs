@@ -875,23 +875,6 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
         }
     }
 
-    private void TrimBgrPoolForSizeLocked(int height, int width)
-    {
-        var total = _bgrQueue.Count;
-        if (total == 0) return;
-        for (var i = 0; i < total; i++)
-        {
-            if (!_bgrQueue.TryDequeue(out var mat)) break;
-            if (mat != null && !mat.IsDisposed && mat.Rows == height && mat.Cols == width && mat.Type() == MatType.CV_8UC3)
-            {
-                _bgrQueue.Enqueue(mat);
-            }
-            else
-            {
-                mat?.Dispose();
-            }
-        }
-    }
 
     public void Stop()
     {
