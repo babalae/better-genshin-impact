@@ -444,10 +444,26 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             // 原地应用，避免逐个属性触发自动保存；属性变更仍会通过 PropertyChanged 通知 UI 刷新。
+            // 先对当前实例做快照：若应用中途抛异常（如个别字段转换失败），回滚到原状态，
+            // 避免磁盘与内存值混合的实例被界面使用或被后续自动保存写回文件。
+            var snapshotJson = JsonConvert.SerializeObject(SelectedConfig);
             SelectedConfig.PropertyChanged -= ConfigPropertyChanged;
             try
             {
                 JsonConvert.PopulateObject(json, SelectedConfig);
+            }
+            catch
+            {
+                try
+                {
+                    JsonConvert.PopulateObject(snapshotJson, SelectedConfig);
+                }
+                catch (Exception rollbackException)
+                {
+                    _logger.LogDebug(rollbackException, "回滚重读的一条龙配置失败: {ConfigName}", configName);
+                }
+
+                throw;
             }
             finally
             {
