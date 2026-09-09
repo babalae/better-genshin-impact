@@ -402,8 +402,50 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void OnConfigDropDownChanged()
     {
+        if (SelectedConfig == null)
+        {
+            return;
+        }
+
+        // 切换预设时重新从磁盘读取所选配置：用户在运行中外部编辑的文件才能生效，
+        // 也避免后续自动保存把内存中的旧值覆盖回文件（#3235）。
+        var diskConfig = ReadOneDragonConfigFromDisk(SelectedConfig.Name);
+        if (diskConfig != null)
+        {
+            var index = ConfigList.IndexOf(SelectedConfig);
+            if (index >= 0)
+            {
+                ConfigList[index] = diskConfig;
+            }
+
+            SelectedConfig = diskConfig;
+        }
+
         SetSomeSelectedConfig(SelectedConfig);
         SelectedTask = null;
+    }
+
+    /// <summary>
+    /// 按配置名重读 <see cref="OneDragonFlowConfigFolder" /> 下的文件；文件缺失或解析失败时返回 null（沿用内存中的实例）。
+    /// </summary>
+    private OneDragonFlowConfig? ReadOneDragonConfigFromDisk(string configName)
+    {
+        try
+        {
+            var filePath = Path.Combine(OneDragonFlowConfigFolder, $"{configName}.json");
+            if (!File.Exists(filePath))
+            {
+                return null;
+            }
+
+            var json = File.ReadAllText(filePath);
+            return JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "重读一条龙配置失败: {ConfigName}", configName);
+            return null;
+        }
     }
 
     public void SaveConfig()

@@ -1,3 +1,5 @@
+using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,6 +10,9 @@ namespace BetterGenshinImpact.View.Behavior;
 
 public static class DomainCascadingComboBoxBehavior
 {
+    private static readonly DependencyPropertyDescriptor SelectedCascadingItemDescriptor =
+        DependencyPropertyDescriptor.FromProperty(CascadingComboBox.SelectedCascadingItemProperty, typeof(CascadingComboBox));
+
     private static readonly DependencyProperty LastCommittedItemProperty =
         DependencyProperty.RegisterAttached(
             "LastCommittedItem",
@@ -66,6 +71,7 @@ public static class DomainCascadingComboBoxBehavior
         comboBox.SelectionChanged -= OnSelectionChanged;
         comboBox.Loaded -= OnLoaded;
         comboBox.RemoveHandler(Button.ClickEvent, new RoutedEventHandler(OnButtonClick));
+        SelectedCascadingItemDescriptor.RemoveValueChanged(comboBox, OnSelectedCascadingItemChanged);
 
         if (e.NewValue is true)
         {
@@ -74,6 +80,17 @@ public static class DomainCascadingComboBoxBehavior
             comboBox.SelectionChanged += OnSelectionChanged;
             comboBox.Loaded += OnLoaded;
             comboBox.AddHandler(Button.ClickEvent, new RoutedEventHandler(OnButtonClick), true);
+            // 程序化修改 SelectedCascadingItem（例如切换一条龙预设导致绑定值变化）不会触发交互事件，
+            // 这里额外监听依赖属性变化，使折叠态展示文案随绑定值同步刷新（#3235）。
+            SelectedCascadingItemDescriptor.AddValueChanged(comboBox, OnSelectedCascadingItemChanged);
+            comboBox.Dispatcher.BeginInvoke(() => UpdateCommittedSelection(comboBox, restoreInvalidSelection: false));
+        }
+    }
+
+    private static void OnSelectedCascadingItemChanged(object? sender, EventArgs e)
+    {
+        if (sender is CascadingComboBox comboBox)
+        {
             comboBox.Dispatcher.BeginInvoke(() => UpdateCommittedSelection(comboBox, restoreInvalidSelection: false));
         }
     }
