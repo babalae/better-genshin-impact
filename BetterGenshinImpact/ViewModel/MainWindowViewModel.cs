@@ -299,7 +299,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             WindowHelper.ApplyThemeToWindow(Application.Current.MainWindow, themeType);
         }
 
-        // 同步第三方多选控件(Sdl.MultiSelectComboBox)的主题，避免其下拉在深色模式下黑底黑字看不清
+        // 同步第三方多选控件(Sdl.MultiSelectComboBox)的主题，避免深色主题下其下拉弹层文字与背景对比不足不可读
         var isDarkTheme = themeType is ThemeType.DarkNone or ThemeType.DarkMica or ThemeType.DarkAcrylic;
         try
         {
@@ -318,15 +318,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 这里在应用级资源中按主题覆盖这两个系统色键，使所有实例(含寻路角色设置窗口)一致适配。
         try
         {
-            if (Application.Current is not null)
-            {
-                var bg = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x2B, 0x2B, 0x2B) : Colors.White);
-                var frame = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x40, 0x40, 0x40) : Colors.LightGray);
-                bg.Freeze();
-                frame.Freeze();
-                Application.Current.Resources[SystemColors.WindowBrushKey] = bg;
-                Application.Current.Resources[SystemColors.WindowFrameBrushKey] = frame;
-            }
+            var bg = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x2B, 0x2B, 0x2B) : Colors.White);
+            var frame = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x40, 0x40, 0x40) : Colors.LightGray);
+            bg.Freeze();
+            frame.Freeze();
+            Application.Current.Resources[SystemColors.WindowBrushKey] = bg;
+            Application.Current.Resources[SystemColors.WindowFrameBrushKey] = frame;
         }
         catch (Exception e)
         {
