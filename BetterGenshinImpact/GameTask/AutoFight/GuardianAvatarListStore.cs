@@ -132,7 +132,8 @@ public static class GuardianAvatarListStore
 
         lock (FileLock)
         {
-            var tmpPath = path + ".tmp";
+            // 每次保存使用唯一临时文件名，避免多进程同时保存时互相覆盖同一个 .tmp 文件
+            var tmpPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllText(tmpPath, sb.ToString(), new UTF8Encoding(false));
             File.Move(tmpPath, path, true);
         }
@@ -161,7 +162,8 @@ public static class GuardianAvatarListStore
 
         lock (FileLock)
         {
-            var tmpPath = path + ".tmp";
+            // 每次保存使用唯一临时文件名，避免多进程同时保存时互相覆盖同一个 .tmp 文件
+            var tmpPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllText(tmpPath, content, new UTF8Encoding(false));
             File.Move(tmpPath, path, true);
         }
