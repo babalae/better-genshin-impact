@@ -50,7 +50,9 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
         double CursorDeltaX,
         double CursorDeltaY,
         double StartX,
-        double StartY)
+        double StartY,
+        double EndX,
+        double EndY)
     {
         public bool Moved => Math.Abs(CursorDeltaX) + Math.Abs(CursorDeltaY) >= 2d;
     }
@@ -373,7 +375,101 @@ internal sealed class ExperimentalTeleportDrag(TpConfig config, CancellationToke
             inputCompletionRatio,
             effectiveDistanceCorrection,
             Environment.TickCount64 - dragStartedAt);
-        return new DragResult(end.X - start.X, end.Y - start.Y, actualX, actualY, start.X, start.Y);
+        return new DragResult(
+            end.X - start.X,
+            end.Y - start.Y,
+            actualX,
+            actualY,
+            start.X,
+            start.Y,
+            end.X,
+            end.Y);
+    }
+
+    /// <summary>
+    /// 沿上一次拖动的同一条跑道反向拖回，不重新选择或识别起点。
+    /// </summary>
+    internal async Task<DragResult> ReverseDragAsync(DragResult previous)
+    {
+        if (!previous.Moved ||
+            !double.IsFinite(previous.StartX) ||
+            !double.IsFinite(previous.StartY) ||
+            !double.IsFinite(previous.EndX) ||
+            !double.IsFinite(previous.EndY))
+        {
+            return default;
+        }
+
+        var start = new Point2d(previous.EndX, previous.EndY);
+        var end = new Point2d(previous.StartX, previous.StartY);
+        var inputDistance = Math.Sqrt(
+            Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2));
+        if (!double.IsFinite(inputDistance) || inputDistance < 1d)
+        {
+            return default;
+        }
+
+        var systemInfo = TaskContext.Instance().SystemInfo;
+        var captureRect = systemInfo.ScaleMax1080PCaptureRect;
+        var realCaptureRect = systemInfo.CaptureAreaRect;
+        var boundaryDelay = GetOperationInterval();
+        var dragStartDelay = config.GetEffectiveExperimentalTeleportDragStartDelayMilliseconds();
+        var dragReleaseDelay = config.GetEffectiveExperimentalTeleportDragReleaseDelayMilliseconds();
+        var maxSingleStepDistance = config.GetEffectiveExperimentalTeleportMaxSingleStepDistancePixels();
+        var steps = Math.Clamp(
+            maxSingleStepDistance > 0
+                ? (int)Math.Ceiling(inputDistance / maxSingleStepDistance)
+                : 1,
+            1,
+            int.MaxValue);
+        var stepDelay = GetStepInterval();
+
+        Logger.LogWarning(
+            "实验传送检测到地图亮度过低，沿原跑道反向拖动：runway=({StartX:0.0},{StartY:0.0})->({EndX:0.0},{EndY:0.0}) steps={Steps}",
+            start.X,
+            start.Y,
+            end.X,
+            end.Y,
+            steps);
+
+        MoveToCapturePoint(start, captureRect, realCaptureRect);
+        await Delay(boundaryDelay, ct);
+        GetCursorPosition(out var cursorBefore);
+        try
+        {
+            Simulation.SendInput.Mouse.LeftButtonDown();
+            await Delay(dragStartDelay, ct);
+            for (var i = 1; i <= steps; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var progress = i / (double)steps;
+                MoveToCapturePoint(
+                    new Point2d(
+                        start.X + (end.X - start.X) * progress,
+                        start.Y + (end.Y - start.Y) * progress),
+                    captureRect,
+                    realCaptureRect);
+                await Delay(i < steps ? stepDelay : dragReleaseDelay, ct);
+            }
+        }
+        finally
+        {
+            Simulation.SendInput.Mouse.LeftButtonUp();
+        }
+
+        await Delay(boundaryDelay, ct);
+        GetCursorPosition(out var cursorAfter);
+        var actualX = (cursorAfter.X - cursorBefore.X) * captureRect.Width / Math.Max(1d, realCaptureRect.Width);
+        var actualY = (cursorAfter.Y - cursorBefore.Y) * captureRect.Height / Math.Max(1d, realCaptureRect.Height);
+        return new DragResult(
+            end.X - start.X,
+            end.Y - start.Y,
+            actualX,
+            actualY,
+            start.X,
+            start.Y,
+            end.X,
+            end.Y);
     }
 
     public async Task AdjustMapZoomLevelAsync(double zoomLevel, double targetZoomLevel)

@@ -116,7 +116,10 @@ public class TpTask
     private const int TeleportCompletionStableMainUiChecks = 1;
     private const int BlessingCheckIntervalMs = 1000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
+    private const double ExperimentalMapLowBrightnessThreshold = 50d;
+    private const double SeaOfBygoneErasLowBrightnessThreshold = 32d;
     private static string? s_lastSuccessfulTeleportMapName;
+    private static string? s_currentSelectedBigMapName;
     private static readonly IReadOnlySet<string> ExperimentalDragForbiddenIconTypes = new HashSet<string>(StringComparer.Ordinal)
     {
         "TeleportWaypoint",
@@ -128,6 +131,7 @@ public class TpTask
     private string? _lastAreaSwitchCenterMapName;
     private Func<int, int, Task<ExperimentalTeleportDrag.DragResult>>? _experimentalDrag;
     private ExperimentalTeleportDrag? _experimentalDragController;
+    private ExperimentalTeleportDrag.DragResult _lastExperimentalDragResult;
     private Action? _experimentalDragFailureHandler;
     private Action? _experimentalDragStateResetter;
     private Func<double, double, Task>? _experimentalZoomAdjuster;
@@ -453,6 +457,7 @@ public class TpTask
     {
         _experimentalDrag = CreateExperimentalDragDelegate(drag);
         _experimentalDragController = drag;
+        _lastExperimentalDragResult = default;
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         InvalidateExperimentalMapRecognitionCache();
@@ -466,6 +471,7 @@ public class TpTask
             _experimentalZoomAdjuster = null;
             _experimentalDrag = null;
             _experimentalDragController = null;
+            _lastExperimentalDragResult = default;
             _experimentalDragFailureHandler = null;
             _experimentalDragStateResetter = null;
         }
@@ -480,6 +486,7 @@ public class TpTask
         var uiStateMachine = new ExperimentalTeleportUiStateMachine(this, _tpConfig, ct);
         _experimentalDrag = CreateExperimentalDragDelegate(drag);
         _experimentalDragController = drag;
+        _lastExperimentalDragResult = default;
         _experimentalZoomAdjuster = drag.AdjustMapZoomLevelAsync;
         _experimentalUiStateMachine = uiStateMachine;
         InvalidateExperimentalMapRecognitionCache();
@@ -494,6 +501,7 @@ public class TpTask
             _experimentalZoomAdjuster = null;
             _experimentalDrag = null;
             _experimentalDragController = null;
+            _lastExperimentalDragResult = default;
             _experimentalDragFailureHandler = null;
             _experimentalDragStateResetter = null;
         }
@@ -907,6 +915,7 @@ public class TpTask
         }
 
         s_lastSuccessfulTeleportMapName = target.MapName;
+        s_currentSelectedBigMapName = target.MapName;
         return (target.X, target.Y);
     }
 
@@ -1022,13 +1031,24 @@ public class TpTask
 
     private async Task PrepareExperimentalTeleportMap(TeleportTargetContext target)
     {
+        var switchedMap = await EnsureExperimentalTeleportTargetMap(target);
         if (!string.Equals(target.MapName, MapTypes.Teyvat.ToString(), StringComparison.Ordinal))
         {
-            await SwitchToTeleportTargetMap(target);
             return;
         }
 
-        if (!TryGetExperimentalCurrentMapState(target.MapName, out var currentCenter, out var currentZoom))
+        Point2f currentCenter;
+        double currentZoom;
+        if (switchedMap && TryGetRememberedAreaSwitchCenterPoint(target.MapName, out currentCenter))
+        {
+            currentZoom = GetCurrentBigMapZoomLevel();
+            Logger.LogDebug(
+                "实验传送切换大地图后使用国家中心作为当前位置：center=({CenterX:0.0},{CenterY:0.0}) zoom={ZoomLevel:0.00}",
+                currentCenter.X,
+                currentCenter.Y,
+                currentZoom);
+        }
+        else if (!TryGetExperimentalCurrentMapState(target.MapName, out currentCenter, out currentZoom))
         {
             await Delay(GetTeleportOperationDelay(100), ct);
             if (!TryGetExperimentalCurrentMapState(target.MapName, out currentCenter, out currentZoom))
@@ -1089,6 +1109,43 @@ public class TpTask
                 await AdjustMapZoomLevel(currentZoom, widestMapZoom);
             }
         }
+    }
+
+    private async Task<bool> EnsureExperimentalTeleportTargetMap(TeleportTargetContext target)
+    {
+        if (string.Equals(s_currentSelectedBigMapName, target.MapName, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        Logger.LogDebug(
+            "实验传送当前大地图与目标不一致，先切换地图：current={CurrentMap} target={TargetMap}",
+            s_currentSelectedBigMapName ?? "未知",
+            target.MapName);
+
+        string areaName;
+        if (string.Equals(target.MapName, MapTypes.Teyvat.ToString(), StringComparison.Ordinal))
+        {
+            areaName = target.Country ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(areaName) &&
+                TryGetNearestCountryCenter(target.X, target.Y, out var nearestCountry, out _))
+            {
+                areaName = nearestCountry;
+            }
+
+            if (string.IsNullOrWhiteSpace(areaName))
+            {
+                throw new InvalidOperationException("无法确定切换到提瓦特大陆时使用的目标国家");
+            }
+        }
+        else
+        {
+            areaName = MapTypesExtensions.ParseFromName(target.MapName).GetDescription();
+        }
+
+        await SwitchArea(areaName);
+        InvalidateExperimentalMapRecognitionCache();
+        return true;
     }
 
     private bool TryGetExperimentalCurrentMapState(
@@ -2247,20 +2304,58 @@ public class TpTask
             var mouseMoveResult = await MouseMoveMap(effectiveMoveMouseX, effectiveMoveMouseY);
             await Delay(GetExperimentalOperationDelay(30), ct);
 
+            double sentDeltaX = mouseMoveResult.SentDeltaX;
+            double sentDeltaY = mouseMoveResult.SentDeltaY;
+            double actualCursorDeltaX = mouseMoveResult.ActualDeltaX;
+            double actualCursorDeltaY = mouseMoveResult.ActualDeltaY;
+            if (_experimentalDragController is { } experimentalDragController &&
+                IsExperimentalMapBrightnessLow(mapName))
+            {
+                var reverseResult = await experimentalDragController.ReverseDragAsync(_lastExperimentalDragResult);
+                InvalidateExperimentalMapRecognitionCache();
+                await Delay(GetExperimentalOperationDelay(30), ct);
+
+                if (IsExperimentalMapBrightnessLow(mapName))
+                {
+                    Logger.LogWarning("实验传送反向拖动后地图亮度仍然过低，切换到目标区域中心");
+                    var jumpedCenterPoint = await ForceJumpToTargetArea(x, y, mapName);
+                    InvalidateExperimentalMapRecognitionCache();
+                    currentZoomLevel = GetCurrentBigMapZoomLevel();
+                    if (jumpedCenterPoint is { } centerPoint)
+                    {
+                        ClearRememberedAreaSwitchCenterPoint();
+                        moveState = GetMoveMapState(centerPoint, x, y, currentZoomLevel);
+                    }
+                    else if (!TryGetRecognizedMoveMapState(mapName, x, y, currentZoomLevel, out moveState))
+                    {
+                        throw new MapPositionNotRecognizedException("地图黑图恢复并切换区域后，仍无法识别当前位置");
+                    }
+
+                    exceptionTimes = 0;
+                    continue;
+                }
+
+                Logger.LogInformation("实验传送反向拖动后地图亮度恢复，继续识别当前位置");
+                sentDeltaX += reverseResult.InputDeltaX;
+                sentDeltaY += reverseResult.InputDeltaY;
+                actualCursorDeltaX += reverseResult.CursorDeltaX;
+                actualCursorDeltaY += reverseResult.CursorDeltaY;
+            }
+
             // 推算理论上的移动后坐标 (惯性预测)
             // 实验拖动会回读真实光标位移。优先使用实际位移，避免 DPI 缩放、输入裁剪
             // 或系统鼠标加速导致计划位移与地图实际移动不一致；回读无效时再退回计划值。
-            double predictionDeltaX = mouseMoveResult.SentDeltaX;
-            double predictionDeltaY = mouseMoveResult.SentDeltaY;
+            double predictionDeltaX = sentDeltaX;
+            double predictionDeltaY = sentDeltaY;
             var actualDeltaDistance = Math.Sqrt(
-                mouseMoveResult.ActualDeltaX * mouseMoveResult.ActualDeltaX +
-                mouseMoveResult.ActualDeltaY * mouseMoveResult.ActualDeltaY);
+                actualCursorDeltaX * actualCursorDeltaX +
+                actualCursorDeltaY * actualCursorDeltaY);
             if (_experimentalDrag is not null &&
                 double.IsFinite(actualDeltaDistance) &&
                 actualDeltaDistance >= 2d)
             {
-                predictionDeltaX = mouseMoveResult.ActualDeltaX;
-                predictionDeltaY = mouseMoveResult.ActualDeltaY;
+                predictionDeltaX = actualCursorDeltaX;
+                predictionDeltaY = actualCursorDeltaY;
             }
 
             Point2f predictedPoint = moveState.CenterPoint + new Point2f(
@@ -2804,6 +2899,20 @@ public class TpTask
         return _tpConfig.GetEffectiveExperimentalTeleportStateRecognitionIntervalMilliseconds();
     }
 
+    private bool IsExperimentalMapBrightnessLow(string mapName)
+    {
+        using var capture = CaptureToRectArea();
+        var brightness = Cv2.Mean(capture.SrcMat).Val0;
+        var threshold = string.Equals(mapName, MapTypes.SeaOfBygoneEras.ToString(), StringComparison.Ordinal)
+            ? SeaOfBygoneErasLowBrightnessThreshold
+            : ExperimentalMapLowBrightnessThreshold;
+        LogExperimentalDetailed(
+            "实验传送大地图亮度检测：brightness={Brightness:0.0} threshold={Threshold:0.0}",
+            brightness,
+            threshold);
+        return brightness < threshold;
+    }
+
     private int GetExperimentalStateRecognitionInitialDelay()
     {
         if (_experimentalUiStateMachine == null)
@@ -2950,22 +3059,24 @@ public class TpTask
     {
         if (_experimentalDrag is { } experimentalDrag)
         {
+            _lastExperimentalDragResult = default;
             var result = await experimentalDrag(pixelDeltaX, pixelDeltaY);
             if (!result.Moved)
             {
                 throw new MapPositionNotRecognizedException("实验传送拖动未检测到有效鼠标位移");
             }
 
+            _lastExperimentalDragResult = result;
             InvalidateExperimentalMapRecognitionCache();
 
             return (
                 (int)Math.Round(result.InputDeltaX),
                 (int)Math.Round(result.InputDeltaY),
                 0,
-                0,
-                0,
-                0,
-                0,
+                result.StartX,
+                result.StartY,
+                result.EndX,
+                result.EndY,
                 result.CursorDeltaX,
                 result.CursorDeltaY);
         }
@@ -3445,6 +3556,31 @@ public class TpTask
         }
     }
 
+    private static void RememberSelectedBigMap(string areaName)
+    {
+        if (MapLazyAssets.Get().CountryPositions.ContainsKey(areaName))
+        {
+            s_currentSelectedBigMapName = MapTypes.Teyvat.ToString();
+            return;
+        }
+
+        try
+        {
+            s_currentSelectedBigMapName = MapTypesExtensions.ParseFromDescription(areaName).ToString();
+        }
+        catch (ArgumentException)
+        {
+            // 尘歌壶、千星奇域等不属于路径追踪支持的独立地图，身份按未知处理。
+            s_currentSelectedBigMapName = null;
+        }
+    }
+
+    private void RememberSuccessfulAreaSwitch(string areaName)
+    {
+        RememberAreaSwitchCenterPoint(areaName);
+        RememberSelectedBigMap(areaName);
+    }
+
     private bool TryConsumeLastAreaSwitchCenterPoint(string mapName, out Point2f centerPoint)
     {
         if (TryGetRememberedAreaSwitchCenterPoint(mapName, out centerPoint))
@@ -3594,7 +3730,7 @@ public class TpTask
                 ra.ClickTo(templateRect.X, templateRect.Y, templateRect.Width, templateRect.Height);
                 await Delay(GetExperimentalOperationDelay(50), ct);
                 await WaitForTemplateAreaSelectionApplied(areaName);
-                RememberAreaSwitchCenterPoint(areaName);
+                RememberSuccessfulAreaSwitch(areaName);
                 Logger.LogInformation("切换到区域（模板匹配）：{Country}", areaName);
                 return true;
             }
@@ -3615,7 +3751,7 @@ public class TpTask
 
                 await Delay(GetExperimentalOperationDelay(50), ct);
                 await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
-                RememberAreaSwitchCenterPoint(areaName);
+                RememberSuccessfulAreaSwitch(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
                 return true;
             }
@@ -4878,11 +5014,13 @@ public class TpTask
     private async Task ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
         // 候选列表有个动画，识别到以后一定要再等一会点击
-        var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
-        await Delay(time < 200 ? 200 : time, ct);
+        var clickPreparationDelay = _experimentalUiStateMachine is not null
+            ? GetExperimentalOperationDelay(200)
+            : Math.Max(200, TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay);
+        await Delay(clickPreparationDelay, ct);
         Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
-        await Delay(GetExperimentalOperationDelay(MapChooseCandidateClickDelayMs), ct);
+        await Delay(GetExperimentalOperationDelay(150), ct);
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)
