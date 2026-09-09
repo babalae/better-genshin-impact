@@ -339,6 +339,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return Status.Running;
             }
 
+            // 如果未检测到退出钓鱼按钮，说明不在钓鱼模式，直接成功退出
+            if (imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion)).IsEmpty())
+            {
+                _logger.LogInformation("未检测到退出钓鱼按钮，可能不在钓鱼模式，直接退出");
+                return Status.Success;
+            }
+
             if (Bv.FindF(imageRegion, _fishingLocalizedString))
             {
                 _logger.LogInformation("退出完成");
