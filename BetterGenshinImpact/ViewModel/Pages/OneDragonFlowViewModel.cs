@@ -407,74 +407,59 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
-        var configName = SelectedConfig.Name;
-
         // 切换预设时重新从磁盘读取所选配置：用户在运行中外部编辑的文件才能生效，
         // 也避免后续自动保存把内存中的旧值覆盖回文件（#3235）。
-        //
-        // SelectedConfig 是预设下拉框的 TwoWay 绑定源：这里赋入新实例后，绑定会异步回写
-        // ComboBox.SelectedItem 并再次触发本命令（且每次重读都会产生新实例）。
-        // 因此重读后先记录配置名，等这次由回写引起的重入到达时按同名直接消费掉，避免持续重读（Code Review #3639）。
-        if (_lastReloadedConfigName == configName)
-        {
-            _lastReloadedConfigName = null;
-            SetSomeSelectedConfig(SelectedConfig);
-            SelectedTask = null;
-            return;
-        }
-
-        var diskConfig = ReadOneDragonConfigFromDisk(configName);
-        if (diskConfig != null)
-        {
-            _lastReloadedConfigName = configName;
-            var index = ConfigList.IndexOf(SelectedConfig);
-            if (index >= 0)
-            {
-                ConfigList[index] = diskConfig;
-            }
-
-            SelectedConfig = diskConfig;
-        }
+        TryReloadSelectedConfigFromDisk(SelectedConfig.Name);
 
         SetSomeSelectedConfig(SelectedConfig);
         SelectedTask = null;
     }
 
     /// <summary>
-    /// 上一次重读所选预设时记录的配置名，用于拦住 SelectedConfig 回写导致的命令重入。
+    /// 按配置名重读 <see cref="OneDragonFlowConfigFolder" /> 下的文件，并把磁盘内容原地应用到
+    /// 当前 <see cref="SelectedConfig" /> 实例。成功返回 true。
+    /// <para>保持实例身份不变（不做 ConfigList 元素替换），避免预设下拉框的双向绑定回写再次触发
+    /// 本命令造成的重入；文件缺失、解析失败或名称与来源文件不一致时返回 false（沿用内存中的实例）。</para>
     /// </summary>
-    private string? _lastReloadedConfigName;
-
-    /// <summary>
-    /// 按配置名重读 <see cref="OneDragonFlowConfigFolder" /> 下的文件；文件缺失、解析失败或
-    /// 名称与来源文件不一致时返回 null（沿用内存中的实例）。
-    /// </summary>
-    private OneDragonFlowConfig? ReadOneDragonConfigFromDisk(string configName)
+    private bool TryReloadSelectedConfigFromDisk(string configName)
     {
         try
         {
             var filePath = Path.Combine(OneDragonFlowConfigFolder, $"{configName}.json");
             if (!File.Exists(filePath))
             {
-                return null;
+                _logger.LogDebug("重读一条龙配置失败，文件不存在: {ConfigName}", configName);
+                return false;
             }
 
             var json = File.ReadAllText(filePath);
-            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+
             // 仅接受与来源文件名一致的非空 Name：否则后续保存会用对象里的 Name 生成路径，
             // 导致原预设文件未被更新或写入错误的 .json 文件。
-            if (config == null || string.IsNullOrEmpty(config.Name) || config.Name != configName)
+            var parsed = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            if (parsed == null || string.IsNullOrEmpty(parsed.Name) || parsed.Name != configName)
             {
                 _logger.LogDebug("忽略重读的一条龙配置，名称与来源文件不一致: {ConfigName}", configName);
-                return null;
+                return false;
             }
 
-            return config;
+            // 原地应用，避免逐个属性触发自动保存；属性变更仍会通过 PropertyChanged 通知 UI 刷新。
+            SelectedConfig.PropertyChanged -= ConfigPropertyChanged;
+            try
+            {
+                JsonConvert.PopulateObject(json, SelectedConfig);
+            }
+            finally
+            {
+                SelectedConfig.PropertyChanged += ConfigPropertyChanged;
+            }
+
+            return true;
         }
         catch (Exception e)
         {
             _logger.LogDebug(e, "重读一条龙配置失败: {ConfigName}", configName);
-            return null;
+            return false;
         }
     }
 
