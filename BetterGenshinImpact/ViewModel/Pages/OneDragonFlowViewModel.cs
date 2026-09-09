@@ -454,7 +454,8 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
         }
 
-        SetSomeSelectedConfig(SelectedConfig);
+        // 收尾以本次读取结果为准（读取失败则保持原实例），不依赖绑定回写回显来完成状态收敛。
+        SetSomeSelectedConfig(diskConfig ?? SelectedConfig);
         SelectedTask = null;
     }
 
@@ -484,6 +485,11 @@ public partial class OneDragonFlowViewModel : ViewModel
                 _logger.LogDebug("忽略重读的一条龙配置，名称与来源文件不一致: {ConfigName}", configName);
                 return null;
             }
+
+            // 防御外部文件把任务集合显式写成 null 的情况，避免后续 SaveConfig 对空集合调用 Clear() 崩溃。
+            config.TaskEnabledList ??= [];
+            config.TaskOrder ??= [];
+            config.TaskDefinitions ??= [];
 
             return config;
         }
@@ -540,25 +546,45 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
     {
-        if (SelectedConfig != null)
+        if (selected == null)
         {
-            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
-            foreach (var task in TaskList)
-            {
-                if (SelectedConfig.TaskEnabledList.TryGetValue(task.Id, out var value))
-                {
-                    task.IsEnabled = value;
-                }
-            }
-
-            LoadDisplayTaskListFromConfig();
+            return;
         }
+
+        // 以入参为准收口：绑定的异步回写可能让 SelectedConfig 短暂为 null 或滞后（自审），
+        // 先确保属性指向本次要应用的实例，后续刷新才具备确定性。
+        if (!ReferenceEquals(SelectedConfig, selected))
+        {
+            SelectedConfig = selected;
+        }
+
+        TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = selected.Name;
+        foreach (var task in TaskList)
+        {
+            if (selected.TaskEnabledList.TryGetValue(task.Id, out var value))
+            {
+                task.IsEnabled = value;
+            }
+        }
+
+        LoadDisplayTaskListFromConfig();
     }
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (SelectedConfig == null)
+        {
+            return;
+        }
+
+        // 捕获本次变更所属的预设实例：防抖期间若用户已切换预设，
+        // 不再用当前 TaskList/SelectedConfig 覆盖新预设（自审）。
+        var config = SelectedConfig;
         await Task.Delay(100); //等会加载完再保存
-        SaveConfig();
+        if (ReferenceEquals(SelectedConfig, config))
+        {
+            SaveConfig();
+        }
     }
 
     private void ConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
