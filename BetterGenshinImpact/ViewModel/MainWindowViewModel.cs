@@ -313,22 +313,19 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             _logger.LogWarning(e, "同步 Sdl.MultiSelectComboBox 主题失败：{Message}", e.Message);
         }
 
-        // Sdl.MultiSelectComboBox 下拉弹层的边框/背景硬编码使用系统色 SystemColors.WindowBrushKey，
+        // Sdl.MultiSelectComboBox 下拉弹层的边框/背景硬编码使用系统色 SystemColors.WindowBrushKey/WindowFrameBrushKey，
         // 不会跟随 BetterGI 主题，导致深色模式下“深色底 + 白字”或“白底 + 白字”不可读。
-        // 这里在应用级资源中按主题覆盖该系统色键，使所有实例(含寻路角色设置窗口)一致适配。
+        // 这里在应用级资源中按主题覆盖这两个系统色键，使所有实例(含寻路角色设置窗口)一致适配。
         try
         {
             if (Application.Current is not null)
             {
                 var bg = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x2B, 0x2B, 0x2B) : Colors.White);
                 var frame = new SolidColorBrush(isDarkTheme ? Color.FromRgb(0x40, 0x40, 0x40) : Colors.LightGray);
-                var text = new SolidColorBrush(isDarkTheme ? Colors.White : Colors.Black);
                 bg.Freeze();
                 frame.Freeze();
-                text.Freeze();
                 Application.Current.Resources[SystemColors.WindowBrushKey] = bg;
                 Application.Current.Resources[SystemColors.WindowFrameBrushKey] = frame;
-                Application.Current.Resources[SystemColors.WindowTextBrushKey] = text;
             }
         }
         catch (Exception e)
