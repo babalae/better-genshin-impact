@@ -29,7 +29,7 @@ internal class ConversationLoggingChatClient(IChatClient innerClient, ILogger lo
 
         var response = await InnerClient.GetResponseAsync(messages, options, cancellationToken);
 
-        logger.LogInformation("── 第 {Round} 轮 · LLM 发出 ──\n{Messages}", round, FormatMessages(response.Messages));
+        logger.LogInformation("── 第 {Round} 轮 · LLM 发出（FinishReason: {FinishReason}）──\n{Messages}", round, response.FinishReason?.Value ?? "无", FormatMessages(response.Messages));
         return response;
     }
 

@@ -172,7 +172,7 @@ public class AutoBuildComboTask : ISoloTask
         var openAiClient = new OpenAIClient(new ApiKeyCredential(config.ApiKey), openAiOptions);
         IChatClient client = openAiClient.GetChatClient(config.ModelName).AsIChatClient();
 
-        // MEAI 自带 tree 字段裁剪装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗
+        // CsTrees.MEAI 自带 tree 字段裁剪装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗
         client = new CompactResultChatClient(client);
 
         // 对话记录装饰：逐轮记录发给 LLM 与 LLM 发出的内容（回退解析前的原始响应，含藏在 reasoning/文本里的 XML 原文），便于观察 FunctionInvokingChatClient 的中间多轮过程
@@ -183,10 +183,13 @@ public class AutoBuildComboTask : ISoloTask
         client = new XmlToolCallFallbackParseChatClient(client, logger);
 
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
-        return new FunctionInvokingChatClient(client)
+        client = new FunctionInvokingChatClient(client)
         {
             MaximumIterationsPerRequest = MaxToolCallIterations,
         };
+
+        // 截断检查装饰：LLM 因上下文耗尽或达到 max_tokens 被截断时（finish_reason=length）显式报错
+        return new LengthCutoffCheckChatClient(client, logger);
     }
 
     /// <summary>
