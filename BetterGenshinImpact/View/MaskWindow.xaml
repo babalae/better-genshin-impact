@@ -203,7 +203,27 @@
                                     </StackPanel.Resources>
                                     <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
                                                Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               Text="{Binding Name}">
+                                               Text="{Binding Icon}">
+                                        <TextBlock.FontSize>
+                                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.LogFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.FontSize>
+                                        <TextBlock.Foreground>
+                                            <MultiBinding Converter="{StaticResource EnabledColorBrushConverter}">
+                                                <Binding Path="IsEnabled" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusDisabledTextColor" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusEnabledTextColor" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.Foreground>
+                                    </TextBlock>
+                                    <TextBlock FontFamily="{StaticResource TextThemeFontFamily}"
+                                               Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Text="{Binding DisplayName}">
                                         <TextBlock.FontSize>
                                             <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
                                                 <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />

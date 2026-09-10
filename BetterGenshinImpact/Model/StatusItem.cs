@@ -6,7 +6,9 @@ namespace BetterGenshinImpact.Model
 {
     public partial class StatusItem : ObservableObject
     {
-        public string Name { get; set; }
+        public string Name { get; }
+        public string Icon { get; }
+        public string DisplayName { get; }
         private INotifyPropertyChanged _sourceObject { get; set; }
         private string _propertyName { get; set; }
 
@@ -15,6 +17,17 @@ namespace BetterGenshinImpact.Model
         public StatusItem(string name, INotifyPropertyChanged sourceObject, string propertyName = "Enabled")
         {
             Name = name;
+            var separatorIndex = name.IndexOf(' ');
+            if (separatorIndex > 0)
+            {
+                Icon = name[..separatorIndex];
+                DisplayName = name[(separatorIndex + 1)..];
+            }
+            else
+            {
+                Icon = string.Empty;
+                DisplayName = name;
+            }
             _sourceObject = sourceObject;
             _propertyName = propertyName;
 
