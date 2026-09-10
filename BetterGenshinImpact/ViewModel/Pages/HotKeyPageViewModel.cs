@@ -28,6 +28,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -38,6 +39,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
@@ -71,6 +73,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
+        I18nService.Instance.PropertyChanged += OnI18nPropertyChanged;
         // 获取配置
         Config = configService.Get();
 
@@ -123,6 +126,31 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     model.RegisterHotKey();
                 }
             };
+        }
+    }
+
+    private void OnI18nPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(I18nService.Revision))
+        {
+            return;
+        }
+
+        foreach (var model in EnumerateHotKeySettings(HotKeySettingModels))
+        {
+            model.RefreshDisplayNames();
+        }
+    }
+
+    private static IEnumerable<HotKeySettingModel> EnumerateHotKeySettings(IEnumerable<HotKeySettingModel> models)
+    {
+        foreach (var model in models)
+        {
+            yield return model;
+            foreach (var child in EnumerateHotKeySettings(model.Children))
+            {
+                yield return child;
+            }
         }
     }
 
