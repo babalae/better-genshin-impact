@@ -21,7 +21,7 @@ internal sealed class SileroVadDetector : IDisposable
 
     public SileroVadDetector()
     {
-        var modelPath = BgiOnnxModel.SileroVad.ModalPath;
+        var modelPath = BgiOnnxModel.SileroVad.ModelPath;
         if (!File.Exists(modelPath))
         {
             throw new FileNotFoundException("Silero VAD 模型文件不存在", modelPath);
