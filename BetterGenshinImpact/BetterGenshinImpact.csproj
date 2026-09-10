@@ -47,7 +47,7 @@
 
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="Clipper2" Version="2.0.0" />
-		<PackageReference Include="CsTrees" Version="1.0.4" />
+		<PackageReference Include="CsTrees" Version="1.0.5" />
 		<PackageReference Include="CsTrees.MEAI" Version="1.0.1" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />

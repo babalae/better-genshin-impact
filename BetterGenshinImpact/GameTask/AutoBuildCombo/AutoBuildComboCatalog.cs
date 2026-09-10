@@ -1,5 +1,7 @@
+using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.FluentBuilder;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
@@ -55,21 +57,21 @@ public class AutoBuildComboCatalog : IBehaviourCatalog
         Blackboard blackboard)
         => new(name, avatarName, blackboard);
 
-    [Description("普攻：连续攻击1秒。始终可用、无冷却，是可靠的兜底动作。返回状态：指定角色名不存在时Failure，否则Success。")]
+    [Description("普攻：连续短按左键1秒进行攻击。基础动作。返回状态：指定角色名不存在时Failure，否则Success。")]
     public Attack Attack(
         string name,
         [Description("目标角色名；若不在场会先切换到该角色")] string avatarName,
         Blackboard blackboard)
         => new(name, avatarName, 1, blackboard);
 
-    [Description("重击（长按左键），持续1秒。始终可用、无冷却。返回状态：指定角色名不存在时Failure，否则Success。")]
+    [Description("重击：长按左键1秒蓄力攻击。基础动作。返回状态：指定角色名不存在时Failure，否则Success。")]
     public Charge Charge(
         string name,
         [Description("目标角色名；若不在场会先切换到该角色")] string avatarName,
         Blackboard blackboard)
         => new(name, avatarName, 1, blackboard);
 
-    [Description("朝指定方向行走，持续指定秒数。始终可用。返回状态：指定角色名不存在时Failure，否则Success。仅用于调整站位，不用于输出")]
+    [Description("朝指定方向行走，持续指定秒数。基础动作。返回状态：指定角色名不存在时Failure，否则Success。")]
     public Walk Walk(
         string name,
         [Description("目标角色名；若不在场会先切换到该角色")] string avatarName,
@@ -78,7 +80,7 @@ public class AutoBuildComboCatalog : IBehaviourCatalog
         Blackboard blackboard)
         => new(name, avatarName, direction, seconds, blackboard);
 
-    [Description("冲刺，持续指定秒数。始终可用。返回状态：指定角色名不存在时Failure，否则Success。仅用于调整站位或躲避，不用于输出")]
+    [Description("冲刺，持续指定秒数。基础动作。返回状态：指定角色名不存在时Failure，否则Success。")]
     public Dash Dash(
         string name,
         [Description("目标角色名；若不在场会先切换到该角色")] string avatarName,
@@ -86,10 +88,30 @@ public class AutoBuildComboCatalog : IBehaviourCatalog
         Blackboard blackboard)
         => new(name, avatarName, seconds, blackboard);
 
-    [Description("跳跃一次。始终可用。返回状态：指定角色名不存在时Failure，否则Success")]
+    [Description("跳跃一次。基础动作。返回状态：指定角色名不存在时Failure，否则Success")]
     public Jump Jump(
         string name,
         [Description("目标角色名；若不在场会先切换到该角色")] string avatarName,
         Blackboard blackboard)
         => new(name, avatarName, blackboard);
+
+    [Description("打开一个 BasicActionsByDuration（按时长循环基础动作序列）作用域，打开后须要在其中依次添加角色的基础动作子节点。会切换到目标角色并站场，循环执行子节点指定秒数。期间返回 Running，时间到返回 Success，角色不存在返回 Failure。")]
+    public BasicActionsByDuration BasicActionsByDuration(
+        [Description("节点名，应附带站场秒数")] string name,
+        [Description("角色名")] string avatarName,
+        [Description("站场秒数")] double seconds,
+        [Description("是否站场时自动穿插E技能（点按）")] bool useE,
+        IEnumerable<Behaviour> children,
+        Blackboard blackboard)
+        => new(name, avatarName, seconds, useE, children, blackboard);
+
+    [Description("打开一个 BasicActionsByCount（按次数循环基础动作序列）作用域，打开后须要在其中依次添加角色的基础动作子节点。会切换到目标角色并站场，循环执行子节点指定轮数。期间返回 Running，轮数完成返回 Success，角色不存在返回 Failure。")]
+    public BasicActionsByCount BasicActionsByCount(
+        [Description("节点名，应附带站场轮数")] string name,
+        [Description("角色名")] string avatarName,
+        [Description("循环执行轮数")] int times,
+        [Description("是否站场时自动穿插E技能（点按）")] bool useE,
+        IEnumerable<Behaviour> children,
+        Blackboard blackboard)
+        => new(name, avatarName, times, useE, children, blackboard);
 }
