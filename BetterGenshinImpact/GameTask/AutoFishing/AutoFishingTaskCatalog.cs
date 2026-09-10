@@ -1,15 +1,14 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.View.Drawable;
 using CsTrees.Blackboard;
 using CsTrees.FluentBuilder;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.ML.OnnxRuntime;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
@@ -58,12 +57,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             string name,
             ILogger logger,
             IInputSimulator input,
-            InferenceSession session,
-            Dictionary<string, float[]> prototypes,
+            IItemIconRecognizer itemRecognizer,
             Blackboard blackboard,
             TimeProvider? timeProvider = null,
             CultureInfo? cultureInfo = null,
-            IStringLocalizer? stringLocalizer = null) => new EnterFishingMode(name, logger, input, session, prototypes, blackboard, timeProvider, cultureInfo, stringLocalizer);
+            IStringLocalizer? stringLocalizer = null) => new EnterFishingMode(name, logger, input, itemRecognizer, blackboard, timeProvider, cultureInfo, stringLocalizer);
 
         public CheckInitalState CheckInitalState(
             string name,
@@ -77,10 +75,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             ILogger logger,
             ISystemInfo systemInfo,
             IInputSimulator input,
-            InferenceSession session,
-            Dictionary<string, float[]> prototypes,
+            IItemIconRecognizer itemRecognizer,
             Blackboard blackboard,
-            TimeProvider? timeProvider = null) => new ChooseBait(name, logger, systemInfo, input, session, prototypes, blackboard, timeProvider);
+            TimeProvider? timeProvider = null) => new ChooseBait(name, logger, systemInfo, input, itemRecognizer, blackboard, timeProvider);
 
         public LiftRod LiftRod(
             string name,

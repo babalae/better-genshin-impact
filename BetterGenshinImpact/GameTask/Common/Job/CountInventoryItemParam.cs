@@ -16,13 +16,14 @@ public class CountInventoryItemParam
 
     public List<string> ItemNames { get; set; } = [];
 
-    public ItemIconRecognitionMode IconRecognitionMode { get; set; } = ItemIconRecognitionMode.GridIcon;
+    public ItemIconRecognitionMode IconRecognitionMode { get; set; }
 
     /// <summary>
     /// 供脚本创建后逐项赋值；参数校验在任务消费参数时执行。
     /// </summary>
     public CountInventoryItemParam()
     {
+        IconRecognitionMode = TaskContext.Instance().Config.OtherConfig.ItemIconRecognitionMode;
     }
 
     public IEnumerable<string>? GetItemNamesOrNull()
