@@ -324,7 +324,7 @@ public class CraftMaterialTask
     /// <returns>找到并选中目标材料时返回 true。</returns>
     private async Task<bool> TryFindAndSelectMaterial()
     {
-        using ItemRecognizer itemRecognizer = new();
+        using IItemIconRecognizer itemRecognizer = ItemIconRecognizerFactory.CreateConfigured();
         GridScreen gridScreen = new(GridParams.Templates[GridScreenName.Crafting], _logger, _ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
         gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
@@ -335,8 +335,8 @@ public class CraftMaterialTask
             {
                 using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                var candidate = itemRecognizer.Match(icon);
-                if (candidate.Score < 0.75 || candidate.Name != _materialName)
+                string? recognizedName = itemRecognizer.Recognize(icon);
+                if (recognizedName != _materialName)
                 {
                     continue;
                 }

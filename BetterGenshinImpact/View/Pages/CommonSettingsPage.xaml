@@ -1770,6 +1770,28 @@
                               SelectedValuePath="Item1"
                               DisplayMemberPath="Item2" />
                 </Grid>
+                <Grid Margin="16,0,16,12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body"
+                                  Text="图标识别模型" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="默认ItemV2且推荐，如果出现问题可尝试切换，GridIcon 在合成台与背包计数任务中识别不全"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                              MinWidth="120" Margin="0,0,36,0"
+                              ItemsSource="{Binding ItemIconRecognitionModes}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"
+                              SelectedValue="{Binding Config.OtherConfig.ItemIconRecognitionMode, Mode=TwoWay}" />
+                </Grid>
                 <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
