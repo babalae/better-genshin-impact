@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
+using System.Buffers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -15,6 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -559,18 +561,26 @@ public partial class AutoPickTrigger : ITaskTrigger
         while (start <= end)
         {
             char c = span[start];
-            if (c == '「' || char.IsLetterOrDigit(c)) // 引号或字母/数字
+            if (c == '「') // 引号
                 break;
-            start++;
+
+            if (IsLetterOrDigitAt(span, start, out var charsConsumed)) // 字母/数字
+                break;
+
+            start += charsConsumed;
         }
 
         // 2. 从右边开始，删除非文本字符
         while (end >= start)
         {
             char c = span[end];
-            if (c == '」' || c == '！' || c == '!' || char.IsLetterOrDigit(c)) // 引号、感叹号或字母/数字
+            if (c == '」' || c == '！' || c == '!') // 引号、感叹号
                 break;
-            end--;
+
+            if (IsLetterOrDigitAtEnd(span, end, out var charsConsumed)) // 字母/数字
+                break;
+
+            end -= charsConsumed;
         }
 
         // 如果所有字符都被删除了
@@ -608,5 +618,29 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         return cleanedSpan.ToString();
+    }
+
+    private static bool IsLetterOrDigitAt(ReadOnlySpan<char> span, int index, out int charsConsumed)
+    {
+        var status = Rune.DecodeFromUtf16(span[index..], out var rune, out charsConsumed);
+        if (status != OperationStatus.Done)
+        {
+            charsConsumed = Math.Max(charsConsumed, 1);
+            return false;
+        }
+
+        return Rune.IsLetterOrDigit(rune);
+    }
+
+    private static bool IsLetterOrDigitAtEnd(ReadOnlySpan<char> span, int end, out int charsConsumed)
+    {
+        var status = Rune.DecodeLastFromUtf16(span[..(end + 1)], out var rune, out charsConsumed);
+        if (status != OperationStatus.Done)
+        {
+            charsConsumed = Math.Max(charsConsumed, 1);
+            return false;
+        }
+
+        return Rune.IsLetterOrDigit(rune);
     }
 }
