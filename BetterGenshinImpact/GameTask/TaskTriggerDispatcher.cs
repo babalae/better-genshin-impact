@@ -360,7 +360,11 @@ namespace BetterGenshinImpact.GameTask
 
                 var speedTimer = new SpeedTimer();
                 // 从真正开始截图处计时，前面的窗口状态检查不计入 BetterGI 本轮处理耗时。
-                tickMetrics.Begin();
+                // 仅在遮罩指标开启时启动采样：未 Begin 时 EndCapture/AddTriggerCost/Publish 均按设计空转。
+                if (_metricsService is { IsEnabled: true })
+                {
+                    tickMetrics.Begin();
+                }
                 // 捕获游戏画面
                 var captureFrame = GameCapture.Capture();
                 var bitmap = captureFrame?.Frame;

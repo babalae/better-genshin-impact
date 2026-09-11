@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
 /// QQ 官方 REST 通知器。
-/// 通过 QQ 开放平台 API 将 BetterGI 事件推送到用户的 QQ 私聊（C2C）。
+/// 通过 QQ 开放平台 API 将 BetterGI 事件推送到用户的 QQ 私聊（C2C）与群聊（群 OpenID）。
 /// 支持文本消息和截图图片消息（分片上传）。
 /// 本通知器已通过三轮 AI 代码审查。
 /// </summary>
@@ -31,28 +31,33 @@ public sealed class QqNotifier : INotifier
     public string Name { get; } = "QQ";
 
     private const string TokenUrl = "https://bots.qq.com/app/getAppAccessToken";
-    private const string ApiBase = "https://api.sgroup.qq.com/v2/users/{openid}";
+    private const string C2CBase = "https://api.sgroup.qq.com/v2/users/{openid}";
+    private const string GroupBase = "https://api.sgroup.qq.com/v2/groups/{openid}";
     private const int MaxRetry = 3;
 
     private readonly HttpClient _httpClient;
     private readonly string _appId;
     private readonly string _clientSecret;
     private readonly string _openId;
+    private readonly string _groupOpenId;
 
     private string? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
     private readonly SemaphoreSlim _tokenSemaphore = new(1, 1);
 
-    public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId)
+    public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId, string groupOpenId)
     {
         _httpClient = httpClient;
         _appId = appId;
         _clientSecret = clientSecret;
         _openId = openId;
+        _groupOpenId = groupOpenId;
     }
 
     /// <summary>
-    /// 发送通知：先发文本，再发截图（如有）。截图失败时降级为纯文本。
+    /// 发送通知：对每个已配置目标（C2C / 群）先发文本，再发截图（如有）。
+    /// 单个目标的截图失败时降级为纯文本，不阻断其他目标；
+    /// 单个目标的文本失败时记 Warning 后继续下一目标，使 C2C 与群互不影响。
     /// </summary>
     public async Task SendAsync(BaseNotificationData content)
     {
@@ -62,27 +67,51 @@ public sealed class QqNotifier : INotifier
         if (string.IsNullOrWhiteSpace(_clientSecret))
             throw new NotifierException("QQ AppSecret 为空");
 
-        if (string.IsNullOrWhiteSpace(_openId))
-            throw new NotifierException("QQ OpenID 为空");
+        if (string.IsNullOrWhiteSpace(_openId) && string.IsNullOrWhiteSpace(_groupOpenId))
+            throw new NotifierException("QQ OpenID 与群 OpenID 均为空");
 
         var ct = CancellationToken.None;
+        var targets = BuildTargets();
         try
         {
             var text = GenerateMessage(content);
-            await SendTextAsync(text, ct);
-
-            if (content.Screenshot != null)
+            var successCount = 0;
+            var lastError = string.Empty;
+            foreach (var target in targets)
             {
                 try
                 {
-                    await SendImageAsync(content.Screenshot, ct);
+                    await SendTextAsync(target, text, ct);
+                    successCount++;
+
+                    if (content.Screenshot != null)
+                    {
+                        try
+                        {
+                            await SendImageAsync(target, content.Screenshot, ct);
+                        }
+                        catch (System.Exception ex)
+                        {
+                            // 单个目标的图片发送失败时降级为纯文本，不阻断其他目标
+                            Logger.LogWarning("QQ 图片发送失败（目标 {target}），降级为纯文本: {ex}", target, ex.Message);
+                        }
+                    }
+                }
+                catch (NotifierException)
+                {
+                    throw;
                 }
                 catch (System.Exception ex)
                 {
-                    // 图片发送失败时降级为纯文本，不阻断通知
-                    Logger.LogWarning("QQ 图片发送失败，降级为纯文本: {ex}", ex.Message);
+                    // 单个目标的文本发送失败时记 Warning 后 continue 下一目标，使 C2C 与群互不影响
+                    lastError = ex.Message;
+                    Logger.LogWarning("QQ 文本发送失败（目标 {target}），跳过该目标: {ex}", target, ex.Message);
                 }
             }
+
+            // 全部目标发送失败时向调用方抛出异常，避免通知管理器误报成功
+            if (successCount == 0)
+                throw new NotifierException($"发送 QQ 消息失败: {targets.Count} 个目标全部失败，最后错误: {lastError}");
         }
         catch (NotifierException)
         {
@@ -92,6 +121,19 @@ public sealed class QqNotifier : INotifier
         {
             throw new NotifierException($"发送 QQ 消息失败: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 构造发送目标 baseUrl 列表：C2C OpenID 非空加入私聊，群 OpenID 非空加入群聊。
+    /// </summary>
+    private List<string> BuildTargets()
+    {
+        var targets = new List<string>(2);
+        if (!string.IsNullOrWhiteSpace(_openId))
+            targets.Add(C2CBase.Replace("{openid}", _openId));
+        if (!string.IsNullOrWhiteSpace(_groupOpenId))
+            targets.Add(GroupBase.Replace("{openid}", _groupOpenId));
+        return targets;
     }
 
     /// <summary>
@@ -137,7 +179,7 @@ public sealed class QqNotifier : INotifier
         using var content = new StringContent(body, Encoding.UTF8, "application/json");
         using var request = new HttpRequestMessage(HttpMethod.Post, TokenUrl) { Content = content };
         using var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(response, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -160,21 +202,40 @@ public sealed class QqNotifier : INotifier
     }
 
     /// <summary>
-    /// 发送纯文本消息（msg_type=0）。注意：此请求非幂等，不重试，避免重复消息。
+    /// 校验响应成功；失败时先读取响应体再抛异常（保留状态码供重试判断），
+    /// 便于携带 QQ 服务端返回的具体错误信息。
     /// </summary>
-    private async Task SendTextAsync(string text, CancellationToken ct)
+    private static async Task EnsureSuccessWithBodyAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var body = JsonSerializer.Serialize(new { msg_type = 0, content = text });
-        using var jsonContent = new StringContent(body, Encoding.UTF8, "application/json");
-        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{ApiBase.Replace("{openid}", _openId)}/messages", jsonContent, ct);
-        using var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var statusCode = response.StatusCode;
+        var body = await response.Content.ReadAsStringAsync(ct);
+        throw new HttpRequestException(
+            $"QQ API 请求失败 ({(int)statusCode})：{(string.IsNullOrWhiteSpace(body) ? response.ReasonPhrase : body)}",
+            null,
+            statusCode);
     }
 
     /// <summary>
-    /// 发送截图图片消息（msg_type=7）：先分片上传图片拿到 file_info，再发富媒体消息。
+    /// 发送纯文本消息（msg_type=0）到指定目标 baseUrl（C2C 或群）。
+    /// 注意：此请求非幂等，不重试，避免重复消息。
     /// </summary>
-    private async Task SendImageAsync(Image<Rgb24> screenshot, CancellationToken ct)
+    private async Task SendTextAsync(string baseUrl, string text, CancellationToken ct)
+    {
+        var body = JsonSerializer.Serialize(new { msg_type = 0, content = text });
+        using var jsonContent = new StringContent(body, Encoding.UTF8, "application/json");
+        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/messages", jsonContent, ct);
+        using var response = await _httpClient.SendAsync(request, ct);
+        await EnsureSuccessWithBodyAsync(response, ct);
+    }
+
+    /// <summary>
+    /// 发送截图图片消息（msg_type=7）到指定目标 baseUrl（C2C 或群）：
+    /// 先分片上传图片拿到 file_info，再发富媒体消息。
+    /// </summary>
+    private async Task SendImageAsync(string baseUrl, Image<Rgb24> screenshot, CancellationToken ct)
     {
         byte[] imageBytes;
         using (var ms = new MemoryStream())
@@ -183,7 +244,7 @@ public sealed class QqNotifier : INotifier
             imageBytes = ms.ToArray();
         }
 
-        var fileInfo = await UploadImageChunkedAsync(imageBytes, ct);
+        var fileInfo = await UploadImageChunkedAsync(baseUrl, imageBytes, ct);
 
         var body = JsonSerializer.Serialize(new
         {
@@ -191,18 +252,17 @@ public sealed class QqNotifier : INotifier
             media = new { file_info = fileInfo }
         });
         using var jsonContent = new StringContent(body, Encoding.UTF8, "application/json");
-        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{ApiBase.Replace("{openid}", _openId)}/messages", jsonContent, ct);
+        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/messages", jsonContent, ct);
         using var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(response, ct);
     }
 
     /// <summary>
     /// 分片上传图片：prepare → 逐片 PUT → part_finish → 合并拿 file_info。
     /// 上传阶段幂等，可重试。
     /// </summary>
-    private async Task<string> UploadImageChunkedAsync(byte[] imageBytes, CancellationToken ct)
+    private async Task<string> UploadImageChunkedAsync(string baseUrl, byte[] imageBytes, CancellationToken ct)
     {
-        var baseUrl = ApiBase.Replace("{openid}", _openId);
         var fileName = "screenshot.jpg";
         var md5 = Convert.ToHexString(MD5.HashData(imageBytes)).ToLower();
         var sha1 = Convert.ToHexString(SHA1.HashData(imageBytes)).ToLower();
@@ -240,7 +300,7 @@ public sealed class QqNotifier : INotifier
                 md5_10m = md5First10m
             }), Encoding.UTF8, "application/json"), ct);
         using var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(response, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
         var uploadId = doc.RootElement.GetProperty("upload_id").GetString()!;
@@ -294,7 +354,7 @@ public sealed class QqNotifier : INotifier
         using var putContent = new ByteArrayContent(chunk);
         putContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         using var putResponse = await _httpClient.PutAsync(presignedUrl, putContent, ct);
-        putResponse.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(putResponse, ct);
     }
 
     /// <summary>
@@ -311,7 +371,7 @@ public sealed class QqNotifier : INotifier
                 md5 = chunkMd5
             }), Encoding.UTF8, "application/json"), ct);
         using var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(response, ct);
     }
 
     /// <summary>
@@ -322,7 +382,7 @@ public sealed class QqNotifier : INotifier
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/files", new StringContent(
             JsonSerializer.Serialize(new { file_type = 1, upload_id = uploadId }), Encoding.UTF8, "application/json"), ct);
         using var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessWithBodyAsync(response, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
         return doc.RootElement.GetProperty("file_info").GetString()!;

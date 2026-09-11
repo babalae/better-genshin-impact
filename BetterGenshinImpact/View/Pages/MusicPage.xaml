@@ -238,7 +238,7 @@
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding ViewModel.Config.MusicConfig.MusicFolder}">
-                            <Run Text="{i18n:T 曲谱目录：}" /><Run Text="{Binding ViewModel.MusicFolderDisplayText}" />
+                            <Run Text="{i18n:T 曲谱目录：}" /><Run Text="{Binding ViewModel.MusicFolderDisplayText, Mode=OneWay}" />
                         </TextBlock>
                         <ui:Button Grid.Column="2"
                                    Width="36"
@@ -403,7 +403,7 @@
                                                            HorizontalAlignment="Right"
                                                            FontSize="11"
                                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{i18n:T 可演奏 }" /><Run Text="{Binding PlayableRatioText}" />
+                                                    <Run Text="{i18n:T 可演奏 }" /><Run Text="{Binding PlayableRatioText, Mode=OneWay}" />
                                                 </TextBlock>
                                             </StackPanel>
                                         </Grid>
