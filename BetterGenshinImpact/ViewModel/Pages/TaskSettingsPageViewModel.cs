@@ -3,7 +3,6 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoCombo;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoCook;
@@ -515,6 +514,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
+        }
+        else if (AutoFightParam.ComboStrategyName.Equals(strategyName))
+        {
+            // 固定策略：不对应策略文件，跳过存在性检查，由 ComboCombatTaskFactory 路由
+            path = strategyName;
+            return false;
         }
         else
         {
