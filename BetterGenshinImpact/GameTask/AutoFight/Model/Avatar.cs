@@ -249,6 +249,10 @@ public class Avatar
             new TpTask(ct).TpToStatueOfTheSeven().WaitAsync(ct).GetAwaiter().GetResult();
             Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
         }
+        catch (NormalEndException)
+        {
+            throw;
+        }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             throw;
