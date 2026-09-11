@@ -353,6 +353,37 @@
                             </StackPanel>
                         </Border>
 
+                        <StackPanel Margin="0,18,0,0"
+                                    Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                            <TextBlock Foreground="#E6FFFFFF"
+                                       Text="{i18n:T Windows 用户名}" />
+                            <ui:TextBox Margin="0,6,0,0"
+                                        PlaceholderText="{i18n:T 例如 administrator}"
+                                        Text="{Binding WindowsUserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Margin="0,12,0,0"
+                                       Foreground="#E6FFFFFF"
+                                       Text="{i18n:T Windows 密码}" />
+                            <PasswordBox x:Name="WindowsPasswordBox"
+                                         Margin="0,6,0,0"
+                                         PasswordChanged="WindowsPasswordBox_OnPasswordChanged" />
+                            <Grid Margin="0,10,0,0">
+                                <CheckBox Content="{i18n:T 记住凭据（保存到 Windows 凭据管理器）}"
+                                          Foreground="#CCFFFFFF"
+                                          IsChecked="{Binding RememberCredentials, Mode=TwoWay}" />
+                                <ui:Button HorizontalAlignment="Right"
+                                           Appearance="Transparent"
+                                           Command="{Binding ClearSavedCredentialsCommand}"
+                                           Content="{i18n:T 清除已保存凭据}"
+                                           FontSize="12"
+                                           Padding="8,2" />
+                            </Grid>
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="#70FFFFFF"
+                                       FontSize="11"
+                                       Text="{i18n:T 用于桌面分身自动登录；密码仅保存在本机凭据管理器。}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
                         <StackPanel Margin="0,24,0,0"
                                     HorizontalAlignment="Center"
                                     Orientation="Horizontal"

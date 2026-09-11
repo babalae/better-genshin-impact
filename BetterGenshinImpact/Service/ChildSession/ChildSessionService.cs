@@ -46,6 +46,8 @@ public sealed class ChildSessionService : IDisposable
     private bool _statusTickInProgress;
     private bool _disposed;
     private string? _lastOperationMessage;
+    private string? _connectionUserName;
+    private string? _connectionPassword;
 
     public event EventHandler? StateChanged;
 
@@ -123,7 +125,7 @@ public sealed class ChildSessionService : IDisposable
         RefreshState();
     }
 
-    public async Task StartAsync()
+    public async Task StartAsync(string? userName = null, string? password = null)
     {
         ThrowIfDisposed();
         EnsureChildSessionsEnabled();
@@ -132,6 +134,21 @@ public sealed class ChildSessionService : IDisposable
         if (ConnectedState == 1)
         {
             return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(userName))
+        {
+            _connectionUserName = userName.Trim();
+            _connectionPassword = password ?? string.Empty;
+        }
+        else
+        {
+            var stored = ChildSessionCredentialStore.TryLoad();
+            if (stored is not null)
+            {
+                _connectionUserName = stored.Value.UserName;
+                _connectionPassword = stored.Value.Password;
+            }
         }
 
         var completionSource = _connectionAttemptCompletionSource;
@@ -452,7 +469,10 @@ public sealed class ChildSessionService : IDisposable
             _initialConnectionRetriesRemaining = _autoLaunchBetterGiPending
                 ? InitialConnectionRetryCount
                 : 0;
-            window.RdpHost.ConnectToChildSession(DefaultDesktopSize);
+            window.RdpHost.ConnectToChildSession(
+                DefaultDesktopSize,
+                _connectionUserName,
+                _connectionPassword);
         }
 
         RefreshState(operationMessage);

@@ -15,6 +15,7 @@ public partial class ChildSessionWindow : FluentWindow
 {
     private readonly ChildSessionWindowViewModel _viewModel;
     private bool _closeRequestInProgress;
+    private bool _syncingPasswordBox;
 
     internal RdpActiveXHost RdpHost { get; } = new();
 
@@ -25,6 +26,73 @@ public partial class ChildSessionWindow : FluentWindow
         DataContext = _viewModel = viewModel;
         InitializeComponent();
         RdpFormsHost.Child = RdpHost;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Loaded += OnLoaded;
+        IsVisibleChanged += OnIsVisibleChanged;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoaded;
+        SyncPasswordBoxFromViewModel();
+        _viewModel.ScheduleAutoStartIfNeeded();
+    }
+
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+        {
+            _viewModel.ScheduleAutoStartIfNeeded();
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ChildSessionWindowViewModel.WindowsPassword))
+        {
+            SyncPasswordBoxFromViewModel();
+        }
+    }
+
+    private void SyncPasswordBoxFromViewModel()
+    {
+        if (_syncingPasswordBox || WindowsPasswordBox is null)
+        {
+            return;
+        }
+
+        if (WindowsPasswordBox.Password == _viewModel.WindowsPassword)
+        {
+            return;
+        }
+
+        _syncingPasswordBox = true;
+        try
+        {
+            WindowsPasswordBox.Password = _viewModel.WindowsPassword;
+        }
+        finally
+        {
+            _syncingPasswordBox = false;
+        }
+    }
+
+    private void WindowsPasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (_syncingPasswordBox || sender is not System.Windows.Controls.PasswordBox passwordBox)
+        {
+            return;
+        }
+
+        _syncingPasswordBox = true;
+        try
+        {
+            _viewModel.WindowsPassword = passwordBox.Password;
+        }
+        finally
+        {
+            _syncingPasswordBox = false;
+        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -73,6 +141,7 @@ public partial class ChildSessionWindow : FluentWindow
 
     protected override void OnClosed(EventArgs e)
     {
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         RdpFormsHost.Child = null;
         RdpHost.Dispose();
         base.OnClosed(e);
