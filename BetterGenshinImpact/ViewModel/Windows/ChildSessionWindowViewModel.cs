@@ -26,6 +26,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private readonly ChildSessionService _childSessionService;
     private readonly DispatcherTimer _notificationTimer;
     private bool _startRequested;
+    private int _autoStartGate;
 
     [ObservableProperty]
     private Brush _connectionStatusBrush = Brushes.Red;
@@ -114,6 +115,19 @@ public partial class ChildSessionWindowViewModel : ViewModel
     [NotifyCanExecuteChangedFor(nameof(ToggleAudioMutedCommand))]
     private bool _isAudioReconnectPending;
 
+    [ObservableProperty]
+    private string _windowsUserName = Environment.UserName;
+
+    [ObservableProperty]
+    private string _windowsPassword = "";
+
+    [ObservableProperty]
+    private bool _rememberCredentials = true;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ClearSavedCredentialsCommand))]
+    private bool _hasSavedCredentials;
+
     public bool IsDefaultResolutionSelected => true;
 
     public string TopmostButtonToolTip => IsTopmost ? "取消置顶" : "置顶";
@@ -165,7 +179,77 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _childSessionService.SystemShortcutsReconnectCompleted +=
             OnSystemShortcutsReconnectCompleted;
         _childSessionService.AudioReconnectCompleted += OnAudioReconnectCompleted;
+        LoadSavedCredentials();
         UpdateConnectionStatus();
+        ScheduleAutoStartIfNeeded();
+    }
+
+    public void ScheduleAutoStartIfNeeded()
+    {
+        if (Application.Current?.Dispatcher is null)
+        {
+            return;
+        }
+
+        _ = Application.Current.Dispatcher.BeginInvoke(
+            DispatcherPriority.Background,
+            new Func<Task>(TryAutoStartIfNeededAsync));
+    }
+
+    private async Task TryAutoStartIfNeededAsync()
+    {
+        if (System.Threading.Interlocked.CompareExchange(ref _autoStartGate, 1, 0) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_startRequested
+                || IsSessionClosing
+                || _childSessionService.ConnectedState == 1)
+            {
+                return;
+            }
+
+            if (!HasSavedCredentials)
+            {
+                return;
+            }
+
+            var userName = WindowsUserName?.Trim() ?? string.Empty;
+            var password = WindowsPassword ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
+            {
+                return;
+            }
+
+            ConnectionStatusDescription = "已检测到保存的凭据，正在自动连接…";
+            await StartAsync();
+        }
+        finally
+        {
+            System.Threading.Interlocked.Exchange(ref _autoStartGate, 0);
+        }
+    }
+
+    private void LoadSavedCredentials()
+    {
+        var stored = ChildSessionCredentialStore.TryLoad();
+        HasSavedCredentials = stored is not null;
+        if (stored is null)
+        {
+            if (string.IsNullOrWhiteSpace(WindowsUserName))
+            {
+                WindowsUserName = Environment.UserName;
+            }
+
+            return;
+        }
+
+        WindowsUserName = stored.Value.UserName;
+        WindowsPassword = stored.Value.Password;
+        RememberCredentials = true;
     }
 
     partial void OnNormalWindowPositionChanged(WindowPositionConfig? value)
@@ -229,19 +313,67 @@ public partial class ChildSessionWindowViewModel : ViewModel
             }
         }
 
+        var userName = WindowsUserName?.Trim() ?? string.Empty;
+        var password = WindowsPassword ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
+        {
+            await ThemedMessageBox.WarningAsync(
+                "请填写用于桌面分身自动登录的 Windows 用户名和密码。",
+                "缺少登录凭据");
+            return;
+        }
+
+        if (RememberCredentials)
+        {
+            ChildSessionCredentialStore.Save(userName, password);
+            HasSavedCredentials = true;
+        }
+
         _startRequested = true;
         IsConnectionPromptVisible = false;
 
         try
         {
             await Dispatcher.Yield(DispatcherPriority.Background);
-            await ExecuteAsync(_childSessionService.StartAsync);
+            await ExecuteAsync(() => _childSessionService.StartAsync(userName, password));
         }
         finally
         {
             _startRequested = false;
             UpdateConnectionStatus();
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanClearSavedCredentials))]
+    private async Task ClearSavedCredentialsAsync()
+    {
+        var result = await ThemedMessageBox.WarningAsync(
+            "将清除已保存的桌面分身 Windows 登录凭据，下次启动需要重新填写。是否继续？",
+            "清除已保存凭据",
+            MessageBoxButton.YesNo,
+            MessageBoxResult.No);
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        ChildSessionCredentialStore.Delete();
+        HasSavedCredentials = false;
+        WindowsPassword = "";
+        if (string.IsNullOrWhiteSpace(WindowsUserName))
+        {
+            WindowsUserName = Environment.UserName;
+        }
+
+        ShowNotification(
+            "已清除凭据",
+            "已删除保存的桌面分身登录凭据。",
+            InfoBarSeverity.Informational);
+    }
+
+    private bool CanClearSavedCredentials()
+    {
+        return HasSavedCredentials;
     }
 
     [RelayCommand]
@@ -518,10 +650,24 @@ public partial class ChildSessionWindowViewModel : ViewModel
                 UpdateConnectionStatus();
                 ShowNotification(
                     "RDP 连接失败",
-                    e.Message,
+                    AppendCredentialHint(e.Message),
                     InfoBarSeverity.Error,
                     TimeSpan.FromSeconds(10));
             }));
+    }
+
+    private static string AppendCredentialHint(string message)
+    {
+        if (message.Contains("凭据", StringComparison.Ordinal)
+            || message.Contains("密码", StringComparison.Ordinal)
+            || message.Contains("身份验证", StringComparison.Ordinal)
+            || message.Contains("用户名", StringComparison.Ordinal))
+        {
+            return message
+                + "\n\n请检查启动页填写的 Windows 用户名和密码后重试。";
+        }
+
+        return message;
     }
 
     private void OnSystemShortcutsReconnectCompleted(object? sender, EventArgs e)
@@ -624,13 +770,17 @@ public partial class ChildSessionWindowViewModel : ViewModel
         {
             ConnectionStatusBrush = Brushes.DodgerBlue;
             ConnectionStatusTitle = "桌面分身已启动，等待连接";
-            ConnectionStatusDescription = "桌面分身会话仍在运行，点击“启动并连接”可重新建立 RDP 连接。";
+            ConnectionStatusDescription = HasSavedCredentials
+                ? "桌面分身会话仍在运行，已检测到保存的凭据，将自动重新连接。"
+                : "桌面分身会话仍在运行，点击“启动并连接”可重新建立 RDP 连接。";
         }
         else
         {
             ConnectionStatusBrush = Brushes.Red;
             ConnectionStatusTitle = "桌面分身尚未启动";
-            ConnectionStatusDescription = "点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。";
+            ConnectionStatusDescription = HasSavedCredentials
+                ? "已检测到保存的凭据，正在自动连接…"
+                : "点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。";
         }
 
         RdpStatusText = connectedState switch

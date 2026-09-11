@@ -32,6 +32,8 @@ internal sealed class RdpActiveXHost : AxHost
     private bool _audioMuted;
     private DrawingSize? _pendingReconnectDesktopSize;
     private bool _smartSizingEnabled = true;
+    private string? _cachedUserName;
+    private string? _cachedPassword;
 
     internal event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
 
@@ -61,11 +63,20 @@ internal sealed class RdpActiveXHost : AxHost
         }
     }
 
-    internal void ConnectToChildSession(DrawingSize desktopSize)
+    internal void ConnectToChildSession(
+        DrawingSize desktopSize,
+        string? userName = null,
+        string? password = null)
     {
         if (ConnectedState != 0)
         {
             return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(userName))
+        {
+            _cachedUserName = userName.Trim();
+            _cachedPassword = password ?? string.Empty;
         }
 
         ChildSessionNativeMethods.ClearRdpInputWindowCache(Handle);
@@ -115,6 +126,8 @@ internal sealed class RdpActiveXHost : AxHost
             extendedSettings.set_Property("ConnectToChildSession", ref connectToChildSession);
         });
 
+        ApplyCachedCredentials(client);
+
         _connectionAttemptInProgress = true;
         _connectionFailureReported = false;
         _lastConnectionDiagnostic = null;
@@ -128,6 +141,22 @@ internal sealed class RdpActiveXHost : AxHost
             _connectionAttemptInProgress = false;
             throw;
         }
+    }
+
+    private void ApplyCachedCredentials(object client)
+    {
+        if (string.IsNullOrWhiteSpace(_cachedUserName))
+        {
+            return;
+        }
+
+        RunComStep("设置 RDP 用户名", () =>
+            SetComProperty(client, "UserName", _cachedUserName));
+        RunComStep("设置 RDP 密码", () =>
+        {
+            var nonScriptable = (IMsRdpClientNonScriptable)client;
+            nonScriptable.put_ClearTextPassword(_cachedPassword ?? string.Empty);
+        });
     }
 
     internal void SendShowDesktopShortcut()
