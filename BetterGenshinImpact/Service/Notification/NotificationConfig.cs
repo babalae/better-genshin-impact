@@ -107,6 +107,11 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private string _dingdingWebhookUrl = string.Empty;
 
+    /// <summary>
+    ///     一条龙结束后发送汇总通知（体力+委托奖励，附拼接截图）
+    /// </summary>
+    [ObservableProperty] private bool _dragonEndSummaryEnabled = false;
+
     // Email 通知配置
     [ObservableProperty] private bool _emailNotificationEnabled;
 
