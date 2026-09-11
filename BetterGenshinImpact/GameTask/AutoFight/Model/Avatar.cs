@@ -239,15 +239,27 @@ public class Avatar
     /// tp 到七天神像恢复
     /// </summary>
     /// <param name="ct"></param>
-    /// <param name="ex"></param>
+    /// <param name="retryException"></param>
     /// <exception cref="RetryException"></exception>
-    public static void TpForRecover(CancellationToken ct, Exception ex)
+    public static void TpForRecover(CancellationToken ct, RetryException retryException)
     {
-        // tp 到七天神像复活
-        var tpTask = new TpTask(ct);
-        tpTask.TpToStatueOfTheSeven().Wait(ct);
-        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
-        throw ex;
+        try
+        {
+            // tp 到七天神像复活。保留等待取消能力，同时避免 Wait 将原异常包装为 AggregateException。
+            new TpTask(ct).TpToStatueOfTheSeven().WaitAsync(ct).GetAwaiter().GetResult();
+            Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 一旦进入恢复流程，就不能返回原战斗循环；否则会从七天神像向旧战斗点执行回点。
+            Logger.LogWarning(ex, "前往七天神像恢复时发生异常，将重试当前任务");
+        }
+
+        throw retryException;
     }
 
     /// <summary>
