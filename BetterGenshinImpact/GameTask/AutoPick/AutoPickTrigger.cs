@@ -504,13 +504,13 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// <summary>
     /// 高性能处理OCR识别的文字结果
     /// 1. 替换【、[ 为「，替换】、] 为」
-    /// 2. 清理左边非「字符和中文的字符
-    /// 3. 清理右边非」字符和中文的字符  
+    /// 2. 清理左边非文本字符
+    /// 3. 清理右边非文本字符
     /// 4. 确保引号配对：有「必有」，有」必有「
     /// </summary>
     /// <param name="text">OCR识别的原始文字</param>
     /// <returns>处理后的文字</returns>
-    private static string ProcessOcrText(string text)
+    internal static string ProcessOcrText(string text)
     {
         if (string.IsNullOrEmpty(text))
             return text;
@@ -555,20 +555,20 @@ public partial class AutoPickTrigger : ITaskTrigger
         int start = 0;
         int end = span.Length - 1;
 
-        // 1. 从左边开始，删除非「字符和中文的字符
+        // 1. 从左边开始，删除非文本字符
         while (start <= end)
         {
             char c = span[start];
-            if (c == '「' || (c >= 0x4E00 && c <= 0x9FFF)) // 「字符或中文字符
+            if (c == '「' || char.IsLetterOrDigit(c)) // 引号或字母/数字
                 break;
             start++;
         }
 
-        // 2. 从右边开始，删除非」字符和中文的字符
+        // 2. 从右边开始，删除非文本字符
         while (end >= start)
         {
             char c = span[end];
-            if (c == '」' || c == '！' || (c >= 0x4E00 && c <= 0x9FFF)) // 」字符或中文字符
+            if (c == '」' || c == '！' || c == '!' || char.IsLetterOrDigit(c)) // 引号、感叹号或字母/数字
                 break;
             end--;
         }
