@@ -1,4 +1,4 @@
-using BetterGenshinImpact.GameTask.AutoFight.Model;
+﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using CsTrees;
 using CsTrees.Blackboard;
@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo;
 
 /// <summary>
 /// 按时长循环基础动作：切换到目标角色并站场，循环执行基础动作序列直到满指定秒数（最后一个动作可能略微超出）

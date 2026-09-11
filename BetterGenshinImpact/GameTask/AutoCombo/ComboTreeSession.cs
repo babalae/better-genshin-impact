@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees;
 using CsTrees.Blackboard;
@@ -5,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo;
 
 /// <summary>
 /// 一次建树会话的产物：持有行为树构建器、黑板与建树元数据
@@ -17,7 +18,7 @@ public sealed record ComboTreeSession
     private const string CombatScenesKeyName = "CombatScenes";
 
     /// <summary>行为树构建器，重复 Build 每次产出全新节点实例</summary>
-    public required AutoBuildComboBuilder Builder { get; init; }
+    public required AutoComboBuildBuilder Builder { get; init; }
 
     /// <summary>建树时使用的黑板，与构建器绑定</summary>
     public required Blackboard Blackboard { get; init; }

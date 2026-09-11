@@ -1,4 +1,4 @@
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
 /// <summary>
 /// 装饰器：按轮次记录与 LLM 的完整对话（发给 LLM 的新增内容 ↔ LLM 发出的回复），

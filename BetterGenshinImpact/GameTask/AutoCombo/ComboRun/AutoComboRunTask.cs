@@ -13,13 +13,13 @@ using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.AutoFight.AutoFightTask;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 
 /// <summary>
 /// 已构建行为树的运行时持有者：建树任务完成后暂存建树会话，
 /// 供测试按钮启动/暂停 Tick 循环（暂停只中断循环，下次启动重新 Build 复位行为状态）
 /// </summary>
-public static class AutoBuildComboRuntime
+public static class AutoComboRuntime
 {
     /// <summary>最近一次建树任务产出的建树会话，未建树时为 null</summary>
     public static ComboTreeSession? Session { get; set; }
@@ -29,13 +29,13 @@ public static class AutoBuildComboRuntime
 /// 连招行为树测试任务：循环 Tick 已构建的行为树驱动战斗，取消即暂停
 /// 每次启动都通过 Builder 重新 Build 出全新节点实例的树，天然完成行为状态复位
 /// </summary>
-public class AutoBuildComboTestTask : ISoloTask
+public class AutoComboRunTask : ISoloTask
 {
-    public string Name => "连招行为树测试";
+    public string Name => "自动连招运行";
 
     public async Task Start(CancellationToken ct)
     {
-        var session = AutoBuildComboRuntime.Session
+        var session = AutoComboRuntime.Session
             ?? throw new NormalEndException("尚未构建行为树，请先运行一次自动连招任务完成建树");
 
         // 标准消费者协议：重新识别队伍（顺带由 BindAndBuild 校验与建树队伍是否一致）→ BeforeTask 写入本任务令牌
@@ -45,7 +45,7 @@ public class AutoBuildComboTestTask : ISoloTask
         // 清黑板 → 授权写入 CombatScenes → 重新 Build 得到全新节点实例的行为树（行为状态复位）
         var comboTree = session.BindAndBuild(combatScenes);
         Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
-        var extendedRoot = new AutoBuildComboTestBuilder()
+        var extendedRoot = new AutoComboRunBuilder()
             .WithBlackboard(session.Blackboard)
                 .Sequence("-", memory: true)
                     .Leaf(() => comboTree)
@@ -122,7 +122,7 @@ public class AutoBuildComboTestTask : ISoloTask
 /// <summary>
 /// 战斗结束检测行为：直接复用 AutoFight 的 CheckFightFinish
 /// 战斗结束时抛出 NormalEndException 终止任务
-/// 节流周期取自动战斗配置的 CheckTime ，好像有些不对，将就吧
+/// 节流周期取自动战斗配置的 CheckTime ，与 AutoFightTask 战斗循环的检查间隔语义一致
 /// </summary>
 public partial class CheckFightFinish : Behaviour
 {
@@ -140,8 +140,22 @@ public partial class CheckFightFinish : Behaviour
 
     protected override void Initialize()
     {
-        var param = new AutoFightParam();
-        _detectConfig = new AutoFightTask.TaskFightFinishDetectConfig(param.FinishDetectConfig);
+        // 直接取用户自动战斗配置的战斗结束检测设置（不走 AutoFightParam，避免无关的策略路径解析等副作用）
+        var c = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig;
+        var detectConfig = new AutoFightParam.FightFinishDetectConfig
+        {
+            FastCheckEnabled = c.FastCheckEnabled,
+            FastCheckParams = c.FastCheckParams,
+            CheckAfterSwitchAvatar = c.CheckAfterSwitchAvatar,
+            CheckEndDelay = c.CheckEndDelay,
+            BeforeDetectDelay = c.BeforeDetectDelay,
+            RotateFindEnemyEnabled = c.RotateFindEnemyEnabled,
+            SkipFightEndCheckWhenEnemyVisible = c.SkipFightEndCheckWhenEnemyVisible,
+            BlockCheckBeforeBattleSeconds = c.BlockCheckBeforeBattleSeconds,
+            PaimonEndCheckEnabled = c.PaimonEndCheckEnabled,
+            PaimonEndCheckDelay = c.PaimonEndCheckDelay,
+        };
+        _detectConfig = new AutoFightTask.TaskFightFinishDetectConfig(detectConfig);
     }
 
     protected async override Task<Status> Update()

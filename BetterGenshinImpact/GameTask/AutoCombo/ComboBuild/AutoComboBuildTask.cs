@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees.Blackboard;
 using CsTrees.MEAI;
@@ -12,14 +13,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
 /// <summary>
 /// 自动连招任务
 /// 识别队伍 → 调用 LLM 通过 Function Calling 逐节点构建连招行为树 → 打印树给用户
 /// 建树发生在战斗开始之前，树暂存内存中，后续集成进 AutoFight 运行
 /// </summary>
-public class AutoBuildComboTask : ISoloTask
+public class AutoComboBuildTask : ISoloTask
 {
     public string Name => "自动连招";
 
@@ -36,10 +37,10 @@ public class AutoBuildComboTask : ISoloTask
             var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
             Logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
 
-            var config = TaskContext.Instance().Config.AutoBuildComboConfig;
+            var config = TaskContext.Instance().Config.AutoComboBuildConfig;
 
             // 只暂存建树会话；CombatScenes 的绑定与生命周期由消费方（测试按钮/后续 AutoFight）负责
-            AutoBuildComboRuntime.Session = await BuildComboTreeAsync(avatarNames, config, Logger, ct);
+            AutoComboRuntime.Session = await BuildComboTreeAsync(avatarNames, config, Logger, ct);
         }
         catch (Exception e)
         {
@@ -57,20 +58,20 @@ public class AutoBuildComboTask : ISoloTask
     /// 日志由调用方注入：主任务传 TaskControl.Logger，单测可传自定义实现，避免触及主程序静态初始化
     /// 返回建树会话（含构建器、黑板与队伍名）；异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
     /// </summary>
-    public static async Task<ComboTreeSession> BuildComboTreeAsync(List<string> avatarNames, AutoBuildComboConfig config, ILogger logger, CancellationToken ct)
+    public static async Task<ComboTreeSession> BuildComboTreeAsync(List<string> avatarNames, AutoComboBuildConfig config, ILogger logger, CancellationToken ct)
     {
-        AutoBuildComboBuilder? builder = null;
+        AutoComboBuildBuilder? builder = null;
         try
         {
             var chatClient = CreateChatClient(config, logger);
 
             var blackboard = new Blackboard();
-            builder = new AutoBuildComboBuilder().WithBlackboard(blackboard);
+            builder = new AutoComboBuildBuilder().WithBlackboard(blackboard);
 
-            var tools = new AutoBuildComboTools(builder);
+            var tools = new AutoComboBuildTools(builder);
             var aiFunctions = tools.Tools
                 // 禁止 LLM 调用 RunTree
-                .Where(d => d.Method.Name != nameof(AutoBuildComboTools.RunTree))
+                .Where(d => d.Method.Name != nameof(AutoComboBuildTools.RunTree))
                 .Select(d => AIFunctionFactory.Create(d))
                 .ToArray();
 
@@ -133,13 +134,12 @@ public class AutoBuildComboTask : ISoloTask
     /// <summary>
     /// 根据 LLM 配置创建带工具调用循环的 IChatClient
     /// </summary>
-    private static IChatClient CreateChatClient(AutoBuildComboConfig config, ILogger logger)
+    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(config.PlanningLlmEndpoint) ||
-            string.IsNullOrWhiteSpace(config.ModelName) ||
-            string.IsNullOrWhiteSpace(config.ApiKey))
+            string.IsNullOrWhiteSpace(config.ModelName))
         {
-            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 服务地址、模型名和密钥");
+            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 服务地址和模型名");
         }
 
         Uri endpoint;
@@ -159,6 +159,12 @@ public class AutoBuildComboTask : ISoloTask
             throw new Exception($"LLM 服务地址必须使用 HTTPS（否则密钥将明文传输），本机回环地址除外：{config.PlanningLlmEndpoint}");
         }
 
+        // 本机回环地址（本地模型/本地中转通常不校验密钥）允许密钥为空，其余地址必须配置
+        if (string.IsNullOrWhiteSpace(config.ApiKey) && !isLoopback)
+        {
+            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址除外）");
+        }
+
         // 在 HTTP 传输层前注入原生 JSON 请求/响应日志，用于查验最终发送给 API 及 API 返回的原始内容
         var openAiOptions = new OpenAIClientOptions
         {
@@ -166,7 +172,9 @@ public class AutoBuildComboTask : ISoloTask
             NetworkTimeout = TimeSpan.FromMinutes(10),
         };
 
-        var openAiClient = new OpenAIClient(new ApiKeyCredential(config.ApiKey), openAiOptions);
+        // 密钥为空时传占位符：OpenAI 客户端拒绝空密钥，而本地服务不校验该头的值
+        var apiKey = string.IsNullOrWhiteSpace(config.ApiKey) ? "missing-api-key" : config.ApiKey;
+        var openAiClient = new OpenAIClient(new ApiKeyCredential(apiKey), openAiOptions);
         IChatClient client = openAiClient.GetChatClient(config.ModelName).AsIChatClient();
 
         // CsTrees.MEAI 自带 tree 字段裁剪装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗

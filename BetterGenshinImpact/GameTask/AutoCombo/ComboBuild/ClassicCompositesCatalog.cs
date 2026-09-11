@@ -4,7 +4,7 @@ using CsTrees.FluentBuilder;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild
 {
     /// <summary>
     /// 经典复合节点目录

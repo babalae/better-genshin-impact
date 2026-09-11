@@ -1,11 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
 /// <summary>
 /// 自动连招配置
 /// </summary>
-public partial class AutoBuildComboConfig : ObservableObject
+public partial class AutoComboBuildConfig : ObservableObject
 {
     /// <summary>
     /// 决策模型的 OpenAI 兼容端点

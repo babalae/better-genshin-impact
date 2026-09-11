@@ -1,10 +1,10 @@
-using BetterGenshinImpact.GameTask.AutoFight.Config;
+﻿using BetterGenshinImpact.GameTask.AutoFight.Config;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo;
 
 /// <summary>
 /// 角色档案：角色名、战术描述与类别标签

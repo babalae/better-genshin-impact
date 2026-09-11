@@ -1,11 +1,11 @@
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
 /// <summary>
 /// 截断检查装饰器：LLM 因上下文窗口耗尽或输出达到 max_tokens 被截断时，服务端不返回错误，

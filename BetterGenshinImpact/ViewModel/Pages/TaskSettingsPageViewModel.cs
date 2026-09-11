@@ -3,7 +3,9 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoBuildCombo;
+using BetterGenshinImpact.GameTask.AutoCombo;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -135,17 +137,17 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoCookButtonText = "启动";
 
     [ObservableProperty]
-    private bool _switchAutoBuildComboEnabled;
+    private bool _switchAutoComboEnabled;
 
     [ObservableProperty]
-    private string _switchAutoBuildComboButtonText = "启动";
+    private string _switchAutoComboButtonText = "启动";
 
     [ObservableProperty]
-    private string _switchAutoBuildComboTestButtonText = "测试运行";
+    private string _switchAutoComboRunButtonText = "测试运行";
 
-    private bool _autoBuildComboTestRunning;
+    private bool _autoComboRunRunning;
 
-    private bool _autoBuildComboTestPaused;
+    private bool _autoComboRunPaused;
 
     [ObservableProperty]
     private List<string> _domainNameList;
@@ -372,10 +374,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoMusicGameEnabled = false;
         SwitchAutoAlbumEnabled = false;
         SwitchAutoCookEnabled = false;
-        SwitchAutoBuildComboEnabled = false;
-        SwitchAutoBuildComboTestButtonText = "测试运行";
-        _autoBuildComboTestRunning = false;
-        _autoBuildComboTestPaused = false;
+        SwitchAutoComboEnabled = false;
+        SwitchAutoComboRunButtonText = "测试运行";
+        _autoComboRunRunning = false;
+        _autoComboRunPaused = false;
         SwitchAutoFishingEnabled = false;
         SwitchAutoLeyLineOutcropEnabled = false;
         SwitchArtifactSalvageEnabled = false;
@@ -689,41 +691,41 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private async Task OnSwitchAutoBuildCombo()
+    private async Task OnSwitchAutoCombo()
     {
-        SwitchAutoBuildComboEnabled = true;
+        SwitchAutoComboEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoBuildComboTask());
-        SwitchAutoBuildComboEnabled = false;
+            .RunSoloTaskAsync(new AutoComboBuildTask());
+        SwitchAutoComboEnabled = false;
     }
 
     [RelayCommand]
-    private async Task OnSwitchAutoBuildComboTest()
+    private async Task OnSwitchAutoComboRun()
     {
-        if (_autoBuildComboTestRunning)
+        if (_autoComboRunRunning)
         {
             // 暂停：取消 Tick 循环，行为树节点状态保留，下次点击继续
-            _autoBuildComboTestRunning = false;
-            _autoBuildComboTestPaused = true;
-            SwitchAutoBuildComboTestButtonText = "继续";
+            _autoComboRunRunning = false;
+            _autoComboRunPaused = true;
+            SwitchAutoComboRunButtonText = "继续";
             CancellationContext.Instance.Cancel();
             return;
         }
 
-        _autoBuildComboTestRunning = true;
-        _autoBuildComboTestPaused = false;
-        SwitchAutoBuildComboTestButtonText = "暂停";
+        _autoComboRunRunning = true;
+        _autoComboRunPaused = false;
+        SwitchAutoComboRunButtonText = "暂停";
         try
         {
             await new TaskRunner()
-                .RunSoloTaskAsync(new AutoBuildComboTestTask());
+                .RunSoloTaskAsync(new AutoComboRunTask());
         }
         finally
         {
-            _autoBuildComboTestRunning = false;
-            if (!_autoBuildComboTestPaused)
+            _autoComboRunRunning = false;
+            if (!_autoComboRunPaused)
             {
-                SwitchAutoBuildComboTestButtonText = "测试运行";
+                SwitchAutoComboRunButtonText = "测试运行";
             }
         }
     }

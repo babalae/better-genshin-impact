@@ -3580,8 +3580,8 @@
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
-                               Content="{Binding SwitchAutoBuildComboTestButtonText}"
-                               Command="{Binding SwitchAutoBuildComboTestCommand}"
+                               Content="{Binding SwitchAutoComboRunButtonText}"
+                               Command="{Binding SwitchAutoComboRunCommand}"
                                Icon="{ui:SymbolIcon Play24}" />
                     <controls:TwoStateButton Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -3589,9 +3589,9 @@
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
                                              DisableContent="停止"
-                                             EnableCommand="{Binding SwitchAutoBuildComboCommand}"
-                                             EnableContent="{Binding SwitchAutoBuildComboButtonText}"
-                                             IsChecked="{Binding SwitchAutoBuildComboEnabled}" />
+                                             EnableCommand="{Binding SwitchAutoComboCommand}"
+                                             EnableContent="{Binding SwitchAutoComboButtonText}"
+                                             IsChecked="{Binding SwitchAutoComboEnabled}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3622,7 +3622,7 @@
                                 MinWidth="300"
                                 MaxWidth="400"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.AutoBuildComboConfig.PlanningLlmEndpoint, Mode=TwoWay}"
+                                Text="{Binding Config.AutoComboBuildConfig.PlanningLlmEndpoint, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
                 </Grid>
                 <Grid Margin="16">
@@ -3646,7 +3646,7 @@
                                 MinWidth="180"
                                 MaxWidth="400"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.AutoBuildComboConfig.ModelName, Mode=TwoWay}"
+                                Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
                 </Grid>
                 <Grid Margin="16">
@@ -3675,7 +3675,7 @@
                                     MinWidth="300"
                                     MaxWidth="400"
                                     Margin="0,0,36,0"
-                                    Password="{Binding Config.AutoBuildComboConfig.ApiKey, Mode=TwoWay}" />
+                                    Password="{Binding Config.AutoComboBuildConfig.ApiKey, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3704,7 +3704,7 @@
                                 MaxWidth="400"
                                 Height="80"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.AutoBuildComboConfig.ExtraPrompt, Mode=TwoWay}"
+                                Text="{Binding Config.AutoComboBuildConfig.ExtraPrompt, Mode=TwoWay}"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
                                 VerticalContentAlignment="Top"

@@ -4,14 +4,14 @@ using CsTrees.FluentBuilder;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
 /// <summary>
 /// 自动连招行为目录
 /// 工厂方法会被 CsTrees.MEAI 源生成器转换为 LLM 的工具调用方法，
 /// 因此方法签名与 [Description] 就是 LLM 可见的动作词汇表，修改需谨慎
 /// </summary>
-public class AutoBuildComboCatalog : IBehaviourCatalog
+public class AutoComboBuildCatalog : IBehaviourCatalog
 {
     [Description("使用元素战技E：若目标角色不在场则先切换到该角色，再释放战技，释放后自动识别并记录冷却。注意：本动作不检查冷却状态，冷却中调用是无效按键。返回状态：角色不存在时Failure，否则Success。")]
     public UseSkill UseSkill(

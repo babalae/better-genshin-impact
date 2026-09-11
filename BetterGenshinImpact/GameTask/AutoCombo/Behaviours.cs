@@ -1,4 +1,4 @@
-using BetterGenshinImpact.GameTask.AutoFight.Model;
+﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
@@ -8,7 +8,7 @@ using System;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
-namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo;
 
 /// <summary>
 /// 队伍数据访问辅助

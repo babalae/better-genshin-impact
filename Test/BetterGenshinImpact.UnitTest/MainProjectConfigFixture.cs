@@ -1,4 +1,5 @@
-using BetterGenshinImpact.GameTask.AutoBuildCombo;
+using BetterGenshinImpact.GameTask.AutoCombo;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.Service;
 using System.Text.Json;
 
@@ -6,7 +7,7 @@ namespace BetterGenshinImpact.UnitTest;
 
 /// <summary>
 /// 读取主项目编译输出中的 User/config.json（注册于 InitCollection，需要读取主项目配置的测试统一注入）。
-/// 只做纯文件解析：按节点单独反序列化所需配置（如 autoBuildComboConfig），全程不触及 ConfigService 实例链与 App 静态初始化，
+/// 只做纯文件解析：按节点单独反序列化所需配置（如 autoComboBuildConfig），全程不触及 ConfigService 实例链与 App 静态初始化，
 /// 否则会连带主程序启动副作用（提权重启弹 UAC、占用单实例命名管道等）。
 /// 定位失败或解析失败均不抛异常，由测试方根据 LoadError 决定跳过并提示
 /// </summary>
@@ -15,11 +16,11 @@ public class MainProjectConfigFixture
     /// <summary>主项目 User/config.json 的完整路径，未找到时为 null</summary>
     public string? ConfigPath { get; }
 
-    /// <summary>定位或解析失败原因（ConfigPath 与 AutoBuildComboConfig 均为 null 时给出）</summary>
+    /// <summary>定位或解析失败原因（ConfigPath 与 AutoComboConfig 均为 null 时给出）</summary>
     public string? LoadError { get; }
 
     /// <summary>主项目配置中的自动连招配置；节点缺失或解析失败时为 null</summary>
-    public AutoBuildComboConfig? AutoBuildComboConfig { get; }
+    public AutoComboBuildConfig? AutoComboBuildConfig { get; }
 
     public MainProjectConfigFixture()
     {
@@ -34,17 +35,17 @@ public class MainProjectConfigFixture
         try
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(path));
-            if (!doc.RootElement.TryGetProperty("autoBuildComboConfig", out var node))
+            if (!doc.RootElement.TryGetProperty("autoComboBuildConfig", out var node))
             {
-                LoadError = "config.json 中没有 autoBuildComboConfig 节点";
+                LoadError = "config.json 中没有 autoComboBuildConfig 节点";
                 return;
             }
 
-            AutoBuildComboConfig = node.Deserialize<AutoBuildComboConfig>(ConfigService.JsonOptions);
+            AutoComboBuildConfig = node.Deserialize<AutoComboBuildConfig>(ConfigService.JsonOptions);
         }
         catch (Exception e)
         {
-            AutoBuildComboConfig = null;
+            AutoComboBuildConfig = null;
             LoadError = $"config.json 解析失败：{e.Message}";
         }
     }
