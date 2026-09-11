@@ -25,7 +25,7 @@ internal static class Program
             var scanResult = I18nScanner.Scan(projectDirectory);
             var plans = I18nJsonSynchronizer.CreatePlans(projectDirectory, scanResult.Keys, options.AddOnly);
 
-            Console.WriteLine($"已扫描 {scanResult.XamlFileCount} 个 XAML 文件，发现 {scanResult.Keys.Count} 个 i18n Key。");
+            Console.WriteLine($"已扫描 {scanResult.XamlFileCount} 个 XAML 文件和 {scanResult.CodeFileCount} 个 C# 文件，发现 {scanResult.Keys.Count} 个 i18n Key。");
             Console.WriteLine(options.AddOnly ? "模式：只补充，保留废弃 Key。" : "模式：补充并删除废弃 Key。" );
 
             foreach (var plan in plans)
