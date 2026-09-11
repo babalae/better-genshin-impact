@@ -25,4 +25,10 @@ public partial class AutoBuildComboConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _apiKey = "";
+
+    /// <summary>
+    /// 注入给建树 LLM 的额外提示词（追加在系统指令末尾），留空则不注入
+    /// </summary>
+    [ObservableProperty]
+    private string _extraPrompt = "";
 }

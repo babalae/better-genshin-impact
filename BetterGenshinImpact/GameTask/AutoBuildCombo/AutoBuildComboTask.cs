@@ -86,7 +86,7 @@ public class AutoBuildComboTask : ISoloTask
 
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, BuildInstructions(avatarNames, logger)),
+                new(ChatRole.System, BuildInstructions(avatarNames, config.ExtraPrompt, logger)),
                 new(ChatRole.User, $"请为当前队伍构建战斗策略行为树"),
             };
             var options = new ChatOptions { Tools = aiFunctions };
@@ -196,10 +196,11 @@ public class AutoBuildComboTask : ISoloTask
     /// <summary>
     /// 构建给 LLM 的系统指令（静态内容，配合 provider 端前缀缓存）
     /// </summary>
-    private static string BuildInstructions(List<string> avatarNames, ILogger logger)
+    private static string BuildInstructions(List<string> avatarNames, string extraPrompt, ILogger logger)
     {
         // 只展开与当前队伍标签相关的交叉描述，无匹配内容时整段省略
         var tagPairSection = AvatarProfiles.BuildTagPairSection(avatarNames);
+        var extraPromptSection = string.IsNullOrWhiteSpace(extraPrompt) ? "" : $"\n\n## 用户自定义要求\n{extraPrompt.Trim()}";
         return $$"""
             你将通过工具调用构建一棵战斗策略行为树，外部将不断循环运行它来进行战斗。
             你的做法是先仔细分析并输出设计思路和行为树草图，然后通过合理的工具调用进行构建，最终调用 BuildTree 完成构建。
@@ -237,7 +238,7 @@ public class AutoBuildComboTask : ISoloTask
             {{AvatarProfiles.BuildTeamSection(avatarNames, logger)}}
 
             ## 元素反应
-            {{tagPairSection}}
+            {{tagPairSection}}{{extraPromptSection}}
             """;
     }
 
