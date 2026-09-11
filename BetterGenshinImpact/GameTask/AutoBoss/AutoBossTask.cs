@@ -814,32 +814,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
-    /// 多次尝试识别当前队伍角色并初始化战斗场景。
-    /// </summary>
-    /// <returns>已成功识别队伍的战斗场景。</returns>
-    /// <exception cref="Exception">连续多次识别队伍失败时抛出。</exception>
-    private CombatScenes GetCombatScenesWithRetry()
-    {
-        const int maxRetries = 5;
-        for (var attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            _ct.ThrowIfCancellationRequested();
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (combatScenes.CheckTeamInitialized())
-            {
-                return combatScenes;
-            }
-
-            if (attempt < maxRetries)
-            {
-                Sleep(1000, _ct);
-            }
-        }
-
-        throw new Exception("识别队伍角色失败（已重试 5 次）");
-    }
-
-    /// <summary>
     /// 根据当前队伍匹配战斗脚本，并切换到脚本中的首个角色。
     /// </summary>
     /// <param name="combatScenes">已初始化的战斗场景。</param>
@@ -872,7 +846,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         else
         {
-            var combatScenes = GetCombatScenesWithRetry();
+            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
             FindCombatScriptAndSwitchAvatar(combatScenes);
 
             var taskParam = BuildAutoFightParamForBoss();

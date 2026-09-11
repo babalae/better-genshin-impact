@@ -1,5 +1,4 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
-using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.MEAI;
 using Microsoft.Extensions.AI;
@@ -27,29 +26,20 @@ public class AutoBuildComboTask : ISoloTask
     /// <summary>FunctionInvokingChatClient 单次 GetResponseAsync 允许的最大工具调用循环轮数</summary>
     private const int MaxToolCallIterations = 128;
 
-    private CancellationToken _ct;
-
     public async Task Start(CancellationToken ct)
     {
-        _ct = ct;
         try
         {
             Logger.LogInformation("{Name}任务启动", Name);
 
-            var combatScenes = GetCombatScenesWithRetry();
-            combatScenes.BeforeTask(ct);
+            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
             var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
             Logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
 
             var config = TaskContext.Instance().Config.AutoBuildComboConfig;
-            var (root, blackboard) = await BuildComboTreeAsync(avatarNames, config, Logger, ct);
 
-            // 树构建完成后直接把队伍信息写入黑板
-            blackboard.GrantExclusiveWrite<CombatScenes>(null!, "CombatScenes").Set(combatScenes);
-
-            // 暂存树根与黑板，供任务设置页的测试按钮启动/暂停 Tick 循环、手工扩展树
-            AutoBuildComboRuntime.Root = root;
-            AutoBuildComboRuntime.Blackboard = blackboard;
+            // 只暂存建树会话；CombatScenes 的绑定与生命周期由消费方（测试按钮/后续 AutoFight）负责
+            AutoBuildComboRuntime.Session = await BuildComboTreeAsync(avatarNames, config, Logger, ct);
         }
         catch (Exception e)
         {
@@ -65,9 +55,9 @@ public class AutoBuildComboTask : ISoloTask
     /// <summary>
     /// 从已知队伍角色名开始，调用 LLM 通过 Function Calling 逐节点构建连招行为树（不含角色识别，可脱离游戏运行）
     /// 日志由调用方注入：主任务传 TaskControl.Logger，单测可传自定义实现，避免触及主程序静态初始化
-    /// 返回树根与黑板；异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
+    /// 返回建树会话（含构建器、黑板与队伍名）；异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
     /// </summary>
-    public static async Task<(Behaviour Root, Blackboard Blackboard)> BuildComboTreeAsync(List<string> avatarNames, AutoBuildComboConfig config, ILogger logger, CancellationToken ct)
+    public static async Task<ComboTreeSession> BuildComboTreeAsync(List<string> avatarNames, AutoBuildComboConfig config, ILogger logger, CancellationToken ct)
     {
         AutoBuildComboBuilder? builder = null;
         try
@@ -111,7 +101,13 @@ public class AutoBuildComboTask : ISoloTask
             var ascii = CsTrees.Display.Display.AsciiTree(root);
             logger.LogInformation("生成的行为树：\n{Tree}", ascii);
 
-            return (root, blackboard);
+            return new ComboTreeSession
+            {
+                Builder = builder,
+                Blackboard = blackboard,
+                TeamNames = avatarNames,
+                BuiltAt = DateTimeOffset.Now,
+            };
         }
         catch (Exception e)
         {
@@ -240,31 +236,5 @@ public class AutoBuildComboTask : ISoloTask
             ## 元素反应
             {{tagPairSection}}{{extraPromptSection}}
             """;
-    }
-
-    /// <summary>
-    /// 识别队伍角色，复用 AutoFight 的 YOLO 侧面头像识别，失败重试 5 次
-    /// </summary>
-    private CombatScenes GetCombatScenesWithRetry()
-    {
-        const int maxRetries = 5;
-        const int retryDelayMs = 1000;
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            using var imageRegion = CaptureToRectArea();
-            var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
-            if (combatScenes.CheckTeamInitialized())
-            {
-                return combatScenes;
-            }
-
-            if (attempt < maxRetries)
-            {
-                Sleep(retryDelayMs, _ct);
-            }
-        }
-
-        throw new Exception("识别队伍角色失败（已重试 5 次）");
     }
 }

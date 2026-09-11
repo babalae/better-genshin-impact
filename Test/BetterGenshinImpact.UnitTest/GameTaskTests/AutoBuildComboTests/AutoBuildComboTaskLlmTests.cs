@@ -48,7 +48,8 @@ public class AutoBuildComboTaskLlmTests
         _output.WriteLine("测试队伍：{0}", string.Join("、", Team));
 
         var logger = new TestOutputLogger(_output);
-        var (root, _) = await AutoBuildComboTask.BuildComboTreeAsync(Team.ToList(), config, logger, CancellationToken.None);
+        var session = await AutoBuildComboTask.BuildComboTreeAsync(Team.ToList(), config, logger, CancellationToken.None);
+        var root = session.Builder.Build();
 
         _output.WriteLine("生成的行为树：\n{0}", Display.AsciiTree(root));
         Assert.NotNull(root);

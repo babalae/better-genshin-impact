@@ -16,53 +16,46 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoBuildCombo;
 
 /// <summary>
-/// 已构建行为树的运行时持有者：建树任务完成后暂存树根，
-/// 供测试按钮启动/暂停 Tick 循环（暂停只中断循环，树节点状态保留可继续）
+/// 已构建行为树的运行时持有者：建树任务完成后暂存建树会话，
+/// 供测试按钮启动/暂停 Tick 循环（暂停只中断循环，下次启动重新 Build 复位行为状态）
 /// </summary>
 public static class AutoBuildComboRuntime
 {
-    /// <summary>最近一次建树任务产出的行为树根节点，未建树时为 null</summary>
-    public static Behaviour? Root { get; set; }
-
-    /// <summary>建树任务使用的黑板，供手工扩展树时复用</summary>
-    public static Blackboard? Blackboard { get; set; }
+    /// <summary>最近一次建树任务产出的建树会话，未建树时为 null</summary>
+    public static ComboTreeSession? Session { get; set; }
 }
 
 /// <summary>
 /// 连招行为树测试任务：循环 Tick 已构建的行为树驱动战斗，取消即暂停
+/// 每次启动都通过 Builder 重新 Build 出全新节点实例的树，天然完成行为状态复位
 /// </summary>
 public class AutoBuildComboTestTask : ISoloTask
 {
     public string Name => "连招行为树测试";
 
-    /// <summary>手工扩展后的树根缓存，避免任务重入时重复扩展包装</summary>
-    private static Behaviour? _extendedRoot;
-
-    /// <summary>扩展时的内层树引用，用于失效判断：建树任务重新建树后重新扩展</summary>
-    private static Behaviour? _extendedSource;
-
     public async Task Start(CancellationToken ct)
     {
-        var comboTree = AutoBuildComboRuntime.Root
+        var session = AutoBuildComboRuntime.Session
             ?? throw new NormalEndException("尚未构建行为树，请先运行一次自动连招任务完成建树");
 
-        // 重入时复用已扩展的树（节点状态跨暂停保留）；建树任务重新建树（Root 引用变化）时才重新扩展
-        if (_extendedRoot == null || !ReferenceEquals(_extendedSource, comboTree))
-        {
-            Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
-            _extendedSource = comboTree;
-            _extendedRoot = new AutoBuildComboTestBuilder()
-                .WithBlackboard(AutoBuildComboRuntime.Blackboard!)
-                    .Sequence("-", memory: true)
-                        .Leaf(() => comboTree)
-                        .CheckFightFinish("战斗结束检测")
-                    .End()
-                .End().Build();
-        }
+        // 标准消费者协议：重新识别队伍（顺带由 BindAndBuild 校验与建树队伍是否一致）→ BeforeTask 写入本任务令牌
+        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+        combatScenes.BeforeTask(ct);
+
+        // 清黑板 → 授权写入 CombatScenes → 重新 Build 得到全新节点实例的行为树（行为状态复位）
+        var comboTree = session.BindAndBuild(combatScenes);
+        Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
+        var extendedRoot = new AutoBuildComboTestBuilder()
+            .WithBlackboard(session.Blackboard)
+                .Sequence("-", memory: true)
+                    .Leaf(() => comboTree)
+                    .CheckFightFinish("战斗结束检测")
+                .End()
+            .End().Build();
 
         Logger.LogInformation("{Name}任务启动，持续 Tick 行为树", Name);
 
-        var tree = new BehaviourTree(_extendedRoot);
+        var tree = new BehaviourTree(extendedRoot);
         var snapshot = new SnapshotVisitor();
         tree.AddVisitor(snapshot);
 
@@ -109,7 +102,7 @@ public class AutoBuildComboTestTask : ISoloTask
         }
         catch (OperationCanceledException)
         {
-            // 暂停即取消，行为树节点状态保留
+            // 暂停即取消，下次启动重新 Build 复位行为状态
         }
         finally
         {
@@ -120,7 +113,8 @@ public class AutoBuildComboTestTask : ISoloTask
                 try { await targetingTask; } catch (OperationCanceledException) { }
             }
 
-            Logger.LogInformation("{Name}任务暂停，行为树状态已保留，可再次点击继续", Name);
+            combatScenes.AfterTask();
+            Logger.LogInformation("{Name}任务暂停，可再次点击继续", Name);
         }
     }
 }
