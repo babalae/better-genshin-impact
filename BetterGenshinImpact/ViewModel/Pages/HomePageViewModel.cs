@@ -30,6 +30,7 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -75,12 +76,18 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
     private readonly IBannerImageService _bannerImageService;
+    private readonly IInferenceDeviceDiscoveryService _inferenceDeviceDiscoveryService;
     private CancellationTokenSource? _bannerDownloadCancellationTokenSource;
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
 
-    [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
+    public ObservableCollection<InferenceDeviceDescriptor> InferenceDevices { get; } = [];
+
+    [ObservableProperty] private InferenceDeviceDescriptor? _selectedInferenceDevice;
+
+    private bool _suppressInferenceDeviceChange;
+    private bool _inferenceDevicesLoaded;
 
     [ObservableProperty] private ImageSource _bannerImageSource;
 
@@ -94,11 +101,13 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         IConfigService configService,
         TaskTriggerDispatcher taskTriggerDispatcher,
         ChildSessionService childSessionService,
-        IBannerImageService bannerImageService)
+        IBannerImageService bannerImageService,
+        IInferenceDeviceDiscoveryService inferenceDeviceDiscoveryService)
     {
         _taskDispatcher = taskTriggerDispatcher;
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
+        _inferenceDeviceDiscoveryService = inferenceDeviceDiscoveryService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
@@ -113,9 +122,6 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
-            _inferenceDeviceTypes = _inferenceDeviceTypes
-                .Where(x => x != InferenceDeviceType.GpuDirectMl)
-                .ToArray();
         }
 
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -147,21 +153,129 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     }
 
     [RelayCommand]
-    private void OnLoaded()
+    private async Task OnLoaded()
     {
         // OnTest();
 
         // 组件首次加载时运行一次。
-        if (!_autoRun)
+        if (_autoRun)
+        {
+            _autoRun = false;
+
+            // 只对纯 "start" 参数自动启动截图器
+            // startOneDragon、--startGroups 等由各自流程中的 StartGameTask 处理
+            HandleActivation(CommandLineOptions.Instance);
+        }
+
+        if (!_inferenceDevicesLoaded)
+        {
+            _inferenceDevicesLoaded = true;
+            await RefreshInferenceDevicesAsync();
+        }
+    }
+
+    partial void OnSelectedInferenceDeviceChanged(InferenceDeviceDescriptor? value)
+    {
+        if (_suppressInferenceDeviceChange || value is null || !value.IsAvailable)
         {
             return;
         }
 
-        _autoRun = false;
+        var config = Config.HardwareAccelerationConfig;
+        config.InferenceDevice = value.Provider;
+        switch (value.Provider)
+        {
+            case InferenceDeviceType.GpuDirectMl:
+                config.GpuDevice = checked((int)value.DeviceId);
+                config.DirectMlAdapterLuid = value.StableId;
+                break;
+            case InferenceDeviceType.Cuda:
+                config.CudaDevice = checked((int)value.DeviceId);
+                config.CudaDeviceUuid = value.StableId.StartsWith("Cuda:", StringComparison.OrdinalIgnoreCase)
+                    ? value.StableId["Cuda:".Length..]
+                    : value.StableId;
+                break;
+            case InferenceDeviceType.OpenVino:
+                config.OpenVinoDevice = value.ProviderOption;
+                break;
+        }
+    }
 
-        // 只对纯 "start" 参数自动启动截图器
-        // startOneDragon、--startGroups 等由各自流程中的 StartGameTask 处理
-        HandleActivation(CommandLineOptions.Instance);
+    private async Task RefreshInferenceDevicesAsync()
+    {
+        IReadOnlyList<InferenceDeviceDescriptor> devices;
+        try
+        {
+            devices = await _inferenceDeviceDiscoveryService.DiscoverAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "[ONNX] 首页刷新推理设备失败");
+            devices =
+            [
+                new InferenceDeviceDescriptor(InferenceDeviceType.Cpu, "cpu:0", "CPU（内置）",
+                    InferenceHardwareType.Cpu, "CPU", 0, "CPU")
+            ];
+        }
+
+        if (!OsVersionHelper.IsWindows10_1903_OrGreater)
+        {
+            devices = devices.Where(device => device.Provider != InferenceDeviceType.GpuDirectMl).ToArray();
+        }
+
+        var config = Config.HardwareAccelerationConfig;
+        var list = devices.ToList();
+        if (config.InferenceDevice is InferenceDeviceType.Cuda or InferenceDeviceType.OpenVino &&
+            list.All(device => device.Provider != config.InferenceDevice))
+        {
+            list.Add(new InferenceDeviceDescriptor(
+                config.InferenceDevice,
+                $"{config.InferenceDevice}:unavailable",
+                "当前配置的设备（不可用）",
+                config.InferenceDevice == InferenceDeviceType.OpenVino &&
+                string.Equals(config.OpenVinoDevice, "NPU", StringComparison.OrdinalIgnoreCase)
+                    ? InferenceHardwareType.Npu
+                    : InferenceHardwareType.Gpu,
+                "",
+                checked((uint)Math.Max(0, config.CudaDevice)),
+                config.InferenceDevice == InferenceDeviceType.OpenVino ? config.OpenVinoDevice : config.CudaDevice.ToString(),
+                false,
+                "Plugin EP 未安装、依赖不满足或设备已失效，请打开“更多”查看诊断。"));
+        }
+
+        _suppressInferenceDeviceChange = true;
+        try
+        {
+            InferenceDevices.Clear();
+            foreach (var device in list)
+            {
+                InferenceDevices.Add(device);
+            }
+
+            SelectedInferenceDevice = config.InferenceDevice switch
+            {
+                InferenceDeviceType.GpuDirectMl => list.FirstOrDefault(device =>
+                    device.Provider == InferenceDeviceType.GpuDirectMl &&
+                    device.StableId.Equals(config.DirectMlAdapterLuid, StringComparison.OrdinalIgnoreCase))
+                    ?? list.FirstOrDefault(device => device.Provider == InferenceDeviceType.GpuDirectMl &&
+                                                     device.DeviceId == config.GpuDevice),
+                InferenceDeviceType.Cuda => list.FirstOrDefault(device =>
+                    device.Provider == InferenceDeviceType.Cuda &&
+                    !string.IsNullOrWhiteSpace(config.CudaDeviceUuid) &&
+                    device.StableId.EndsWith(config.CudaDeviceUuid, StringComparison.OrdinalIgnoreCase))
+                    ?? list.FirstOrDefault(device => device.Provider == InferenceDeviceType.Cuda &&
+                                                     device.DeviceId == config.CudaDevice),
+                InferenceDeviceType.OpenVino => list.FirstOrDefault(device =>
+                    device.Provider == InferenceDeviceType.OpenVino &&
+                    device.ProviderOption.Equals(config.OpenVinoDevice, StringComparison.OrdinalIgnoreCase)),
+                _ => list.FirstOrDefault(device => device.Provider == InferenceDeviceType.Cpu)
+            } ?? list.FirstOrDefault(device => device.Provider == config.InferenceDevice)
+              ?? list.FirstOrDefault(device => device.Provider == InferenceDeviceType.Cpu);
+        }
+        finally
+        {
+            _suppressInferenceDeviceChange = false;
+        }
     }
 
     public void HandleActivation(CommandLineOptions commandLineOptions)
@@ -569,24 +683,35 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     }
 
     [RelayCommand]
-    public void OnOpenHardwareAccelerationSettings()
+    public async Task OnOpenHardwareAccelerationSettings()
     {
-        var dialogWindow = new FluentWindow
+        try
         {
-            Title = "硬件加速设置",
-            Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
-            Width = 800,
-            Height = 600,
-            MinWidth = 800,
-            MaxWidth = 800,
-            MinHeight = 600,
-            Owner = Application.Current.MainWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ExtendsContentIntoTitleBar = true,
-            WindowBackdropType = WindowBackdropType.Auto,
-        };
-        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
-        var result = dialogWindow.ShowDialog();
+            var content = App.GetService<HardwareAccelerationView>()
+                          ?? throw new InvalidOperationException("硬件加速设置视图未注册。");
+            var dialogWindow = new FluentWindow
+            {
+                Title = "硬件加速设置",
+                Content = content,
+                Width = 800,
+                Height = 600,
+                MinWidth = 800,
+                MaxWidth = 800,
+                MinHeight = 600,
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ExtendsContentIntoTitleBar = true,
+                WindowBackdropType = WindowBackdropType.Auto,
+            };
+            dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
+            dialogWindow.ShowDialog();
+            await RefreshInferenceDevicesAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "打开硬件加速设置失败");
+            ThemedMessageBox.Error($"无法打开硬件加速设置：{exception.Message}");
+        }
     }
 
     #region 背景图片管理

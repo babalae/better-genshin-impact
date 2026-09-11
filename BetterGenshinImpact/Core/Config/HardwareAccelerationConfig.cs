@@ -7,6 +7,13 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class HardwareAccelerationConfig : ObservableObject
 {
+    public enum CudaRuntimeMajor
+    {
+        Auto = 0,
+        Cuda12 = 12,
+        Cuda13 = 13
+    }
+
     /// <summary>
     /// 推理使用的设备。默认CPU
     /// </summary>
@@ -26,6 +33,12 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _gpuDevice = 0;
+
+    /// <summary>
+    /// DirectML 适配器 LUID。优先使用稳定的 LUID 恢复设备，无法匹配时回退到设备编号。
+    /// </summary>
+    [ObservableProperty]
+    private string _directMlAdapterLuid = "";
 
     /// <summary>
     /// 附加path，用;分割。默认为空。
@@ -48,6 +61,18 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _cudaDevice = 0;
+
+    /// <summary>
+    /// CUDA GPU UUID。设备顺序变化时用于重新解析 device_id。
+    /// </summary>
+    [ObservableProperty]
+    private string _cudaDeviceUuid = "";
+
+    /// <summary>
+    /// CUDA Plugin EP 主版本。Auto 会选择依赖可用的最高已安装版本。
+    /// </summary>
+    [ObservableProperty]
+    private CudaRuntimeMajor _cudaRuntime = CudaRuntimeMajor.Auto;
 
     /// <summary>
     /// 自动附加cuda的path。一般情况下用这个就足够了。默认关闭。
@@ -78,7 +103,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// OpenVino 设备参数。
     /// </summary>
     [ObservableProperty]
-    private string _openVinoDevice = "AUTO:GPU,CPU";
+    private string _openVinoDevice = "AUTO";
     
     /// <summary>
     /// 启用 OpenVINO 缓存。默认关闭。
@@ -87,4 +112,15 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private bool _enableOpenVinoCache = false;
 
     #endregion
+
+    /// <summary>
+    /// 将旧版“自动 GPU”迁移为 DirectML。旧逻辑在正常 Windows 环境下会优先命中内置 DML。
+    /// </summary>
+    public void MigrateLegacyConfig()
+    {
+        if (InferenceDevice == InferenceDeviceType.LegacyAutoGpu)
+        {
+            InferenceDevice = InferenceDeviceType.GpuDirectMl;
+        }
+    }
 }

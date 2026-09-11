@@ -22,6 +22,7 @@ using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -192,8 +193,13 @@ public partial class App : Application
                 services.AddSingleton<IKeyInputTransport, PostMessageKeyInputTransport>();
                 services.AddSingleton<IKeyInputTransport, SendInputKeyInputTransport>();
                 services.AddSingleton<IMusicPlaybackService, MusicPlaybackService>();
+                services.AddSingleton<IOnnxRuntimePluginManager, OnnxRuntimePluginManager>();
+                services.AddSingleton<IOnnxRuntimePluginRegistry, OnnxRuntimePluginRegistry>();
+                services.AddSingleton<IInferenceDeviceDiscoveryService, InferenceDeviceDiscoveryService>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
+                services.AddTransient<HardwareAccelerationViewModel>();
+                services.AddTransient<HardwareAccelerationView>();
                 services.AddMemoryCache();
                 services.AddSingleton<IAppCache, CachingService>();
                 services.AddSingleton<MemoryFileCache>();
@@ -255,6 +261,8 @@ public partial class App : Application
             // 分配控制台窗口以支持控制台输出
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
+            // 在主界面允许修改配置前固定本次进程使用的 ORT Provider；后续切换统一在重启后生效。
+            _ = _host.Services.GetRequiredService<BgiOnnxFactory>();
             await _host.StartAsync();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
             await UrlProtocolHelper.RegisterAsync();

@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.View.Pages.View;
 
 public partial class HardwareAccelerationView : UserControl
 {
-    private HardwareAccelerationViewModel ViewModel { get; }
+    public HardwareAccelerationViewModel ViewModel { get; }
 
     public HardwareAccelerationView(HardwareAccelerationViewModel viewModel)
     {

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.Win32;
@@ -17,6 +18,10 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX;
 public class BgiOnnxFactory
 {
     private readonly ILogger _logger;
+    private readonly IOnnxRuntimePluginManager? _pluginManager;
+    private readonly IOnnxRuntimePluginRegistry? _pluginRegistry;
+    private IReadOnlyList<OrtEpDevice> _pluginDevices = [];
+    private readonly string _cudaDeviceUuid = "";
 
     /// <summary>
     ///     缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
@@ -31,34 +36,46 @@ public class BgiOnnxFactory
     /// </summary>
     /// <param name="logger"></param>
     public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger)
+        : this(logger, null, null, null)
+    {
+        // 保留单元测试和旧调用方使用的构造入口；生产环境由依赖注入选择下面的完整构造函数。
+    }
+
+    public BgiOnnxFactory(
+        ILogger<BgiOnnxFactory> logger,
+        IConfigService? configService,
+        IOnnxRuntimePluginManager? pluginManager,
+        IOnnxRuntimePluginRegistry? pluginRegistry)
     {
         _logger = logger;
+        _pluginManager = pluginManager;
+        _pluginRegistry = pluginRegistry;
 
-        var config = GetConfig();
-        if (config.AutoAppendCudaPath) AppendCudaPath();
-
-        if (string.IsNullOrWhiteSpace(config.AdditionalPath))
-            AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
-
+        var config = configService?.Get().HardwareAccelerationConfig ?? GetConfig();
+        OnnxRuntimePathHelper.Prepare(config, logger);
 
         OptimizedModel = config.OptimizedModel;
         CudaDeviceId = config.CudaDevice;
-        DmlDeviceId = config.GpuDevice;
+        _cudaDeviceUuid = config.CudaDeviceUuid;
+        DmlDeviceId = Service.DxgiAdapterEnumerator.ResolveDeviceId(
+            config.DirectMlAdapterLuid, config.GpuDevice, logger);
         TrtUseEmbedMode = config.EmbedTensorRtCache;
         EnableCache = config.EnableTensorRtCache;
         CpuOcr = config.CpuOcr;
         OpenVinoDevice = config.OpenVinoDevice;
         OpenVinoCache = config.EnableOpenVinoCache;
+        ConfiguredProvider = config.InferenceDevice;
+        CudaRuntime = config.CudaRuntime;
         ProviderTypes = GetProviderType(config.InferenceDevice);
         _logger.LogDebug(
-            "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
+            "[ONNX]启用的provider:{Device},实际provider:{EffectiveProvider},设备:{EffectiveDevice},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, CpuOcr={CpuOcr}",
             string.Join(",", ProviderTypes.Select<ProviderType, string>(Enum.GetName!)),
+            EffectiveProvider,
+            EffectiveDevice,
             config.InferenceDevice,
             OptimizedModel,
             CudaDeviceId,
             DmlDeviceId,
-            TrtUseEmbedMode,
-            EnableCache,
             CpuOcr);
     }
 
@@ -84,13 +101,18 @@ public class BgiOnnxFactory
 
     public ProviderType[] ProviderTypes { get; }
     public int DmlDeviceId { get; }
-    public int CudaDeviceId { get; }
+    public int CudaDeviceId { get; private set; }
     public bool OptimizedModel { get; }
     public bool TrtUseEmbedMode { get; }
-    public string OpenVinoDevice { get; }
+    public string OpenVinoDevice { get; private set; }
     public bool EnableCache { get; }
     public bool CpuOcr { get; }
     public bool OpenVinoCache { get; }
+    public HardwareAccelerationConfig.CudaRuntimeMajor CudaRuntime { get; }
+    public InferenceDeviceType ConfiguredProvider { get; }
+    public ProviderType EffectiveProvider { get; private set; } = ProviderType.Cpu;
+    public string EffectiveDevice { get; private set; } = "CPU";
+    public string StartupDiagnostic { get; private set; } = "";
 
 
     /// <summary>
@@ -104,102 +126,173 @@ public class BgiOnnxFactory
         switch (inferenceDeviceType)
         {
             case InferenceDeviceType.Cpu:
+                EffectiveProvider = ProviderType.Cpu;
+                EffectiveDevice = "CPU";
                 return [ProviderType.Cpu];
             case InferenceDeviceType.GpuDirectMl:
                 //只用dml不加cpu的话在很多场景下性能很差。
+                EffectiveProvider = ProviderType.Dml;
+                EffectiveDevice = $"DirectML {DmlDeviceId}";
                 return [ProviderType.Dml, ProviderType.Cpu];
-            case InferenceDeviceType.Gpu:
-            {
-                List<ProviderType> list = [];
-                SessionOptions? testSession = null;
-                var hasGpu = false;
-                if (!hasGpu && CudaDeviceId >= 0)
-                    // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
-                    try
-                    {
-                        testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
-                        list.Add(ProviderType.TensorRt);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu && DmlDeviceId >= 0)
-                    // dml效果不如tensorrt，但是比纯cuda稳定性强
-                    try
-                    {
-                        testSession = new SessionOptions();
-                        testSession.AppendExecutionProvider_DML(DmlDeviceId);
-                        list.Add(ProviderType.Dml);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu && CudaDeviceId >= 0)
-                    // cuda优先级比较低，因为跑起来并不太理想。
-                    try
-                    {
-                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
-                        list.Add(ProviderType.Cuda);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu) _logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
-
-                //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
-                list.Add(ProviderType.Cpu);
-                return list.ToArray();
-            }
-
+            case InferenceDeviceType.LegacyAutoGpu:
+                // 历史值只作为兼容兜底；ConfigService 会在正常读取流程中迁移为 DirectML。
+                EffectiveProvider = ProviderType.Dml;
+                EffectiveDevice = $"DirectML {DmlDeviceId}";
+                return [ProviderType.Dml, ProviderType.Cpu];
+            case InferenceDeviceType.Cuda:
+                return TryActivatePlugin(InferenceDeviceType.Cuda, ProviderType.Cuda);
             case InferenceDeviceType.OpenVino:
+                return TryActivatePlugin(InferenceDeviceType.OpenVino, ProviderType.OpenVino);
+            default:
+                StartupDiagnostic = "无效的推理设备配置，已回退到 CPU。";
+                return [ProviderType.Cpu];
+        }
+    }
+
+    private ProviderType[] TryActivatePlugin(InferenceDeviceType provider, ProviderType providerType)
+    {
+        if (_pluginManager is null || _pluginRegistry is null)
+        {
+            StartupDiagnostic = "当前调用方未提供 Plugin EP 服务，已回退到 CPU。";
+            EffectiveProvider = ProviderType.Cpu;
+            EffectiveDevice = "CPU（回退）";
+            return [ProviderType.Cpu];
+        }
+
+        var failures = new List<string>();
+        var resolutions = _pluginManager.ResolveForStartup(provider, CudaRuntime);
+        foreach (var resolution in resolutions)
+        {
+            OnnxRuntimePathHelper.AppendPluginDirectory(resolution.LibraryPath, _logger);
+            if (!_pluginRegistry.TryRegister(resolution, out var devices, out var error))
             {
-                List<ProviderType> list = [];
-                SessionOptions? testSession = null;
-                // OpenVino是英特尔的OpenVINO执行提供程序
-                // 目前来看比Dml强
-                try
+                failures.Add($"{resolution.Descriptor.DisplayName} {resolution.Version}: {error}");
+                continue;
+            }
+
+            var selectedDevices = SelectPluginDevices(provider, devices);
+            if (selectedDevices.Count == 0)
+            {
+                failures.Add($"{resolution.Descriptor.DisplayName}: 配置的推理设备不存在");
+                continue;
+            }
+
+            _pluginDevices = selectedDevices;
+            _pluginManager.MarkActivationSucceeded(resolution);
+            EffectiveProvider = providerType;
+            EffectiveDevice = BuildDeviceDescription(selectedDevices);
+            StartupDiagnostic = "";
+            return [providerType, ProviderType.Cpu];
+        }
+
+        var localPackageDiagnostic = _pluginManager.GetCurrentPackages()
+            .FirstOrDefault(package => package.Descriptor.Provider == provider &&
+                                       !string.IsNullOrWhiteSpace(package.InstalledVersion))
+            ?.StatusMessage;
+        StartupDiagnostic = failures.Count == 0
+            ? string.IsNullOrWhiteSpace(localPackageDiagnostic)
+                ? "未安装所选 Plugin EP，已回退到 CPU。"
+                : $"所选 Plugin EP 不可用，已回退到 CPU：{localPackageDiagnostic}"
+            : $"Plugin EP 加载失败，已回退到 CPU：{string.Join("；", failures)}";
+        _logger.LogWarning("[ONNX] {Diagnostic}", StartupDiagnostic);
+        EffectiveProvider = ProviderType.Cpu;
+        EffectiveDevice = "CPU（回退）";
+        return [ProviderType.Cpu];
+    }
+
+    private IReadOnlyList<OrtEpDevice> SelectPluginDevices(
+        InferenceDeviceType provider, IReadOnlyList<OrtEpDevice> devices)
+    {
+        if (provider == InferenceDeviceType.Cuda)
+        {
+            if (!string.IsNullOrWhiteSpace(_cudaDeviceUuid))
+            {
+                var uuidMatch = devices.Where(device =>
+                    device.HardwareDevice.Metadata.Entries.Any(pair =>
+                        (pair.Key.Equals("uuid", StringComparison.OrdinalIgnoreCase) ||
+                         pair.Key.Equals("device_uuid", StringComparison.OrdinalIgnoreCase)) &&
+                        pair.Value.Equals(_cudaDeviceUuid, StringComparison.OrdinalIgnoreCase))).ToArray();
+                if (uuidMatch.Length > 0)
                 {
-                    testSession = new SessionOptions();
-                    testSession.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig(null));
-                    testSession.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
-                    list.Add(ProviderType.OpenVino);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogDebug("[init]无法加载OpenVino。可能不支持，跳过。({Err})", e.Message);
-                }
-                finally
-                {
-                    testSession?.Dispose();
+                    CudaDeviceId = checked((int)uuidMatch[0].HardwareDevice.DeviceId);
+                    return uuidMatch;
                 }
 
-                list.Add(ProviderType.Cpu);
-                return list.ToArray();
+                var nvidiaGpu = Service.NvidiaSmiDeviceEnumerator.Enumerate()
+                    .FirstOrDefault(gpu => gpu.Uuid.Equals(_cudaDeviceUuid,
+                        StringComparison.OrdinalIgnoreCase));
+                if (nvidiaGpu is not null)
+                {
+                    CudaDeviceId = checked((int)nvidiaGpu.DeviceId);
+                    var indexMatch = devices.Where(device =>
+                        device.HardwareDevice.DeviceId == nvidiaGpu.DeviceId).ToArray();
+                    if (indexMatch.Length > 0)
+                    {
+                        return indexMatch;
+                    }
+                }
             }
-            default:
-                throw new InvalidEnumArgumentException("无效的推理设备");
+
+            return devices.Where(device => device.HardwareDevice.DeviceId == CudaDeviceId).ToArray();
         }
+
+        if (string.IsNullOrWhiteSpace(OpenVinoDevice) ||
+            OpenVinoDevice.StartsWith("AUTO", StringComparison.OrdinalIgnoreCase))
+        {
+            var supportedDevices = devices.Where(device =>
+                device.HardwareDevice.Type != OrtHardwareDeviceType.NPU ||
+                device.HardwareDevice.VendorId == 0x8086 ||
+                device.HardwareDevice.Vendor.Contains("Intel", StringComparison.OrdinalIgnoreCase)).ToArray();
+            OpenVinoDevice = BuildOpenVinoAutoOption(supportedDevices);
+            return supportedDevices;
+        }
+
+        if (OpenVinoDevice.Equals("NPU", StringComparison.OrdinalIgnoreCase))
+        {
+            return devices.Where(device => device.HardwareDevice.Type == OrtHardwareDeviceType.NPU &&
+                                           (device.HardwareDevice.VendorId == 0x8086 ||
+                                            device.HardwareDevice.Vendor.Contains("Intel",
+                                                StringComparison.OrdinalIgnoreCase))).ToArray();
+        }
+
+        if (OpenVinoDevice.Equals("CPU", StringComparison.OrdinalIgnoreCase))
+        {
+            return devices.Where(device => device.HardwareDevice.Type == OrtHardwareDeviceType.CPU).ToArray();
+        }
+
+        if (OpenVinoDevice.StartsWith("GPU", StringComparison.OrdinalIgnoreCase))
+        {
+            var gpuDevices = devices.Where(device => device.HardwareDevice.Type == OrtHardwareDeviceType.GPU);
+            var separator = OpenVinoDevice.IndexOf('.');
+            if (separator >= 0 && uint.TryParse(OpenVinoDevice[(separator + 1)..], out var deviceId))
+            {
+                gpuDevices = gpuDevices.Where(device => device.HardwareDevice.DeviceId == deviceId);
+            }
+
+            return gpuDevices.ToArray();
+        }
+
+        // HETERO/MULTI 和其他 OpenVINO 高级配置由插件自行解析，设备集合保持完整。
+        return devices;
+    }
+
+    private static string BuildDeviceDescription(IReadOnlyList<OrtEpDevice> devices)
+    {
+        return string.Join(", ", devices.Select(device =>
+            $"{device.HardwareDevice.Vendor} {device.HardwareDevice.Type} {device.HardwareDevice.DeviceId}"));
+    }
+
+    private static string BuildOpenVinoAutoOption(IReadOnlyList<OrtEpDevice> devices)
+    {
+        var availableTypes = devices.Select(device => device.HardwareDevice.Type).ToHashSet();
+        var options = new List<string>();
+        if (devices.Any(device => device.HardwareDevice.Type == OrtHardwareDeviceType.NPU &&
+                                 (device.HardwareDevice.VendorId == 0x8086 ||
+                                  device.HardwareDevice.Vendor.Contains("Intel",
+                                      StringComparison.OrdinalIgnoreCase)))) options.Add("NPU");
+        if (availableTypes.Contains(OrtHardwareDeviceType.GPU)) options.Add("GPU");
+        if (availableTypes.Contains(OrtHardwareDeviceType.CPU)) options.Add("CPU");
+        return options.Count == 0 ? "AUTO" : $"AUTO:{string.Join(",", options)}";
     }
 
     /// <summary>
@@ -302,6 +395,22 @@ public class BgiOnnxFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
+        try
+        {
+            return CreateYoloPredictorCore(model);
+        }
+        catch (Exception exception) when (EffectiveProvider is ProviderType.OpenVino or ProviderType.Cuda)
+        {
+            _logger.LogError(exception,
+                "[ONNX] {Provider} 创建模型 {Model} 失败，本次会话回退到 CPU",
+                EffectiveProvider, model.Name);
+            return new BgiYoloPredictor(model, model.ModalPath,
+                CreateSessionOptions(model, false, [ProviderType.Cpu]));
+        }
+    }
+
+    private BgiYoloPredictor CreateYoloPredictorCore(BgiOnnxModel model)
+    {
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
 
@@ -323,6 +432,23 @@ public class BgiOnnxFactory
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
+        try
+        {
+            return CreateInferenceSessionCore(model, providerTypes);
+        }
+        catch (Exception exception) when (providerTypes is null &&
+                                          (EffectiveProvider is ProviderType.OpenVino or ProviderType.Cuda))
+        {
+            _logger.LogError(exception,
+                "[ONNX] {Provider} 创建模型 {Model} 失败，本次会话回退到 CPU",
+                EffectiveProvider, model.Name);
+            return new InferenceSession(model.ModalPath,
+                CreateSessionOptions(model, false, [ProviderType.Cpu]));
+        }
+    }
+
+    private InferenceSession CreateInferenceSessionCore(BgiOnnxModel model, ProviderType[]? providerTypes)
+    {
         if (!EnableCache)
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
 
@@ -417,8 +543,8 @@ public class BgiOnnxFactory
                         sessionOptions.AppendExecutionProvider_Dnnl();
                         break;
                     case ProviderType.OpenVino:
-                        sessionOptions.AppendExecutionProvider("OpenVINO",
-                            GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
+                        sessionOptions.AppendExecutionProvider(OrtEnv.Instance(), _pluginDevices,
+                            GetOpenVinoProviderConfig(OpenVinoCache ? model.Name : null));
                         sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
                         break;
                     case ProviderType.TensorRt:
@@ -430,12 +556,8 @@ public class BgiOnnxFactory
 
                         break;
                     case ProviderType.Cuda:
-                        using (var options = new OrtCUDAProviderOptions())
-                        {
-                            options.UpdateOptions(GetCudaProviderConfig());
-                            sessionOptions.AppendExecutionProvider_CUDA();
-                        }
-
+                        sessionOptions.AppendExecutionProvider(OrtEnv.Instance(), _pluginDevices,
+                            GetCudaProviderConfig());
                         break;
                     default:
                         throw new InvalidEnumArgumentException("无效的推理设备");
@@ -445,6 +567,12 @@ public class BgiOnnxFactory
             {
                 _logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
                     e.Message);
+                if (type is ProviderType.OpenVino or ProviderType.Cuda)
+                {
+                    // Plugin EP 会话初始化失败时交给上层统一创建纯 CPU 会话，避免返回半配置状态。
+                    sessionOptions.Dispose();
+                    throw;
+                }
             }
 
         if (!OptimizedModel) return sessionOptions;
@@ -556,13 +684,14 @@ public class BgiOnnxFactory
         var result = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(OpenVinoDevice))
         {
-            result["deice_type"] = OpenVinoDevice;
+            result["device_type"] = OpenVinoDevice;
         }
 
         if (!string.IsNullOrWhiteSpace(cacheFolder))
         {
             // OpenVINO缓存目录
-            result["cache_dir"] = Path.Combine(cacheFolder, "openvino");
+            var storageRoot = _pluginManager?.StorageRoot ?? Path.Combine(AppContext.BaseDirectory, "ort");
+            result["cache_dir"] = Path.Combine(storageRoot, "cache", "openvino", cacheFolder);
             if (!Directory.Exists(result["cache_dir"]))
             {
                 try

@@ -238,8 +238,16 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Margin="0,0,10,0"
-                              ItemsSource="{Binding InferenceDeviceTypes}"
-                              SelectedItem="{Binding Config.HardwareAccelerationConfig.InferenceDevice, Mode=TwoWay}">
+                              MinWidth="260"
+                              DisplayMemberPath="FullDisplayName"
+                              ItemsSource="{Binding InferenceDevices}"
+                              SelectedItem="{Binding SelectedInferenceDevice, Mode=TwoWay}">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
+                                <Setter Property="ToolTip" Value="{Binding UnavailableReason}" />
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
                         <!-- <b:Interaction.Triggers> -->
                         <!--     <b:EventTrigger EventName="SelectionChanged"> -->
                         <!--         <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" /> -->

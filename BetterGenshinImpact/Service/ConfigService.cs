@@ -81,6 +81,7 @@ public class ConfigService : IConfigService
             }
 
             config.AutoPickConfig.MigrateLegacyConfig();
+            config.HardwareAccelerationConfig.MigrateLegacyConfig();
             Config = config;
             return config;
         }
