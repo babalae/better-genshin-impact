@@ -32,7 +32,10 @@
     "btnWhiteRecover": "rect(580 * s, 950 * s, 90 * s, 95 * s)",
     "craftCondensedResin": "rect(cw / 2, 0, cw / 2, ch / 3 * 2)",
     "fragileResinCount": "rect(cw / 2, ch * 3 / 4, cw / 3, ch / 6)",
-    "condensedResinCount": "rect(cw / 2, 0, cw / 4, ch / 15)"
+    "condensedResinCount": "rect(cw / 2, 0, cw / 4, ch / 15)",
+    "popupConfirmLeftBottomHalf": "rect(0, ch / 2, cw / 2, ch / 3)",
+    "popupExitSwitchRightBottom": "rect(cw * 9 / 10, ch * 85 / 100, cw / 10, ch * 15 / 100)",
+    "popupMiMenuRightBottom": "rect(cw * 8 / 10, ch * 8 / 10, cw * 2 / 10, ch * 2 / 10)"
   },
   "objects": {
     "PromptDialogLeftBottomStar": {
@@ -488,6 +491,24 @@
       "roi": "@currentAvatarThreshold",
       "useBinaryMatch": true,
       "binaryThreshold": 200
+    },
+    "PopupConfirmButton": {
+      "type": "TemplateMatch",
+      "template": "popup_confirm.png",
+      "roi": "@popupConfirmLeftBottomHalf",
+      "draw": false
+    },
+    "PopupExitSwitch": {
+      "type": "TemplateMatch",
+      "template": "exit_switch.png",
+      "roi": "@popupExitSwitchRightBottom",
+      "draw": false
+    },
+    "PopupMiMenu": {
+      "type": "TemplateMatch",
+      "template": "mi_menu.png",
+      "roi": "@popupMiMenuRightBottom",
+      "draw": false
     }
   }
 }

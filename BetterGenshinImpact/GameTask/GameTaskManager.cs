@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
 using System;
@@ -45,11 +46,13 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
+        TriggerDictionary.TryAdd("GameExceptionPopup", new GameExceptionPopupTrigger());
+        TriggerDictionary.TryAdd("NetworkWatchdog", new NetworkWatchdogTrigger());
 
         return ConvertToTriggerList();
     }
 
-    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false)
+    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false, bool skipInit = false)
     {
         if (TriggerDictionary is null)
         {
@@ -58,7 +61,15 @@ internal class GameTaskManager
 
         var loadedTriggers = TriggerDictionary.Values.ToList();
 
-        loadedTriggers.ForEach(i => i.Init());
+        // skipInit 用于"任务启动清空实时触发器"（ClearTriggers）：
+        // 常驻触发器要留在列表里继续工作，但绝不能被重新 Init——
+        // Init 会重置各自的时间戳与探测状态（看门狗会因此重启 ping 循环、恢复探针的节流被抹掉），
+        // 而配置组会为每个项目调用一次 ClearTriggers，反复 Init 会让"连续失败达阈值"的节奏永远攒不满。
+        if (!skipInit)
+        {
+            loadedTriggers.ForEach(i => i.Init());
+        }
+
         if (allEnabled)
         {
             loadedTriggers.ForEach(i => i.IsEnabled = true);
@@ -68,9 +79,26 @@ internal class GameTaskManager
         return loadedTriggers;
     }
 
+    /// <summary>
+    /// 清空实时触发器（任务启动时调用）。
+    /// 常驻触发器（<see cref="ITaskTrigger.AlwaysActive"/>：异常弹窗处理、断网看门狗）必须跨任务存活——
+    /// 它们承担"检测游戏异常并自动恢复"的职责，任务运行期间才是最需要它们的场景；
+    /// 若一并清掉，任务期间既没有 OnCapture 驱动，也再没有任何时机把它们放回列表。
+    /// </summary>
     public static void ClearTriggers()
     {
-        TriggerDictionary?.Clear();
+        // 先固定本地引用：LoadInitialTriggers() 会整体替换 TriggerDictionary，
+        // 若每步都重新读静态属性，快照与删除可能落在两个不同的字典上（删错对象）。
+        var dict = TriggerDictionary;
+        if (dict is null)
+        {
+            return;
+        }
+
+        foreach (var name in dict.Where(kv => !kv.Value.AlwaysActive).Select(kv => kv.Key).ToList())
+        {
+            dict.TryRemove(name, out _);
+        }
     }
 
     /// <summary>
@@ -122,6 +150,42 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
+        }
+
+        // 异常恢复功能的配置变更副作用（与"游戏是否前台""是否有任务在跑"无关，必须在这里做）：
+        // 1) 断网看门狗的 ping 循环独立于截图调度器，功能关闭时会自行停表，
+        //    配置一改动就确保循环在跑（游戏失焦时调度器根本不截图，没有 OnCapture 可以保活）；
+        // 2) 关掉功能要立刻解挂并停掉在途恢复流程——实时待机（没有任务在跑）时不存在
+        //    "任务线程等待循环"这条释放路径，挂起会一直留着，而挂起期间调度器会跳过所有
+        //    非常驻触发器（自动拾取/自动剧情/钓鱼等静默失效，界面上没有任何提示）。
+        if (TaskContext.Instance().IsInitialized)
+        {
+            var recovery = TaskContext.Instance().Config.OtherConfig.ExceptionRecoveryConfig;
+
+            // 只在功能开启时保活 ping 循环：关闭时拉起一个只会自停的定时器没有意义
+            if (recovery.NetworkDetectionEnabled)
+            {
+                NetworkWatchdogTrigger.EnsureLoopRunning();
+            }
+
+            if (!recovery.PopupRecoveryEnabled)
+            {
+                GameExceptionPopupTrigger.CancelRunningRecovery();
+
+                // 只有没有在途恢复时才清标志：有在途恢复时由它自己的收尾解除挂起
+                // （否则"任务已放行、恢复流程还在点击"）。任务线程的等待循环也会做一次同样的
+                // "中止 + 有界等待"后再解挂，这里不阻塞 UI 线程。
+                GameExceptionPopupTrigger.ResumeRecoverySuspensionIfIdle();
+
+                // 用户主动关闭功能 = 保护状态归零：再次打开时从干净状态开始
+                // （跨任务不再自动清零熔断，所以这里给用户一个确定的复位途径）
+                GameExceptionPopupTrigger.ResetProtectionState();
+            }
+
+            if (!recovery.NetworkDetectionEnabled)
+            {
+                ExceptionSuspendSignal.ResumeByNetwork();
+            }
         }
 
         ReloadAssets();

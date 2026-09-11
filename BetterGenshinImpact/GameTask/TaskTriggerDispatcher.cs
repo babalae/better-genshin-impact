@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
@@ -95,12 +96,39 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 当前**线程**是否正在某个触发器的 OnCapture 回调里。
+        /// 供 TaskControl 判断"此刻本线程是否处于截图调度线程"——在该线程上任何阻塞等待
+        /// 都会卡死整条截图管线（异常恢复的解除依赖这条管线），因此必须让位而不是等待。
+        ///
+        /// 必须是线程亲和（[ThreadStatic]）而不是进程级标志：进程级标志会被任务线程读到，
+        /// 使任务线程在挂起生效的瞬间跳过本次等待、继续操作游戏（且没有任何日志）。
+        /// OnCapture 是同步方法，置位与复位都在同一线程上，[ThreadStatic] 足够。
+        /// </summary>
+        [ThreadStatic]
+        private static bool _isInTriggerCallback;
+
+        public static bool IsInTriggerCallback
+        {
+            get => _isInTriggerCallback;
+            set => _isInTriggerCallback = value;
+        }
+
+        /// <summary>
+        /// 清空实时触发器（任务启动/任务结束都会调用）。
+        /// 常驻触发器（<see cref="ITaskTrigger.AlwaysActive"/>）会被保留：任务是它们最需要工作的场景，
+        /// 清掉之后任务期间再无任何时机把它们放回列表。
+        /// 保留时**不能**重新 Init（`skipInit: true`）——那会清掉它们的连续失败计数与熔断状态，
+        /// 而配置组会为每个项目调用一次本方法。
+        /// 挂起信号与看门狗循环属于会话级清理，只在 <see cref="Stop"/>（截图器停止）里做，
+        /// 不能挂在这里——否则"启动任务"等于"停掉这两个功能"。
+        /// </summary>
         public void ClearTriggers()
         {
             lock (_triggerListLocker)
             {
                 GameTaskManager.ClearTriggers();
-                _triggers?.Clear();
+                SetTriggers(GameTaskManager.ConvertToTriggerList(skipInit: true));
             }
         }
 
@@ -137,8 +165,16 @@ namespace BetterGenshinImpact.GameTask
             // 初始化任务上下文(一定要在初始化触发器前完成)
             TaskContext.Instance().Init(hWnd);
 
+            // 截图会话开始的显式钩子：两个常驻触发器用它放行"本会话可以工作"。
+            // 必须在初始化触发器之前——LoadInitialTriggers 会调用它们的 Init()，
+            // 而 Init() 里会拉起看门狗的 ping 循环，会话已收尾时不该被拉起来。
+            // （不能用 Init() 自己复位：任务结束/AddTrigger 也会调 Init，那会在会话已收尾时错误放行。）
+            GameExceptionPopupTrigger.OnCaptureSessionStarted();
+            NetworkWatchdogTrigger.OnCaptureSessionStarted();
+
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
+
             GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
 
             // if (GraphicsCapture.IsHdrEnabled(hWnd))
@@ -172,6 +208,13 @@ namespace BetterGenshinImpact.GameTask
         public void Stop()
         {
             _timer.Stop();
+            // 截图器停 ⇒ 异常恢复的挂起、看门狗循环、在途恢复流程必须一起收尾，
+            // 否则会残留挂起、后台 ping，甚至在新会话里继续点击游戏。
+            // 顺序：先让恢复会话作废（请求取消在途恢复、拒绝"会话已收尾后"的新恢复），
+            // 再清挂起标志——反过来会在中间留出"已解挂、恢复流程却还在点击"的窗口。
+            GameExceptionPopupTrigger.ResetSession();
+            ExceptionSuspendSignal.ResumeAll();
+            NetworkWatchdogTrigger.StopLoop();
             ChatUiHotkeyGuard.Reset();
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
@@ -402,6 +445,14 @@ namespace BetterGenshinImpact.GameTask
                     if (exclusiveTrigger != null)
                     {
                         needRunTriggers.Add(exclusiveTrigger);
+
+                        // 常驻触发器与"独占"不冲突：它们不参与"当前界面该由谁操作"的竞争，
+                        // 但必须在任何场景下都有机会工作——否则钓鱼/快速传送这类可独占数分钟的
+                        // 场景里，异常弹窗完全不会被发现。
+                        // 但仍要尊重它们自己声明的后台语义（游戏不在前台时不该被调度：
+                        // 它们需要前台才能操作，抢焦点会打断用户正在做的事）。
+                        needRunTriggers.AddRange(_triggers.Where(t =>
+                            t.AlwaysActive && t.IsEnabled && (!hasBackgroundTriggerToRun || t.IsBackgroundRunning)));
                     }
                     else
                     {
@@ -412,6 +463,16 @@ namespace BetterGenshinImpact.GameTask
                         }
 
                         needRunTriggers.AddRange(runningTriggers);
+                    }
+
+                    // 异常恢复挂起期间：只保留承担解除职责的常驻触发器（异常弹窗处理/断网看门狗），
+                    // 其余会操作游戏的触发器（自动拾取/自动剧情/快速传送…）一律跳过，
+                    // 避免与恢复流程并发操作游戏。
+                    // 注意必须作用于"最终列表"：独占触发器（自动钓鱼/快速传送）走的是上面的独占分支，
+                    // 把过滤写在 else 里会漏掉它们，挂起期间照样发输入。
+                    if (ExceptionSuspendSignal.IsSuspended)
+                    {
+                        needRunTriggers = needRunTriggers.Where(t => t.AlwaysActive).ToList();
                     }
 
                     if (needRunTriggers.Count > 0)
@@ -426,12 +487,26 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in needRunTriggers)
                         {
-                            if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
+                            // 常驻触发器不受 UI 分类门控：它们不做与具体界面相关的动作，
+                            // 而长对话（Talk）/大地图（BigMap）稳定超过 30 秒后，UI 分类判定会
+                            // 把默认 Unknown 的触发器整个滤掉——那期间出现的异常弹窗就再也发现不了。
+                            if (trigger.AlwaysActive
+                                || (PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
                                 || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                             {
                                 // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
                                 var triggerStart = Stopwatch.GetTimestamp();
-                                trigger.OnCapture(content);
+                                // 标记"正在触发器回调里"：TaskControl 依此避免在截图线程上阻塞等待
+                                IsInTriggerCallback = true;
+                                try
+                                {
+                                    trigger.OnCapture(content);
+                                }
+                                finally
+                                {
+                                    IsInTriggerCallback = false;
+                                }
+
                                 tickMetrics.AddTriggerCost(triggerStart);
                                 speedTimer.Record(trigger.Name);
                             }

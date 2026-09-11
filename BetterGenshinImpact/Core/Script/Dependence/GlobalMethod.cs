@@ -22,6 +22,9 @@ public class GlobalMethod
 {
     public static async Task Sleep(int millisecondsTimeout)
     {
+        // 异常恢复挂起期间不要继续往游戏发输入：JS 脚本（一条龙 / 脚本组）的 sleep 是最主要的等待点，
+        // 不走这一步的话，挂起期间脚本仍会持续按键点击，与恢复流程并发操作游戏。
+        TaskControl.WaitWhileGameSuspendedByException();
         await Task.Delay(millisecondsTimeout, CancellationContext.Instance.Cts.Token);
     }
     

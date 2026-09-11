@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -36,7 +36,21 @@ public interface ITaskTrigger
     /// 处于可以后台运行的状态（原神窗口不处于激活状态）
     /// </summary>
     bool IsBackgroundRunning => false;
-    
+
+    /// <summary>
+    /// 常驻触发器：跨任务存活，且在「异常恢复挂起」期间继续运行。
+    ///
+    /// 默认 false —— 代表本触发器只服务于当前这次实时触发会话：
+    /// 任务启动会清空实时触发器（<see cref="TaskTriggerDispatcher.ClearTriggers"/>），
+    /// 挂起期间也会被调度器跳过。
+    ///
+    /// 只有承担解除挂起职责、且必须在任务运行期间继续工作的触发器
+    /// （异常弹窗处理、断网看门狗）才返回 true：
+    /// 它们必须留在触发器列表里，否则任务运行期间没有任何 OnCapture 驱动，
+    /// 检测与自动恢复会整体失效。
+    /// </summary>
+    bool AlwaysActive => false;
+
     GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 
     /// <summary>
