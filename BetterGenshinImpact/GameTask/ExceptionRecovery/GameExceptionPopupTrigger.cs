@@ -26,8 +26,14 @@ namespace BetterGenshinImpact.GameTask.ExceptionRecovery;
 /// 2. 识别用"外观模板 + OCR 文案"双证据；点击只认白名单文案，命不中时退回确认按钮**图形模板**
 ///    （文案随客户端语言变化、按钮图形不随语言变化）——照抄既有做法：GameLoading 的「适龄提示」自动关闭、
 ///    <c>Bv.ClickConfirmButton</c>。
-/// 3. **不抢焦点、不还原窗口、不做重登**：窗口不在前台或已最小化就跳过本次点击，把动作降到"至多一次点击"。
-/// 4. 预算 + 退避：点不掉时在日志与提示里明确告知需要人工处理，并逐次拉长探测间隔，
+/// 3. **不抢焦点、不还原窗口、不选账号、不重登**：窗口不在前台或已最小化就跳过本次点击；
+///    点击只认白名单按钮文案与「点击进入 / 进入游戏」这两项上游素材，既不选账号也不输密码。
+/// 4. **两个阶段，预算是分开的**：阶段一"点掉弹窗"（<see cref="DismissBudgetMs"/>）；弹窗证据消失后
+///    若游戏还没回到可玩状态，进入阶段二"把游戏推回可玩状态"（<see cref="EnterGameBudgetMs"/>），
+///    点「点击进入 / 进入游戏」。这一步原先是上游 <c>GameLoadingTrigger</c> 的职责，但它不是常驻触发器：
+///    任务运行期间它不在触发列表里，成功一次或超过 5 分钟还会自毁，所以任务期间必须由常驻触发器补上
+///    （见 <see cref="EnterGameRecovery"/> 的类注释）。
+/// 5. 预算 + 退避：点不掉时在日志与提示里明确告知需要人工处理，并逐次拉长探测间隔，
 ///    既不会无限点击，也不会无限刷提示。
 /// </summary>
 public class GameExceptionPopupTrigger : ITaskTrigger
@@ -83,6 +89,38 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     /// </summary>
     private const long StageStepIntervalMs = 500;
 
+    /// <summary>
+    /// "把游戏推回可玩状态"阶段的预算（毫秒）。量级与上游一致：上游等「进入游戏」按钮出现/消失
+    /// 用的就是 120 次 × 1000ms（`GameTask/Common/Job/ExitAndReloginJob.cs:81`、`:94`），
+    /// 而热更后的加载画面几十秒不出现主界面是已知情形。
+    /// </summary>
+    private const long EnterGameBudgetMs = 120_000;
+
+    /// <summary>
+    /// 判定"已回到可玩状态"要求**连续**命中的采样次数。与"弹窗是否已消失"同样要求连续两次的理由：
+    /// 单帧证据撑不起"脚本继续执行"这句提示。两次采样之间还隔着
+    /// <see cref="StageStepIntervalMs"/>，是真实等待，不是背靠背采样。
+    /// </summary>
+    private const int PlayableConfirmSamples = 2;
+
+    /// <summary>
+    /// 阶段二两次执行之间超过这个空档（毫秒）就**重新起算预算**：说明这段时间本触发器根本没有被调度——
+    /// 游戏被切到后台（<see cref="IsBackgroundRunning"/> 为 false 时调度器不调度它）、功能开关被关掉、
+    /// 或者截图会话停过。那些时间不该算进"我花了多久在尝试"里。
+    /// 不算的话会有两个假的失败出口：回到前台/重新打开开关的**第一帧**就带着过期时间戳，
+    /// 直接报"未能在 120 秒内回到可玩界面（已点击 N 次）"——而那 120 秒根本没花出去。
+    /// 单次 tick 的正常间隔是 50ms（截图节拍）、阶段内还有 500ms 节流，所以 5 秒已是很宽的空档判据。
+    /// 注意它只让**时间**重新起算，<see cref="_enterGameClickCount"/> 不清零：点击次数是累计副作用，
+    /// 由 <see cref="MaxEnterGameClicks"/> 单独封顶。
+    /// </summary>
+    private const long EnterGameGapRestartMs = 5_000;
+
+    /// <summary>
+    /// 阶段二一次最多点几下（**副作用硬上限**）。80 ≈ <see cref="EnterGameBudgetMs"/> / <see cref="ClickIntervalMs"/>。
+    /// 它是"点击次数有界"的最后一道保证：即使空档判据让预算反复重新起算，点击也不会无限增长。
+    /// </summary>
+    private const int MaxEnterGameClicks = 80;
+
     /// <summary>两项证据允许的最大中心距（1080P 下的像素）：超过就认为不属于同一个弹窗，不点。</summary>
     private const double MaxEvidenceDistance = 420;
 
@@ -112,7 +150,10 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         Idle,
 
         /// <summary>正在点掉异常弹窗。</summary>
-        Dismissing
+        Dismissing,
+
+        /// <summary>弹窗证据已消失、但游戏还没回到可玩状态：正在点「点击进入 / 进入游戏」。</summary>
+        EnteringGame
     }
 
     //===== 运行期状态 =====
@@ -148,6 +189,20 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     /// <summary>连续多少次采样都没看到弹窗证据（用于"是否已点掉"的两次确认）。</summary>
     private int _popupAbsentSamples;
 
+    /// <summary>连续多少次采样都判定游戏处于可玩状态（用于阶段二的两次确认）。</summary>
+    private int _playableSamples;
+
+    /// <summary>
+    /// 阶段二里**实际点下去了几次**「点击进入 / 进入游戏」（由点击出口返回的真实结果累加，
+    /// 不是"识别到几次"——窗口不在前台时出口会拒绝点击并返回 false）。
+    /// 它决定阶段二超预算时怎么收尾：点过 = 有证据说明游戏确实停在进入界面，按一次失败记账；
+    /// 一次都没点过 = 只是"没看到可点的按钮"，不能当失败（理由见 <see cref="StepEnteringGame"/>）。
+    /// </summary>
+    private int _enterGameClickCount;
+
+    /// <summary>阶段二上一次被执行的时刻，用于空档重新起算（见 <see cref="EnterGameGapRestartMs"/>）。</summary>
+    private long _lastEnterGameTickAtMs;
+
     public void Init()
     {
         _stage = Stage.Idle;
@@ -158,6 +213,9 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         _failedAttempts = 0;
         _detectedWithoutConfirmButton = false;
         _popupAbsentSamples = 0;
+        _playableSamples = 0;
+        _enterGameClickCount = 0;
+        _lastEnterGameTickAtMs = 0;
     }
 
     public void OnCapture(CaptureContent content)
@@ -200,7 +258,16 @@ public class GameExceptionPopupTrigger : ITaskTrigger
 
             _nextStageStepAtMs = now + StageStepIntervalMs;
 
-            StepDismissing(ra, config, now);
+            // 按进入本次调用时的阶段分派：即使 StepDismissing 里把阶段换成了 EnteringGame，
+            // 本次也只走一步（新阶段从下一次回调开始），保持"每次回调最多走一小步"。
+            if (_stage == Stage.Dismissing)
+            {
+                StepDismissing(ra, config, now);
+            }
+            else if (_stage == Stage.EnteringGame)
+            {
+                StepEnteringGame(ra, config, now);
+            }
 
             return;
         }
@@ -255,20 +322,21 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     /// </summary>
     private void StepDismissing(ImageRegion ra, Core.Config.OtherConfig.PopupRecovery config, long now)
     {
-        // 触发本次处理的那组外观证据都消失 = 弹窗已经被点掉。
-        // 热更后的加载画面可能几十秒都不是主界面，因此这里**不要求回到主界面**、也不判失败：
-        // 本阶段只负责"把挡住画面的异常弹窗点掉"，（若之后停在进入游戏界面）自动点「点击进入」
-        // 属于独立的一步，见后续改动。
+        // 触发本次处理的那组外观证据都消失 = 弹窗已经被点掉。本阶段**只**负责把挡住画面的异常弹窗点掉：
         // 判成功一律以"弹窗证据已消失"为前提——**不能**拿"看起来在主界面"当成功门槛：
         // 弹窗是叠加在主界面上的模态框时那样会一次都不点（且每秒刷一条假成功提示）。
         if (IsPopupGone(ra, config))
         {
-            // 判据与提示**分开**：这里判成功只认"弹窗证据已消失"（理由见上面）。
-            // 但提示措辞必须如实——弹窗没了不等于脚本就能继续，掉线/热更后常停在「点击进入」界面，
-            // 而"自动进入游戏"是独立的一步（见后续改动）。所以 IsInMainUi 只决定**说什么**，
-            // 不参与成败判定。
-            var backInGame = Bv.IsInMainUi(ra);
-            Succeed("异常弹窗已消失", SuccessToast(backInGame), config, now);
+            // 弹窗证据消失只说明"挡住画面的东西没了"，不等于"脚本就能继续跑"：掉线、热更之后
+            // 游戏常停在「点击进入 / 进入游戏」界面。所以下一步一律交给阶段二去确认并推回可玩状态，
+            // 由它决定最终提示——本阶段自己不下成功结论（也就不会在这里说"脚本继续执行"）。
+            Logger.LogInformation("[异常弹窗处理] 异常弹窗已点掉，开始确认游戏是否可以继续");
+            _stage = Stage.EnteringGame;
+            _stageStartedAtMs = now;
+            _nextClickAtMs = now;
+            _playableSamples = 0;
+            _enterGameClickCount = 0;
+            _lastEnterGameTickAtMs = now;
             return;
         }
 
@@ -290,15 +358,102 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         }
     }
 
-    /// <summary>成功提示的措辞：只有拿到"已回到主界面"这一证据时才敢说"脚本继续执行"。</summary>
-    private static string SuccessToast(bool backInGame) => backInGame
-        ? "游戏异常弹窗已处理，脚本继续执行"
-        : "异常弹窗已点掉，但游戏未回到主界面，请手动进入";
+    /// <summary>
+    /// 阶段二：确认游戏能不能继续，不能就点「点击进入 / 进入游戏」把它推回可玩状态。
+    ///
+    /// 进入条件见 <see cref="StepDismissing"/>（弹窗证据已消失）。三个出口，全部有界：
+    /// * <see cref="EnterGameRecovery.IsGamePlayable"/> **连续** <see cref="PlayableConfirmSamples"/> 次命中
+    ///   → 成功，这时才敢提示"脚本继续执行"；
+    /// * 超过 <see cref="EnterGameBudgetMs"/>（或达到 <see cref="MaxEnterGameClicks"/> 次点击）
+    ///   且期间**确实点过**进入按钮 → 按一次失败记账并退避；
+    /// * 超预算但一次都没点过 → 只留 Warning 与提示，**不记账、不退避**（理由见下）。
+    ///
+    /// 两处刻意的取舍：
+    /// * **"不在可玩界面"本身不当作失败**：它推不出"脚本跑不下去"——游戏可能只是还在加载、在过场里，
+    ///   或者停在需要账号/密码的登录页。拿它当失败门槛会造出假失败（本项目已有同型教训：凭猜收紧判定
+    ///   → 假熔断）。只有"确实点过进入按钮、点满预算仍回不去"才算失败。
+    /// * **本阶段不重新探测新的异常弹窗**：最坏情况下新弹窗要等本阶段结束（≤120 秒）才被发现，不会丢。
+    ///   写进注释是因为这是已知边界，不是遗漏。
+    /// * **预算算的是"被调度的时间"，不是墙钟**：两次执行之间空档超过
+    ///   <see cref="EnterGameGapRestartMs"/> 就重新起算（那段时间本触发器根本没在跑：游戏不在前台、
+    ///   开关被关掉、截图会话停过）。否则回到前台/重新打开开关的第一帧就会拿着过期时间戳直接收尾——
+    ///   那 120 秒其实没花出去。判断顺序上"可玩"永远先判，所以用户自己进了游戏会先命中成功分支。
+    ///   另有点击次数硬上限 <see cref="MaxEnterGameClicks"/>，保证副作用有界。
+    /// </summary>
+    private void StepEnteringGame(ImageRegion ra, Core.Config.OtherConfig.PopupRecovery config, long now)
+    {
+        // 空档重新起算（见 EnterGameGapRestartMs）：点击计数不清零，它由 MaxEnterGameClicks 封顶。
+        if (now - _lastEnterGameTickAtMs > EnterGameGapRestartMs)
+        {
+            Logger.LogInformation("[异常弹窗处理] 阶段二空档 {Seconds} 秒（本触发器未被调度），预算重新起算",
+                (now - _lastEnterGameTickAtMs) / 1000);
+            _stageStartedAtMs = now;
+            _playableSamples = 0;
+        }
+
+        _lastEnterGameTickAtMs = now;
+
+        if (EnterGameRecovery.IsGamePlayable(ra))
+        {
+            _playableSamples++;
+            if (_playableSamples >= PlayableConfirmSamples)
+            {
+                Succeed("异常弹窗已消失，游戏已回到可玩界面",
+                    "游戏异常弹窗已处理，已自动进入游戏，脚本继续执行", config, now);
+            }
+
+            return;
+        }
+
+        _playableSamples = 0;
+
+        if (now - _stageStartedAtMs > EnterGameBudgetMs || _enterGameClickCount >= MaxEnterGameClicks)
+        {
+            if (_enterGameClickCount > 0)
+            {
+                Fail($"游戏未回到可玩界面（已点击「点击进入 / 进入游戏」{_enterGameClickCount} 次、"
+                     + $"尝试 {(now - _stageStartedAtMs) / 1000} 秒），请手动处理", config, now);
+            }
+            else
+            {
+                Logger.LogWarning("[异常弹窗处理] 异常弹窗已点掉，但未识别到「点击进入 / 进入游戏」，"
+                                  + "游戏也未回到可玩界面，可能需要手动进入或登录");
+                NotifyToast("异常弹窗已点掉，未检测到可自动点击的进入按钮，请确认游戏状态");
+                Finish(config, now);
+            }
+
+            return;
+        }
+
+        if (now < _nextClickAtMs)
+        {
+            return;
+        }
+
+        _nextClickAtMs = now + ClickIntervalMs;
+        if (EnterGameRecovery.TryClickEnterGame(ra))
+        {
+            _enterGameClickCount++;
+        }
+        else
+        {
+            Logger.LogDebug("[异常弹窗处理] 本轮没有点击（未识别到进入按钮，或游戏窗口不在前台），继续等待");
+        }
+    }
 
     private void Succeed(string message, string toast, Core.Config.OtherConfig.PopupRecovery config, long now)
     {
         Logger.LogInformation("[异常弹窗处理] {Message}", message);
         NotifyToast(toast);
+        Finish(config, now);
+    }
+
+    /// <summary>
+    /// "本次处理到此为止、且不算失败"的公共收尾：清零失败计数、回 Idle、按当前间隔安排下一次探测。
+    /// 与 <see cref="Fail"/> 的区别只在失败计数与日志级别。
+    /// </summary>
+    private void Finish(Core.Config.OtherConfig.PopupRecovery config, long now)
+    {
         _failedAttempts = 0;
         _stage = Stage.Idle;
         _nextProbeAtMs = now + (NextProbeIntervalSeconds(config) * 1000L);
@@ -313,29 +468,6 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         NotifyToast($"游戏异常弹窗处理失败：{reason}");
         _stage = Stage.Idle;
         _nextProbeAtMs = now + (backoff * 1000L);
-    }
-
-    /// <summary>
-    /// 点击前的最后一道校验。本触发器只在游戏处于前台时才会被调度（<see cref="IsBackgroundRunning"/> 为 false），
-    /// 这里再确认一次，避免"点下去时窗口刚好被切走/最小化"——SendInput 用的是绝对桌面坐标，会落到别的窗口上。
-    /// 刻意**不**抢焦点、**不**还原最小化窗口：那是用户自己的桌面状态。
-    /// </summary>
-    private static void ClickIfGameActive(Region region, string what)
-    {
-        if (SystemControl.IsGenshinImpactMinimized())
-        {
-            Logger.LogWarning("[异常弹窗处理] 游戏窗口已最小化，跳过点击（{What}）", what);
-            return;
-        }
-
-        if (!SystemControl.IsGenshinImpactActiveByProcess())
-        {
-            Logger.LogWarning("[异常弹窗处理] 游戏窗口不在前台，跳过点击（{What}）", what);
-            return;
-        }
-
-        Logger.LogInformation("[异常弹窗处理] 点击：{What}", what);
-        region.Click();
     }
 
     /// <summary>
@@ -467,7 +599,7 @@ public class GameExceptionPopupTrigger : ITaskTrigger
             return false;
         }
 
-        ClickIfGameActive(button, $"弹窗按钮：{button.Text}");
+        EnterGameRecovery.ClickIfGameActive(button, $"弹窗按钮：{button.Text}");
         return true;
     }
 
@@ -509,7 +641,7 @@ public class GameExceptionPopupTrigger : ITaskTrigger
                 continue;
             }
 
-            ClickIfGameActive(button, $"确认按钮模板：{name}");
+            EnterGameRecovery.ClickIfGameActive(button, $"确认按钮模板：{name}");
             return true;
         }
 
