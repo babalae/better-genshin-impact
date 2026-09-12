@@ -438,7 +438,7 @@
                                                     Value="{DynamicResource SystemFillColorCautionBrush}" />
                                             <Setter TargetName="TrackStatusText"
                                                     Property="Text"
-                                                    Value="解析失败" />
+                                                    Value="{i18n:T 解析失败}" />
                                         </DataTrigger>
                                     </DataTemplate.Triggers>
                                 </DataTemplate>
@@ -580,7 +580,7 @@
                             <TextBlock Margin="0,4,0,0"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                <Run Text="{Binding ViewModel.CurrentMusicItem.FormatName, Mode=OneWay, TargetNullValue=等待播放}" />
+                                <Run Text="{Binding ViewModel.CurrentMusicItem.FormatName, Mode=OneWay, TargetNullValue='Waiting for playback'}" />
                                 <Run Text=" · " />
                                 <Run Text="{Binding ViewModel.CurrentMusicItem.Instrument, Mode=OneWay, TargetNullValue=--}" />
                             </TextBlock>
