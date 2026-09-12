@@ -67,6 +67,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             _relativeMouseMessageHandler,
             EnqueueActivation,
             DispatchWebViewMessage,
+            () => RequestApplicationShutdown(),
             logger);
     }
 
@@ -238,6 +239,27 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                 Operation = operation,
                 Data = data
             },
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+    }
+
+    /// <summary>
+    /// 请求根实例关闭自身。仅客户端（桌面分身 / WebView）调用；根实例会直接关闭自己。
+    /// 用于桌面分身的一条龙任务完成后，连同主身 BGI 一起退出。
+    /// </summary>
+    public async Task RequestRootShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        if (Context.InstanceType == BetterGiInstanceType.Primary)
+        {
+            RequestApplicationShutdown();
+            return;
+        }
+
+        var rootConnection = GetRequiredRootConnection();
+        var response = await rootConnection.SendRequestAsync(
+            InstanceOperations.ApplicationShutdown,
+            null,
             RequestTimeout,
             cancellationToken).ConfigureAwait(false);
         EnsureSuccessfulResponse(response);

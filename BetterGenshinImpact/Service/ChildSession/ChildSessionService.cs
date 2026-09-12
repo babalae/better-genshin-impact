@@ -287,6 +287,16 @@ public sealed class ChildSessionService : IDisposable
         return LaunchBetterGiCoreAsync(isAutomatic: false);
     }
 
+    /// <summary>
+    /// 以管理员权限在桌面分身中启动 BetterGI，并附带要执行的任务参数。
+    /// 任务完成后分身会自动关闭自身并请求主身 BGI 关闭（配合 <c>--close-on-complete</c>）。
+    /// </summary>
+    public Task LaunchBetterGiWithTaskAsync(string[] taskArguments)
+    {
+        ThrowIfDisposed();
+        return LaunchBetterGiCoreAsync(isAutomatic: false, taskArguments);
+    }
+
     public bool IsRelativeMouseForwardingAvailable()
     {
         return _desktopWindow?.IsVisible == true
@@ -512,7 +522,7 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
-    private async Task LaunchBetterGiCoreAsync(bool isAutomatic)
+    private async Task LaunchBetterGiCoreAsync(bool isAutomatic, string[]? taskArguments = null)
     {
         await _launchSemaphore.WaitAsync();
         try
@@ -520,10 +530,13 @@ public sealed class ChildSessionService : IDisposable
             var childSessionId = GetRequiredChildSessionId();
             RefreshState(isAutomatic
                 ? "桌面分身已加载，正在自动以管理员权限启动 BetterGI"
-                : "正在以管理员权限启动 BetterGI");
-            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId);
+                : (taskArguments is { Length: > 0 }
+                    ? "正在以管理员权限在桌面分身中启动 BetterGI 并执行任务"
+                    : "正在以管理员权限启动 BetterGI"));
+            await ChildSessionProcessLauncher.LaunchBetterGiAsync(childSessionId, taskArguments);
             RefreshState(
-                $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 BetterGI");
+                $"已在桌面分身（会话 {childSessionId}）中以管理员权限启动 BetterGI"
+                + (taskArguments is { Length: > 0 } ? " 并执行任务" : ""));
         }
         finally
         {

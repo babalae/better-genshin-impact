@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
@@ -20,6 +21,8 @@ using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.Input;
@@ -541,10 +544,48 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
+    private async Task LaunchInCloneAsync()
+    {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择一条龙配置");
+            return;
+        }
+
+        var instanceService = App.GetService<InstanceService>();
+        if (instanceService is null || !instanceService.Context.IsRoot)
+        {
+            Toast.Warning("仅在主身（根实例）中可以拉起桌面分身执行任务");
+            return;
+        }
+
+        var childSessionService = App.GetService<ChildSessionService>();
+        if (childSessionService is null)
+        {
+            Toast.Warning("当前环境不支持桌面分身");
+            return;
+        }
+
+        var taskArguments = new[] { "startOneDragon", SelectedConfig.Name };
+        try
+        {
+            Toast.Information($"正在桌面分身中启动一条龙「{SelectedConfig.Name}」");
+            _logger.LogInformation(
+                "主身通过桌面分身执行一条龙：{TaskArguments}",
+                string.Join(" ", taskArguments));
+            await childSessionService.LaunchBetterGiWithTaskAsync(taskArguments);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "拉起桌面分身执行任务失败");
+            Toast.Error("拉起桌面分身执行任务失败");
+        }
+    }
+
+    [RelayCommand]
     public async Task OnOneKeyExecute()
     {
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
-
         // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
         CancellationContext.Instance.Set();
 
@@ -686,19 +727,58 @@ public partial class OneDragonFlowViewModel : ViewModel
                         SystemControl.CloseGame();
                         break;
                     case "关闭软件":
+                        // 桌面分身中先请求关闭主身 BGI，再关闭自身（顺序不可颠倒）。
+                        await RequestRootShutdownIfCloneAsync(
+                            CancellationContext.Instance.Cts.Token);
+                        SystemControl.CloseGame();
                         Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
                         break;
                     case "关闭游戏和软件":
+                        await RequestRootShutdownIfCloneAsync(
+                            CancellationContext.Instance.Cts.Token);
                         SystemControl.CloseGame();
                         Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
                         break;
                     case "关机":
+                        await RequestRootShutdownIfCloneAsync(
+                            CancellationContext.Instance.Cts.Token);
                         SystemControl.CloseGame();
                         SystemControl.Shutdown();
                         break;
                 }
             }
+            else if (CommandLineOptions.Instance.CloseOnComplete)
+            {
+                // 桌面分身携带 --close-on-complete：无论一条龙配置如何，任务完成后
+                // 关闭自身并请求主身 BGI 一同关闭（顺序不可颠倒）。
+                await RequestRootShutdownIfCloneAsync(
+                    CancellationContext.Instance.Cts.Token);
+                SystemControl.CloseGame();
+                Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+            }
         });
+    }
+
+    /// <summary>
+    /// 若当前实例为桌面分身 / WebView（非主身），则在执行完成操作后请求主身 BGI 一同关闭。
+    /// 主身实例无需此操作，直接关闭自身即可。请求失败不应阻断自身关闭。
+    /// </summary>
+    private async Task RequestRootShutdownIfCloneAsync(CancellationToken cancellationToken)
+    {
+        var instanceService = App.GetService<InstanceService>();
+        if (instanceService is null || instanceService.Context.InstanceType == BetterGiInstanceType.Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            await instanceService.RequestRootShutdownAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "请求主身 BGI 关闭失败，将继续关闭自身。");
+        }
     }
 
     /// <summary>
