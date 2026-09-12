@@ -33,6 +33,11 @@ public class PointsCanvas : FrameworkElement
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
     private Rect _viewportRect = Rect.Empty;
 
+    /// <summary>
+    /// 移动轨迹分段（2048 级图像坐标），段间不连线
+    /// </summary>
+    private IReadOnlyList<IReadOnlyList<Point>>? _trajectorySegments;
+
     public event EventHandler? ViewportChanged;
 
     #region 依赖属性
@@ -234,37 +239,94 @@ public class PointsCanvas : FrameworkElement
     private void RenderPoints()
     {
         using var dc = _drawingVisual.RenderOpen();
+        if (_viewportRect.IsEmpty || _viewportRect.Width <= 0 || _viewportRect.Height <= 0)
+        {
+            return;
+        }
+
+        var aw = ActualWidth;
+        var ah = ActualHeight;
+        if (aw <= 0 || ah <= 0)
+        {
+            return;
+        }
+
+        var scaleX = aw / _viewportRect.Width;
+        var scaleY = ah / _viewportRect.Height;
+
+        DrawTrajectory(dc, scaleX, scaleY);
+
         if (_allPoints.Count == 0)
         {
             return;
         }
 
-        if (!_viewportRect.IsEmpty)
+        // 扩展可视区域，避免边缘闪烁
+        var expandedViewport = _viewportRect;
+        expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
+
+        foreach (var point in _allPoints)
         {
-            // 扩展可视区域，避免边缘闪烁
-            var expandedViewport = _viewportRect;
-            expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
-
-            var aw = ActualWidth;
-            var ah = ActualHeight;
-            if (aw <= 0 || ah <= 0)
+            if (expandedViewport.Contains(point.ImageX, point.ImageY))
             {
-                return;
-            }
-
-            var scaleX = aw / _viewportRect.Width;
-            var scaleY = ah / _viewportRect.Height;
-
-            foreach (var point in _allPoints)
-            {
-                if (expandedViewport.Contains(point.ImageX, point.ImageY))
-                {
-                    var localX = (point.ImageX - _viewportRect.X) * scaleX;
-                    var localY = (point.ImageY - _viewportRect.Y) * scaleY;
-                    DrawPoint(dc, point, localX, localY, MaskMapPointStatic.Width, MaskMapPointStatic.Height);
-                }
+                var localX = (point.ImageX - _viewportRect.X) * scaleX;
+                var localY = (point.ImageY - _viewportRect.Y) * scaleY;
+                DrawPoint(dc, point, localX, localY, MaskMapPointStatic.Width, MaskMapPointStatic.Height);
             }
         }
+    }
+
+    /// <summary>
+    /// 更新移动轨迹并触发重绘
+    /// </summary>
+    /// <param name="segments">轨迹分段（2048 级图像坐标），null 表示清除</param>
+    public void UpdateTrajectory(IReadOnlyList<IReadOnlyList<Point>>? segments)
+    {
+        _trajectorySegments = segments;
+        Refresh();
+    }
+
+    /// <summary>
+    /// 在点位下层绘制移动轨迹折线
+    /// </summary>
+    private void DrawTrajectory(DrawingContext dc, double scaleX, double scaleY)
+    {
+        if (_trajectorySegments == null || _trajectorySegments.Count == 0)
+        {
+            return;
+        }
+
+        var brush = new SolidColorBrush(Color.FromArgb(220, 0, 229, 255));
+        brush.Freeze();
+        var pen = new Pen(brush, 2.0);
+        pen.Freeze();
+
+        foreach (var segment in _trajectorySegments)
+        {
+            if (segment.Count < 2)
+            {
+                continue;
+            }
+
+            var geometry = new StreamGeometry();
+            using (var ctx = geometry.Open())
+            {
+                ctx.BeginFigure(ToLocalPoint(segment[0], scaleX, scaleY), false, false);
+                for (var i = 1; i < segment.Count; i++)
+                {
+                    ctx.LineTo(ToLocalPoint(segment[i], scaleX, scaleY), true, false);
+                }
+            }
+            geometry.Freeze();
+            dc.DrawGeometry(null, pen, geometry);
+        }
+    }
+
+    private Point ToLocalPoint(Point imagePoint, double scaleX, double scaleY)
+    {
+        return new Point(
+            (imagePoint.X - _viewportRect.X) * scaleX,
+            (imagePoint.Y - _viewportRect.Y) * scaleY);
     }
 
     /// <summary>

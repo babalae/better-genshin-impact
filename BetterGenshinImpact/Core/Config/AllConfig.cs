@@ -26,6 +26,7 @@ using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
+using BetterGenshinImpact.GameTask.TravelLog;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -200,6 +201,11 @@ public partial class AllConfig : ObservableObject
     public SkillCdConfig SkillCdConfig { get; set; } = new();
 
     /// <summary>
+    /// 移动轨迹记录
+    /// </summary>
+    public TravelLogConfig TravelLogConfig { get; set; } = new();
+
+    /// <summary>
     /// 自动使用
     /// </summary>
     public AutoRedeemCodeConfig AutoRedeemCodeConfig { get; set; } = new();
@@ -310,6 +316,7 @@ public partial class AllConfig : ObservableObject
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
         ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
+        TravelLogConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
