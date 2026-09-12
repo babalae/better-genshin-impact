@@ -6,7 +6,7 @@ namespace BetterGenshinImpact.Infrastructure.NetworkRecovery;
 public sealed class RecoverySession : IRecoverySession
 {
     private readonly object _sync = new();
-    private readonly AsyncLocal<bool> _recoveryExecution = new();
+    private readonly AsyncLocal<long> _recoveryExecutionGeneration = new();
     private TaskExecutionContext? _currentTask;
     private bool _isRecovering;
     private long _generation;
@@ -33,7 +33,7 @@ public sealed class RecoverySession : IRecoverySession
         }
     }
 
-    public bool IsCurrentRecoveryExecution => _recoveryExecution.Value;
+    public bool IsCurrentRecoveryExecution => _recoveryExecutionGeneration.Value != 0;
 
     public void BeginTask(TaskExecutionContext context)
     {
@@ -65,14 +65,14 @@ public sealed class RecoverySession : IRecoverySession
 
             _isRecovering = true;
             _generation++;
-            _recoveryExecution.Value = true;
+            _recoveryExecutionGeneration.Value = _generation;
             return new RecoveryLease(this, _generation);
         }
     }
 
     public void Clear()
     {
-        _recoveryExecution.Value = false;
+        _recoveryExecutionGeneration.Value = 0;
         lock (_sync)
         {
             _currentTask = null;
@@ -81,10 +81,17 @@ public sealed class RecoverySession : IRecoverySession
         }
     }
 
-    /// <summary>只有持有当前代次的租约才能清单飞标志，否则会误清后来者的标志</summary>
+    /// <summary>
+    /// 只有持有当前代次的租约才能清单飞标志；执行栈标记也按代次比对，
+    /// 老租约收尾时不得把新一轮恢复的执行栈标记清掉。
+    /// </summary>
     private void EndRecovery(long generation)
     {
-        _recoveryExecution.Value = false;
+        if (_recoveryExecutionGeneration.Value == generation)
+        {
+            _recoveryExecutionGeneration.Value = 0;
+        }
+
         lock (_sync)
         {
             if (generation == _generation)
