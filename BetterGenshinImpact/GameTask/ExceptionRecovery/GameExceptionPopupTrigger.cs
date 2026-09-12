@@ -400,8 +400,10 @@ public class GameExceptionPopupTrigger : ITaskTrigger
             _playableSamples++;
             if (_playableSamples >= PlayableConfirmSamples)
             {
+                // 提示措辞必须与证据一致：成功判据是"连续两次确认游戏可玩"，而游戏可能是它自己加载完的
+                // （例如 _enterGameClickCount == 0 的情况），所以说"已回到可玩界面"而不是"已自动进入游戏"。
                 Succeed("异常弹窗已消失，游戏已回到可玩界面",
-                    "游戏异常弹窗已处理，已自动进入游戏，脚本继续执行", config, now);
+                    "游戏异常弹窗已处理，游戏已回到可玩界面，脚本继续执行", config, now);
             }
 
             return;
