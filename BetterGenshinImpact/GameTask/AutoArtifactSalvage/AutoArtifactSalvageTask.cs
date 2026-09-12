@@ -90,7 +90,50 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     public static async Task OpenInventory(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
     {
-        var (recognitionObjectChecked, recognitionObjectUnchecked) = GetTabRecognitionObjects(gridScreenName);
+        RecognitionObject? recognitionObjectChecked;
+        RecognitionObject? recognitionObjectUnchecked;
+
+        switch (gridScreenName)
+        {
+            case GridScreenName.Weapons:
+                recognitionObjectChecked = ElementRecognition.Get("BagWeaponChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagWeaponUnchecked");
+                break;
+            case GridScreenName.Artifacts:
+                recognitionObjectChecked = ElementRecognition.Get("BagArtifactChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagArtifactUnchecked");
+                break;
+            case GridScreenName.CharacterDevelopmentItems:
+                recognitionObjectChecked = ElementRecognition.Get("BagCharacterDevelopmentItemChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagCharacterDevelopmentItemUnchecked");
+                break;
+            case GridScreenName.Food:
+                recognitionObjectChecked = ElementRecognition.Get("BagFoodChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagFoodUnchecked");
+                break;
+            case GridScreenName.Materials:
+                recognitionObjectChecked = ElementRecognition.Get("BagMaterialChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagMaterialUnchecked");
+                break;
+            case GridScreenName.Gadget:
+                recognitionObjectChecked = ElementRecognition.Get("BagGadgetChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagGadgetUnchecked");
+                break;
+            case GridScreenName.Quest:
+                recognitionObjectChecked = ElementRecognition.Get("BagQuestChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagQuestUnchecked");
+                break;
+            case GridScreenName.PreciousItems:
+                recognitionObjectChecked = ElementRecognition.Get("BagPreciousItemChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagPreciousItemUnchecked");
+                break;
+            case GridScreenName.Furnishings:
+                recognitionObjectChecked = ElementRecognition.Get("BagFurnishingChecked");
+                recognitionObjectUnchecked = ElementRecognition.Get("BagFurnishingUnchecked");
+                break;
+            default:
+                throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}");
+        }
 
         // B键打开背包
         input.SimulateAction(GIActions.OpenInventory);
@@ -141,81 +184,6 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
 
-        await Delay(800, ct);
-    }
-
-    /// <summary>
-    /// 取背包分类 tab 的选中/未选中元素识别对象。
-    /// </summary>
-    /// <param name="gridScreenName">目标背包分类。</param>
-    /// <returns>(选中元素, 未选中元素)。</returns>
-    /// <exception cref="NotSupportedException">不支持分类时抛出。</exception>
-    private static (RecognitionObject Checked, RecognitionObject Unchecked) GetTabRecognitionObjects(GridScreenName gridScreenName)
-    {
-        return gridScreenName switch
-        {
-            GridScreenName.Weapons => (ElementRecognition.Get("BagWeaponChecked"), ElementRecognition.Get("BagWeaponUnchecked")),
-            GridScreenName.Artifacts => (ElementRecognition.Get("BagArtifactChecked"), ElementRecognition.Get("BagArtifactUnchecked")),
-            GridScreenName.CharacterDevelopmentItems => (ElementRecognition.Get("BagCharacterDevelopmentItemChecked"), ElementRecognition.Get("BagCharacterDevelopmentItemUnchecked")),
-            GridScreenName.Food => (ElementRecognition.Get("BagFoodChecked"), ElementRecognition.Get("BagFoodUnchecked")),
-            GridScreenName.Materials => (ElementRecognition.Get("BagMaterialChecked"), ElementRecognition.Get("BagMaterialUnchecked")),
-            GridScreenName.Gadget => (ElementRecognition.Get("BagGadgetChecked"), ElementRecognition.Get("BagGadgetUnchecked")),
-            GridScreenName.Quest => (ElementRecognition.Get("BagQuestChecked"), ElementRecognition.Get("BagQuestUnchecked")),
-            GridScreenName.PreciousItems => (ElementRecognition.Get("BagPreciousItemChecked"), ElementRecognition.Get("BagPreciousItemUnchecked")),
-            GridScreenName.Furnishings => (ElementRecognition.Get("BagFurnishingChecked"), ElementRecognition.Get("BagFurnishingUnchecked")),
-            _ => throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}")
-        };
-    }
-
-    /// <summary>
-    /// 在已打开的背包界面内，切换到目标分类 tab（不返回主界面）。
-    /// 已在目标 tab 则直接返回；否则点击未选中按钮并等待切换完成。
-    /// </summary>
-    /// <param name="targetTab">目标背包分类。</param>
-    /// <param name="input">输入模拟器。</param>
-    /// <param name="logger">日志记录器。</param>
-    /// <param name="ct">取消令牌。</param>
-    public static async Task SwitchInventoryTab(GridScreenName targetTab, InputSimulator input, ILogger logger, CancellationToken ct)
-    {
-        var (checkedObj, uncheckedObj) = GetTabRecognitionObjects(targetTab);
-
-        // 已在目标 tab 则直接返回
-        using (var ra0 = CaptureToRectArea())
-        using (var checkedBtn0 = ra0.Find(checkedObj))
-        {
-            if (checkedBtn0.IsExist())
-            {
-                return;
-            }
-        }
-
-        // 查找并点击未选中按钮
-        bool clicked = false;
-        for (int attempt = 0; attempt < 5; attempt++)
-        {
-            using var ra = CaptureToRectArea();
-            using var uncheckedBtn = ra.Find(uncheckedObj);
-            if (uncheckedBtn.IsExist())
-            {
-                uncheckedBtn.Click();
-                clicked = true;
-                break;
-            }
-            await Delay(300, ct);
-        }
-
-        if (!clicked)
-        {
-            logger.LogError("未找到背包中{name}菜单按钮,切换分类失败", targetTab.GetDescription());
-            return;
-        }
-
-        // 等待目标 tab 变为选中状态
-        var switched = await NewRetry.WaitForElementAppear(checkedObj, retryAction: null, ct, maxAttemptCount: 5, retryInterval: 500);
-        if (!switched)
-        {
-            logger.LogWarning("切换到{name}后未能确认已选中,继续尝试扫描", targetTab.GetDescription());
-        }
         await Delay(800, ct);
     }
 
