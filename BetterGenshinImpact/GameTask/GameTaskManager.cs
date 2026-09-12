@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
 using System;
@@ -34,6 +35,14 @@ internal class GameTaskManager
     public static List<ITaskTrigger> LoadInitialTriggers()
     {
         ReloadAssets();
+
+        // 常驻触发器（ITaskTrigger.AlwaysActive）**跨会话复用同一实例**：
+        // 任务结束（TaskRunner.End）也会走这里整体重建字典，若这里 new 新实例，进行中的状态
+        // （例如"弹窗已点掉、正在等「点击进入」"）会被静默重置、退避记忆也会丢。
+        // 这与 ClearTriggers 保留常驻触发器是同一件事的两半。
+        // 光复用实例还不够：ConvertToTriggerList 也必须**不**对它调用 Init，否则状态照样被清掉
+        // （那里已把常驻触发器排除在 Init 之外——两处是同一套约定，改动时必须同时改）。
+        var previous = TriggerDictionary;
         TriggerDictionary = new ConcurrentDictionary<string, ITaskTrigger>();
 
         TriggerDictionary.TryAdd("RecognitionTest", new TestTrigger());
@@ -45,11 +54,29 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
+        TriggerDictionary.TryAdd("GameExceptionPopup",
+            ReuseAlwaysActive(previous, "GameExceptionPopup") ?? new GameExceptionPopupTrigger());
 
         return ConvertToTriggerList();
     }
 
-    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false)
+    /// <summary>取上一个字典里同名的常驻触发器：存在且声明了 <see cref="ITaskTrigger.AlwaysActive"/> 时复用同一实例。</summary>
+    private static ITaskTrigger? ReuseAlwaysActive(ConcurrentDictionary<string, ITaskTrigger>? previous, string name)
+    {
+        if (previous != null && previous.TryGetValue(name, out var old) && old.AlwaysActive)
+        {
+            return old;
+        }
+
+        return null;
+    }
+
+    /// <param name="allEnabled">是否把所有触发器都置为启用（自动秘境/配置组/脚本 API 的 AddTrigger 会用到）。</param>
+    /// <param name="skipInit">
+    /// 是否跳过 Init()。用于"任务启动清空实时触发器"：这些触发器要留在列表里继续工作，
+    /// 但不能被重新 Init——配置组会为每个项目调用一次 <see cref="ClearTriggers"/>。
+    /// </param>
+    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false, bool skipInit = false)
     {
         if (TriggerDictionary is null)
         {
@@ -58,7 +85,23 @@ internal class GameTaskManager
 
         var loadedTriggers = TriggerDictionary.Values.ToList();
 
-        loadedTriggers.ForEach(i => i.Init());
+        if (!skipInit)
+        {
+            // 常驻触发器（<see cref="ITaskTrigger.AlwaysActive"/>）**不在这里 Init**：
+            // 它们跨任务存活，而重建列表有多条路径（任务启停、ClearTriggers、AddTrigger），
+            // 逐条判断"本次用到的是新建实例还是复用实例"极易漏一处，漏掉就等于把运行状态静默重置。
+            // 因此把它们的生命周期收口到一个地方：**只有实时触发会话启动时**
+            // （TaskTriggerDispatcher.Start 里显式调用 Init），那是唯一确定"新会话开始"的时机。
+            // 这个约定的前提是：常驻触发器新建时字段已由自身初始化（Init 只是再置一遍同样的默认值）。
+            loadedTriggers.ForEach(i =>
+            {
+                if (!i.AlwaysActive)
+                {
+                    i.Init();
+                }
+            });
+        }
+
         if (allEnabled)
         {
             loadedTriggers.ForEach(i => i.IsEnabled = true);
@@ -68,9 +111,26 @@ internal class GameTaskManager
         return loadedTriggers;
     }
 
+    /// <summary>
+    /// 清空实时触发器（任务启动/任务结束都会调用）。
+    /// 常驻触发器（<see cref="ITaskTrigger.AlwaysActive"/>：游戏异常弹窗处理）必须跨任务存活——
+    /// 任务是它最需要工作的场景；若一并清掉，任务期间既没有 OnCapture 驱动，
+    /// 也再没有任何时机把它放回列表（任务结束才会 LoadInitialTriggers）。
+    /// </summary>
     public static void ClearTriggers()
     {
-        TriggerDictionary?.Clear();
+        // 先固定本地引用：LoadInitialTriggers() 会整体替换 TriggerDictionary，
+        // 若每步都重新读静态属性，快照与删除可能落在两个不同的字典上。
+        var dict = TriggerDictionary;
+        if (dict is null)
+        {
+            return;
+        }
+
+        foreach (var name in dict.Where(kv => !kv.Value.AlwaysActive).Select(kv => kv.Key).ToList())
+        {
+            dict.TryRemove(name, out _);
+        }
     }
 
     /// <summary>
@@ -110,7 +170,13 @@ internal class GameTaskManager
 
     public static void RefreshTriggerConfigs()
     {
-        if (TriggerDictionary is { Count: > 0 })
+        // 只在"存在非常驻触发器"时才刷：下面的 ClearAll 会清掉 VisionContext 的画布，
+        // 进而影响正在绘制的任务标注；而任务运行期间实时触发器已被清空（只剩常驻触发器），
+        // 此时没有需要在这里刷新的触发器配置。
+        // 注意**不能**断言"任务运行期间字典里一定只剩常驻触发器"——任务内的脚本/任务会走
+        // AddTrigger 把 AutoPick/AutoSkip/AutoEat 加回来。本判据只要求"存在可刷新的触发器"，
+        // 与上述两种情形都自洽。
+        if (TriggerDictionary?.Any(kv => !kv.Value.AlwaysActive) == true)
         {
             TriggerDictionary.GetValueOrDefault("AutoPick")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoSkip")?.Init();

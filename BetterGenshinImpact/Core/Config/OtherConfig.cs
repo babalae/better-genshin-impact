@@ -32,7 +32,31 @@ public partial class OtherConfig : ObservableObject
     //OCR配置
     [ObservableProperty]
     private Ocr _ocrConfig = new();
+
+    //游戏异常弹窗自动处理（实时触发页「异常弹窗处理」卡片）
+    //单独成一个配置段，是为了能像其它功能段（AutoEatConfig/SkillCdConfig…）一样
+    //在 AllConfig.InitEvent() 里被订阅：改动即时落盘 + 触发触发器刷新
+    [ObservableProperty]
+    private PopupRecovery _popupRecoveryConfig = new();
     
+
+    /// <summary>
+    /// 游戏异常弹窗自动处理（更新通知 / 连接已断开 这类弹窗）的配置段。
+    /// 独立成段是为了纳入 AllConfig.InitEvent() 的订阅（改动即时保存 + 刷新触发器配置），
+    /// 与 AutoEatConfig/SkillCdConfig 等既有功能段保持一致。
+    /// </summary>
+    public partial class PopupRecovery : ObservableObject
+    {
+        //异常弹窗自动处理开关（默认关闭，由用户在实时触发页自行开启）
+        [ObservableProperty]
+        private bool _enabled = false;
+        //弹窗探测间隔（秒）：5~60，默认 30（弹窗会一直等人点，无需秒级响应）
+        [ObservableProperty]
+        private int _probeIntervalSeconds = 30;
+        //追加的弹窗关键词（逗号/分号/竖线分隔，用于国际服等文案不同的客户端）
+        [ObservableProperty]
+        private string _extraKeywords = "";
+    }
 
     public partial class AutoRestart : ObservableObject
     {

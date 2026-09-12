@@ -66,7 +66,9 @@ public class Dispatcher
     }
 
     /// <summary>
-    /// 清理所有实时任务
+    /// 清理所有实时任务。
+    /// 注意：常驻触发器（<see cref="ITaskTrigger.AlwaysActive"/>，如"游戏异常弹窗处理"）**不受影响**——
+    /// 它们跨任务存活，否则任务运行期间就没有任何时机去做异常处理。
     /// </summary>
     public void ClearAllTriggers()
     {

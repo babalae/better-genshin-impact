@@ -95,12 +95,19 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 清空实时触发器（任务启动/任务结束都会调用）。
+        /// 常驻触发器（<see cref="ITaskTrigger.AlwaysActive"/>）会被保留：任务是它们最需要工作的场景，
+        /// 清掉之后任务期间再无任何时机把它们放回列表。
+        /// 保留时**不能**重新 Init（skipInit: true）——那会重置它们的运行状态，
+        /// 而配置组会为每个项目调用一次本方法。
+        /// </summary>
         public void ClearTriggers()
         {
             lock (_triggerListLocker)
             {
                 GameTaskManager.ClearTriggers();
-                _triggers?.Clear();
+                SetTriggers(GameTaskManager.ConvertToTriggerList(skipInit: true));
             }
         }
 
@@ -138,7 +145,30 @@ namespace BetterGenshinImpact.GameTask
             TaskContext.Instance().Init(hWnd);
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadInitialTriggers();
+            var initialTriggers = GameTaskManager.LoadInitialTriggers();
+
+            lock (_triggerListLocker)
+            {
+                _triggers = initialTriggers;
+
+                // 常驻触发器（ITaskTrigger.AlwaysActive）的状态要跨任务边界保留，因此
+                // GameTaskManager.ConvertToTriggerList **不会** Init 它们（见那里的说明）——
+                // 它们唯一的重置点就是这里：实时触发会话启动。
+                //
+                // **必须与 OnCapture 互斥**（OnCapture 就在本锁内被调用，见下面的循环）：
+                // 常驻触发器是**跨会话复用的同一实例**，Init 写入的正是 OnCapture 正在读写的运行期状态。
+                // 不能用"Start 发生在启动捕获之前"来论证安全——切换捕获模式是
+                // HomePageViewModel.OnCaptureModeDropDownChanged 里的 Stop → Start 连续执行，
+                // 而 Stop 只是 _timer.Stop()，**不 join 在飞的那一次 tick**。
+                initialTriggers.ForEach(t =>
+                {
+                    if (t.AlwaysActive)
+                    {
+                        t.Init();
+                    }
+                });
+            }
+
             GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
 
             // if (GraphicsCapture.IsHdrEnabled(hWnd))
@@ -402,6 +432,13 @@ namespace BetterGenshinImpact.GameTask
                     if (exclusiveTrigger != null)
                     {
                         needRunTriggers.Add(exclusiveTrigger);
+
+                        // 常驻触发器与"独占"不冲突：它们不参与"当前界面该由谁操作"的竞争，
+                        // 但必须在任何场景下都有机会工作——否则钓鱼/快速传送这类可独占数分钟的
+                        // 场景里，异常弹窗完全不会被发现。
+                        // 仍要尊重它们自己声明的后台语义（游戏不在前台时不调度）。
+                        needRunTriggers.AddRange(_triggers!.Where(t =>
+                            t.AlwaysActive && t.IsEnabled && (!hasBackgroundTriggerToRun || t.IsBackgroundRunning)));
                     }
                     else
                     {
@@ -426,7 +463,11 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in needRunTriggers)
                         {
-                            if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
+                            // 常驻触发器不受 UI 分类门控：它不做与具体界面相关的动作，
+                            // 而长对话（Talk）/大地图（BigMap）稳定超过 30 秒后，UI 分类判定会把
+                            // 默认 Unknown 的触发器整个滤掉——那期间出现的异常弹窗就再也发现不了。
+                            if (trigger.AlwaysActive
+                                || (PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
                                 || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                             {
                                 // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
