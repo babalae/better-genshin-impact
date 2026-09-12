@@ -24,13 +24,16 @@ public sealed class NetworkHealthMonitorHostedService(
             {
                 // 用任务取消令牌而非应用生命周期令牌：任务被取消时恢复流程必须一起停，
                 // 否则它会继续截图与发送键鼠输入，和随后启动的任务抢操作权。
-                networkHealthMonitor.RequestCheck(GetTaskCancellationToken(stoppingToken));
+                if (GetTaskCancellationToken() is { } cancellationToken)
+                {
+                    networkHealthMonitor.RequestCheck(cancellationToken);
+                }
             }
         }
     }
 
-    /// <summary>任务取消令牌。Clear() 可能并发释放 CTS，此时退回应用令牌。</summary>
-    private static CancellationToken GetTaskCancellationToken(CancellationToken fallback)
+    /// <summary>任务取消令牌。Clear() 并发释放 CTS 时返回空，调用方跳过本次探测。</summary>
+    private static CancellationToken? GetTaskCancellationToken()
     {
         try
         {
@@ -38,7 +41,7 @@ public sealed class NetworkHealthMonitorHostedService(
         }
         catch (ObjectDisposedException)
         {
-            return fallback;
+            return null;
         }
     }
 }
