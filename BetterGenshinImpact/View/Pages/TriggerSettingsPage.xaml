@@ -1810,5 +1810,67 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>-->
+        <!--  异常弹窗处理  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf071;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" TextWrapping="Wrap" Text="{i18n:T 异常弹窗处理}" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Text="{i18n:T 检测到更新通知、连接已断开等异常弹窗时自动点掉}" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,24,0" IsChecked="{Binding Config.PopupRecoveryConfig.Enabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" TextWrapping="Wrap" Text="{i18n:T 检测间隔（秒）}" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Text="{i18n:T 多少时间检查一次是否有异常弹窗}" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="90" Margin="0,0,8,0" Text="{Binding Config.PopupRecoveryConfig.CheckIntervalSeconds, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" TextWrapping="Wrap" Text="{i18n:T 单次处理上限（秒）}" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Text="{i18n:T 超过该时间仍未点掉则放弃处理并恢复脚本}" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="90" Margin="0,0,8,0" Text="{Binding Config.PopupRecoveryConfig.MaxRecoverySeconds, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" TextWrapping="Wrap" Text="{i18n:T 追加关键词}" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Text="{i18n:T 逗号分隔；用于其它服或其它文案的弹窗}" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="160" Margin="0,0,8,0" Text="{Binding Config.PopupRecoveryConfig.ExtraKeywords, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
     </StackPanel>
 </Page>

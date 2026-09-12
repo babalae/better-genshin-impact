@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Infrastructure.NetworkRecovery;
@@ -13,6 +14,7 @@ namespace BetterGenshinImpact.Infrastructure.NetworkRecovery;
 public sealed class PauseCoordinator : IPauseCoordinator
 {
     private readonly INetworkPauseGate _networkPauseGate;
+    private readonly IPopupPauseGate _popupPauseGate;
     private readonly INetworkHealthMonitor _networkHealthMonitor;
     private readonly IRecoverySession _recoverySession;
     private readonly ILogger<PauseCoordinator> _logger;
@@ -20,18 +22,21 @@ public sealed class PauseCoordinator : IPauseCoordinator
 
     public PauseCoordinator(
         INetworkPauseGate networkPauseGate,
+        IPopupPauseGate popupPauseGate,
         INetworkHealthMonitor networkHealthMonitor,
         IRecoverySession recoverySession,
         ILogger<PauseCoordinator> logger)
     {
         _networkPauseGate = networkPauseGate;
+        _popupPauseGate = popupPauseGate;
         _networkHealthMonitor = networkHealthMonitor;
         _recoverySession = recoverySession;
         _logger = logger;
     }
 
+    // 网络门与弹窗门并列；恢复流程自身的执行栈豁免挂起
     public bool IsPaused => RunnerContext.Instance.IsSuspend ||
-                            (_networkPauseGate.IsNetworkPaused &&
+                            ((_networkPauseGate.IsNetworkPaused || _popupPauseGate.IsPopupPaused) &&
                              !_recoverySession.IsCurrentRecoveryExecution);
 
     public void ToggleManualPause()
@@ -83,7 +88,20 @@ public sealed class PauseCoordinator : IPauseCoordinator
             suspendable.Suspend();
         }
 
-        _logger.LogWarning(RunnerContext.Instance.IsSuspend ? "快捷键触发暂停，等待解除" : "网络探测失败，任务暂停等待恢复");
+        _logger.LogWarning(DescribePauseReason());
+    }
+
+    /// <summary>挂起原因文案。三种来源区分开，热键优先。</summary>
+    private string DescribePauseReason()
+    {
+        if (RunnerContext.Instance.IsSuspend)
+        {
+            return "快捷键触发暂停，等待解除";
+        }
+
+        return _networkPauseGate.IsNetworkPaused
+            ? "网络探测失败，任务暂停等待恢复"
+            : $"游戏异常弹窗处理中，任务暂停等待恢复：{_popupPauseGate.LastReason}";
     }
 
     private void ReleasePauseSideEffects()

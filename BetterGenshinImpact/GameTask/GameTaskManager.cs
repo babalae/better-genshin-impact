@@ -19,6 +19,7 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using System;
 
 namespace BetterGenshinImpact.GameTask;
@@ -34,6 +35,9 @@ internal class GameTaskManager
     public static List<ITaskTrigger> LoadInitialTriggers()
     {
         ReloadAssets();
+
+        // 常驻触发器复用上一份字典里的实例，避免自持定时器被丢弃
+        var previous = TriggerDictionary;
         TriggerDictionary = new ConcurrentDictionary<string, ITaskTrigger>();
 
         TriggerDictionary.TryAdd("RecognitionTest", new TestTrigger());
@@ -45,8 +49,21 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
+        TriggerDictionary.TryAdd("GameExceptionPopup",
+            ReuseAlwaysActive(previous, "GameExceptionPopup") ?? new GameExceptionPopupTrigger());
 
         return ConvertToTriggerList();
+    }
+
+    /// <summary>取上一份字典里同名的常驻触发器实例；不存在或未声明常驻时返回 null。</summary>
+    private static ITaskTrigger? ReuseAlwaysActive(ConcurrentDictionary<string, ITaskTrigger>? previous, string name)
+    {
+        if (previous != null && previous.TryGetValue(name, out var old) && old.AlwaysActive)
+        {
+            return old;
+        }
+
+        return null;
     }
 
     public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false)
@@ -59,6 +76,7 @@ internal class GameTaskManager
         var loadedTriggers = TriggerDictionary.Values.ToList();
 
         loadedTriggers.ForEach(i => i.Init());
+
         if (allEnabled)
         {
             loadedTriggers.ForEach(i => i.IsEnabled = true);
@@ -70,7 +88,17 @@ internal class GameTaskManager
 
     public static void ClearTriggers()
     {
-        TriggerDictionary?.Clear();
+        var dict = TriggerDictionary;
+        if (dict is null)
+        {
+            return;
+        }
+
+        // 常驻触发器跨任务保留
+        foreach (var name in dict.Where(kv => !kv.Value.AlwaysActive).Select(kv => kv.Key).ToList())
+        {
+            dict.TryRemove(name, out _);
+        }
     }
 
     /// <summary>
@@ -120,6 +148,8 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
+            // 常驻触发器跟随配置刷新
+            TriggerDictionary.GetValueOrDefault("GameExceptionPopup")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }

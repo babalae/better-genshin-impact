@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using Microsoft.Extensions.Logging.Abstractions;
 using BetterGenshinImpact.Infrastructure.NetworkRecovery;
 
@@ -143,6 +144,7 @@ public class NetworkRecoveryTests
             TimeSpan.Zero));
         var coordinator = new PauseCoordinator(
             gate,
+            new PopupPauseGate(),
             new StubNetworkHealthMonitor(),
             new RecoverySession(),
             NullLogger<PauseCoordinator>.Instance);

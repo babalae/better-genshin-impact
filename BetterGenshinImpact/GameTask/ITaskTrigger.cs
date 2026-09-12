@@ -37,6 +37,12 @@ public interface ITaskTrigger
     /// </summary>
     bool IsBackgroundRunning => false;
     
+    /// <summary>
+    /// 常驻触发器：跨任务存活，且不受界面分类门控。
+    /// <see cref="Init"/> 会被重复调用，实现必须幂等。
+    /// </summary>
+    bool AlwaysActive => false;
+    
     GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 
     /// <summary>

@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Infrastructure.NetworkRecovery;
 using BetterGenshinImpact.Service;
@@ -189,6 +190,7 @@ public partial class App : Application
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<INetworkHealthProbe, PingNetworkHealthProbe>();
                 services.AddSingleton<INetworkPauseGate, NetworkPauseGate>();
+                services.AddSingleton<IPopupPauseGate, PopupPauseGate>();
                 services.AddSingleton<IRecoverySession, RecoverySession>();
                 services.AddSingleton<IPauseCoordinator, PauseCoordinator>();
                 services.AddSingleton<ILoginAdapter, GenshinLoginAdapter>();
