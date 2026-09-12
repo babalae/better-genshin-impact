@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Core.Script;
@@ -7,10 +8,11 @@ using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.ExceptionRecovery;
 using Microsoft.Extensions.Logging;
+using Timer = System.Timers.Timer;
 
 namespace BetterGenshinImpact.Infrastructure.NetworkRecovery;
 
-public sealed class PauseCoordinator : IPauseCoordinator
+public sealed class PauseCoordinator : IPauseCoordinator, IDisposable
 {
     private readonly INetworkPauseGate _networkPauseGate;
     private readonly IPopupPauseGate _popupPauseGate;
@@ -18,6 +20,7 @@ public sealed class PauseCoordinator : IPauseCoordinator
     private readonly IRecoverySession _recoverySession;
     private readonly ILogger<PauseCoordinator> _logger;
     private readonly object _pauseSync = new();
+    private readonly Timer _sideEffectWatchdog;
     private bool _pauseSideEffectsApplied;
     private int _pauseWaiters;
 
@@ -33,6 +36,17 @@ public sealed class PauseCoordinator : IPauseCoordinator
         _networkHealthMonitor = networkHealthMonitor;
         _recoverySession = recoverySession;
         _logger = logger;
+
+        // 归还共享副作用不能只靠等待方：等待者可能已被取消，暂停解除后再没有人走进 WaitIfPaused。
+        _sideEffectWatchdog = new Timer { AutoReset = true, Interval = 1000 };
+        _sideEffectWatchdog.Elapsed += (_, _) => ReleaseSideEffectsWhenPauseCleared();
+        _sideEffectWatchdog.Start();
+    }
+
+    public void Dispose()
+    {
+        _sideEffectWatchdog.Stop();
+        _sideEffectWatchdog.Dispose();
     }
 
     // 网络门与弹窗门并列；恢复流程自身的执行栈豁免挂起
@@ -147,5 +161,25 @@ public sealed class PauseCoordinator : IPauseCoordinator
         }
 
         _logger.LogWarning("任务暂停已解除，继续当前任务上下文");
+    }
+
+    /// <summary>独立于等待方的归还者：暂停来源已解除且没有等待者留在暂停循环里（避免把新一轮的副作用解掉）。</summary>
+    private void ReleaseSideEffectsWhenPauseCleared()
+    {
+        try
+        {
+            lock (_pauseSync)
+            {
+                if (!IsPauseSourceActive && _pauseWaiters == 0)
+                {
+                    ReleasePauseSideEffects();
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            // 定时器回调抛异常会直接终止进程
+            _logger.LogError(e, "归还暂停副作用失败");
+        }
     }
 }
