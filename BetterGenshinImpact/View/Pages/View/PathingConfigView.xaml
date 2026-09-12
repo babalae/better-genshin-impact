@@ -4,9 +4,9 @@
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:dd="urn:gong-wpf-dragdrop"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  xmlns:local="clr-namespace:BetterGenshinImpact.Model"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                 xmlns:sdl="http://schemas.sdl.com/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
@@ -39,7 +39,7 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontSize="16"
                                   FontTypography="BodyStrong"
-                                  Text="{i18n:T 地图追踪设置（相关配置优先级从高到低，UI样式还有问题未解决）}" />
+                                  Text="{i18n:T 地图追踪设置（相关配置优先级从高到低）}" />
 
                 </StackPanel>
 
@@ -76,26 +76,12 @@
                                                   SelectedItem="{Binding Predicate, Mode=TwoWay}" />
 
                                         <!--  搜索输入框  -->
-                                        <sdl:MultiSelectComboBox Width="300"
-                                                                 MinWidth="300"
-                                                                 Background="{DynamicResource ApplicationBackgroundBrush}"
-                                                                 EnableAutoComplete="True"
-                                                                 EnableBatchSelection="True"
-                                                                 EnableFiltering="True"
-                                                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                                 IsEditable="True"
-                                                                 ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
-                                                                 MaxDropDownHeight="300"
-                                                                 SelectedItems="{Binding Object, Mode=TwoWay}"
-                                                                 SelectionMode="Multiple">
-                                            <!--<sdl:MultiSelectComboBox.Resources>
-                                            <Style TargetType="{x:Type TextBlock}">
-                                                <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
-                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            </Style>
-                                            <SolidColorBrush x:Key="MultiSelectComboBox.Text.Foreground" Color="#ffffff" />
-                                        </sdl:MultiSelectComboBox.Resources>-->
-                                        </sdl:MultiSelectComboBox>
+                                        <!--  控件颜色及交互状态跟随 WPF-UI 全局主题资源  -->
+                                        <controls:MultiSelectComboBox Width="300"
+                                                                      MinWidth="300"
+                                                                      ItemsSource="{Binding Definition.ObjectOptions}"
+                                                                      MaxDropDownHeight="300"
+                                                                      SelectedItems="{Binding Object, Mode=TwoWay}" />
 
                                         <ui:TextBlock Margin="10,0"
                                                       VerticalAlignment="Center"
@@ -158,17 +144,10 @@
 
                                         <!--  搜索输入框  -->
                                         <Grid Width="300" MinWidth="300">
-                                            <sdl:MultiSelectComboBox
-                                                Background="{DynamicResource ApplicationBackgroundBrush}"
-                                                EnableAutoComplete="True"
-                                                EnableBatchSelection="True"
-                                                EnableFiltering="True"
-                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                IsEditable="True"
-                                                ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
+                                            <controls:MultiSelectComboBox
+                                                ItemsSource="{Binding Definition.ObjectOptions}"
                                                 MaxDropDownHeight="300"
-                                                SelectedItems="{Binding Object, Mode=TwoWay}"
-                                                SelectionMode="Multiple" />
+                                                SelectedItems="{Binding Object, Mode=TwoWay}" />
 
                                         </Grid>
 

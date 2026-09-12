@@ -41,6 +41,9 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Reward;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoCombo;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
@@ -57,6 +60,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private readonly CombatScriptBag? _combatScriptBag;
     private readonly string? _jsonCombatStrategyPath;
+
+    /// <summary>策略为自动连招（LLM 行为树）时为 true：进本前调用 LLM 建树，循环战斗中 Tick 该树</summary>
+    private readonly bool _useComboStrategy;
+
+    /// <summary>进本前构建的连招建树会话，仅 _useComboStrategy 时非空</summary>
+    private ComboTreeSession? _comboSession;
     private readonly Dictionary<string, int> _rewardSummary = new();
 
     private CancellationToken _ct;
@@ -89,7 +98,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
-        if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        if (AutoFightParam.ComboStrategyName.Equals(_taskParam.CombatStrategyPath))
+        {
+            _useComboStrategy = true;
+            Logger.LogInformation("自动秘境：检测到自动连招策略，将使用LLM行为树");
+        }
+        else if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
         {
             _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
             Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
@@ -168,6 +182,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
+        // 自动连招：进本前在秘境外建树（秘境内队伍锁定，建树队伍即整场战斗队伍）
+        if (_useComboStrategy)
+        {
+            _comboSession = await BuildComboTreeForDomain(ct);
+        }
+
         // 复活重试
         for (var i = 0; i < _config.ReviveRetryCount; i++)
         {
@@ -225,7 +245,19 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             Logger.LogDebug("0. 关闭秘境提示");
             await CloseDomainTip();
 
-            if (_jsonCombatStrategyPath != null)
+            if (_useComboStrategy)
+            {
+                ESkillCdTracker.Clear();
+                // 自动连招策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
+                // 1. 走到钥匙处启动
+                Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+                await WalkToPressF();
+
+                // 2. 执行战斗（LLM行为树）
+                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略(自动连招)");
+                await StartComboFight();
+            }
+            else if (_jsonCombatStrategyPath != null)
             {
                 ESkillCdTracker.Clear();
                 // JSON策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
@@ -769,6 +801,59 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
+    /// 自动连招：进本前在秘境外识别队伍并调用 LLM 构建连招行为树
+    /// </summary>
+    private async Task<ComboTreeSession> BuildComboTreeForDomain(CancellationToken ct)
+    {
+        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+        var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
+        Logger.LogInformation("自动秘境：识别队伍 {Avatars}，开始调用 LLM 构建连招行为树", string.Join("、", avatarNames));
+
+        var config = TaskContext.Instance().Config.AutoComboBuildConfig;
+        return await AutoComboBuildTask.BuildComboTreeAsync(avatarNames, config, Logger, ct);
+    }
+
+    /// <summary>
+    /// 自动连招战斗入口：Tick 进本前构建的连招行为树（注入建树会话，不读静态暂存），
+    /// 秘境的DomainEndDetectionTask通过CancellationToken控制战斗结束。
+    /// </summary>
+    private async Task StartComboFight()
+    {
+        CancellationTokenSource cts = new();
+        _ct.Register(cts.Cancel);
+
+        // 抑制其自带的结束检测（FightFinishDetectEnabled=false），由秘境的DomainEndDetectionTask控制战斗结束
+        var comboTask = new AutoComboRunTask(new AutoFightParam { FightFinishDetectEnabled = false }, _comboSession!);
+
+        var domainEndTask = DomainEndDetectionTask(cts);
+
+        var combatTask = Task.Run(async () =>
+        {
+            try
+            {
+                await comboTask.Start(cts.Token);
+            }
+            catch (RetryException)
+            {
+                // 复活/恢复信号必须传回 Start 的重试循环，复活后重试秘境
+                await cts.CancelAsync();
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                // 对局结束取消战斗，正常流程
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning("自动连招战斗任务异常：{Msg}", e.Message);
+            }
+        }, cts.Token);
+
+        domainEndTask.Start();
+        await Task.WhenAll(combatTask, domainEndTask);
+    }
+
+    /// <summary>
     /// JSON策略战斗入口：委托给AutoFightJsonTask，抑制其自带的结束检测和拾取逻辑，
     /// 秘境的DomainEndDetectionTask通过CancellationToken控制战斗结束。
     /// </summary>
@@ -796,6 +881,16 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             try
             {
                 await jsonTask.Start(cts.Token);
+            }
+            catch (RetryException)
+            {
+                // 复活/恢复信号必须传回 Start 的重试循环，复活后重试秘境
+                await cts.CancelAsync();
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                // 对局结束取消战斗，正常流程
             }
             catch (Exception e)
             {

@@ -90,6 +90,31 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="{i18n:T 一条龙结束发送汇总通知}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.NotificationConfig.DragonEndSummaryEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="{i18n:T 是否允许 JS 通知}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
@@ -2481,11 +2506,11 @@
                         <ui:Button.Style>
                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                 <Setter Property="Command" Value="{Binding BindQqCommand}" />
-                                <Setter Property="Content" Value="绑定" />
+                                <Setter Property="Content" Value="{i18n:T 绑定}" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsBinding}" Value="True">
                                         <Setter Property="Command" Value="{Binding CancelBindQqCommand}" />
-                                        <Setter Property="Content" Value="取消" />
+                                        <Setter Property="Content" Value="{i18n:T 取消}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -2630,11 +2655,11 @@
                         <ui:Button.Style>
                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                 <Setter Property="Command" Value="{Binding BindWechatClawbotCommand}" />
-                                <Setter Property="Content" Value="登录并绑定" />
+                                <Setter Property="Content" Value="{i18n:T 登录并绑定}" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsWechatClawbotBinding}" Value="True">
                                         <Setter Property="Command" Value="{Binding CancelBindWechatClawbotCommand}" />
-                                        <Setter Property="Content" Value="取消" />
+                                        <Setter Property="Content" Value="{i18n:T 取消}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
