@@ -1,8 +1,9 @@
 using System;
-using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +35,10 @@ public class AutoPathingScript
 
             await pathExecutor.Pathing(task);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             TaskControl.Logger.LogDebug(e,"执行地图追踪时候发生错误");
@@ -47,6 +52,10 @@ public class AutoPathingScript
         {
             var json = await new LimitedFile(_rootPath).ReadText(path);
             await Run(json);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception e)
         {
