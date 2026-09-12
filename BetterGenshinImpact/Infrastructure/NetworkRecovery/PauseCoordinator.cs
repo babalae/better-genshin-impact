@@ -17,7 +17,8 @@ public sealed class PauseCoordinator : IPauseCoordinator
     private readonly INetworkHealthMonitor _networkHealthMonitor;
     private readonly IRecoverySession _recoverySession;
     private readonly ILogger<PauseCoordinator> _logger;
-    private int _pauseSideEffectsApplied;
+    private readonly object _pauseSync = new();
+    private bool _pauseSideEffectsApplied;
     private int _pauseWaiters;
 
     public PauseCoordinator(
@@ -39,6 +40,14 @@ public sealed class PauseCoordinator : IPauseCoordinator
                             ((_networkPauseGate.IsNetworkPaused || _popupPauseGate.IsPopupPaused) &&
                              !_recoverySession.IsCurrentRecoveryExecution);
 
+    /// <summary>
+    /// 暂停来源是否仍生效（不含"恢复流程自身豁免"那一层）。归还共享副作用必须用它判断：
+    /// IsPaused 对恢复执行栈恒为假，用它判断会在别的等待者仍被暂停时把副作用解掉。
+    /// </summary>
+    private bool IsPauseSourceActive => RunnerContext.Instance.IsSuspend ||
+                                        _networkPauseGate.IsNetworkPaused ||
+                                        _popupPauseGate.IsPopupPaused;
+
     public void ToggleManualPause()
     {
         RunnerContext.Instance.IsSuspend = !RunnerContext.Instance.IsSuspend;
@@ -54,7 +63,11 @@ public sealed class PauseCoordinator : IPauseCoordinator
             Simulation.ReleaseAllKey();
         }
 
-        Interlocked.Increment(ref _pauseWaiters);
+        lock (_pauseSync)
+        {
+            _pauseWaiters++;
+        }
+
         try
         {
             while (IsPaused)
@@ -73,30 +86,37 @@ public sealed class PauseCoordinator : IPauseCoordinator
         }
         finally
         {
-            // 副作用由等待者共同持有：只有最后一个退出的等待者归还，否则先退出者会把其它等待者的
-            // 暂停保护一起解掉。未应用时释放自身即空操作。
-            if (Interlocked.Decrement(ref _pauseWaiters) == 0)
+            // 最后一个退出的等待者归还共享副作用；暂停来源仍生效时不归还（本等待者被取消也算），
+            // 由暂停解除后的下一次 WaitIfPaused 调用兜底。未应用时释放自身即空操作。
+            lock (_pauseSync)
             {
-                ReleasePauseSideEffects();
+                if (--_pauseWaiters == 0 && !IsPauseSourceActive)
+                {
+                    ReleasePauseSideEffects();
+                }
             }
         }
     }
 
     private void ApplyPauseSideEffects()
     {
-        if (Interlocked.Exchange(ref _pauseSideEffectsApplied, 1) != 0)
+        lock (_pauseSync)
         {
-            return;
-        }
+            if (_pauseSideEffectsApplied)
+            {
+                return;
+            }
 
-        Simulation.ReleaseAllKey();
-        RunnerContext.Instance.StopAutoPick();
-        foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
-        {
-            suspendable.Suspend();
-        }
+            _pauseSideEffectsApplied = true;
+            Simulation.ReleaseAllKey();
+            RunnerContext.Instance.StopAutoPick();
+            foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
+            {
+                suspendable.Suspend();
+            }
 
-        _logger.LogWarning(DescribePauseReason());
+            _logger.LogWarning(DescribePauseReason());
+        }
     }
 
     /// <summary>挂起原因文案。三种来源区分开，热键优先。</summary>
@@ -114,11 +134,12 @@ public sealed class PauseCoordinator : IPauseCoordinator
 
     private void ReleasePauseSideEffects()
     {
-        if (Interlocked.Exchange(ref _pauseSideEffectsApplied, 0) == 0)
+        if (!_pauseSideEffectsApplied)
         {
             return;
         }
 
+        _pauseSideEffectsApplied = false;
         RunnerContext.Instance.ResumeAutoPick();
         foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
         {
