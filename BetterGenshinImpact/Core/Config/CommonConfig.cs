@@ -22,31 +22,31 @@ public enum ThemeType
 
 
 /// <summary>
-///     遮罩窗口配置
+/// 遮罩窗口配置
 /// </summary>
 [Serializable]
 public partial class CommonConfig : ObservableObject
 {
     /// <summary>
-    ///     是否启用遮罩窗口
+    /// 是否启用遮罩窗口
     /// </summary>
     [ObservableProperty]
     private bool _screenshotEnabled;
 
     /// <summary>
-    ///     UID遮盖是否启用
+    /// UID遮盖是否启用
     /// </summary>
     [ObservableProperty]
     private bool _screenshotUidCoverEnabled = true;
 
     /// <summary>
-    ///     是否保存奖励识别调试截图
+    /// 是否保存奖励识别调试截图
     /// </summary>
     [ObservableProperty]
     private bool _rewardRecognitionScreenshotEnabled;
 
     /// <summary>
-    ///     退出时最小化至托盘
+    /// 退出时最小化至托盘
     /// </summary>
     [ObservableProperty]
     private bool _exitToTray;
@@ -129,4 +129,40 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _redeemCodeGlobalFeedsUpdateVersion = string.Empty;
+
+    /// <summary>
+    /// 启动时恢复上次窗口位置和大小
+    /// </summary>
+    [ObservableProperty]
+    private bool _restoreWindowPositionAndSize;
+
+    /// <summary>
+    /// 上次窗口 X 坐标
+    /// </summary>
+    [ObservableProperty]
+    private double _windowLeft;
+
+    /// <summary>
+    /// 上次窗口 Y 坐标
+    /// </summary>
+    [ObservableProperty]
+    private double _windowTop;
+
+    /// <summary>
+    /// 上次窗口宽度
+    /// </summary>
+    [ObservableProperty]
+    private double _windowWidth = 900;
+
+    /// <summary>
+    /// 上次窗口高度
+    /// </summary>
+    [ObservableProperty]
+    private double _windowHeight = 600;
+
+    /// <summary>
+    /// 上次窗口状态 (0=Normal, 1=Minimized, 2=Maximized)
+    /// </summary>
+    [ObservableProperty]
+    private int _windowState;
 }
