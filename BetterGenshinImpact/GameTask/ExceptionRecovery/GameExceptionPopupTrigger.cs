@@ -25,6 +25,8 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     private const int UiCheckIntervalMs = 1000;
 
     /// <summary>弹窗检测关键词。只放异常弹窗专有文案，避免命中正常界面的提示语。</summary>
+    /// <remarks>"点击进入" 是门屏按钮，只用于 <see cref="PresentKeywords"/> 与 <see cref="SubstringButtonText"/>：
+    /// 若放进检测词表，空闲停在门屏也会被点掉，绕过自动进游戏开关。</remarks>
     private static readonly string[] DetectKeywords =
     [
         "连接已断开",
@@ -32,7 +34,6 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         "网络错误",
         "无法登录服务器",
         "更新通知",
-        "点击进入",
     ];
 
     /// <summary>已进入处理后再判定"弹窗还在不在"，用更宽的词表。</summary>

@@ -437,6 +437,13 @@ namespace BetterGenshinImpact.GameTask
                                 trigger.OnCapture(content);
                                 tickMetrics.AddTriggerCost(triggerStart);
                                 speedTimer.Record(trigger.Name);
+
+                                // 本帧执行过程中新取得独占的触发器要立即收口：独占门在循环前只求值一次，
+                                // 否则同帧排在它后面的触发器仍会对同一张截图发输入。
+                                if (trigger.IsExclusive)
+                                {
+                                    break;
+                                }
                             }
                         }
 
