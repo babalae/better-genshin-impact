@@ -60,8 +60,10 @@ public sealed class LoginRecoveryStateMachine : ILoginRecoveryStateMachine
             }
 
             SetState(LoginRecoveryState.ReturningToMainUi);
+            // 已确认停在登录界面时不必先回主界面：返回主界面只发 ESC/退出门，在登录界面上必然失败。
             var atMainUi = screen == LoginScreenState.MainUi ||
-                           await adapter.ReturnToMainUiAsync(cancellationToken);
+                           (screen != LoginScreenState.LoginRequired &&
+                            await adapter.ReturnToMainUiAsync(cancellationToken));
             if (!atMainUi || screen == LoginScreenState.LoginRequired)
             {
                 SetState(LoginRecoveryState.Relogging);
@@ -78,7 +80,8 @@ public sealed class LoginRecoveryStateMachine : ILoginRecoveryStateMachine
             _logger.LogInformation("网络恢复完成，当前任务上下文将继续执行");
             return new LoginRecoveryResult(true, State, "网络恢复成功");
         }
-        catch (OperationCanceledException)
+        // 只有调用方令牌真的取消才算「已取消」；适配器自身的取消/超时归入失败
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             SetState(LoginRecoveryState.Cancelled);
             return new LoginRecoveryResult(false, State, "网络恢复已取消");

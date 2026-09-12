@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -112,7 +113,6 @@ public class NetworkRecoveryTests
             LoginScreenState.NetworkError,
             LoginScreenState.LoginRequired)
         {
-            ReturnToMainUiResult = true,
             ReloginResult = true
         };
         var stateMachine = new LoginRecoveryStateMachine(
@@ -126,7 +126,7 @@ public class NetworkRecoveryTests
         Assert.True(result.Succeeded);
         Assert.Equal(LoginRecoveryState.Succeeded, result.State);
         Assert.Equal(1, adapter.ConfirmCount);
-        Assert.Equal(1, adapter.ReturnToMainUiCount);
+        Assert.Equal(0, adapter.ReturnToMainUiCount);
         Assert.Equal(1, adapter.ReloginCount);
         Assert.False(gate.IsNetworkPaused);
     }
@@ -149,11 +149,22 @@ public class NetworkRecoveryTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        RunnerContext.Instance.IsSuspend = false;
-        Assert.Throws<OperationCanceledException>(() => coordinator.WaitIfPaused(cancellation.Token));
-        gate.ClearNetworkPause();
-        RunnerContext.Instance.IsSuspend = false;
+        var originalIsSuspend = RunnerContext.Instance.IsSuspend;
+        try
+        {
+            RunnerContext.Instance.IsSuspend = false;
+            Assert.Throws<OperationCanceledException>(() => coordinator.WaitIfPaused(cancellation.Token));
+        }
+        finally
+        {
+            gate.ClearNetworkPause();
+            RunnerContext.Instance.IsSuspend = originalIsSuspend;
+        }
     }
+
+    // 共享副作用由等待者共同持有（PauseCoordinator._pauseWaiters）这条语义没有单测：等待者一旦真正进入
+    // 暂停循环，就会经 RunnerContext.StopAutoPick 触碰 TaskControl.Logger（App 静态初始化链路），
+    // 实测直接让测试宿主崩溃。该语义只由真机点检验证，勿在此补"循环内等待"的用例。
 
     private sealed class StubLoginAdapter(params LoginScreenState[] screens) : ILoginAdapter
     {

@@ -35,13 +35,6 @@ public sealed class NetworkHealthMonitorHostedService(
     /// <summary>任务取消令牌。Clear() 并发释放 CTS 时返回空，调用方跳过本次探测。</summary>
     private static CancellationToken? GetTaskCancellationToken()
     {
-        try
-        {
-            return CancellationContext.Instance.Cts.Token;
-        }
-        catch (ObjectDisposedException)
-        {
-            return null;
-        }
+        return CancellationContext.Instance.TryGetToken(out var token) ? token : null;
     }
 }

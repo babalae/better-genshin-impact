@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BetterGenshinImpact.Model;
 using System.Threading;
 
@@ -105,5 +105,36 @@ public class CancellationContext : Singleton<CancellationContext>
         }
 
         cts.Dispose();
+    }
+
+    /// <summary>
+    /// 任务令牌。Clear() 会并发释放 CTS，此时返回 false 且 token 为 <see cref="CancellationToken.None"/>。
+    /// </summary>
+    public bool TryGetToken(out CancellationToken token)
+    {
+        try
+        {
+            token = Cts.Token;
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            token = CancellationToken.None;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 取任务令牌；<paramref name="preferred"/> 可取消时优先用它。
+    /// Clear() 并发释放 CTS 时退化为不可取消。
+    /// </summary>
+    public CancellationToken ResolveToken(CancellationToken preferred = default)
+    {
+        if (preferred.CanBeCanceled)
+        {
+            return preferred;
+        }
+
+        return TryGetToken(out var taskToken) ? taskToken : CancellationToken.None;
     }
 }
