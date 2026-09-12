@@ -1008,6 +1008,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -1023,6 +1024,14 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Config.AutoFightConfig.GuardianAvatar}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                            <Style x:Key="GuardianAutoHintStyle" TargetType="FrameworkElement">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Config.AutoFightConfig.GuardianAvatar}" Value="自动">
+                                        <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1046,7 +1055,7 @@
                                   HorizontalContentAlignment="Center"
                                   VerticalContentAlignment="Center"
                                   Margin="10,0,10,0"
-                                  ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.AvatarIndexList}}"
+                                  ItemsSource="{Binding Config.AutoFightConfig.GuardianAvatarIndexList}"
                                   SelectedItem="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
 
                         <ui:TextBlock Grid.Row="0"
@@ -1153,6 +1162,29 @@
                                 </Style>
                             </ui:ToggleSwitch.Style>
                         </ui:ToggleSwitch>
+
+                        <Grid Grid.Row="3"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="5"
+                              Margin="0,12,36,0"
+                              Style="{StaticResource GuardianAutoHintStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Column="0"
+                                          Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          FontSize="12"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 选择自动时，将按盾奶位名单自动匹配队伍中的盾奶角色}"
+                                          TextWrapping="Wrap" />
+                            <ui:Button Grid.Column="1"
+                                       Margin="8,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Command="{Binding OpenGuardianAvatarListCommand}"
+                                       Content="{i18n:T 编辑盾奶名单}" />
+                        </Grid>
                  </Grid>
                 </ui:CardExpander>
                 
