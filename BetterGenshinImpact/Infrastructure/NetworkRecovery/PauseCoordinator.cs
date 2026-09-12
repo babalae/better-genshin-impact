@@ -48,7 +48,13 @@ public sealed class PauseCoordinator : IPauseCoordinator
     {
         var effectiveCancellationToken = cancellationToken.CanBeCanceled
             ? cancellationToken
-            : CancellationContext.Instance.Cts.Token;
+            : GetTaskCancellationToken();
+
+        if (IsPaused)
+        {
+            // 长按类操作可能停在本线程的 KeyDown 与 KeyUp 之间；副作用是共享一次性的，这里各自释放
+            Simulation.ReleaseAllKey();
+        }
 
         try
         {
@@ -71,6 +77,19 @@ public sealed class PauseCoordinator : IPauseCoordinator
             // 按副作用是否真的应用过释放，不用入口快照：暂停可能在进入等待前一刻才落下。
             // 未应用时 ReleasePauseSideEffects 自身即空操作。
             ReleasePauseSideEffects();
+        }
+    }
+
+    /// <summary>任务取消令牌。Clear() 会并发释放 CTS，此时退化为不可取消。</summary>
+    private static CancellationToken GetTaskCancellationToken()
+    {
+        try
+        {
+            return CancellationContext.Instance.Cts.Token;
+        }
+        catch (ObjectDisposedException)
+        {
+            return CancellationToken.None;
         }
     }
 

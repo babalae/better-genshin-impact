@@ -9,6 +9,7 @@ public sealed class RecoverySession : IRecoverySession
     private readonly AsyncLocal<bool> _recoveryExecution = new();
     private TaskExecutionContext? _currentTask;
     private bool _isRecovering;
+    private long _generation;
 
     public TaskExecutionContext? CurrentTask
     {
@@ -63,8 +64,9 @@ public sealed class RecoverySession : IRecoverySession
             }
 
             _isRecovering = true;
+            _generation++;
             _recoveryExecution.Value = true;
-            return new RecoveryLease(this);
+            return new RecoveryLease(this, _generation);
         }
     }
 
@@ -74,26 +76,31 @@ public sealed class RecoverySession : IRecoverySession
         lock (_sync)
         {
             _currentTask = null;
+            _generation++;
             _isRecovering = false;
         }
     }
 
-    private void EndRecovery()
+    /// <summary>只有持有当前代次的租约才能清单飞标志，否则会误清后来者的标志</summary>
+    private void EndRecovery(long generation)
     {
         _recoveryExecution.Value = false;
         lock (_sync)
         {
-            _isRecovering = false;
+            if (generation == _generation)
+            {
+                _isRecovering = false;
+            }
         }
     }
 
-    private sealed class RecoveryLease(RecoverySession owner) : IDisposable
+    private sealed class RecoveryLease(RecoverySession owner, long generation) : IDisposable
     {
         private RecoverySession? _owner = owner;
 
         public void Dispose()
         {
-            Interlocked.Exchange(ref _owner, null)?.EndRecovery();
+            Interlocked.Exchange(ref _owner, null)?.EndRecovery(generation);
         }
     }
 }
