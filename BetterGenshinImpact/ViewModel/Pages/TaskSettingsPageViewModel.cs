@@ -717,13 +717,22 @@ public partial class TaskSettingsPageViewModel : ViewModel
             return;
         }
 
+        // 预检查：未建树时提示用户且不启动任务
+        if (AutoComboRuntime.Session == null)
+        {
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("尚未构建行为树，请先运行一次自动连招任务完成建树"); });
+            return;
+        }
+
         _autoComboRunRunning = true;
         _autoComboRunPaused = false;
         SwitchAutoComboRunButtonText = "暂停";
         try
         {
+            // 消费最近一次建树任务暂存的会话；独立运行需显式开启自带战斗结束检测（AutoFightParam 默认关闭）
+            var session = AutoComboRuntime.Session!;
             await new TaskRunner()
-                .RunSoloTaskAsync(new AutoComboRunTask());
+                .RunSoloTaskAsync(new AutoComboRunTask(new AutoFightParam { FightFinishDetectEnabled = true }, session));
         }
         finally
         {

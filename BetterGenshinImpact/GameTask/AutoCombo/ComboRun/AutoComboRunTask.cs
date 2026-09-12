@@ -26,17 +26,28 @@ public static class AutoComboRuntime
 }
 
 /// <summary>
-/// 连招行为树测试任务：循环 Tick 已构建的行为树驱动战斗，取消即暂停
+/// 连招行为树运行任务：循环 Tick 指定建树会话的行为树驱动战斗，取消即暂停
 /// 每次启动都通过 Builder 重新 Build 出全新节点实例的树，天然完成行为状态复位
 /// </summary>
 public class AutoComboRunTask : ISoloTask
 {
     public string Name => "自动连招运行";
 
+    /// <summary>宿主场景的战斗意图：结束检测开关、拾取、超时等，任务按开关决定自身行为</summary>
+    private readonly AutoFightParam _param;
+
+    /// <summary>本次运行消费的建树会话：构造时强制注入，任务自身不读取任何静态状态</summary>
+    private readonly ComboTreeSession _session;
+
+    public AutoComboRunTask(AutoFightParam param, ComboTreeSession session)
+    {
+        _param = param;
+        _session = session;
+    }
+
     public async Task Start(CancellationToken ct)
     {
-        var session = AutoComboRuntime.Session
-            ?? throw new NormalEndException("尚未构建行为树，请先运行一次自动连招任务完成建树");
+        var session = _session;
 
         // 标准消费者协议：重新识别队伍（顺带由 BindAndBuild 校验与建树队伍是否一致）→ BeforeTask 写入本任务令牌
         var combatScenes = CombatScenes.GetCombatScenesWithRetry();
@@ -44,14 +55,25 @@ public class AutoComboRunTask : ISoloTask
 
         // 清黑板 → 授权写入 CombatScenes → 重新 Build 得到全新节点实例的行为树（行为状态复位）
         var comboTree = session.BindAndBuild(combatScenes);
-        Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
-        var extendedRoot = new AutoComboRunBuilder()
-            .WithBlackboard(session.Blackboard)
-                .Sequence("-", memory: true)
-                    .Leaf(() => comboTree)
-                    .CheckFightFinish("战斗结束检测")
-                .End()
-            .End().Build();
+
+        // 按宿主意图决定是否包装自带战斗结束检测：外部控制结束时（如秘境）关闭，只认取消令牌
+        Behaviour extendedRoot;
+        if (_param.FightFinishDetectEnabled)
+        {
+            Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
+            extendedRoot = new AutoComboRunBuilder()
+                .WithBlackboard(session.Blackboard)
+                    .Sequence("-", memory: true)
+                        .Leaf(() => comboTree)
+                        .CheckFightFinish("战斗结束检测")
+                    .End()
+                .End().Build();
+        }
+        else
+        {
+            Logger.LogInformation("{Name}使用宿主场景的结束控制，不包装战斗结束检测", Name);
+            extendedRoot = comboTree;
+        }
 
         Logger.LogInformation("{Name}任务启动，持续 Tick 行为树", Name);
 
