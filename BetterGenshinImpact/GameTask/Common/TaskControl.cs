@@ -40,9 +40,7 @@ public class TaskControl
 
     public static void TrySuspend(CancellationToken cancellationToken = default)
     {
-        var effectiveCancellationToken = cancellationToken.CanBeCanceled
-            ? cancellationToken
-            : CancellationContext.Instance.Cts.Token;
+        var effectiveCancellationToken = CancellationContext.Instance.ResolveToken(cancellationToken);
         App.GetService<INetworkHealthMonitor>()?.RequestCheck(effectiveCancellationToken);
         if (App.GetService<IPauseCoordinator>() is { } pauseCoordinator)
         {

@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Core.Script;
@@ -19,6 +18,7 @@ public sealed class PauseCoordinator : IPauseCoordinator
     private readonly IRecoverySession _recoverySession;
     private readonly ILogger<PauseCoordinator> _logger;
     private int _pauseSideEffectsApplied;
+    private int _pauseWaiters;
 
     public PauseCoordinator(
         INetworkPauseGate networkPauseGate,
@@ -46,9 +46,7 @@ public sealed class PauseCoordinator : IPauseCoordinator
 
     public void WaitIfPaused(CancellationToken cancellationToken = default)
     {
-        var effectiveCancellationToken = cancellationToken.CanBeCanceled
-            ? cancellationToken
-            : GetTaskCancellationToken();
+        var effectiveCancellationToken = CancellationContext.Instance.ResolveToken(cancellationToken);
 
         if (IsPaused)
         {
@@ -56,6 +54,7 @@ public sealed class PauseCoordinator : IPauseCoordinator
             Simulation.ReleaseAllKey();
         }
 
+        Interlocked.Increment(ref _pauseWaiters);
         try
         {
             while (IsPaused)
@@ -74,22 +73,12 @@ public sealed class PauseCoordinator : IPauseCoordinator
         }
         finally
         {
-            // 按副作用是否真的应用过释放，不用入口快照：暂停可能在进入等待前一刻才落下。
-            // 未应用时 ReleasePauseSideEffects 自身即空操作。
-            ReleasePauseSideEffects();
-        }
-    }
-
-    /// <summary>任务取消令牌。Clear() 会并发释放 CTS，此时退化为不可取消。</summary>
-    private static CancellationToken GetTaskCancellationToken()
-    {
-        try
-        {
-            return CancellationContext.Instance.Cts.Token;
-        }
-        catch (ObjectDisposedException)
-        {
-            return CancellationToken.None;
+            // 副作用由等待者共同持有：只有最后一个退出的等待者归还，否则先退出者会把其它等待者的
+            // 暂停保护一起解掉。未应用时释放自身即空操作。
+            if (Interlocked.Decrement(ref _pauseWaiters) == 0)
+            {
+                ReleasePauseSideEffects();
+            }
         }
     }
 
