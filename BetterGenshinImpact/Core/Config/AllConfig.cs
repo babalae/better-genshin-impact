@@ -62,10 +62,10 @@ public partial class AllConfig : ObservableObject
 
     /// <summary>
     ///     WGC V2 帧率上限（毫秒，即最小更新间隔，限制 DWM 推帧频率以降低 GPU 占用）
-    ///     0 = 不启用限流；默认 50ms（约 20fps）；仅 Windows 11 24H2 及以上系统生效
+    ///     0 = 不启用限流（默认）；仅 Windows 11 24H2 及以上系统生效
     /// </summary>
     [ObservableProperty]
-    private int _wgcMinUpdateIntervalMs = 50;
+    private int _wgcMinUpdateIntervalMs;
 
     /// <summary>
     ///     WGC V2 使用 CPU 颜色转换（BGRA→BGR 由 CPU CvtColor 完成）

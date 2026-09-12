@@ -2343,7 +2343,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T '0=不启用限流；限制 DWM 推帧频率以降低 GPU 占用，默认 50ms（约20fps）；仅 Windows 11 24H2 及以上系统生效'}"
+                                          Text="{i18n:T '0=不启用限流（默认）；限制 DWM 推帧频率以降低 GPU 占用；仅 Windows 11 24H2 及以上系统生效'}"
                                           TextWrapping="Wrap" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"

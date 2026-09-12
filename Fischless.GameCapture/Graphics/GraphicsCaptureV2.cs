@@ -48,7 +48,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
     // FFmpeg gfxcapture 式限流：MinUpdateInterval 把 DWM 推帧率限到消费需求率（26100+，接口 QI 调用，见 TryApplyMinUpdateInterval）
     private Windows.Graphics.SizeInt32 _capSize;
-    private long _minUpdateIntervalHns = 500_000L;   // 默认 50ms（≈20fps），WinRT TimeSpan（100ns 单位）；0 = 不启用限流
+    private long _minUpdateIntervalHns;   // 默认 0 = 不启用限流，WinRT TimeSpan（100ns 单位）
 
     // IGraphicsCaptureSession5 {67C0EA62-1F85-5061-925A-239BE0AC09CB}
     private static readonly Guid GraphicsCaptureSession5Iid = new("67C0EA62-1F85-5061-925A-239BE0AC09CB");
