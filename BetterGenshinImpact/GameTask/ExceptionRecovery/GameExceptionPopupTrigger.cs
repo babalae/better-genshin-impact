@@ -27,10 +27,11 @@ namespace BetterGenshinImpact.GameTask.ExceptionRecovery;
 ///    （文案随客户端语言变化、按钮图形不随语言变化）——照抄既有做法：GameLoading 的「适龄提示」自动关闭、
 ///    <c>Bv.ClickConfirmButton</c>。
 /// 3. **不抢焦点、不还原窗口、不选账号、不重登**：窗口不在前台或已最小化就跳过本次点击；
-///    点击只认白名单按钮文案与「点击进入 / 进入游戏」这两项上游素材，既不选账号也不输密码。
+///    点击只认白名单按钮文案与上游进门流程用到的素材（「点击进入」「进入游戏」、适龄提示的白色确认按钮、
+///    月卡/原石提示的空白处），既不选账号也不输密码。
 /// 4. **两个阶段，预算是分开的**：阶段一"点掉弹窗"（<see cref="DismissBudgetMs"/>）；弹窗证据消失后
 ///    若游戏还没回到可玩状态，进入阶段二"把游戏推回可玩状态"（<see cref="EnterGameBudgetMs"/>），
-///    点「点击进入 / 进入游戏」。这一步原先是上游 <c>GameLoadingTrigger</c> 的职责，但它不是常驻触发器：
+///    按上游的进门顺序推进。这一步原先是上游 <c>GameLoadingTrigger</c> 的职责，但它不是常驻触发器：
 ///    任务运行期间它不在触发列表里，成功一次或超过 5 分钟还会自毁，所以任务期间必须由常驻触发器补上
 ///    （见 <see cref="EnterGameRecovery"/> 的类注释）。
 /// 5. 预算 + 退避：点不掉时在日志与提示里明确告知需要人工处理，并逐次拉长探测间隔，
@@ -193,10 +194,10 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     private int _playableSamples;
 
     /// <summary>
-    /// 阶段二里**实际点下去了几次**「点击进入 / 进入游戏」（由点击出口返回的真实结果累加，
+    /// 阶段二里**实际点下去了几下**（进入按钮或进门提示，由点击出口返回的真实结果累加，
     /// 不是"识别到几次"——窗口不在前台时出口会拒绝点击并返回 false）。
-    /// 它决定阶段二超预算时怎么收尾：点过 = 有证据说明游戏确实停在进入界面，按一次失败记账；
-    /// 一次都没点过 = 只是"没看到可点的按钮"，不能当失败（理由见 <see cref="StepEnteringGame"/>）。
+    /// 它决定阶段二超预算时怎么收尾：点过 = 有证据说明游戏确实停在进门流程里，按一次失败记账；
+    /// 一下都没点过 = 只是"没看到可点的东西"，不能当失败（理由见 <see cref="StepEnteringGame"/>）。
     /// </summary>
     private int _enterGameClickCount;
 
@@ -359,7 +360,8 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     }
 
     /// <summary>
-    /// 阶段二：确认游戏能不能继续，不能就点「点击进入 / 进入游戏」把它推回可玩状态。
+    /// 阶段二：确认游戏能不能继续，不能就按**上游的进门顺序**把它推回可玩状态
+    /// （`EnterGameRecovery.TryAdvanceEnterGame`：适龄提示 →「点击进入」→「进入游戏」→ 月卡 → 原石）。
     ///
     /// 进入条件见 <see cref="StepDismissing"/>（弹窗证据已消失）。三个出口，全部有界：
     /// * <see cref="EnterGameRecovery.IsGamePlayable"/> **连续** <see cref="PlayableConfirmSamples"/> 次命中
@@ -411,8 +413,8 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         {
             if (_enterGameClickCount > 0)
             {
-                Fail($"游戏未回到可玩界面（已点击「点击进入 / 进入游戏」{_enterGameClickCount} 次、"
-                     + $"尝试 {(now - _stageStartedAtMs) / 1000} 秒），请手动处理", config, now);
+                Fail($"游戏未回到可玩界面（已尝试 {_enterGameClickCount} 次、"
+                     + $"耗时 {(now - _stageStartedAtMs) / 1000} 秒），请手动处理", config, now);
             }
             else
             {
@@ -431,13 +433,13 @@ public class GameExceptionPopupTrigger : ITaskTrigger
         }
 
         _nextClickAtMs = now + ClickIntervalMs;
-        if (EnterGameRecovery.TryClickEnterGame(ra))
+        if (EnterGameRecovery.TryAdvanceEnterGame(ra))
         {
             _enterGameClickCount++;
         }
         else
         {
-            Logger.LogDebug("[异常弹窗处理] 本轮没有点击（未识别到进入按钮，或游戏窗口不在前台），继续等待");
+            Logger.LogDebug("[异常弹窗处理] 本轮没有点击（未识别到进入按钮或进门提示，或游戏窗口不在前台），继续等待");
         }
     }
 
