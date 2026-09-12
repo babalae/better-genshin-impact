@@ -203,7 +203,7 @@
                                     </StackPanel.Resources>
                                     <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
                                                Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               Text="{Binding Name}">
+                                               Text="{Binding LocalizedName}">
                                         <TextBlock.FontSize>
                                             <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
                                                 <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />

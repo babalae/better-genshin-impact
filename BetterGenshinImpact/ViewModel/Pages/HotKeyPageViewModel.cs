@@ -28,6 +28,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -139,9 +140,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             return;
         }
 
-        var message = $"{model.FunctionName}使用{hotKeyId.ToName()}键会与原神键位冲突：\n\n"
+        var message = string.Format(
+                          I18nService.Instance.Translate("{0}使用{1}键会与原神键位冲突："),
+                          model.LocalizedFunctionName,
+                          hotKeyId.ToName())
+                      + "\n\n"
                       + string.Join("\n", conflictLines)
-                      + "\n\n会导致游戏内动作和 BetterGI 功能同时触发，建议更换为其他按键。是否继续使用？";
+                      + "\n\n"
+                      + I18nService.Instance.Translate("会导致游戏内动作和 BetterGI 功能同时触发，建议更换为其他按键。是否继续使用？");
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             if (model.HotKey != newHotKey)
@@ -149,7 +155,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 return;
             }
 
-            var result = ThemedMessageBox.Warning(message, "快捷键冲突提醒", MessageBoxButton.OKCancel, MessageBoxResult.Cancel);
+            var result = ThemedMessageBox.Warning(
+                message,
+                I18nService.Instance.Translate("快捷键冲突提醒"),
+                MessageBoxButton.OKCancel,
+                MessageBoxResult.Cancel);
             if (result == MessageBoxResult.Cancel && model.HotKey == newHotKey)
             {
                 _acceptedHotKeys[model.ConfigPropertyName] = previousHotKey;
@@ -206,52 +216,52 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     {
         return propertyName switch
         {
-            nameof(KeyBindingsConfig.MoveForward) => "向前移动",
-            nameof(KeyBindingsConfig.MoveBackward) => "向后移动",
-            nameof(KeyBindingsConfig.MoveLeft) => "向左移动",
-            nameof(KeyBindingsConfig.MoveRight) => "向右移动",
-            nameof(KeyBindingsConfig.SwitchToWalkOrRun) => "切换走/跑；特定操作模式下向下移动",
-            nameof(KeyBindingsConfig.NormalAttack) => "普通攻击",
-            nameof(KeyBindingsConfig.ElementalSkill) => "元素战技",
-            nameof(KeyBindingsConfig.ElementalBurst) => "元素爆发",
-            nameof(KeyBindingsConfig.SprintKeyboard) => "冲刺（键盘）",
-            nameof(KeyBindingsConfig.SprintMouse) => "冲刺（鼠标）",
-            nameof(KeyBindingsConfig.SwitchAimingMode) => "切换瞄准模式",
-            nameof(KeyBindingsConfig.Jump) => "跳跃；特定操作模式下向上移动",
-            nameof(KeyBindingsConfig.Drop) => "落下",
-            nameof(KeyBindingsConfig.PickUpOrInteract) => "拾取/交互（自动拾取由AutoPick模块管理）",
-            nameof(KeyBindingsConfig.QuickUseGadget) => "快捷使用小道具",
-            nameof(KeyBindingsConfig.InteractionInSomeMode) => "特定玩法内交互操作",
-            nameof(KeyBindingsConfig.QuestNavigation) => "开启任务追踪",
-            nameof(KeyBindingsConfig.AbandonChallenge) => "中断挑战",
-            nameof(KeyBindingsConfig.SwitchMember1) => "切换小队角色1",
-            nameof(KeyBindingsConfig.SwitchMember2) => "切换小队角色2",
-            nameof(KeyBindingsConfig.SwitchMember3) => "切换小队角色3",
-            nameof(KeyBindingsConfig.SwitchMember4) => "切换小队角色4",
-            nameof(KeyBindingsConfig.SwitchMember5) => "切换小队角色5",
-            nameof(KeyBindingsConfig.ShortcutWheel) => "呼出快捷轮盘",
-            nameof(KeyBindingsConfig.OpenInventory) => "打开背包",
-            nameof(KeyBindingsConfig.OpenCharacterScreen) => "打开角色界面",
-            nameof(KeyBindingsConfig.OpenMap) => "打开地图",
-            nameof(KeyBindingsConfig.OpenPaimonMenu) => "打开派蒙界面",
-            nameof(KeyBindingsConfig.OpenAdventurerHandbook) => "打开冒险之证界面",
-            nameof(KeyBindingsConfig.OpenCoOpScreen) => "打开多人游戏界面",
-            nameof(KeyBindingsConfig.OpenWishScreen) => "打开祈愿界面",
-            nameof(KeyBindingsConfig.OpenBattlePassScreen) => "打开纪行界面",
-            nameof(KeyBindingsConfig.OpenTheEventsMenu) => "打开活动面板",
-            nameof(KeyBindingsConfig.OpenTheSettingsMenu) => "打开玩法系统界面（尘歌壶内猫尾酒馆内）",
-            nameof(KeyBindingsConfig.OpenTheFurnishingScreen) => "打开摆设界面（尘歌壶内）",
-            nameof(KeyBindingsConfig.OpenStellarReunion) => "打开星之归还（条件符合期间生效）",
-            nameof(KeyBindingsConfig.OpenQuestMenu) => "开关任务菜单",
-            nameof(KeyBindingsConfig.OpenNotificationDetails) => "打开通知详情",
-            nameof(KeyBindingsConfig.OpenChatScreen) => "打开聊天界面",
-            nameof(KeyBindingsConfig.OpenSpecialEnvironmentInformation) => "打开特殊环境说明",
-            nameof(KeyBindingsConfig.CheckTutorialDetails) => "查看教程详情",
-            nameof(KeyBindingsConfig.ElementalSight) => "长按打开元素视野",
-            nameof(KeyBindingsConfig.ShowCursor) => "呼出鼠标",
-            nameof(KeyBindingsConfig.OpenPartySetupScreen) => "打开队伍配置界面",
-            nameof(KeyBindingsConfig.OpenFriendsScreen) => "打开好友界面",
-            nameof(KeyBindingsConfig.HideUI) => "隐藏主界面",
+            nameof(KeyBindingsConfig.MoveForward) => I18nService.Instance.Translate("向前移动"),
+            nameof(KeyBindingsConfig.MoveBackward) => I18nService.Instance.Translate("向后移动"),
+            nameof(KeyBindingsConfig.MoveLeft) => I18nService.Instance.Translate("向左移动"),
+            nameof(KeyBindingsConfig.MoveRight) => I18nService.Instance.Translate("向右移动"),
+            nameof(KeyBindingsConfig.SwitchToWalkOrRun) => I18nService.Instance.Translate("切换走/跑；特定操作模式下向下移动"),
+            nameof(KeyBindingsConfig.NormalAttack) => I18nService.Instance.Translate("普通攻击"),
+            nameof(KeyBindingsConfig.ElementalSkill) => I18nService.Instance.Translate("元素战技"),
+            nameof(KeyBindingsConfig.ElementalBurst) => I18nService.Instance.Translate("元素爆发"),
+            nameof(KeyBindingsConfig.SprintKeyboard) => I18nService.Instance.Translate("冲刺（键盘）"),
+            nameof(KeyBindingsConfig.SprintMouse) => I18nService.Instance.Translate("冲刺（鼠标）"),
+            nameof(KeyBindingsConfig.SwitchAimingMode) => I18nService.Instance.Translate("切换瞄准模式"),
+            nameof(KeyBindingsConfig.Jump) => I18nService.Instance.Translate("跳跃；特定操作模式下向上移动"),
+            nameof(KeyBindingsConfig.Drop) => I18nService.Instance.Translate("落下"),
+            nameof(KeyBindingsConfig.PickUpOrInteract) => I18nService.Instance.Translate("拾取/交互（自动拾取由AutoPick模块管理）"),
+            nameof(KeyBindingsConfig.QuickUseGadget) => I18nService.Instance.Translate("快捷使用小道具"),
+            nameof(KeyBindingsConfig.InteractionInSomeMode) => I18nService.Instance.Translate("特定玩法内交互操作"),
+            nameof(KeyBindingsConfig.QuestNavigation) => I18nService.Instance.Translate("开启任务追踪"),
+            nameof(KeyBindingsConfig.AbandonChallenge) => I18nService.Instance.Translate("中断挑战"),
+            nameof(KeyBindingsConfig.SwitchMember1) => I18nService.Instance.Translate("切换小队角色1"),
+            nameof(KeyBindingsConfig.SwitchMember2) => I18nService.Instance.Translate("切换小队角色2"),
+            nameof(KeyBindingsConfig.SwitchMember3) => I18nService.Instance.Translate("切换小队角色3"),
+            nameof(KeyBindingsConfig.SwitchMember4) => I18nService.Instance.Translate("切换小队角色4"),
+            nameof(KeyBindingsConfig.SwitchMember5) => I18nService.Instance.Translate("切换小队角色5"),
+            nameof(KeyBindingsConfig.ShortcutWheel) => I18nService.Instance.Translate("呼出快捷轮盘"),
+            nameof(KeyBindingsConfig.OpenInventory) => I18nService.Instance.Translate("打开背包"),
+            nameof(KeyBindingsConfig.OpenCharacterScreen) => I18nService.Instance.Translate("打开角色界面"),
+            nameof(KeyBindingsConfig.OpenMap) => I18nService.Instance.Translate("打开地图"),
+            nameof(KeyBindingsConfig.OpenPaimonMenu) => I18nService.Instance.Translate("打开派蒙界面"),
+            nameof(KeyBindingsConfig.OpenAdventurerHandbook) => I18nService.Instance.Translate("打开冒险之证界面"),
+            nameof(KeyBindingsConfig.OpenCoOpScreen) => I18nService.Instance.Translate("打开多人游戏界面"),
+            nameof(KeyBindingsConfig.OpenWishScreen) => I18nService.Instance.Translate("打开祈愿界面"),
+            nameof(KeyBindingsConfig.OpenBattlePassScreen) => I18nService.Instance.Translate("打开纪行界面"),
+            nameof(KeyBindingsConfig.OpenTheEventsMenu) => I18nService.Instance.Translate("打开活动面板"),
+            nameof(KeyBindingsConfig.OpenTheSettingsMenu) => I18nService.Instance.Translate("打开玩法系统界面（尘歌壶内猫尾酒馆内）"),
+            nameof(KeyBindingsConfig.OpenTheFurnishingScreen) => I18nService.Instance.Translate("打开摆设界面（尘歌壶内）"),
+            nameof(KeyBindingsConfig.OpenStellarReunion) => I18nService.Instance.Translate("打开星之归还（条件符合期间生效）"),
+            nameof(KeyBindingsConfig.OpenQuestMenu) => I18nService.Instance.Translate("开关任务菜单"),
+            nameof(KeyBindingsConfig.OpenNotificationDetails) => I18nService.Instance.Translate("打开通知详情"),
+            nameof(KeyBindingsConfig.OpenChatScreen) => I18nService.Instance.Translate("打开聊天界面"),
+            nameof(KeyBindingsConfig.OpenSpecialEnvironmentInformation) => I18nService.Instance.Translate("打开特殊环境说明"),
+            nameof(KeyBindingsConfig.CheckTutorialDetails) => I18nService.Instance.Translate("查看教程详情"),
+            nameof(KeyBindingsConfig.ElementalSight) => I18nService.Instance.Translate("长按打开元素视野"),
+            nameof(KeyBindingsConfig.ShowCursor) => I18nService.Instance.Translate("呼出鼠标"),
+            nameof(KeyBindingsConfig.OpenPartySetupScreen) => I18nService.Instance.Translate("打开队伍配置界面"),
+            nameof(KeyBindingsConfig.OpenFriendsScreen) => I18nService.Instance.Translate("打开好友界面"),
+            nameof(KeyBindingsConfig.HideUI) => I18nService.Instance.Translate("隐藏主界面"),
             _ => propertyName
         };
     }
