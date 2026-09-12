@@ -395,6 +395,16 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
+    public void StartCaptureFromHutao(IntPtr hWnd)
+    {
+        UIDispatcherHelper.Invoke(() => Start(hWnd));
+    }
+
+    public void StopCaptureFromHutao()
+    {
+        UIDispatcherHelper.Invoke(Stop);
+    }
+
     private void OnUiTaskStopTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(Stop);
