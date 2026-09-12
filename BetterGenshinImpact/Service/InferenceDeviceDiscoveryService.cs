@@ -23,12 +23,16 @@ public sealed class InferenceDeviceDiscoveryService(
     : IInferenceDeviceDiscoveryService
 {
     public Task<IReadOnlyList<InferenceDeviceDescriptor>> DiscoverAsync(
+        HardwareAccelerationConfig? config = null,
         CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Discover(cancellationToken), cancellationToken);
+        var snapshot = config?.Clone();
+        return Task.Run(() => Discover(snapshot, cancellationToken), cancellationToken);
     }
 
-    private IReadOnlyList<InferenceDeviceDescriptor> Discover(CancellationToken cancellationToken)
+    private IReadOnlyList<InferenceDeviceDescriptor> Discover(
+        HardwareAccelerationConfig? requestedConfig,
+        CancellationToken cancellationToken)
     {
         var result = new List<InferenceDeviceDescriptor>
         {
@@ -39,7 +43,7 @@ public sealed class InferenceDeviceDiscoveryService(
         result.AddRange(DxgiAdapterEnumerator.Enumerate(logger));
         cancellationToken.ThrowIfCancellationRequested();
 
-        var config = configService.Get().HardwareAccelerationConfig;
+        var config = requestedConfig ?? configService.Get().HardwareAccelerationConfig;
         OnnxRuntimePathHelper.Prepare(config, logger);
         RegisterInstalledPlugins(InferenceDeviceType.OpenVino, config, cancellationToken);
         RegisterInstalledPlugins(InferenceDeviceType.Cuda, config, cancellationToken);
@@ -149,7 +153,7 @@ public sealed class InferenceDeviceDiscoveryService(
     private void RegisterInstalledPlugins(InferenceDeviceType provider, HardwareAccelerationConfig config,
         CancellationToken cancellationToken)
     {
-        foreach (var resolution in pluginManager.ResolveForStartup(provider, config.CudaRuntime))
+        foreach (var resolution in pluginManager.ResolveForStartup(provider, config.CudaRuntime, config))
         {
             cancellationToken.ThrowIfCancellationRequested();
             OnnxRuntimePathHelper.AppendPluginDirectory(resolution.LibraryPath, logger);

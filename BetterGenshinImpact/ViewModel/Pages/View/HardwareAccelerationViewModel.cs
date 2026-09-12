@@ -21,21 +21,30 @@ public partial class HardwareAccelerationViewModel : ViewModel
 {
     private readonly IOnnxRuntimePluginManager _pluginManager;
     private readonly IInferenceDeviceDiscoveryService _deviceDiscoveryService;
+    private readonly IInferenceBenchmarkService _benchmarkService;
+    private readonly IConfigService _configService;
+    private readonly HardwareAccelerationConfig _persistedConfig;
     private CancellationTokenSource? _downloadCancellationTokenSource;
+    private CancellationTokenSource? _testCancellationTokenSource;
     private IReadOnlyList<InferenceDeviceDescriptor> _allDevices = [];
     private bool _isLoaded;
     private bool _suppressSelectionChange;
+    private bool _lastTestCanceled;
 
     public HardwareAccelerationViewModel(
         IConfigService configService,
         BgiOnnxFactory status,
         IOnnxRuntimePluginManager pluginManager,
-        IInferenceDeviceDiscoveryService deviceDiscoveryService)
+        IInferenceDeviceDiscoveryService deviceDiscoveryService,
+        IInferenceBenchmarkService benchmarkService)
     {
-        Config = configService.Get().HardwareAccelerationConfig;
+        _configService = configService;
+        _persistedConfig = configService.Get().HardwareAccelerationConfig;
+        Config = _persistedConfig.Clone();
         Status = status;
         _pluginManager = pluginManager;
         _deviceDiscoveryService = deviceDiscoveryService;
+        _benchmarkService = benchmarkService;
         _providerTypesText = string.Join(",", Status.ProviderTypes);
         _effectiveRuntimeText = $"{Status.EffectiveProvider} / {Status.EffectiveDevice}";
         _nextRuntimeText = GetProviderDisplayName(Config.InferenceDevice);
@@ -63,6 +72,7 @@ public partial class HardwareAccelerationViewModel : ViewModel
     public ObservableCollection<OnnxRuntimePluginItemViewModel> PluginPackages { get; } = [];
     public HardwareAccelerationConfig.CudaRuntimeMajor[] CudaRuntimeMajors { get; } =
         Enum.GetValues<HardwareAccelerationConfig.CudaRuntimeMajor>();
+    public int[] BenchmarkIterationOptions { get; } = [5, 10, 20, 50];
 
     [ObservableProperty]
     private InferenceProviderOptionViewModel? _selectedProvider;
@@ -102,6 +112,23 @@ public partial class HardwareAccelerationViewModel : ViewModel
 
     [ObservableProperty]
     private string _openVinoDeviceText;
+
+    [ObservableProperty]
+    private int _benchmarkIterations = 10;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RunBenchmarkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAndValidateCommand))]
+    private bool _isTesting;
+
+    [ObservableProperty]
+    private double _testProgress;
+
+    [ObservableProperty]
+    private string _testProgressText = "尚未测试";
+
+    [ObservableProperty]
+    private string _testResultText = "使用 bgi_fish.onnx 和 test_fish.jpg 验证完整推理链路。";
 
     partial void OnSelectedCudaRuntimeChanged(HardwareAccelerationConfig.CudaRuntimeMajor value)
     {
@@ -210,7 +237,7 @@ public partial class HardwareAccelerationViewModel : ViewModel
                 PageMessage = $"在线包信息刷新失败，已显示本地状态：{exception.Message}";
             }
 
-            _allDevices = await _deviceDiscoveryService.DiscoverAsync();
+            _allDevices = await _deviceDiscoveryService.DiscoverAsync(Config);
             RebuildProviderOptions();
             FilterDevicesForSelectedProvider();
         }
@@ -218,6 +245,134 @@ public partial class HardwareAccelerationViewModel : ViewModel
         {
             IsRefreshing = false;
         }
+    }
+
+    private bool CanStartTest()
+    {
+        return !IsTesting;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartTest))]
+    private async Task RunBenchmarkAsync()
+    {
+        await RunTestAsync(BenchmarkIterations, false);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartTest))]
+    private async Task SaveAndValidateAsync()
+    {
+        var succeeded = await RunTestAsync(1, true);
+        if (succeeded)
+        {
+            PersistDraftConfig();
+            RestartRequired = Config.InferenceDevice != Status.ConfiguredProvider ||
+                              (Config.InferenceDevice == InferenceDeviceType.Cuda &&
+                               (Config.CudaRuntime != Status.CudaRuntime ||
+                                Config.CudaDevice != Status.CudaDeviceId)) ||
+                              (Config.InferenceDevice == InferenceDeviceType.GpuDirectMl &&
+                               Config.GpuDevice != Status.DmlDeviceId);
+            PageMessage = RestartRequired
+                ? "设置已通过验证并保存，将在重启程序后用于正式推理。"
+                : "设置已通过验证并保存。";
+            return;
+        }
+
+        if (_lastTestCanceled)
+        {
+            PageMessage = "保存前验证已取消，原有配置未发生变化。";
+            return;
+        }
+
+        // 保存前验证失败时只回退 Provider，保留设备参数供用户排查后再次尝试。
+        Config.InferenceDevice = InferenceDeviceType.Cpu;
+        PersistDraftConfig();
+        RebuildProviderOptions();
+        FilterDevicesForSelectedProvider();
+        RestartRequired = Status.EffectiveProvider != ProviderType.Cpu;
+        PageMessage = "所选设置测试失败，已保存 CPU 作为默认安全回退。错误详情见测试结果。";
+        await ThemedMessageBox.ErrorAsync(PageMessage, "推理设置验证失败");
+    }
+
+    [RelayCommand]
+    private void CancelTest()
+    {
+        _testCancellationTokenSource?.Cancel();
+    }
+
+    [RelayCommand]
+    private void Unload()
+    {
+        // 页面关闭后不再保留下载或推理任务，避免后台任务继续更新已经离开的界面。
+        _isLoaded = false;
+        _downloadCancellationTokenSource?.Cancel();
+        _testCancellationTokenSource?.Cancel();
+    }
+
+    private async Task<bool> RunTestAsync(int iterations, bool isSaveValidation)
+    {
+        if (IsTesting)
+        {
+            return false;
+        }
+
+        _testCancellationTokenSource?.Dispose();
+        _testCancellationTokenSource = new CancellationTokenSource();
+        IsTesting = true;
+        _lastTestCanceled = false;
+        TestProgress = 0;
+        TestProgressText = isSaveValidation ? "正在执行保存前验证…" : "正在准备性能测试…";
+        var progress = new Progress<InferenceBenchmarkProgress>(value =>
+        {
+            TestProgress = value.Percentage;
+            TestProgressText = value.Stage;
+        });
+
+        try
+        {
+            var result = await _benchmarkService.RunAsync(Config, iterations, progress,
+                _testCancellationTokenSource.Token);
+            TestProgress = 100;
+            TestProgressText = isSaveValidation ? "保存前验证通过" : "性能测试完成";
+            TestResultText = result.ToDisplayText();
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            _lastTestCanceled = true;
+            TestProgressText = "测试已取消";
+            TestResultText = "用户取消了本次测试。";
+            return false;
+        }
+        catch (Exception exception)
+        {
+            TestProgressText = "测试失败";
+            TestResultText = $"测试失败：{GetInnermostExceptionMessage(exception)}";
+            return false;
+        }
+        finally
+        {
+            IsTesting = false;
+            _testCancellationTokenSource?.Dispose();
+            _testCancellationTokenSource = null;
+        }
+    }
+
+    private void PersistDraftConfig()
+    {
+        var allConfig = _configService.Get();
+        var saveAction = allConfig.OnAnyChangedAction;
+        try
+        {
+            // CopyFrom 会逐项触发通知，暂时关闭自动落盘，最后统一写入一次。
+            allConfig.OnAnyChangedAction = null;
+            _persistedConfig.CopyFrom(Config);
+        }
+        finally
+        {
+            allConfig.OnAnyChangedAction = saveAction;
+        }
+
+        _configService.Save();
     }
 
     [RelayCommand]
@@ -249,7 +404,7 @@ public partial class HardwareAccelerationViewModel : ViewModel
             RestartRequired = true;
             PageMessage = $"{item.Descriptor.DisplayName} 已安装，重启程序后生效。";
             ReplacePackages(_pluginManager.GetCurrentPackages());
-            _allDevices = await _deviceDiscoveryService.DiscoverAsync();
+            _allDevices = await _deviceDiscoveryService.DiscoverAsync(Config);
             RebuildProviderOptions();
             FilterDevicesForSelectedProvider();
         }
@@ -327,15 +482,15 @@ public partial class HardwareAccelerationViewModel : ViewModel
 
         if (item.Descriptor.Provider == InferenceDeviceType.Cuda)
         {
-                SelectedCudaRuntime = item.Descriptor.CudaMajor switch
-                {
+            SelectedCudaRuntime = item.Descriptor.CudaMajor switch
+            {
                 12 => HardwareAccelerationConfig.CudaRuntimeMajor.Cuda12,
                 13 => HardwareAccelerationConfig.CudaRuntimeMajor.Cuda13,
-                    _ => HardwareAccelerationConfig.CudaRuntimeMajor.Auto
-                };
+                _ => HardwareAccelerationConfig.CudaRuntimeMajor.Auto
+            };
         }
 
-        _allDevices = await _deviceDiscoveryService.DiscoverAsync();
+        _allDevices = await _deviceDiscoveryService.DiscoverAsync(Config);
         RebuildProviderOptions();
         var provider = ProviderOptions.FirstOrDefault(option => option.Type == item.Descriptor.Provider);
         if (provider is { IsAvailable: true })
@@ -363,6 +518,74 @@ public partial class HardwareAccelerationViewModel : ViewModel
             MessageBoxButton.OK,
             ThemedMessageBox.MessageBoxIcon.Information,
             MessageBoxResult.OK);
+    }
+
+    [RelayCommand]
+    private void OpenPluginReleasePage(OnnxRuntimePluginItemViewModel? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Descriptor.ReleasePageUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(item.Descriptor.ReleasePageUrl) { UseShellExecute = true });
+        }
+        catch (Exception exception)
+        {
+            PageMessage = $"打开官方页面失败：{exception.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void OpenManualInstallFolder(OnnxRuntimePluginItemViewModel? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var path = _pluginManager.GetManualInstallDirectory(item.Descriptor);
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
+            PageMessage = $"请将官方包解压到：{path}，然后点击“检测本地”。";
+        }
+        catch (Exception exception)
+        {
+            PageMessage = $"打开手动安装目录失败：{exception.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DetectManualPluginAsync(OnnxRuntimePluginItemViewModel? item)
+    {
+        if (item is null || item.IsBusy)
+        {
+            return;
+        }
+
+        item.IsBusy = true;
+        try
+        {
+            await _pluginManager.RegisterManualInstallationAsync(item.Descriptor);
+            RestartRequired = true;
+            PageMessage = $"已识别手动安装的 {item.Descriptor.DisplayName}，重启程序后生效。";
+            ReplacePackages(_pluginManager.GetCurrentPackages());
+            _allDevices = await _deviceDiscoveryService.DiscoverAsync(Config);
+            RebuildProviderOptions();
+            FilterDevicesForSelectedProvider();
+        }
+        catch (Exception exception)
+        {
+            PageMessage = $"检测手动安装失败：{GetInnermostExceptionMessage(exception)}";
+        }
+        finally
+        {
+            item.IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -555,7 +778,16 @@ public sealed record InferenceProviderOptionViewModel(
     InferenceDeviceType Type,
     string DisplayName,
     bool IsAvailable,
-    string UnavailableReason);
+    string UnavailableReason)
+{
+    public string Summary => Type switch
+    {
+        InferenceDeviceType.GpuDirectMl => "内置 · Windows GPU",
+        InferenceDeviceType.Cuda => "插件 · NVIDIA GPU",
+        InferenceDeviceType.OpenVino => "插件 · Intel CPU/GPU/NPU",
+        _ => "内置 · 通用"
+    };
+}
 
 public partial class OnnxRuntimePluginItemViewModel : ObservableObject
 {
@@ -577,9 +809,12 @@ public partial class OnnxRuntimePluginItemViewModel : ObservableObject
     public OnnxRuntimePluginStatusKind Status { get; }
     public bool DownloadAllowed { get; }
     public bool CanSelect { get; }
-    public string SourceText => Descriptor.Source == OnnxRuntimePluginSourceKind.NuGet
-        ? "官方 NuGet"
-        : "BetterGI 下载源";
+    public string SourceText => Descriptor.Source switch
+    {
+        OnnxRuntimePluginSourceKind.NuGet => "官方 NuGet",
+        OnnxRuntimePluginSourceKind.GitHubRelease => "微软官方 GitHub Release",
+        _ => "BetterGI 下载源"
+    };
     public string VersionText => string.IsNullOrWhiteSpace(InstalledVersion)
         ? $"在线 {Descriptor.Version}"
         : $"已安装 {InstalledVersion} / 在线 {Descriptor.Version}";

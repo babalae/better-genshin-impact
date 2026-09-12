@@ -234,32 +234,32 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{i18n:T 修改后需要重启程序生效}"
                                   TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Margin="0,0,10,0"
-                              MinWidth="260"
-                              DisplayMemberPath="FullDisplayName"
-                              ItemsSource="{Binding InferenceDevices}"
-                              SelectedItem="{Binding SelectedInferenceDevice, Mode=TwoWay}">
-                        <ComboBox.ItemContainerStyle>
-                            <Style TargetType="ComboBoxItem">
-                                <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
-                                <Setter Property="ToolTip" Value="{Binding UnavailableReason}" />
-                            </Style>
-                        </ComboBox.ItemContainerStyle>
-                        <!-- <b:Interaction.Triggers> -->
-                        <!--     <b:EventTrigger EventName="SelectionChanged"> -->
-                        <!--         <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" /> -->
-                        <!--     </b:EventTrigger> -->
-                        <!-- </b:Interaction.Triggers> -->
-                    </ComboBox>
+                    <Border Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            Margin="0,0,10,0"
+                            Padding="12,6"
+                            MinWidth="260"
+                            VerticalAlignment="Center"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            CornerRadius="6"
+                            ToolTip="{Binding SelectedInferenceDevice.UnavailableReason}">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="{Binding SelectedInferenceDevice.FullDisplayName, Mode=OneWay, TargetNullValue=CPU / CPU（内置）}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Border>
+                    <!-- 旧版下拉框曾通过 SelectionChanged 直接保存设备；现在统一进入设置页验证后提交。 -->
+                    <!-- <b:Interaction.Triggers> -->
+                    <!--     <b:EventTrigger EventName="SelectionChanged"> -->
+                    <!--         <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" /> -->
+                    <!--     </b:EventTrigger> -->
+                    <!-- </b:Interaction.Triggers> -->
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenHardwareAccelerationSettingsCommand}"
-                               Content="{i18n:T 更多...}" />
+                               Content="{i18n:T 设置与测试...}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">

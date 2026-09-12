@@ -114,6 +114,37 @@ public partial class HardwareAccelerationConfig : ObservableObject
     #endregion
 
     /// <summary>
+    /// 创建用于设置界面编辑和推理测试的独立副本，避免尚未验证的配置提前写入磁盘。
+    /// </summary>
+    public HardwareAccelerationConfig Clone()
+    {
+        var result = new HardwareAccelerationConfig();
+        result.CopyFrom(this);
+        return result;
+    }
+
+    /// <summary>
+    /// 从已经验证的设置副本中复制全部字段。
+    /// </summary>
+    public void CopyFrom(HardwareAccelerationConfig source)
+    {
+        InferenceDevice = source.InferenceDevice;
+        CpuOcr = source.CpuOcr;
+        GpuDevice = source.GpuDevice;
+        DirectMlAdapterLuid = source.DirectMlAdapterLuid;
+        AdditionalPath = source.AdditionalPath;
+        OptimizedModel = source.OptimizedModel;
+        CudaDevice = source.CudaDevice;
+        CudaDeviceUuid = source.CudaDeviceUuid;
+        CudaRuntime = source.CudaRuntime;
+        AutoAppendCudaPath = source.AutoAppendCudaPath;
+        EnableTensorRtCache = source.EnableTensorRtCache;
+        EmbedTensorRtCache = source.EmbedTensorRtCache;
+        OpenVinoDevice = source.OpenVinoDevice;
+        EnableOpenVinoCache = source.EnableOpenVinoCache;
+    }
+
+    /// <summary>
     /// 将旧版“自动 GPU”迁移为 DirectML。旧逻辑在正常 Windows 环境下会优先命中内置 DML。
     /// </summary>
     public void MigrateLegacyConfig()

@@ -18,11 +18,15 @@
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadCommand}" />
         </b:EventTrigger>
+        <b:EventTrigger EventName="Unloaded">
+            <b:InvokeCommandAction Command="{Binding UnloadCommand}" />
+        </b:EventTrigger>
     </b:Interaction.Triggers>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0" Title="{i18n:T 硬件加速设置}">
@@ -67,7 +71,8 @@
             <!--  推理设备配置  -->
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon Settings24}">
+                             Icon="{ui:SymbolIcon Settings24}"
+                             IsExpanded="True">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -98,33 +103,61 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
+                                      Grid.ColumnSpan="2"
                                       FontTypography="Body"
                                       Text="{i18n:T 推理设备类型}" />
-                        <ComboBox Grid.Row="0"
-                                  Grid.RowSpan="2"
-                                  Grid.Column="1"
-                                  MinWidth="180"
-                                  DisplayMemberPath="DisplayName"
-                                  ItemsSource="{Binding ProviderOptions}"
-                                  SelectedItem="{Binding SelectedProvider, Mode=TwoWay}">
-                            <ComboBox.ItemContainerStyle>
-                                <Style TargetType="ComboBoxItem">
+                        <ListBox Grid.Row="1"
+                                 Grid.ColumnSpan="2"
+                                 Margin="0,8,0,0"
+                                 Padding="0"
+                                 BorderThickness="0"
+                                 ItemsSource="{Binding ProviderOptions}"
+                                 SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Margin" Value="0,0,8,0" />
+                                    <Setter Property="Padding" Value="14,10" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                     <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
                                     <Setter Property="ToolTip" Value="{Binding UnavailableReason}" />
                                 </Style>
-                            </ComboBox.ItemContainerStyle>
-                        </ComboBox>
-                        <ui:TextBlock Grid.Row="1"
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel MinWidth="110">
+                                        <ui:TextBlock HorizontalAlignment="Center"
+                                                      FontTypography="BodyStrong"
+                                                      Text="{Binding DisplayName}" />
+                                        <TextBlock HorizontalAlignment="Center"
+                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                   Text="{Binding Summary}"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <ui:TextBlock Grid.Row="2"
+                                      Grid.ColumnSpan="2"
+                                      Margin="0,6,0,0"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="{i18n:T 选择推理使用的硬件设备类型 默认使用CPU}" />
-                        <TextBlock Grid.Row="2"
+                                      Text="{i18n:T 先选择 Provider，再选择其实际设备；未安装或依赖缺失的 Provider 会保持可见并说明原因。}"
+                                      TextWrapping="Wrap" />
+                        <TextBlock Grid.Row="3"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             <Run Text="{i18n:T 当前加载：}" /><Run Text="{Binding ProviderTypesText, Mode=OneWay}" />
@@ -278,6 +311,55 @@
 
                 </StackPanel>
             </ui:CardExpander>
+            <!--  推理测试  -->
+            <ui:Card Margin="0,0,0,12" Padding="16">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="BodyStrong" Text="{i18n:T 推理性能测试}" />
+                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 使用 bgi_fish.onnx 与 test_fish.jpg；先预热，再统计多次完整推理。}"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1"
+                                  MinWidth="82"
+                                  Margin="8,0,0,0"
+                                  ItemsSource="{Binding BenchmarkIterationOptions}"
+                                  SelectedItem="{Binding BenchmarkIterations, Mode=TwoWay}" />
+                        <ui:Button Grid.Column="2"
+                                   Margin="8,0,0,0"
+                                   Command="{Binding RunBenchmarkCommand}"
+                                   Content="{i18n:T 开始测试}" />
+                        <ui:Button Grid.Column="3"
+                                   Margin="8,0,0,0"
+                                   Command="{Binding CancelTestCommand}"
+                                   Content="{i18n:T 取消}"
+                                   IsEnabled="{Binding IsTesting}" />
+                    </Grid>
+                    <ProgressBar Height="4"
+                                 Margin="0,12,0,0"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Value="{Binding TestProgress}" />
+                    <TextBlock Margin="0,6,0,0"
+                               Text="{Binding TestProgressText}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                    <Border Margin="0,8,0,0"
+                            Padding="12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            CornerRadius="6">
+                        <TextBlock Text="{Binding TestResultText}"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Consolas" />
+                    </Border>
+                </StackPanel>
+            </ui:Card>
             <!--  Plugin EP 包管理  -->
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
@@ -300,6 +382,10 @@
                 </ui:CardExpander.Header>
                 <StackPanel>
                     <Grid Margin="16,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -316,6 +402,12 @@
                                    Margin="8,0,0,0"
                                    Command="{Binding OpenPluginFolderCommand}"
                                    Content="{i18n:T 打开 ort 目录}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.ColumnSpan="3"
+                                      Margin="0,8,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 手动安装：从“官方页面”下载，使用“手动目录”打开目标文件夹，完整解压后点击“检测本地”；请勿放入 onnxruntime.dll。}"
+                                      TextWrapping="Wrap" />
                     </Grid>
                     <ItemsControl ItemsSource="{Binding PluginPackages}">
                         <ItemsControl.ItemTemplate>
@@ -327,6 +419,7 @@
                                         CornerRadius="8">
                                     <Grid>
                                         <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
@@ -364,8 +457,8 @@
                                                    TextWrapping="Wrap"
                                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
                                         <StackPanel Grid.Row="4"
-                                                    Grid.Column="0"
-                                                    Margin="0,8,12,0">
+                                                    Grid.ColumnSpan="2"
+                                                    Margin="0,8,0,0">
                                             <ProgressBar Height="4"
                                                          Minimum="0"
                                                          Maximum="100"
@@ -373,8 +466,9 @@
                                             <TextBlock Text="{Binding ProgressText}"
                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                                         </StackPanel>
-                                        <WrapPanel Grid.Row="4"
-                                                   Grid.Column="1"
+                                        <WrapPanel Grid.Row="5"
+                                                   Grid.ColumnSpan="2"
+                                                   HorizontalAlignment="Left"
                                                    Margin="0,8,0,0">
                                             <ui:Button Margin="4,0"
                                                        Command="{Binding DataContext.InstallPluginCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
@@ -399,10 +493,22 @@
                                                        Command="{Binding DataContext.OpenPluginFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                                                        CommandParameter="{Binding}"
                                                        Content="{i18n:T 打开目录}" />
+                                             <ui:Button Margin="4,0"
+                                                        Command="{Binding DataContext.ShowPluginDependenciesCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                        CommandParameter="{Binding}"
+                                                        Content="{i18n:T 依赖说明}" />
                                             <ui:Button Margin="4,0"
-                                                       Command="{Binding DataContext.ShowPluginDependenciesCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                       Command="{Binding DataContext.OpenPluginReleasePageCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                                                        CommandParameter="{Binding}"
-                                                       Content="{i18n:T 依赖说明}" />
+                                                       Content="{i18n:T 官方页面}" />
+                                            <ui:Button Margin="4,0"
+                                                       Command="{Binding DataContext.OpenManualInstallFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                       CommandParameter="{Binding}"
+                                                       Content="{i18n:T 手动目录}" />
+                                            <ui:Button Margin="4,0"
+                                                       Command="{Binding DataContext.DetectManualPluginCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                       CommandParameter="{Binding}"
+                                                       Content="{i18n:T 检测本地}" />
                                         </WrapPanel>
                                     </Grid>
                                 </Border>
@@ -733,5 +839,27 @@
             </ui:CardExpander>
         </StackPanel>
         </ScrollViewer>
+        <Border Grid.Row="2"
+                Padding="20,12"
+                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0"
+                Background="{ui:ThemeResource ApplicationBackgroundBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center"
+                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                           Text="{i18n:T 只有通过一次完整推理验证后才会保存；失败将自动保存 CPU 回退。}"
+                           TextWrapping="Wrap" />
+                <ui:Button Grid.Column="1"
+                           MinWidth="140"
+                           Margin="12,0,0,0"
+                           Appearance="Primary"
+                           Command="{Binding SaveAndValidateCommand}"
+                           Content="{i18n:T 保存并验证}" />
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

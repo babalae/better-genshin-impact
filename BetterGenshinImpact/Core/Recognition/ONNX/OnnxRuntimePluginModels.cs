@@ -6,7 +6,8 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX;
 public enum OnnxRuntimePluginSourceKind
 {
     NuGet,
-    BetterGi
+    BetterGi,
+    GitHubRelease
 }
 
 public enum OnnxRuntimePluginStatusKind
@@ -71,6 +72,7 @@ public sealed class OnnxRuntimePluginDescriptor
     public string EpName { get; set; } = "";
     public string DownloadUrl { get; set; } = "";
     public string FallbackDownloadUrl { get; set; } = "";
+    public string ReleasePageUrl { get; set; } = "";
     public string ChecksumAlgorithm { get; set; } = "SHA256";
     public string Checksum { get; set; } = "";
     public long DownloadSize { get; set; }

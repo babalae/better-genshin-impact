@@ -17,9 +17,13 @@ public interface IOnnxRuntimePluginManager
     Task<IReadOnlyList<OnnxRuntimePluginInfo>> RefreshCatalogAsync(CancellationToken cancellationToken = default);
     Task InstallAsync(OnnxRuntimePluginDescriptor descriptor, IProgress<PluginDownloadProgress>? progress,
         CancellationToken cancellationToken = default);
+    Task RegisterManualInstallationAsync(OnnxRuntimePluginDescriptor descriptor,
+        CancellationToken cancellationToken = default);
     Task UninstallAsync(string pluginId, CancellationToken cancellationToken = default);
     IReadOnlyList<OnnxRuntimePluginResolution> ResolveForStartup(InferenceDeviceType provider,
-        HardwareAccelerationConfig.CudaRuntimeMajor cudaRuntime);
+        HardwareAccelerationConfig.CudaRuntimeMajor cudaRuntime,
+        HardwareAccelerationConfig? config = null);
     void MarkActivationSucceeded(OnnxRuntimePluginResolution resolution);
     string GetPluginDirectory(string pluginId);
+    string GetManualInstallDirectory(OnnxRuntimePluginDescriptor descriptor);
 }

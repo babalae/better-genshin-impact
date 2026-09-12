@@ -20,6 +20,7 @@ public class BgiOnnxFactory
     private readonly ILogger _logger;
     private readonly IOnnxRuntimePluginManager? _pluginManager;
     private readonly IOnnxRuntimePluginRegistry? _pluginRegistry;
+    private readonly HardwareAccelerationConfig _config;
     private IReadOnlyList<OrtEpDevice> _pluginDevices = [];
     private readonly string _cudaDeviceUuid = "";
 
@@ -36,7 +37,7 @@ public class BgiOnnxFactory
     /// </summary>
     /// <param name="logger"></param>
     public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger)
-        : this(logger, null, null, null)
+        : this(logger, (IConfigService?)null, null, null)
     {
         // 保留单元测试和旧调用方使用的构造入口；生产环境由依赖注入选择下面的完整构造函数。
     }
@@ -46,12 +47,25 @@ public class BgiOnnxFactory
         IConfigService? configService,
         IOnnxRuntimePluginManager? pluginManager,
         IOnnxRuntimePluginRegistry? pluginRegistry)
+        : this(logger, configService?.Get().HardwareAccelerationConfig ?? GetConfig(logger), pluginManager,
+            pluginRegistry)
+    {
+    }
+
+    /// <summary>
+    /// 使用尚未持久化的配置创建独立工厂，供硬件加速设置页进行保存前验证和性能测试。
+    /// </summary>
+    internal BgiOnnxFactory(
+        ILogger<BgiOnnxFactory> logger,
+        HardwareAccelerationConfig config,
+        IOnnxRuntimePluginManager? pluginManager,
+        IOnnxRuntimePluginRegistry? pluginRegistry)
     {
         _logger = logger;
         _pluginManager = pluginManager;
         _pluginRegistry = pluginRegistry;
+        _config = config;
 
-        var config = configService?.Get().HardwareAccelerationConfig ?? GetConfig();
         OnnxRuntimePathHelper.Prepare(config, logger);
 
         OptimizedModel = config.OptimizedModel;
@@ -84,7 +98,7 @@ public class BgiOnnxFactory
     /// 为了单元测试
     /// </summary>
     /// <returns></returns>
-    private HardwareAccelerationConfig GetConfig()
+    private static HardwareAccelerationConfig GetConfig(ILogger logger)
     {
         try
         {
@@ -94,7 +108,7 @@ public class BgiOnnxFactory
         catch (Exception e)
         {
             // 如果配置获取失败，使用默认配置
-            _logger.LogWarning(e, "获取硬件加速配置失败，使用默认配置");
+            logger.LogWarning(e, "获取硬件加速配置失败，使用默认配置");
             return new HardwareAccelerationConfig();
         }
     }
@@ -160,7 +174,7 @@ public class BgiOnnxFactory
         }
 
         var failures = new List<string>();
-        var resolutions = _pluginManager.ResolveForStartup(provider, CudaRuntime);
+        var resolutions = _pluginManager.ResolveForStartup(provider, CudaRuntime, _config);
         foreach (var resolution in resolutions)
         {
             OnnxRuntimePathHelper.AppendPluginDirectory(resolution.LibraryPath, _logger);
@@ -407,6 +421,14 @@ public class BgiOnnxFactory
             return new BgiYoloPredictor(model, model.ModalPath,
                 CreateSessionOptions(model, false, [ProviderType.Cpu]));
         }
+    }
+
+    /// <summary>
+    /// 创建用于设置验证的预测器。这里故意不执行 CPU 静默回退，确保测试失败能够阻止保存无效配置。
+    /// </summary>
+    internal BgiYoloPredictor CreateYoloPredictorForValidation(BgiOnnxModel model)
+    {
+        return CreateYoloPredictorCore(model);
     }
 
     private BgiYoloPredictor CreateYoloPredictorCore(BgiOnnxModel model)

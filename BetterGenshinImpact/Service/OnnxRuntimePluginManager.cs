@@ -27,10 +27,8 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
 {
     private const long MaxPackageBytes = 1024L * 1024 * 1024;
     private const string OpenVinoPackageId = "intel.ml.onnxruntime.ep.openvino";
-    private const string CnbCatalogUrl =
-        "https://cnb.cool/bettergi/better-genshin-impact/-/git/raw/main/BetterGenshinImpact/Assets/Config/onnxruntime-plugins.json";
-    private const string GitHubCatalogUrl =
-        "https://raw.githubusercontent.com/babalae/better-genshin-impact/main/BetterGenshinImpact/Assets/Config/onnxruntime-plugins.json";
+    private const string CudaReleasePageUrl =
+        "https://github.com/microsoft/onnxruntime/releases/tag/plugin-ep-cuda/v0.1.0";
 
     private static readonly TimeSpan NetworkTimeout = TimeSpan.FromSeconds(30);
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -98,8 +96,6 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                 cancellationToken, timeoutSource.Token);
 
             await RefreshOpenVinoMetadataAsync(catalog[0], linkedSource.Token).ConfigureAwait(false);
-            var remoteCatalog = await TryDownloadCudaCatalogAsync(linkedSource.Token).ConfigureAwait(false);
-            catalog = MergeCatalog(catalog, remoteCatalog).ToList();
             _catalog = catalog;
 
             if (IsStorageWritable)
@@ -198,6 +194,7 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                     installState.Descriptor = descriptor;
                     installState.PendingVersion = descriptor.Version;
                     installState.PendingDescriptor = descriptor;
+                    installState.PendingInstalledManually = false;
                     SaveState();
                 }
             }
@@ -209,6 +206,60 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
         {
             TryDeleteFile(downloadPath);
             TryDeleteDirectory(extractionPath);
+            _operationGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 登记用户自行下载并解压到指定目录的插件。手动内容由用户负责来源可信性，
+    /// 这里仍会检查入口 DLL、目录边界和不得携带 ORT Core 等基本约束。
+    /// </summary>
+    public async Task RegisterManualInstallationAsync(OnnxRuntimePluginDescriptor descriptor,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsStorageWritable)
+        {
+            throw new IOException(StorageError);
+        }
+
+        ValidateDescriptorForInstall(descriptor);
+        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var directory = GetManualInstallDirectory(descriptor);
+            var entryPath = FindEntryLibrary(directory, descriptor.EntryLibrary)
+                            ?? throw new FileNotFoundException(
+                                $"没有在手动安装目录中找到 {descriptor.EntryLibrary}。", directory);
+            if (new FileInfo(entryPath).Length < 64 * 1024)
+            {
+                throw new InvalidDataException($"{descriptor.EntryLibrary} 文件尺寸异常，请重新解压官方包。");
+            }
+
+            if (Directory.EnumerateFiles(directory, "onnxruntime.dll", SearchOption.AllDirectories).Any())
+            {
+                throw new InvalidDataException("Plugin EP 目录不得包含 onnxruntime.dll，请仅放置插件包内容。");
+            }
+
+            using (AcquireStoreMutex())
+            {
+                lock (_stateSyncRoot)
+                {
+                    _state = LoadState();
+                    var installState = GetOrCreateInstallState(descriptor.Id);
+                    installState.Descriptor = descriptor;
+                    installState.PendingVersion = descriptor.Version;
+                    installState.PendingDescriptor = descriptor;
+                    installState.PendingInstalledManually = true;
+                    SaveState();
+                }
+            }
+
+            _logger.LogInformation(
+                "[ONNX] 已登记手动安装的 Plugin EP {Plugin} {Version}，等待重启启用。入口：{Entry}",
+                descriptor.DisplayName, descriptor.Version, entryPath);
+        }
+        finally
+        {
             _operationGate.Release();
         }
     }
@@ -235,6 +286,8 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                         installState.PendingVersion = "";
                         installState.ActiveDescriptor = null;
                         installState.PendingDescriptor = null;
+                        installState.ActiveInstalledManually = false;
+                        installState.PendingInstalledManually = false;
                     }
 
                     if (Directory.Exists(pluginDirectory))
@@ -264,7 +317,7 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
     }
 
     public IReadOnlyList<OnnxRuntimePluginResolution> ResolveForStartup(InferenceDeviceType provider,
-        HardwareAccelerationConfig.CudaRuntimeMajor cudaRuntime)
+        HardwareAccelerationConfig.CudaRuntimeMajor cudaRuntime, HardwareAccelerationConfig? config = null)
     {
         string[] ids = provider switch
         {
@@ -305,7 +358,7 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                         !version.Equals(descriptor.Version, StringComparison.OrdinalIgnoreCase) ||
                         !IsTrustedInstalledDescriptor(descriptor) ||
                         !OnnxRuntimeDependencyChecker.Check(
-                            descriptor, _configService.Get().HardwareAccelerationConfig).IsCompatible)
+                            descriptor, config ?? _configService.Get().HardwareAccelerationConfig).IsCompatible)
                     {
                         continue;
                     }
@@ -347,11 +400,15 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                     installState.Descriptor = resolution.Descriptor;
                     installState.ActiveVersion = resolution.Version;
                     installState.ActiveDescriptor = resolution.Descriptor;
+                    installState.ActiveInstalledManually = resolution.IsPendingVersion
+                        ? installState.PendingInstalledManually
+                        : installState.ActiveInstalledManually;
                     if (string.Equals(installState.PendingVersion, resolution.Version,
                             StringComparison.OrdinalIgnoreCase))
                     {
                         installState.PendingVersion = "";
                         installState.PendingDescriptor = null;
+                        installState.PendingInstalledManually = false;
                     }
 
                     SaveState();
@@ -372,6 +429,12 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
         }
 
         return Path.Combine(_packagesRoot, pluginId);
+    }
+
+    public string GetManualInstallDirectory(OnnxRuntimePluginDescriptor descriptor)
+    {
+        ValidateDescriptorForInstall(descriptor);
+        return GetVersionDirectory(descriptor.Id, descriptor.Version);
     }
 
     private async Task RefreshOpenVinoMetadataAsync(OnnxRuntimePluginDescriptor descriptor,
@@ -441,35 +504,6 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
         {
             _logger.LogWarning(exception, "[ONNX] 获取 OpenVINO NuGet 元数据失败，继续使用缓存或内置元数据");
         }
-    }
-
-    private async Task<IReadOnlyList<OnnxRuntimePluginDescriptor>> TryDownloadCudaCatalogAsync(
-        CancellationToken cancellationToken)
-    {
-        foreach (var url in new[] { CnbCatalogUrl, GitHubCatalogUrl })
-        {
-            try
-            {
-                using var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken)
-                    .ConfigureAwait(false);
-                var catalog = await JsonSerializer.DeserializeAsync<OnnxRuntimePluginCatalog>(
-                    stream, JsonOptions, cancellationToken).ConfigureAwait(false);
-                if (catalog?.SchemaVersion == 1)
-                {
-                    return catalog.Packages
-                        .Where(package => package.Provider == InferenceDeviceType.Cuda)
-                        .ToArray();
-                }
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                _logger.LogDebug(exception, "[ONNX] 获取 CUDA Plugin EP 清单失败：{Url}", url);
-            }
-        }
-
-        return [];
     }
 
     private async Task DownloadAndVerifyAsync(OnnxRuntimePluginDescriptor descriptor, string destination,
@@ -842,6 +876,16 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                 OnnxRuntimePluginStatusKind.Installed => "已安装",
                 _ => "未安装"
             };
+            if (status == OnnxRuntimePluginStatusKind.PendingRestart &&
+                installState?.PendingInstalledManually == true)
+            {
+                message = "已检测到手动安装，重启后启用";
+            }
+            else if (status == OnnxRuntimePluginStatusKind.Installed &&
+                     installState?.ActiveInstalledManually == true)
+            {
+                message = "已手动安装";
+            }
             if (packageDescriptor.Provider == InferenceDeviceType.OpenVino &&
                 !string.IsNullOrWhiteSpace(descriptor.SourceLatestVersion) &&
                 !string.Equals(descriptor.SourceLatestVersion, packageDescriptor.Version,
@@ -885,30 +929,41 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                 Checksum = "TOFTZAucE682gE3yeVRzjXSKR3VZBOZEufQ7ZQt0zP34lb/MOdQqIosUpoBI6R4w7Jx3GcxAB78THyjoQYt+tQ==",
                 DownloadSize = 117_914_126,
                 Source = OnnxRuntimePluginSourceKind.NuGet,
+                ReleasePageUrl =
+                    $"https://www.nuget.org/packages/Intel.ML.OnnxRuntime.EP.OpenVINO/{openVinoVersion}",
                 Description = "支持 Intel CPU、GPU 和 NPU，运行库已包含在官方 NuGet 包中。"
             },
-            CreateCudaPlaceholder(12),
-            CreateCudaPlaceholder(13)
+            CreateCudaDescriptor(12),
+            CreateCudaDescriptor(13)
         ];
     }
 
-    private static OnnxRuntimePluginDescriptor CreateCudaPlaceholder(int major)
+    private static OnnxRuntimePluginDescriptor CreateCudaDescriptor(int major)
     {
+        const string version = "0.1.0";
+        var fileName = $"cuda_ep_cuda{major}_{version}_win-x64.zip";
         return new OnnxRuntimePluginDescriptor
         {
             Id = $"cuda{major}",
             DisplayName = $"CUDA {major} Plugin EP",
-            Version = "1.29.0-bgi.1",
-            SourceLatestVersion = "1.29.0-bgi.1",
+            Version = version,
+            SourceLatestVersion = version,
             Provider = InferenceDeviceType.Cuda,
             CudaMajor = major,
             MinimumOrtVersion = "1.24.4",
             EntryLibrary = "onnxruntime_providers_cuda.dll",
             EpName = "CUDAExecutionProvider",
+            DownloadUrl =
+                $"https://github.com/microsoft/onnxruntime/releases/download/plugin-ep-cuda/v{version}/{fileName}",
+            ReleasePageUrl = CudaReleasePageUrl,
             ChecksumAlgorithm = "SHA256",
-            Source = OnnxRuntimePluginSourceKind.BetterGi,
-            IsPublished = false,
-            Description = $"需要系统已安装 CUDA {major} 和 cuDNN 9。"
+            Checksum = major == 12
+                ? "A9ABFCC11692EE886289C99D3CF95373A36595F55E72B4745A1742D1BF2623F5"
+                : "CA2F3BD52539EB9F0E02A9B74EE9980AFAADA7C545D813D784ABF6621C4A6953",
+            DownloadSize = major == 12 ? 191_925_307 : 132_565_271,
+            Source = OnnxRuntimePluginSourceKind.GitHubRelease,
+            IsPublished = true,
+            Description = $"微软官方 CUDA Plugin EP 0.1.0；需要系统已安装 CUDA {major} 和 cuDNN 9。"
         };
     }
 
@@ -931,7 +986,8 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                 continue;
             }
 
-            if (IsTrustedCudaDescriptor(descriptor))
+            if (IsTrustedCudaDescriptor(descriptor) &&
+                descriptor.Source == OnnxRuntimePluginSourceKind.GitHubRelease)
             {
                 result[descriptor.Id] = descriptor;
             }
@@ -981,12 +1037,21 @@ public sealed class OnnxRuntimePluginManager : IOnnxRuntimePluginManager
                descriptor.EntryLibrary.Equals("onnxruntime_providers_cuda.dll",
                    StringComparison.OrdinalIgnoreCase) &&
                descriptor.EpName.Equals("CUDAExecutionProvider", StringComparison.OrdinalIgnoreCase) &&
-               descriptor.Source == OnnxRuntimePluginSourceKind.BetterGi &&
+               descriptor.Source == OnnxRuntimePluginSourceKind.GitHubRelease &&
+               descriptor.Version == "0.1.0" &&
                descriptor.ChecksumAlgorithm.Equals("SHA256", StringComparison.OrdinalIgnoreCase) &&
-               descriptor.Checksum.Length == 64 && descriptor.Checksum.All(Uri.IsHexDigit) &&
-               IsHttpsUrl(descriptor.DownloadUrl) &&
+               descriptor.Checksum.Equals(descriptor.CudaMajor == 12
+                       ? "A9ABFCC11692EE886289C99D3CF95373A36595F55E72B4745A1742D1BF2623F5"
+                       : "CA2F3BD52539EB9F0E02A9B74EE9980AFAADA7C545D813D784ABF6621C4A6953",
+                   StringComparison.OrdinalIgnoreCase) &&
+               Uri.TryCreate(descriptor.DownloadUrl, UriKind.Absolute, out var downloadUri) &&
+               downloadUri.Scheme == Uri.UriSchemeHttps &&
+               downloadUri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) &&
+               downloadUri.AbsolutePath.StartsWith(
+                   "/microsoft/onnxruntime/releases/download/plugin-ep-cuda/v0.1.0/",
+                   StringComparison.OrdinalIgnoreCase) &&
                (string.IsNullOrWhiteSpace(descriptor.FallbackDownloadUrl) ||
-                IsHttpsUrl(descriptor.FallbackDownloadUrl));
+                 IsHttpsUrl(descriptor.FallbackDownloadUrl));
     }
 
     private static bool IsSafePathSegment(string value)
@@ -1140,4 +1205,6 @@ internal sealed class PluginInstallState
     public OnnxRuntimePluginDescriptor? PendingDescriptor { get; set; }
     public string ActiveVersion { get; set; } = "";
     public string PendingVersion { get; set; } = "";
+    public bool ActiveInstalledManually { get; set; }
+    public bool PendingInstalledManually { get; set; }
 }

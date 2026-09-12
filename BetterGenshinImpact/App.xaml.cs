@@ -196,6 +196,7 @@ public partial class App : Application
                 services.AddSingleton<IOnnxRuntimePluginManager, OnnxRuntimePluginManager>();
                 services.AddSingleton<IOnnxRuntimePluginRegistry, OnnxRuntimePluginRegistry>();
                 services.AddSingleton<IInferenceDeviceDiscoveryService, InferenceDeviceDiscoveryService>();
+                services.AddSingleton<IInferenceBenchmarkService, InferenceBenchmarkService>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
                 services.AddTransient<HardwareAccelerationViewModel>();
