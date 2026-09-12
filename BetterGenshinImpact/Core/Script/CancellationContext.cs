@@ -94,8 +94,16 @@ public class CancellationContext : Singleton<CancellationContext>
             disposed = true;
         }
 
-        // 先取消再释放：已发出的令牌必须被触发（在锁外调，取消回调可能重入本类）
-        cts.Cancel();
+        // 先取消再释放：已发出的令牌必须被触发。回调异常不得外抛，否则调用方后续清理会被跳过。
+        try
+        {
+            cts.Cancel();
+        }
+        catch (Exception)
+        {
+            // 取消回调自身抛异常时仍须完成释放
+        }
+
         cts.Dispose();
     }
 }
