@@ -60,10 +60,15 @@ public class GameExceptionPopupTrigger : ITaskTrigger
     private readonly IRecoverySession? _recoverySession = App.GetService<IRecoverySession>();
     private readonly Timer _watchdog;
 
+    /// <summary>让"点击授权"与"结束处理"互斥：看门狗线程可能在 OCR 期间已放行脚本。</summary>
+    private readonly object _actionSync = new();
+
     private long _lastCheckTimestamp;
     private long _lastClickTimestamp;
     private long _lastUiCheckTimestamp;
     private long _recoveryStartTimestamp;
+
+    /// <summary>处理中。调度器与看门狗会无锁读取它，必须保持 volatile。</summary>
     private volatile bool _recovering;
 
     public GameExceptionPopupTrigger()
@@ -106,15 +111,16 @@ public class GameExceptionPopupTrigger : ITaskTrigger
 
         var ra = content.CaptureRectArea;
 
-        if (_recovering)
+        // 断网登录恢复也在点同一批按钮（登录适配器的 ConfirmNetworkErrorAsync）；两种恢复必须互斥。
+        // 让位期间保持 _recovering（弹窗暂停与看门狗仍在），登录恢复结束后本流程继续。
+        if (_recoverySession?.IsRecovering == true)
         {
-            StepRecovery(ra);
             return;
         }
 
-        // 断网登录恢复期间会点同一个按钮（登录适配器的 ConfirmNetworkErrorAsync）
-        if (_recoverySession?.IsRecovering == true)
+        if (_recovering)
         {
+            StepRecovery(ra);
             return;
         }
 
@@ -137,7 +143,11 @@ public class GameExceptionPopupTrigger : ITaskTrigger
 
     private void BeginRecovery()
     {
-        _recovering = true;
+        lock (_actionSync)
+        {
+            _recovering = true;
+        }
+
         _recoveryStartTimestamp = Stopwatch.GetTimestamp();
         _lastUiCheckTimestamp = 0;
         _popupPauseGate?.EnterPopupPause("检测到游戏异常弹窗");
@@ -164,11 +174,21 @@ public class GameExceptionPopupTrigger : ITaskTrigger
             return;
         }
 
-        _lastClickTimestamp = Stopwatch.GetTimestamp();
-
-        if (TryClickPopupButton(ra, out var text))
+        // 点击授权与"结束处理"必须在同一临界区：看门狗线程可能已在本次 OCR 期间结束处理并放行脚本，
+        // 此时按旧截图点击会和已恢复的脚本抢鼠标。
+        lock (_actionSync)
         {
-            _logger.LogInformation("已点击弹窗按钮：{Text}", text);
+            if (!_recovering)
+            {
+                return;
+            }
+
+            _lastClickTimestamp = Stopwatch.GetTimestamp();
+
+            if (TryClickPopupButton(ra, out var text))
+            {
+                _logger.LogInformation("已点击弹窗按钮：{Text}", text);
+            }
         }
     }
 
@@ -200,8 +220,14 @@ public class GameExceptionPopupTrigger : ITaskTrigger
 
     private void EndRecovery(string reason)
     {
-        var recovering = _recovering;
-        _recovering = false;
+        bool recovering;
+        lock (_actionSync)
+        {
+            // 先失效再放行：与"点击授权"同一临界区，放行之后不会再发出本轮输入
+            recovering = _recovering;
+            _recovering = false;
+        }
+
         _watchdog.Stop();
         _popupPauseGate?.ClearPopupPause();
 
