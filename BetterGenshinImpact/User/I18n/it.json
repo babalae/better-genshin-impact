@@ -497,7 +497,7 @@
   "地图追踪开发者工具": "Strumenti sviluppatore tracciamento mappa",
   "地图追踪行走配置（不启用则使用地图追踪内的条件配置）": "Configurazione spostamento del tracciamento mappa (se disabilitata, usa le condizioni interne al tracciamento)",
   "地图追踪设置": "Impostazioni tracciamento mappa",
-  "地图追踪设置（相关配置优先级从高到低）": "",
+  "地图追踪设置（相关配置优先级从高到低）": "Impostazioni tracciamento mappa (priorità delle configurazioni, dalla più alta alla più bassa)",
   "地图追踪（实验功能）": "Tracciamento mappa (funzione sperimentale)",
   "地图遮罩": "Overlay mappa",
   "地图遮罩开关": "",

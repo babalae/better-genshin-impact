@@ -41,7 +41,6 @@ public sealed class PauseCoordinator : IPauseCoordinator
 
     public void WaitIfPaused(CancellationToken cancellationToken = default)
     {
-        var wasPaused = IsPaused;
         var effectiveCancellationToken = cancellationToken.CanBeCanceled
             ? cancellationToken
             : CancellationContext.Instance.Cts.Token;
@@ -64,10 +63,9 @@ public sealed class PauseCoordinator : IPauseCoordinator
         }
         finally
         {
-            if (wasPaused)
-            {
-                ReleasePauseSideEffects();
-            }
+            // 按副作用是否真的应用过释放，不用入口快照：暂停可能在进入等待前一刻才落下。
+            // 未应用时 ReleasePauseSideEffects 自身即空操作。
+            ReleasePauseSideEffects();
         }
     }
 

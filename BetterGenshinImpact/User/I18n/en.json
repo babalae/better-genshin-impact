@@ -497,7 +497,7 @@
   "地图追踪开发者工具": "Map Tracking Developer Tools",
   "地图追踪行走配置（不启用则使用地图追踪内的条件配置）": "Map Tracking Travel Settings (if disabled, uses the condition settings inside map tracking)",
   "地图追踪设置": "Map Tracking Settings",
-  "地图追踪设置（相关配置优先级从高到低）": "",
+  "地图追踪设置（相关配置优先级从高到低）": "Map Tracking Settings (relevant config priority, high to low)",
   "地图追踪（实验功能）": "Map Tracking (Experimental)",
   "地图遮罩": "Map Overlay",
   "地图遮罩开关": "Toggle Map Overlay",

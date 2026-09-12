@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Logging;
 
@@ -53,7 +54,7 @@ public sealed class NetworkHealthMonitor : INetworkHealthMonitor
         }
 
         var config = TaskContext.Instance().Config.OtherConfig;
-        if (!config.NetworkHealthMonitoringEnabled)
+        if (!IsMonitoringEffective(config))
         {
             ResetMonitoringState();
             return;
@@ -65,6 +66,12 @@ public sealed class NetworkHealthMonitor : INetworkHealthMonitor
         }
 
         _ = Task.Run(() => CheckAsync(cancellationToken));
+    }
+
+    /// <summary>开关关闭或探测地址为空时不生效。空地址会被探测实现判为 DnsFailure，不能当成断网。</summary>
+    private static bool IsMonitoringEffective(OtherConfig config)
+    {
+        return config.NetworkHealthMonitoringEnabled && !string.IsNullOrWhiteSpace(config.NetworkProbeTarget);
     }
 
     private async Task CheckAsync(CancellationToken cancellationToken)
@@ -90,7 +97,7 @@ public sealed class NetworkHealthMonitor : INetworkHealthMonitor
                 ProbeTimeoutMilliseconds,
                 effectiveCancellationToken);
 
-            if (!config.NetworkHealthMonitoringEnabled)
+            if (!IsMonitoringEffective(config))
             {
                 ResetMonitoringState();
                 return;
@@ -150,12 +157,27 @@ public sealed class NetworkHealthMonitor : INetworkHealthMonitor
 
     private void ResetMonitoringState()
     {
-        _pauseGate.ClearNetworkPause();
+        // 恢复进行中时不清暂停门：清了会让原任务的 WaitIfPaused 提前返回，
+        // 与仍在操作界面的登录恢复抢控制权。等恢复自身结束再清。
+        if (!IsRecoveryInFlight())
+        {
+            _pauseGate.ClearNetworkPause();
+        }
+
         lock (_stateSync)
         {
             _consecutiveFailures = 0;
             _lastCheckAt = DateTimeOffset.MinValue;
             _lastSnapshot = null;
         }
+    }
+
+    private bool IsRecoveryInFlight()
+    {
+        return _recoveryStateMachine.State is
+            LoginRecoveryState.Detecting or
+            LoginRecoveryState.ConfirmingNetworkError or
+            LoginRecoveryState.ReturningToMainUi or
+            LoginRecoveryState.Relogging;
     }
 }
