@@ -3,6 +3,8 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -132,6 +134,19 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private string _switchAutoCookButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoComboEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoComboButtonText = "启动";
+
+    [ObservableProperty]
+    private string _switchAutoComboRunButtonText = "测试运行";
+
+    private bool _autoComboRunRunning;
+
+    private bool _autoComboRunPaused;
 
     [ObservableProperty]
     private List<string> _domainNameList;
@@ -358,6 +373,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoMusicGameEnabled = false;
         SwitchAutoAlbumEnabled = false;
         SwitchAutoCookEnabled = false;
+        SwitchAutoComboEnabled = false;
+        SwitchAutoComboRunButtonText = "测试运行";
+        _autoComboRunRunning = false;
+        _autoComboRunPaused = false;
         SwitchAutoFishingEnabled = false;
         SwitchAutoLeyLineOutcropEnabled = false;
         SwitchArtifactSalvageEnabled = false;
@@ -495,6 +514,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
+        }
+        else if (AutoFightParam.ComboStrategyName.Equals(strategyName))
+        {
+            // 固定策略：不对应策略文件，跳过存在性检查，由 ComboCombatTaskFactory 路由
+            path = strategyName;
+            return false;
         }
         else
         {
@@ -668,6 +693,55 @@ public partial class TaskSettingsPageViewModel : ViewModel
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoCookTask());
         SwitchAutoCookEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoCombo()
+    {
+        SwitchAutoComboEnabled = true;
+        await new TaskRunner()
+            .RunSoloTaskAsync(new AutoComboBuildTask());
+        SwitchAutoComboEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoComboRun()
+    {
+        if (_autoComboRunRunning)
+        {
+            // 暂停：取消 Tick 循环，行为树节点状态保留，下次点击继续
+            _autoComboRunRunning = false;
+            _autoComboRunPaused = true;
+            SwitchAutoComboRunButtonText = "继续";
+            CancellationContext.Instance.Cancel();
+            return;
+        }
+
+        // 预检查：未建树时提示用户且不启动任务
+        if (AutoComboRuntime.Session == null)
+        {
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("尚未构建行为树，请先运行一次自动连招任务完成建树"); });
+            return;
+        }
+
+        _autoComboRunRunning = true;
+        _autoComboRunPaused = false;
+        SwitchAutoComboRunButtonText = "暂停";
+        try
+        {
+            // 消费最近一次建树任务暂存的会话；独立运行需显式开启自带战斗结束检测（AutoFightParam 默认关闭）
+            var session = AutoComboRuntime.Session!;
+            await new TaskRunner()
+                .RunSoloTaskAsync(new AutoComboRunTask(new AutoFightParam { FightFinishDetectEnabled = true }, session));
+        }
+        finally
+        {
+            _autoComboRunRunning = false;
+            if (!_autoComboRunPaused)
+            {
+                SwitchAutoComboRunButtonText = "测试运行";
+            }
+        }
     }
 
     [RelayCommand]
