@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.Model;
 using System.Threading;
 
@@ -94,6 +94,8 @@ public class CancellationContext : Singleton<CancellationContext>
             disposed = true;
         }
 
+        // 先取消再释放：已发出的令牌必须被触发（在锁外调，取消回调可能重入本类）
+        cts.Cancel();
         cts.Dispose();
     }
 }
