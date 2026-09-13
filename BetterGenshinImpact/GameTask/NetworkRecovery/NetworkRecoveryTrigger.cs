@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
@@ -19,7 +20,7 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
     private static NetworkRecoveryController? _controller;
     private static IDisposable? _controllerScope;
     private static bool _sessionActive;
-    private static long _lastRecoveryCheckTicks;
+    private static long _lastRecoveryCheckTimestamp;
 
     public string Name => "NetworkRecovery";
 
@@ -70,10 +71,10 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
         }
 
         // 截图频率很高；恢复检查最多每秒一次，真正恢复仍由控制器单飞。
-        var now = DateTime.UtcNow.Ticks;
-        var previous = Interlocked.Read(ref _lastRecoveryCheckTicks);
-        if (now - previous < TimeSpan.FromSeconds(1).Ticks ||
-            Interlocked.CompareExchange(ref _lastRecoveryCheckTicks, now, previous) != previous)
+        var now = Stopwatch.GetTimestamp();
+        var previous = Interlocked.Read(ref _lastRecoveryCheckTimestamp);
+        if ((previous != 0 && Stopwatch.GetElapsedTime(previous, now) < TimeSpan.FromSeconds(1)) ||
+            Interlocked.CompareExchange(ref _lastRecoveryCheckTimestamp, now, previous) != previous)
         {
             if (ownsTaskSemaphore) TaskControl.TaskSemaphore.Release();
             return;
@@ -91,7 +92,7 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
             if (_controller is not null) return _controller;
             _controller = NetworkRecoveryTask.CreateController(CancellationToken.None);
             _controllerScope = _controller.Enter();
-            Interlocked.Exchange(ref _lastRecoveryCheckTicks, 0);
+            Interlocked.Exchange(ref _lastRecoveryCheckTimestamp, 0);
             return _controller;
         }
     }
