@@ -1,8 +1,9 @@
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -13,6 +14,15 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 public sealed class NetworkRecoveryTask
 {
     private static readonly ILogger RecoveryLogger = App.GetLogger<NetworkRecoveryTask>();
+    private static readonly string[] DisconnectTexts =
+    [
+        "连接已断开", "连接超时", "与服务器断开连接", "网络错误", "无法登录服务器", "重新连接"
+    ];
+    private static readonly string[] ConfirmTexts = ["确认", "确定", "重新连接", "点击进入", "知道了"];
+    private const int DialogWaitRounds = 30;
+    private const int DialogWaitIntervalMs = 1000;
+    private const int PostDialogWaitRounds = 5;
+    private const int PostDialogWaitIntervalMs = 2000;
 
     public static NetworkRecoveryController CreateController(CancellationToken ct) => new(
         () =>
@@ -31,51 +41,140 @@ public sealed class NetworkRecoveryTask
         TrySuspend(ct);
         RecoveryLogger.LogInformation("正在激活游戏窗口并检查断线界面");
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
-        using var screen = CaptureToRectArea();
+        RecoveryLogger.LogInformation("网络先于游戏弹窗恢复，最多等待 30 秒监测断线确认按钮");
 
-        // 此流程只会在连续三次探测失败、随后重新连通后执行。复用已有按钮素材，
-        // 避免把登录恢复限定为中文 OCR 文本。必须先处理遮挡在主界面上的断网确认框，
-        // 否则主界面特征可能仍然命中并被误判为无需恢复。
-        using (var confirm = screen.Find(ElementRecognition.Get("BtnWhiteConfirm", screen)))
+        var playableSeen = false;
+        for (var round = 0; round < DialogWaitRounds; round++)
         {
-            if (confirm.IsExist())
+            ct.ThrowIfCancellationRequested();
+            using var screen = CaptureToRectArea();
+
+            // 必须先处理遮挡在主界面上的断网确认框，否则背景中的主界面特征仍会命中。
+            var dialogResult = TryDismissDisconnectDialog(screen);
+            if (dialogResult == DialogResult.Clicked)
             {
-                TrySuspend(ct);
-                RecoveryLogger.LogInformation("检测到确认按钮，点击后重新判断游戏状态");
-                confirm.Click();
-                await Delay(1000, ct);
+                return await WaitAfterDialogAsync(ct);
             }
-            else if (Bv.IsInMainUi(screen))
+
+            if (dialogResult == DialogResult.None)
             {
-                RecoveryLogger.LogInformation("游戏仍处于主界面，无需重新登录");
-                return true;
+                var loginResult = await TryHandleLoginUiAsync(screen, ct);
+                if (loginResult.HasValue) return loginResult.Value;
+                playableSeen |= IsPlayableUi(screen);
             }
+
+            // DetectedButNotClicked 时同样保持暂停并继续采样，避免偶发 OCR/模板漏检。
+            await Delay(DialogWaitIntervalMs, ct);
         }
 
-        using var current = CaptureToRectArea();
-        if (IsPlayableUi(current)) return true;
-        using var enter = current.Find(RecognitionAssets.Get("GameLoading", "EnterGame", current));
-        using var choose = current.Find(RecognitionAssets.Get("GameLoading", "ChooseEnterGame", current));
+        if (playableSeen)
+        {
+            RecoveryLogger.LogInformation("等待 30 秒未出现断线弹窗，游戏界面持续可用，解除暂停");
+            return true;
+        }
+
+        RecoveryLogger.LogWarning("等待断线确认按钮超时，且未识别到可用游戏界面，继续保持暂停");
+        return false;
+    }
+
+    private static bool IsPlayableUi(ImageRegion image) =>
+        Bv.IsInMainUi(image) || Bv.IsInAnyClosableUi(image) || Bv.IsInDomain(image);
+
+    private static async Task<bool> WaitAfterDialogAsync(CancellationToken ct)
+    {
+        var playableSeen = false;
+        // 点掉断线窗口后，登录界面可能延迟数秒出现；不能马上被背景主界面误判成功。
+        for (var round = 0; round < PostDialogWaitRounds; round++)
+        {
+            await Delay(PostDialogWaitIntervalMs, ct);
+            using var screen = CaptureToRectArea();
+            var dialogResult = TryDismissDisconnectDialog(screen);
+            if (dialogResult != DialogResult.None) continue;
+
+            var loginResult = await TryHandleLoginUiAsync(screen, ct);
+            if (loginResult.HasValue) return loginResult.Value;
+            playableSeen |= IsPlayableUi(screen);
+        }
+
+        if (playableSeen)
+        {
+            RecoveryLogger.LogInformation("断线弹窗已关闭，等待登录界面后确认游戏仍可操作");
+            return true;
+        }
+
+        RecoveryLogger.LogWarning("断线弹窗已关闭，但暂未识别到主界面或登录界面");
+        return false;
+    }
+
+    private static async Task<bool?> TryHandleLoginUiAsync(ImageRegion screen, CancellationToken ct)
+    {
+        using var enter = screen.Find(RecognitionAssets.Get("GameLoading", "EnterGame", screen));
+        using var choose = screen.Find(RecognitionAssets.Get("GameLoading", "ChooseEnterGame", screen));
         if (choose.IsExist())
         {
             RecoveryLogger.LogInformation("检测到重新进入按钮，确认重新进入游戏");
             choose.Click();
             await Delay(1000, ct);
             using var afterChoose = CaptureToRectArea();
-            return IsPlayableUi(afterChoose);
+            return IsPlayableUi(afterChoose) ? true : null;
         }
 
-        if (enter.IsExist())
-        {
-            RecoveryLogger.LogInformation("检测到登录界面，复用现有登录流程重新进入游戏");
-            return await new ExitAndReloginJob().EnterGameAsync(ct);
-        }
+        if (!enter.IsExist()) return null;
 
-        // 未识别界面不发送键鼠输入，等下一轮恢复再判断。
-        RecoveryLogger.LogWarning("未识别当前游戏界面，本轮不发送额外输入");
-        return false;
+        RecoveryLogger.LogInformation("检测到登录界面，复用现有登录流程重新进入游戏");
+        return await new ExitAndReloginJob().EnterGameAsync(ct);
     }
 
-    private static bool IsPlayableUi(ImageRegion image) =>
-        Bv.IsInMainUi(image) || Bv.IsInAnyClosableUi(image) || Bv.IsInDomain(image);
+    private static DialogResult TryDismissDisconnectDialog(ImageRegion screen)
+    {
+        var textRegions = screen.FindMulti(RecognitionObject.Ocr(
+            screen.Width * 0.25, screen.Height * 0.25,
+            screen.Width * 0.5, screen.Height * 0.5));
+        var evidence = textRegions.FirstOrDefault(region => MatchesAny(region.Text, DisconnectTexts));
+
+        if (evidence is not null)
+        {
+            var button = textRegions.FirstOrDefault(region =>
+                !ReferenceEquals(region, evidence) && MatchesAny(region.Text, ConfirmTexts));
+            if (button is not null)
+            {
+                RecoveryLogger.LogInformation("检测到断线弹窗“{Evidence}”，点击按钮“{Button}”",
+                    evidence.Text, button.Text);
+                button.Click();
+                return DialogResult.Clicked;
+            }
+
+            // OCR 按钮文案可能因语言或合框失败；复用上游黑/白/联机确认按钮模板兜底。
+            if (Bv.ClickConfirmButton(screen))
+            {
+                RecoveryLogger.LogInformation("检测到断线弹窗“{Evidence}”，已通过通用确认按钮关闭", evidence.Text);
+                return DialogResult.Clicked;
+            }
+
+            RecoveryLogger.LogWarning("检测到断线弹窗“{Evidence}”，但未识别到可点击的确认按钮", evidence.Text);
+            return DialogResult.DetectedButNotClicked;
+        }
+
+        if (!Bv.IsInPromptDialog(screen)) return DialogResult.None;
+
+        if (Bv.ClickConfirmButton(screen))
+        {
+            RecoveryLogger.LogInformation("检测到提示弹窗，已通过通用确认按钮关闭");
+            return DialogResult.Clicked;
+        }
+
+        RecoveryLogger.LogWarning("检测到提示弹窗外观，但未识别到可点击的确认按钮");
+        return DialogResult.DetectedButNotClicked;
+    }
+
+    private static bool MatchesAny(string? text, string[] candidates) =>
+        !string.IsNullOrWhiteSpace(text) && candidates.Any(candidate =>
+            text.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+
+    private enum DialogResult
+    {
+        None,
+        Clicked,
+        DetectedButNotClicked
+    }
 }
