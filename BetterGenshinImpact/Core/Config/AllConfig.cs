@@ -316,6 +316,7 @@ public partial class AllConfig : ObservableObject
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
         ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
+        OtherConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

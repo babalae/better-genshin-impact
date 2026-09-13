@@ -1,14 +1,14 @@
 using System;
-using System.Drawing;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using Vanara.PInvoke;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -18,6 +18,9 @@ public class TaskControl
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
+    private static readonly object PauseSync = new();
+    private static int _pauseWaiters;
+    private static bool _pauseSideEffectsApplied;
 
 
     public static void CheckAndSleep(int millisecondsTimeout)
@@ -38,59 +41,99 @@ public class TaskControl
         Thread.Sleep(millisecondsTimeout);
     }
 
-    private static bool IsKeyPressed(User32.VK key)
+    public static void TrySuspend(CancellationToken cancellationToken = default)
     {
-        // 获取按键状态
-        var state = User32.GetAsyncKeyState((int)key);
+        var network = NetworkRecoveryController.Current;
+        var effectiveToken = GetEffectiveCancellationToken(cancellationToken);
+        var registered = false;
+        IDisposable? networkPauseLease = null;
+        try
+        {
+            while (IsPauseRequested(network))
+            {
+                effectiveToken.ThrowIfCancellationRequested();
+                if (!registered)
+                {
+                    lock (PauseSync) _pauseWaiters++;
+                    registered = true;
+                }
+                ApplyPauseSideEffects();
 
-        // 检查高位是否为 1（表示按键被按下）
-        return (state & 0x8000) != 0;
+                if (networkPauseLease is null &&
+                    network is { IsPaused: true } && !network.IsRecoveryExecution &&
+                    !TaskTriggerDispatcher.IsInTriggerCallback)
+                {
+                    networkPauseLease = network.AcknowledgeTaskPaused();
+                }
+
+                if (!IsPauseRequested(network)) break;
+                if (effectiveToken.WaitHandle.WaitOne(250))
+                    effectiveToken.ThrowIfCancellationRequested();
+            }
+        }
+        finally
+        {
+            networkPauseLease?.Dispose();
+            if (registered)
+            {
+                lock (PauseSync)
+                {
+                    if (_pauseWaiters > 0) _pauseWaiters--;
+                    if (_pauseWaiters == 0 &&
+                        (!IsPauseRequested(network) || effectiveToken.IsCancellationRequested))
+                        ReleasePauseSideEffects();
+                }
+            }
+        }
     }
 
-    public static void TrySuspend()
+    private static CancellationToken GetEffectiveCancellationToken(CancellationToken cancellationToken)
     {
-        
-        var first = true;
-        //此处为了记录最开始的暂停状态
-        var isSuspend = RunnerContext.Instance.IsSuspend;
-        while (RunnerContext.Instance.IsSuspend)
+        if (cancellationToken.CanBeCanceled || TaskSemaphore.CurrentCount != 0)
+            return cancellationToken;
+
+        try { return CancellationContext.Instance.Cts.Token; }
+        catch (ObjectDisposedException) { return CancellationToken.None; }
+    }
+
+    private static bool IsPauseRequested(NetworkRecoveryController? network) =>
+        RunnerContext.Instance.IsSuspend ||
+        (network is { IsPaused: true } && !network.IsRecoveryExecution &&
+         !TaskTriggerDispatcher.IsInTriggerCallback);
+
+    private static void ApplyPauseSideEffects()
+    {
+        lock (PauseSync)
         {
-            if (first)
-            {
-                RunnerContext.Instance.StopAutoPick();
-                //使快捷键本身释放
-                Thread.Sleep(300);
-                foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
-                {
-                    // 检查键是否被按下
-                    if (IsKeyPressed(key)) // 强制转换 VK 枚举为 int
-                    {
-                        Logger.LogWarning($"解除{key}的按下状态.");
-                        Simulation.SendInput.Keyboard.KeyUp(key);
-                    }
-                }
-
-                Logger.LogWarning("快捷键触发暂停，等待解除");
-                foreach (var item in RunnerContext.Instance.SuspendableDictionary)
-                {
-                    item.Value.Suspend();
-                }
-
-                first = false;
-            }
-
-            Thread.Sleep(1000);
+            if (_pauseSideEffectsApplied) return;
+            _pauseSideEffectsApplied = true;
+            Simulation.ReleaseAllKey();
+            RunnerContext.Instance.StopAutoPick();
+            foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
+                suspendable.Suspend();
+            Logger.LogWarning(RunnerContext.Instance.IsSuspend
+                ? "快捷键触发暂停，等待解除"
+                : "网络探测失败，任务暂停等待恢复");
         }
+    }
 
-        //从暂停中解除
-        if (isSuspend)
+    private static void ReleasePauseSideEffects()
+    {
+        if (!_pauseSideEffectsApplied) return;
+        _pauseSideEffectsApplied = false;
+        RunnerContext.Instance.ResumeAutoPick();
+        foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
+            suspendable.Resume();
+        Logger.LogWarning("暂停已经解除");
+    }
+
+    /// <summary>任务收尾兜底，避免取消发生在暂停循环时遗留自动拾取计数。</summary>
+    public static void ResetPauseSideEffects()
+    {
+        lock (PauseSync)
         {
-            Logger.LogWarning("暂停已经解除");
-            RunnerContext.Instance.ResumeAutoPick();
-            foreach (var item in RunnerContext.Instance.SuspendableDictionary)
-            {
-                item.Value.Resume();
-            }
+            _pauseWaiters = 0;
+            ReleasePauseSideEffects();
         }
     }
 
@@ -146,7 +189,7 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
 
-            TrySuspend();
+            TrySuspend(ct);
             CheckAndActivateGameWindow();
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
@@ -175,7 +218,7 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
 
-            TrySuspend();
+            TrySuspend(ct);
             CheckAndActivateGameWindow();
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);

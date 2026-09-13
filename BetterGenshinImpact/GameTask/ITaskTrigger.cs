@@ -36,6 +36,12 @@ public interface ITaskTrigger
     /// 处于可以后台运行的状态（原神窗口不处于激活状态）
     /// </summary>
     bool IsBackgroundRunning => false;
+
+    /// <summary>
+    /// 常驻实时触发器：任务启动清理普通触发器以及异常挂起期间仍保留。
+    /// 仅承担解除挂起职责的触发器应返回 true。
+    /// </summary>
+    bool AlwaysActive => false;
     
     GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 

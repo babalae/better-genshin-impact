@@ -14,6 +14,7 @@ using System.Threading;
 using System.Windows;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
+using BetterGenshinImpact.GameTask.NetworkRecovery;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Model;
@@ -45,6 +46,11 @@ namespace BetterGenshinImpact.GameTask
         private DateTime _prevManualGc = DateTime.MinValue;
 
         private static readonly object _triggerListLocker = new();
+
+        [ThreadStatic]
+        private static bool _isInTriggerCallback;
+
+        public static bool IsInTriggerCallback => _isInTriggerCallback;
 
         private User32.HWINEVENTHOOK _winEventHookMoveSize;
         private User32.HWINEVENTHOOK _winEventHookLocation;
@@ -100,7 +106,7 @@ namespace BetterGenshinImpact.GameTask
             lock (_triggerListLocker)
             {
                 GameTaskManager.ClearTriggers();
-                _triggers?.Clear();
+                SetTriggers(GameTaskManager.ConvertToTriggerList(skipInit: true));
             }
         }
 
@@ -137,6 +143,8 @@ namespace BetterGenshinImpact.GameTask
             // 初始化任务上下文(一定要在初始化触发器前完成)
             TaskContext.Instance().Init(hWnd);
 
+            NetworkRecoveryTrigger.OnCaptureSessionStarted();
+
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
             GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
@@ -172,6 +180,7 @@ namespace BetterGenshinImpact.GameTask
         public void Stop()
         {
             _timer.Stop();
+            NetworkRecoveryTrigger.StopSession();
             ChatUiHotkeyGuard.Reset();
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
@@ -402,6 +411,8 @@ namespace BetterGenshinImpact.GameTask
                     if (exclusiveTrigger != null)
                     {
                         needRunTriggers.Add(exclusiveTrigger);
+                        needRunTriggers.AddRange(_triggers.Where(t =>
+                            t.AlwaysActive && t.IsEnabled && (!hasBackgroundTriggerToRun || t.IsBackgroundRunning)));
                     }
                     else
                     {
@@ -412,6 +423,11 @@ namespace BetterGenshinImpact.GameTask
                         }
 
                         needRunTriggers.AddRange(runningTriggers);
+                    }
+
+                    if (NetworkRecoveryController.Current is { IsPaused: true })
+                    {
+                        needRunTriggers = needRunTriggers.Where(t => t.AlwaysActive).ToList();
                     }
 
                     if (needRunTriggers.Count > 0)
@@ -426,12 +442,21 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in needRunTriggers)
                         {
-                            if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
+                            if (trigger.AlwaysActive
+                                || (PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
                                 || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                             {
                                 // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
                                 var triggerStart = Stopwatch.GetTimestamp();
-                                trigger.OnCapture(content);
+                                _isInTriggerCallback = true;
+                                try
+                                {
+                                    trigger.OnCapture(content);
+                                }
+                                finally
+                                {
+                                    _isInTriggerCallback = false;
+                                }
                                 tickMetrics.AddTriggerCost(triggerStart);
                                 speedTimer.Record(trigger.Name);
                             }

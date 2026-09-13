@@ -62,7 +62,12 @@ public class ExitAndReloginJob
         );
         await Delay(1000, ct);
 
-        //============== 重新登录流程 ==============
+        await EnterGameAsync(ct);
+    }
+
+    /// <summary>从已经显示的登录页面进入游戏，供退出重登和断网恢复共同使用。</summary>
+    public async Task<bool> EnterGameAsync(CancellationToken ct)
+    {
         Logger.LogInformation("点击登录");
         _login3rdParty.RefreshAvailabled();
         if (_login3rdParty is { Type: Login3rdParty.The3rdPartyType.Bilibili, IsAvailabled: true })
@@ -119,5 +124,6 @@ public class ExitAndReloginJob
         }
 
         await Delay(500, ct);
+        return mainUiFound;
     }
 }
