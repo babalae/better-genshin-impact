@@ -15,6 +15,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.GameTask.Common;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -56,6 +57,14 @@ public class TaskRunner
             {
                 CancellationContext.Instance.Clear();
             }
+            return;
+        }
+
+        // 网络暂停或恢复期间不允许新任务插队，避免恢复流程与新任务同时操作游戏。
+        if (NetworkRecoveryController.Current is { IsPaused: true })
+        {
+            TaskSemaphore.Release();
+            _logger.LogWarning("任务启动失败：正在恢复网络和游戏状态，请稍后重试");
             return;
         }
         try

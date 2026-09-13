@@ -185,7 +185,7 @@ public class AutoFightJsonTask : ISoloTask
             // 设置初始当前角色名（用于无 Character 字段的通用 action 回退）
             _currentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? _currentAvatarName;
             TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout);
-            Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+            var timeoutStartedAt = GetActiveTimestamp();
     
             AutoFightSeek.RotationCount = 0;
             AutoFightTask.FightStatusFlag = true;
@@ -265,7 +265,7 @@ public class AutoFightJsonTask : ISoloTask
 
                     while (!cts2.Token.IsCancellationRequested)
                     {
-                        if (timeoutStopwatch.Elapsed > fightTimeout)
+                        if (GetActiveElapsed(timeoutStartedAt) > fightTimeout)
                         {
                             Logger.LogInformation("战斗超时结束");
                             fightEndFlag = true;

@@ -25,7 +25,6 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -953,8 +952,8 @@ public class TpTask
             await Delay(initialDelayMs, ct);
         }
 
-        var stopwatch = Stopwatch.StartNew();
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
+        var startedAt = GetActiveTimestamp();
+        for (var i = 0; i == 0 || GetActiveElapsed(startedAt).TotalMilliseconds < timeoutMilliseconds; i++)
         {
             if (i > 0)
             {
@@ -1033,12 +1032,12 @@ public class TpTask
     /// </summary>
     private async Task WaitForTeleportCompletion()
     {
-        var stopwatch = Stopwatch.StartNew();
+        var startedAt = GetActiveTimestamp();
         var observedLoadingState = false;
         var consecutiveNonUiChecks = 0;
         var consecutiveMainUiChecks = 0;
         long nextBlessingCheckAt = BlessingCheckIntervalMs;
-        while (stopwatch.ElapsedMilliseconds < TeleportTimeoutMs)
+        while (GetActiveElapsed(startedAt).TotalMilliseconds < TeleportTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -1050,7 +1049,7 @@ public class TpTask
             {
                 consecutiveNonUiChecks = 0;
                 if (observedLoadingState &&
-                    stopwatch.ElapsedMilliseconds >= TeleportMinimumCompletionMs &&
+                    GetActiveElapsed(startedAt).TotalMilliseconds >= TeleportMinimumCompletionMs &&
                     ++consecutiveMainUiChecks >= TeleportCompletionStableMainUiChecks)
                 {
                     Logger.LogInformation("传送完成");
@@ -1073,11 +1072,12 @@ public class TpTask
             await Delay(TeleportLoadingPollIntervalMs, ct);
 
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
-            if (observedLoadingState && !isInMainUi && stopwatch.ElapsedMilliseconds >= nextBlessingCheckAt)
+            var elapsedMilliseconds = GetActiveElapsed(startedAt).TotalMilliseconds;
+            if (observedLoadingState && !isInMainUi && elapsedMilliseconds >= nextBlessingCheckAt)
             {
                 await _blessingOfTheWelkinMoonTask.Start(ct);
                 ct.ThrowIfCancellationRequested();
-                nextBlessingCheckAt = stopwatch.ElapsedMilliseconds + BlessingCheckIntervalMs;
+                nextBlessingCheckAt = (long)elapsedMilliseconds + BlessingCheckIntervalMs;
             }
         }
 
@@ -1208,8 +1208,8 @@ public class TpTask
 
     private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds)
     {
-        var stopwatch = Stopwatch.StartNew();
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
+        var startedAt = GetActiveTimestamp();
+        for (var i = 0; i == 0 || GetActiveElapsed(startedAt).TotalMilliseconds < timeoutMilliseconds; i++)
         {
             if (IsInBigMapUi())
             {
@@ -1226,14 +1226,34 @@ public class TpTask
     public async Task<(double, double)> Tp(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(TeleportTimeoutMs);
+        var timeoutStartedAt = GetActiveTimestamp();
+        var operation = new TpTask(timeoutCts.Token).TpWithRetries(tpX, tpY, mapName, force);
         try
         {
-            return await new TpTask(timeoutCts.Token).TpWithRetries(tpX, tpY, mapName, force);
+            while (!operation.IsCompleted)
+            {
+                await Task.WhenAny(operation, Task.Delay(250, ct));
+                ct.ThrowIfCancellationRequested();
+                if (GetActiveElapsed(timeoutStartedAt).TotalMilliseconds < TeleportTimeoutMs) continue;
+
+                timeoutCts.Cancel();
+                try { await operation; }
+                catch when (!ct.IsCancellationRequested) { }
+                throw new TimeoutException($"单次传送超过 {TeleportTimeoutMs / 1000} 秒");
+            }
+
+            return await operation;
         }
-        catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            throw new TimeoutException($"单次传送超过 {TeleportTimeoutMs / 1000} 秒", e);
+            timeoutCts.Cancel();
+            try { await operation; }
+            catch { }
+            throw;
+        }
+        finally
+        {
+            if (!operation.IsCompleted) timeoutCts.Cancel();
         }
     }
 
@@ -2451,8 +2471,8 @@ public class TpTask
         await Delay(50, ct);
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
+        var startedAt = GetActiveTimestamp();
+        while (GetActiveElapsed(startedAt).TotalMilliseconds < SwitchAreaCandidateTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
             using var ra = CaptureToRectArea();
@@ -2487,9 +2507,9 @@ public class TpTask
         string localizedAreaName,
         Rect clickedCandidateRect)
     {
-        var stopwatch = Stopwatch.StartNew();
+        var startedAt = GetActiveTimestamp();
         var consecutiveMissingChecks = 0;
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
+        while (GetActiveElapsed(startedAt).TotalMilliseconds < SwitchAreaSelectionTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
             using var capture = CaptureToRectArea();
@@ -2498,7 +2518,7 @@ public class TpTask
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
 
             if (!clickedCandidateStillVisible &&
-                stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
+                GetActiveElapsed(startedAt).TotalMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
             {
                 consecutiveMissingChecks++;
                 if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
@@ -2582,8 +2602,8 @@ public class TpTask
         var groundLayerClicked = false;
         // 图层按钮的出现、展开和选中都有固定时长的界面动画，不能随传送操作速度缩短。
         var retryInterval = MapLayerVerificationPollIntervalMs;
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < MapGroundLayerSwitchTimeoutMs)
+        var startedAt = GetActiveTimestamp();
+        while (GetActiveElapsed(startedAt).TotalMilliseconds < MapGroundLayerSwitchTimeoutMs)
         {
             using var capture = CaptureToRectArea();
             using var groundButton = capture.Find(
@@ -2614,7 +2634,7 @@ public class TpTask
 
             if (!isUnderground)
             {
-                if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= MapLayerVerificationPollIntervalMs * 2)
+                if (!layerSwitchClicked && GetActiveElapsed(startedAt).TotalMilliseconds >= MapLayerVerificationPollIntervalMs * 2)
                 {
                     return;
                 }
@@ -2702,9 +2722,9 @@ public class TpTask
 
     private async Task<TeleportPanelResult> WaitAndPressTeleportConfirm(GiTpPosition? targetTp)
     {
-        var stopwatch = Stopwatch.StartNew();
+        var startedAt = GetActiveTimestamp();
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
+        for (var i = 0; i == 0 || GetActiveElapsed(startedAt).TotalMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
             await Delay(UiRecognitionPollIntervalMs, ct);
 
@@ -2726,7 +2746,8 @@ public class TpTask
                 return TeleportPanelResult.Confirmed;
             }
 
-            if (stopwatch.ElapsedMilliseconds >= nextCandidateVerificationAt)
+            var elapsedMilliseconds = GetActiveElapsed(startedAt).TotalMilliseconds;
+            if (elapsedMilliseconds >= nextCandidateVerificationAt)
             {
                 // 同一截图识别一次即可；列表仍在则点击未生效（点了未激活项或点空）。
                 if (GetPreferredMapChooseCandidate(screen, targetTp) != null)
@@ -2734,7 +2755,7 @@ public class TpTask
                     return TeleportPanelResult.RetryPoint;
                 }
 
-                nextCandidateVerificationAt = stopwatch.ElapsedMilliseconds +
+                nextCandidateVerificationAt = (long)elapsedMilliseconds +
                                               MapChooseCandidateClickVerificationIntervalMs;
             }
         }

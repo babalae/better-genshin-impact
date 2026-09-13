@@ -242,7 +242,7 @@ public class AutoFightTask : ISoloTask
 
         combatScenes.BeforeTask(cts2.Token);
         TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 战斗超时时间
-        Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+        var timeoutStartedAt = GetActiveTimestamp();
 
         // 记录开战时间，供"开战前一段时间阻断战斗结束检查"使用
         FightStartTime = DateTime.Now;
@@ -396,7 +396,7 @@ public class AutoFightTask : ISoloTask
 
                         #endregion
 
-                        if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
+                        if (GetActiveElapsed(timeoutStartedAt) > fightTimeout || AutoFightSeek.RotationCount >= 6)
                         {
                             Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                             fightEndFlag = true;

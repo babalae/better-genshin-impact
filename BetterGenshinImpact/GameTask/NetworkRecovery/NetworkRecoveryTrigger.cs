@@ -98,6 +98,14 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
     {
         try
         {
+            // 调度到后台线程前，原暂停任务可能已经结束；此时重新接管任务锁。
+            // 若有新任务抢先持锁则放弃本轮，避免两个流程同时操作游戏。
+            if (!ownsTaskSemaphore && !controller.HasTaskPauseWaiter)
+            {
+                if (!TaskControl.TaskSemaphore.Wait(0)) return;
+                ownsTaskSemaphore = true;
+            }
+
             await controller.TryRecoverAsync(controller.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (controller.Token.IsCancellationRequested)
