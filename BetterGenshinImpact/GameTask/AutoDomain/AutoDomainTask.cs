@@ -186,9 +186,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 建树与传送进本并行，战斗启动前在 StartComboFight 中等待其完成
         if (_useComboStrategy)
         {
-            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
-            var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
-            Logger.LogInformation("自动秘境：识别队伍 {Avatars}，后台启动 LLM 建树", string.Join("、", avatarNames));
+            var avatarNames = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+            Logger.LogInformation("自动秘境：后台启动 LLM 建树");
 
             var config = TaskContext.Instance().Config.AutoComboBuildConfig;
             _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatarNames, config, Logger, ct);
