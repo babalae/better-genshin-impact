@@ -61,6 +61,20 @@ public partial class AllConfig : ObservableObject
     [ObservableProperty]
     private int _triggerInterval = 50;
 
+    /// <summary>
+    ///     WGC V2 帧率上限（毫秒，即最小更新间隔，限制 DWM 推帧频率以降低 GPU 占用）
+    ///     0 = 不启用限流（默认）；仅 Windows 11 24H2 及以上系统生效
+    /// </summary>
+    [ObservableProperty]
+    private int _wgcMinUpdateIntervalMs;
+
+    /// <summary>
+    ///     WGC V2 使用 CPU 颜色转换（BGRA→BGR 由 CPU CvtColor 完成）
+    ///     默认关闭 = GPU compute shader 打包 BGR24（回读量更小、CPU 零转换）；重启捕获后生效
+    /// </summary>
+    [ObservableProperty]
+    private bool _wgcV2UseCpuConvert;
+
     // /// <summary>
     // ///     WGC使用位图缓存
     // ///     高帧率情况下，可能会导致卡顿
