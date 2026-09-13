@@ -8,6 +8,8 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
+public readonly record struct FeatureMatchResult(Point2f CenterPoint, int GoodMatchCount, int InlierCount);
+
 public static class Feature2DExtensions
 {
     private static readonly Dictionary<DescriptorMatcherType, DescriptorMatcher> MatcherFactory = new()
@@ -51,6 +53,12 @@ public static class Feature2DExtensions
     public static Point2f Match(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
         DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
+        return feature2D.MatchWithQuality(trainKeyPoints, trainDescriptors, queryMat, queryMatMask, matcherType).CenterPoint;
+    }
+
+    public static FeatureMatchResult MatchWithQuality(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat,
+        Mat? queryMatMask = null, DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
+    {
         SpeedTimer speedTimer = new();
 
         using var queryDescriptors = new Mat();
@@ -58,6 +66,25 @@ public static class Feature2DExtensions
         feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
         speedTimer.Record("模板生成KeyPoint");
+
+        return feature2D.MatchWithQuality(
+            trainKeyPoints,
+            trainDescriptors,
+            queryKeyPoints,
+            queryDescriptors,
+            queryMat.Size(),
+            matcherType);
+    }
+
+    public static FeatureMatchResult MatchWithQuality(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors,
+        KeyPoint[] queryKeyPoints, Mat queryDescriptors, Size querySize,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
+    {
+        SpeedTimer speedTimer = new();
+        if (queryKeyPoints.Length == 0 || queryDescriptors.Empty())
+        {
+            return default;
+        }
 
         var matches = GetMatcher(matcherType).Match(queryDescriptors, trainDescriptors);
         //Finding the Minimum and Maximum Distance
@@ -103,15 +130,20 @@ public static class Feature2DExtensions
         // algorithm RANSAC Filter the matched results
         var pQuery = pointsQuery.ToPoint2d();
         var pTrain = pointsTrain.ToPoint2d();
-        var outMask = new Mat();
+        using var outMask = new Mat();
         // If the original matching result is null, Skip the filtering step
         if (pQuery.Count > 0 && pTrain.Count > 0)
         {
-            var hMat = Cv2.FindHomography(pQuery, pTrain, HomographyMethods.Ransac, mask: outMask);
+            using var hMat = Cv2.FindHomography(pQuery, pTrain, HomographyMethods.Ransac, mask: outMask);
             speedTimer.Record("FindHomography");
+            if (hMat.Empty())
+            {
+                speedTimer.DebugPrint();
+                return new FeatureMatchResult(default, pointsQuery.Count, 0);
+            }
 
             // 1. 计算查询图像的中心点
-            var queryCenterPoint = new Point2f(queryMat.Cols / 2f, queryMat.Rows / 2f);
+            var queryCenterPoint = new Point2f(querySize.Width / 2f, querySize.Height / 2f);
 
             // 2. 使用单应矩阵进行透视变换
             Point2f[] queryCenterPoints = [queryCenterPoint];
@@ -121,11 +153,11 @@ public static class Feature2DExtensions
             var trainCenterPoint = transformedCenterPoints[0];
             speedTimer.Record("PerspectiveTransform");
             speedTimer.DebugPrint();
-            return trainCenterPoint;
+            return new FeatureMatchResult(trainCenterPoint, pointsQuery.Count, Cv2.CountNonZero(outMask));
         }
 
         speedTimer.DebugPrint();
-        return new Point2f();
+        return new FeatureMatchResult(default, pointsQuery.Count, 0);
     }
 
     #endregion 普通匹配
