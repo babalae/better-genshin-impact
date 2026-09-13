@@ -50,7 +50,7 @@ public class PaddleOcrService : IOcrService, IDisposable
             {
                 const string modelConfigFileName = "inference.yml";
                 var configFilePath = Path.Combine(
-                    Path.GetDirectoryName(recModel.ModalPath) ??
+                    Path.GetDirectoryName(recModel.ModelPath) ??
                     throw new InvalidOperationException("Cannot get model directory"),
                     modelConfigFileName);
 

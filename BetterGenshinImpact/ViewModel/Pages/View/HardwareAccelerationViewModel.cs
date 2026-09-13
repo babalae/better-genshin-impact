@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -28,6 +29,10 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     [RelayCommand]
     public void OnOpenCacheFolder()
     {
-        Process.Start("explorer.exe", Global.Absolute(BgiOnnxModel.ModelCacheRelativePath));
+        if (BgiOnnxModel.ModelCacheRelativePath is not { } modelCacheRelativePath) return;
+
+        var cachePath = Global.Absolute(modelCacheRelativePath);
+        Directory.CreateDirectory(cachePath);
+        Process.Start("explorer.exe", cachePath);
     }
 }
