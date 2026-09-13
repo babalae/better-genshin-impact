@@ -1993,6 +1993,7 @@ public class TpTask
             }
         }
 
+        await Delay(60, ct);
         Simulation.SendInput.Mouse.LeftButtonUp();
         var endCursor = GetCursorPositionInCapture();
         return (sentDeltaX, sentDeltaY, steps, startX, startY, endX, endY, endCursor.X - startCursor.X, endCursor.Y - startCursor.Y);
