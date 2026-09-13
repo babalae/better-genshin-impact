@@ -1,5 +1,6 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.NetworkRecovery;
 using System.Collections.Concurrent;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.Common;
@@ -7,6 +8,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Common;
 [Collection("Realtime trigger lifetime")]
 public class RealtimeTriggerLifetimeTests
 {
+    [Fact]
+    public void NetworkRecoveryTriggerRunsWhileGameIsInBackground()
+    {
+        var trigger = new NetworkRecoveryTrigger();
+
+        Assert.True(trigger.AlwaysActive);
+        Assert.True(trigger.IsBackgroundRunning);
+    }
+
     [Fact]
     public void ClearTriggersPreservesOnlyAlwaysActiveTriggers()
     {

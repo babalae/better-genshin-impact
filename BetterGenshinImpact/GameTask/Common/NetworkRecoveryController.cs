@@ -19,6 +19,8 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     private readonly Func<string, CancellationToken, Task<bool>> _probe;
     private readonly Func<CancellationToken, Task<bool>> _recover;
     private readonly Action<Exception>? _onError;
+    private readonly Action<string>? _onInfo;
+    private readonly Action<string>? _onWarning;
     private readonly TimeSpan _interval;
     private readonly Task _monitor;
     private string? _target;
@@ -39,12 +41,16 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     public NetworkRecoveryController(Func<string?> getTarget,
         Func<CancellationToken, Task<bool>> recover, CancellationToken token,
         Action<Exception>? onError = null,
+        Action<string>? onInfo = null,
+        Action<string>? onWarning = null,
         Func<string, CancellationToken, Task<bool>>? probe = null,
         TimeSpan? interval = null)
     {
         _getTarget = getTarget;
         _recover = recover;
         _onError = onError;
+        _onInfo = onInfo;
+        _onWarning = onWarning;
         _probe = probe ?? PingAsync;
         _interval = interval ?? TimeSpan.FromSeconds(5);
         _stop = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -75,14 +81,17 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
                 var target = _getTarget()?.Trim();
                 if (string.IsNullOrWhiteSpace(target))
                 {
+                    var stopped = false;
                     lock (_sync)
                     {
+                        stopped = _target is not null;
                         _target = null;
                         _failures = 0;
                         _healthy = false;
                         // 开关关闭不能让原任务与尚未结束的恢复流程抢操作权。
                         if (!_recovering) _pending = false;
                     }
+                    if (stopped) _onInfo?.Invoke("网络健康监控已停止");
                 }
                 else
                 {
@@ -94,17 +103,45 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
                     // 探测期间改过配置，不把旧目标的结果计入新目标。
                     if (string.Equals(target, _getTarget()?.Trim(), StringComparison.OrdinalIgnoreCase))
                     {
+                        string? info = null;
+                        string? warning = null;
                         lock (_sync)
                         {
                             if (!string.Equals(_target, target, StringComparison.OrdinalIgnoreCase))
                             {
                                 _target = target;
                                 _failures = 0;
+                                _healthy = false;
+                                info = $"网络健康监控已启动，探测目标：{target}";
                             }
+
+                            var previousFailures = _failures;
+                            var wasPending = _pending;
                             _healthy = healthy;
-                            _failures = healthy ? 0 : Math.Min(3, _failures + 1);
-                            if (_failures >= 3) _pending = true;
+                            if (healthy)
+                            {
+                                _failures = 0;
+                                if (previousFailures > 0)
+                                {
+                                    info = wasPending
+                                        ? $"网络已恢复，探测目标：{target}，准备检查游戏状态"
+                                        : $"网络连接已恢复，探测目标：{target}，未达到暂停阈值";
+                                }
+                            }
+                            else
+                            {
+                                _failures = Math.Min(3, previousFailures + 1);
+                                if (_failures != previousFailures)
+                                {
+                                    warning = _failures < 3
+                                        ? $"网络探测失败（{_failures}/3），目标：{target}"
+                                        : $"网络连续探测失败 3 次，已进入暂停等待恢复状态，目标：{target}";
+                                }
+                                if (_failures >= 3) _pending = true;
+                            }
                         }
+                        if (info is not null) _onInfo?.Invoke(info);
+                        if (warning is not null) _onWarning?.Invoke(warning);
                     }
                 }
                 await Task.Delay(_interval, Token).ConfigureAwait(false);
@@ -128,13 +165,22 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
         try
         {
             _inRecovery.Value = true;
+            _onInfo?.Invoke("网络恢复流程已启动，正在激活并检查游戏窗口");
             var succeeded = await _recover(ct).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
+            var resumed = false;
             lock (_sync)
             {
                 // 恢复期间再次断网时保留暂停。
-                if (succeeded && _healthy) _pending = false;
+                if (succeeded && _healthy)
+                {
+                    _pending = false;
+                    resumed = true;
+                }
             }
+            if (resumed) _onInfo?.Invoke("游戏状态恢复完成，已解除网络暂停");
+            else if (!succeeded) _onWarning?.Invoke("暂未识别到可恢复的游戏界面，等待下一次检查");
+            else _onWarning?.Invoke("恢复游戏期间网络再次不可用，继续保持暂停");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception e) { _onError?.Invoke(e); }
@@ -152,11 +198,27 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
 
     private static async Task<bool> PingAsync(string target, CancellationToken ct)
     {
-        using var ping = new Ping();
-        // 整体等待也有时限，避免域名解析拖住任务收尾。
-        var result = await ping.SendPingAsync(target, 1500)
-            .WaitAsync(TimeSpan.FromSeconds(3), ct).ConfigureAwait(false);
-        return result.Status == IPStatus.Success;
+        try
+        {
+            using var ping = new Ping();
+            // 整体等待也有时限，避免域名解析拖住任务收尾。
+            var result = await ping.SendPingAsync(target, 1500)
+                .WaitAsync(TimeSpan.FromSeconds(3), ct).ConfigureAwait(false);
+            return result.Status == IPStatus.Success;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (PingException)
+        {
+            // 断网、DNS 解析失败等均属于正常的探测失败，由状态转换日志统一记录。
+            return false;
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
     }
 
     public async ValueTask DisposeAsync()

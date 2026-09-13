@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using BetterGenshinImpact.GameTask.Common;
 
@@ -113,6 +114,41 @@ public class NetworkRecoveryControllerTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => recovery);
         await recoveryCanceled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task ProbeLogsOnlyStateChanges_AndReportsRecoveryResult()
+    {
+        var probes = Channel.CreateUnbounded<bool>();
+        var info = new ConcurrentQueue<string>();
+        var warnings = new ConcurrentQueue<string>();
+        await using var controller = new NetworkRecoveryController(
+            () => "probe.test",
+            _ => Task.FromResult(true),
+            CancellationToken.None,
+            onInfo: info.Enqueue,
+            onWarning: warnings.Enqueue,
+            probe: (_, token) => probes.Reader.ReadAsync(token).AsTask(),
+            interval: TimeSpan.FromMilliseconds(10));
+
+        await probes.Writer.WriteAsync(false);
+        await WaitUntilAsync(() => warnings.Count == 1);
+        await probes.Writer.WriteAsync(false);
+        await WaitUntilAsync(() => warnings.Count == 2);
+        await probes.Writer.WriteAsync(false);
+        await WaitUntilAsync(() => controller.IsPaused && warnings.Count == 3);
+        await probes.Writer.WriteAsync(false);
+        await Task.Delay(30);
+
+        Assert.Equal(3, warnings.Count);
+        Assert.Contains(warnings, message => message.Contains("已进入暂停等待恢复状态"));
+
+        await probes.Writer.WriteAsync(true);
+        await WaitUntilAsync(() => info.Any(message => message.Contains("网络已恢复")));
+        await InvokeUntilAsync(controller, () => !controller.IsPaused);
+
+        Assert.Contains(info, message => message.Contains("恢复流程已启动"));
+        Assert.Contains(info, message => message.Contains("已解除网络暂停"));
     }
 
     private static NetworkRecoveryController CreateController(

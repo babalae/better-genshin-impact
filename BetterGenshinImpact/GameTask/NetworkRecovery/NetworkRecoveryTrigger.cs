@@ -31,7 +31,8 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
 
     public int Priority => 5;
     public bool IsExclusive => false;
-    public bool IsBackgroundRunning => false;
+    // 用户切到 BGI 或系统网络面板恢复网络时也必须继续执行，否则无法主动切回并恢复游戏。
+    public bool IsBackgroundRunning => true;
     public bool AlwaysActive => true;
 
     public static void OnCaptureSessionStarted()
