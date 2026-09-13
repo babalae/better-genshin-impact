@@ -126,7 +126,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                             .End()
                                         .End()
                                     .Finally()
-                                        .QuitFishingMode("退出钓鱼模式", _logger, input, param.GameCultureInfo, param.StringLocalizer)
+                                        .QuitFishingMode("退出钓鱼模式", _logger, input)
                                     .End()
                                 .End()
                                 .WholeProcessTimeout("检查整体超时", _logger, param.WholeProcessTimeoutSeconds)

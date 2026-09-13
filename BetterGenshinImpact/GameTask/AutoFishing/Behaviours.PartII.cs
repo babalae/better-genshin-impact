@@ -307,7 +307,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger _logger;
         private readonly IInputSimulator _input;
-        private readonly string _fishingLocalizedString;
 
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
@@ -318,11 +317,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<int> HandoffTimeSeconds { get; private set; } = null!;
 
-        private QuitFishingMode(string name, ILogger logger, IInputSimulator input, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private QuitFishingMode(string name, ILogger logger, IInputSimulator input) : base(name)
         {
             _logger = logger;
             _input = input;
-            _fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
         }
 
         protected async override Task<Status> Update()
@@ -339,9 +337,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return Status.Running;
             }
 
-            if (Bv.FindF(imageRegion, _fishingLocalizedString))
+            if (Bv.IsInMainUi(imageRegion))
             {
-                _logger.LogInformation("退出完成");
+                _logger.LogInformation("已在主界面，退出完成");
                 return Status.Success;
             }
 
