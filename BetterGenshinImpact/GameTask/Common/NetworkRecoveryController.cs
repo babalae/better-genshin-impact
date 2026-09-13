@@ -1,5 +1,6 @@
 using System;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,6 +31,7 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     private bool _recovering;
     private bool _stopping;
     private int _taskPauseWaiters;
+    private int _taskPauseParticipants;
     private DateTimeOffset _retryAt;
 
     public static NetworkRecoveryController? Current => Volatile.Read(ref _current);
@@ -37,6 +39,15 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     public bool IsRecoveryExecution => _inRecovery.Value;
     public bool IsPaused { get { lock (_sync) return _pending; } }
     public bool HasTaskPauseWaiter => Volatile.Read(ref _taskPauseWaiters) > 0;
+    public bool IsTaskPauseAcknowledged
+    {
+        get
+        {
+            var waiters = Volatile.Read(ref _taskPauseWaiters);
+            var participants = Volatile.Read(ref _taskPauseParticipants);
+            return waiters > 0 && (participants == 0 || waiters >= participants);
+        }
+    }
 
     public NetworkRecoveryController(Func<string?> getTarget,
         Func<CancellationToken, Task<bool>> recover, CancellationToken token,
@@ -51,7 +62,7 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
         _onError = onError;
         _onInfo = onInfo;
         _onWarning = onWarning;
-        _probe = probe ?? PingAsync;
+        _probe = probe ?? ((target, ct) => ProbeNetworkAsync(target, ct));
         _interval = interval ?? TimeSpan.FromSeconds(5);
         _stop = CancellationTokenSource.CreateLinkedTokenSource(token);
         Token = _stop.Token;
@@ -69,6 +80,14 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     {
         Interlocked.Increment(ref _taskPauseWaiters);
         return new Scope(() => Interlocked.Decrement(ref _taskPauseWaiters));
+    }
+
+    /// <summary>登记同一任务内会并发发送输入的分支，恢复前必须等待这些分支全部进入暂停点。</summary>
+    public IDisposable RegisterTaskPauseParticipants(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        Interlocked.Add(ref _taskPauseParticipants, count);
+        return new Scope(() => Interlocked.Add(ref _taskPauseParticipants, -count));
     }
 
     private async Task MonitorAsync()
@@ -196,7 +215,39 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
         }
     }
 
-    private static async Task<bool> PingAsync(string target, CancellationToken ct)
+    /// <summary>ICMP 不可用时使用同一目标的常见 Web TCP 端口复核，避免仅因禁 Ping 永久误暂停。</summary>
+    internal static async Task<bool> ProbeNetworkAsync(
+        string target,
+        CancellationToken ct,
+        Func<string, CancellationToken, Task<bool>>? icmpProbe = null,
+        Func<string, int, CancellationToken, Task<bool>>? tcpProbe = null,
+        Func<bool>? isNetworkAvailable = null)
+    {
+        var host = NormalizeProbeTarget(target);
+        icmpProbe ??= PingOnlyAsync;
+        tcpProbe ??= TcpConnectAsync;
+        isNetworkAvailable ??= NetworkInterface.GetIsNetworkAvailable;
+
+        if (await icmpProbe(host, ct).ConfigureAwait(false)) return true;
+        if (!isNetworkAvailable()) return false;
+
+        // 复用用户配置的目标，不额外硬编码第三方站点。默认目标是 Web 主机，
+        // 因此 443/80 任一可连接即可证明“只是 ICMP 被屏蔽”，不应暂停任务。
+        var tcpResults = await Task.WhenAll(
+            tcpProbe(host, 443, ct),
+            tcpProbe(host, 80, ct)).ConfigureAwait(false);
+        return tcpResults[0] || tcpResults[1];
+    }
+
+    private static string NormalizeProbeTarget(string target)
+    {
+        var trimmed = target.Trim();
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host)
+            ? uri.Host
+            : trimmed;
+    }
+
+    private static async Task<bool> PingOnlyAsync(string target, CancellationToken ct)
     {
         try
         {
@@ -216,6 +267,25 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
             return false;
         }
         catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<bool> TcpConnectAsync(string target, int port, CancellationToken ct)
+    {
+        try
+        {
+            using var client = new TcpClient();
+            await client.ConnectAsync(target, port, ct).AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+            return client.Connected;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception e) when (e is SocketException or TimeoutException)
         {
             return false;
         }

@@ -61,8 +61,10 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
         // 有任务持有信号量时，必须等任务线程真正走到暂停检查点；否则恢复流程会与原任务并发操作游戏。
         // 空闲时则由恢复流程临时持有任务信号量，阻止恢复期间启动新任务。
         var ownsTaskSemaphore = false;
-        if (!controller.HasTaskPauseWaiter)
+        if (!controller.IsTaskPauseAcknowledged)
         {
+            // 多分支任务只有部分分支到达暂停点时不能开始恢复；否则可能与剩余分支并发输入。
+            if (controller.HasTaskPauseWaiter) return;
             if (!TaskControl.TaskSemaphore.Wait(0)) return;
             ownsTaskSemaphore = true;
         }
@@ -100,8 +102,9 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
         {
             // 调度到后台线程前，原暂停任务可能已经结束；此时重新接管任务锁。
             // 若有新任务抢先持锁则放弃本轮，避免两个流程同时操作游戏。
-            if (!ownsTaskSemaphore && !controller.HasTaskPauseWaiter)
+            if (!ownsTaskSemaphore && !controller.IsTaskPauseAcknowledged)
             {
+                if (controller.HasTaskPauseWaiter) return;
                 if (!TaskControl.TaskSemaphore.Wait(0)) return;
                 ownsTaskSemaphore = true;
             }

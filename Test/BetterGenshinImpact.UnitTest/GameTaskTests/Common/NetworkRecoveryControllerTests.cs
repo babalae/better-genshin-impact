@@ -30,6 +30,66 @@ public class NetworkRecoveryControllerTests
     }
 
     [Fact]
+    public async Task ParallelPauseParticipantsMustAllAcknowledgeBeforeRecovery()
+    {
+        var probes = Channel.CreateUnbounded<bool>();
+        await using var controller = CreateController(
+            () => "probe.test",
+            probes,
+            _ => Task.FromResult(true));
+
+        using var participants = controller.RegisterTaskPauseParticipants(3);
+        using var first = controller.AcknowledgeTaskPaused();
+        Assert.False(controller.IsTaskPauseAcknowledged);
+        using var second = controller.AcknowledgeTaskPaused();
+        Assert.False(controller.IsTaskPauseAcknowledged);
+        using var third = controller.AcknowledgeTaskPaused();
+        Assert.True(controller.IsTaskPauseAcknowledged);
+    }
+
+    [Fact]
+    public async Task ProbeFallsBackToTcpWhenIcmpIsBlocked()
+    {
+        var attemptedPorts = new ConcurrentBag<int>();
+
+        var healthy = await NetworkRecoveryController.ProbeNetworkAsync(
+            "https://probe.test/path",
+            CancellationToken.None,
+            icmpProbe: (_, _) => Task.FromResult(false),
+            tcpProbe: (host, port, _) =>
+            {
+                Assert.Equal("probe.test", host);
+                attemptedPorts.Add(port);
+                return Task.FromResult(port == 443);
+            },
+            isNetworkAvailable: () => true);
+
+        Assert.True(healthy);
+        Assert.Contains(443, attemptedPorts);
+        Assert.Contains(80, attemptedPorts);
+    }
+
+    [Fact]
+    public async Task ProbeSkipsTcpFallbackWhenNoNetworkInterfaceIsAvailable()
+    {
+        var tcpAttempts = 0;
+
+        var healthy = await NetworkRecoveryController.ProbeNetworkAsync(
+            "probe.test",
+            CancellationToken.None,
+            icmpProbe: (_, _) => Task.FromResult(false),
+            tcpProbe: (_, _, _) =>
+            {
+                Interlocked.Increment(ref tcpAttempts);
+                return Task.FromResult(true);
+            },
+            isNetworkAvailable: () => false);
+
+        Assert.False(healthy);
+        Assert.Equal(0, tcpAttempts);
+    }
+
+    [Fact]
     public async Task ThreeFailuresPause_AndSuccessfulRecoveryResumes()
     {
         var probes = Channel.CreateUnbounded<bool>();
