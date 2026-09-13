@@ -100,7 +100,8 @@ namespace BetterGenshinImpact.GameTask
             lock (_triggerListLocker)
             {
                 GameTaskManager.ClearTriggers();
-                _triggers?.Clear();
+                // 常驻触发器留在运行列表里
+                _triggers = _triggers?.Where(t => t.AlwaysActive).ToList();
             }
         }
 
@@ -426,7 +427,9 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in needRunTriggers)
                         {
-                            if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
+                            // 常驻触发器不受界面分类门控
+                            if (trigger.AlwaysActive
+                                || (PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
                                 || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                             {
                                 // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
@@ -434,6 +437,13 @@ namespace BetterGenshinImpact.GameTask
                                 trigger.OnCapture(content);
                                 tickMetrics.AddTriggerCost(triggerStart);
                                 speedTimer.Record(trigger.Name);
+
+                                // 本帧执行过程中新取得独占的触发器要立即收口：独占门在循环前只求值一次，
+                                // 否则同帧排在它后面的触发器仍会对同一张截图发输入。
+                                if (trigger.IsExclusive)
+                                {
+                                    break;
+                                }
                             }
                         }
 

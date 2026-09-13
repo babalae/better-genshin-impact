@@ -28,6 +28,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
 using System.Collections.Specialized;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Infrastructure.NetworkRecovery;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -617,12 +618,17 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
+                    // 默认任务由 TaskRunner 内部成对登记，此处不显式调用
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
                     await new TaskRunner().RunThreadAsync(async () =>
                     {
                         await task.Action();
                         await Task.Delay(1000);
-                    });
+                    }, new TaskExecutionContext(
+                        SelectedConfig.Name,
+                        task.Id,
+                        task.Name,
+                        taskListCopy.IndexOf(task)));
                 }
                 else
                 {
@@ -642,9 +648,24 @@ public partial class OneDragonFlowViewModel : ViewModel
                             await Task.Delay(500);
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
-                            IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
-                            await Task.Delay(1000);
+                            // 与下方 CompleteTask 成对，中间是 RunMulti
+                            var recoverySession = App.GetService<IRecoverySession>();
+                            recoverySession?.BeginTask(new TaskExecutionContext(
+                                SelectedConfig.Name,
+                                task.Id,
+                                task.Name,
+                                taskListCopy.IndexOf(task),
+                                group.Name));
+                            try
+                            {
+                                IScriptService? scriptService = App.GetService<IScriptService>();
+                                await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
+                                await Task.Delay(1000);
+                            }
+                            finally
+                            {
+                                recoverySession?.CompleteTask(task.Id);
+                            }
                         }
                     }
                     catch (Exception e)

@@ -152,6 +152,15 @@ public static partial class Bv
     }
 
     /// <summary>
+    /// 是否处于可以执行任务的界面（主界面 / 任意可关闭UI / 秘境 / 对话）。
+    /// 与启动流程、加载流程里"可以开始跑任务了"的判定一致，另含对话界面——弹窗可能出现在对话中。
+    /// </summary>
+    public static bool IsInTaskRunnableUi(ImageRegion captureRa)
+    {
+        return IsInMainUi(captureRa) || IsInAnyClosableUi(captureRa) || IsInDomain(captureRa) || IsInTalkUi(captureRa);
+    }
+
+    /// <summary>
     /// 是否在队伍选择界面
     /// </summary>
     /// <param name="captureRa"></param>

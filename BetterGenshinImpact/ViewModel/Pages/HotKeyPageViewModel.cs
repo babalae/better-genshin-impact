@@ -394,7 +394,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.SuspendHotkey),
             Config.HotKeyConfig.SuspendHotkey,
             Config.HotKeyConfig.SuspendHotkeyType,
-            (_, _) => { RunnerContext.Instance.IsSuspend = !RunnerContext.Instance.IsSuspend; }
+            (_, _) => { App.GetService<BetterGenshinImpact.Infrastructure.NetworkRecovery.IPauseCoordinator>()?.ToggleManualPause(); }
         ));
         var takeScreenshotHotKeySettingModel = new HotKeySettingModel(
             "游戏截图",

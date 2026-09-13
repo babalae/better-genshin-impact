@@ -32,6 +32,18 @@ public partial class OtherConfig : ObservableObject
     //OCR配置
     [ObservableProperty]
     private Ocr _ocrConfig = new();
+
+    /// <summary>
+    /// 按配置地址探测网络健康状态，并在连续失败后暂停任务。
+    /// </summary>
+    [ObservableProperty]
+    private bool _networkHealthMonitoringEnabled = false;
+
+    /// <summary>
+    /// 网络健康探测地址，支持主机名或 IP 地址。
+    /// </summary>
+    [ObservableProperty]
+    private string _networkProbeTarget = "www.baidu.com";
     
 
     public partial class AutoRestart : ObservableObject
