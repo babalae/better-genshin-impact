@@ -2,7 +2,7 @@
   "网络健康监控与断网恢复": "Network health monitoring and recovery",
   "常驻实时检测网络；连续探测失败后暂停任务，网络和登录恢复后从暂停处继续。": "Continuously monitor the network as a real-time trigger. Pause after consecutive failures and resume after network and login recovery.",
   "网络探测地址": "Network probe address",
-  "使用 ICMP Ping，填写主机名或 IP，无需添加协议前缀": "Uses ICMP Ping. Enter a hostname or IP without a protocol prefix.",
+  "优先使用 ICMP Ping，失败时通过 TCP 443/80 复核；填写主机名或 IP": "Uses ICMP Ping first, then verifies with TCP ports 443/80 on failure. Enter a hostname or IP.",
   "网络探测主机名或 IP，例如 www.baidu.com": "Network probe hostname or IP, for example www.baidu.com",
   "(下方地图选择会影响路径录制所在的独立地图)": "(The map selected below determines the independent map used for path recording)",
   "(实验性功能) 战斗时按下方设置的间隔尝试靠近或旋转寻找敌人。": "(Experimental) During combat, periodically move closer or rotate to search for enemies using the interval below.",

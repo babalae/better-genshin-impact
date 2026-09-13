@@ -1113,6 +1113,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private async Task NavigateToReward()
     {
         using var navigationCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
+        // 该阶段有三个并发分支会截图或发送输入；网络恢复前必须等待三者都进入暂停点。
+        using var pauseParticipants = NetworkRecoveryController.Current?.RegisterTaskPauseParticipants(3);
         var page = new BvPage(navigationCts.Token);
 
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);

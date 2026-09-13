@@ -2,7 +2,7 @@
   "网络健康监控与断网恢复": "Monitoraggio e ripristino della rete",
   "常驻实时检测网络；连续探测失败后暂停任务，网络和登录恢复后从暂停处继续。": "Monitora continuamente la rete come trigger in tempo reale. Sospende dopo errori consecutivi e riprende dopo il recupero della rete e dell'accesso.",
   "网络探测地址": "Indirizzo di verifica della rete",
-  "使用 ICMP Ping，填写主机名或 IP，无需添加协议前缀": "Usa ICMP Ping. Inserisci un nome host o IP senza prefisso di protocollo.",
+  "优先使用 ICMP Ping，失败时通过 TCP 443/80 复核；填写主机名或 IP": "Usa prima ICMP Ping, quindi verifica tramite le porte TCP 443/80 in caso di errore. Inserisci un nome host o IP.",
   "网络探测主机名或 IP，例如 www.baidu.com": "Nome host o IP da verificare, ad esempio www.baidu.com",
   "(下方地图选择会影响路径录制所在的独立地图)": "(La selezione della mappa in basso influisce sulla mappa indipendente usata per la registrazione del percorso)",
   "(实验性功能) 战斗时按下方设置的间隔尝试靠近或旋转寻找敌人。": "(Sperimentale) Durante il combattimento, prova ad avvicinarti o a ruotare per trovare i nemici all'intervallo configurato di seguito.",
