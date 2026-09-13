@@ -23,7 +23,6 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -1118,7 +1117,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
 
-        var navigationStopwatch = Stopwatch.StartNew();
+        var navigationStartedAt = GetActiveTimestamp();
         var navigationTimeout = TimeSpan.FromSeconds(20);
         var adjustCameraTask = AdjustRewardCameraTask(page, navigationCts);
         var moveToRewardTask = MoveToRewardTask(page, navigationCts);
@@ -1129,7 +1128,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             while (true)
             {
                 _ct.ThrowIfCancellationRequested();
-                if (navigationStopwatch.Elapsed >= navigationTimeout)
+                if (GetActiveElapsed(navigationStartedAt) >= navigationTimeout)
                 {
                     throw new TimeoutException("超时未找到征讨之花领奖界面");
                 }

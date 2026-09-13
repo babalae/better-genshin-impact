@@ -6,6 +6,7 @@ using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -22,7 +23,21 @@ public class GlobalMethod
 {
     public static async Task Sleep(int millisecondsTimeout)
     {
+        if (millisecondsTimeout < Timeout.Infinite)
+        {
+            throw new ArgumentOutOfRangeException(nameof(millisecondsTimeout));
+        }
+
         var ct = CancellationContext.Instance.Cts.Token;
+        if (millisecondsTimeout == Timeout.Infinite)
+        {
+            while (true)
+            {
+                TaskControl.TrySuspend(ct);
+                await Task.Delay(250, ct);
+            }
+        }
+
         while (millisecondsTimeout > 0)
         {
             TaskControl.TrySuspend(ct);

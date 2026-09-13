@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,13 +47,13 @@ public class ScanPickTask
     public async Task DoOnce(CancellationToken ct, int? seconds = null)
     {
         var sec = seconds ?? TaskContext.Instance().Config.AutoFightConfig.PickDropsAfterFightSeconds;
-        Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+        var timeoutStartedAt = GetActiveTimestamp();
         TimeSpan finishTime = TimeSpan.FromSeconds(sec);
 
         Simulation.SendInput.SimulateAction(GIActions.Drop);
         await ResetCamera(ct);
 
-        while (!ct.IsCancellationRequested && timeoutStopwatch.Elapsed < finishTime)
+        while (!ct.IsCancellationRequested && GetActiveElapsed(timeoutStartedAt) < finishTime)
         {
             var (hasItems, pickItems) = DetectPickableItems();
             // Logger.LogInformation("存在可拾取物品: {0}", hasItems);
@@ -62,7 +61,7 @@ public class ScanPickTask
             {
                 Simulation.ReleaseAllKey();
                 await ResetCamera(ct);
-                for (var i = 0; i < 10 && timeoutStopwatch.Elapsed < finishTime; i++)
+                for (var i = 0; i < 10 && GetActiveElapsed(timeoutStartedAt) < finishTime; i++)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy(400, 0);
                     if (i > 5) //前期不考虑移动扫描

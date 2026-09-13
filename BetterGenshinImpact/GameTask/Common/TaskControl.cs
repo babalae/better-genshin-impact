@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,8 @@ public class TaskControl
     private static readonly object PauseSync = new();
     private static int _pauseWaiters;
     private static bool _pauseSideEffectsApplied;
+    private static long _pauseStartedTimestamp;
+    private static long _totalPausedTimestamp;
 
 
     public static void CheckAndSleep(int millisecondsTimeout)
@@ -107,6 +110,7 @@ public class TaskControl
         {
             if (_pauseSideEffectsApplied) return;
             _pauseSideEffectsApplied = true;
+            _pauseStartedTimestamp = Stopwatch.GetTimestamp();
             Simulation.ReleaseAllKey();
             RunnerContext.Instance.StopAutoPick();
             foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
@@ -120,6 +124,8 @@ public class TaskControl
     private static void ReleasePauseSideEffects()
     {
         if (!_pauseSideEffectsApplied) return;
+        _totalPausedTimestamp += Stopwatch.GetTimestamp() - _pauseStartedTimestamp;
+        _pauseStartedTimestamp = 0;
         _pauseSideEffectsApplied = false;
         RunnerContext.Instance.ResumeAutoPick();
         foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
@@ -137,9 +143,30 @@ public class TaskControl
         }
     }
 
+    /// <summary>返回扣除任务暂停时长后的单调时间戳，供任务超时使用。</summary>
+    public static long GetActiveTimestamp()
+    {
+        lock (PauseSync)
+        {
+            var now = Stopwatch.GetTimestamp();
+            var paused = _totalPausedTimestamp;
+            if (_pauseSideEffectsApplied)
+                paused += now - _pauseStartedTimestamp;
+            return now - paused;
+        }
+    }
+
+    /// <summary>计算从指定活动时间戳起、扣除暂停时长后的经过时间。</summary>
+    public static TimeSpan GetActiveElapsed(long startedAt) =>
+        Stopwatch.GetElapsedTime(startedAt, GetActiveTimestamp());
+
     private static void CheckAndActivateGameWindow()
     {
-        if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
+        // 恢复流程需要向原神发送真实键鼠输入，不能受普通的“失焦后恢复”开关限制。
+        // 否则恢复期间偶发失焦会让后续确认/登录操作停在其他窗口上。
+        var shouldRestoreFocus = TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled ||
+                                 NetworkRecoveryController.Current is { IsRecoveryExecution: true };
+        if (!shouldRestoreFocus)
         {
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
@@ -225,6 +252,13 @@ public class TaskControl
         if (ct is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
+        }
+
+        // NewRetry 等上游流程通常在 Delay 返回后立即发送下一次输入。
+        // 网络恢复期间需要在等待结束时再校验一次，堵住“等待中失焦、返回后误点其他窗口”的竞态。
+        if (NetworkRecoveryController.Current is { IsRecoveryExecution: true })
+        {
+            CheckAndActivateGameWindow();
         }
     }
 

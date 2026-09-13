@@ -2,7 +2,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -620,13 +619,13 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
         return _stateTransitionTimeouts.TryGetValue(state, out var timeoutMs) ? timeoutMs : DefaultTransitionTimeout;
     }
 
-    private void RecordStateRetry(string reason, (bool useTimeout, int value) retryPolicy, Stopwatch stateRetryStopwatch)
+    private void RecordStateRetry(string reason, (bool useTimeout, int value) retryPolicy, long stateRetryStartedAt)
     {
         CurrentStateRetryCount++;
 
         if (retryPolicy.useTimeout)
         {
-            var elapsedMilliseconds = stateRetryStopwatch.ElapsedMilliseconds;
+            var elapsedMilliseconds = GetActiveElapsed(stateRetryStartedAt).TotalMilliseconds;
             if (elapsedMilliseconds >= retryPolicy.value)
             {
                 Logger.LogError("状态 {State} {Reason}，重试超时达到上限 {Max} ms，转为失败",
@@ -683,7 +682,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
         CurrentStateRetryInterval = StateMachineLoopInterval;
         CurrentStateTransitionTimeout = DefaultTransitionTimeout;
         TState lastRetryState = default;
-        var stateRetryStopwatch = Stopwatch.StartNew();
+        var stateRetryStartedAt = GetActiveTimestamp();
 
         for (int iteration = 0; iteration < maxIterations; iteration++)
         {
@@ -697,7 +696,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             {
                 CurrentStateRetryCount = 0;
                 lastRetryState = CurrentState;
-                stateRetryStopwatch.Restart();
+                stateRetryStartedAt = GetActiveTimestamp();
             }
 
             // 检查是否到达目标状态
@@ -733,11 +732,11 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
                         {
                             case StateTransitionWaitStatus.ReachedTarget:
                                 CurrentStateRetryCount = 0; // 成功转换后重置重试计数
-                                stateRetryStopwatch.Restart();
+                                stateRetryStartedAt = GetActiveTimestamp();
                                 break;
 
                             case StateTransitionWaitStatus.RetryCurrentState:
-                                RecordStateRetry("源状态持续可见，触发当前状态重试", retryPolicy, stateRetryStopwatch);
+                                RecordStateRetry("源状态持续可见，触发当前状态重试", retryPolicy, stateRetryStartedAt);
                                 nextLoopInterval = retryInterval;
                                 break;
 
@@ -753,7 +752,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
 
                     case StateHandlerStatus.Retry:
                         // 意外失败重试：检查重试次数。
-                        RecordStateRetry("Handler 返回 Retry", retryPolicy, stateRetryStopwatch);
+                        RecordStateRetry("Handler 返回 Retry", retryPolicy, stateRetryStartedAt);
                         nextLoopInterval = retryInterval;
                         break;
 
@@ -909,12 +908,12 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             return new StateTransitionWaitResult(StateTransitionWaitStatus.RetryCurrentState);
         }
 
-        var sourceVisibleStopwatch = Stopwatch.StartNew();
-        var intermediateStopwatch = Stopwatch.StartNew();
+        var sourceVisibleStartedAt = GetActiveTimestamp();
+        var intermediateStartedAt = GetActiveTimestamp();
         var intermediateTimeout = Math.Max(timeout, DefaultIntermediateTransitionTimeout);
 
-        while (sourceVisibleStopwatch.ElapsedMilliseconds < timeout &&
-               intermediateStopwatch.ElapsedMilliseconds < intermediateTimeout)
+        while (GetActiveElapsed(sourceVisibleStartedAt).TotalMilliseconds < timeout &&
+               GetActiveElapsed(intermediateStartedAt).TotalMilliseconds < intermediateTimeout)
         {
             _ct.ThrowIfCancellationRequested();
 
@@ -929,17 +928,17 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
 
             if (EqualityComparer<TState>.Default.Equals(currentState, sourceState))
             {
-                intermediateStopwatch.Restart();
+                intermediateStartedAt = GetActiveTimestamp();
             }
             else
             {
-                sourceVisibleStopwatch.Restart();
+                sourceVisibleStartedAt = GetActiveTimestamp();
             }
 
             await Delay(DefaultDetectionInterval, _ct);
         }
 
-        if (sourceVisibleStopwatch.ElapsedMilliseconds >= timeout)
+        if (GetActiveElapsed(sourceVisibleStartedAt).TotalMilliseconds >= timeout)
         {
             Logger.LogWarning("源状态 {State} 持续可见超过 {Timeout} ms，触发当前状态重试，期望任一：{Expected}",
                 sourceState, timeout, string.Join(",", transitionTargetStates));
