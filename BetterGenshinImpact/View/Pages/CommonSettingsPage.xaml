@@ -1684,6 +1684,43 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16,12,16,20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="0" Grid.Column="0">
+                        <ui:TextBlock FontTypography="Body"
+                                      Text="{i18n:T 网络健康监控}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Margin="0,4,12,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 连续探测失败后暂停任务，网络恢复并完成登录恢复后继续当前任务}"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.Column="1"
+                                     Margin="24,0,24,0"
+                                     VerticalAlignment="Center"
+                                     IsChecked="{Binding Config.OtherConfig.NetworkHealthMonitoringEnabled, Mode=TwoWay}" />
+
+                    <StackPanel Grid.Row="1"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Margin="0,16,0,0"
+                                IsEnabled="{Binding Config.OtherConfig.NetworkHealthMonitoringEnabled}">
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 测试用网页}" />
+                        <ui:TextBlock Margin="0,3,0,6"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 填写主机名或 IP 地址，用于检测网络连通性}" />
+                        <ui:TextBox Text="{Binding Config.OtherConfig.NetworkProbeTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="{i18n:T 例如 www.baidu.com}" />
+                    </StackPanel>
+                </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
