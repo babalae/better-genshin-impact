@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
@@ -32,7 +33,7 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     private bool _stopping;
     private int _taskPauseWaiters;
     private int _taskPauseParticipants;
-    private DateTimeOffset _retryAt;
+    private long _lastRecoveryCompletedTimestamp;
 
     public static NetworkRecoveryController? Current => Volatile.Read(ref _current);
     public CancellationToken Token { get; }
@@ -177,7 +178,9 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
         ct.ThrowIfCancellationRequested();
         lock (_sync)
         {
-            if (_stopping || !_pending || !_healthy || _recovering || DateTimeOffset.UtcNow < _retryAt) return;
+            if (_stopping || !_pending || !_healthy || _recovering ||
+                (_lastRecoveryCompletedTimestamp != 0 &&
+                 Stopwatch.GetElapsedTime(_lastRecoveryCompletedTimestamp) < _interval)) return;
             if (!_recoveryGate.Wait(0)) return;
             _recovering = true;
         }
@@ -209,7 +212,7 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
             lock (_sync)
             {
                 _recovering = false;
-                _retryAt = DateTimeOffset.UtcNow + _interval;
+                _lastRecoveryCompletedTimestamp = Stopwatch.GetTimestamp();
                 _recoveryGate.Release();
             }
         }
