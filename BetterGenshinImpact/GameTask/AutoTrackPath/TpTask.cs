@@ -1248,6 +1248,11 @@ public class TpTask
             catch (TeleportPanelNotOpenedException e)
             {
                 // 同一视野内点击后未出现面板，重试只会重复点击同一位置。
+                
+                // 抛出异常按下 ESC 退出大地图，避免影响后续路径追踪任务
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(300, ct);
+                
                 throw;
             }
             catch (TpPointNotActivate e)
