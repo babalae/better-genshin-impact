@@ -24,7 +24,6 @@ public class RewardResultRecognizer
     private static readonly Lazy<RewardResultRecognizer> _instance = new(() => new RewardResultRecognizer());
     public static RewardResultRecognizer Instance => _instance.Value;
 
-    private readonly ItemRecognizer _itemRecognizer;
     private readonly ILogger<RewardResultRecognizer> _logger = App.GetLogger<RewardResultRecognizer>();
     private static readonly Scalar RewardMaskLower = new(0, 0, 190);
     private static readonly Scalar RewardMaskUpper = new(179, 20, 249);
@@ -46,7 +45,6 @@ public class RewardResultRecognizer
 
     private RewardResultRecognizer()
     {
-        _itemRecognizer = new ItemRecognizer();
     }
 
     /// <summary>
@@ -66,6 +64,9 @@ public class RewardResultRecognizer
         // 上一页原始奖励，用于判断翻页后的重复卡片。
         List<RewardItem>? previousPageRewards = null;
 
+        // 整轮识别共用一个识别器实例，用完销毁，不常驻内存。
+        using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
+
         for (int currentPage = 1; currentPage <= maxPages; currentPage++)
         {
             if (currentPage > 1)
@@ -74,7 +75,7 @@ public class RewardResultRecognizer
             }
 
             using var screen = CaptureRewardPageScreen();
-            var pageResult = RecognizeRewardPage(screen);
+            var pageResult = RecognizeRewardPage(screen, iconRecognizer);
             SaveRewardDebugImage(currentPage, screen.SrcMat, pageResult.CardRects);
 
             if (pageResult.Rewards.Count == 0)
@@ -139,12 +140,13 @@ public class RewardResultRecognizer
     /// 识别单页奖励截图。
     /// </summary>
     /// <param name="screen">当前页全屏截图。</param>
+    /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <returns>本页奖励与卡片位置。</returns>
-    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen)
+    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer)
     {
         using var bandMat = new Mat(screen.SrcMat, new Rect(220, 444, 1480, 220));
         var cardRects = DetectCardRects(bandMat);
-        var recognizedRewards = RecognizeRewards(bandMat, cardRects);
+        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer);
         return new RewardPageRecognitionResult(recognizedRewards, cardRects);
     }
 
@@ -319,8 +321,9 @@ public class RewardResultRecognizer
     /// </summary>
     /// <param name="bandMat">奖励条带。</param>
     /// <param name="cardRects">已定位的卡片矩形。</param>
+    /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <param name="ocrService">OCR 服务，为空时使用 Paddle OCR。</param>
-    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IOcrService? ocrService = null)
+    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null)
     {
         ocrService ??= OcrFactory.Paddle;
 
@@ -341,39 +344,40 @@ public class RewardResultRecognizer
             using var cardMat = new Mat(bandMat, cardRect);
 
             // === 图标识别===
-            var iconMatch = RecognizeIcon(cardMat, cardIdx);
-            if (iconMatch.Score < 0.75)
+            var iconName = RecognizeIcon(iconRecognizer, cardMat, cardIdx);
+            if (iconName == null)
             {
-                _logger.LogWarning("奖励识别：已跳过一个奖励图标，识别为={Name}，可信度={Score:F2}", iconMatch.Name, iconMatch.Score);
+                _logger.LogWarning("奖励识别：已跳过一个未识别的奖励图标");
                 continue;
             }
 
             // === 数量 OCR ===
             var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx);
 
-            results.Add(new RecognizedReward(iconMatch.Name, count, iconMatch.QualityLevel));
+            results.Add(new RecognizedReward(iconName, count));
         }
 
         return results;
     }
 
     /// <summary>
-    /// 识别单张奖励卡片图标。
+    /// 识别单张奖励卡片图标的名称。
     /// </summary>
+    /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <param name="cardMat">奖励卡片图像。</param>
     /// <param name="cardIdx">卡片序号。</param>
-    /// <returns>图标候选结果。</returns>
-    private ItemIconCandidate RecognizeIcon(Mat cardMat, int cardIdx)
+    /// <returns>奖励名称；未识别时返回 null。</returns>
+    private string? RecognizeIcon(IItemIconRecognizer iconRecognizer, Mat cardMat, int cardIdx)
     {
         try
         {
             using Mat icon = cardMat.GetGridIcon(); // 归一化为 125×125
-            return _itemRecognizer.Match(icon);
+            return iconRecognizer.Recognize(icon);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "奖励识别：卡片 {CardIndex} 图标识别异常，已忽略", cardIdx);
-            return ItemIconCandidate.Empty;
+            return null;
         }
     }
 

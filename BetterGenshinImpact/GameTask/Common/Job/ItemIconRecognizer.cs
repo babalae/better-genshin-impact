@@ -26,13 +26,31 @@ internal sealed record ItemIconCandidate(string Name, double Score, int QualityL
     public static readonly ItemIconCandidate Empty = new(string.Empty, double.MinValue, -1);
 }
 
-internal interface IItemIconRecognizer : IDisposable
+/// <summary>
+/// 物品图标识别器。实现类持有 ONNX 会话等重资源，
+/// 由 <see cref="ItemIconRecognizerFactory"/> 创建新实例，调用方负责用完 Dispose。
+/// </summary>
+public interface IItemIconRecognizer : IDisposable
 {
     string? Recognize(Mat icon);
 }
 
-internal static class ItemIconRecognizerFactory
+/// <summary>
+/// 物品图标识别器工厂。按指定模式创建识别器新实例。
+/// </summary>
+public static class ItemIconRecognizerFactory
 {
+    /// <summary>
+    /// 按当前全局设置（OtherConfig.ItemIconRecognitionMode）创建识别器。
+    /// </summary>
+    public static IItemIconRecognizer CreateConfigured()
+    {
+        return Create(TaskContext.Instance().Config.OtherConfig.ItemIconRecognitionMode);
+    }
+
+    /// <summary>
+    /// 创建指定模式的识别器新实例；调用方负责用完 Dispose。
+    /// </summary>
     public static IItemIconRecognizer Create(ItemIconRecognitionMode mode)
     {
         return mode switch
@@ -85,7 +103,7 @@ internal sealed class ItemRecognizer : IItemIconRecognizer
     /// <summary>
     /// 初始化物品图标模型和原型表。
     /// </summary>
-    internal ItemRecognizer()
+    public ItemRecognizer()
     {
         _session = new InferenceSession(Global.Absolute(@"Assets\Model\ItemV2\item.onnx"));
         _prototypes = LoadIconPrototypes();
@@ -97,7 +115,7 @@ internal sealed class ItemRecognizer : IItemIconRecognizer
     /// <param name="mat">125×125 的 BGR 图标图像。</param>
     /// <returns>最高分图标候选。</returns>
     /// <exception cref="ArgumentOutOfRangeException">图标尺寸不是 125×125。</exception>
-    internal ItemIconCandidate Match(Mat mat)
+    private ItemIconCandidate Match(Mat mat)
     {
         if (mat.Size().Width != InputSize || mat.Size().Height != InputSize)
         {
@@ -179,16 +197,34 @@ internal sealed class ItemRecognizer : IItemIconRecognizer
         };
         parser.SetDelimiters(",");
 
-        var headers = parser.ReadFields()!;
+        var headers = parser.ReadFields();
+        if (headers == null)
+        {
+            throw new InvalidDataException("ItemV2/item.csv 为空或缺少表头行。");
+        }
         int nameIndex = Array.FindIndex(headers, h => string.Equals(h?.Trim(), "item_name", StringComparison.OrdinalIgnoreCase));
         int itemClassIdIndex = Array.FindIndex(headers, h => string.Equals(h?.Trim(), "item_class_id", StringComparison.OrdinalIgnoreCase));
         int qualityLevelIndex = Array.FindIndex(headers, h => string.Equals(h?.Trim(), "quality_level", StringComparison.OrdinalIgnoreCase));
         int embeddingIndex = Array.FindIndex(headers, h => string.Equals(h?.Trim(), "embedding", StringComparison.OrdinalIgnoreCase));
 
+        if (nameIndex < 0 || itemClassIdIndex < 0 || qualityLevelIndex < 0 || embeddingIndex < 0)
+        {
+            throw new InvalidDataException("ItemV2/item.csv 缺少必要字段：item_name、item_class_id、quality_level 或 embedding。");
+        }
+
         List<IconPrototype> prototypes = [];
         while (!parser.EndOfData)
         {
-            var columns = parser.ReadFields()!;
+            var columns = parser.ReadFields();
+            if (columns == null)
+            {
+                continue;
+            }
+
+            if (columns.Length <= Math.Max(Math.Max(nameIndex, itemClassIdIndex), Math.Max(qualityLevelIndex, embeddingIndex)))
+            {
+                throw new InvalidDataException("ItemV2/item.csv 存在字段数量不足的数据行。");
+            }
             prototypes.Add(ParseIconPrototype(columns, nameIndex, itemClassIdIndex, qualityLevelIndex, embeddingIndex));
         }
 
