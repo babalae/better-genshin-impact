@@ -100,6 +100,7 @@ public class TaskRunner
         }
         finally
         {
+            ResetPauseSideEffects();
             End();
             _logger.LogInformation("→ {Text}", _name + "任务结束");
 

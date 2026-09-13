@@ -18,6 +18,7 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.NetworkRecovery;
 using BetterGenshinImpact.GameTask.SkillCd;
 using System;
 
@@ -45,11 +46,12 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
+        TriggerDictionary.TryAdd("NetworkRecovery", new NetworkRecoveryTrigger());
 
         return ConvertToTriggerList();
     }
 
-    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false)
+    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false, bool skipInit = false)
     {
         if (TriggerDictionary is null)
         {
@@ -58,7 +60,10 @@ internal class GameTaskManager
 
         var loadedTriggers = TriggerDictionary.Values.ToList();
 
-        loadedTriggers.ForEach(i => i.Init());
+        if (!skipInit)
+        {
+            loadedTriggers.ForEach(i => i.Init());
+        }
         if (allEnabled)
         {
             loadedTriggers.ForEach(i => i.IsEnabled = true);
@@ -70,7 +75,14 @@ internal class GameTaskManager
 
     public static void ClearTriggers()
     {
-        TriggerDictionary?.Clear();
+        var dictionary = TriggerDictionary;
+        if (dictionary is null) return;
+
+        foreach (var name in dictionary.Where(pair => !pair.Value.AlwaysActive)
+                     .Select(pair => pair.Key).ToList())
+        {
+            dictionary.TryRemove(name, out _);
+        }
     }
 
     /// <summary>
@@ -120,6 +132,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
+            TriggerDictionary.GetValueOrDefault("NetworkRecovery")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }

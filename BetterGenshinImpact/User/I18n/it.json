@@ -1,4 +1,9 @@
 {
+  "网络健康监控与断网恢复": "Monitoraggio e ripristino della rete",
+  "常驻实时检测网络；连续探测失败后暂停任务，网络和登录恢复后从暂停处继续。": "Monitora continuamente la rete come trigger in tempo reale. Sospende dopo errori consecutivi e riprende dopo il recupero della rete e dell'accesso.",
+  "网络探测地址": "Indirizzo di verifica della rete",
+  "使用 ICMP Ping，填写主机名或 IP，无需添加协议前缀": "Usa ICMP Ping. Inserisci un nome host o IP senza prefisso di protocollo.",
+  "网络探测主机名或 IP，例如 www.baidu.com": "Nome host o IP da verificare, ad esempio www.baidu.com",
   "(下方地图选择会影响路径录制所在的独立地图)": "(La selezione della mappa in basso influisce sulla mappa indipendente usata per la registrazione del percorso)",
   "(实验性功能) 战斗时按下方设置的间隔尝试靠近或旋转寻找敌人。": "(Sperimentale) Durante il combattimento, prova ad avvicinarti o a ruotare per trovare i nemici all'intervallo configurato di seguito.",
   "(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)": "(Consigliato insieme a \"Verifica più rapida della fine del combattimento\" impostata a circa 1s) Prima di aprire la schermata squadra per verificare la fine del combattimento, controlla prima i nemici per decidere se avvicinarsi o ruotare per cercarli. (Verifica pre-Q: controlla se il combattimento è finito prima di lanciare l'Abilità Q. Cerca di fronteggiare i nemici: individua i nemici all'inizio del combattimento e prova a rivolgerti verso di loro durante lo scontro.)",
