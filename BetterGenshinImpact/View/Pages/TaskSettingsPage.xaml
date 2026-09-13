@@ -1889,7 +1889,7 @@
                               Grid.Column="1"
                               Width="200"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyListWithoutCombo}"
                               SelectedItem="{Binding Config.AutoBossConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -2224,7 +2224,7 @@
                               Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyListWithoutCombo}"
                               SelectedItem="{Binding Config.AutoStygianOnslaughtConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -2854,7 +2854,7 @@
                               Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyListWithoutCombo}"
                               SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
