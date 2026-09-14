@@ -79,8 +79,13 @@ public sealed class NetworkRecoveryTask
 
         if (consecutivePlayableRounds >= StablePlayableRounds)
         {
-            RecoveryLogger.LogInformation("等待 30 秒未出现断线弹窗，且最终连续识别到可用游戏界面，解除暂停");
-            return true;
+            if (await FocusGameForInteractionAsync(ct))
+            {
+                RecoveryLogger.LogInformation("等待 30 秒未出现断线弹窗，且最终连续识别到可用游戏界面，解除暂停");
+                return true;
+            }
+
+            return false;
         }
 
         RecoveryLogger.LogWarning("等待断线确认按钮超时，且未识别到可用游戏界面，继续保持暂停");
@@ -114,8 +119,13 @@ public sealed class NetworkRecoveryTask
 
         if (consecutivePlayableRounds >= StablePlayableRounds)
         {
-            RecoveryLogger.LogInformation("断线弹窗已关闭，且最终连续识别到游戏仍可操作");
-            return true;
+            if (await FocusGameForInteractionAsync(ct))
+            {
+                RecoveryLogger.LogInformation("断线弹窗已关闭，且最终连续识别到游戏仍可操作");
+                return true;
+            }
+
+            return false;
         }
 
         RecoveryLogger.LogWarning("断线弹窗已关闭，但暂未识别到主界面或登录界面");
@@ -155,7 +165,8 @@ public sealed class NetworkRecoveryTask
         }
 
         RecoveryLogger.LogInformation("检测到登录界面，复用现有登录流程重新进入游戏");
-        return await new ExitAndReloginJob().EnterGameAsync(ct);
+        return await new ExitAndReloginJob().EnterGameAsync(ct) &&
+               await FocusGameForInteractionAsync(ct);
     }
 
     private async Task<DialogResult> TryDismissDisconnectDialogAsync(ImageRegion screen, CancellationToken ct,
