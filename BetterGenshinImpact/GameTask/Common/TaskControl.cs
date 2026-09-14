@@ -24,6 +24,7 @@ public class TaskControl
     private static readonly object PauseTransitionSync = new();
     private static int _pauseWaiters;
     private static bool _pauseSideEffectsApplied;
+    private static bool _inputReleaseFailureLogged;
     private static long _pauseStartedTimestamp;
     private static long _totalPausedTimestamp;
 
@@ -64,7 +65,13 @@ public class TaskControl
                     lock (PauseSync) _pauseWaiters++;
                     registered = true;
                 }
-                ApplyPauseSideEffects();
+                if (!ApplyPauseSideEffects())
+                {
+                    if (!IsPauseRequested(network)) break;
+                    if (effectiveToken.WaitHandle.WaitOne(250))
+                        effectiveToken.ThrowIfCancellationRequested();
+                    continue;
+                }
 
                 if (networkPauseLease is null &&
                     network is { IsPaused: true } && !network.IsRecoveryExecution &&
@@ -108,7 +115,7 @@ public class TaskControl
         (network is { IsPaused: true } && !network.IsRecoveryExecution &&
          !TaskTriggerDispatcher.IsInTriggerCallback);
 
-    private static void ApplyPauseSideEffects()
+    private static bool ApplyPauseSideEffects()
     {
         // PauseSync 还承担活动时间读取，不能在其中执行窗口切换和固定等待。
         // 单独串行化副作用，确保其他任务分支只能在首个分支完成输入释放后确认暂停。
@@ -116,22 +123,39 @@ public class TaskControl
         {
             lock (PauseSync)
             {
-                if (_pauseSideEffectsApplied) return;
-                _pauseSideEffectsApplied = true;
-                _pauseStartedTimestamp = Stopwatch.GetTimestamp();
+                if (_pauseSideEffectsApplied) return true;
+                if (_pauseStartedTimestamp == 0)
+                    _pauseStartedTimestamp = Stopwatch.GetTimestamp();
             }
 
-            ReleaseAllInputForPause();
+            if (!ReleaseAllInputForPause())
+            {
+                var shouldLog = false;
+                lock (PauseSync)
+                {
+                    if (!_inputReleaseFailureLogged)
+                    {
+                        _inputReleaseFailureLogged = true;
+                        shouldLog = true;
+                    }
+                }
+                if (shouldLog)
+                    Logger.LogWarning("暂停时未能激活原神窗口，尚未释放输入，将继续重试");
+                return false;
+            }
+
             RunnerContext.Instance.StopAutoPick();
             foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
                 suspendable.Suspend();
+            lock (PauseSync) _pauseSideEffectsApplied = true;
             Logger.LogWarning(RunnerContext.Instance.IsSuspend
                 ? "快捷键触发暂停，等待解除"
                 : "网络探测失败，任务暂停等待恢复");
+            return true;
         }
     }
 
-    private static void ReleaseAllInputForPause()
+    private static bool ReleaseAllInputForPause()
     {
         var taskContext = TaskContext.Instance();
         var gameHandle = taskContext.IsInitialized ? taskContext.GameHandle : IntPtr.Zero;
@@ -151,8 +175,14 @@ public class TaskControl
                 Thread.Sleep(100);
             }
 
+            // RestoreWindow 只发起激活请求；必须确认目标确实成为前台窗口，
+            // 否则 SendInput 的 KeyUp/MouseUp 会落到 BGI 或 Explorer。
+            if (gameHandle != IntPtr.Zero && User32.GetForegroundWindow() != gameHandle)
+                return false;
+
             Simulation.ReleaseAllKey();
             Thread.Sleep(50);
+            return true;
         }
         finally
         {
@@ -163,9 +193,11 @@ public class TaskControl
 
     private static void ReleasePauseSideEffects()
     {
-        if (!_pauseSideEffectsApplied) return;
+        if (_pauseStartedTimestamp == 0) return;
         _totalPausedTimestamp += Stopwatch.GetTimestamp() - _pauseStartedTimestamp;
         _pauseStartedTimestamp = 0;
+        _inputReleaseFailureLogged = false;
+        if (!_pauseSideEffectsApplied) return;
         _pauseSideEffectsApplied = false;
         RunnerContext.Instance.ResumeAutoPick();
         foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
@@ -194,7 +226,7 @@ public class TaskControl
         {
             var now = Stopwatch.GetTimestamp();
             var paused = _totalPausedTimestamp;
-            if (_pauseSideEffectsApplied)
+            if (_pauseStartedTimestamp != 0)
                 paused += now - _pauseStartedTimestamp;
             return now - paused;
         }
