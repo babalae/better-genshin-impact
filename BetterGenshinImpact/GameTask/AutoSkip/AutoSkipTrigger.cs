@@ -14,11 +14,13 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.View.Windows;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -91,8 +93,18 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private List<string> _selectList = [];
 
     private PostMessageSimulator? _postMessageSimulator;
-    
+
     private readonly bool _isCustomConfiguration;
+
+    /// <summary>
+    /// 对话选项识别用的本地化字符串（每日/委托/探索/派遣 及组合形式）
+    /// </summary>
+    private string _dailyLocalizedString = "";
+    private string _commissionsLocalizedString = "";
+    private string _expeditionLocalizedString = "";
+    private string _dispatchLocalizedString = "";
+    private string _dailyCommissionsLocalizedString = "";
+    private string _expeditionDispatchLocalizedString = "";
 
     private static RecognitionObject GetRecognitionObject(string objectName, ImageRegion region)
     {
@@ -102,8 +114,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public AutoSkipTrigger()
     {
         _config = TaskContext.Instance().Config.AutoSkipConfig;
+        InitLocalizedStrings();
     }
-    
+
     /// <summary>
     /// 用于内部的其他方法调用
     /// </summary>
@@ -112,6 +125,20 @@ public partial class AutoSkipTrigger : ITaskTrigger
     {
         _config = config;
         _isCustomConfiguration = true;
+        InitLocalizedStrings();
+    }
+
+    private void InitLocalizedStrings()
+    {
+        IStringLocalizer<AutoSkipTrigger> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoSkipTrigger>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        _dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日");
+        _commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+        _expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
+        _dispatchLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "派遣");
+        _dailyCommissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日委托");
+        _expeditionDispatchLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索派遣");
     }
 
     public void Init()
@@ -754,7 +781,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         var textMat = item.ToImageRegion().SrcMat;
                         if (IsOrangeOption(textMat))
                         {
-                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
+                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains(_dailyLocalizedString) || item.Text.Contains(_commissionsLocalizedString)))
                             {
                                 if (!ClickOcrRegion(item, "每日委托"))
                                 {
@@ -773,7 +800,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 
                                 _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                             }
-                            else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
+                            else if (_config.AutoReExploreEnabled && (item.Text.Contains(_expeditionLocalizedString) || item.Text.Contains(_dispatchLocalizedString)))
                             {
                                 if (!ClickOcrRegion(item, "探索派遣"))
                                 {
@@ -783,10 +810,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 Thread.Sleep(800); // 等待探索派遣界面打开
                                 new OneKeyExpeditionTask().Run();
                             }
-                            else if (!item.Text.Contains("每日")
-                                && !item.Text.Contains("委托")
-                                && !item.Text.Contains("探索")
-                                && !item.Text.Contains("派遣"))
+                            else if (!item.Text.Contains(_dailyLocalizedString)
+                                && !item.Text.Contains(_commissionsLocalizedString)
+                                && !item.Text.Contains(_expeditionLocalizedString)
+                                && !item.Text.Contains(_dispatchLocalizedString))
                             {
                                 if (!ClickOcrRegion(item))
                                 {
@@ -1040,7 +1067,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private void AutoSkipLog(string text)
     {
-        if (text.Contains("每日委托") || text.Contains("探索派遣"))
+        if (text.Contains(_dailyCommissionsLocalizedString) || text.Contains(_expeditionDispatchLocalizedString))
         {
             _logger.LogInformation("自动剧情：{Text}", text);
         }
