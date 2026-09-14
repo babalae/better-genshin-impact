@@ -37,6 +37,7 @@ public class TaskControl
 
         Thread.Sleep(millisecondsTimeout);
         TrySuspend();
+        CheckAndActivateGameWindow();
     }
 
     public static void Sleep(int millisecondsTimeout)
@@ -48,6 +49,7 @@ public class TaskControl
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
         TrySuspend();
+        CheckAndActivateGameWindow();
     }
 
     public static void TrySuspend(CancellationToken cancellationToken = default)
@@ -317,6 +319,7 @@ public class TaskControl
 
         // 暂停可能在 Thread.Sleep 期间到达；不要让调用方在返回后继续输入。
         TrySuspend(ct);
+        CheckAndActivateGameWindow();
     }
 
     public static async Task Delay(int millisecondsTimeout, CancellationToken ct)
@@ -350,12 +353,8 @@ public class TaskControl
         // 暂停可能在 Task.Delay 期间到达；返回调用方前再次进入暂停检查点。
         TrySuspend(ct);
 
-        // NewRetry 等上游流程通常在 Delay 返回后立即发送下一次输入。
-        // 网络恢复期间需要在等待结束时再校验一次，堵住“等待中失焦、返回后误点其他窗口”的竞态。
-        if (NetworkRecoveryController.Current is { IsRecoveryExecution: true })
-        {
-            CheckAndActivateGameWindow();
-        }
+        // Delay 返回后通常会立刻输入；暂停过程可能恢复了原来的前台窗口，必须重新校验。
+        CheckAndActivateGameWindow();
     }
 
     /// <summary>
