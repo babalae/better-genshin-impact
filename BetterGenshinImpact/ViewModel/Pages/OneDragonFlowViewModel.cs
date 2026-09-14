@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
@@ -399,11 +400,104 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    /// <summary>true 时表示正在应用磁盘重读结果，忽略由绑定回写引起的本命令重入。</summary>
+    private bool _isApplyingConfigReload;
+
+    /// <summary>最近一次成功应用到当前所选预设的原始 JSON（按名称记忆），内容未变化时跳过重复替换。</summary>
+    private (string Name, string Json)? _lastAppliedConfigReload;
+
     [RelayCommand]
     private void OnConfigDropDownChanged()
     {
-        SetSomeSelectedConfig(SelectedConfig);
+        if (SelectedConfig == null || _isApplyingConfigReload)
+        {
+            return;
+        }
+
+        // 切换预设时从磁盘重读对应文件，让运行中外部编辑的预设文件生效，
+        // 也避免后续自动保存把内存中的旧值覆盖回文件（#3235）。
+        var configName = SelectedConfig.Name;
+
+        // 只做一次读取：取到磁盘内容（含反序列化与 Name 校验），读取/解析失败则沿用内存实例。
+        var diskConfig = ReadOneDragonConfigFromDisk(configName, out var json);
+
+        // 内容与最近一次应用的一致（例如绑定异步回写再次触发的本命令）：无需重复替换。
+        if (diskConfig != null && _lastAppliedConfigReload is { } lastApplied
+            && lastApplied.Name == configName && lastApplied.Json == json)
+        {
+            SetSomeSelectedConfig(SelectedConfig);
+            SelectedTask = null;
+            return;
+        }
+
+        if (diskConfig != null)
+        {
+            _isApplyingConfigReload = true;
+            try
+            {
+                var index = ConfigList.IndexOf(SelectedConfig);
+                if (index >= 0)
+                {
+                    ConfigList[index] = diskConfig;
+                }
+
+                // SelectedConfig 是预设下拉框的 TwoWay 绑定源：赋入新实例后绑定引擎会异步回写
+                // ComboBox.SelectedItem 并再次触发本命令。守卫打开期间同步泵完 DataBind 优先级的
+                // 回写，把这次重入拦掉，避免实例被反复替换（死循环）。
+                _lastAppliedConfigReload = (configName, json);
+                SelectedConfig = diskConfig;
+                Application.Current?.Dispatcher.Invoke(() => { }, DispatcherPriority.DataBind);
+            }
+            finally
+            {
+                _isApplyingConfigReload = false;
+            }
+        }
+
+        // 收尾以本次读取结果为准（读取失败则保持原实例），不依赖绑定回写回显来完成状态收敛。
+        SetSomeSelectedConfig(diskConfig ?? SelectedConfig);
         SelectedTask = null;
+    }
+
+    /// <summary>
+    /// 按配置名读取并反序列化 <see cref="OneDragonFlowConfigFolder" /> 下的文件为全新实例；
+    /// 文件缺失、解析失败或名称与来源文件不一致时返回 null（沿用内存中的实例，活对象不会被部分修改）。
+    /// 成功时通过 <paramref name="json" /> 返回本次实际应用的原始内容，供后续幂等比较使用（单次读取）。
+    /// </summary>
+    private OneDragonFlowConfig? ReadOneDragonConfigFromDisk(string configName, out string json)
+    {
+        json = string.Empty;
+        try
+        {
+            var filePath = Path.Combine(OneDragonFlowConfigFolder, $"{configName}.json");
+            if (!File.Exists(filePath))
+            {
+                _logger.LogDebug("重读一条龙配置失败，文件不存在: {ConfigName}", configName);
+                return null;
+            }
+
+            json = File.ReadAllText(filePath);
+            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            // 仅接受与来源文件名一致的非空 Name：否则后续保存会用对象里的 Name 生成路径，
+            // 导致原预设文件未被更新或写入错误的 .json 文件。
+            if (config == null || string.IsNullOrEmpty(config.Name) || config.Name != configName)
+            {
+                _logger.LogDebug("忽略重读的一条龙配置，名称与来源文件不一致: {ConfigName}", configName);
+                return null;
+            }
+
+            // 防御外部文件把任务集合显式写成 null 的情况，避免后续 SaveConfig 对空集合调用 Clear() 崩溃。
+            config.TaskEnabledList ??= [];
+            config.TaskOrder ??= [];
+            config.TaskDefinitions ??= [];
+
+            return config;
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "重读一条龙配置失败: {ConfigName}", configName);
+            return null;
+        }
     }
 
     public void SaveConfig()
@@ -452,25 +546,45 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
     {
-        if (SelectedConfig != null)
+        if (selected == null)
         {
-            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
-            foreach (var task in TaskList)
-            {
-                if (SelectedConfig.TaskEnabledList.TryGetValue(task.Id, out var value))
-                {
-                    task.IsEnabled = value;
-                }
-            }
-
-            LoadDisplayTaskListFromConfig();
+            return;
         }
+
+        // 以入参为准收口：绑定的异步回写可能让 SelectedConfig 短暂为 null 或滞后（自审），
+        // 先确保属性指向本次要应用的实例，后续刷新才具备确定性。
+        if (!ReferenceEquals(SelectedConfig, selected))
+        {
+            SelectedConfig = selected;
+        }
+
+        TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = selected.Name;
+        foreach (var task in TaskList)
+        {
+            if (selected.TaskEnabledList.TryGetValue(task.Id, out var value))
+            {
+                task.IsEnabled = value;
+            }
+        }
+
+        LoadDisplayTaskListFromConfig();
     }
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (SelectedConfig == null)
+        {
+            return;
+        }
+
+        // 捕获本次变更所属的预设实例：防抖期间若用户已切换预设，
+        // 不再用当前 TaskList/SelectedConfig 覆盖新预设（自审）。
+        var config = SelectedConfig;
         await Task.Delay(100); //等会加载完再保存
-        SaveConfig();
+        if (ReferenceEquals(SelectedConfig, config))
+        {
+            SaveConfig();
+        }
     }
 
     private void ConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
