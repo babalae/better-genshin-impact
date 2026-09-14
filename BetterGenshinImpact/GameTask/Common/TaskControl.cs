@@ -36,8 +36,8 @@ public class TaskControl
         CheckAndActivateGameWindow();
 
         Thread.Sleep(millisecondsTimeout);
-        TrySuspend();
-        CheckAndActivateGameWindow();
+        if (TrySuspend())
+            CheckAndActivateGameWindow(forceRestoreFocus: true);
     }
 
     public static void Sleep(int millisecondsTimeout)
@@ -48,11 +48,13 @@ public class TaskControl
             CheckAndActivateGameWindow();
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
-        TrySuspend();
-        CheckAndActivateGameWindow();
+        if (TrySuspend())
+            CheckAndActivateGameWindow(forceRestoreFocus: true);
     }
 
-    public static void TrySuspend(CancellationToken cancellationToken = default)
+    /// <summary>在暂停请求有效时等待。</summary>
+    /// <returns>本次调用是否实际进入过暂停。</returns>
+    public static bool TrySuspend(CancellationToken cancellationToken = default)
     {
         var network = NetworkRecoveryController.Current;
         var effectiveToken = GetEffectiveCancellationToken(cancellationToken);
@@ -102,6 +104,8 @@ public class TaskControl
                 }
             }
         }
+
+        return registered;
     }
 
     private static CancellationToken GetEffectiveCancellationToken(CancellationToken cancellationToken)
@@ -252,11 +256,12 @@ public class TaskControl
     public static TimeSpan GetActiveElapsed(long startedAt) =>
         Stopwatch.GetElapsedTime(startedAt, GetActiveTimestamp());
 
-    private static void CheckAndActivateGameWindow()
+    private static void CheckAndActivateGameWindow(bool forceRestoreFocus = false)
     {
         // 恢复流程需要向原神发送真实键鼠输入，不能受普通的“失焦后恢复”开关限制。
         // 否则恢复期间偶发失焦会让后续确认/登录操作停在其他窗口上。
-        var shouldRestoreFocus = TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled ||
+        var shouldRestoreFocus = forceRestoreFocus ||
+                                 TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled ||
                                  NetworkRecoveryController.Current is { IsRecoveryExecution: true };
         if (!shouldRestoreFocus)
         {
@@ -281,7 +286,7 @@ public class TaskControl
             {
                 var name = SystemControl.GetActiveByProcess();
                 Logger.LogInformation("当前获取焦点的窗口为: {Name}，不是原神，尝试恢复窗口", name);
-                SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+                SystemControl.RestoreWindow(TaskContext.Instance().GameHandle);
             }
 
             count++;
@@ -318,8 +323,8 @@ public class TaskControl
         }
 
         // 暂停可能在 Thread.Sleep 期间到达；不要让调用方在返回后继续输入。
-        TrySuspend(ct);
-        CheckAndActivateGameWindow();
+        if (TrySuspend(ct))
+            CheckAndActivateGameWindow(forceRestoreFocus: true);
     }
 
     public static async Task Delay(int millisecondsTimeout, CancellationToken ct)
@@ -351,10 +356,11 @@ public class TaskControl
         }
 
         // 暂停可能在 Task.Delay 期间到达；返回调用方前再次进入暂停检查点。
-        TrySuspend(ct);
-
-        // Delay 返回后通常会立刻输入；暂停过程可能恢复了原来的前台窗口，必须重新校验。
-        CheckAndActivateGameWindow();
+        if (TrySuspend(ct))
+        {
+            // 暂停过程可能恢复了原来的前台窗口；仅在确实经历暂停后强制恢复游戏焦点。
+            CheckAndActivateGameWindow(forceRestoreFocus: true);
+        }
     }
 
     /// <summary>
