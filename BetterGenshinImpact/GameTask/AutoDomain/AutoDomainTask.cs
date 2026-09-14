@@ -1021,6 +1021,15 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private Task FindPetrifiedTree()
     {
+        // 战斗结束后古树可能已经在当前视野内。只有连续检测并确认转向后居中，
+        // 才跳过原搜索；任一步失败都会由中键复位并完整执行原流程。
+        if (!_config.ShortMovement && TryCenterPetrifiedTreeInCurrentView())
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
+            Logger.LogInformation("已在当前视角确认并居中石化古树，跳过固定朝东搜索");
+            return Task.CompletedTask;
+        }
+
         CancellationTokenSource treeCts = new();
         _ct.Register(treeCts.Cancel);
         // 中键回正视角
@@ -1198,6 +1207,124 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
             VisionContext.Instance().DrawContent.ClearAll();
         });
+    }
+
+    private bool TryCenterPetrifiedTreeInCurrentView()
+    {
+        if (!TryGetConfirmedPetrifiedTree(out var target))
+        {
+            return false;
+        }
+
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            var treeMiddleX = target.Rect.X + target.Rect.Width / 2;
+            var mouseDelta = CalculatePetrifiedTreeMouseDelta(treeMiddleX, target.CaptureWidth);
+            if (mouseDelta == 0)
+            {
+                return true;
+            }
+
+            Simulation.SendInput.Mouse.MoveMouseBy(mouseDelta, 0);
+            Logger.LogInformation(
+                "当前视角第 {Attempt}/2 次向石化古树转向：treeMiddleX={TreeMiddleX}px，mouseDelta={MouseDelta}",
+                attempt,
+                treeMiddleX,
+                mouseDelta);
+            Sleep(180, _ct);
+            if (!TryGetConfirmedPetrifiedTree(out target))
+            {
+                return false;
+            }
+        }
+
+        var confirmedMiddleX = target.Rect.X + target.Rect.Width / 2;
+        return CalculatePetrifiedTreeMouseDelta(confirmedMiddleX, target.CaptureWidth) == 0;
+    }
+
+    private bool TryGetConfirmedPetrifiedTree(out (Rect Rect, int CaptureWidth) target)
+    {
+        using var firstCapture = CaptureToRectArea();
+        var firstTreeRect = DetectTree(firstCapture);
+        if (firstTreeRect == default)
+        {
+            target = default;
+            return false;
+        }
+
+        Sleep(120, _ct);
+        using var confirmationCapture = CaptureToRectArea();
+        var confirmedTreeRect = DetectTree(confirmationCapture);
+        if (confirmedTreeRect == default ||
+            confirmationCapture.Width != firstCapture.Width ||
+            confirmationCapture.Height != firstCapture.Height ||
+            !ArePetrifiedTreeDetectionsConsistent(
+                firstTreeRect,
+                confirmedTreeRect,
+                confirmationCapture.Width,
+                confirmationCapture.Height))
+        {
+            target = default;
+            return false;
+        }
+
+        target = (confirmedTreeRect, confirmationCapture.Width);
+        return true;
+    }
+
+    internal static int CalculatePetrifiedTreeMouseDelta(int treeMiddleX, int captureWidth)
+    {
+        if (captureWidth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(captureWidth));
+        }
+
+        var offset = treeMiddleX - captureWidth / 2;
+        var centerTolerance = Math.Max(30, captureWidth / 20);
+        if (Math.Abs(offset) <= centerTolerance)
+        {
+            return 0;
+        }
+
+        // CameraOrientation 中约 2 个鼠标单位对应 1 度。按约 90 度水平视野，
+        // 将屏幕横向偏差换算为保守的单次相机修正量。
+        return Math.Clamp(
+            (int)Math.Round(offset * 180.0 / captureWidth),
+            -120,
+            120);
+    }
+
+    internal static bool ArePetrifiedTreeDetectionsConsistent(
+        Rect first,
+        Rect second,
+        int captureWidth,
+        int captureHeight)
+    {
+        if (captureWidth <= 0 || captureHeight <= 0 ||
+            first.Width <= 0 || first.Height <= 0 ||
+            second.Width <= 0 || second.Height <= 0)
+        {
+            return false;
+        }
+
+        static bool IsInside(Rect rect, int width, int height) =>
+            rect.X >= 0 && rect.Y >= 0 &&
+            rect.X + rect.Width <= width && rect.Y + rect.Height <= height;
+
+        if (!IsInside(first, captureWidth, captureHeight) ||
+            !IsInside(second, captureWidth, captureHeight))
+        {
+            return false;
+        }
+
+        var firstMiddleX = first.X + first.Width / 2;
+        var firstMiddleY = first.Y + first.Height / 2;
+        var secondMiddleX = second.X + second.Width / 2;
+        var secondMiddleY = second.Y + second.Height / 2;
+        var xTolerance = Math.Max(30, captureWidth / 8);
+        var yTolerance = Math.Max(30, captureHeight / 8);
+        return Math.Abs(firstMiddleX - secondMiddleX) <= xTolerance &&
+               Math.Abs(firstMiddleY - secondMiddleY) <= yTolerance;
     }
 
     private Rect DetectTree(ImageRegion region)
