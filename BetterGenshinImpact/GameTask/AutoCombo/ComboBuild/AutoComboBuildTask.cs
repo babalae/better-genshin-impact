@@ -1,5 +1,7 @@
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Job;
 using CsTrees.Blackboard;
 using CsTrees.MEAI;
 using Microsoft.Extensions.AI;
@@ -33,9 +35,7 @@ public class AutoComboBuildTask : ISoloTask
         {
             Logger.LogInformation("{Name}任务启动", Name);
 
-            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
-            var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
-            Logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
+            var avatarNames = await EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
 
             var config = TaskContext.Instance().Config.AutoComboBuildConfig;
 
@@ -51,6 +51,25 @@ public class AutoComboBuildTask : ISoloTask
         {
             Logger.LogInformation("{Name}任务结束", Name);
         }
+    }
+
+    /// <summary>
+    /// 确保处于主界面后识别队伍角色并返回角色名列表
+    /// </summary>
+    public static async Task<List<string>> EnsureMainUiAndRecognizeTeamAsync(ILogger logger, CancellationToken ct)
+    {
+        await new ReturnMainUiTask().Start(ct);
+
+        using var capture = CaptureToRectArea();
+        if (!Bv.IsInMainUi(capture))
+        {
+            throw new InvalidOperationException("未能返回主界面，无法识别队伍角色");
+        }
+
+        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+        var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
+        logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
+        return avatarNames;
     }
 
     /// <summary>

@@ -64,8 +64,11 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// <summary>策略为自动连招（LLM 行为树）时为 true：进本前调用 LLM 建树，循环战斗中 Tick 该树</summary>
     private readonly bool _useComboStrategy;
 
-    /// <summary>进本前构建的连招建树会话，仅 _useComboStrategy 时非空</summary>
-    private ComboTreeSession? _comboSession;
+    /// <summary>后台建树任务：队伍识别后启动，与传送进本并行，战斗启动前等待其完成</summary>
+    private Task<ComboTreeSession>? _comboBuildTask;
+
+    /// <summary>后台建树的取消源：链接主令牌，秘境流程结束时取消，避免宿主异常退出后建树白跑</summary>
+    private CancellationTokenSource? _comboBuildCts;
     private readonly Dictionary<string, int> _rewardSummary = new();
 
     private CancellationToken _ct;
@@ -182,50 +185,70 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
-        // 自动连招：进本前在秘境外建树（秘境内队伍锁定，建树队伍即整场战斗队伍）
+        // 自动连招：秘境外识别队伍后启动 LLM 后台建树，
+        // 建树与传送进本并行，战斗启动前在 StartComboFight 中等待其完成；
+        // 建树令牌链接主令牌，秘境流程结束（含异常退出）时在 finally 中取消
         if (_useComboStrategy)
         {
-            _comboSession = await BuildComboTreeForDomain(ct);
+            var avatarNames = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+            Logger.LogInformation("自动秘境：后台启动 LLM 建树");
+
+            var config = TaskContext.Instance().Config.AutoComboBuildConfig;
+            _comboBuildCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatarNames, config, Logger, _comboBuildCts.Token);
         }
 
-        // 复活重试
-        for (var i = 0; i < _config.ReviveRetryCount; i++)
+        try
         {
-            try
+            // 复活重试
+            for (var i = 0; i < _config.ReviveRetryCount; i++)
             {
-                await DoDomain();
-                // 其他场景不重试
-                break;
-            }
-            catch (RetryException e)
-            {
-                // 只有选择了秘境的时候才会重试
-                if (!string.IsNullOrEmpty(_taskParam.DomainName))
+                try
                 {
-                    var msg = e.Message;
-                    if (msg.Contains("复活"))
+                    await DoDomain();
+                    // 其他场景不重试
+                    break;
+                }
+                catch (RetryException e)
+                {
+                    // 只有选择了秘境的时候才会重试
+                    if (!string.IsNullOrEmpty(_taskParam.DomainName))
                     {
-                        msg = "存在角色死亡，复活后重试秘境...";
+                        var msg = e.Message;
+                        if (msg.Contains("复活"))
+                        {
+                            msg = "存在角色死亡，复活后重试秘境...";
+                        }
+
+                        Logger.LogWarning("自动秘境：{Text}", msg);
+                        await Delay(2000, ct);
+                        Notify.Event(NotificationEvent.DomainRetry).Error(msg);
+                        continue;
                     }
 
-                    Logger.LogWarning("自动秘境：{Text}", msg);
-                    await Delay(2000, ct);
-                    Notify.Event(NotificationEvent.DomainRetry).Error(msg);
-                    continue;
+                    throw;
                 }
+            }
 
-                throw;
+
+            await Delay(2000, ct);
+            await Bv.WaitForMainUi(_ct, 30);
+            await Delay(2000, ct);
+
+            await ArtifactSalvage();
+            Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
+            return new Dictionary<string, int>(_rewardSummary);
+        }
+        finally
+        {
+            // 正常结束时建树任务早已完成（已在按 F 前 await），取消是空操作；异常退出时立即掐断后台 LLM 请求
+            if (_comboBuildCts != null)
+            {
+                await _comboBuildCts.CancelAsync();
+                _comboBuildCts.Dispose();
+                _comboBuildCts = null;
             }
         }
-
-
-        await Delay(2000, ct);
-        await Bv.WaitForMainUi(_ct, 30);
-        await Delay(2000, ct);
-
-        await ArtifactSalvage();
-        Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
-        return new Dictionary<string, int>(_rewardSummary);
     }
 
     private async Task DoDomain()
@@ -249,6 +272,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 ESkillCdTracker.Clear();
                 // 自动连招策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
+
+                if (!_comboBuildTask!.IsCompleted)
+                {
+                    Logger.LogInformation("自动秘境：{Text}", "0. 等待后台 LLM 建树完成");
+                }
+                await _comboBuildTask!; // 建树失败在此抛出快速结束任务，结果由 StartComboFight 内再次 await 获取
+
                 // 1. 走到钥匙处启动
                 Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
                 await WalkToPressF();
@@ -801,20 +831,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
-    /// 自动连招：进本前在秘境外识别队伍并调用 LLM 构建连招行为树
-    /// </summary>
-    private async Task<ComboTreeSession> BuildComboTreeForDomain(CancellationToken ct)
-    {
-        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
-        var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
-        Logger.LogInformation("自动秘境：识别队伍 {Avatars}，开始调用 LLM 构建连招行为树", string.Join("、", avatarNames));
-
-        var config = TaskContext.Instance().Config.AutoComboBuildConfig;
-        return await AutoComboBuildTask.BuildComboTreeAsync(avatarNames, config, Logger, ct);
-    }
-
-    /// <summary>
-    /// 自动连招战斗入口：Tick 进本前构建的连招行为树（注入建树会话，不读静态暂存），
+    /// 自动连招战斗入口：Tick 后台构建的连招行为树（注入建树会话，不读静态暂存），
     /// 秘境的DomainEndDetectionTask通过CancellationToken控制战斗结束。
     /// </summary>
     private async Task StartComboFight()
@@ -822,8 +839,11 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
 
+        // 建树已在 WalkToPressF 前汇合完成，此处 await 已完成的任务同步返回结果
+        var comboTreeSession = await _comboBuildTask!;
+
         // 抑制其自带的结束检测（FightFinishDetectEnabled=false），由秘境的DomainEndDetectionTask控制战斗结束
-        var comboTask = new AutoComboRunTask(new AutoFightParam { FightFinishDetectEnabled = false }, _comboSession!);
+        var comboTask = new AutoComboRunTask(new AutoFightParam { FightFinishDetectEnabled = false }, comboTreeSession);
 
         var domainEndTask = DomainEndDetectionTask(cts);
 
