@@ -210,9 +210,11 @@ public class AutoFightJsonTask : ISoloTask
             // 战斗前动作
             await RunPreActions(combatScenes, evaluator);
     
-            // 战斗操作
+            // 战斗操作。每个会发送输入的并发分支在自己的异步上下文内单独登记。
+            var networkController = NetworkRecoveryController.Current;
             var fightTask = Task.Run(async () =>
             {
+                using var fightPauseParticipant = networkController?.RegisterTaskPauseParticipant();
                 try
                 {
                     JsonAction? lastExecutedAction = null;
@@ -416,6 +418,7 @@ public class AutoFightJsonTask : ISoloTask
             {
                 targetingTask = Task.Run(async () =>
                 {
+                    using var targetingPauseParticipant = networkController?.RegisterTaskPauseParticipant();
                     try
                     {
                         await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);

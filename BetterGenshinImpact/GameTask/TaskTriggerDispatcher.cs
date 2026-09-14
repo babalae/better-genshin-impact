@@ -308,7 +308,14 @@ namespace BetterGenshinImpact.GameTask
                             var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                             if (exclusive != null)
                             {
-                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                                // 普通独占触发器不能阻断承担恢复职责的后台常驻触发器。
+                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning ||
+                                                            _triggers.Any(t => t is
+                                                            {
+                                                                AlwaysActive: true,
+                                                                IsEnabled: true,
+                                                                IsBackgroundRunning: true
+                                                            });
                             }
                             else
                             {

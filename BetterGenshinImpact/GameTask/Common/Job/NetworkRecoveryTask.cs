@@ -150,8 +150,8 @@ public sealed class NetworkRecoveryTask
                 choose.X, choose.Y, choose.Width, choose.Height);
             choose.Click();
             await Delay(1000, ct);
-            using var afterChoose = CaptureToRectArea();
-            return IsPlayableUi(afterChoose) ? true : null;
+            // 点击后仍回到外层连续识别流程，不能用单帧主界面结果提前解除暂停。
+            return null;
         }
 
         RecoveryLogger.LogInformation("检测到登录界面，复用现有登录流程重新进入游戏");

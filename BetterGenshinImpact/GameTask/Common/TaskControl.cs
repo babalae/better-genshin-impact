@@ -11,6 +11,7 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -111,13 +112,41 @@ public class TaskControl
             if (_pauseSideEffectsApplied) return;
             _pauseSideEffectsApplied = true;
             _pauseStartedTimestamp = Stopwatch.GetTimestamp();
-            Simulation.ReleaseAllKey();
+            ReleaseAllInputForPause();
             RunnerContext.Instance.StopAutoPick();
             foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
                 suspendable.Suspend();
             Logger.LogWarning(RunnerContext.Instance.IsSuspend
                 ? "快捷键触发暂停，等待解除"
                 : "网络探测失败，任务暂停等待恢复");
+        }
+    }
+
+    private static void ReleaseAllInputForPause()
+    {
+        var taskContext = TaskContext.Instance();
+        var gameHandle = taskContext.IsInitialized ? taskContext.GameHandle : IntPtr.Zero;
+        var previousForeground = User32.GetForegroundWindow();
+        var restoreForeground = gameHandle != IntPtr.Zero && previousForeground != gameHandle &&
+                                User32.IsWindow(previousForeground);
+
+        try
+        {
+            // 上游的手动暂停依赖 SendInput 释放按键；断网暂停时原神不一定在前台，
+            // 必须先让真实 KeyUp/MouseUp 到达绑定的游戏窗口。
+            if (gameHandle != IntPtr.Zero && previousForeground != gameHandle)
+            {
+                SystemControl.FocusWindow(gameHandle);
+                Thread.Sleep(100);
+            }
+
+            Simulation.ReleaseAllKey();
+            Thread.Sleep(50);
+        }
+        finally
+        {
+            if (restoreForeground)
+                SystemControl.FocusWindow((nint)previousForeground);
         }
     }
 

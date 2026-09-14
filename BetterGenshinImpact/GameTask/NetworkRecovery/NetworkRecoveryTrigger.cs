@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace BetterGenshinImpact.GameTask.NetworkRecovery;
 
 /// <summary>
-/// 网络健康实时触发器。Ping 循环独立于截图回调；截图回调只负责在网络恢复后
+/// 网络健康实时触发器。探测循环独立于截图回调；截图回调只负责在网络恢复后
 /// 启动一次恢复流程，因此挂起任务线程不会切断自身的恢复路径。
 /// </summary>
 public sealed class NetworkRecoveryTrigger : ITaskTrigger
@@ -128,23 +128,35 @@ public sealed class NetworkRecoveryTrigger : ITaskTrigger
 
     public static void StopSession()
     {
-        lock (Sync) _sessionActive = false;
-        StopController();
+        lock (Sync)
+        {
+            _sessionActive = false;
+            StopControllerLocked();
+        }
     }
 
     private static void StopController()
     {
-        NetworkRecoveryController? controller;
-        IDisposable? scope;
         lock (Sync)
         {
-            controller = _controller;
-            scope = _controllerScope;
-            _controller = null;
-            _controllerScope = null;
+            StopControllerLocked();
+        }
+    }
+
+    /// <summary>在 Sync 内完成旧控制器的分离和释放，禁止新会话与停止流程交错。</summary>
+    private static void StopControllerLocked()
+    {
+        var controller = _controller;
+        var scope = _controllerScope;
+        _controller = null;
+        _controllerScope = null;
+
+        if (controller is null)
+        {
+            scope?.Dispose();
+            return;
         }
 
-        if (controller is null) return;
         try { controller.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
         catch (Exception e) { Logger.LogWarning(e, "停止网络健康实时触发器时发生异常"); }
         finally { scope?.Dispose(); }

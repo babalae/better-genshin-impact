@@ -288,9 +288,11 @@ public class AutoFightTask : ISoloTask
             expDetector.Start();
         }
 
-        // 战斗操作
+        // 战斗操作。每个会发送输入的并发分支在自己的异步上下文内单独登记。
+        var networkController = NetworkRecoveryController.Current;
         var fightTask = Task.Run(async () =>
         {
+            using var fightPauseParticipant = networkController?.RegisterTaskPauseParticipant();
             try
             {
                 FightStatusFlag = true;
@@ -491,6 +493,7 @@ public class AutoFightTask : ISoloTask
         {
             targetingTask = Task.Run(async () =>
             {
+                using var targetingPauseParticipant = networkController?.RegisterTaskPauseParticipant();
                 try
                 {
                     await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);

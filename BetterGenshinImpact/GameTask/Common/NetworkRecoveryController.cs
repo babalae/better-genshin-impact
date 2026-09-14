@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -14,7 +15,9 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
 {
     private static NetworkRecoveryController? _current;
     private readonly AsyncLocal<bool> _inRecovery = new();
+    private readonly AsyncLocal<long?> _currentTaskPauseParticipant = new();
     private readonly object _sync = new();
+    private readonly object _taskPauseSync = new();
     private readonly SemaphoreSlim _recoveryGate = new(1, 1);
     private readonly CancellationTokenSource _stop;
     private readonly Func<string?> _getTarget;
@@ -32,7 +35,9 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     private bool _recovering;
     private bool _stopping;
     private int _taskPauseWaiters;
-    private int _taskPauseParticipants;
+    private long _nextTaskPauseParticipantId;
+    private readonly HashSet<long> _taskPauseParticipants = [];
+    private readonly Dictionary<long, int> _taskPauseParticipantWaiters = [];
     private long _lastRecoveryCompletedTimestamp;
 
     public static NetworkRecoveryController? Current => Volatile.Read(ref _current);
@@ -44,9 +49,15 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     {
         get
         {
-            var waiters = Volatile.Read(ref _taskPauseWaiters);
-            var participants = Volatile.Read(ref _taskPauseParticipants);
-            return waiters > 0 && (participants == 0 || waiters >= participants);
+            lock (_taskPauseSync)
+            {
+                if (_taskPauseParticipants.Count == 0)
+                    return Volatile.Read(ref _taskPauseWaiters) > 0;
+
+                // 有显式登记的并发输入分支时，只接受这些分支自己的暂停确认。
+                // 外层 JS Promise 等普通等待者不能冒充自动战斗/索敌分支。
+                return _taskPauseParticipantWaiters.Count >= _taskPauseParticipants.Count;
+            }
         }
     }
 
@@ -73,22 +84,66 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
     // 实时触发器持有此作用域，使任务线程与截图调度线程看到同一个会话。
     public IDisposable Enter()
     {
-        var previous = Interlocked.Exchange(ref _current, this);
-        return new Scope(() => Interlocked.CompareExchange(ref _current, previous, this));
+        Interlocked.Exchange(ref _current, this);
+        // 只移除自己，不恢复旧值。即使意外出现重叠作用域，也不能重新暴露已释放的旧控制器。
+        return new Scope(() => Interlocked.CompareExchange(ref _current, null, this));
     }
 
     public IDisposable AcknowledgeTaskPaused()
     {
+        var participantId = _currentTaskPauseParticipant.Value;
+        var registeredParticipant = false;
+        if (participantId is { } id)
+        {
+            lock (_taskPauseSync)
+            {
+                if (_taskPauseParticipants.Contains(id))
+                {
+                    _taskPauseParticipantWaiters.TryGetValue(id, out var count);
+                    _taskPauseParticipantWaiters[id] = count + 1;
+                    registeredParticipant = true;
+                }
+            }
+        }
+
         Interlocked.Increment(ref _taskPauseWaiters);
-        return new Scope(() => Interlocked.Decrement(ref _taskPauseWaiters));
+        return new Scope(() =>
+        {
+            if (registeredParticipant)
+            {
+                lock (_taskPauseSync)
+                {
+                    if (_taskPauseParticipantWaiters.TryGetValue(participantId!.Value, out var count))
+                    {
+                        if (count <= 1) _taskPauseParticipantWaiters.Remove(participantId.Value);
+                        else _taskPauseParticipantWaiters[participantId.Value] = count - 1;
+                    }
+                }
+            }
+
+            Interlocked.Decrement(ref _taskPauseWaiters);
+        });
     }
 
-    /// <summary>登记同一任务内会并发发送输入的分支，恢复前必须等待这些分支全部进入暂停点。</summary>
-    public IDisposable RegisterTaskPauseParticipants(int count)
+    /// <summary>
+    /// 在当前异步执行分支登记一个输入参与者。恢复前必须等待每个仍存活的登记分支分别进入暂停点。
+    /// </summary>
+    public IDisposable RegisterTaskPauseParticipant()
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
-        Interlocked.Add(ref _taskPauseParticipants, count);
-        return new Scope(() => Interlocked.Add(ref _taskPauseParticipants, -count));
+        var participantId = Interlocked.Increment(ref _nextTaskPauseParticipantId);
+        var previousParticipantId = _currentTaskPauseParticipant.Value;
+        lock (_taskPauseSync) _taskPauseParticipants.Add(participantId);
+        _currentTaskPauseParticipant.Value = participantId;
+
+        return new Scope(() =>
+        {
+            _currentTaskPauseParticipant.Value = previousParticipantId;
+            lock (_taskPauseSync)
+            {
+                _taskPauseParticipants.Remove(participantId);
+                _taskPauseParticipantWaiters.Remove(participantId);
+            }
+        });
     }
 
     private async Task MonitorAsync()
@@ -277,18 +332,23 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
 
     private static async Task<bool> TcpConnectAsync(string target, int port, CancellationToken ct)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(2));
         try
         {
             using var client = new TcpClient();
-            await client.ConnectAsync(target, port, ct).AsTask()
-                .WaitAsync(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+            await client.ConnectAsync(target, port, timeout.Token).ConfigureAwait(false);
             return client.Connected;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception e) when (e is SocketException or TimeoutException)
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (SocketException)
         {
             return false;
         }

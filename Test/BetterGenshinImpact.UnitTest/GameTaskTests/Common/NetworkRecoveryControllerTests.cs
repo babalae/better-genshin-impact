@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Common;
 public class NetworkRecoveryControllerTests
 {
     [Fact]
-    public async Task EnterPublishesControllerAcrossExecutionContexts_AndScopeRestoresIt()
+    public async Task EnterPublishesControllerAcrossExecutionContexts_AndScopeClearsIt()
     {
         var probes = Channel.CreateUnbounded<bool>();
         await using var controller = CreateController(
@@ -30,6 +30,31 @@ public class NetworkRecoveryControllerTests
     }
 
     [Fact]
+    public async Task OverlappingScopesNeverRestoreAnOlderController()
+    {
+        var firstProbes = Channel.CreateUnbounded<bool>();
+        var secondProbes = Channel.CreateUnbounded<bool>();
+        await using var first = CreateController(
+            () => "first.test",
+            firstProbes,
+            _ => Task.FromResult(true));
+        await using var second = CreateController(
+            () => "second.test",
+            secondProbes,
+            _ => Task.FromResult(true));
+
+        var firstScope = first.Enter();
+        var secondScope = second.Enter();
+        Assert.Same(second, NetworkRecoveryController.Current);
+
+        firstScope.Dispose();
+        Assert.Same(second, NetworkRecoveryController.Current);
+
+        secondScope.Dispose();
+        Assert.Null(NetworkRecoveryController.Current);
+    }
+
+    [Fact]
     public async Task ParallelPauseParticipantsMustAllAcknowledgeBeforeRecovery()
     {
         var probes = Channel.CreateUnbounded<bool>();
@@ -38,13 +63,151 @@ public class NetworkRecoveryControllerTests
             probes,
             _ => Task.FromResult(true));
 
-        using var participants = controller.RegisterTaskPauseParticipants(3);
-        using var first = controller.AcknowledgeTaskPaused();
-        Assert.False(controller.IsTaskPauseAcknowledged);
-        using var second = controller.AcknowledgeTaskPaused();
-        Assert.False(controller.IsTaskPauseAcknowledged);
-        using var third = controller.AcknowledgeTaskPaused();
-        Assert.True(controller.IsTaskPauseAcknowledged);
+        var release = NewSignal();
+        var acknowledge = Enumerable.Range(0, 3).Select(_ => NewSignal()).ToArray();
+        var registered = Enumerable.Range(0, 3).Select(_ => NewSignal()).ToArray();
+        var paused = Enumerable.Range(0, 3).Select(_ => NewSignal()).ToArray();
+        var workers = Enumerable.Range(0, 3)
+            .Select(i => RunPauseParticipantAsync(controller, registered[i], acknowledge[i], paused[i], release.Task))
+            .ToArray();
+
+        try
+        {
+            await Task.WhenAll(registered.Select(signal => signal.Task));
+            acknowledge[0].SetResult();
+            await paused[0].Task;
+            Assert.False(controller.IsTaskPauseAcknowledged);
+
+            acknowledge[1].SetResult();
+            await paused[1].Task;
+            Assert.False(controller.IsTaskPauseAcknowledged);
+
+            acknowledge[2].SetResult();
+            await paused[2].Task;
+            Assert.True(controller.IsTaskPauseAcknowledged);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await Task.WhenAll(workers);
+        }
+    }
+
+    [Fact]
+    public async Task DirectAsyncParticipantsKeepIndependentPauseIdentities()
+    {
+        var probes = Channel.CreateUnbounded<bool>();
+        await using var controller = CreateController(
+            () => "probe.test",
+            probes,
+            _ => Task.FromResult(true));
+
+        var release = NewSignal();
+        var acknowledge = Enumerable.Range(0, 3).Select(_ => NewSignal()).ToArray();
+        var registered = Enumerable.Range(0, 3).Select(_ => NewSignal()).ToArray();
+        var paused = Enumerable.Range(0, 3).Select(_ => NewSignal()).ToArray();
+        var workers = Enumerable.Range(0, 3)
+            .Select(i => RunDirectPauseParticipantAsync(
+                controller, registered[i], acknowledge[i], paused[i], release.Task))
+            .ToArray();
+
+        try
+        {
+            await Task.WhenAll(registered.Select(signal => signal.Task));
+            acknowledge[0].SetResult();
+            await paused[0].Task;
+            Assert.False(controller.IsTaskPauseAcknowledged);
+
+            acknowledge[1].SetResult();
+            await paused[1].Task;
+            Assert.False(controller.IsTaskPauseAcknowledged);
+
+            acknowledge[2].SetResult();
+            await paused[2].Task;
+            Assert.True(controller.IsTaskPauseAcknowledged);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await Task.WhenAll(workers);
+        }
+    }
+
+    [Fact]
+    public async Task FinishedParallelBranchNoLongerBlocksPauseAcknowledgement()
+    {
+        var probes = Channel.CreateUnbounded<bool>();
+        await using var controller = CreateController(
+            () => "probe.test",
+            probes,
+            _ => Task.FromResult(true));
+
+        var release = NewSignal();
+        var acknowledge = NewSignal();
+        var runningRegistered = NewSignal();
+        var runningPaused = NewSignal();
+        var finishedRegistered = NewSignal();
+        var finish = NewSignal();
+        var running = RunPauseParticipantAsync(
+            controller, runningRegistered, acknowledge, runningPaused, release.Task);
+        var finished = Task.Run(async () =>
+        {
+            using var participant = controller.RegisterTaskPauseParticipant();
+            finishedRegistered.SetResult();
+            await finish.Task;
+        });
+
+        try
+        {
+            await Task.WhenAll(runningRegistered.Task, finishedRegistered.Task);
+            acknowledge.SetResult();
+            await runningPaused.Task;
+            Assert.False(controller.IsTaskPauseAcknowledged);
+
+            finish.SetResult();
+            await finished;
+            Assert.True(controller.IsTaskPauseAcknowledged);
+        }
+        finally
+        {
+            finish.TrySetResult();
+            release.TrySetResult();
+            await Task.WhenAll(running, finished);
+        }
+    }
+
+    [Fact]
+    public async Task UnregisteredWaiterCannotAcknowledgeRegisteredParticipant()
+    {
+        var probes = Channel.CreateUnbounded<bool>();
+        await using var controller = CreateController(
+            () => "probe.test",
+            probes,
+            _ => Task.FromResult(true));
+
+        var release = NewSignal();
+        var acknowledge = NewSignal();
+        var registered = NewSignal();
+        var paused = NewSignal();
+        var participant = RunPauseParticipantAsync(
+            controller, registered, acknowledge, paused, release.Task);
+
+        try
+        {
+            await registered.Task;
+            using var unrelatedWaiter = controller.AcknowledgeTaskPaused();
+            Assert.True(controller.HasTaskPauseWaiter);
+            Assert.False(controller.IsTaskPauseAcknowledged);
+
+            acknowledge.SetResult();
+            await paused.Task;
+            Assert.True(controller.IsTaskPauseAcknowledged);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await participant;
+        }
     }
 
     [Fact]
@@ -221,6 +384,39 @@ public class NetworkRecoveryControllerTests
         ct,
         probe: (_, token) => probes.Reader.ReadAsync(token).AsTask(),
         interval: TimeSpan.FromMilliseconds(10));
+
+    private static TaskCompletionSource NewSignal() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private static Task RunPauseParticipantAsync(
+        NetworkRecoveryController controller,
+        TaskCompletionSource registered,
+        TaskCompletionSource acknowledge,
+        TaskCompletionSource paused,
+        Task release) => Task.Run(async () =>
+    {
+        using var participant = controller.RegisterTaskPauseParticipant();
+        registered.SetResult();
+        await acknowledge.Task;
+        using var pauseAcknowledgement = controller.AcknowledgeTaskPaused();
+        paused.SetResult();
+        await release;
+    });
+
+    private static async Task RunDirectPauseParticipantAsync(
+        NetworkRecoveryController controller,
+        TaskCompletionSource registered,
+        TaskCompletionSource acknowledge,
+        TaskCompletionSource paused,
+        Task release)
+    {
+        using var participant = controller.RegisterTaskPauseParticipant();
+        registered.SetResult();
+        await acknowledge.Task;
+        using var pauseAcknowledgement = controller.AcknowledgeTaskPaused();
+        paused.SetResult();
+        await release;
+    }
 
     private static async Task InvokeUntilStartedAsync(
         NetworkRecoveryController controller,

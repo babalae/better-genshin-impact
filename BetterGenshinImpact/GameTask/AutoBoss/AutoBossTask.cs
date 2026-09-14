@@ -1113,8 +1113,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private async Task NavigateToReward()
     {
         using var navigationCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
-        // 该阶段有三个并发分支会截图或发送输入；网络恢复前必须等待三者都进入暂停点。
-        using var pauseParticipants = NetworkRecoveryController.Current?.RegisterTaskPauseParticipants(3);
         var page = new BvPage(navigationCts.Token);
 
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
@@ -1186,6 +1184,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private async Task MonitorRewardPromptTask(BvPage page, CancellationTokenSource navigationCts)
     {
+        using var pauseParticipant = NetworkRecoveryController.Current?.RegisterTaskPauseParticipant();
         var ct = navigationCts.Token;
         var lastInteractAt = DateTime.MinValue;
 
@@ -1213,6 +1212,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private async Task AdjustRewardCameraTask(BvPage page, CancellationTokenSource navigationCts)
     {
+        using var pauseParticipant = NetworkRecoveryController.Current?.RegisterTaskPauseParticipant();
         var ct = navigationCts.Token;
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         //将图标控制在屏幕中间，大约截图宽度的45%-55%之间
@@ -1255,6 +1255,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private async Task MoveToRewardTask(BvPage page, CancellationTokenSource navigationCts)
     {
+        using var pauseParticipant = NetworkRecoveryController.Current?.RegisterTaskPauseParticipant();
         var ct = navigationCts.Token;
         var climbRect = ScaleRect(1686, 1030, 60, 23);
         var jumpCount = 0;

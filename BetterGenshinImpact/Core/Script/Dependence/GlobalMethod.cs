@@ -29,6 +29,7 @@ public class GlobalMethod
         }
 
         var ct = CancellationContext.Instance.Cts.Token;
+        ct.ThrowIfCancellationRequested();
         if (millisecondsTimeout == Timeout.Infinite)
         {
             while (true)

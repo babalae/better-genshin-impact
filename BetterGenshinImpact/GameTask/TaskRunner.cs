@@ -64,6 +64,10 @@ public class TaskRunner
         if (NetworkRecoveryController.Current is { IsPaused: true })
         {
             TaskSemaphore.Release();
+            if (clearCancellationContextOnLockFailure)
+            {
+                CancellationContext.Instance.Clear();
+            }
             _logger.LogWarning("任务启动失败：正在恢复网络和游戏状态，请稍后重试");
             return;
         }
