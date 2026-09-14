@@ -23,6 +23,7 @@ public class TaskControl
     private static readonly object PauseSync = new();
     private static readonly object PauseTransitionSync = new();
     private static int _pauseWaiters;
+    private static bool _pauseComponentsSuspended;
     private static bool _pauseSideEffectsApplied;
     private static bool _inputReleaseFailureLogged;
     private static long _pauseStartedTimestamp;
@@ -121,11 +122,28 @@ public class TaskControl
         // 单独串行化副作用，确保其他任务分支只能在首个分支完成输入释放后确认暂停。
         lock (PauseTransitionSync)
         {
+            var shouldSuspendComponents = false;
             lock (PauseSync)
             {
                 if (_pauseSideEffectsApplied) return true;
                 if (_pauseStartedTimestamp == 0)
                     _pauseStartedTimestamp = Stopwatch.GetTimestamp();
+                if (!_pauseComponentsSuspended)
+                {
+                    _pauseComponentsSuspended = true;
+                    shouldSuspendComponents = true;
+                }
+            }
+
+            // 即使 Windows 暂时拒绝前台切换，也要先阻止自动拾取、路径等独立分支继续输入。
+            if (shouldSuspendComponents)
+            {
+                RunnerContext.Instance.StopAutoPick();
+                foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
+                    suspendable.Suspend();
+                Logger.LogWarning(RunnerContext.Instance.IsSuspend
+                    ? "快捷键触发暂停，等待解除"
+                    : "网络探测失败，任务暂停等待恢复");
             }
 
             if (!ReleaseAllInputForPause())
@@ -144,13 +162,7 @@ public class TaskControl
                 return false;
             }
 
-            RunnerContext.Instance.StopAutoPick();
-            foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
-                suspendable.Suspend();
             lock (PauseSync) _pauseSideEffectsApplied = true;
-            Logger.LogWarning(RunnerContext.Instance.IsSuspend
-                ? "快捷键触发暂停，等待解除"
-                : "网络探测失败，任务暂停等待恢复");
             return true;
         }
     }
@@ -197,8 +209,10 @@ public class TaskControl
         _totalPausedTimestamp += Stopwatch.GetTimestamp() - _pauseStartedTimestamp;
         _pauseStartedTimestamp = 0;
         _inputReleaseFailureLogged = false;
-        if (!_pauseSideEffectsApplied) return;
+        var componentsSuspended = _pauseComponentsSuspended;
+        _pauseComponentsSuspended = false;
         _pauseSideEffectsApplied = false;
+        if (!componentsSuspended) return;
         RunnerContext.Instance.ResumeAutoPick();
         foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
             suspendable.Resume();
