@@ -86,9 +86,6 @@ public class TaskControl
                     effectiveToken.ThrowIfCancellationRequested();
             }
 
-            // 只在确实经历暂停后复用上游焦点策略；普通检查点不改变窗口行为。
-            if (registered)
-                CheckAndActivateGameWindow();
         }
         finally
         {
