@@ -1021,20 +1021,22 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private Task FindPetrifiedTree()
     {
-        // 战斗结束后古树可能已经在当前视野内。只有连续检测并确认转向后居中，
-        // 才跳过原搜索；任一步失败都会由中键复位并完整执行原流程。
-        if (!_config.ShortMovement && TryCenterPetrifiedTreeInCurrentView())
+        // 中键回正视角
+        Simulation.SendInput.Mouse.MiddleButtonClick();
+        Sleep(900, _ct);
+
+        // 很多秘境战斗结束后，石化古树已经在当前视野内。先检测一次，
+        // 避免常见场景仍执行完整的朝东定位与横移居中。
+        if (!_config.ShortMovement && TryTurnCameraToPetrifiedTree("当前视角"))
         {
+            Sleep(180, _ct);
             VisionContext.Instance().DrawContent.ClearAll();
-            Logger.LogInformation("已在当前视角确认并居中石化古树，跳过固定朝东搜索");
+            Logger.LogInformation("已在当前视角找到石化古树，跳过固定朝东搜索");
             return Task.CompletedTask;
         }
 
         CancellationTokenSource treeCts = new();
         _ct.Register(treeCts.Cancel);
-        // 中键回正视角
-        Simulation.SendInput.Mouse.MiddleButtonClick();
-        Sleep(900, _ct);
 
         // 左右移动直到石化古树位于屏幕中心任务
         var moveAvatarTask = MoveAvatarHorizontallyTask(treeCts);
@@ -1066,6 +1068,29 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 var treeRect = DetectTree(capture);
                 if (treeRect != default)
                 {
+                    // 默认模式下，首次检测到树后直接转动相机，再由 WalkToPressF 接近，
+                    // 避免相机锁东时反复横移。低性能设备主动启用的小步伐模式保持原逻辑。
+                    if (!_config.ShortMovement)
+                    {
+                        if (leftKeyDown)
+                        {
+                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
+                            leftKeyDown = false;
+                        }
+
+                        if (rightKeyDown)
+                        {
+                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
+                            rightKeyDown = false;
+                        }
+
+                        treeCts.Cancel();
+                        Sleep(120, _ct);
+                        TurnCameraTowardPetrifiedTree(treeRect, captureArea.Width, "朝东后首次检测");
+                        Sleep(180, _ct);
+                        break;
+                    }
+
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
                     if (treeRect.X + treeRect.Width < middleX && !_config.ShortMovement)
                     {
@@ -1209,67 +1234,35 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         });
     }
 
-    private bool TryCenterPetrifiedTreeInCurrentView()
+    private bool TryTurnCameraToPetrifiedTree(string source)
     {
-        if (!TryGetConfirmedPetrifiedTree(out var target))
+        using var capture = CaptureToRectArea();
+        var treeRect = DetectTree(capture);
+        if (treeRect == default)
         {
             return false;
         }
 
-        for (var attempt = 1; attempt <= 2; attempt++)
-        {
-            var treeMiddleX = target.Rect.X + target.Rect.Width / 2;
-            var mouseDelta = CalculatePetrifiedTreeMouseDelta(treeMiddleX, target.CaptureWidth);
-            if (mouseDelta == 0)
-            {
-                return true;
-            }
-
-            Simulation.SendInput.Mouse.MoveMouseBy(mouseDelta, 0);
-            Logger.LogInformation(
-                "当前视角第 {Attempt}/2 次向石化古树转向：treeMiddleX={TreeMiddleX}px，mouseDelta={MouseDelta}",
-                attempt,
-                treeMiddleX,
-                mouseDelta);
-            Sleep(180, _ct);
-            if (!TryGetConfirmedPetrifiedTree(out target))
-            {
-                return false;
-            }
-        }
-
-        var confirmedMiddleX = target.Rect.X + target.Rect.Width / 2;
-        return CalculatePetrifiedTreeMouseDelta(confirmedMiddleX, target.CaptureWidth) == 0;
+        TurnCameraTowardPetrifiedTree(treeRect, capture.Width, source);
+        return true;
     }
 
-    private bool TryGetConfirmedPetrifiedTree(out (Rect Rect, int CaptureWidth) target)
+    private void TurnCameraTowardPetrifiedTree(Rect treeRect, int captureWidth, string source)
     {
-        using var firstCapture = CaptureToRectArea();
-        var firstTreeRect = DetectTree(firstCapture);
-        if (firstTreeRect == default)
+        var treeMiddleX = treeRect.X + treeRect.Width / 2;
+        var mouseDelta = CalculatePetrifiedTreeMouseDelta(treeMiddleX, captureWidth);
+        if (mouseDelta == 0)
         {
-            target = default;
-            return false;
+            Logger.LogInformation("{Source}检测到石化古树已居中", source);
+            return;
         }
 
-        Sleep(120, _ct);
-        using var confirmationCapture = CaptureToRectArea();
-        var confirmedTreeRect = DetectTree(confirmationCapture);
-        if (confirmedTreeRect == default ||
-            confirmationCapture.Width != firstCapture.Width ||
-            confirmationCapture.Height != firstCapture.Height ||
-            !ArePetrifiedTreeDetectionsConsistent(
-                firstTreeRect,
-                confirmedTreeRect,
-                confirmationCapture.Width,
-                confirmationCapture.Height))
-        {
-            target = default;
-            return false;
-        }
-
-        target = (confirmedTreeRect, confirmationCapture.Width);
-        return true;
+        Simulation.SendInput.Mouse.MoveMouseBy(mouseDelta, 0);
+        Logger.LogInformation(
+            "{Source}检测到石化古树并转向：treeMiddleX={TreeMiddleX}px，mouseDelta={MouseDelta}",
+            source,
+            treeMiddleX,
+            mouseDelta);
     }
 
     internal static int CalculatePetrifiedTreeMouseDelta(int treeMiddleX, int captureWidth)
@@ -1292,39 +1285,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             (int)Math.Round(offset * 180.0 / captureWidth),
             -120,
             120);
-    }
-
-    internal static bool ArePetrifiedTreeDetectionsConsistent(
-        Rect first,
-        Rect second,
-        int captureWidth,
-        int captureHeight)
-    {
-        if (captureWidth <= 0 || captureHeight <= 0 ||
-            first.Width <= 0 || first.Height <= 0 ||
-            second.Width <= 0 || second.Height <= 0)
-        {
-            return false;
-        }
-
-        static bool IsInside(Rect rect, int width, int height) =>
-            rect.X >= 0 && rect.Y >= 0 &&
-            rect.X + rect.Width <= width && rect.Y + rect.Height <= height;
-
-        if (!IsInside(first, captureWidth, captureHeight) ||
-            !IsInside(second, captureWidth, captureHeight))
-        {
-            return false;
-        }
-
-        var firstMiddleX = first.X + first.Width / 2;
-        var firstMiddleY = first.Y + first.Height / 2;
-        var secondMiddleX = second.X + second.Width / 2;
-        var secondMiddleY = second.Y + second.Height / 2;
-        var xTolerance = Math.Max(30, captureWidth / 8);
-        var yTolerance = Math.Max(30, captureHeight / 8);
-        return Math.Abs(firstMiddleX - secondMiddleX) <= xTolerance &&
-               Math.Abs(firstMiddleY - secondMiddleY) <= yTolerance;
     }
 
     private Rect DetectTree(ImageRegion region)
