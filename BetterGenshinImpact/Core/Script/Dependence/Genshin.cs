@@ -118,6 +118,16 @@ public class Genshin
     public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        if (TaskContext.Instance().Config.TpConfig.UseExperimentalTeleport)
+        {
+            await tpTask.RunExperimentalMapOperation(MapTypes.Teyvat.ToString(), async () =>
+            {
+                await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+                await tpTask.MoveMapToCentered(x, y, MapTypes.Teyvat.ToString());
+            });
+            return;
+        }
+
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
@@ -135,6 +145,16 @@ public class Genshin
     public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        if (TaskContext.Instance().Config.TpConfig.UseExperimentalTeleport)
+        {
+            await tpTask.RunExperimentalMapOperation(MapTypes.Teyvat.ToString(), async () =>
+            {
+                await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+                await tpTask.ClickMapPointCentered(x, y, MapTypes.Teyvat.ToString());
+            });
+            return;
+        }
+
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
@@ -153,6 +173,24 @@ public class Genshin
     public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        if (TaskContext.Instance().Config.TpConfig.UseExperimentalTeleport)
+        {
+            await tpTask.RunExperimentalMapOperation(mapName, async () =>
+            {
+                if (mapName == MapTypes.Teyvat.ToString())
+                {
+                    await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+                }
+                else
+                {
+                    await tpTask.SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
+                }
+
+                await tpTask.MoveMapToCentered(x, y, mapName);
+            });
+            return;
+        }
+
         await tpTask.CheckInBigMapUi();
         // 切换地区
         if (mapName == MapTypes.Teyvat.ToString())
