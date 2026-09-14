@@ -144,36 +144,43 @@ namespace BetterGenshinImpact.GameTask
             TaskContext.Instance().Init(hWnd);
 
             NetworkRecoveryTrigger.OnCaptureSessionStarted();
-
-            // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadInitialTriggers();
-            GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
-
-            // if (GraphicsCapture.IsHdrEnabled(hWnd))
-            // {
-            //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
-            // }
-
-            // 启动截图
-            GameCapture.Start(hWnd,
-                new Dictionary<string, object>()
-                {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
-                }
-            );
-
-            // 使用 SetWinEventHook 监听窗口移动和大小变化事件
-            _winEventProc = WinEventCallback;
-            var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
-            _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
-            _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
-
-            // 启动定时器
-            _frameIndex = 0;
-            _timer.Interval = interval;
-            if (!_timer.Enabled)
+            try
             {
-                _timer.Start();
+                // 初始化触发器(一定要在任务上下文初始化完毕后使用)
+                _triggers = GameTaskManager.LoadInitialTriggers();
+                GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
+
+                // if (GraphicsCapture.IsHdrEnabled(hWnd))
+                // {
+                //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
+                // }
+
+                // 启动截图
+                GameCapture.Start(hWnd,
+                    new Dictionary<string, object>()
+                    {
+                        { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                    }
+                );
+
+                // 使用 SetWinEventHook 监听窗口移动和大小变化事件
+                _winEventProc = WinEventCallback;
+                var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
+                _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
+                _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
+
+                // 启动定时器
+                _frameIndex = 0;
+                _timer.Interval = interval;
+                if (!_timer.Enabled)
+                {
+                    _timer.Start();
+                }
+            }
+            catch
+            {
+                NetworkRecoveryTrigger.StopSession();
+                throw;
             }
         }
 
@@ -417,8 +424,11 @@ namespace BetterGenshinImpact.GameTask
                     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                     if (exclusiveTrigger != null)
                     {
-                        needRunTriggers.Add(exclusiveTrigger);
-                        needRunTriggers.AddRange(_triggers.Where(t =>
+                        if (active || exclusiveTrigger.IsBackgroundRunning)
+                        {
+                            needRunTriggers.Add(exclusiveTrigger);
+                        }
+                        needRunTriggers.AddRange(_triggers!.Where(t =>
                             t.AlwaysActive && t.IsEnabled && (!hasBackgroundTriggerToRun || t.IsBackgroundRunning)));
                     }
                     else

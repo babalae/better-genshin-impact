@@ -39,6 +39,11 @@ public class GlobalMethod
             }
         }
 
+        if (millisecondsTimeout == 0)
+        {
+            return;
+        }
+
         while (millisecondsTimeout > 0)
         {
             TaskControl.TrySuspend(ct);
@@ -46,6 +51,10 @@ public class GlobalMethod
             await Task.Delay(delay, ct);
             millisecondsTimeout -= delay;
         }
+
+        // 暂停可能在最后一段等待期间到达；返回脚本前再检查一次，
+        // 避免紧随 sleep 的键鼠操作漏过暂停点。
+        TaskControl.TrySuspend(ct);
     }
     
     public static string GetVersion()

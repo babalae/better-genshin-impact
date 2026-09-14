@@ -44,7 +44,7 @@ public sealed class NetworkRecoveryTask
         // 恢复栈只豁免网络暂停，手动暂停仍然有效。
         TrySuspend(ct);
         RecoveryLogger.LogInformation("正在激活游戏窗口并检查断线界面");
-        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+        SystemControl.RestoreWindow(TaskContext.Instance().GameHandle);
         RecoveryLogger.LogInformation("网络先于游戏弹窗恢复，最多等待 30 秒监测断线确认按钮");
 
         var consecutivePlayableRounds = 0;
@@ -255,7 +255,7 @@ public sealed class NetworkRecoveryTask
     private static async Task<bool> FocusGameForInteractionAsync(CancellationToken ct)
     {
         var previousForeground = SystemControl.GetActiveByProcess();
-        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+        SystemControl.RestoreWindow(TaskContext.Instance().GameHandle);
         await Task.Delay(200, ct);
         if (SystemControl.IsGenshinImpactActiveByProcess())
         {

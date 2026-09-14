@@ -37,7 +37,7 @@ public partial class OtherConfig : ObservableObject
     [ObservableProperty]
     private bool _networkHealthMonitoringEnabled;
 
-    /// <summary>网络探测目标，支持主机名或 IP。</summary>
+    /// <summary>网络探测目标，需支持 ICMP Ping 或 TCP 443/80。</summary>
     [ObservableProperty]
     private string _networkProbeTarget = "www.baidu.com";
     

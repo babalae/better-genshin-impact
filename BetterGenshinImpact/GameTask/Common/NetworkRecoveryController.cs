@@ -324,6 +324,11 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
             // 断网、DNS 解析失败等均属于正常的探测失败，由状态转换日志统一记录。
             return false;
         }
+        catch (ArgumentException)
+        {
+            // 设置框正在编辑或目标格式无效也按探测失败处理，避免每轮输出异常堆栈。
+            return false;
+        }
         catch (TimeoutException)
         {
             return false;
@@ -349,6 +354,10 @@ public sealed class NetworkRecoveryController : IAsyncDisposable
             return false;
         }
         catch (SocketException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
         {
             return false;
         }

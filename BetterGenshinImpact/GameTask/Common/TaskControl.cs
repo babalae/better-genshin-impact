@@ -21,6 +21,7 @@ public class TaskControl
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
     private static readonly object PauseSync = new();
+    private static readonly object PauseTransitionSync = new();
     private static int _pauseWaiters;
     private static bool _pauseSideEffectsApplied;
     private static long _pauseStartedTimestamp;
@@ -33,6 +34,7 @@ public class TaskControl
         CheckAndActivateGameWindow();
 
         Thread.Sleep(millisecondsTimeout);
+        TrySuspend();
     }
 
     public static void Sleep(int millisecondsTimeout)
@@ -43,6 +45,7 @@ public class TaskControl
             CheckAndActivateGameWindow();
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
+        TrySuspend();
     }
 
     public static void TrySuspend(CancellationToken cancellationToken = default)
@@ -107,11 +110,17 @@ public class TaskControl
 
     private static void ApplyPauseSideEffects()
     {
-        lock (PauseSync)
+        // PauseSync 还承担活动时间读取，不能在其中执行窗口切换和固定等待。
+        // 单独串行化副作用，确保其他任务分支只能在首个分支完成输入释放后确认暂停。
+        lock (PauseTransitionSync)
         {
-            if (_pauseSideEffectsApplied) return;
-            _pauseSideEffectsApplied = true;
-            _pauseStartedTimestamp = Stopwatch.GetTimestamp();
+            lock (PauseSync)
+            {
+                if (_pauseSideEffectsApplied) return;
+                _pauseSideEffectsApplied = true;
+                _pauseStartedTimestamp = Stopwatch.GetTimestamp();
+            }
+
             ReleaseAllInputForPause();
             RunnerContext.Instance.StopAutoPick();
             foreach (var suspendable in RunnerContext.Instance.SuspendableDictionary.Values.ToArray())
@@ -136,7 +145,9 @@ public class TaskControl
             // 必须先让真实 KeyUp/MouseUp 到达绑定的游戏窗口。
             if (gameHandle != IntPtr.Zero && previousForeground != gameHandle)
             {
-                SystemControl.FocusWindow(gameHandle);
+                // FocusWindow 对无法还原的最小化窗口会无限等待；这里使用上游已有的
+                // 无循环恢复方法，并保留缓冲时间让 KeyUp/MouseUp 到达游戏窗口。
+                SystemControl.RestoreWindow(gameHandle);
                 Thread.Sleep(100);
             }
 
@@ -146,7 +157,7 @@ public class TaskControl
         finally
         {
             if (restoreForeground)
-                SystemControl.FocusWindow((nint)previousForeground);
+                SystemControl.RestoreWindow((nint)previousForeground);
         }
     }
 
@@ -165,10 +176,14 @@ public class TaskControl
     /// <summary>任务收尾兜底，避免取消发生在暂停循环时遗留自动拾取计数。</summary>
     public static void ResetPauseSideEffects()
     {
-        lock (PauseSync)
+        // 避免任务收尾在首个暂停分支尚未完成副作用时先行恢复。
+        lock (PauseTransitionSync)
         {
-            _pauseWaiters = 0;
-            ReleasePauseSideEffects();
+            lock (PauseSync)
+            {
+                _pauseWaiters = 0;
+                ReleasePauseSideEffects();
+            }
         }
     }
 
@@ -253,6 +268,9 @@ public class TaskControl
         {
             throw new NormalEndException("取消自动任务");
         }
+
+        // 暂停可能在 Thread.Sleep 期间到达；不要让调用方在返回后继续输入。
+        TrySuspend(ct);
     }
 
     public static async Task Delay(int millisecondsTimeout, CancellationToken ct)
@@ -282,6 +300,9 @@ public class TaskControl
         {
             throw new NormalEndException("取消自动任务");
         }
+
+        // 暂停可能在 Task.Delay 期间到达；返回调用方前再次进入暂停检查点。
+        TrySuspend(ct);
 
         // NewRetry 等上游流程通常在 Delay 返回后立即发送下一次输入。
         // 网络恢复期间需要在等待结束时再校验一次，堵住“等待中失焦、返回后误点其他窗口”的竞态。
