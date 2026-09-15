@@ -108,8 +108,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         // https://github.com/babalae/better-genshin-impact/issues/394
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
-            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture
-            _modeNames = _modeNames.Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()).ToList();
+            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture / WindowsGraphicsCaptureV2
+            // （V2 帧池用 CreateFreeThreaded，同样要求 1903+）
+            _modeNames = _modeNames
+                .Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()
+                         && x.EnumName != CaptureModes.WindowsGraphicsCaptureV2.ToString())
+                .ToList();
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
