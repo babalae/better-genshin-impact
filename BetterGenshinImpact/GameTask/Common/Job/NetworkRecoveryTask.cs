@@ -23,7 +23,6 @@ public sealed class NetworkRecoveryTask
     private const int DialogWaitIntervalMs = 1000;
     private const int PostDialogWaitRounds = 15;
     private const int PostDialogWaitIntervalMs = 2000;
-    private const int StablePlayableRounds = 3;
     private const int DisconnectClickCooldownMs = 5000;
     private string? _lastDisconnectClickKey;
     private long _lastDisconnectClickAt;
@@ -45,9 +44,8 @@ public sealed class NetworkRecoveryTask
         TrySuspend(ct);
         RecoveryLogger.LogInformation("正在激活游戏窗口并检查断线界面");
         SystemControl.RestoreWindow(TaskContext.Instance().GameHandle);
-        RecoveryLogger.LogInformation("网络先于游戏弹窗恢复，最多等待 30 秒监测断线确认按钮");
+        RecoveryLogger.LogInformation("网络先于游戏弹窗恢复，本轮等待 30 秒监测断线确认按钮或登录界面，期间保持暂停");
 
-        var consecutivePlayableRounds = 0;
         for (var round = 0; round < DialogWaitRounds; round++)
         {
             ct.ThrowIfCancellationRequested();
@@ -64,40 +62,19 @@ public sealed class NetworkRecoveryTask
             {
                 var loginResult = await TryHandleLoginUiAsync(screen, ct);
                 if (loginResult.HasValue) return loginResult.Value;
-                consecutivePlayableRounds = IsPlayableUi(screen)
-                    ? consecutivePlayableRounds + 1
-                    : 0;
-            }
-            else
-            {
-                consecutivePlayableRounds = 0;
             }
 
             // DetectedButNotClicked 时同样保持暂停并继续采样，避免偶发 OCR/模板漏检。
             await Delay(DialogWaitIntervalMs, ct);
         }
 
-        if (consecutivePlayableRounds >= StablePlayableRounds)
-        {
-            if (await FocusGameForInteractionAsync(ct))
-            {
-                RecoveryLogger.LogInformation("等待 30 秒未出现断线弹窗，且最终连续识别到可用游戏界面，解除暂停");
-                return true;
-            }
-
-            return false;
-        }
-
-        RecoveryLogger.LogWarning("等待断线确认按钮超时，且未识别到可用游戏界面，继续保持暂停");
+        // 断线弹窗可能在网络恢复后延迟出现，旧主界面或秘境画面不能证明恢复完成。
+        RecoveryLogger.LogWarning("本轮未完成断线确认与登录恢复，继续保持暂停，等待下一次检查");
         return false;
     }
 
-    private static bool IsPlayableUi(ImageRegion image) =>
-        Bv.IsInMainUi(image) || Bv.IsInDomain(image);
-
     private async Task<bool> WaitAfterDialogAsync(CancellationToken ct)
     {
-        var consecutivePlayableRounds = 0;
         // 点掉断线窗口后，登录界面可能延迟数秒出现；不能马上被背景主界面误判成功。
         for (var round = 0; round < PostDialogWaitRounds; round++)
         {
@@ -106,29 +83,14 @@ public sealed class NetworkRecoveryTask
             var dialogResult = await TryDismissDisconnectDialogAsync(screen, ct);
             if (dialogResult != DialogResult.None)
             {
-                consecutivePlayableRounds = 0;
                 continue;
             }
 
             var loginResult = await TryHandleLoginUiAsync(screen, ct);
             if (loginResult.HasValue) return loginResult.Value;
-            consecutivePlayableRounds = IsPlayableUi(screen)
-                ? consecutivePlayableRounds + 1
-                : 0;
         }
 
-        if (consecutivePlayableRounds >= StablePlayableRounds)
-        {
-            if (await FocusGameForInteractionAsync(ct))
-            {
-                RecoveryLogger.LogInformation("断线弹窗已关闭，且最终连续识别到游戏仍可操作");
-                return true;
-            }
-
-            return false;
-        }
-
-        RecoveryLogger.LogWarning("断线弹窗已关闭，但暂未识别到主界面或登录界面");
+        RecoveryLogger.LogWarning("断线弹窗已关闭，但尚未完成登录恢复，继续保持暂停，等待下一次检查");
         return false;
     }
 
@@ -165,6 +127,7 @@ public sealed class NetworkRecoveryTask
         }
 
         RecoveryLogger.LogInformation("检测到登录界面，复用现有登录流程重新进入游戏");
+        // EnterGameAsync 会等待派蒙菜单出现；只有确认进入主界面后才能报告恢复成功。
         return await new ExitAndReloginJob().EnterGameAsync(ct) &&
                await FocusGameForInteractionAsync(ct);
     }
