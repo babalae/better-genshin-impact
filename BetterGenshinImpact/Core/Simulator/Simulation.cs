@@ -31,6 +31,8 @@ public class Simulation
 		SendInput.Mouse.LeftButtonUp();
         SendInput.Mouse.RightButtonUp();
         SendInput.Mouse.MiddleButtonUp();
+        SendInput.Mouse.XButtonUp(0x0001);
+        SendInput.Mouse.XButtonUp(0x0002);
     }
 
     public static bool IsKeyDown(User32.VK key)

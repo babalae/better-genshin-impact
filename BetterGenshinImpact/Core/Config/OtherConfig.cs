@@ -32,6 +32,14 @@ public partial class OtherConfig : ObservableObject
     //OCR配置
     [ObservableProperty]
     private Ocr _ocrConfig = new();
+
+    /// <summary>实时触发器探测网络，断网后暂停并在重新登录后继续。</summary>
+    [ObservableProperty]
+    private bool _networkHealthMonitoringEnabled;
+
+    /// <summary>网络探测目标，需支持 ICMP Ping 或 TCP 443/80。</summary>
+    [ObservableProperty]
+    private string _networkProbeTarget = "www.baidu.com";
     
 
     public partial class AutoRestart : ObservableObject

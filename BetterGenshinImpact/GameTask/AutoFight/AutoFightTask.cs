@@ -242,7 +242,7 @@ public class AutoFightTask : ISoloTask
 
         combatScenes.BeforeTask(cts2.Token);
         TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 战斗超时时间
-        Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+        var timeoutStartedAt = GetActiveTimestamp();
 
         // 记录开战时间，供"开战前一段时间阻断战斗结束检查"使用
         FightStartTime = DateTime.Now;
@@ -288,9 +288,11 @@ public class AutoFightTask : ISoloTask
             expDetector.Start();
         }
 
-        // 战斗操作
+        // 战斗操作。每个会发送输入的并发分支在自己的异步上下文内单独登记。
+        var networkController = NetworkRecoveryController.Current;
         var fightTask = Task.Run(async () =>
         {
+            using var fightPauseParticipant = networkController?.RegisterTaskPauseParticipant();
             try
             {
                 FightStatusFlag = true;
@@ -396,7 +398,7 @@ public class AutoFightTask : ISoloTask
 
                         #endregion
 
-                        if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
+                        if (GetActiveElapsed(timeoutStartedAt) > fightTimeout || AutoFightSeek.RotationCount >= 6)
                         {
                             Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                             fightEndFlag = true;
@@ -491,6 +493,7 @@ public class AutoFightTask : ISoloTask
         {
             targetingTask = Task.Run(async () =>
             {
+                using var targetingPauseParticipant = networkController?.RegisterTaskPauseParticipant();
                 try
                 {
                     await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);

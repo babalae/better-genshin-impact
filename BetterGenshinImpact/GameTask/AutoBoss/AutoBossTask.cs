@@ -23,7 +23,6 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -1118,7 +1117,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
 
-        var navigationStopwatch = Stopwatch.StartNew();
+        var navigationStartedAt = GetActiveTimestamp();
         var navigationTimeout = TimeSpan.FromSeconds(20);
         var adjustCameraTask = AdjustRewardCameraTask(page, navigationCts);
         var moveToRewardTask = MoveToRewardTask(page, navigationCts);
@@ -1129,7 +1128,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             while (true)
             {
                 _ct.ThrowIfCancellationRequested();
-                if (navigationStopwatch.Elapsed >= navigationTimeout)
+                if (GetActiveElapsed(navigationStartedAt) >= navigationTimeout)
                 {
                     throw new TimeoutException("超时未找到征讨之花领奖界面");
                 }
@@ -1185,6 +1184,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private async Task MonitorRewardPromptTask(BvPage page, CancellationTokenSource navigationCts)
     {
+        using var pauseParticipant = NetworkRecoveryController.Current?.RegisterTaskPauseParticipant();
         var ct = navigationCts.Token;
         var lastInteractAt = DateTime.MinValue;
 
@@ -1212,6 +1212,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private async Task AdjustRewardCameraTask(BvPage page, CancellationTokenSource navigationCts)
     {
+        using var pauseParticipant = NetworkRecoveryController.Current?.RegisterTaskPauseParticipant();
         var ct = navigationCts.Token;
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         //将图标控制在屏幕中间，大约截图宽度的45%-55%之间
@@ -1254,6 +1255,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private async Task MoveToRewardTask(BvPage page, CancellationTokenSource navigationCts)
     {
+        using var pauseParticipant = NetworkRecoveryController.Current?.RegisterTaskPauseParticipant();
         var ct = navigationCts.Token;
         var climbRect = ScaleRect(1686, 1030, 60, 23);
         var jumpCount = 0;

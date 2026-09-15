@@ -185,7 +185,7 @@ public class AutoFightJsonTask : ISoloTask
             // 设置初始当前角色名（用于无 Character 字段的通用 action 回退）
             _currentAvatarName = combatScenes.GetAvatars().FirstOrDefault()?.Name ?? _currentAvatarName;
             TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout);
-            Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+            var timeoutStartedAt = GetActiveTimestamp();
     
             AutoFightSeek.RotationCount = 0;
             AutoFightTask.FightStatusFlag = true;
@@ -210,9 +210,11 @@ public class AutoFightJsonTask : ISoloTask
             // 战斗前动作
             await RunPreActions(combatScenes, evaluator);
     
-            // 战斗操作
+            // 战斗操作。每个会发送输入的并发分支在自己的异步上下文内单独登记。
+            var networkController = NetworkRecoveryController.Current;
             var fightTask = Task.Run(async () =>
             {
+                using var fightPauseParticipant = networkController?.RegisterTaskPauseParticipant();
                 try
                 {
                     JsonAction? lastExecutedAction = null;
@@ -265,7 +267,7 @@ public class AutoFightJsonTask : ISoloTask
 
                     while (!cts2.Token.IsCancellationRequested)
                     {
-                        if (timeoutStopwatch.Elapsed > fightTimeout)
+                        if (GetActiveElapsed(timeoutStartedAt) > fightTimeout)
                         {
                             Logger.LogInformation("战斗超时结束");
                             fightEndFlag = true;
@@ -416,6 +418,7 @@ public class AutoFightJsonTask : ISoloTask
             {
                 targetingTask = Task.Run(async () =>
                 {
+                    using var targetingPauseParticipant = networkController?.RegisterTaskPauseParticipant();
                     try
                     {
                         await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);

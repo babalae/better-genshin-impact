@@ -316,12 +316,22 @@ public partial class AllConfig : ObservableObject
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
         ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
+        OtherConfig.PropertyChanged += OnOtherConfigPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
     {
         GameTaskManager.RefreshTriggerConfigs();
         OnAnyChangedAction?.Invoke();
+    }
+
+    private void OnOtherConfigPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is nameof(OtherConfig.NetworkHealthMonitoringEnabled)
+            or nameof(OtherConfig.NetworkProbeTarget))
+        {
+            OnAnyPropertyChanged(sender, args);
+        }
     }
 
     public void OnNotificationPropertyChanged(object? sender, PropertyChangedEventArgs args)

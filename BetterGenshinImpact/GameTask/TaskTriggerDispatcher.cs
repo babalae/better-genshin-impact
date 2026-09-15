@@ -14,6 +14,7 @@ using System.Threading;
 using System.Windows;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
+using BetterGenshinImpact.GameTask.NetworkRecovery;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Model;
@@ -45,6 +46,11 @@ namespace BetterGenshinImpact.GameTask
         private DateTime _prevManualGc = DateTime.MinValue;
 
         private static readonly object _triggerListLocker = new();
+
+        [ThreadStatic]
+        private static bool _isInTriggerCallback;
+
+        public static bool IsInTriggerCallback => _isInTriggerCallback;
 
         private User32.HWINEVENTHOOK _winEventHookMoveSize;
         private User32.HWINEVENTHOOK _winEventHookLocation;
@@ -100,7 +106,7 @@ namespace BetterGenshinImpact.GameTask
             lock (_triggerListLocker)
             {
                 GameTaskManager.ClearTriggers();
-                _triggers?.Clear();
+                SetTriggers(GameTaskManager.ConvertToTriggerList(skipInit: true));
             }
         }
 
@@ -137,41 +143,51 @@ namespace BetterGenshinImpact.GameTask
             // 初始化任务上下文(一定要在初始化触发器前完成)
             TaskContext.Instance().Init(hWnd);
 
-            // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadInitialTriggers();
-            GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
-
-            // if (GraphicsCapture.IsHdrEnabled(hWnd))
-            // {
-            //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
-            // }
-
-            // 启动截图
-            GameCapture.Start(hWnd,
-                new Dictionary<string, object>()
-                {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
-                }
-            );
-
-            // 使用 SetWinEventHook 监听窗口移动和大小变化事件
-            _winEventProc = WinEventCallback;
-            var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
-            _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
-            _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
-
-            // 启动定时器
-            _frameIndex = 0;
-            _timer.Interval = interval;
-            if (!_timer.Enabled)
+            NetworkRecoveryTrigger.OnCaptureSessionStarted();
+            try
             {
-                _timer.Start();
+                // 初始化触发器(一定要在任务上下文初始化完毕后使用)
+                _triggers = GameTaskManager.LoadInitialTriggers();
+                GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
+
+                // if (GraphicsCapture.IsHdrEnabled(hWnd))
+                // {
+                //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
+                // }
+
+                // 启动截图
+                GameCapture.Start(hWnd,
+                    new Dictionary<string, object>()
+                    {
+                        { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                    }
+                );
+
+                // 使用 SetWinEventHook 监听窗口移动和大小变化事件
+                _winEventProc = WinEventCallback;
+                var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
+                _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
+                _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
+
+                // 启动定时器
+                _frameIndex = 0;
+                _timer.Interval = interval;
+                if (!_timer.Enabled)
+                {
+                    _timer.Start();
+                }
+            }
+            catch
+            {
+                NetworkRecoveryTrigger.StopSession();
+                throw;
             }
         }
 
         public void Stop()
         {
             _timer.Stop();
+            NetworkRecoveryTrigger.StopSession();
             ChatUiHotkeyGuard.Reset();
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
@@ -299,7 +315,14 @@ namespace BetterGenshinImpact.GameTask
                             var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                             if (exclusive != null)
                             {
-                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                                // 普通独占触发器不能阻断承担恢复职责的后台常驻触发器。
+                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning ||
+                                                            _triggers.Any(t => t is
+                                                            {
+                                                                AlwaysActive: true,
+                                                                IsEnabled: true,
+                                                                IsBackgroundRunning: true
+                                                            });
                             }
                             else
                             {
@@ -401,7 +424,12 @@ namespace BetterGenshinImpact.GameTask
                     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                     if (exclusiveTrigger != null)
                     {
-                        needRunTriggers.Add(exclusiveTrigger);
+                        if (active || exclusiveTrigger.IsBackgroundRunning)
+                        {
+                            needRunTriggers.Add(exclusiveTrigger);
+                        }
+                        needRunTriggers.AddRange(_triggers!.Where(t =>
+                            t.AlwaysActive && t.IsEnabled && (!hasBackgroundTriggerToRun || t.IsBackgroundRunning)));
                     }
                     else
                     {
@@ -412,6 +440,11 @@ namespace BetterGenshinImpact.GameTask
                         }
 
                         needRunTriggers.AddRange(runningTriggers);
+                    }
+
+                    if (NetworkRecoveryController.Current is { IsPaused: true })
+                    {
+                        needRunTriggers = needRunTriggers.Where(t => t.AlwaysActive).ToList();
                     }
 
                     if (needRunTriggers.Count > 0)
@@ -426,12 +459,21 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in needRunTriggers)
                         {
-                            if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
+                            if (trigger.AlwaysActive
+                                || (PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
                                 || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                             {
                                 // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
                                 var triggerStart = Stopwatch.GetTimestamp();
-                                trigger.OnCapture(content);
+                                _isInTriggerCallback = true;
+                                try
+                                {
+                                    trigger.OnCapture(content);
+                                }
+                                finally
+                                {
+                                    _isInTriggerCallback = false;
+                                }
                                 tickMetrics.AddTriggerCost(triggerStart);
                                 speedTimer.Record(trigger.Name);
                             }

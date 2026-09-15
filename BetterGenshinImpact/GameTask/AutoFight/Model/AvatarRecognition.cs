@@ -416,6 +416,9 @@ public static class AvatarRecognition
         {
             while (!ct.IsCancellationRequested && !(isFightEnd?.Invoke() ?? false))
             {
+                // 持续索敌是独立输入分支，也必须先响应网络暂停，再进行截图或移动鼠标。
+                TrySuspend(ct);
+
                 // 快速路径：排他计数 > 0 时跳过本轮，避免不必要的截图开销
                 if (Volatile.Read(ref _skipSeekCount) > 0)
                 {

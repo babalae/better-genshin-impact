@@ -1,4 +1,9 @@
 {
+  "网络健康监控与断网恢复": "Network health monitoring and recovery",
+  "常驻实时检测网络；连续探测失败后暂停任务，网络和登录恢复后从暂停处继续。": "Continuously monitor the network as a real-time trigger. Pause after consecutive failures and resume after network and login recovery.",
+  "网络探测地址": "Network probe address",
+  "目标需支持 ICMP Ping 或 TCP 443/80；填写主机名或 IP": "The target must support ICMP Ping or TCP ports 443/80. Enter a hostname or IP.",
+  "网络探测主机名或 IP，例如 www.baidu.com": "Network probe hostname or IP, for example www.baidu.com",
   "(下方地图选择会影响路径录制所在的独立地图)": "(The map selected below determines the independent map used for path recording)",
   "(实验性功能) 战斗时按下方设置的间隔尝试靠近或旋转寻找敌人。": "(Experimental) During combat, periodically move closer or rotate to search for enemies using the interval below.",
   "(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)": "(Recommended with ~1s “Faster End-of-Combat Detection”) Before opening the party screen to check if combat has ended, detect enemies first and decide whether to move closer or rotate to find them. (Pre-Burst check: check if combat has ended before using Elemental Burst. Face enemy: search at combat start and try to face enemies during combat.)",
