@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media;
@@ -31,7 +33,89 @@ public partial class OneDragonTaskItem : ObservableObject
 
     [ObservableProperty] private OneDragonBaseViewModel? _viewModel;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runMonday = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runTuesday = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runWednesday = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runThursday = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runFriday = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runSaturday = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCondition))]
+    [NotifyPropertyChangedFor(nameof(ShouldRunToday))]
+    private bool _runSunday = false;
+
     public Func<Task>? Action { get; private set; }
+
+    public bool HasCondition => RunMonday || RunTuesday || RunWednesday || RunThursday || RunFriday || RunSaturday || RunSunday;
+
+    public bool ShouldRunToday
+    {
+        get
+        {
+            if (!HasCondition)
+            {
+                return true;
+            }
+
+            var serverTime = ServerTimeHelper.GetServerTimeNow();
+            var dayOfWeek = (serverTime.Hour >= 4 ? serverTime : serverTime.AddDays(-1)).DayOfWeek;
+            return dayOfWeek switch
+            {
+                DayOfWeek.Monday => RunMonday,
+                DayOfWeek.Tuesday => RunTuesday,
+                DayOfWeek.Wednesday => RunWednesday,
+                DayOfWeek.Thursday => RunThursday,
+                DayOfWeek.Friday => RunFriday,
+                DayOfWeek.Saturday => RunSaturday,
+                DayOfWeek.Sunday => RunSunday,
+                _ => true
+            };
+        }
+    }
+
+    /// <summary>
+    /// 在服务器游戏日切换或外部强制刷新时，手动触发 ShouldRunToday 及 HasCondition 的属性变更通知。
+    /// </summary>
+    public void NotifyDateStateChanged()
+    {
+        OnPropertyChanged(nameof(ShouldRunToday));
+        OnPropertyChanged(nameof(HasCondition));
+    }
+
+    /// <summary>
+    /// 创建一个用于条件弹窗编辑的临时副本，仅复制名称、Id 与运行日条件，
+    /// 修改此副本不会影响原任务在列表中的状态或触发自动保存。
+    /// </summary>
+    public OneDragonTaskItem CreateConditionEditingClone()
+    {
+        var clone = new OneDragonTaskItem(Name, Id);
+        clone.ApplyCondition(ToCondition());
+        return clone;
+    }
 
     public OneDragonTaskItem(string name)
     {
@@ -41,6 +125,61 @@ public partial class OneDragonTaskItem : ObservableObject
     public OneDragonTaskItem(string name, string id) : this(name)
     {
         _id = id;
+    }
+
+    public string GetConditionSummaryText()
+    {
+        if (!HasCondition)
+        {
+            return "每天";
+        }
+
+        var list = new List<string>();
+        if (RunMonday) list.Add("周一");
+        if (RunTuesday) list.Add("周二");
+        if (RunWednesday) list.Add("周三");
+        if (RunThursday) list.Add("周四");
+        if (RunFriday) list.Add("周五");
+        if (RunSaturday) list.Add("周六");
+        if (RunSunday) list.Add("周日");
+        return string.Join("、", list);
+    }
+
+    public OneDragonTaskCondition ToCondition()
+    {
+        return new OneDragonTaskCondition
+        {
+            RunMonday = RunMonday,
+            RunTuesday = RunTuesday,
+            RunWednesday = RunWednesday,
+            RunThursday = RunThursday,
+            RunFriday = RunFriday,
+            RunSaturday = RunSaturday,
+            RunSunday = RunSunday
+        };
+    }
+
+    public void ApplyCondition(OneDragonTaskCondition? condition)
+    {
+        if (condition == null)
+        {
+            RunMonday = false;
+            RunTuesday = false;
+            RunWednesday = false;
+            RunThursday = false;
+            RunFriday = false;
+            RunSaturday = false;
+            RunSunday = false;
+            return;
+        }
+
+        RunMonday = condition.RunMonday;
+        RunTuesday = condition.RunTuesday;
+        RunWednesday = condition.RunWednesday;
+        RunThursday = condition.RunThursday;
+        RunFriday = condition.RunFriday;
+        RunSaturday = condition.RunSaturday;
+        RunSunday = condition.RunSunday;
     }
 
     // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
