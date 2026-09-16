@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <Using Include="Xunit" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotWaiter.cs" Link="SereniteaPotWaiter.cs" />
+    <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotWaiterTests.cs" Link="SereniteaPotWaiterTests.cs" />
+  </ItemGroup>
+</Project>
