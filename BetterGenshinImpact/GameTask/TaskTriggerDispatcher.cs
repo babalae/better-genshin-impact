@@ -147,10 +147,14 @@ namespace BetterGenshinImpact.GameTask
             // }
 
             // 启动截图
+            // WGC 限流：0 = 不启用；>0 = DWM 最小推帧间隔（毫秒）
             GameCapture.Start(hWnd,
                 new Dictionary<string, object>()
                 {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt },
+                    { "MinUpdateIntervalMs", TaskContext.Instance().Config.WgcMinUpdateIntervalMs },
+                    // WGC V2 开关：CPU 颜色转换回退（默认 GPU 打包）
+                    { "UseCpuConvert", TaskContext.Instance().Config.WgcV2UseCpuConvert }
                 }
             );
 
