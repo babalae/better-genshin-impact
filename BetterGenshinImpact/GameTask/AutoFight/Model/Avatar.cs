@@ -840,7 +840,61 @@ public class Avatar
     }
 
     /// <summary>
-    ///  计算上一次使用技能到现在还剩下多长时间的cd
+    /// 纯 OCR 视角的 E 技能三态：只依据 OCR 记录（<see cref="OcrSkillCd"/>）与最近一次使用时间
+    /// （<see cref="LastSkillTime"/>）的相对新旧判断记录可信度。
+    /// </summary>
+    private SkillCdState GetOcrSkillCdState()
+    {
+        // OCR 记录晚于最近一次使用 → 记录可信
+        if (OcrSkillCd > LastSkillTime)
+        {
+            return DateTime.UtcNow > OcrSkillCd ? SkillCdState.Ready : SkillCdState.Cooldown;
+        }
+
+        // 从未使用过（默认时间）→ 就绪；否则记录是过期的（用过但没读到 CD）
+        return LastSkillTime == default ? SkillCdState.Ready : SkillCdState.Unknown;
+    }
+
+    /// <summary>
+    /// 获取 E 技能的综合三态冷却状态（就绪 / 冷却中 / 未知）。
+    /// 优先级：<see cref="ManualSkillCd"/> 手动配置 → <see cref="GetOcrSkillCdState"/> OCR 视角 → 保守估计。
+    /// OCR 视角为 Unknown（用过但没读到 CD）时，按完整 CD 从 <see cref="LastSkillTime"/> 起保守估计，
+    /// 窗口内维持 <see cref="SkillCdState.Unknown"/>，窗口过后回落到 <see cref="SkillCdState.Ready"/>。
+    /// </summary>
+    public SkillCdState GetSkillCdState()
+    {
+        // 手动配置：直接按上次释放时间 + 手动 CD 判断
+        if (ManualSkillCd > 0)
+        {
+            var dif = DateTime.UtcNow - LastSkillTime;
+            return ManualSkillCd > dif.TotalSeconds ? SkillCdState.Cooldown : SkillCdState.Ready;
+        }
+
+        var ocrState = GetOcrSkillCdState();
+        if (ocrState != SkillCdState.Unknown)
+        {
+            return ocrState;
+        }
+
+        // 用过但没有更新的 OCR 记录 → 保守估计窗口内为 Unknown，窗口过后回落到 Ready
+        var maxCd = Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd);
+        return DateTime.UtcNow > LastSkillTime.AddSeconds(maxCd) ? SkillCdState.Ready : SkillCdState.Unknown;
+    }
+
+    /// <summary>
+    /// 再识别一次 E 技能冷却并更新 OCR 记录（<see cref="OcrSkillCd"/>）
+    /// </summary>
+    /// <returns>识别到的剩余 CD 秒数，&lt;= 0 表示未识别到</returns>
+    public double RefreshSkillCd()
+    {
+        using var region = CaptureToRectArea();
+        var cd = GetSkillCurrentCd(region);
+        ESkillCdTracker.Record(Name, cd);
+        return cd;
+    }
+
+    /// <summary>
+    /// 计算上一次使用技能到现在还剩下多长时间的cd
     /// </summary>
     /// <returns></returns>
     public double GetSkillCdSeconds()
