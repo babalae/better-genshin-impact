@@ -857,9 +857,7 @@ public class Avatar
 
     /// <summary>
     /// 获取 E 技能的综合三态冷却状态（就绪 / 冷却中 / 未知）。
-    /// 优先级：<see cref="ManualSkillCd"/> 手动配置 → <see cref="GetOcrSkillCdState"/> OCR 视角 → 保守估计。
-    /// OCR 视角为 Unknown（用过但没读到 CD）时，按完整 CD 从 <see cref="LastSkillTime"/> 起保守估计，
-    /// 窗口内维持 <see cref="SkillCdState.Unknown"/>，窗口过后回落到 <see cref="SkillCdState.Ready"/>。
+    /// 优先级：<see cref="ManualSkillCd"/> 手动配置 → <see cref="GetOcrSkillCdState"/> OCR 视角。
     /// </summary>
     public SkillCdState GetSkillCdState()
     {
@@ -871,14 +869,7 @@ public class Avatar
         }
 
         var ocrState = GetOcrSkillCdState();
-        if (ocrState != SkillCdState.Unknown)
-        {
-            return ocrState;
-        }
-
-        // 用过但没有更新的 OCR 记录 → 保守估计窗口内为 Unknown，窗口过后回落到 Ready
-        var maxCd = Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd);
-        return DateTime.UtcNow > LastSkillTime.AddSeconds(maxCd) ? SkillCdState.Ready : SkillCdState.Unknown;
+        return ocrState;
     }
 
     /// <summary>
@@ -929,6 +920,32 @@ public class Avatar
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// 计算剩余技能 CD 的可信版本：与 <see cref="GetSkillCdState"/> 同源，只依据
+    /// <see cref="ManualSkillCd"/> 手动配置与 <see cref="OcrSkillCd"/> OCR 记录，
+    /// 不使用 <see cref="CombatAvatar.SkillCd"/> 做推算（对 CD 从持续时间结束后才起算的角色不准）。
+    /// 返回值三态：&gt;0 冷却中剩余秒数；0 确定就绪；null 未知（用过但没读到 CD）。
+    /// </summary>
+    public double? GetSkillCdSecondsV2()
+    {
+        if (ManualSkillCd > 0)
+        {
+            // 用户设置，直接通过上次释放技能的时间计算；手动配置不存在未知态
+            var dif = DateTime.UtcNow - LastSkillTime;
+            return ManualSkillCd > dif.TotalSeconds ? ManualSkillCd - dif.TotalSeconds : 0;
+        }
+
+        // OCR 记录可信判定与 GetOcrSkillCdState 一致：只认晚于最近一次使用时间的记录
+        if (OcrSkillCd > LastSkillTime)
+        {
+            var remaining = (OcrSkillCd - DateTime.UtcNow).TotalSeconds;
+            return remaining > 0 ? remaining : 0;
+        }
+
+        // 从未使用过 → 就绪；用过但记录过期/缺失 → 未知
+        return LastSkillTime == default ? 0 : null;
     }
 
     /// <summary>
