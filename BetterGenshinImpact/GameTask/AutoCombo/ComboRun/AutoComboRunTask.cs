@@ -74,9 +74,7 @@ public class AutoComboRunTask : ISoloTask
         else
         {
             Logger.LogInformation("{Name}使用宿主场景的结束控制，不包装战斗结束检测", Name);
-            extendedRoot = new AutoComboRunBuilder()
-                .Leaf(() => comboTree)
-                .End().Build();
+            extendedRoot = comboTree;
         }
 
         Logger.LogInformation("{Name}任务启动，持续 Tick 行为树", Name);
