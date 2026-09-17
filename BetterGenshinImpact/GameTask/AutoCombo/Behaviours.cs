@@ -375,8 +375,8 @@ public partial class UseSkillIfReady : Behaviour
             state = avatar.GetSkillCdState();
         }
 
-        // 未就绪直接 Failure，上层 Selector 自然落到下位替代；不产生无效按键
-        if (state != SkillCdState.Ready)
+        // Unknown状态也当Ready，不然目前逻辑会永久Unknown   // todo 等底层E技能识别模型，再细化逻辑
+        if (state == SkillCdState.Cooldown)
         {
             return Status.Failure;
         }

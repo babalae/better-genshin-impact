@@ -54,16 +54,28 @@ public class AutoComboBuildTask : ISoloTask
     }
 
     /// <summary>
-    /// 确保处于主界面后识别队伍角色并返回角色名列表
+    /// 确保处于主界面或秘境中后识别队伍角色并返回角色名列表
+    /// 秘境中左上角没有派蒙图标不算主界面，且按 ESC 打开的是秘境菜单，跳过返回主界面
     /// </summary>
     public static async Task<List<string>> EnsureMainUiAndRecognizeTeamAsync(ILogger logger, CancellationToken ct)
     {
-        await new ReturnMainUiTask().Start(ct);
+        // 秘境中按 ESC 打开的是秘境菜单而非关闭界面，不能走返回主界面流程
+        using (var initialCapture = CaptureToRectArea())
+        {
+            if (Bv.IsInDomain(initialCapture))
+            {
+                logger.LogInformation("当前处于秘境中，跳过返回主界面");
+            }
+            else
+            {
+                await new ReturnMainUiTask().Start(ct);
+            }
+        }
 
         using var capture = CaptureToRectArea();
-        if (!Bv.IsInMainUi(capture))
+        if (!Bv.IsInMainUi(capture) && !Bv.IsInDomain(capture))
         {
-            throw new InvalidOperationException("未能返回主界面，无法识别队伍角色");
+            throw new InvalidOperationException("未能返回主界面或识别到秘境界面，无法识别队伍角色");
         }
 
         var combatScenes = CombatScenes.GetCombatScenesWithRetry();
@@ -226,7 +238,7 @@ public class AutoComboBuildTask : ISoloTask
         var extraPromptSection = string.IsNullOrWhiteSpace(extraPrompt) ? "" : $"\n\n## 用户自定义要求\n{extraPrompt.Trim()}";
         return $$"""
             你将通过工具调用构建一棵战斗策略行为树，外部将不断循环运行它来进行战斗。
-            你的做法是先仔细分析并输出设计思路和行为树草图，然后通过合理的工具调用进行构建，最终调用 BuildTree 完成构建。
+            你的做法是先分析并输出设计思路和行为树草图，然后通过合理的工具调用进行构建，最终调用 BuildTree 完成构建。
 
             ## 建树规范
             - 树一开始就是可用的，不必调用 Reset ，直接使用并完成它，最后一步必须调用 BuildTree 来构建
@@ -236,24 +248,27 @@ public class AutoComboBuildTask : ISoloTask
             - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览，其缩进表示层级。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree——它就是当前树的状态
             - `--> ...` 表示当前正在构建的位置，其缩进表示层级
             - 每次响应允许多次工具调用，有把握时应尽快构建
-
+            
             ## 术语说明
             - 元素战技就是E技能，元素爆发就是Q技能，两者统称技能
             - 通常，元素战技在使用后会进入冷却，元素爆发在使用后充能会归零
             - 通常，元素战技造成伤害时会产生能量，为全队累积充能，因此爆发的使用间隔一般比战技长
-
+            - 应分辨各个技能是否属于站场技能，站场技能是效果只在角色前台登场时成立、切人后无法起效的一类技能，一般是强化角色自身，或为了持续生效角色必须留在场上
+            
             ## 战术要求
             优先使用连招，单一角色的动作其次，所有技能都应有机会被使用。因此使用 Selector 作为外层逻辑，然后按优先级顺序添加以下类型的子节点
                 1. 连招序列，使用 Sequence 作为子节点，内部再按以下规则设计子节点序列
-                    1.1. 连招是为了用元素反应或技能效果，去加成单次爆发或在某种短暂状态下才能打出的关键伤害
+                    1.1. 连招是为了用元素反应或技能效果，去加成单次爆发或在某种短暂状态下才能打出的关键伤害，因此序列中负责铺垫的行为在前，被加成的行为在后
                     1.2. 一个连招序列至少要有一种技能效果，和至多一种元素反应主题
                     1.3. 连招中的元素反应应考虑元素消耗量，持续性效果的技能更适合为持续性的关键伤害做铺垫
                     1.4. 连招序列中如果有多个技能，先连续添加多个 IsXXXReady ，所有检查完成后，再按顺序使用 UseXXX 
-                    1.5. 连招序列中仅当技能强化了角色的基础动作，或为了技能持续生效角色必须留在场上输出时，可以用对应的 BasicActionsByXXX 
+                    1.5. 连招序列中如有站场技能，可在同一角色的 UseXXX 之后使用对应的 BasicActionsByXXX 
                     1.6. 不要单纯为了触发元素反应而设计连招，因为实际上外层的运转已经在随机触发元素反应了
-                2. 单独使用元素战技或元素爆发，直接使用 UseXXXIfReady 作为叶子节点
+                2. 单独使用E技能或Q技能
                     2.1. 由于冷却或充能的存在，下一次 Tick 就会被拦截，从而执行其他兄弟节点
-                    2.2. 连招序列含有爆发的情况下爆发可以不单独使用，而战技应有单独使用的场合以保证队伍充能
+                    2.2. 连招序列含有爆发的情况下Q技能可以不单独使用，而E技能应有单独使用的场合以保证队伍充能
+                    2.3. 非站场技能直接使用 UseXXXIfReady 作为叶子节点
+                    2.4. 即使单独使用，站场技能也应使用 Sequence 作为子节点，其中加入 UseXXXIfReady 和对应的 BasicActionsByXXX 
                 3. 单独的普攻或重击节点可用于外层Selector的兜底，选择队伍中最适合的来在所有技能暂不可用的间隙进行输出
                 4. BasicActionsByXXX 会延误兄弟节点，导致就绪的战技/爆发无法及时打出，不作为Selector子节点使用
 
