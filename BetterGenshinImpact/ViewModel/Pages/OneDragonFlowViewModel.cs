@@ -450,6 +450,18 @@ public partial class OneDragonFlowViewModel : ViewModel
         AutoFightViewModel?.OnStrategyDropDownOpened(type);
     }
 
+    [RelayCommand]
+    private void ResetAutoBossCompletedRunCount()
+    {
+        if (SelectedConfig == null)
+        {
+            return;
+        }
+
+        SelectedConfig.AutoBossCompletedRunCount = 0;
+        Toast.Information("首领讨伐累计成功领奖次数已清空");
+    }
+
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
     {
         if (SelectedConfig != null)
