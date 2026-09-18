@@ -62,10 +62,17 @@ internal static class SereniteaPotUi
     // 只在失败阶段保存一张图；诊断失败不能覆盖原始错误。
     internal static void SaveFailure(string stage)
     {
+        if (SereniteaPotTestLogSink.Current is { } test) test.FailureStage ??= stage;
+        SaveCapture(stage);
+    }
+
+    internal static void SaveCapture(string stage)
+    {
         try
         {
             using var capture = TaskControl.CaptureToRectArea(forceNew: true);
-            var directory = Global.Absolute(Path.Combine("log", "sereniteapot"));
+            var directory = SereniteaPotTestLogSink.Current?.DirectoryPath
+                ?? Global.Absolute(Path.Combine("log", "sereniteapot"));
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory,
                 $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-p{Environment.ProcessId}-{stage}-{Guid.NewGuid():N}.png");

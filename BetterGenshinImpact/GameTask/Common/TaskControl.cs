@@ -47,7 +47,7 @@ public class TaskControl
         return (state & 0x8000) != 0;
     }
 
-    public static void TrySuspend()
+    public static void TrySuspend(CancellationToken ct = default)
     {
         
         var first = true;
@@ -55,6 +55,7 @@ public class TaskControl
         var isSuspend = RunnerContext.Instance.IsSuspend;
         while (RunnerContext.Instance.IsSuspend)
         {
+            ct.ThrowIfCancellationRequested();
             if (first)
             {
                 RunnerContext.Instance.StopAutoPick();
@@ -79,7 +80,7 @@ public class TaskControl
                 first = false;
             }
 
-            Thread.Sleep(1000);
+            if (ct.WaitHandle.WaitOne(1000)) ct.ThrowIfCancellationRequested();
         }
 
         //从暂停中解除
@@ -94,8 +95,13 @@ public class TaskControl
         }
     }
 
-    private static void CheckAndActivateGameWindow()
+    private static void CheckAndActivateGameWindow(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+        if (!User32.IsWindow(TaskContext.Instance().GameHandle))
+        {
+            throw new InvalidOperationException("原神窗口已关闭，请重新启动游戏和截图器");
+        }
         if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
         {
             if (!SystemControl.IsGenshinImpactActiveByProcess())
@@ -106,9 +112,11 @@ public class TaskControl
             }
         }
 
-        var count = 0;
         //未激活则尝试恢复窗口
-        while (!SystemControl.IsGenshinImpactActiveByProcess())
+        GameWindowFocusWaiter.Wait(
+            () => User32.IsWindow(TaskContext.Instance().GameHandle),
+            SystemControl.IsGenshinImpactActiveByProcess,
+            count =>
         {
             if (count >= 10 && count % 10 == 0)
             {
@@ -122,9 +130,7 @@ public class TaskControl
                 SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
             }
 
-            count++;
-            Thread.Sleep(1000);
-        }
+        }, ct);
     }
 
     public static void Sleep(int millisecondsTimeout, CancellationToken ct)
@@ -146,10 +152,10 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
 
-            TrySuspend();
-            CheckAndActivateGameWindow();
+            TrySuspend(ct);
+            CheckAndActivateGameWindow(ct);
         }, TimeSpan.FromSeconds(1), 100);
-        Thread.Sleep(millisecondsTimeout);
+        if (ct.WaitHandle.WaitOne(millisecondsTimeout)) ct.ThrowIfCancellationRequested();
         if (ct.IsCancellationRequested)
         {
             throw new NormalEndException("取消自动任务");
@@ -175,8 +181,8 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
 
-            TrySuspend();
-            CheckAndActivateGameWindow();
+            TrySuspend(ct);
+            CheckAndActivateGameWindow(ct);
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);
         if (ct is { IsCancellationRequested: true })
