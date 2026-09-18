@@ -94,12 +94,12 @@ public class AutoComboBuildTask : ISoloTask
         AutoComboBuildBuilder? builder = null;
         try
         {
-            var chatClient = CreateChatClient(config, logger);
-
             var blackboard = new Blackboard();
             builder = new AutoComboBuildBuilder().WithBlackboard(blackboard);
-
             var tools = new AutoComboBuildTools(builder);
+
+            var chatClient = CreateChatClient(config, logger, tools);
+
             var aiFunctions = tools.Tools
                 // 禁止 LLM 调用 RunTree
                 .Where(d => d.Method.Name != nameof(AutoComboBuildTools.RunTree))
@@ -165,7 +165,7 @@ public class AutoComboBuildTask : ISoloTask
     /// <summary>
     /// 根据 LLM 配置创建带工具调用循环的 IChatClient
     /// </summary>
-    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger)
+    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, AutoComboBuildTools buildTools)
     {
         if (string.IsNullOrWhiteSpace(config.PlanningLlmEndpoint) ||
             string.IsNullOrWhiteSpace(config.ModelName))
@@ -218,6 +218,9 @@ public class AutoComboBuildTask : ISoloTask
         // 放在记录层外层，回退解析告警会先于"LLM 发出"日志打印
         client = new XmlToolCallFallbackParseChatClient(client, logger);
 
+        // CsTrees.MEAI 自带工具屏蔽装饰：builder 尚在初始检查点（空树）时屏蔽 ResetTree/Undo，避免模型在没有任何上下文时误用
+        client = new ResetTreeGuardChatClient(client, buildTools);
+
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
         client = new FunctionInvokingChatClient(client)
         {
@@ -238,14 +241,13 @@ public class AutoComboBuildTask : ISoloTask
         var extraPromptSection = string.IsNullOrWhiteSpace(extraPrompt) ? "" : $"\n\n## 用户自定义要求\n{extraPrompt.Trim()}";
         return $$"""
             你将通过工具调用构建一棵战斗策略行为树，外部将不断循环运行它来进行战斗。
-            你的做法是先分析并输出设计思路和行为树草图，然后通过合理的工具调用进行构建，最终调用 BuildTree 完成构建。
+            你的做法是先分析并输出设计思路、构建过程的伪代码和行为树草图，然后通过工具调用进行构建，最终调用 BuildTree 完成构建。
 
             ## 建树规范
-            - 树一开始就是可用的，不必调用 Reset ，直接使用并完成它，最后一步必须调用 BuildTree 来构建
             - avatarName 必须使用“当前队伍”中列出的角色名
             - 每层打开的作用域必须填入正确的子节点、退出前使用一次End来关闭，所有作用域关闭后才可调用 BuildTree 来构建树
             - 减少没有意义的组合节点嵌套
-            - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览，其缩进表示层级。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree——它就是当前树的状态
+            - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览，其缩进表示层级。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree
             - `--> ...` 表示当前正在构建的位置，其缩进表示层级
             - 每次响应允许多次工具调用，有把握时应尽快构建
             
