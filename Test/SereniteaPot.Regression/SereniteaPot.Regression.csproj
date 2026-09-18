@@ -17,6 +17,8 @@
     <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotWaiter.cs" Link="SereniteaPotWaiter.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotWaiterTests.cs" Link="SereniteaPotWaiterTests.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/Common/GameWindowFocusWaiter.cs" Link="GameWindowFocusWaiter.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/AutoTrackPath/MapAreaSwitchWaiter.cs" Link="MapAreaSwitchWaiter.cs" />
+    <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/MapAreaSwitchWaiterTests.cs" Link="MapAreaSwitchWaiterTests.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotTestSession.cs" Link="SereniteaPotTestSession.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/GameWindowFocusWaiterTests.cs" Link="GameWindowFocusWaiterTests.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotTestSessionTests.cs" Link="SereniteaPotTestSessionTests.cs" />

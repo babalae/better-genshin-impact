@@ -86,23 +86,53 @@ internal class GoToSereniteaPotTask
         }
     }
 
-    private async Task<bool> IntoSereniteaPot(CancellationToken ct)
+    private async Task<bool> OpenSereniteaPotMap(CancellationToken ct)
     {
-        // 退出到主页面
-        await new ReturnMainUiTask().Start(ct);
-        if (!await SereniteaPotUi.WaitForMainUi(ct, "before-map"))
+        const int maxAttempts = 3;
+        var failureStage = "map-open";
+        var tpTask = new TpTask(ct);
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            return false;
+            ct.ThrowIfCancellationRequested();
+            Logger.LogInformation("尘歌壶地图切区：第 {Attempt}/{MaxAttempts} 次尝试，先确认主界面", attempt, maxAttempts);
+            // 重试必须从已确认的主界面开始，不能在展开的菜单上重复点击开关。
+            await new ReturnMainUiTask().Start(ct);
+            if (!await SereniteaPotUi.WaitForMainUi(ct, $"before-map-{attempt}", recordFailure: false))
+            {
+                failureStage = "before-map";
+                continue;
+            }
+
+            TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap);
+            var mapReady = await SereniteaPotWaiter.WaitAsync(() =>
+            {
+                using var capture = CaptureToRectArea();
+                return Bv.IsInBigMapUi(capture);
+            }, Delay, ct, TimeSpan.FromSeconds(30));
+            if (!mapReady)
+            {
+                failureStage = "map-open";
+                Logger.LogWarning("尘歌壶地图打开等待超时：第 {Attempt}/{MaxAttempts} 次尝试", attempt, maxAttempts);
+                SereniteaPotUi.SaveCapture($"map-open-attempt-{attempt}");
+                continue;
+            }
+
+            Action<string, ImageRegion>? saveFrame = SereniteaPotTestLogSink.Current == null ? null
+                : (stage, capture) => SereniteaPotUi.SaveCapture($"attempt-{attempt}-{stage}", capture);
+            if (await tpTask.TrySwitchArea("尘歌壶", saveFrame)) return true;
+
+            failureStage = "map-area-switch";
+            Logger.LogWarning("尘歌壶地图切区未完成：第 {Attempt}/{MaxAttempts} 次尝试", attempt, maxAttempts);
+            SereniteaPotUi.SaveCapture($"map-area-switch-attempt-{attempt}");
         }
 
-        await Delay(200, ct);
+        SereniteaPotUi.SaveFailure(failureStage);
+        return false;
+    }
 
-        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
-        await Delay(900, ct);
-
-        // 进入 壶
-        TpTask tpTask = new TpTask(ct);
-        await tpTask.SwitchArea("尘歌壶");
+    private async Task<bool> IntoSereniteaPot(CancellationToken ct)
+    {
+        if (!await OpenSereniteaPotMap(ct)) return false;
         
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
         for (int i = 0; i < 5; i++){

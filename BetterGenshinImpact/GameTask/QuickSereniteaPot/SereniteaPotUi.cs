@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -14,18 +15,19 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 internal static class SereniteaPotUi
 {
-    internal static async Task<bool> WaitForMainUi(CancellationToken ct, string stage)
+    internal static async Task<bool> WaitForMainUi(CancellationToken ct, string stage, bool recordFailure = true)
     {
         var ready = await SereniteaPotWaiter.WaitAsync(() =>
         {
             using var capture = TaskControl.CaptureToRectArea(forceNew: true);
             return Bv.IsInMainUi(capture);
-        }, TaskControl.Delay, ct, TimeSpan.FromSeconds(15));
+        }, TaskControl.Delay, ct, TimeSpan.FromSeconds(30));
 
         if (!ready)
         {
             TaskControl.Logger.LogWarning("尘歌壶:{Stage} 未确认稳定主界面", stage);
-            SaveFailure(stage);
+            if (recordFailure) SaveFailure(stage);
+            else SaveCapture(stage);
         }
         return ready;
     }
@@ -71,6 +73,18 @@ internal static class SereniteaPotUi
         try
         {
             using var capture = TaskControl.CaptureToRectArea(forceNew: true);
+            SaveCapture(stage, capture);
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "获取尘歌壶诊断截图时发生异常：{Stage}", stage);
+        }
+    }
+
+    internal static void SaveCapture(string stage, ImageRegion capture)
+    {
+        try
+        {
             var directory = SereniteaPotTestLogSink.Current?.DirectoryPath
                 ?? Global.Absolute(Path.Combine("log", "sereniteapot"));
             Directory.CreateDirectory(directory);
