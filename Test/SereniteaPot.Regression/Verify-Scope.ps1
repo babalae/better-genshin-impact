@@ -20,7 +20,13 @@ foreach ($relative in $checks) {
         $actual = $actual.Replace('public partial class TpTask', 'public class TpTask')
     }
     if ($relative.EndsWith('/App.xaml.cs')) {
-        $actual = [regex]::Replace($actual, '(?m)^\s*\.WriteTo\.Sink\(new BetterGenshinImpact\.GameTask\.QuickSereniteaPot\.SereniteaPotTestLogSink\(\)\)\r?\n', '')
+        # Construct the only permitted insertion; duplicate, missing or moved sinks must fail.
+        $anchor = '                    .MinimumLevel.Debug()'
+        $sinkLine = '                    .WriteTo.Sink(new BetterGenshinImpact.GameTask.QuickSereniteaPot.SereniteaPotTestLogSink())'
+        if ([regex]::Matches($expected, '(?m)^' + [regex]::Escape($anchor) + '$').Count -ne 1 -or $expected.Contains($sinkLine)) {
+            throw 'Expected a unique logger anchor in the pre-change baseline'
+        }
+        $expected = $expected.Replace($anchor, $sinkLine + "`n" + $anchor)
     }
     if ($relative.EndsWith('/BetterGenshinImpact.csproj')) {
         # The merge base used 1.0.25; upstream main 42e1c0e7 already uses 1.0.27.

@@ -25,13 +25,20 @@ internal static class SereniteaPotWaiter
         TimeProvider? timeProvider = null)
     {
         string? name = null;
+        var matchingNames = 0;
         var ready = await WaitAsync(() =>
         {
             var candidate = readName()?.Trim();
-            if (string.IsNullOrEmpty(candidate)) return false;
+            if (string.IsNullOrEmpty(candidate))
+            {
+                name = null;
+                matchingNames = 0;
+                return false;
+            }
+            matchingNames = string.Equals(name, candidate, StringComparison.Ordinal) ? matchingNames + 1 : 1;
             name = candidate;
-            return true;
-        }, delay, ct, TimeSpan.FromSeconds(30), timeProvider: timeProvider);
+            return matchingNames >= 3;
+        }, delay, ct, TimeSpan.FromSeconds(30), timeProvider: timeProvider, stableChecks: 1);
         return ready ? name : null;
     }
 
@@ -41,8 +48,10 @@ internal static class SereniteaPotWaiter
         CancellationToken ct,
         TimeSpan timeout,
         TimeSpan minimumWait = default,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        int stableChecks = 3)
     {
+        if (stableChecks < 1) throw new ArgumentOutOfRangeException(nameof(stableChecks));
         var clock = timeProvider ?? TimeProvider.System;
         var started = clock.GetTimestamp();
         var stableFrames = 0;
@@ -69,7 +78,7 @@ internal static class SereniteaPotWaiter
                 return false;
             }
             stableFrames = ready ? stableFrames + 1 : 0;
-            if (stableFrames >= 3)
+            if (stableFrames >= stableChecks)
             {
                 return true;
             }

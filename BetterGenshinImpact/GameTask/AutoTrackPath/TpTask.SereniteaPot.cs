@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -24,7 +23,7 @@ public partial class TpTask
         Rect? candidateRect = null;
         Rect? clickRect = null;
         var sample = 0;
-        var watch = Stopwatch.StartNew();
+        using var watch = SereniteaPotTaskControl.CreateTimer();
         var found = await MapAreaSwitchWaiter.WaitAsync(() =>
         {
             using var capture = CaptureToRectArea(forceNew: true);
@@ -40,7 +39,7 @@ public partial class TpTask
                 ++sample, watch.ElapsedMilliseconds, FormatSwitchAreaCandidateTexts(candidates));
             if (sample <= 3 || match != null) saveFrame?.Invoke($"area-candidates-{sample}", capture);
             return match != null;
-        }, SereniteaPotTaskControl.Delay, ct);
+        }, SereniteaPotTaskControl.Delay, ct, timeProvider: watch);
         if (!found || candidateRect == null || clickRect == null) return false;
 
         ct.ThrowIfCancellationRequested();
@@ -55,7 +54,7 @@ public partial class TpTask
                 IsSameSwitchAreaCandidatePosition(candidateRect.Value, candidate));
             if (++sample <= 3) saveFrame?.Invoke($"area-applied-{sample}", capture);
             return !stillVisible && Bv.IsInBigMapUi(capture);
-        }, SereniteaPotTaskControl.Delay, ct, SwitchAreaSelectionStableChecks);
+        }, SereniteaPotTaskControl.Delay, ct, SwitchAreaSelectionStableChecks, timeProvider: watch);
         if (!applied) return false;
         RememberAreaSwitchCenterPoint(areaName);
         Logger.LogInformation("切换到区域：{Country}", areaName);

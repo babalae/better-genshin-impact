@@ -6,7 +6,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,11 +16,12 @@ internal static class SereniteaPotUi
 {
     internal static async Task<bool> WaitForMainUi(CancellationToken ct, string stage, bool recordFailure = true)
     {
+        using var clock = SereniteaPotTaskControl.CreateTimer();
         var ready = await SereniteaPotWaiter.WaitAsync(() =>
         {
             using var capture = TaskControl.CaptureToRectArea(forceNew: true);
             return Bv.IsInMainUi(capture);
-        }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(30));
+        }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(30), timeProvider: clock);
 
         if (!ready)
         {
@@ -34,7 +34,7 @@ internal static class SereniteaPotUi
 
     internal static async Task<bool> WaitForEntry(CancellationToken ct, string stage, bool afterTeleport = true)
     {
-        var watch = Stopwatch.StartNew();
+        using var watch = SereniteaPotTaskControl.CreateTimer();
         var mainUi = false;
         var inPot = false;
         var ready = await SereniteaPotWaiter.WaitAsync(() =>
@@ -45,7 +45,7 @@ internal static class SereniteaPotUi
             inPot = finger.IsExist();
             return mainUi && inPot;
         }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(afterTeleport ? 60 : 15),
-            afterTeleport ? TimeSpan.FromSeconds(5) : TimeSpan.Zero);
+            afterTeleport ? TimeSpan.FromSeconds(5) : TimeSpan.Zero, timeProvider: watch);
 
         if (ready)
         {

@@ -14,7 +14,6 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +31,13 @@ public class QuickSereniteaPotTask
     /// </summary>
     public static void Done()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            UIDispatcherHelper.Invoke(() => Toast.Warning("请先启动"));
+            return;
+        }
+        // TaskRunner.Init 会激活游戏；必须在调度前保留快捷键原有的前台门禁。
+        if (!SystemControl.IsGenshinImpactActiveByProcess()) return;
         new TaskRunner().FireAndForget(() => Start(CancellationContext.Instance.Cts.Token));
     }
 
@@ -168,8 +174,8 @@ public class QuickSereniteaPotTask
             }
         }
 
-        var watch = Stopwatch.StartNew();
-        long nextInputAt = 0;
+        using var watch = SereniteaPotTaskControl.CreateTimer();
+        double nextInputAt = 0;
         var ready = await SereniteaPotWaiter.WaitAsync(() =>
         {
             using var capture = TaskControl.CaptureToRectArea(forceNew: true);
@@ -202,7 +208,7 @@ public class QuickSereniteaPotTask
 
             nextInputAt = watch.ElapsedMilliseconds + 1500;
             return false;
-        }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(20));
+        }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(20), timeProvider: watch);
 
         if (!ready)
         {

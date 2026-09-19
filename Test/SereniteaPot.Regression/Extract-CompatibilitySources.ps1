@@ -24,6 +24,7 @@ $mapEntry = Get-Method $potFile 'private async Task<bool> IntoSereniteaPot(Cance
 $bagEntry = Get-Method $potFile 'private async Task<bool> IntoSereniteaPotByBag(CancellationToken ct)'
 $executeEntry = Get-Method $potFile 'private async Task<bool> Execute(CancellationToken ct, bool entryOnly)'
 $readRealm = Get-Method $potFile 'private async Task<bool> ReadRealmName(CancellationToken ct)'
+$hotkey = Get-Method 'GameTask/QuickSereniteaPot/QuickSereniteaPotTask.cs' 'public static void Done()'
 $generated = @"
 // Generated from current production source on every build; do not maintain copied method fixtures.
 // Only input, window, OCR and combat-command dependencies are substituted in this offline harness.
@@ -38,6 +39,9 @@ partial class PotEntryProbe { $mapEntry
 $bagEntry
 $readRealm
 $executeEntry }
+}
+namespace SereniteaPot.Regression.Hotkey {
+static partial class HotkeyProbe { $hotkey }
 }
 "@
 $path = [IO.Path]::GetFullPath($OutputPath)

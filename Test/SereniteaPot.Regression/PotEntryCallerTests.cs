@@ -21,6 +21,7 @@ public class PotEntryCallerTests
         Assert.Equal(0, state.OcrBeforeMapReady);
         Assert.Equal(0, state.OcrWithoutFreshCapture);
         Assert.Equal(0, state.LiveImages);
+        Assert.Empty(state.Components);
     }
 
     [Theory]
@@ -39,6 +40,7 @@ public class PotEntryCallerTests
         Assert.Equal(1, state.Recoveries);
         Assert.Equal(30, state.Seconds);
         Assert.Equal(0, state.LiveImages);
+        Assert.Empty(state.Components);
     }
 
     [Theory]
@@ -55,6 +57,7 @@ public class PotEntryCallerTests
         Assert.Equal(0, state.Approaches);
         Assert.Equal(0, state.Rewards);
         Assert.Equal(0, state.LiveImages);
+        Assert.Empty(state.Components);
     }
 
     [Theory]
@@ -72,6 +75,7 @@ public class PotEntryCallerTests
         Assert.Equal(0, state.Rewards);
         Assert.Equal(0, state.Recoveries);
         Assert.Equal(0, state.LiveImages);
+        Assert.Empty(state.Components);
     }
 }
 
@@ -104,6 +108,7 @@ sealed class EntryState : TimeProvider
     internal int OcrCalls, OcrBeforeMapReady, OcrWithoutFreshCapture, HomeClicks, Approaches, Rewards, Recoveries, LiveImages;
     internal bool Teleported;
     internal Action? OnOcr;
+    internal readonly Dictionary<string, BetterGenshinImpact.GameTask.AutoPathing.Suspend.ISuspendable> Components = [];
     internal readonly List<string> Failures = [];
     internal Task Delay(int ms, CancellationToken ct)
     {
@@ -116,9 +121,14 @@ sealed class EntryState : TimeProvider
 static class SereniteaPotWaiter
 {
     internal static Task<string?> WaitForRealmNameAsync(Func<string?> readName,
-        Func<int, CancellationToken, Task> delay, CancellationToken ct) =>
+        Func<int, CancellationToken, Task> delay, CancellationToken ct, TimeProvider? timeProvider = null) =>
         BetterGenshinImpact.GameTask.QuickSereniteaPot.SereniteaPotWaiter.WaitForRealmNameAsync(
-            readName, delay, ct, EntryState.Current);
+            readName, delay, ct, timeProvider ?? EntryState.Current);
+}
+static class SereniteaPotTaskControl
+{
+    internal static BetterGenshinImpact.GameTask.QuickSereniteaPot.SereniteaPotActiveTime CreateTimer() =>
+        new(EntryState.Current.Components, EntryState.Current);
 }
 static class SereniteaPotUi
 {

@@ -153,6 +153,27 @@ public class SereniteaPotWaiterTests
             }, clock.Delay, cts.Token, clock));
     }
 
+    [Fact]
+    public async Task RealmNameChanges_RequireThreeSamplesOfTheSameName()
+    {
+        var clock = new TestClock();
+        var samples = new Queue<string>(["绘绮庭", "绘绮庭", "绘绮庄", " 绘绮庭 ", "绘绮庭", "绘绮庭"]);
+        Assert.Equal("绘绮庭", await SereniteaPotWaiter.WaitForRealmNameAsync(
+            samples.Dequeue, clock.Delay, CancellationToken.None, clock));
+        Assert.Empty(samples);
+        Assert.Equal(3, clock.Seconds);
+    }
+
+    [Fact]
+    public async Task AlternatingRealmNames_ShouldTimeOut()
+    {
+        var clock = new TestClock();
+        var sample = 0;
+        Assert.Null(await SereniteaPotWaiter.WaitForRealmNameAsync(
+            () => ++sample % 2 == 0 ? "绘绮庭" : "绘绮庄", clock.Delay, CancellationToken.None, clock));
+        Assert.Equal(30, clock.Seconds);
+    }
+
     private static Task<bool> Wait(TestClock clock, Func<bool> predicate) =>
         SereniteaPotWaiter.WaitAsync(predicate, clock.Delay, CancellationToken.None,
             TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(5), clock);

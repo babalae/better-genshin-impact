@@ -12,6 +12,8 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 // 尘歌壶专用等待。不要改变 TaskControl 的取消异常约定：战斗脚本依赖 NormalEndException。
 internal static class SereniteaPotTaskControl
 {
+    internal static SereniteaPotActiveTime CreateTimer() => new(RunnerContext.Instance.SuspendableDictionary);
+
     internal static async Task Delay(int milliseconds, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

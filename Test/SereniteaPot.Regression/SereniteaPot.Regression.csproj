@@ -16,6 +16,7 @@
     <Using Include="Xunit" />
     <Compile Include="../../BetterGenshinImpact/GameTask/Common/Exceptions/NormalEndException.cs" Link="NormalEndException.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/AutoPathing/Suspend/ISuspendable.cs" Link="ISuspendable.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotActiveTime.cs" Link="SereniteaPotActiveTime.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotPauseWaiter.cs" Link="SereniteaPotPauseWaiter.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotInputHold.cs" Link="SereniteaPotInputHold.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotInventorySearch.cs" Link="SereniteaPotInventorySearch.cs" />

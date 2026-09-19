@@ -24,7 +24,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Diagnostics;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -127,11 +126,12 @@ internal class GoToSereniteaPotTask
             }
 
             TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap);
+            using var mapClock = SereniteaPotTaskControl.CreateTimer();
             var mapReady = await SereniteaPotWaiter.WaitAsync(() =>
             {
                 using var capture = CaptureToRectArea();
                 return Bv.IsInBigMapUi(capture);
-            }, Delay, ct, TimeSpan.FromSeconds(30));
+            }, Delay, ct, TimeSpan.FromSeconds(30), timeProvider: mapClock);
             if (!mapReady)
             {
                 failureStage = "map-open";
@@ -275,6 +275,7 @@ internal class GoToSereniteaPotTask
     private async Task<bool> ReadRealmName(CancellationToken ct)
     {
         dongTianName = "";
+        using var clock = SereniteaPotTaskControl.CreateTimer();
         var realmName = await SereniteaPotWaiter.WaitForRealmNameAsync(() =>
         {
             using var ra = CaptureToRectArea(forceNew: true);
@@ -285,7 +286,7 @@ internal class GoToSereniteaPotTask
                 RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height * 9 / 10, (int)(ra.Width * 0.073), (int)(ra.Height * 0.04))
             });
             return list.Count > 0 ? list[0].Text : null;
-        }, Delay, ct);
+        }, Delay, ct, timeProvider: clock);
         if (realmName != null)
         {
             dongTianName = realmName;
@@ -338,7 +339,7 @@ internal class GoToSereniteaPotTask
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(900, ct);
         int continuousCount = 0;
-        var searchWatch = Stopwatch.StartNew();
+        using var searchWatch = SereniteaPotTaskControl.CreateTimer();
         while (!ct.IsCancellationRequested)
         {
             if (searchWatch.Elapsed > TimeSpan.FromSeconds(120))
@@ -408,7 +409,7 @@ internal class GoToSereniteaPotTask
         await WithHeldKey(GIActions.MoveForward, async () =>
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆");
-            var approachWatch = Stopwatch.StartNew();
+            using var approachWatch = SereniteaPotTaskControl.CreateTimer();
             while (true)
             {
                 ct.ThrowIfCancellationRequested();
