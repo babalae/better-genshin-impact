@@ -58,6 +58,12 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("it", "Incarichi")]
         [InlineData("it", "Pesca")]
         [InlineData("it", "Katheryne")]
+        // AutoBossTask / AutoLeyLineOutcropTask / AutoStygianOnslaughtTask: the regex-pattern
+        // values matter most here, since a wrong pattern silently never matches.
+        [InlineData("en", "Click anywhere in the blank area", "Click.*anywhere.*in.*the.*blank.*area")]
+        [InlineData("fr", "Cliquez pour poursuivre", "Cliquez.*pour.*poursuivre")]
+        [InlineData("en", "Stygian Onslaught", "Stygian.*Onslaught")]
+        [InlineData("en", "Challenge Failed", "Challenge.*Failed")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>
