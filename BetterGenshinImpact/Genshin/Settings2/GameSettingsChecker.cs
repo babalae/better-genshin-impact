@@ -61,7 +61,7 @@ public class GameSettingsChecker
 
             if (settings.PcTpsAimControlType == TpsAimControlType.PresetTwo)
             {
-                TaskControl.Logger.LogWarning("当前至冬枪械操作预设使用了预设方案二，此方案会影响自动战斗的战斗结束的检测。请在【设置】——右上角【第三人称射击设置】——左侧【按键】菜单——点击【恢复预设】——选择预设一来修改此配置。");
+                TaskControl.Logger.LogWarning("当前至冬枪械操作预设使用了预设方案二，此方案中的滚轮绑定，会导致滚轮能够打断队伍打开的等待进度条，进而影响部分JS（比如自动锄地）或者战斗场景中的战斗结束的检测。请在【设置】——右上角【第三人称射击设置】——左侧【按键】菜单——点击【恢复预设】——选择预设一来修改此配置。");
             }
         }
         catch (Exception e)
