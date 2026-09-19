@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.IO.Hashing;
 using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
@@ -8,16 +10,19 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX;
 public class BgiOnnxModel
 {
     /// <summary>
-    /// 模型使用的缓存文件的相对目录
+    /// ONNX 缓存根目录
     /// </summary>
-    public static readonly string ModelCacheRelativePath = Path.Combine("Cache", Global.Version, "Model");
+    public static readonly string ModelCacheRelativePath = "Cache";
 
     private static readonly List<BgiOnnxModel> RegisteredModels = [];
+
     public string Name { get; private init; }
     public string ModelRelativePath { get; private init; }
-    public string ModalPath => Global.Absolute(ModelRelativePath);
-    public string CacheRelativePath { get; private init; }
+    public string ModelPath => Global.Absolute(ModelRelativePath);
+    public string CacheRelativePath { get; private set; } = ModelCacheRelativePath;
     public string CachePath => Global.Absolute(CacheRelativePath);
+    public string ModelHash { get; private init; }
+    public string CacheIdentifier => $"{Name}_{ModelHash}";
 
     #region 模型注册
 
@@ -32,12 +37,14 @@ public class BgiOnnxModel
     /// <summary>
     /// 钓鱼模型
     /// </summary>
-    public static readonly BgiOnnxModel BgiFish = Register("BgiFish", @"Assets\Model\Fish\bgi_fish.onnx");
+    public static readonly BgiOnnxModel BgiFish =
+        Register("BgiFish", @"Assets\Model\Fish\bgi_fish.onnx");
 
     /// <summary>
     /// 秘境中古树
     /// </summary>
-    public static readonly BgiOnnxModel BgiTree = Register("BgiTree", @"Assets\Model\Domain\bgi_tree.onnx");
+    public static readonly BgiOnnxModel BgiTree =
+        Register("BgiTree", @"Assets\Model\Domain\bgi_tree.onnx");
 
     /// <summary>
     /// 用于捡东西等的大世界模型
@@ -47,7 +54,8 @@ public class BgiOnnxModel
     /// <summary>
     /// 矿物识别模型
     /// </summary>
-    public static readonly BgiOnnxModel BgiMine = Register("BgiMine", @"Assets\Model\Mine\bgi_mine.onnx");
+    public static readonly BgiOnnxModel BgiMine =
+        Register("BgiMine", @"Assets\Model\Mine\bgi_mine.onnx");
 
     /// <summary>
     /// 角色识别
@@ -135,42 +143,49 @@ public class BgiOnnxModel
 
     #endregion
 
-    private BgiOnnxModel(string name, string modelRelativePath, string cacheRelativePath)
+    private BgiOnnxModel(string name, string modelRelativePath)
     {
         Name = name;
         ModelRelativePath = modelRelativePath;
-        CacheRelativePath = cacheRelativePath;
+        ModelHash = ModelHashCompute(ModelPath);
     }
 
-    public static bool IsModelExist(BgiOnnxModel model)
+    private static string ModelHashCompute(string modelPath)
     {
-        return File.Exists(model.ModalPath);
+        using var modelStream = File.OpenRead(modelPath);
+        var hash = new XxHash3();
+        hash.Append(modelStream);
+        return hash.GetCurrentHashAsUInt64().ToString("x16");
+    }
+
+    /// <summary>
+    /// 为当前模型指定执行提供程序对应的缓存目录
+    /// </summary>
+    /// <param name="cacheDirectory">缓存根目录下的子目录</param>
+    /// <returns>缓存目录的绝对路径</returns>
+    public string CachePathDeploy(string cacheDirectory)
+    {
+        CacheRelativePath = Path.Combine(ModelCacheRelativePath, cacheDirectory);
+        return CachePath;
+    }
+
+    public static bool ModelExistence(BgiOnnxModel model)
+    {
+        return File.Exists(model.ModelPath);
     }
 
 
     /// <summary>
     /// 获取全部已注册的模型文件
     /// </summary>
-    /// <returns></returns>
-    public static ImmutableList<BgiOnnxModel> GetAll()
+    public static ImmutableList<BgiOnnxModel> ModelsGetAll()
     {
         return RegisteredModels.ToImmutableList();
     }
 
     private static BgiOnnxModel Register(string name, string modelRelativePath)
     {
-        return Register(name, modelRelativePath, Path.Combine(ModelCacheRelativePath, name));
-    }
-
-    private static BgiOnnxModel Register(string name, string modelRelativePath, string cacheRelativePath)
-    {
-        var model = new BgiOnnxModel(name, modelRelativePath, cacheRelativePath);
-        var cachePath = model.CachePath;
-        if (!Directory.Exists(cachePath))
-        {
-            Directory.CreateDirectory(cachePath);
-        }
-
+        var model = new BgiOnnxModel(name, modelRelativePath);
         RegisteredModels.Add(model);
         return model;
     }
