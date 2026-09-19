@@ -265,23 +265,23 @@ internal class GoToSereniteaPotTask
 
         // 已确认在壶内，再打开地图获取洞天名称。
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap);
-        await Delay(1000, ct);
-        for (int i = 0; i < 5; i++)
+        var realmName = await SereniteaPotWaiter.WaitForRealmNameAsync(() =>
         {
-            using var ra = CaptureToRectArea();
+            using var ra = CaptureToRectArea(forceNew: true);
+            if (!Bv.IsInBigMapUi(ra)) return null;
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,
                 RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height * 9 / 10, (int)(ra.Width * 0.073), (int)(ra.Height * 0.04))
             });
-            if (list.Count > 0)
-            {
-                dongTianName = list[0].Text;
-                Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
-                await new ReturnMainUiTask().Start(ct);
-                return await SereniteaPotUi.WaitForEntry(ct, "after-realm-map", afterTeleport: false);
-            }
-            await Delay(200, ct);
+            return list.Count > 0 ? list[0].Text : null;
+        }, Delay, ct);
+        if (realmName != null)
+        {
+            dongTianName = realmName;
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
+            await new ReturnMainUiTask().Start(ct);
+            return await SereniteaPotUi.WaitForEntry(ct, "after-realm-map", afterTeleport: false);
         }
         Logger.LogWarning("领取尘歌壶奖励:未识别到洞天名称，停止定位");
         SereniteaPotUi.SaveFailure("realm-name");

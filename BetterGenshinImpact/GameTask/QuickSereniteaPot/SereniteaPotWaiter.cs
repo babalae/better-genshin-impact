@@ -10,6 +10,31 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 /// </summary>
 internal static class SereniteaPotWaiter
 {
+    /// <summary>
+    /// 在 30 秒内等待读取到洞天名称；复用稳定检查，超时不返回先前的识别结果。
+    /// </summary>
+    /// <param name="readName">每轮重新截图；地图尚未就绪或识别失败时返回 null。</param>
+    /// <param name="delay">接收取消令牌的轮询延迟。</param>
+    /// <param name="ct">取消整个等待；同步识别返回后再次检查。</param>
+    /// <param name="timeProvider">测试用时钟，默认使用实际经过时间。</param>
+    /// <returns>确认成功后的名称；超时返回 null。</returns>
+    internal static async Task<string?> WaitForRealmNameAsync(
+        Func<string?> readName,
+        Func<int, CancellationToken, Task> delay,
+        CancellationToken ct,
+        TimeProvider? timeProvider = null)
+    {
+        string? name = null;
+        var ready = await WaitAsync(() =>
+        {
+            var candidate = readName()?.Trim();
+            if (string.IsNullOrEmpty(candidate)) return false;
+            name = candidate;
+            return true;
+        }, delay, ct, TimeSpan.FromSeconds(30), timeProvider: timeProvider);
+        return ready ? name : null;
+    }
+
     internal static async Task<bool> WaitAsync(
         Func<bool> isReady,
         Func<int, CancellationToken, Task> delay,

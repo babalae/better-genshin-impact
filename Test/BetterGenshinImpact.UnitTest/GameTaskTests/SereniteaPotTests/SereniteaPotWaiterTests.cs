@@ -78,6 +78,81 @@ public class SereniteaPotWaiterTests
         }, clock.Delay, CancellationToken.None, TimeSpan.FromSeconds(60), timeProvider: clock));
     }
 
+    [Fact]
+    public async Task RealmMapLoadingForTenSeconds_ShouldWaitForName()
+    {
+        var clock = new TestClock();
+        var name = await SereniteaPotWaiter.WaitForRealmNameAsync(
+            () => clock.Seconds >= 10 ? " 绘绮庭 " : null,
+            clock.Delay, CancellationToken.None, clock);
+        Assert.Equal("绘绮庭", name);
+        Assert.Equal(11, clock.Seconds);
+    }
+
+    [Fact]
+    public async Task SlowRealmNameRecognition_ShouldTakeNewSamples()
+    {
+        var clock = new TestClock();
+        var samples = 0;
+        var name = await SereniteaPotWaiter.WaitForRealmNameAsync(() =>
+        {
+            if (++samples == 1)
+            {
+                clock.Advance(10000);
+                return null;
+            }
+            return "绘绮庭";
+        }, clock.Delay, CancellationToken.None, clock);
+        Assert.Equal("绘绮庭", name);
+        Assert.Equal(4, samples);
+        Assert.Equal(12, clock.Seconds);
+    }
+
+    [Fact]
+    public async Task BlankRealmName_ShouldFailAtThirtySeconds()
+    {
+        var clock = new TestClock();
+        Assert.Null(await SereniteaPotWaiter.WaitForRealmNameAsync(
+            () => " ", clock.Delay, CancellationToken.None, clock));
+        Assert.Equal(30, clock.Seconds);
+    }
+
+    [Fact]
+    public async Task TransientRealmName_ShouldNotReturnEarlierCandidateOnTimeout()
+    {
+        var clock = new TestClock();
+        var samples = 0;
+        Assert.Null(await SereniteaPotWaiter.WaitForRealmNameAsync(
+            () => ++samples == 1 ? "绘绮庭" : null,
+            clock.Delay, CancellationToken.None, clock));
+        Assert.Equal(30, clock.Seconds);
+    }
+
+    [Fact]
+    public async Task RealmNameRecognitionOverrunningDeadline_ShouldNotReturnName()
+    {
+        var clock = new TestClock();
+        var samples = 0;
+        Assert.Null(await SereniteaPotWaiter.WaitForRealmNameAsync(() =>
+        {
+            if (++samples == 3) clock.Advance(30000);
+            return "绘绮庭";
+        }, clock.Delay, CancellationToken.None, clock));
+    }
+
+    [Fact]
+    public async Task CancellationDuringRealmNameRecognition_ShouldPropagate()
+    {
+        var clock = new TestClock();
+        using var cts = new CancellationTokenSource();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            SereniteaPotWaiter.WaitForRealmNameAsync(() =>
+            {
+                cts.Cancel();
+                return "绘绮庭";
+            }, clock.Delay, cts.Token, clock));
+    }
+
     private static Task<bool> Wait(TestClock clock, Func<bool> predicate) =>
         SereniteaPotWaiter.WaitAsync(predicate, clock.Delay, CancellationToken.None,
             TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(5), clock);
