@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
-using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
 using CsTrees;
@@ -161,8 +160,8 @@ public partial class UseBurst : Behaviour
 
 /// <summary>
 /// 查询E技能是否就绪（条件节点）
-/// 基于 ESkillCdTracker 冷却记录，就绪返回 Success，冷却中返回 Failure。
-/// 不切人、不阻塞、无副作用，供 Selector/Sequence 组合表达"就绪才放、没好兜底"的策略。
+/// 基于 Avatar 三态冷却记录判断：就绪返回 Success，冷却中或未知返回 Failure。
+/// 冷却状态未知（用过 E 但没读到 CD）时，切人刷新一次 OCR 识别消歧后再判定。
 /// </summary>
 public partial class IsSkillReady : Behaviour
 {
@@ -184,7 +183,20 @@ public partial class IsSkillReady : Behaviour
             return Status.Failure;
         }
 
-        return ESkillCdTracker.IsReady(avatar.Name) ? Status.Success : Status.Failure;
+        var state = avatar.GetSkillCdState();
+        if (state == SkillCdState.Unknown)
+        {
+            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
+            if (BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName) == null)
+            {
+                return Status.Failure;
+            }
+
+            avatar.RefreshSkillCd();
+            state = avatar.GetSkillCdState();
+        }
+
+        return state == SkillCdState.Ready ? Status.Success : Status.Failure;
     }
 }
 
@@ -324,7 +336,8 @@ public partial class UseBurstIfReady : Behaviour
 
 /// <summary>
 /// 检查E战技就绪后释放（条件+动作合一节点）
-/// 基于 ESkillCdTracker 冷却记录判断：未就绪返回 Failure，不切人、不按键；就绪则切换到目标角色并释放，返回 Success。
+/// 基于 Avatar 冷却记录判断：冷却中返回 Failure，不切人、不按键；就绪则切换到目标角色并释放，返回 Success。
+/// 冷却状态未知（用过 E 但没读到 CD）时，切人刷新一次 OCR 识别消歧：仍就绪才释放，否则返回 Failure。
 /// 相比 IsSkillReady+UseSkill 组合，未就绪时不会无效按键，也不会假成功堵死 Selector
 /// </summary>
 public partial class UseSkillIfReady : Behaviour
@@ -349,8 +362,21 @@ public partial class UseSkillIfReady : Behaviour
             return Status.Failure;
         }
 
-        // 未就绪直接 Failure，上层 Selector 自然落到下位替代；不切人、不产生无效按键
-        if (!ESkillCdTracker.IsReady(avatar.Name))
+        var state = avatar.GetSkillCdState();
+        if (state == SkillCdState.Unknown)
+        {
+            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
+            if (BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName) == null)
+            {
+                return Status.Failure;
+            }
+
+            avatar.RefreshSkillCd();
+            state = avatar.GetSkillCdState();
+        }
+
+        // Unknown状态也当Ready，不然目前逻辑会永久Unknown   // todo 等底层E技能识别模型，再细化逻辑
+        if (state == SkillCdState.Cooldown)
         {
             return Status.Failure;
         }
