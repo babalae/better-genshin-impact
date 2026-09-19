@@ -13,8 +13,7 @@ dotnet test Test/SereniteaPot.Regression/SereniteaPot.Regression.csproj
 在仓库根目录检查共享代码和界面范围：
 
 ```powershell
-powershell -File Test/SereniteaPot.Regression/Verify-Scope.ps1 -BaseRef 42e1c0e745670eb4443c1e0357fba963eb24dfcd
-powershell -File Test/SereniteaPot.Regression/Verify-Scope.ps1 -BaseRef f29b0828ab4f8f91d9087152dcb487719e80fa16
+powershell -File Test/SereniteaPot.Regression/Verify-Scope.ps1 -BaseRef f29966868c6e2d5b8798bb6a4f3df201ec4a5f95
 ```
 
-公共等待、秘境、任务执行器、滚动、一条龙界面及应用日志配置必须保持基线内容。仅允许普通 `TpTask` 增加 `partial` 声明，以及 `BetterGI.Assets.Other` 从共同祖先的 `1.0.25` 对齐当前上游的 `1.0.27`；其他依赖变更仍会失败。
+基线取本分支已合入的上游提交。公共等待、秘境、任务执行器、滚动、一条龙界面、应用日志配置及依赖版本必须保持该基线内容，仅允许普通 `TpTask` 增加 `partial` 声明。合入更新的上游后，应改用对应提交运行检查，避免把上游自己的改动误判为本修复引入的变化。

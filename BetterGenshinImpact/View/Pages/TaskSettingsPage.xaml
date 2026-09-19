@@ -3568,7 +3568,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动连招"
+                                  Text="自动连招（实验）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -3609,7 +3609,7 @@
                                   Grid.Column="0"
                                   FontTypography="Body"
                                   TextWrapping="Wrap">
-                        决策LLM服务地址（实验）
+                        决策LLM服务地址
                     </ui:TextBlock>
                     <ui:TextBlock Grid.Row="2"
                                   Grid.Column="0"
@@ -3638,7 +3638,7 @@
                                   Grid.Column="0"
                                   FontTypography="Body"
                                   TextWrapping="Wrap">
-                        LLM模型名（实验）
+                        LLM模型名
                     </ui:TextBlock>
                     <ui:TextBox Grid.Row="1"
                                 Grid.RowSpan="2"
@@ -3662,7 +3662,7 @@
                                   Grid.Column="0"
                                   FontTypography="Body"
                                   TextWrapping="Wrap">
-                        LLM服务密钥（实验）
+                        LLM服务密钥
                     </ui:TextBlock>
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -3695,7 +3695,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="追加给 LLM 的自定义要求；留空则不注入"
+                                  Text="追加给 LLM 的自定义要求，如“使用芭芭拉重击来输出”；留空则不注入"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"

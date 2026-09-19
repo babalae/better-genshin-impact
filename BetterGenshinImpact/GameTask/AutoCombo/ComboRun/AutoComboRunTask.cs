@@ -1,6 +1,8 @@
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.SkillCd;
+using BetterGenshinImpact.View.Drawable;
 using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.Display;
@@ -63,9 +65,9 @@ public class AutoComboRunTask : ISoloTask
             Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
             extendedRoot = new AutoComboRunBuilder()
                 .WithBlackboard(session.Blackboard)
-                    .Sequence("-", memory: true)
-                        .Leaf(() => comboTree)
+                    .Sequence("-", true)
                         .CheckFightFinish("战斗结束检测")
+                        .Leaf(() => comboTree)
                     .End()
                 .End().Build();
         }
@@ -101,8 +103,26 @@ public class AutoComboRunTask : ISoloTask
             }, targetingCts.Token);
         }
 
+        // 全队战技 CD 遮罩显示：与 Tick 循环并发的后台展示循环，刷新间隔自定，与树 Tick 节奏解耦
+        using var overlayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var overlayTask = Task.Run(async () =>
+        {
+            try
+            {
+                await TeamSkillCdOverlay.LoopAsync(overlayCts.Token, combatScenes);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "全队战技CD遮罩循环异常");
+            }
+        }, overlayCts.Token);
+
         try
         {
+            // 接管 CD 遮罩显示：挂起 SkillCd 触发器，避免两套 CD 显示叠加
+            SkillCdTrigger.Suspend();
+
             while (!ct.IsCancellationRequested)
             {
                 await tree.Tick();
@@ -128,14 +148,21 @@ public class AutoComboRunTask : ISoloTask
         }
         finally
         {
-            // 暂停/结束时先停止索敌循环并等待其完成清理，避免其 finally 释放按键与后续操作冲突
+            // 暂停/结束时先停止索敌与 CD 遮罩循环并等待其完成清理，避免与后续收尾操作冲突
             if (targetingTask != null)
             {
                 await targetingCts.CancelAsync();
                 try { await targetingTask; } catch (OperationCanceledException) { }
             }
 
+            await overlayCts.CancelAsync();
+            try { await overlayTask; } catch (OperationCanceledException) { }
+            // 清除全队 CD 遮罩文字，避免任务暂停/结束后残留，并恢复 SkillCd 触发器
+            TeamSkillCdOverlay.Clear();
+            SkillCdTrigger.Resume();
+
             combatScenes.AfterTask();
+
             Logger.LogInformation("{Name}任务暂停，可再次点击继续", Name);
         }
     }
@@ -185,7 +212,7 @@ public partial class CheckFightFinish : Behaviour
         // 节流：未到 CheckTime 间隔直接视为未结束，避免树的高频 Tick 反复打开编队界面
         if ((DateTime.Now - _lastCheckTime).TotalSeconds < _detectConfig.CheckTime)
         {
-            return Status.Failure;
+            return Status.Success;
         }
 
         _lastCheckTime = DateTime.Now;
@@ -199,6 +226,46 @@ public partial class CheckFightFinish : Behaviour
             throw new NormalEndException("战斗结束");
         }
 
-        return Status.Failure;
+        return Status.Success;
+    }
+}
+
+/// <summary>
+/// 全队 E 技能 CD 遮罩显示：复用 SkillCd 模块的 <see cref="SkillCdOverlayRenderer"/>
+/// 渲染全队角色的战技 CD 文字（含未知状态"?"），坐标与样式跟随 SkillCdConfig 用户配置
+/// CD 由时间戳推算，每次刷新即为当前时刻值，以固定间隔的后台循环形式运行，与行为树 Tick 解耦
+/// </summary>
+public static class TeamSkillCdOverlay
+{
+    /// <summary>遮罩文字 key：与 SkillCd 共用（AutoCombo 运行期间已通过 SkillCdTrigger.Suspend 接管显示权）</summary>
+    private const string OverlayKey = "SkillCdText";
+
+    /// <summary>遮罩文字刷新间隔（毫秒）</summary>
+    private const int RefreshIntervalMs = 100;
+
+    /// <summary>持续刷新全队战技 CD 遮罩文字，取消令牌触发后退出</summary>
+    public static async Task LoopAsync(CancellationToken ct, CombatScenes combatScenes)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            var avatars = combatScenes.GetAvatars();
+            var slotCds = new double?[4];
+            for (int i = 0; i < slotCds.Length && i < avatars.Count; i++)
+            {
+                // GetSkillCdSecondsV2：>0 冷却中 / 0 就绪（不绘制）/ null 未知（NaN → "?"）
+                var seconds = avatars[i].GetSkillCdSecondsV2();
+                slotCds[i] = seconds == null ? double.NaN : (seconds.Value > 0 ? seconds.Value : null);
+            }
+
+            SkillCdOverlayRenderer.Update(OverlayKey, slotCds);
+
+            await Task.Delay(RefreshIntervalMs, ct);
+        }
+    }
+
+    /// <summary>清除此循环提交的遮罩文字（任务收尾时调用）</summary>
+    public static void Clear()
+    {
+        VisionContext.Instance().DrawContent.PutOrRemoveTextList(OverlayKey, null);
     }
 }

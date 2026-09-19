@@ -42,13 +42,13 @@
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.24" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.33" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.34" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.27" />
 
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="Clipper2" Version="2.0.0" />
 		<PackageReference Include="CsTrees" Version="1.0.5" />
-		<PackageReference Include="CsTrees.MEAI" Version="1.0.1" />
+		<PackageReference Include="CsTrees.MEAI" Version="1.0.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />

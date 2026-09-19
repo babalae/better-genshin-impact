@@ -141,7 +141,7 @@ public class Avatar
             Sleep(600, ct);
             TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
-        else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
+        else if (AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
@@ -152,70 +152,70 @@ public class Avatar
                 {
                     return;
                 }
-                
+
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
-                
+
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                // 保存原始 MoveMode，用于 finally 还原
-                var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
-                // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                
-                try
-                {
-                    var pathExecutor = new PathExecutor(cts.Token);
-                    
-                    // FaceTo 朝向战斗点，超时 2 秒
-                    cts.CancelAfter(2000);
-                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
-                    
-                    // 重置超时，MoveTo 超时 15 秒
-                    cts.CancelAfter(15000);
-                    // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
-                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
-                    Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
-                    Logger.LogInformation("游泳检测：移动结束");
+                    // 保存原始 MoveMode，用于 finally 还原
+                    var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
+                    // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+                    try
+                    {
+                        var pathExecutor = new PathExecutor(cts.Token);
+
+                        // FaceTo 朝向战斗点，超时 2 秒
+                        cts.CancelAfter(2000);
+                        pathExecutor.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+
+                        // 重置超时，MoveTo 超时 15 秒
+                        cts.CancelAfter(15000);
+                        // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
+                        AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
+                        Simulation.SendInput.Mouse.RightButtonDown();
+                        pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                        Logger.LogInformation("游泳检测：移动结束");
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Logger.LogWarning("游泳检测：回到战斗地点超时");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "游泳检测：回到战斗地点异常");
+                    }
+                    finally
+                    {
+                        // 确保所有资源和状态在任何路径都被正确清理
+                        cts.Cancel(); // 终止 PathExecutor 内部截屏循环
+                        AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
+                        AutoFightTask.FightWaypoint = null;
+                        Simulation.SendInput.Mouse.RightButtonUp();
+                        Simulation.ReleaseAllKey();
+                    }
                 }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (OperationCanceledException)
-                {
-                    Logger.LogWarning("游泳检测：回到战斗地点超时");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "游泳检测：回到战斗地点异常");
-                }
-                finally
-                {
-                    // 确保所有资源和状态在任何路径都被正确清理
-                    cts.Cancel(); // 终止 PathExecutor 内部截屏循环
-                    AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
-                    AutoFightTask.FightWaypoint = null;
-                    Simulation.SendInput.Mouse.RightButtonUp();
-                    Simulation.ReleaseAllKey();
-                }
-                }
-                
+
                 using var bitmap2 = CaptureToRectArea();
                 if (!SwimmingConfirm(bitmap2))
                 {
                     Logger.LogInformation("游泳检测：游泳脱困成功");
                     return;
                 }
-                
+
                 Logger.LogWarning("游泳检测：回到战斗地点失败");
             }
-            
+
             Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
             TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
         }
     }
-    
+
     /// <summary>
     /// 游泳检测（色块连通性检测）
     /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
@@ -231,7 +231,7 @@ public class Avatar
 
         var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
             connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-        
+
         return numLabels > 1;
     }
 
@@ -312,6 +312,7 @@ public class Avatar
     public bool TrySwitch(int tryTimes = 4)
     {
         var context = new AvatarActiveCheckContext();
+        var shouldResendSwitchAction = CombatScenes.UpdateTrySwitchTarget(Index);
         for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -321,12 +322,14 @@ public class Avatar
 
             using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
-            
+
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                // 切换成功——即使检测到已为目标角色，也补发一次按键，
-                // 防止颜色识别假阳性（如方法3偶发误判）导致实际未切到目标
-                // SimulateSwitchAction(Index);
+                // 目标变化且本次尚未实际发送切换按键时补发，避免识别假阳性。
+                if (shouldResendSwitchAction)
+                {
+                    SimulateSwitchAction(Index);
+                }
                 return true;
             }
             else
@@ -346,10 +349,11 @@ public class Avatar
             }
 
             SimulateSwitchAction(Index);
+            shouldResendSwitchAction = false;
 
             Sleep(250, Ct);
         }
-        
+
         Logger.LogWarning("切换角色失败:{Name}", Name);
 
         return false;
@@ -530,38 +534,53 @@ public class Avatar
     {
         if (AvatarSpecialAction.ExecuteSpecializedAction(this, "UseSkill", Name, new ActionArgs(Hold: hold))) return;
 
-        for (var i = 0; i < 1; i++)
+        if (Ct is { IsCancellationRequested: true })
         {
-            if (Ct is { IsCancellationRequested: true })
-            {
-                return;
-            }
+            return;
+        }
 
-            if (hold)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
-            }
-            else
-            {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-            }
+        if (hold)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
+        }
+        else
+        {
+            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+        }
 
-            Sleep(200, Ct);
+        // 0.2 秒内循环 OCR，直到识别到 CD 或超时
+        var recordedCd = 0d;
+        var deadline = DateTime.UtcNow.AddMilliseconds(200);
+        while (recordedCd <= 0 && DateTime.UtcNow < deadline)
+        {
+            Sleep(35, Ct);
 
-            using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
-            var cd = AfterUseSkill(region);
-            var recordedCd = ESkillCdTracker.Record(Name, cd);
-            if (recordedCd <= 0)
+            using (var region = CaptureToRectArea())
             {
-                recordedCd = ESkillCdTracker.ApplyFallback(Name);
+                var cd = AfterUseSkill(region);
+                recordedCd = ESkillCdTracker.Record(Name, cd);
             }
+        }
 
-            if (recordedCd > 0)
+        // 慢速设备兜底：轮询中的检测可能跨过截止时间（如开始于0.035s、结束时已0.25s），CD 数字恰好在其后才出现，超时后再补检一次
+        if (recordedCd <= 0)
+        {
+            using (var region = CaptureToRectArea())
             {
-                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
-                    Math.Round(recordedCd, 2));
+                var cd = AfterUseSkill(region);
+                recordedCd = ESkillCdTracker.Record(Name, cd);
             }
+        }
+
+        if (recordedCd <= 0)
+        {
+            recordedCd = ESkillCdTracker.ApplyFallback(Name);
+        }
+
+        if (recordedCd > 0)
+        {
+            Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                Math.Round(recordedCd, 2));
         }
     }
 
@@ -578,7 +597,13 @@ public class Avatar
             return GetSkillCdSeconds();
         }
 
-        using var region = givenRegion ?? CaptureToRectArea();
+        // 调用方传入的截图由调用方负责释放，方法只释放自己创建的
+        if (givenRegion != null)
+        {
+            return GetSkillCurrentCd(givenRegion);
+        }
+
+        using var region = CaptureToRectArea();
         return GetSkillCurrentCd(region);
     }
 
@@ -662,7 +687,7 @@ public class Avatar
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
         // Logger.LogInformation("Q技能冷却分类：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
-        
+
         // 置信度不足时，直接返回未知，避免误判导致漏放/乱放
         if (topClass.Confidence <= 0.7)
         {
@@ -768,7 +793,7 @@ public class Avatar
     {
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
-    
+
     /// <summary>
     /// 等待完成
     /// </summary>
@@ -819,7 +844,52 @@ public class Avatar
     }
 
     /// <summary>
-    ///  计算上一次使用技能到现在还剩下多长时间的cd
+    /// 纯 OCR 视角的 E 技能三态：只依据 OCR 记录（<see cref="OcrSkillCd"/>）与最近一次使用时间
+    /// （<see cref="LastSkillTime"/>）的相对新旧判断记录可信度。
+    /// </summary>
+    private SkillCdState GetOcrSkillCdState()
+    {
+        // OCR 记录晚于最近一次使用 → 记录可信
+        if (OcrSkillCd > LastSkillTime)
+        {
+            return DateTime.UtcNow > OcrSkillCd ? SkillCdState.Ready : SkillCdState.Cooldown;
+        }
+
+        // 从未使用过（默认时间）→ 就绪；否则记录是过期的（用过但没读到 CD）
+        return LastSkillTime == default ? SkillCdState.Ready : SkillCdState.Unknown;
+    }
+
+    /// <summary>
+    /// 获取 E 技能的综合三态冷却状态（就绪 / 冷却中 / 未知）。
+    /// 优先级：<see cref="ManualSkillCd"/> 手动配置 → <see cref="GetOcrSkillCdState"/> OCR 视角。
+    /// </summary>
+    public SkillCdState GetSkillCdState()
+    {
+        // 手动配置：直接按上次释放时间 + 手动 CD 判断
+        if (ManualSkillCd > 0)
+        {
+            var dif = DateTime.UtcNow - LastSkillTime;
+            return ManualSkillCd > dif.TotalSeconds ? SkillCdState.Cooldown : SkillCdState.Ready;
+        }
+
+        var ocrState = GetOcrSkillCdState();
+        return ocrState;
+    }
+
+    /// <summary>
+    /// 再识别一次 E 技能冷却并更新 OCR 记录（<see cref="OcrSkillCd"/>）
+    /// </summary>
+    /// <returns>识别到的剩余 CD 秒数，&lt;= 0 表示未识别到</returns>
+    public double RefreshSkillCd()
+    {
+        using var region = CaptureToRectArea();
+        var cd = GetSkillCurrentCd(region);
+        ESkillCdTracker.Record(Name, cd);
+        return cd;
+    }
+
+    /// <summary>
+    /// 计算上一次使用技能到现在还剩下多长时间的cd
     /// </summary>
     /// <returns></returns>
     public double GetSkillCdSeconds()
@@ -827,33 +897,59 @@ public class Avatar
         switch (ManualSkillCd)
         {
             case < 0:
-            {
-                var now = DateTime.UtcNow;
-                // 若未经过OCR的技能释放,上次时间加上最长的技能时间
-                var maxCd = Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd);
-                var target =
-                    LastSkillTime >= OcrSkillCd
-                        ? LastSkillTime.AddSeconds(Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd))
-                        : OcrSkillCd;
-                var result = now > target ? 0d : (target - now).TotalSeconds;
-                if (!(result > maxCd)) return result;
-                Logger.LogWarning("{Name}的当前技能CD大于其最大技能CD{MaxCd}。如果你没有调整系统时间的话，这是一个bug。", Name, maxCd);
-                return maxCd;
-            }
-            case > 0:
-            {
-                // 用户设置，所以直接通过上次释放技能的时间计算
-                var dif = DateTime.UtcNow - LastSkillTime;
-                if (ManualSkillCd > dif.TotalSeconds)
                 {
-                    return ManualSkillCd - dif.TotalSeconds;
+                    var now = DateTime.UtcNow;
+                    // 若未经过OCR的技能释放,上次时间加上最长的技能时间
+                    var maxCd = Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd);
+                    var target =
+                        LastSkillTime >= OcrSkillCd
+                            ? LastSkillTime.AddSeconds(Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd))
+                            : OcrSkillCd;
+                    var result = now > target ? 0d : (target - now).TotalSeconds;
+                    if (!(result > maxCd)) return result;
+                    Logger.LogWarning("{Name}的当前技能CD大于其最大技能CD{MaxCd}。如果你没有调整系统时间的话，这是一个bug。", Name, maxCd);
+                    return maxCd;
                 }
+            case > 0:
+                {
+                    // 用户设置，所以直接通过上次释放技能的时间计算
+                    var dif = DateTime.UtcNow - LastSkillTime;
+                    if (ManualSkillCd > dif.TotalSeconds)
+                    {
+                        return ManualSkillCd - dif.TotalSeconds;
+                    }
 
-                break;
-            }
+                    break;
+                }
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// 计算剩余技能 CD 的可信版本：与 <see cref="GetSkillCdState"/> 同源，只依据
+    /// <see cref="ManualSkillCd"/> 手动配置与 <see cref="OcrSkillCd"/> OCR 记录，
+    /// 不使用 <see cref="CombatAvatar.SkillCd"/> 做推算（对 CD 从持续时间结束后才起算的角色不准）。
+    /// 返回值三态：&gt;0 冷却中剩余秒数；0 确定就绪；null 未知（用过但没读到 CD）。
+    /// </summary>
+    public double? GetSkillCdSecondsV2()
+    {
+        if (ManualSkillCd > 0)
+        {
+            // 用户设置，直接通过上次释放技能的时间计算；手动配置不存在未知态
+            var dif = DateTime.UtcNow - LastSkillTime;
+            return ManualSkillCd > dif.TotalSeconds ? ManualSkillCd - dif.TotalSeconds : 0;
+        }
+
+        // OCR 记录可信判定与 GetOcrSkillCdState 一致：只认晚于最近一次使用时间的记录
+        if (OcrSkillCd > LastSkillTime)
+        {
+            var remaining = (OcrSkillCd - DateTime.UtcNow).TotalSeconds;
+            return remaining > 0 ? remaining : 0;
+        }
+
+        // 从未使用过 → 就绪；用过但记录过期/缺失 → 未知
+        return LastSkillTime == default ? 0 : null;
     }
 
     /// <summary>
