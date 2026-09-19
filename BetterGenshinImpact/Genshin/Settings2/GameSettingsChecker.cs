@@ -58,6 +58,11 @@ public class GameSettingsChecker
             {
                 TaskControl.Logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
             }
+
+            if (settings.PcTpsAimControlType == TpsAimControlType.PresetTwo)
+            {
+                TaskControl.Logger.LogWarning("当前至冬枪械操作预设使用了预设方案二，此方案会影响自动战斗的战斗结束的检测。请在【设置】——右上角【第三人称射击设置】——左侧【按键】菜单——点击【恢复预设】——选择预设一来修改此配置。");
+            }
         }
         catch (Exception e)
         {
