@@ -38,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// <summary>
 /// 传送任务
 /// </summary>
-public class TpTask
+public partial class TpTask
 {
     private readonly QuickTeleportAssets _assets;
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
@@ -94,6 +94,9 @@ public class TpTask
     private const int TeleportPanelMinimumTimeoutMs = 900;
     private const int TeleportPanelInitialDelayMs = 200;
     private const int TeleportConfirmTimeoutMs = 5000;
+    private const int SwitchAreaCandidateTimeoutMs = 1500;
+    private const int SwitchAreaSelectionTimeoutMs = 600;
+    private const int SwitchAreaSelectionMinimumWaitMs = 120;
     private const int SwitchAreaSelectionStableChecks = 2;
     private const int TeleportTimeoutMs = 60_000;
     private const int TeleportLoadingPollIntervalMs = 100;
@@ -2442,43 +2445,34 @@ public class TpTask
         throw new Exception($"切换区域[{areaName}]失败");
     }
 
-    internal async Task<bool> TrySwitchArea(string areaName, Action<string, ImageRegion>? saveFrame = null)
+    private async Task<bool> TrySwitchArea(string areaName)
     {
-        ct.ThrowIfCancellationRequested();
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        await Delay(50, ct);
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
         var stopwatch = Stopwatch.StartNew();
-        var sample = 0;
-        Region? matchRect = null;
-        Logger.LogInformation("等待区域菜单：{Country}，最长 {Seconds} 秒", areaName, MapAreaSwitchWaiter.Timeout.TotalSeconds);
-        var found = await MapAreaSwitchWaiter.WaitAsync(() =>
-        {
-            using var ra = CaptureToRectArea();
-            var capturedAt = stopwatch.ElapsedMilliseconds;
-            var list = FindSwitchAreaCandidates(ra);
-            candidatesText = FormatSwitchAreaCandidateTexts(list);
-            matchRect = list
-                .OrderByDescending(r => r.Y)
-                .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
-            Logger.LogInformation(
-                "区域菜单识别 #{Sample}：{Country}，截图时刻={CapturedMs}ms，OCR耗时={OcrMs}ms，命中={Matched}，候选={Candidates}",
-                ++sample, areaName, capturedAt, stopwatch.ElapsedMilliseconds - capturedAt, matchRect != null, candidatesText);
-            // 保存实际参与 OCR 的帧，避免事后截图与识别的画面不同。
-            if (sample <= 3 || matchRect != null) saveFrame?.Invoke($"area-candidates-{sample}", ra);
-            return matchRect != null;
-        }, Delay, ct);
-
-        if (found && matchRect != null)
+        while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
-            matchRect.Click();
-            if (!await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect, saveFrame))
-                return false;
-            RememberAreaSwitchCenterPoint(areaName);
-            Logger.LogInformation("切换到区域：{Country}", areaName);
-            return true;
+            using var ra = CaptureToRectArea();
+            var list = FindSwitchAreaCandidates(ra);
+            candidatesText = FormatSwitchAreaCandidateTexts(list);
+            var matchRect = list
+                .OrderByDescending(r => r.Y)
+                .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
+            if (matchRect != null)
+            {
+                var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
+                matchRect.Click();
+                await Delay(50, ct);
+                await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
+                RememberAreaSwitchCenterPoint(areaName);
+                Logger.LogInformation("切换到区域：{Country}", areaName);
+                return true;
+            }
+
+            await Delay(UiRecognitionPollIntervalMs, ct);
         }
 
         Logger.LogWarning(
@@ -2488,31 +2482,39 @@ public class TpTask
         return false;
     }
 
-    private async Task<bool> WaitForAreaSelectionApplied(
+    private async Task WaitForAreaSelectionApplied(
         string areaName,
         string localizedAreaName,
-        Rect clickedCandidateRect,
-        Action<string, ImageRegion>? saveFrame)
+        Rect clickedCandidateRect)
     {
         var stopwatch = Stopwatch.StartNew();
-        var sample = 0;
-        var applied = await MapAreaSwitchWaiter.WaitAsync(() =>
+        var consecutiveMissingChecks = 0;
+        while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
         {
+            ct.ThrowIfCancellationRequested();
             using var capture = CaptureToRectArea();
-            var capturedAt = stopwatch.ElapsedMilliseconds;
             var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
                 IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
-            var mapVisible = Bv.IsInBigMapUi(capture);
-            Logger.LogInformation(
-                "区域选择确认 #{Sample}：{Country}，截图时刻={CapturedMs}ms，识别耗时={RecognitionMs}ms，候选仍可见={CandidateVisible}，地图可见={MapVisible}",
-                ++sample, areaName, capturedAt, stopwatch.ElapsedMilliseconds - capturedAt, clickedCandidateStillVisible, mapVisible);
-            if (sample <= 3) saveFrame?.Invoke($"area-applied-{sample}", capture);
-            return !clickedCandidateStillVisible && mapVisible;
-        }, Delay, ct, SwitchAreaSelectionStableChecks);
 
-        if (!applied) Logger.LogWarning("区域选择等待超时：{Country}，未确认切换生效", areaName);
-        return applied;
+            if (!clickedCandidateStillVisible &&
+                stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
+            {
+                consecutiveMissingChecks++;
+                if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                consecutiveMissingChecks = 0;
+            }
+
+            await Delay(UiRecognitionPollIntervalMs, ct);
+        }
+
+        Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
     }
 
     private static bool IsSameSwitchAreaCandidatePosition(Rect clickedCandidateRect, Region candidate)

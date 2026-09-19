@@ -14,6 +14,14 @@
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <Using Include="Xunit" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/Common/Exceptions/NormalEndException.cs" Link="NormalEndException.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/AutoPathing/Suspend/ISuspendable.cs" Link="ISuspendable.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotPauseWaiter.cs" Link="SereniteaPotPauseWaiter.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotInputHold.cs" Link="SereniteaPotInputHold.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotInventorySearch.cs" Link="SereniteaPotInventorySearch.cs" />
+    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotScreenshotStore.cs" Link="SereniteaPotScreenshotStore.cs" />
+    <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotSideEffectTests.cs" Link="SereniteaPotSideEffectTests.cs" />
+    <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotScreenshotStoreTests.cs" Link="SereniteaPotScreenshotStoreTests.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotWaiter.cs" Link="SereniteaPotWaiter.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotWaiterTests.cs" Link="SereniteaPotWaiterTests.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/Common/GameWindowFocusWaiter.cs" Link="GameWindowFocusWaiter.cs" />
@@ -23,4 +31,10 @@
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/GameWindowFocusWaiterTests.cs" Link="GameWindowFocusWaiterTests.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotTestSessionTests.cs" Link="SereniteaPotTestSessionTests.cs" />
   </ItemGroup>
+  <Target Name="ExtractCompatibilitySources" BeforeTargets="CoreCompile">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/Extract-CompatibilitySources.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)/$(IntermediateOutputPath)CompatibilitySources.g.cs&quot;" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)CompatibilitySources.g.cs" />
+    </ItemGroup>
+  </Target>
 </Project>

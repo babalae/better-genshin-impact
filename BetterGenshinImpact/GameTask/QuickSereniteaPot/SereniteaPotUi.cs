@@ -21,7 +21,7 @@ internal static class SereniteaPotUi
         {
             using var capture = TaskControl.CaptureToRectArea(forceNew: true);
             return Bv.IsInMainUi(capture);
-        }, TaskControl.Delay, ct, TimeSpan.FromSeconds(30));
+        }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(30));
 
         if (!ready)
         {
@@ -44,7 +44,7 @@ internal static class SereniteaPotUi
             using var finger = capture.Find(ElementRecognition.Get("FingerIcon", capture));
             inPot = finger.IsExist();
             return mainUi && inPot;
-        }, TaskControl.Delay, ct, TimeSpan.FromSeconds(afterTeleport ? 60 : 15),
+        }, SereniteaPotTaskControl.Delay, ct, TimeSpan.FromSeconds(afterTeleport ? 60 : 15),
             afterTeleport ? TimeSpan.FromSeconds(5) : TimeSpan.Zero);
 
         if (ready)
@@ -85,16 +85,19 @@ internal static class SereniteaPotUi
     {
         try
         {
-            var directory = SereniteaPotTestLogSink.Current?.DirectoryPath
-                ?? Global.Absolute(Path.Combine("log", "sereniteapot"));
-            Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory,
-                $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-p{Environment.ProcessId}-{stage}-{Guid.NewGuid():N}.png");
-            if (!Cv2.ImWrite(path, capture.SrcMat))
+            string? path;
+            if (SereniteaPotTestLogSink.Current is { } test)
             {
-                TaskControl.Logger.LogWarning("尘歌壶诊断截图写入失败：{Path}", path);
-                return;
+                path = Path.Combine(test.DirectoryPath,
+                    $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-p{Environment.ProcessId}-{stage}-{Guid.NewGuid():N}.png");
+                if (!Cv2.ImWrite(path, capture.SrcMat)) { File.Delete(path); return; }
             }
+            else
+            {
+                path = SereniteaPotScreenshotStore.Save(Global.Absolute(Path.Combine("log", "sereniteapot")),
+                    stage, file => Cv2.ImWrite(file, capture.SrcMat));
+            }
+            if (path == null) return;
             TaskControl.Logger.LogWarning("尘歌壶诊断:{Stage}，前台进程={Foreground}，截图={Path}",
                 stage, SystemControl.GetActiveByProcess(), path);
         }

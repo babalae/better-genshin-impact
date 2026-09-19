@@ -32,6 +32,29 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 internal class GoToSereniteaPotTask
 {
+    private static Task Delay(int milliseconds, CancellationToken ct) => SereniteaPotTaskControl.Delay(milliseconds, ct);
+
+    private static async Task WithHeldKey(GIActions action, Func<Task> operation, CancellationToken ct)
+    {
+        await Delay(0, ct);
+        var simulator = TaskContext.Instance().PostMessageSimulator;
+        using var hold = new SereniteaPotInputHold(
+            () => simulator.SimulateAction(action, KeyType.KeyDown),
+            () => simulator.SimulateAction(action, KeyType.KeyUp), ct);
+        var registration = $"pot-input-{Guid.NewGuid():N}";
+        var components = RunnerContext.Instance.SuspendableDictionary;
+        components.Add(registration, hold);
+        try
+        {
+            hold.Resume();
+            ct.ThrowIfCancellationRequested();
+            await operation();
+        }
+        finally { components.Remove(registration); }
+    }
+
+    private static Task MoveFor(GIActions action, int milliseconds, CancellationToken ct) =>
+        WithHeldKey(action, () => Delay(milliseconds, ct), ct);
     public string Name => "领取尘歌壶奖励";
 
     private bool fail = false;
@@ -119,7 +142,7 @@ internal class GoToSereniteaPotTask
 
             Action<string, ImageRegion>? saveFrame = SereniteaPotTestLogSink.Current == null ? null
                 : (stage, capture) => SereniteaPotUi.SaveCapture($"attempt-{attempt}-{stage}", capture);
-            if (await tpTask.TrySwitchArea("尘歌壶", saveFrame)) return true;
+            if (await tpTask.TrySwitchSereniteaPotArea(saveFrame)) return true;
 
             failureStage = "map-area-switch";
             Logger.LogWarning("尘歌壶地图切区未完成：第 {Attempt}/{MaxAttempts} 次尝试", attempt, maxAttempts);
@@ -297,37 +320,27 @@ internal class GoToSereniteaPotTask
             {
                 case "妙香林":
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "在妙香林，调整位置");
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    await Delay(200, ct);
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    await MoveFor(GIActions.MoveForward, 200, ct);
                     break;
                 case "清琼岛":
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "在清琼岛，调整位置");
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-                    await Delay(100, ct);
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    await MoveFor(GIActions.MoveLeft, 100, ct);
                     await Delay(300, ct);
                     Simulation.SendInput.Mouse.MiddleButtonClick();
                     await Delay(500, ct);
                     break;
                 case "绘绮庭":
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "在绘绮庭，调整位置");
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-                    await Delay(1300, ct);
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    await MoveFor(GIActions.MoveLeft, 1300, ct);
                     await Delay(500, ct);
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                    await Delay(600, ct);
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                    await MoveFor(GIActions.MoveBackward, 600, ct);
                     await Delay(300, ct);
                     Simulation.SendInput.Mouse.MiddleButtonClick();
                     await Delay(800, ct);
                     break;
                 case "旋流屿":
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "在旋流屿，调整位置");
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                    await Delay(900, ct);
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                    await MoveFor(GIActions.MoveBackward, 900, ct);
                     await Delay(300, ct);
                     Simulation.SendInput.Mouse.MiddleButtonClick();
                     await Delay(800, ct);
@@ -406,9 +419,8 @@ internal class GoToSereniteaPotTask
         }
 
         ct.ThrowIfCancellationRequested();
-        try
+        await WithHeldKey(GIActions.MoveForward, async () =>
         {
-            TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown); // 向前走
             Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆");
             var approachWatch = Stopwatch.StartNew();
             while (true)
@@ -430,12 +442,7 @@ internal class GoToSereniteaPotTask
                 TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.Drop);//防止爬墙
                 await Delay(50, ct);
             }
-        }
-        finally
-        {
-            // 正常结束、取消或异常时都释放前进键。
-            TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-        }
+        }, ct);
     }
 
     private async Task BuyMaxNumber(CancellationToken ct)
@@ -476,7 +483,7 @@ internal class GoToSereniteaPotTask
     private async Task<bool> GetReward(CancellationToken ct)
     {
         // 保证与阿圆对话
-        var interactionFound = await NewRetry.WaitForAction(() =>
+        var interactionFound = await SereniteaPotTaskControl.WaitForAction(() =>
         {
             using var capture = CaptureToRectArea();
             return Bv.FindFAndPress(capture, text: this.ayuanHeyString);

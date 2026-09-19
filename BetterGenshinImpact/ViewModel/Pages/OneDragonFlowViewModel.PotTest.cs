@@ -136,9 +136,12 @@ public partial class OneDragonFlowViewModel
         }
         finally
         {
-            session?.Dispose();
-            _potTestCancellation = null;
-            IsPotTestRunning = false;
+            try { session?.Dispose(); }
+            finally
+            {
+                _potTestCancellation = null;
+                IsPotTestRunning = false;
+            }
         }
     }
 
