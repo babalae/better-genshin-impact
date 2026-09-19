@@ -492,7 +492,7 @@ internal class GoToSereniteaPotTask
             SereniteaPotUi.SaveFailure("reward-dialog");
             return false;
         }
-        if (rewardOption == TalkOptionRes.FoundAndClick)
+        // 保留独立作用域，让领奖截图在进入商店流程前释放。
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
             await Delay(1000, ct);
