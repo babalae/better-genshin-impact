@@ -87,7 +87,6 @@ public partial class App : Application
                             retainedFileTimeLimit: TimeSpan.FromDays(21)))
                     .WriteTo.Console(outputTemplate:
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-                    .WriteTo.Sink(new BetterGenshinImpact.GameTask.QuickSereniteaPot.SereniteaPotTestLogSink())
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);

@@ -119,7 +119,7 @@ internal class GoToSereniteaPotTask
             Logger.LogInformation("尘歌壶地图切区：第 {Attempt}/{MaxAttempts} 次尝试，先确认主界面", attempt, maxAttempts);
             // 重试必须从已确认的主界面开始，不能在展开的菜单上重复点击开关。
             await new ReturnMainUiTask().Start(ct);
-            if (!await SereniteaPotUi.WaitForMainUi(ct, $"before-map-{attempt}", recordFailure: false))
+            if (!await SereniteaPotUi.WaitForMainUi(ct, $"before-map-{attempt}"))
             {
                 failureStage = "before-map";
                 continue;
@@ -140,9 +140,7 @@ internal class GoToSereniteaPotTask
                 continue;
             }
 
-            Action<string, ImageRegion>? saveFrame = SereniteaPotTestLogSink.Current == null ? null
-                : (stage, capture) => SereniteaPotUi.SaveCapture($"attempt-{attempt}-{stage}", capture);
-            if (await tpTask.TrySwitchSereniteaPotArea(saveFrame)) return true;
+            if (await tpTask.TrySwitchSereniteaPotArea()) return true;
 
             failureStage = "map-area-switch";
             Logger.LogWarning("尘歌壶地图切区未完成：第 {Attempt}/{MaxAttempts} 次尝试", attempt, maxAttempts);
@@ -497,8 +495,6 @@ internal class GoToSereniteaPotTask
             Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
             await Delay(1000, ct);
 
-            if (SereniteaPotTestLogSink.Current != null) SereniteaPotUi.SaveCapture("reward-before");
-
             using var getAare = CaptureToRectArea();
             using var countArea = getAare.DeriveCrop(getAare.Width* 1801 / 1920,
                 getAare.Height* 609 / 1080,getAare.Width * 75 / 1920,getAare.Width * 46 / 1920);
@@ -544,7 +540,6 @@ internal class GoToSereniteaPotTask
             using var ra2 = CaptureToRectArea();
             ra2.Find(ElementRecognition.Get("SereniteaPotMoney", ra2), a => a.Click());
             await Delay(500, ct);
-            if (SereniteaPotTestLogSink.Current != null) SereniteaPotUi.SaveCapture("reward-after");
             using var ra3 = CaptureToRectArea();
             ra3.Find(ElementRecognition.Get("SereniteapotPageClose", ra3), a => a.Click());
             await Delay(500, ct);
@@ -698,41 +693,10 @@ internal class GoToSereniteaPotTask
         fail = false;
         dongTianName = "";
         InitConfigList();
-        await Execute(ct, entryOnly: false);
+        await Execute(ct);
     }
 
-    /// <summary>手动测试复用正式流程，只使用内存配置，不执行一条龙或洞天商店购买。</summary>
-    internal async Task<bool> TestAsync(string entryType, bool includeRewards, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        fail = false;
-        dongTianName = "";
-        SelectedConfig = new OneDragonFlowConfig
-        {
-            SereniteaPotTpType = entryType,
-            SecretTreasureObjects = []
-        };
-        try
-        {
-            using (var capture = CaptureToRectArea(forceNew: true))
-            {
-                using var finger = capture.Find(ElementRecognition.Get("FingerIcon", capture));
-                if (finger.IsExist())
-                {
-                    Logger.LogWarning("尘歌壶测试:请先回到大世界，再测试进入尘歌壶");
-                    SereniteaPotUi.SaveFailure("already-in-pot");
-                    return false;
-                }
-            }
-            return await Execute(ct, entryOnly: !includeRewards);
-        }
-        finally
-        {
-            Simulation.ReleaseAllKey();
-        }
-    }
-
-    private async Task<bool> Execute(CancellationToken ct, bool entryOnly)
+    private async Task<bool> Execute(CancellationToken ct)
     {
         // /**
         //  * 1. 首先退出到主页面
@@ -759,12 +723,6 @@ internal class GoToSereniteaPotTask
             return false;
         }
 
-        if (entryOnly)
-        {
-            Logger.LogInformation("尘歌壶测试:进壶已确认，停留在壶内");
-            return true;
-        }
-        
         // 寻找阿圆并靠近
         await FindAYuan(ct);
         // 领取奖励

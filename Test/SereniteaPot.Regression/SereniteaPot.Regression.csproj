@@ -10,9 +10,6 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Serilog" Version="4.2.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <Using Include="Xunit" />
     <Compile Include="../../BetterGenshinImpact/GameTask/Common/Exceptions/NormalEndException.cs" Link="NormalEndException.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/AutoPathing/Suspend/ISuspendable.cs" Link="ISuspendable.cs" />
@@ -28,9 +25,7 @@
     <Compile Include="../../BetterGenshinImpact/GameTask/Common/GameWindowFocusWaiter.cs" Link="GameWindowFocusWaiter.cs" />
     <Compile Include="../../BetterGenshinImpact/GameTask/AutoTrackPath/MapAreaSwitchWaiter.cs" Link="MapAreaSwitchWaiter.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/MapAreaSwitchWaiterTests.cs" Link="MapAreaSwitchWaiterTests.cs" />
-    <Compile Include="../../BetterGenshinImpact/GameTask/QuickSereniteaPot/SereniteaPotTestSession.cs" Link="SereniteaPotTestSession.cs" />
     <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/GameWindowFocusWaiterTests.cs" Link="GameWindowFocusWaiterTests.cs" />
-    <Compile Include="../BetterGenshinImpact.UnitTest/GameTaskTests/SereniteaPotTests/SereniteaPotTestSessionTests.cs" Link="SereniteaPotTestSessionTests.cs" />
   </ItemGroup>
   <Target Name="ExtractCompatibilitySources" BeforeTargets="CoreCompile">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/Extract-CompatibilitySources.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)/$(IntermediateOutputPath)CompatibilitySources.g.cs&quot;" />

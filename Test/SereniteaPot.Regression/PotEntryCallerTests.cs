@@ -87,7 +87,7 @@ partial class PotEntryProbe(bool bag)
     private bool fail = false;
     private readonly EntryConfig SelectedConfig = new() { SereniteaPotTpType = bag ? "尘歌壶道具" : "地图传送" };
     internal string RealmName => dongTianName;
-    internal Task<bool> Run(CancellationToken ct = default) => Execute(ct, entryOnly: false);
+    internal Task<bool> Run(CancellationToken ct = default) => Execute(ct);
     private static Task<bool> OpenSereniteaPotMap(CancellationToken ct) => Task.FromResult(true);
     private static Task Delay(int ms, CancellationToken ct) => EntryState.Current.Delay(ms, ct);
     private static ImageRegion CaptureToRectArea(bool forceNew = false) => new(forceNew: forceNew);

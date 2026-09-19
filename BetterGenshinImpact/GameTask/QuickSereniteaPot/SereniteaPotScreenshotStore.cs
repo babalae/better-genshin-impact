@@ -10,7 +10,7 @@ internal static class SereniteaPotScreenshotStore
     internal const long MaxBytes = 64L * 1024 * 1024;
     internal static readonly TimeSpan MaxAge = TimeSpan.FromDays(14);
 
-    // 仅管理此处生成的 pot-*.png；手动测试目录和其他日志不属于自动清理范围。
+    // 仅管理此处生成的 pot-*.png，不清理其他文件。
     internal static string? Save(string directory, string stage, Func<string, bool> write,
         int maxFiles = MaxFiles, long maxBytes = MaxBytes, DateTime? utcNow = null)
     {

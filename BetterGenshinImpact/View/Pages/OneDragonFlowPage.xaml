@@ -334,30 +334,6 @@
 
             <ScrollViewer>
                 <StackPanel Margin="0,0,18,0">
-                    <Border Margin="0,0,0,16" Padding="14" CornerRadius="8"
-                            BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}">
-                        <StackPanel>
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{i18n:T 尘歌壶单独测试}" />
-                            <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="{i18n:T 默认只验证进壶，并停留在壶内。可选先领取邮件，或继续寻找阿圆、领取宝钱与好感并返回大世界。测试不购买洞天商店物品。}" />
-                            <TextBlock Margin="0,6,0,0" Text="{Binding PotTestInstance}" />
-                            <CheckBox Margin="0,8,0,0" Content="{i18n:T 先领取邮件}"
-                                      IsChecked="{Binding PotTestClaimMailFirst}" />
-                            <CheckBox Margin="0,4,0,8" Content="{i18n:T 继续测试阿圆与奖励流程}"
-                                      IsChecked="{Binding PotTestIncludeRewards}" />
-                            <WrapPanel>
-                                <ui:Button Margin="0,0,8,8" Content="{i18n:T 背包进壶测试}"
-                                           Command="{Binding TestSereniteaPotCommand}" CommandParameter="尘歌壶道具" />
-                                <ui:Button Margin="0,0,8,8" Content="{i18n:T 地图进壶测试}"
-                                           Command="{Binding TestSereniteaPotCommand}" CommandParameter="地图传送" />
-                                <ui:Button Margin="0,0,8,8" Content="{i18n:T 停止测试}"
-                                           Command="{Binding StopSereniteaPotTestCommand}" />
-                                <ui:Button Margin="0,0,8,8" Content="{i18n:T 打开测试记录}"
-                                           Command="{Binding OpenSereniteaPotTestLogsCommand}" />
-                            </WrapPanel>
-                            <TextBlock TextWrapping="Wrap" Text="{Binding PotTestStatus}" />
-                        </StackPanel>
-                    </Border>
                     <!--  合成树脂  -->
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"

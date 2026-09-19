@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 internal static class SereniteaPotUi
 {
-    internal static async Task<bool> WaitForMainUi(CancellationToken ct, string stage, bool recordFailure = true)
+    internal static async Task<bool> WaitForMainUi(CancellationToken ct, string stage)
     {
         using var clock = SereniteaPotTaskControl.CreateTimer();
         var ready = await SereniteaPotWaiter.WaitAsync(() =>
@@ -26,8 +26,7 @@ internal static class SereniteaPotUi
         if (!ready)
         {
             TaskControl.Logger.LogWarning("尘歌壶:{Stage} 未确认稳定主界面", stage);
-            if (recordFailure) SaveFailure(stage);
-            else SaveCapture(stage);
+            SaveFailure(stage);
         }
         return ready;
     }
@@ -64,7 +63,6 @@ internal static class SereniteaPotUi
     // 只在失败阶段保存一张图；诊断失败不能覆盖原始错误。
     internal static void SaveFailure(string stage)
     {
-        if (SereniteaPotTestLogSink.Current is { } test) test.FailureStage ??= stage;
         SaveCapture(stage);
     }
 
@@ -81,22 +79,12 @@ internal static class SereniteaPotUi
         }
     }
 
-    internal static void SaveCapture(string stage, ImageRegion capture)
+    private static void SaveCapture(string stage, ImageRegion capture)
     {
         try
         {
-            string? path;
-            if (SereniteaPotTestLogSink.Current is { } test)
-            {
-                path = Path.Combine(test.DirectoryPath,
-                    $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-p{Environment.ProcessId}-{stage}-{Guid.NewGuid():N}.png");
-                if (!Cv2.ImWrite(path, capture.SrcMat)) { File.Delete(path); return; }
-            }
-            else
-            {
-                path = SereniteaPotScreenshotStore.Save(Global.Absolute(Path.Combine("log", "sereniteapot")),
-                    stage, file => Cv2.ImWrite(file, capture.SrcMat));
-            }
+            var path = SereniteaPotScreenshotStore.Save(Global.Absolute(Path.Combine("log", "sereniteapot")),
+                stage, file => Cv2.ImWrite(file, capture.SrcMat));
             if (path == null) return;
             TaskControl.Logger.LogWarning("尘歌壶诊断:{Stage}，前台进程={Foreground}，截图={Path}",
                 stage, SystemControl.GetActiveByProcess(), path);
