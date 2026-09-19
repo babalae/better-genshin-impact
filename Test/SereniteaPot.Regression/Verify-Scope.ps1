@@ -22,6 +22,15 @@ foreach ($relative in $checks) {
     if ($relative.EndsWith('/App.xaml.cs')) {
         $actual = [regex]::Replace($actual, '(?m)^\s*\.WriteTo\.Sink\(new BetterGenshinImpact\.GameTask\.QuickSereniteaPot\.SereniteaPotTestLogSink\(\)\)\r?\n', '')
     }
+    if ($relative.EndsWith('/BetterGenshinImpact.csproj')) {
+        # The merge base used 1.0.25; upstream main 42e1c0e7 already uses 1.0.27.
+        # Allow only that exact reference transition, never an arbitrary current version.
+        $oldReference = '<PackageReference Include="BetterGI.Assets.Other" Version="1.0.25" />'
+        $newReference = '<PackageReference Include="BetterGI.Assets.Other" Version="1.0.27" />'
+        if ($actual.Contains($newReference)) {
+            $expected = $expected.Replace($oldReference, $newReference)
+        }
+    }
     if ((Normalize $actual) -cne (Normalize $expected)) { throw "Unrelated shared behavior changed: $relative" }
     Write-Output "PASS $relative"
 }

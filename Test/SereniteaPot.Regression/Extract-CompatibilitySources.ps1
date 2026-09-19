@@ -19,14 +19,26 @@ function Get-Method([string]$relativePath, [string]$signature) {
 $sleep = Get-Method 'GameTask/Common/TaskControl.cs' 'public static void Sleep(int millisecondsTimeout, CancellationToken ct)'
 $fight = Get-Method 'GameTask/AutoDomain/AutoDomainTask.cs' 'private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)'
 $end = Get-Method 'GameTask/AutoDomain/AutoDomainTask.cs' 'private Task DomainEndDetectionTask(CancellationTokenSource cts)'
+$potFile = 'GameTask/Common/Job/GoToSereniteaPotTask.cs'
+$mapEntry = Get-Method $potFile 'private async Task<bool> IntoSereniteaPot(CancellationToken ct)'
+$bagEntry = Get-Method $potFile 'private async Task<bool> IntoSereniteaPotByBag(CancellationToken ct)'
+$executeEntry = Get-Method $potFile 'private async Task<bool> Execute(CancellationToken ct, bool entryOnly)'
+$readRealm = Get-Method $potFile 'private async Task<bool> ReadRealmName(CancellationToken ct)'
 $generated = @"
 // Generated from current production source on every build; do not maintain copied method fixtures.
 // Only input, window, OCR and combat-command dependencies are substituted in this offline harness.
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-namespace SereniteaPot.Regression.Compatibility;
+namespace SereniteaPot.Regression.Compatibility {
 static partial class SleepSource { $sleep }
 partial class DomainProbe { $fight
 $end }
+}
+namespace SereniteaPot.Regression.Entry {
+partial class PotEntryProbe { $mapEntry
+$bagEntry
+$readRealm
+$executeEntry }
+}
 "@
 $path = [IO.Path]::GetFullPath($OutputPath)
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path)) | Out-Null
