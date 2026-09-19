@@ -499,13 +499,44 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             pickAssets = AutoPickAssets.Get(gameCaptureRegion, TaskContext.Instance().Config.AutoPickConfig.PickKey);
         }
 
-        await NewRetry.WaitForElementDisappear(
-            pickAssets.PickRo,
-            () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
-            _ct,
-            20,
-            500
-        );
+        var domainName = _guideDomainName ?? _taskParam.DomainName;
+        if (!string.IsNullOrEmpty(domainName)
+            && MapLazyAssets.Get().DomainPositionMap.TryGetValue(domainName, out var domainPosition)
+            && "至冬".Equals(domainPosition.Country, StringComparison.Ordinal))
+        {
+            var domainOptionName = domainPosition.Name ?? domainName;
+            Logger.LogInformation("自动秘境：至冬秘境使用文本OCR选择交互项 {Text}", domainOptionName);
+            if (!await new ChooseFOptionTask().SingleSelectText(domainOptionName, _ct))
+            {
+                Logger.LogWarning("未能通过文本OCR选择秘境，直接F");
+                await NewRetry.WaitForElementDisappear(
+                    pickAssets.PickRo,
+                    () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
+                    _ct,
+                    20,
+                    500
+                );
+            }
+
+            // 交互输入生效和截图源刷新都存在延迟，等待交互键消失后再识别秘境菜单。
+            await NewRetry.WaitForElementDisappear(
+                pickAssets.PickRo,
+                (Action?)null,
+                _ct,
+                20,
+                500
+            );
+        }
+        else
+        {
+            await NewRetry.WaitForElementDisappear(
+                pickAssets.PickRo,
+                () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
+                _ct,
+                20,
+                500
+            );
+        }
         var menuFound = await NewRetry.WaitForElementAppear(
             GetConfirmRa(singlePlayerChallengeString),
             null,//只等待,不执行操作

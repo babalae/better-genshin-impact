@@ -840,8 +840,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    SetTimeTask setTimeTask = new SetTimeTask();
-                    Task.Run(async () => { await setTimeTask.Start(12, 05, new CancellationToken()); });
+                    var myTask = new ChooseFOptionTask();
+                    Task.Run(async () => { await myTask.SingleSelectText("荒坠的圣迹", CancellationToken.None); });
 
                     // var pName = SystemControl.GetActiveProcessName();
                     // Debug.WriteLine($"当前处于前台的程序：{pName}，原神是否位于前台：{SystemControl.IsGenshinImpactActive()}");
