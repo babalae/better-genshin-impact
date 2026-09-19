@@ -428,8 +428,8 @@ public static class AvatarRecognition
                     int preAimX = (int)(capture.Width * 0.5);
                     int preAimY = (int)(capture.Height * (480.0 / 1080.0));
 
-                    // 不在主界面时跳过本轮（避免菜单/地图/对话等界面下误操作）
-                    if (!Bv.IsInMainUi(capture))
+                    // 不在主界面时跳过本轮（避免菜单/地图/对话等界面下误操作；秘境中左上角没有派蒙图标不算主界面）
+                    if (!Bv.IsInMainUi(capture) && !Bv.IsInDomain(capture))
                     {
                         await Task.Delay(frameIntervalMs, ct);
                         continue;
