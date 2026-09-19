@@ -1,6 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees;
-using CsTrees.Blackboard;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,14 +8,11 @@ namespace BetterGenshinImpact.GameTask.AutoCombo;
 
 /// <summary>
 /// 按时长循环基础动作：切换到目标角色并站场，循环执行基础动作序列直到满指定秒数（最后一个动作可能略微超出）
-/// 期间返回 Running，时间到返回 Success，角色不存在返回 Failure
+/// 期间返回 Running，时间到返回 Success
 /// </summary>
 public partial class BasicActionsByDuration : Composite
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly double _seconds;
     private readonly bool _useE;
 
@@ -26,14 +22,14 @@ public partial class BasicActionsByDuration : Composite
     /// <summary>当前轮转到的子动作下标；跨 Tick 保留以支持非阻塞子动作的续跑</summary>
     private int _index;
 
-    private BasicActionsByDuration(string name, string avatarName, double seconds, bool useE, IEnumerable<Behaviour> children) : base(name, children)
+    public BasicActionsByDuration(string name, Avatar avatar, double seconds, bool useE, IEnumerable<Behaviour> children) : base(name, children)
     {
         if (seconds <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "站场时长必须大于0");
         }
 
-        _avatarName = avatarName;
+        _avatar = avatar;
         _seconds = seconds;
         _useE = useE;
 
@@ -66,14 +62,6 @@ public partial class BasicActionsByDuration : Composite
 
         if (!resuming)
         {
-            var avatar = BehaviourHelper.ResolveAvatar(CombatScenes.Get(), _avatarName);
-            if (avatar == null)
-            {
-                Stop(Status.Failure);
-                yield return this;
-                yield break;
-            }
-
             // 时间到：窗口的正常结束出口；超时判定在子动作边界，最后一个动作完整跑完后结束
             if (Stopwatch.GetTimestamp() - _startTicks > _seconds * Stopwatch.Frequency)
             {
@@ -83,10 +71,10 @@ public partial class BasicActionsByDuration : Composite
             }
 
             // E穿插：每个子动作边界检查一次，非冷却则切人释放（UseSkill 内部自动记录冷却）
-            if (_useE && avatar.GetSkillCdState() == SkillCdState.Ready)
+            if (_useE && _avatar.GetSkillCdState() == SkillCdState.Ready)
             {
-                avatar.Switch();
-                avatar.UseSkill(hold: false);
+                _avatar.Switch();
+                _avatar.UseSkill(hold: false);
             }
 
             FeedbackMessage = $"剩余 {Math.Max(0, _seconds - (Stopwatch.GetTimestamp() - _startTicks) / (double)Stopwatch.Frequency):F1}s";
@@ -109,7 +97,7 @@ public partial class BasicActionsByDuration : Composite
 
         if (current.Status != Status.Success)
         {
-            // 非 Success（角色不存在等）真实失败向外传播
+            // 非 Success 真实失败向外传播
             Stop(current.Status);
             yield return this;
             yield break;
@@ -148,14 +136,11 @@ public partial class BasicActionsByDuration : Composite
 
 /// <summary>
 /// 按次数循环基础动作：切换到目标角色并站场，循环执行基础动作序列指定轮数（times 轮完整跑完后结束）
-/// 期间返回 Running，轮数完成返回 Success，角色不存在返回 Failure
+/// 期间返回 Running，轮数完成返回 Success
 /// </summary>
 public partial class BasicActionsByCount : Composite
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly int _times;
     private readonly bool _useE;
 
@@ -165,14 +150,14 @@ public partial class BasicActionsByCount : Composite
     /// <summary>当前轮转到的子动作下标；跨 Tick 保留以支持非阻塞子动作的续跑</summary>
     private int _index;
 
-    private BasicActionsByCount(string name, string avatarName, int times, bool useE, IEnumerable<Behaviour> children) : base(name, children)
+    public BasicActionsByCount(string name, Avatar avatar, int times, bool useE, IEnumerable<Behaviour> children) : base(name, children)
     {
         if (times <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(times), times, "站场轮数必须大于0");
         }
 
-        _avatarName = avatarName;
+        _avatar = avatar;
         _times = times;
         _useE = useE;
 
@@ -205,19 +190,11 @@ public partial class BasicActionsByCount : Composite
 
         if (!resuming)
         {
-            var avatar = BehaviourHelper.ResolveAvatar(CombatScenes.Get(), _avatarName);
-            if (avatar == null)
-            {
-                Stop(Status.Failure);
-                yield return this;
-                yield break;
-            }
-
             // E穿插：每个子动作边界检查一次，非冷却则切人释放（UseSkill 内部自动记录冷却）
-            if (_useE && avatar.GetSkillCdState() == SkillCdState.Ready)
+            if (_useE && _avatar.GetSkillCdState() == SkillCdState.Ready)
             {
-                avatar.Switch();
-                avatar.UseSkill(hold: false);
+                _avatar.Switch();
+                _avatar.UseSkill(hold: false);
             }
 
             FeedbackMessage = $"第 {Math.Min(_completedLoops + 1, _times)}/{_times} 轮";
@@ -240,7 +217,7 @@ public partial class BasicActionsByCount : Composite
 
         if (current.Status != Status.Success)
         {
-            // 非 Success（角色不存在等）真实失败向外传播
+            // 非 Success 真实失败向外传播
             Stop(current.Status);
             yield return this;
             yield break;

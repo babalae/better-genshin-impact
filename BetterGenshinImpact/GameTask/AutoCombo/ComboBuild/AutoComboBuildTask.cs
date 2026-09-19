@@ -35,12 +35,14 @@ public class AutoComboBuildTask : ISoloTask
         {
             Logger.LogInformation("{Name}任务启动", Name);
 
-            var avatarNames = await EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+            var avatars = await EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+            var avatarNames = avatars.Select(a => a.Name).ToList();
+            Logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
 
             var config = TaskContext.Instance().Config.AutoComboBuildConfig;
 
             // 只暂存建树会话；CombatScenes 的绑定与生命周期由消费方（测试按钮/后续 AutoFight）负责
-            AutoComboRuntime.Session = await BuildComboTreeAsync(avatarNames, config, Logger, ct);
+            AutoComboRuntime.Session = await BuildComboTreeAsync(avatars, config, Logger, ct);
         }
         catch (Exception e)
         {
@@ -54,10 +56,10 @@ public class AutoComboBuildTask : ISoloTask
     }
 
     /// <summary>
-    /// 确保处于主界面或秘境中后识别队伍角色并返回角色名列表
+    /// 确保处于主界面或秘境中后识别队伍角色并返回识别出的队伍成员
     /// 秘境中左上角没有派蒙图标不算主界面，且按 ESC 打开的是秘境菜单，跳过返回主界面
     /// </summary>
-    public static async Task<List<string>> EnsureMainUiAndRecognizeTeamAsync(ILogger logger, CancellationToken ct)
+    public static async Task<Avatar[]> EnsureMainUiAndRecognizeTeamAsync(ILogger logger, CancellationToken ct)
     {
         // 秘境中按 ESC 打开的是秘境菜单而非关闭界面，不能走返回主界面流程
         using (var initialCapture = CaptureToRectArea())
@@ -79,23 +81,24 @@ public class AutoComboBuildTask : ISoloTask
         }
 
         var combatScenes = CombatScenes.GetCombatScenesWithRetry();
-        var avatarNames = combatScenes.GetAvatars().Select(a => a.Name).ToList();
-        logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
-        return avatarNames;
+        return combatScenes.GetAvatars().ToArray();
     }
 
     /// <summary>
-    /// 从已知队伍角色名开始，调用 LLM 通过 Function Calling 逐节点构建连招行为树（不含角色识别，可脱离游戏运行）
+    /// 从已知队伍成员开始，调用 LLM 通过 Function Calling 逐节点构建连招行为树（不含角色识别，可脱离游戏运行）
+    /// 队伍成员实例会存入建树会话
     /// 日志由调用方注入：主任务传 TaskControl.Logger，单测可传自定义实现，避免触及主程序静态初始化
-    /// 返回建树会话（含构建器、黑板与队伍名）；异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
+    /// 返回建树会话（含构建器、黑板与队伍成员）；异常退出时尝试打印当前已构建的行为树预览，便于定位 LLM 建树进度
     /// </summary>
-    public static async Task<ComboTreeSession> BuildComboTreeAsync(List<string> avatarNames, AutoComboBuildConfig config, ILogger logger, CancellationToken ct)
+    public static async Task<ComboTreeSession> BuildComboTreeAsync(Avatar[] avatars, AutoComboBuildConfig config, ILogger logger, CancellationToken ct)
     {
+        var avatarNames = avatars.Select(a => a.Name).ToList();
         AutoComboBuildBuilder? builder = null;
         try
         {
+            // 队伍名单随构建器注入 Catalog，Build 时按名解析节点目标角色
             var blackboard = new Blackboard();
-            builder = new AutoComboBuildBuilder().WithBlackboard(blackboard);
+            builder = new AutoComboBuildBuilder(avatars).WithBlackboard(blackboard);
             var tools = new AutoComboBuildTools(builder);
 
             var chatClient = CreateChatClient(config, logger, tools);
@@ -137,7 +140,7 @@ public class AutoComboBuildTask : ISoloTask
             {
                 Builder = builder,
                 Blackboard = blackboard,
-                TeamNames = avatarNames,
+                Avatars = avatars,
                 BuiltAt = DateTimeOffset.Now,
             };
         }
@@ -225,6 +228,7 @@ public class AutoComboBuildTask : ISoloTask
         client = new FunctionInvokingChatClient(client)
         {
             MaximumIterationsPerRequest = MaxToolCallIterations,
+            IncludeDetailedErrors = true
         };
 
         // 截断检查装饰：LLM 因上下文耗尽或达到 max_tokens 被截断时（finish_reason=length）显式报错
@@ -244,7 +248,6 @@ public class AutoComboBuildTask : ISoloTask
             你的做法是先分析并输出设计思路、构建过程的伪代码和行为树草图，然后通过工具调用进行构建，最终调用 BuildTree 完成构建。
 
             ## 建树规范
-            - avatarName 必须使用“当前队伍”中列出的角色名
             - 每层打开的作用域必须填入正确的子节点、退出前使用一次End来关闭，所有作用域关闭后才可调用 BuildTree 来构建树
             - 减少没有意义的组合节点嵌套
             - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览，其缩进表示层级。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree
