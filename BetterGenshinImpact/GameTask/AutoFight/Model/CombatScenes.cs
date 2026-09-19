@@ -46,6 +46,15 @@ public class CombatScenes : IDisposable
     /// </summary>
     public int LastActiveAvatarIndex { get; set; } = -1;
 
+    private int _lastTrySwitchTargetIndex = -1;
+
+    internal bool UpdateTrySwitchTarget(int targetIndex)
+    {
+        var targetChanged = _lastTrySwitchTargetIndex != targetIndex;
+        _lastTrySwitchTargetIndex = targetIndex;
+        return targetChanged;
+    }
+
     public MultiGameStatus? CurrentMultiGameStatus { set; get; }
 
     private readonly BgiYoloPredictor _predictor;
