@@ -38,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// <summary>
 /// 传送任务
 /// </summary>
-public partial class TpTask
+public class TpTask
 {
     private readonly QuickTeleportAssets _assets;
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
@@ -2438,9 +2438,9 @@ public partial class TpTask
         return false;
     }
 
-    internal async Task SwitchArea(string areaName)
+    internal async Task SwitchArea(string areaName, bool waitForSlowUi = false)
     {
-        if (await TrySwitchArea(areaName))
+        if (await TrySwitchArea(areaName, waitForSlowUi))
         {
             return;
         }
@@ -2448,34 +2448,38 @@ public partial class TpTask
         throw new Exception($"切换区域[{areaName}]失败");
     }
 
-    private async Task<bool> TrySwitchArea(string areaName)
+    private async Task<bool> TrySwitchArea(string areaName, bool waitForSlowUi = false)
     {
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-        await Delay(50, ct);
+        await Delay(waitForSlowUi ? 500 : 50, ct);
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
+        // 尘歌壶入口允许慢速加载；按次数轮询，暂停不消耗等待预算。
+        var remainingChecks = 60;
+        while (waitForSlowUi ? remainingChecks-- > 0 : stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            using var ra = CaptureToRectArea();
+            using var ra = CaptureToRectArea(forceNew: waitForSlowUi);
             var list = FindSwitchAreaCandidates(ra);
             candidatesText = FormatSwitchAreaCandidateTexts(list);
             var matchRect = list
                 .OrderByDescending(r => r.Y)
                 .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
+            if (waitForSlowUi) ct.ThrowIfCancellationRequested();
             if (matchRect != null)
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
                 await Delay(50, ct);
-                await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
+                var applied = await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect, waitForSlowUi);
+                if (waitForSlowUi && !applied) return false;
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
                 return true;
             }
 
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await Delay(waitForSlowUi ? 500 : UiRecognitionPollIntervalMs, ct);
         }
 
         Logger.LogWarning(
@@ -2485,28 +2489,33 @@ public partial class TpTask
         return false;
     }
 
-    private async Task WaitForAreaSelectionApplied(
+    private async Task<bool> WaitForAreaSelectionApplied(
         string areaName,
         string localizedAreaName,
-        Rect clickedCandidateRect)
+        Rect clickedCandidateRect,
+        bool waitForSlowUi = false)
     {
         var stopwatch = Stopwatch.StartNew();
         var consecutiveMissingChecks = 0;
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
+        var remainingChecks = 60;
+        while (waitForSlowUi ? remainingChecks-- > 0 : stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            using var capture = CaptureToRectArea();
+            using var capture = CaptureToRectArea(forceNew: waitForSlowUi);
             var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
                 IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
 
+            if (waitForSlowUi) ct.ThrowIfCancellationRequested();
+
             if (!clickedCandidateStillVisible &&
+                (!waitForSlowUi || Bv.IsInBigMapUi(capture)) &&
                 stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
             {
                 consecutiveMissingChecks++;
                 if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
                 {
-                    return;
+                    return true;
                 }
             }
             else
@@ -2514,10 +2523,11 @@ public partial class TpTask
                 consecutiveMissingChecks = 0;
             }
 
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await Delay(waitForSlowUi ? 500 : UiRecognitionPollIntervalMs, ct);
         }
 
         Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
+        return false;
     }
 
     private static bool IsSameSwitchAreaCandidatePosition(Rect clickedCandidateRect, Region candidate)
