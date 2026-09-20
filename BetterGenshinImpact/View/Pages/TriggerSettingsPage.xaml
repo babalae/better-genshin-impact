@@ -714,12 +714,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Silero VAD 实时诊断"
+                                  Text="{i18n:T Silero VAD 实时诊断}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="开启后持续读取游戏进程音频并调用模型，不依赖对话选项或画面识别"
+                                  Text="{i18n:T 开启后持续读取游戏进程音频并调用模型，不依赖对话选项或画面识别}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -775,21 +775,21 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="模型概率" />
+                                              Text="{i18n:T 模型概率}" />
                                 <ui:TextBlock Margin="0,4,0,0"
                                               FontWeight="SemiBold"
                                               Text="{Binding VoiceDiagnosticState.ProbabilityText}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1">
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="RMS" />
+                                              Text="{i18n:T RMS}" />
                                 <ui:TextBlock Margin="0,4,0,0"
                                               FontWeight="SemiBold"
                                               Text="{Binding VoiceDiagnosticState.RmsText}" />
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="峰值" />
+                                              Text="{i18n:T 峰值}" />
                                 <ui:TextBlock Margin="0,4,0,0"
                                               FontWeight="SemiBold"
                                               Text="{Binding VoiceDiagnosticState.PeakText}" />

@@ -20,8 +20,16 @@ internal sealed class PcmWaveRecorder : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
         FilePath = filePath;
         _stream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-        _writer = new BinaryWriter(_stream, Encoding.ASCII, true);
-        WriteHeader(0);
+        try
+        {
+            _writer = new BinaryWriter(_stream, Encoding.ASCII, true);
+            WriteHeader(0);
+        }
+        catch
+        {
+            _stream.Dispose();
+            throw;
+        }
     }
 
     public string FilePath { get; }
@@ -44,11 +52,23 @@ internal sealed class PcmWaveRecorder : IDisposable
         }
 
         _disposed = true;
-        _writer.Flush();
-        _stream.Position = 0;
-        WriteHeader(_dataLength);
-        _writer.Dispose();
-        _stream.Dispose();
+        try
+        {
+            _writer.Flush();
+            _stream.Position = 0;
+            WriteHeader(_dataLength);
+        }
+        finally
+        {
+            try
+            {
+                _writer.Dispose();
+            }
+            finally
+            {
+                _stream.Dispose();
+            }
+        }
     }
 
     private void WriteHeader(int dataLength)
