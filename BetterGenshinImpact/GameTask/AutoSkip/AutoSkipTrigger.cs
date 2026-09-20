@@ -75,6 +75,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private readonly AutoSkipConfig _config;
     private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter = new();
 
+    internal DialogueOptionAudioWaiter VoiceWaiter => _dialogueOptionAudioWaiter;
+
     /// <summary>
     /// 不自动点击的选项，优先级低于橙色文字点击
     /// </summary>
