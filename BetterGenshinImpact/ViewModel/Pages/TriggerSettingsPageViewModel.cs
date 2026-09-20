@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.Service.Interface;
@@ -43,13 +44,19 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
 
+    public DialogueOptionVoiceDiagnosticState VoiceDiagnosticState { get; }
+
     private readonly INavigationService _navigationService;
 
     [ObservableProperty] private List<string> _hangoutBranches;
 
-    public TriggerSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
+    public TriggerSettingsPageViewModel(
+        IConfigService configService,
+        INavigationService navigationService,
+        DialogueOptionVoiceDiagnosticState voiceDiagnosticState)
     {
         Config = configService.Get();
+        VoiceDiagnosticState = voiceDiagnosticState;
         _navigationService = navigationService;
         _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
         UpdateAutoPickModeVisibility();
@@ -135,6 +142,12 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         };
 
         window.ShowDialog();
+    }
+
+    [RelayCommand]
+    private void ToggleVoiceDiagnosticRecording()
+    {
+        VoiceDiagnosticState.ToggleRecording();
     }
 
     [RelayCommand]
