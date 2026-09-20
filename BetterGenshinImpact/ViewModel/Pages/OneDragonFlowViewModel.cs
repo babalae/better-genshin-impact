@@ -492,6 +492,13 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
+        // 首领讨伐的累计次数回调来自任务线程，保存配置需要访问 WPF 任务列表，统一调度回 UI 线程。
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(() => ConfigPropertyChanged(sender, e));
+            return;
+        }
+
         if (ReferenceEquals(config, SelectedConfig))
         {
             SaveConfig();

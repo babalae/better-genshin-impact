@@ -1313,9 +1313,11 @@
                                                       LargeChange="5"
                                                       SpinButtonPlacementMode="Hidden"
                                                       AcceptsExpression="False"
-                                                      ValueChanged="AutoBossCountNumberBox_ValueChanged"
-                                                      Tag="RunCount"
-                                                      Width="120" />
+                                                      Width="120">
+                                            <b:Interaction.Behaviors>
+                                                <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1" />
+                                            </b:Interaction.Behaviors>
+                                        </ui:NumberBox>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal"
@@ -1345,9 +1347,11 @@
                                                       LargeChange="5"
                                                       SpinButtonPlacementMode="Hidden"
                                                       AcceptsExpression="False"
-                                                      ValueChanged="AutoBossCountNumberBox_ValueChanged"
-                                                      Tag="TotalLimit"
-                                                      Value="{Binding SelectedConfig.AutoBossTotalRunCountLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                      Value="{Binding SelectedConfig.AutoBossTotalRunCountLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                            <b:Interaction.Behaviors>
+                                                <behavior:NumberBoxValueConstraintBehavior EmptyValue="0" MinimumValue="0" />
+                                            </b:Interaction.Behaviors>
+                                        </ui:NumberBox>
                                     </StackPanel>
 
                                     <Grid Margin="0,4,0,0">

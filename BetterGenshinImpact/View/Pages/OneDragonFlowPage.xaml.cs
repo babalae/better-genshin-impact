@@ -3,8 +3,6 @@ using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Violeta.Controls;
-using UiNumberBox = Wpf.Ui.Controls.NumberBox;
-using UiNumberBoxValueChangedEventArgs = Wpf.Ui.Controls.NumberBoxValueChangedEventArgs;
 using System.Linq; 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -54,35 +52,6 @@ public partial class OneDragonFlowPage
         }
     }
 
-    /// <summary>
-    /// 首领讨伐次数输入框的取值约束：
-    /// 单次运行上限清空或小于 1 时自动回到 1；累计运行上限清空或小于 0 时回到 0（不限制）。
-    /// 修正后同样写回绑定源，避免 NumberBox 将 Value 置为 null 后与 int 属性的双向绑定失效。
-    /// </summary>
-    private void AutoBossCountNumberBox_ValueChanged(object sender, UiNumberBoxValueChangedEventArgs e)
-    {
-        if (sender is not UiNumberBox numberBox)
-        {
-            return;
-        }
-
-        switch (numberBox.Tag as string)
-        {
-            case "RunCount":
-                if (e.NewValue is null || e.NewValue < 1)
-                {
-                    numberBox.Value = 1;
-                }
-                break;
-            case "TotalLimit":
-                if (e.NewValue is null || e.NewValue < 0)
-                {
-                    numberBox.Value = 0;
-                }
-                break;
-        }
-    }
-    
     private void ShowAddTaskGroupPopup()
     {
         try
