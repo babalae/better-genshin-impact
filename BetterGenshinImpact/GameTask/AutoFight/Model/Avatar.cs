@@ -889,6 +889,15 @@ public class Avatar
     }
 
     /// <summary>
+    /// 复位 E 技能的使用记录（<see cref="OcrSkillCd"/> 与 <see cref="LastSkillTime"/>）
+    /// </summary>
+    public void ResetSkillCdRecord()
+    {
+        OcrSkillCd = default;
+        LastSkillTime = default;
+    }
+
+    /// <summary>
     /// 计算上一次使用技能到现在还剩下多长时间的cd
     /// </summary>
     /// <returns></returns>

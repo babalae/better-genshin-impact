@@ -96,10 +96,10 @@ public class AutoComboBuildTask : ISoloTask
         AutoComboBuildBuilder? builder = null;
         try
         {
-            // 队伍名单随构建器注入 Catalog，Build 时按名解析节点目标角色
+            // 队伍名单随构建器注入 Catalog，Build 时按名解析节点目标角色；成员实例同时注入工具宿主，供设置类工具修改其状态
             var blackboard = new Blackboard();
             builder = new AutoComboBuildBuilder(avatars).WithBlackboard(blackboard);
-            var tools = new AutoComboBuildTools(builder);
+            var tools = new AutoComboBuildTools(builder, avatars);
 
             var chatClient = CreateChatClient(config, logger, tools);
 

@@ -27,12 +27,17 @@ public sealed record ComboTreeSession
     public DateTimeOffset BuiltAt { get; init; }
 
     /// <summary>
-    /// 构建全新行为树：清空黑板（复位上次运行的键值状态）→ Build（每次产出全新节点实例，节点内状态随实例自然复位）
+    /// 构建全新行为树：清空黑板（复位上次运行的键值状态）→ 复位队伍成员的上次战斗状态 → Build（每次产出全新节点实例，节点内状态随实例自然复位）
     /// 队伍一致性校验与成员状态复位已由 CombatScenes.FromAvatars 在接管时完成
     /// </summary>
     public Behaviour BindAndBuild()
     {
         Blackboard.Clear();
+        foreach (var avatar in Avatars)
+        {
+            avatar.ResetSkillCdRecord();
+        }
+
         return Builder.Build();
     }
 }
