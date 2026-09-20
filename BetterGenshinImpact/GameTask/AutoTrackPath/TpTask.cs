@@ -2473,6 +2473,7 @@ public class TpTask
                 matchRect.Click();
                 await Delay(50, ct);
                 var applied = await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect, waitForSlowUi);
+                if (waitForSlowUi) ct.ThrowIfCancellationRequested();
                 if (waitForSlowUi && !applied) return false;
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);

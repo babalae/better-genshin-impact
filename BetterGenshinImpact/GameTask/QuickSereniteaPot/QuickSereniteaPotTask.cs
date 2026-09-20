@@ -49,20 +49,19 @@ public class QuickSereniteaPotTask
 
         try
         {
-            TaskControl.Sleep(1, ct);
-            using (var capture = TaskControl.CaptureToRectArea(forceNew: true))
-            {
-                // 已经打开背包时不要再次按 B 将它关闭。
-                if (Bv.IsInMainUi(capture))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
-                }
-            }
+            var bagRequested = false;
             WaitForUi(capture =>
             {
                 using var close = capture.Find(RecognitionAssets.Get("QuickTeleport", "MapCloseButton", capture));
-                return close.IsExist() && !Bv.IsInBigMapUi(capture);
+                if (close.IsExist() && !Bv.IsInBigMapUi(capture)) return true;
+                // 等主界面加载后只按一次 B；已经打开背包时不再关闭它。
+                if (!bagRequested && Bv.IsInMainUi(capture))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
+                    bagRequested = true;
+                }
+                return false;
             }, "背包未打开", ct);
 
             // 等待道具页选中，不能在切页动画期间查找壶。
@@ -90,7 +89,14 @@ public class QuickSereniteaPotTask
                 return true;
             }, "未检测到壶", ct);
 
-            WaitForUi(capture => Bv.ClickWhiteConfirmButton(capture), "未找到尘歌壶放置按钮", ct);
+            WaitForUi(capture =>
+            {
+                using var confirm = capture.Find(ElementRecognition.Get("BtnWhiteConfirm", capture));
+                if (confirm.IsEmpty()) return false;
+                ct.ThrowIfCancellationRequested();
+                confirm.Click();
+                return true;
+            }, "未找到尘歌壶放置按钮", ct);
             WaitForUi(Bv.IsInMainUi, "放置尘歌壶后未返回主界面", ct);
 
             bool isEnter = false;
