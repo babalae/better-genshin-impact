@@ -185,7 +185,7 @@ public class CraftMaterialTask
             return materialType;
         }
 
-        throw new InvalidOperationException($"未找到材料 {_materialName} 的材料类型，请传入 materialType 或检查 item.csv。");
+        throw new InvalidOperationException($"未找到材料 {_materialName} 的材料类型，请传入 materialType 或检查物品数据。");
     }
 
     /// <summary>
