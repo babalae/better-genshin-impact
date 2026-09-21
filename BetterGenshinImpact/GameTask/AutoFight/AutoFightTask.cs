@@ -89,9 +89,10 @@ public class AutoFightTask : ISoloTask
         public int PaimonEndCheckDelayMs = 75;
         public int RotaryFactor = 6;
 
-        public TaskFightFinishDetectConfig(AutoFightParam taskParam)
+        // 保留仅传入结束检测配置的构造方式，兼容不持有完整 AutoFightParam 的调用方。
+        // 此路径沿用 RotaryFactor 的默认值；持有完整参数时由下方构造函数覆盖为用户配置值。
+        public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
-            var finishDetectConfig = taskParam.FinishDetectConfig;
             FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
             CheckAfterSwitchAvatar = finishDetectConfig.CheckAfterSwitchAvatar;
             ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
@@ -105,6 +106,11 @@ public class AutoFightTask : ISoloTask
             PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
             // 派蒙检测延时（秒）限制在 0.05-0.4 之间，超出范围时修饰到对应上下限
             PaimonEndCheckDelayMs = (int)(Math.Clamp(finishDetectConfig.PaimonEndCheckDelay, 0.05, 0.4) * 1000);
+        }
+
+        public TaskFightFinishDetectConfig(AutoFightParam taskParam)
+            : this(taskParam.FinishDetectConfig)
+        {
             RotaryFactor = Math.Clamp(taskParam.RotaryFactor, 1, 13);
         }
 
