@@ -96,22 +96,37 @@ public class AutoComboBuildCatalog(Avatar[] avatars) : IBehaviourCatalog
         string name,
         [Description("角色名；若不在场会先切换到该角色")] string avatarName)
         => new(name, GetAvatarByName(avatarName));
+    [Description("先检查角色的元素战技E，冷却中返回Failure，就绪则释放，然后打开一个按时长循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定秒数，子节点失败会被跳过，时间到返回 Success。")]
+    public UseSkillIfReadyThenDoActionsByDuration UseSkillIfReadyThenDoActionsByDuration(
+        [Description("节点名，应附带站场秒数")] string name,
+        [Description("角色名")] string avatarName,
+        [Description("是否长按战技")] bool hold,
+        [Description("站场秒数")] double seconds,
+        IEnumerable<Behaviour> children)
+        => new(name, GetAvatarByName(avatarName), hold, seconds, children);
 
-    [Description("打开一个 BasicActionsByDuration（按时长循环基础动作序列）作用域，打开后须要在其中依次添加角色的基础动作子节点。会切换到目标角色并站场，循环执行子节点指定秒数。期间返回 Running，时间到返回 Success")]
-    public BasicActionsByDuration BasicActionsByDuration(
+    [Description("先检查角色的元素战技E，冷却中返回Failure，就绪则释放，然后打开一个按次数循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定轮数，子节点失败会被跳过，轮数完成返回 Success。")]
+    public UseSkillIfReadyThenDoActionsByCount UseSkillIfReadyThenDoActionsByCount(
+        [Description("节点名，应附带站场轮数")] string name,
+        [Description("角色名")] string avatarName,
+        [Description("是否长按战技")] bool hold,
+        [Description("循环执行轮数")] int times,
+        IEnumerable<Behaviour> children)
+        => new(name, GetAvatarByName(avatarName), hold, times, children);
+
+    [Description("先检查角色的元素爆发Q，未就绪返回Failure，就绪则释放，然后打开一个按时长循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定秒数，子节点失败会被跳过，时间到返回 Success。")]
+    public UseBurstIfReadyThenDoActionsByDuration UseBurstIfReadyThenDoActionsByDuration(
         [Description("节点名，应附带站场秒数")] string name,
         [Description("角色名")] string avatarName,
         [Description("站场秒数")] double seconds,
-        [Description("是否站场时自动穿插E技能（点按）")] bool useE,
         IEnumerable<Behaviour> children)
-        => new(name, GetAvatarByName(avatarName), seconds, useE, children);
+        => new(name, GetAvatarByName(avatarName), seconds, children);
 
-    [Description("打开一个 BasicActionsByCount（按次数循环基础动作序列）作用域，打开后须要在其中依次添加角色的基础动作子节点。会切换到目标角色并站场，循环执行子节点指定轮数。期间返回 Running，轮数完成返回 Success")]
-    public BasicActionsByCount BasicActionsByCount(
+    [Description("先检查角色的元素爆发Q，未就绪返回Failure，就绪则释放，然后打开一个按次数循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定轮数，子节点失败会被跳过，轮数完成返回 Success。")]
+    public UseBurstIfReadyThenDoActionsByCount UseBurstIfReadyThenDoActionsByCount(
         [Description("节点名，应附带站场轮数")] string name,
         [Description("角色名")] string avatarName,
         [Description("循环执行轮数")] int times,
-        [Description("是否站场时自动穿插E技能（点按）")] bool useE,
         IEnumerable<Behaviour> children)
-        => new(name, GetAvatarByName(avatarName), times, useE, children);
+        => new(name, GetAvatarByName(avatarName), times, children);
 }
