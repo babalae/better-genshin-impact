@@ -31,11 +31,12 @@ public class QuickSereniteaPotTask
         throw new RetryException(failureMessage);
     }
 
-    public static void Done() => TryEnter(CancellationToken.None);
+    public static void Done() => TryEnter(CancellationToken.None, out _);
 
     // 返回值表示已触发进出壶交互；调用者仍需等待加载并确认壶内状态。
-    internal static bool TryEnter(CancellationToken ct)
+    internal static bool TryEnter(CancellationToken ct, out bool potUiVisibleBeforeInteraction)
     {
+        potUiVisibleBeforeInteraction = false;
         if (!TaskContext.Instance().IsInitialized)
         {
             Toast.Warning("请先启动");
@@ -108,6 +109,12 @@ public class QuickSereniteaPotTask
 
             string action = isEnter ? "进入" : "离开";
             TaskControl.Logger.LogInformation("快速进出尘歌壶:识别到 {Action}尘歌壶", action);
+            // 记录交互前的状态，避免把未响应的原界面当作已经加载完成。
+            using (var capture = TaskControl.CaptureToRectArea(forceNew: true))
+            {
+                using var finger = capture.Find(ElementRecognition.Get("FingerIcon", capture));
+                potUiVisibleBeforeInteraction = Bv.IsInMainUi(capture) && finger.IsExist();
+            }
             ct.ThrowIfCancellationRequested();
             Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
             TaskControl.Sleep(500, ct);

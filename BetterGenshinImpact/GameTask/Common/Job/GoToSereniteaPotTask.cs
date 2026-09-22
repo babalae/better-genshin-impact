@@ -175,7 +175,8 @@ internal class GoToSereniteaPotTask
             await Delay(800, ct);    // 重试间隔
         }
         
-        return await WaitForPotEntry(ct);
+        // 已确认过地图界面；恢复到壶内主界面本身就是状态转换，兼容快速传送。
+        return await WaitForPotEntry(ct, requireTransition: false);
     }
 
     /// <summary>
@@ -183,13 +184,14 @@ internal class GoToSereniteaPotTask
     /// </summary>
     private async Task<bool> IntoSereniteaPotByBag(CancellationToken ct)
     {
-        if (!QuickSereniteaPotTask.TryEnter(ct) || !await WaitForPotEntry(ct))
+        if (!QuickSereniteaPotTask.TryEnter(ct, out var potUiVisibleBeforeInteraction)
+            || !await WaitForPotEntry(ct, requireTransition: potUiVisibleBeforeInteraction))
             return false;
 
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap);
         if (!await ReadRealmName(ct)) return false;
         await new ReturnMainUiTask().Start(ct);
-        return await WaitForPotEntry(ct, waitForLoading: false);
+        return await WaitForPotEntry(ct, requireTransition: false);
     }
 
     private static Task<bool> WaitForUi(Func<ImageRegion, bool> isReady, CancellationToken ct, int retryTimes = 60)
@@ -233,15 +235,18 @@ internal class GoToSereniteaPotTask
         return true;
     }
 
-    private static async Task<bool> WaitForPotEntry(CancellationToken ct, bool waitForLoading = true)
+    private static async Task<bool> WaitForPotEntry(CancellationToken ct, bool requireTransition = true)
     {
-        // 传送初期可能短暂显示主界面，需同时确认壶内标志连续稳定。
-        if (waitForLoading) await Delay(5000, ct);
+        // 原界面若已满足识别条件，必须先观察到它消失，再确认连续稳定的到达状态。
+        // 不固定等待五秒，避免漏掉短暂的加载过程。
+        var transitionObserved = !requireTransition;
         var stableChecks = 0;
         var ready = await WaitForUi(capture =>
         {
             using var finger = capture.Find(ElementRecognition.Get("FingerIcon", capture));
-            stableChecks = Bv.IsInMainUi(capture) && finger.IsExist() ? stableChecks + 1 : 0;
+            var inPotUi = Bv.IsInMainUi(capture) && finger.IsExist();
+            if (!inPotUi) transitionObserved = true;
+            stableChecks = transitionObserved && inPotUi ? stableChecks + 1 : 0;
             return stableChecks >= 3;
         }, ct, retryTimes: 120);
         if (!ready) Logger.LogWarning("领取尘歌壶奖励:等待进入尘歌壶超时");
