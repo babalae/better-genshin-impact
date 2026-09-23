@@ -55,7 +55,7 @@ public class AutoComboRunTask : ISoloTask
         combatScenes.BeforeTask(ct);
 
         // 清黑板（复位上次运行的键值状态）→ 重新 Build 得到全新节点实例的行为树（节点内状态随实例自然复位）
-        var comboTree = session.BindAndBuild();
+        var (comboTree, fallbackTree) = session.BindAndBuild();
 
         // 按宿主意图决定是否包装自带战斗结束检测：外部控制结束时（如秘境）关闭，只认取消令牌
         Behaviour extendedRoot;
@@ -66,14 +66,23 @@ public class AutoComboRunTask : ISoloTask
                 .WithBlackboard(session.Blackboard)
                     .Sequence("-", true)
                         .CheckFightFinish("战斗结束检测")
-                        .Leaf(() => comboTree)
+                        .Selector("-", false)
+                            .Leaf(() => comboTree)
+                            .Leaf(() => fallbackTree)
+                        .End()
                     .End()
                 .End().Build();
         }
         else
         {
             Logger.LogInformation("{Name}使用宿主场景的结束控制，不包装战斗结束检测", Name);
-            extendedRoot = comboTree;
+            extendedRoot = new AutoComboRunBuilder(session.Avatars)
+                .WithBlackboard(session.Blackboard)
+                    .Selector("-", false)
+                        .Leaf(() => comboTree)
+                        .Leaf(() => fallbackTree)
+                    .End()
+                .End().Build();
         }
 
         Logger.LogInformation("{Name}任务启动，持续 Tick 行为树", Name);
@@ -134,11 +143,7 @@ public class AutoComboRunTask : ISoloTask
                     previouslyVisited: snapshot.PreviouslyVisited);
                 Logger.LogInformation("Tick {Count}：\n{Path}", tree.Count, path);
 
-                // 树完成一轮评估（根节点非 Running）时稍作等待，避免空转
-                if (tree.Root.Status != Status.Running)
-                {
-                    Sleep(200, ct);
-                }
+                Sleep(35, ct);
             }
         }
         catch (OperationCanceledException)

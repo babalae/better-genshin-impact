@@ -53,10 +53,12 @@ public class AutoComboBuildTaskLlmTests
 
         var logger = new TestOutputLogger(_output);
         var session = await AutoComboBuildTask.BuildComboTreeAsync(avatars, config, logger, CancellationToken.None);
-        var root = session.Builder.Build();
+        var (root, fallbackRoot) = session.BindAndBuild();
 
-        _output.WriteLine("生成的行为树：\n{0}", Display.AsciiTree(root));
+        _output.WriteLine("生成的技能行为树：\n{0}", Display.AsciiTree(root));
         Assert.NotNull(root);
+
+        _output.WriteLine("生成的兜底行为树：\n{0}", Display.AsciiTree(fallbackRoot));
     }
 
     /// <summary>ITestOutputHelper 转 ILogger：建树过程中的日志全部打进测试输出</summary>

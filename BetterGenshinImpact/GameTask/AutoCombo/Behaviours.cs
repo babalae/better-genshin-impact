@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
@@ -221,26 +223,61 @@ public partial class UseSkillIfReady : Behaviour
 }
 
 /// <summary>
-/// 普通攻击，每 0.2 秒点击一次左键，持续指定时长
+/// 普通攻击（非阻塞）：每 0.2 秒点击一次左键，持续指定时长，期间返回 Running，时间到返回 Success
 /// 若目标角色不在场，先切换到该角色
 /// </summary>
 public partial class Attack : Behaviour
 {
     private readonly Avatar _avatar;
     private readonly double _seconds;
+    private readonly TimeProvider _timeProvider;
 
-    public Attack(string name, Avatar avatar, double seconds) : base(name)
+    /// <summary>点击间隔（毫秒），与 Avatar.Attack 的节奏一致</summary>
+    private const int ClickIntervalMs = 200;
+
+    /// <summary>窗口起点；null 表示尚未开始（首次 Tick 时切人并点击第一下）</summary>
+    private DateTimeOffset? _startAt;
+
+    private DateTimeOffset _lastClickAt;
+
+    public Attack(string name, Avatar avatar, double seconds, TimeProvider? timeProvider = null) : base(name)
     {
         AssertUtils.IsTrue(seconds > 0, "attack时长必须大于0");
         _avatar = avatar;
         _seconds = seconds;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    protected override void Initialize()
+    {
+        _startAt = null;
     }
 
     protected async override Task<Status> Update()
     {
-        _avatar.Switch();
-        _avatar.Attack((int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
-        return Status.Success;
+        var now = _timeProvider.GetLocalNow();
+
+        // 首次进入：切人，记录窗口起点
+        if (_startAt == null)
+        {
+            _avatar.Switch();
+            _startAt = now;
+        }
+
+        // 时间到：窗口正常结束（首拍 now - _startAt == 0，不可能命中）
+        if (now - _startAt >= TimeSpan.FromSeconds(_seconds))
+        {
+            return Status.Success;
+        }
+
+        // 按固定节奏点击，两次点击不足间隔时本拍空转
+        if (now - _lastClickAt >= TimeSpan.FromMilliseconds(ClickIntervalMs))
+        {
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            _lastClickAt = now;
+        }
+
+        return Status.Running;
     }
 }
 
