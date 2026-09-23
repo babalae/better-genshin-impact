@@ -280,31 +280,24 @@ public class Dispatcher
                     {
                         throw new NullReferenceException($"{nameof(soloTask.Config)}为空");
                     }
-                    GridScreenName gridScreenName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "gridScreenName", (GridScreenName?)null) ?? throw new Exception("gridScreenName为空或错误");
-                    string? itemName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "itemName", (string?)null);
+                    GridScreenName? gridScreenName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "gridScreenName", (GridScreenName?)null);
+                    bool stopByItemSort = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "stopByItemSort", false);
                     IEnumerable<string>? itemNames = ScriptObjectConverter.GetValue<string>((ScriptObject)soloTask.Config, "itemNames");
                     CountInventoryItemParam param = new()
                     {
                         GridScreenName = gridScreenName,
-                        ItemName = itemName,
+                        StopByItemSort = stopByItemSort,
                         ItemNames = itemNames?.ToList() ?? []
                     };
 
                     var result = await new CountInventoryItem(param).Start(cancellationToken);
-                    if (param.ItemName != null)
+                    dynamic expando = new ExpandoObject();
+                    var expandoDict = (IDictionary<string, object>)expando;
+                    foreach (var kvp in (Dictionary<string, int>)result)
                     {
-                        return result;
+                        expandoDict[kvp.Key] = kvp.Value;
                     }
-                    else
-                    {
-                        dynamic expando = new ExpandoObject();
-                        var expandoDict = (IDictionary<string, object>)expando;
-                        foreach (var kvp in (Dictionary<string, int>)result)
-                        {
-                            expandoDict[kvp.Key] = kvp.Value;
-                        }
-                        return expandoDict;
-                    }
+                    return expandoDict;
                 }
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
@@ -441,7 +434,7 @@ public class Dispatcher
     /// </summary>
     /// <param name="param">背包物品计数参数。</param>
     /// <param name="customCt">自定义取消令牌。</param>
-    /// <returns>单物品返回数量；多物品返回名称到数量的脚本对象。</returns>
+    /// <returns>返回名称到数量的脚本对象。</returns>
     public async Task<object?> RunCountInventoryItemTask(CountInventoryItemParam param, CancellationToken? customCt = null)
     {
         if (param == null)
@@ -452,20 +445,13 @@ public class Dispatcher
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
         object result = await new CountInventoryItem(param).Start(cancellationToken);
 
-        if (param.ItemName != null)
+        dynamic expando = new ExpandoObject();
+        var expandoDict = (IDictionary<string, object>)expando;
+        foreach (var kvp in (Dictionary<string, int>)result)
         {
-            return result;
+            expandoDict[kvp.Key] = kvp.Value;
         }
-        else
-        {
-            dynamic expando = new ExpandoObject();
-            var expandoDict = (IDictionary<string, object>)expando;
-            foreach (var kvp in (Dictionary<string, int>)result)
-            {
-                expandoDict[kvp.Key] = kvp.Value;
-            }
 
-            return expandoDict;
-        }
+        return expandoDict;
     }
 }
