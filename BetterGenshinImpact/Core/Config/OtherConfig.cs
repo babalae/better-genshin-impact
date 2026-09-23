@@ -1,6 +1,7 @@
 using System;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.Common.Job;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -21,6 +22,9 @@ public partial class OtherConfig : ObservableObject
     //服务器时区偏移量
     [ObservableProperty]
     private TimeSpan _serverTimeZoneOffset = TimeSpan.FromHours(8);
+    //物品图标识别模型
+    [ObservableProperty]
+    private ItemIconRecognitionMode _itemIconRecognitionMode = ItemIconRecognitionMode.Item;
     [ObservableProperty]
     private AutoRestart _autoRestartConfig = new();
     //锄地规划

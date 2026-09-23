@@ -307,7 +307,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 ra5.ClickTo(315, 190);
                 await Delay(1000, ct);
                 // 遍历套装Grid勾选套装
-                using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
+                using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
                 ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
                 string drawKey = "ArtifactSetFilter";
                 var drawRectList = new List<RectDrawable>();
@@ -319,7 +319,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                     {
                         using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                         using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
-                        (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
+                        string? predName = iconRecognizer.Recognize(img125);
                         if (predName == null)
                         {
                             var rectDrawable = itemRegion.SelfToRectDrawable(drawKey);

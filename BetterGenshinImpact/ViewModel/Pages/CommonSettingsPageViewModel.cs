@@ -19,6 +19,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
@@ -67,6 +68,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
         Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
         Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
     ];
+
+    public IReadOnlyDictionary<ItemIconRecognitionMode, string> ItemIconRecognitionModes { get; } =
+        new Dictionary<ItemIconRecognitionMode, string>
+        {
+            [ItemIconRecognitionMode.Item] = "ItemV2",
+            [ItemIconRecognitionMode.GridIcon] = "GridIcon"
+        };
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,

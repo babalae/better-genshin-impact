@@ -5,7 +5,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
@@ -139,8 +139,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ISystemInfo systemInfo;
         private readonly IInputSimulator input;
-        private readonly InferenceSession session;
-        private readonly Dictionary<string, float[]> prototypes;
+        private readonly IItemIconRecognizer itemRecognizer;
         private readonly ILogger logger;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? chooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现并尝试找鱼饵的结束时间
@@ -178,13 +177,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        private ChooseBait(string name, ILogger logger, ISystemInfo systemInfo, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null) : base(name)
+        private ChooseBait(string name, ILogger logger, ISystemInfo systemInfo, IInputSimulator input, IItemIconRecognizer itemRecognizer, TimeProvider? timeProvider = null) : base(name)
         {
             this.logger = logger;
             this.systemInfo = systemInfo;
             this.input = input;
-            this.session = session;
-            this.prototypes = prototypes;
+            this.itemRecognizer = itemRecognizer;
             this.timeProvider = timeProvider ?? TimeProvider.System;
         }
 
@@ -307,7 +305,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 using ImageRegion resRa = singleRowGrid.DeriveCrop(box);
                 using Mat img125 = resRa.SrcMat.GetGridIcon();
-                (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, this.session, this.prototypes);
+                string? predName = itemRecognizer.Recognize(img125);
                 if (predName != null && !availableBaitNames.Contains(predName))
                 {
                     predName = null;
@@ -316,7 +314,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-        private static readonly FrozenSet<string> availableBaitNames = Enum.GetValues(typeof(BaitType)).Cast<BaitType>().Select(bt => bt.GetDescription()).ToFrozenSet();
+        private static readonly FrozenSet<string> availableBaitNames = Enum.GetValues<BaitType>()
+            .Select(bt => bt.GetDescription())
+            .ToFrozenSet();
     }
 
     [Obsolete]
