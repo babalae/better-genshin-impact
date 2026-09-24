@@ -42,8 +42,6 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     private readonly int _keyY = 921;
 
-    private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
-
     public async Task Start(CancellationToken ct)
     {
         Init();
@@ -56,20 +54,59 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         {
             Logger.LogInformation("开始自动演奏");
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-            // var taskFactory = new TaskFactory();
-            var taskList = new List<Task>();
+            var keyPoints = new Dictionary<User32.VK, Point>();
+            var pressedKeys = new HashSet<User32.VK>();
 
-            // 计算按键位置
-            using var gameCaptureRegion = CaptureToRectArea();
-
-            foreach (var keyValuePair in _keyX)
+            // 用一次完整截图来计算判定点坐标。实际演奏阶段统一从全局截图器
+            // 获取同一帧，并在这一帧上检查 A/S/D/J/K/L 六个判定点。
+            using (var gameCaptureRegion = CaptureToRectArea())
             {
-                var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
-                // 添加任务
-                taskList.Add(Task.Run(async () => await DoWhitePressWin32(ct, keyValuePair.Key, new Point(x, y)), ct));
+                foreach (var keyValuePair in _keyX)
+                {
+                    var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion(
+                        (int)(keyValuePair.Value * assetScale),
+                        (int)(_keyY * assetScale));
+                    keyPoints[keyValuePair.Key] = new Point(x, y);
+                }
             }
 
-            await Task.WhenAll(taskList);
+            // 保持自动音游的取帧路径与全局截图器配置一致，
+            // 避免 GDI GetDC/GetPixel 读取到滞后的 DWM 内容。
+            while (!ct.IsCancellationRequested)
+            {
+                using var captureFrame = TaskTriggerDispatcher.GlobalGameCapture.Capture();
+                if (captureFrame == null || captureFrame.Frame.Empty())
+                {
+                    await Task.Delay(5, ct);
+                    continue;
+                }
+
+                var frame = captureFrame.Frame;
+                foreach (var pair in keyPoints)
+                {
+                    var point = pair.Value;
+                    if (point.X < 0 || point.X >= frame.Cols || point.Y < 0 || point.Y >= frame.Rows)
+                    {
+                        continue;
+                    }
+
+                    var blue = frame.At<Vec3b>(point.Y, point.X).Item0;
+
+                    if (blue < 220)
+                    {
+                        if (pressedKeys.Add(pair.Key))
+                        {
+                            KeyDown(pair.Key);
+                        }
+                    }
+                    else if (pressedKeys.Remove(pair.Key))
+                    {
+                        KeyUp(pair.Key);
+                    }
+                }
+
+                await Task.Delay(5, ct);
+            }
         }
         finally
         {
@@ -78,153 +115,48 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         }
     }
 
-    private async Task DoWhitePressWin32(CancellationToken ct, User32.VK key, Point point)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            await Task.Delay(5, ct);
-            // Stopwatch sw = new();
-            // sw.Start();
-            var hdc = User32.GetDC(_hWnd);
-            var c = Gdi32.GetPixel(hdc, point.X, point.Y);
-            Gdi32.DeleteDC(hdc);
-
-            if (c.B < 220)
-            {
-                KeyDown(key);
-                while (!ct.IsCancellationRequested)
-                {
-                    await Task.Delay(5, ct);
-                    hdc = User32.GetDC(_hWnd);
-                    c = Gdi32.GetPixel(hdc, point.X, point.Y);
-                    Gdi32.DeleteDC(hdc);
-                    if (c.B >= 220)
-                    {
-                        break;
-                    }
-                }
-
-                KeyUp(key);
-            }
-
-            // sw.Stop();
-            // Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
-        }
-    }
-
-    // private async Task DoWhitePressWin32Default(CancellationToken ct, User32.VK key, Point point)
-    // {
-    //     while (!ct.IsCancellationRequested)
-    //     {
-    //         await Task.Delay(10, ct);
-    //         var c = GetPixel(point.X, point.Y);
-    //
-    //         if (c.G < 220)
-    //         {
-    //             KeyDown(key);
-    //             while (!ct.IsCancellationRequested)
-    //             {
-    //                 Thread.Sleep(10);
-    //                 c = GetPixel(point.X, point.Y);
-    //                 if (c.G >= 230 && c.G != 255)
-    //                 {
-    //                     if (point.X == 417)
-    //                     {
-    //                         Debug.WriteLine("打断颜色：" + c.R + "," + c.G + "," + c.B);
-    //                     }
-    //
-    //                     break;
-    //                 }
-    //             }
-    //
-    //             KeyUp(key);
-    //         }
-    //     }
-    // }
-
-    // private async Task DoWhitePressWin32Default(CancellationToken ct, User32.VK key, Point point)
+    // private async Task DoWhitePressWin32(CancellationToken ct, User32.VK key, Point point)
     // {
     //     while (!ct.IsCancellationRequested)
     //     {
     //         await Task.Delay(5, ct);
-    //         var color = GetPixel(point.X, point.Y);
-    //         int r = color.R, g = color.G, b = color.B;
-    //
-    //         if (r >= 140 && r <= 255 && g >= 100 && g <= 170 && b >= 230 && b <= 255)
-    //         {
-    //             // 按下按键
-    //             KeyDown(key);
-    //
-    //             int z1 = 0;
-    //             while (z1 < 3)
-    //             {
-    //                 await Task.Delay(5, ct);
-    //                 color = GetPixel(point.X, point.Y);
-    //                 int r1 = color.R, g1 = color.G, b1 = color.B;
-    //                 var color2 = GetPixel(point.X + 2, point.Y + 2);
-    //                 int r11 = color2.R, g11 = color2.G, b11 = color2.B;
-    //
-    //                 if ((r1 >= 140 && r1 <= 255 && g1 >= 100 && g1 <= 170) || (r11 >= 140 && r11 <= 255 && g11 >= 100 && g11 <= 170))
-    //                 {
-    //                     continue;
-    //                 }
-    //
-    //                 z1++;
-    //             }
-    //
-    //             Console.WriteLine($"{key} purple1 {r} {g} {b}");
-    //
-    //             int z2 = 0;
-    //             while (z2 < 10)
-    //             {
-    //                 await Task.Delay(5, ct);
-    //                 color = GetPixel(point.X, point.Y);
-    //                 int r1 = color.R, g1 = color.G, b1 = color.B;
-    //                 var color2 = GetPixel(point.X + 2, point.Y + 2);
-    //                 int r11 = color2.R, g11 = color2.G, b11 = color2.B;
-    //
-    //                 if (g1 >= 100 && g1 <= 170 || g11 >= 100 && g11 <= 170)
-    //                 {
-    //                     continue;
-    //                 }
-    //
-    //                 z2++;
-    //             }
-    //
-    //             Console.WriteLine($"{key} purple - 紫键结束 {r} {g} {b}");
-    //             KeyUp(key);
-    //         }
-    //
-    //         if (r >= 230 && r <= 255 && g >= 170 && g <= 210 && b >= 50 && b <= 120)
+    //         // Stopwatch sw = new();
+    //         // sw.Start();
+    //         var hdc = User32.GetDC(_hWnd);
+    //         var c = Gdi32.GetPixel(hdc, point.X, point.Y);
+    //         Gdi32.DeleteDC(hdc);
+
+    //         if (c.B < 220)
     //         {
     //             KeyDown(key);
-    //
-    //             var color2 = GetPixel(point.X, point.Y);
-    //             int r2 = color2.R, g2 = color2.G, b2 = color2.B;
-    //
-    //             
-    //             while (g2 >= 170 && g2 <= 210 && b2 >= 50 && b2 <= 120)
+    //             while (!ct.IsCancellationRequested)
     //             {
-    //                 
     //                 await Task.Delay(5, ct);
-    //                 color2 = GetPixel(point.X, point.Y);
-    //                 r2 = color2.R;
-    //                 g2 = color2.G;
-    //                 b2 = color2.B;
+    //                 hdc = User32.GetDC(_hWnd);
+    //                 c = Gdi32.GetPixel(hdc, point.X, point.Y);
+    //                 Gdi32.DeleteDC(hdc);
+    //                 if (c.B >= 220)
+    //                 {
+    //                     break;
+    //                 }
     //             }
-    //
+
     //             KeyUp(key);
     //         }
+
+    //         // sw.Stop();
+    //         // Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
     //     }
     // }
 
-    private COLORREF GetPixel(int x, int y)
-    {
-        var hdc = User32.GetDC(_hWnd);
-        var c = Gdi32.GetPixel(hdc, x, y);
-        Gdi32.DeleteDC(hdc);
-        return c;
-    }
+
+    // private COLORREF GetPixel(int x, int y)
+    // {
+    //     var hdc = User32.GetDC(_hWnd);
+    //     var c = Gdi32.GetPixel(hdc, x, y);
+    //     Gdi32.DeleteDC(hdc);
+    //     return c;
+    // }
 
 
     private void KeyUp(User32.VK key)
