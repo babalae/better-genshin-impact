@@ -7,13 +7,9 @@ namespace BetterGenshinImpact.GameTask.AutoSkip.Audio;
 
 internal sealed class DialogueOptionAudioWaiter
 {
-    private const int SilenceDurationMilliseconds = 2000;
-    private const int SpeechStartGraceMilliseconds = 5000;
-    private const int NoSpeechQuietDurationMilliseconds = 1200;
-    private const int SpeechRiseDurationMilliseconds = 160;
+    internal const int SpeechStartGraceMilliseconds = 5000;
+    internal const int NoSpeechQuietDurationMilliseconds = 1200;
     private const int DetectorRetryDelayMilliseconds = 5000;
-    private const float SpeechProbabilityThreshold = 0.60f;
-    private const float MaybeSpeechProbabilityThreshold = 0.35f;
 
     private readonly object _detectorLock = new();
     private DialogueOptionVoiceDetector? _detector;
@@ -28,6 +24,43 @@ internal sealed class DialogueOptionAudioWaiter
             using var _ = EnterDetectorLock();
             return _waitState != null;
         }
+    }
+
+    /// <summary>
+    /// 本次选项等待会话的真实进度，用于诊断面板展示与实际点击一致的判定。
+    /// </summary>
+    internal readonly record struct WaitProgress(
+        bool IsFallback,
+        bool HeardSpeech,
+        bool InStartGrace,
+        long WaitingMilliseconds,
+        long QuietMilliseconds,
+        int RequiredQuietMilliseconds);
+
+    internal bool TryGetProgress(out WaitProgress progress)
+    {
+        using var _ = EnterDetectorLock();
+        if (_waitState is not { } waitState)
+        {
+            progress = default;
+            return false;
+        }
+
+        var elapsedMilliseconds = waitState.Stopwatch.ElapsedMilliseconds;
+        if (waitState.IsFallback)
+        {
+            progress = new WaitProgress(true, false, false, elapsedMilliseconds, 0, 0);
+            return true;
+        }
+
+        progress = new WaitProgress(
+            false,
+            waitState.HeardSpeech,
+            !waitState.HeardSpeech && elapsedMilliseconds < SpeechStartGraceMilliseconds,
+            elapsedMilliseconds,
+            waitState.QuietSinceMilliseconds is { } quietSince ? elapsedMilliseconds - quietSince : 0,
+            waitState.HeardSpeech ? DialogueOptionVoiceThresholds.SilenceMilliseconds : NoSpeechQuietDurationMilliseconds);
+        return true;
     }
 
     public void Cancel()
@@ -101,7 +134,13 @@ internal sealed class DialogueOptionAudioWaiter
                 return true;
             }
 
-            var probability = waitState.Detector!.Update();
+            var probabilityResult = waitState.Detector!.Update();
+            if (probabilityResult == null)
+            {
+                return false;
+            }
+
+            var probability = probabilityResult.Value.Probability;
             if (float.IsNaN(probability) || float.IsInfinity(probability))
             {
                 probability = 0f;
@@ -109,10 +148,10 @@ internal sealed class DialogueOptionAudioWaiter
 
             waitState.ProbabilityMax = Math.Max(waitState.ProbabilityMax, probability);
 
-            if (probability >= SpeechProbabilityThreshold)
+            if (probability >= DialogueOptionVoiceThresholds.SpeechProbability)
             {
                 waitState.VoiceLikeSinceMilliseconds ??= elapsedMilliseconds;
-                if (elapsedMilliseconds - waitState.VoiceLikeSinceMilliseconds >= SpeechRiseDurationMilliseconds)
+                if (elapsedMilliseconds - waitState.VoiceLikeSinceMilliseconds >= DialogueOptionVoiceThresholds.SpeechRiseMilliseconds)
                 {
                     waitState.HeardSpeech = true;
                 }
@@ -123,20 +162,21 @@ internal sealed class DialogueOptionAudioWaiter
 
             waitState.VoiceLikeSinceMilliseconds = null;
 
-            if (!waitState.HeardSpeech && probability > MaybeSpeechProbabilityThreshold)
+            if (probability > DialogueOptionVoiceThresholds.MaybeSpeechProbability)
             {
                 waitState.QuietSinceMilliseconds = null;
                 return false;
             }
 
             waitState.QuietSinceMilliseconds ??= elapsedMilliseconds;
-            var requiredQuietMilliseconds = waitState.HeardSpeech ? SilenceDurationMilliseconds : NoSpeechQuietDurationMilliseconds;
+            var requiredQuietMilliseconds = waitState.HeardSpeech ? DialogueOptionVoiceThresholds.SilenceMilliseconds : NoSpeechQuietDurationMilliseconds;
             if (!waitState.HeardSpeech && elapsedMilliseconds < SpeechStartGraceMilliseconds)
             {
                 return false;
             }
 
-            if (elapsedMilliseconds - waitState.QuietSinceMilliseconds < requiredQuietMilliseconds)
+            var quietMilliseconds = elapsedMilliseconds - waitState.QuietSinceMilliseconds.Value;
+            if (quietMilliseconds < requiredQuietMilliseconds)
             {
                 return false;
             }

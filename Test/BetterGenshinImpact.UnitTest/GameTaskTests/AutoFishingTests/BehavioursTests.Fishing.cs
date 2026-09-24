@@ -1,7 +1,6 @@
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
-using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System;
@@ -35,11 +34,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2])
-                        .SequenceWithMemory("-")
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2], bb!))
+                        .Sequence("-", true)
                             .GetFishBoxArea("-", logger, false)
                             .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent)
                         .End()
@@ -82,11 +81,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2])
-                        .SequenceWithMemory("-")
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2], bb!))
+                        .Sequence("-", true)
                             .GetFishBoxArea("-", logger, false)
                             .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent)
                         .End()

@@ -1,4 +1,4 @@
-﻿using Fischless.WindowsInput;
+using Fischless.WindowsInput;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,24 +23,46 @@ public sealed class OverrideControllerSettings
             return;
         }
 
+        KeyboardMap? fallbackKeyboardMap = null;
         for (int i = default; i < data.OverrideControllerMapKeyList.Length; i++)
         {
             string? key = data.OverrideControllerMapKeyList[i];
 
-            if (key == "OverrideControllerMap__00000000-0000-0000-0000-000000000000__0")
+            if (key?.StartsWith("OverrideControllerMap__", StringComparison.Ordinal) != true)
             {
-                string xmlRaw = data.OverrideControllerMapValueList[i];
+                continue;
+            }
+
+            string xmlRaw = data.OverrideControllerMapValueList[i];
+            try
+            {
                 XDocument xmlDoc = XDocument.Parse(xmlRaw);
 
                 if (xmlDoc?.Root?.Name.LocalName == "KeyboardMap")
                 {
-                    KeyboardMap = new(xmlRaw);
-                }
+                    KeyboardMap keyboardMap = new(xmlRaw);
+                    if (keyboardMap.ActionElementMap.Count == 0)
+                    {
+                        continue;
+                    }
 
-                // Only detect the KeyboardMap
-                break;
+                    fallbackKeyboardMap ??= keyboardMap;
+                    if (keyboardMap.Enabled != false && keyboardMap.CategoryId == 0 && keyboardMap.LayoutId == 0)
+                    {
+                        KeyboardMap = keyboardMap;
+
+                        // Only detect the KeyboardMap
+                        break;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
             }
         }
+
+        KeyboardMap ??= fallbackKeyboardMap;
     }
 }
 

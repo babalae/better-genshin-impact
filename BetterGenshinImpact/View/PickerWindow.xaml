@@ -3,16 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:view="clr-namespace:BetterGenshinImpact.View"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+        xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
         ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
         ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-        Title="选择捕获窗口"
+        Title="{i18n:T 选择捕获窗口}"
         Width="800"
         Height="450"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Auto"
         WindowStartupLocation="CenterScreen"
-        behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
         Loaded="Window_Loaded"
         PreviewKeyDown="FluentWindow_PreviewKeyDown">
 
@@ -71,13 +70,13 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="选择捕获窗口" 
+                <TextBlock Text="{i18n:T 选择捕获窗口}" 
                          FontSize="24" 
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
 
                 <TextBlock Grid.Row="1"
-                         Text="双击选中要捕获的窗口" 
+                         Text="{i18n:T 双击选中要捕获的窗口}" 
                          Margin="0,8,0,0"
                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                          FontSize="14"/>
@@ -185,7 +184,7 @@
                    HorizontalAlignment="Right"
                    Width="100"
                    Margin="5"
-                   Click="cancelButton_Click">取消</ui:Button>
+                   Click="cancelButton_Click" Content="{i18n:T 取消}" />
         </Grid>
     </Grid>
 </ui:FluentWindow>

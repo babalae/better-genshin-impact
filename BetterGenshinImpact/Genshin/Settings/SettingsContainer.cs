@@ -1,9 +1,8 @@
-﻿using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,14 +10,21 @@ namespace BetterGenshinImpact.Genshin.Settings;
 
 public class SettingsContainer
 {
+    private readonly GenshinRegistryType _registryType;
+    private readonly string? _gameExecutablePath;
     protected MainJson? data = null;
     public LanguageSettings? Language;
     public ResolutionSettings? Resolution;
     public InputDataSettings? InputData;
     public OverrideControllerSettings? OverrideController;
+    public InputKeyMapSettings InputKeyMap = InputKeyMapSettings.Empty;
+    public TpsAimControlType? PcTpsAimControlType;
 
-    public SettingsContainer()
+    public SettingsContainer(GenshinRegistryType registryType = GenshinRegistryType.Auto, string? gameExecutablePath = null)
     {
+        _registryType = registryType;
+        _gameExecutablePath = gameExecutablePath;
+
         try
         {
             FromReg();
@@ -31,7 +37,7 @@ public class SettingsContainer
 
     public void FromReg()
     {
-        if (GenshinRegistry.GetRegistryKey() is not { } hk)
+        if (GenshinRegistry.GetRegistryKey(_registryType, _gameExecutablePath) is not { } hk)
         {
             return;
         }
@@ -44,14 +50,15 @@ public class SettingsContainer
                 return;
             }
 
-            unsafe
+            // 在托管数组范围内查找字符串结束位置，避免注册表数据缺少空终止符时越界读取
+            ReadOnlySpan<byte> rawCfg = rawBytes;
+            int nullTerminatorIndex = rawCfg.IndexOf((byte)0);
+            if (nullTerminatorIndex >= 0)
             {
-                // Keep the rawBytes pinned when parsing
-                fixed (byte* ptr = rawBytes)
-                {
-                    Parse(MemoryMarshal.CreateReadOnlySpanFromNullTerminated(ptr));
-                }
+                rawCfg = rawCfg[..nullTerminatorIndex];
             }
+
+            Parse(rawCfg);
         }
     }
 
@@ -70,9 +77,11 @@ public class SettingsContainer
             }
 
             Language = new LanguageSettings(data);
-            Resolution = new ResolutionSettings();
+            Resolution = new ResolutionSettings(_registryType, _gameExecutablePath);
             InputData = new InputDataSettings(data);
             OverrideController = new OverrideControllerSettings(data);
+            InputKeyMap = InputKeyMapSettings.Parse(data.OverrideInputKeyMapKeyList, data.OverrideInputKeyMapValueList);
+            PcTpsAimControlType = data.PcTpsAimControlType;
         }
         catch (Exception e)
         {

@@ -10,6 +10,13 @@
 
 # Build results
 Build/
+!Build/
+Build/*
+!Build/BetterGenshinImpact.I18nSync/
+!Build/BetterGenshinImpact.I18nSync/**
+!Build/Scripts/
+Build/Scripts/*
+!Build/Scripts/i18n-sync.ps1
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -22,7 +29,11 @@ bld/
 [Ll]og/
 
 # Mine
-Tmp/
+/Tmp/
+
+# AI temporary design docs
+Docs/tmp/*
+!Docs/tmp/README.md
 /packages/
 node_modules/
 github_actions_cache/

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 //using System.Diagnostics;
 using System.IO;
@@ -52,7 +52,8 @@ public class BaseMapLayerByTemplateMatch
         {
             return layers;
         }
-        var jsonFiles = Directory.GetFiles(layerDir, "*.json", SearchOption.AllDirectories);
+        // TemplateMatch 描述文件统一放在场景目录顶层；子目录可能包含 SIFT 等其他格式的 JSON 清单。
+        var jsonFiles = Directory.GetFiles(layerDir, "*.json", SearchOption.TopDirectoryOnly);
         foreach (var jsonFile in jsonFiles)
         {
             var json = File.ReadAllText(jsonFile);

@@ -1,52 +1,41 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
 internal class GenshinRegistry
 {
+    private const string ChineseRegistryPath = @"SOFTWARE\miHoYo\原神";
+    private const string GlobalRegistryPath = @"SOFTWARE\miHoYo\Genshin Impact";
+
     /// <summary>
-    /// TODO 结合进程名字判断当前是获取国服配置还是国际服配置
+    /// 自动模式优先根据正在运行的游戏进程判断区服，其次使用配置的游戏路径，最后根据注册表是否存在判断
     /// </summary>
     /// <param name="type"></param>
+    /// <param name="gameExecutablePath">配置的原神可执行文件路径，用于自动判断区服</param>
     /// <returns></returns>
-    public static RegistryKey? GetRegistryKey(GenshinRegistryType type = GenshinRegistryType.Auto)
+    public static RegistryKey? GetRegistryKey(GenshinRegistryType type = GenshinRegistryType.Auto, string? gameExecutablePath = null)
     {
         try
         {
-            using RegistryKey hkcu = Registry.CurrentUser;
-
             if (type == GenshinRegistryType.Auto)
             {
-                {
-                    if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
-                    {
-                        return sk;
-                    }
-                }
-                {
-                    if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\Genshin Impact", true) is RegistryKey sk)
-                    {
-                        return sk;
-                    }
-                }
+                type = ResolveRegistryType(gameExecutablePath);
             }
-            else if (type == GenshinRegistryType.Chinese)
+
+            if (type == GenshinRegistryType.Chinese)
             {
-                if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
-                {
-                    return sk;
-                }
+                return Registry.CurrentUser.OpenSubKey(ChineseRegistryPath, false);
             }
-            else if (type == GenshinRegistryType.Global)
+
+            if (type == GenshinRegistryType.Global)
             {
-                if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\Genshin Impact", true) is RegistryKey sk)
-                {
-                    return sk;
-                }
+                return Registry.CurrentUser.OpenSubKey(GlobalRegistryPath, false);
             }
-            else if (type == GenshinRegistryType.Cloud)
+
+            if (type == GenshinRegistryType.Cloud)
             {
                 throw new NotImplementedException();
             }
@@ -56,6 +45,54 @@ internal class GenshinRegistry
             Debug.WriteLine(e.ToString());
         }
         return null;
+    }
+
+    private static GenshinRegistryType ResolveRegistryType(string? gameExecutablePath)
+    {
+        bool isChineseRunning = IsProcessRunning("YuanShen");
+        bool isGlobalRunning = IsProcessRunning("GenshinImpact");
+
+        if (isChineseRunning != isGlobalRunning)
+        {
+            return isChineseRunning ? GenshinRegistryType.Chinese : GenshinRegistryType.Global;
+        }
+
+        string? executableName = Path.GetFileName(gameExecutablePath);
+        if (string.Equals(executableName, "YuanShen.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return GenshinRegistryType.Chinese;
+        }
+
+        if (string.Equals(executableName, "GenshinImpact.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return GenshinRegistryType.Global;
+        }
+
+        using RegistryKey? chineseKey = Registry.CurrentUser.OpenSubKey(ChineseRegistryPath, false);
+        using RegistryKey? globalKey = Registry.CurrentUser.OpenSubKey(GlobalRegistryPath, false);
+        if (chineseKey is null && globalKey is not null)
+        {
+            return GenshinRegistryType.Global;
+        }
+
+        // 两个注册表同时存在或都不存在时保留原有的国服优先回退行为，用户仍可在键位映射页手动指定
+        return GenshinRegistryType.Chinese;
+    }
+
+    private static bool IsProcessRunning(string processName)
+    {
+        Process[] processes = Process.GetProcessesByName(processName);
+        try
+        {
+            return processes.Length > 0;
+        }
+        finally
+        {
+            foreach (Process process in processes)
+            {
+                process.Dispose();
+            }
+        }
     }
 }
 

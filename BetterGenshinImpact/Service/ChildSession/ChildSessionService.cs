@@ -75,6 +75,18 @@ public sealed class ChildSessionService : IDisposable
 
     public bool AudioMuted => _config.AudioMuted;
 
+    public WindowPositionConfig? NormalWindowPosition
+    {
+        get => _config.NormalWindowPosition;
+        set => _config.NormalWindowPosition = value;
+    }
+
+    public WindowPositionConfig? SmallWindowPosition
+    {
+        get => _config.SmallWindowPosition;
+        set => _config.SmallWindowPosition = value;
+    }
+
     public bool IsRdpWrapperEnabled()
     {
         return ChildSessionNativeMethods.IsRdpWrapperEnabled();

@@ -8,7 +8,7 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:drawer="clr-namespace:BetterGenshinImpact.View.Controls.Drawer"
-             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              d:DataContext="{d:DesignInstance Type=pages:JsListViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -39,26 +39,26 @@
             <ui:TextBlock Grid.Row="0"
                           Margin="0,0,0,8"
                           FontTypography="BodyStrong"
-                          Text="自定义 Javascript 脚本（实验功能）" />
+                          Text="{i18n:T 自定义 Javascript 脚本（实验功能）}" />
             <ui:TextBlock Grid.Row="1"
                           Margin="0,0,0,8"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                           TextWrapping="Wrap">
-                可以通过 Javascript 调用 BetterGI 在原神中的各项能力。请在调度器中使用！
+                <Run Text="{i18n:T 可以通过 Javascript 调用 BetterGI 在原神中的各项能力。请在调度器中使用！}" />
                 <Hyperlink Command="{Binding GoToJsScriptUrlCommand}"
                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                    点击查看 Javascript 脚本使用与编写教程
-                </Hyperlink>
+                            <Run Text="{i18n:T 点击查看 Javascript 脚本使用与编写教程}" />
+                        </Hyperlink>
             </ui:TextBlock>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal">
                 <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                           Content="打开脚本目录"
+                           Content="{i18n:T 打开脚本目录}"
                            Icon="{ui:SymbolIcon FolderOpen24}" />
                 <Separator Width="10" Opacity="0" />
                 <ui:Button Command="{Binding OpenLocalScriptRepoCommand}" Icon="{ui:SymbolIcon Archive24}">
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <ui:TextBlock>脚本仓库</ui:TextBlock>
+                        <ui:TextBlock Text="{i18n:T 脚本仓库}" />
                         <ui:InfoBadge Margin="0,-8,-14,0"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Top"
@@ -112,13 +112,13 @@
                     <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                         <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
                                         DisplayMemberBinding="{Binding FolderName}"
-                                        Header="目录" />
+                                        Header="{i18n:T 目录}" />
                         <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                         DisplayMemberBinding="{Binding Manifest.Name}"
-                                        Header="名称" />
+                                        Header="{i18n:T 名称}" />
                         <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                         DisplayMemberBinding="{Binding Manifest.Version}"
-                                        Header="版本" />
+                                        Header="{i18n:T 版本}" />
                         <!--<GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -138,17 +138,17 @@
                     <ContextMenu>
                         <MenuItem Command="{Binding OpenScriptProjectFolderCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="打开目录" />
+                                  Header="{i18n:T 打开目录}" />
                         <MenuItem Command="{Binding StartRunCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="执行脚本" />
+                                  Header="{i18n:T 执行脚本}" />
                         <MenuItem Command="{Binding RefreshCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="刷新" />
+                                  Header="{i18n:T 刷新}" />
                         <Separator />
                         <MenuItem Command="{Binding DeleteScriptCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="删除" />
+                                  Header="{i18n:T 删除}" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListView.Style>
@@ -174,7 +174,6 @@
             OpenHeight="{Binding DrawerVm.DrawerHeight}"
             DrawerBackground="{DynamicResource ControlFillColorDefaultBrush}"
             Content="{Binding DrawerVm.DrawerContent}"
-            behavior:AutoTranslateInterceptor.EnableAutoTranslate="False"
             Panel.ZIndex="100">
             <b:Interaction.Triggers>
                 <b:EventTrigger EventName="Opened">

@@ -19,7 +19,7 @@ public class LargeSiftExtractor
     private const int BLOCK_SIZE = 1024;
     private const int OVERLAP_SIZE = BLOCK_SIZE * 3;
     private const int MAX_PARALLELISM = 24;
-    private const string MAP_VERSION = "6.5";
+    private const string MAP_VERSION = "7.0";
     private static readonly string ROOT_PATH = $@"E:\HuiTask\更好的原神\地图匹配\拼图结果\{MAP_VERSION}";
     
     // public static void Gen1024()

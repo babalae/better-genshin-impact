@@ -7,6 +7,18 @@ namespace BetterGenshinImpact.Core.Config;
 public partial class ChildSessionConfig : ObservableObject
 {
     /// <summary>
+    /// 桌面分身普通窗口模式的位置（物理像素坐标）。
+    /// </summary>
+    [ObservableProperty]
+    private WindowPositionConfig? _normalWindowPosition;
+
+    /// <summary>
+    /// 桌面分身小窗模式的位置（物理像素坐标）。
+    /// </summary>
+    [ObservableProperty]
+    private WindowPositionConfig? _smallWindowPosition;
+
+    /// <summary>
     /// 桌面分身窗口是否置顶。
     /// </summary>
     [ObservableProperty]
@@ -41,4 +53,22 @@ public partial class ChildSessionConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _audioMuted = false;
+}
+
+[Serializable]
+public sealed class WindowPositionConfig
+{
+    public int Left { get; set; }
+
+    public int Top { get; set; }
+
+    public WindowPositionConfig()
+    {
+    }
+
+    public WindowPositionConfig(int left, int top)
+    {
+        Left = left;
+        Top = top;
+    }
 }

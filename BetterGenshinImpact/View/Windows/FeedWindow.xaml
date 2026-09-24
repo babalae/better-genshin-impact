@@ -4,7 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  Width="400"
                  Height="700"
                  MinWidth="400"
@@ -12,7 +12,6 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  WindowBackdropType="Mica"
                  WindowStartupLocation="CenterScreen"
@@ -67,7 +66,7 @@
                         </ui:TextBlock>
                         <ui:TextBlock FontSize="12"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="有效期至">
+                                      Text="{i18n:T 有效期至}">
                             <ui:TextBlock.Style>
                                 <Style TargetType="{x:Type ui:TextBlock}">
                                     <Style.Triggers>
@@ -169,13 +168,13 @@
                                    Appearance="Secondary"
                                    Command="{Binding DataContext.CopyItemCodesCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                    CommandParameter="{Binding}"
-                                   Content="复制"
+                                   Content="{i18n:T 复制}"
                                    FontSize="12" />
                         <ui:Button Padding="12,6"
                                    Appearance="Primary"
                                    Command="{Binding DataContext.AutoRedeemItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                    CommandParameter="{Binding}"
-                                   Content="一键兑换"
+                                   Content="{i18n:T 一键兑换}"
                                    FontSize="12" />
                     </StackPanel>
                 </Grid>
@@ -191,7 +190,7 @@
         </Grid.RowDefinitions>
 
         <!-- 标题栏 -->
-        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="兑换码">
+        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="{i18n:T 兑换码}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
@@ -210,10 +209,10 @@
                 <ui:TextBlock Margin="0,0,0,5"
                               FontSize="24"
                               FontWeight="SemiBold"
-                              Text="最新兑换码动态" />
+                              Text="{i18n:T 最新兑换码动态}" />
                 <ui:TextBlock FontSize="14"
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                              Text="查看最新的原神兑换码，一键自动兑换"
+                              Text="{i18n:T 查看最新的原神兑换码，一键自动兑换}"
                               TextWrapping="Wrap" />
             </StackPanel>
 
@@ -228,7 +227,7 @@
                                  Height="16"
                                  Margin="0,0,8,0"
                                  IsIndeterminate="True" />
-                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" Text="正在加载兑换码..." />
+                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" Text="{i18n:T 正在加载兑换码...}" />
             </StackPanel>
 
             <!-- 服务器切页 -->
@@ -245,7 +244,7 @@
                                HorizontalAlignment="Stretch"
                                HorizontalContentAlignment="Center"
                                Command="{Binding SelectCnServerCommand}"
-                               Content="国服"
+                               Content="{i18n:T 国服}"
                                Icon="{ui:SymbolIcon TicketDiagonal24}">
                         <ui:Button.Style>
                             <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
@@ -263,7 +262,7 @@
                                HorizontalAlignment="Stretch"
                                HorizontalContentAlignment="Center"
                                Command="{Binding SelectGlobalServerCommand}"
-                               Content="国际服"
+                               Content="{i18n:T 国际服}"
                                Icon="{ui:SymbolIcon CloudArrowUp24}">
                         <ui:Button.Style>
                             <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
@@ -312,10 +311,10 @@
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="BodyStrong"
-                                                  Text="兑换码更新通知" />
+                                                  Text="{i18n:T 兑换码更新通知}" />
                                     <ui:TextBlock Margin="0,3,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="开启后有新的国服兑换码时提醒"
+                                                  Text="{i18n:T 开启后有新的国服兑换码时提醒}"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
 
@@ -367,10 +366,10 @@
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <ui:TextBlock FontTypography="BodyStrong"
-                                                  Text="兑换码更新通知" />
+                                                  Text="{i18n:T 兑换码更新通知}" />
                                     <ui:TextBlock Margin="0,3,0,0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="开启后有新的国际服兑换码时提醒"
+                                                  Text="{i18n:T 开启后有新的国际服兑换码时提醒}"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
 
@@ -400,7 +399,7 @@
                            Margin="0,0,10,0"
                            Appearance="Secondary"
                            Command="{Binding GetLiveRedeemCodesCommand}"
-                           Content="实时获取前瞻兑换码">
+                           Content="{i18n:T 实时获取前瞻兑换码}">
                     <ui:Button.Style>
                         <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -418,7 +417,7 @@
                 </ui:Button>
                 <ui:Button Name="BtnClose"
                            Click="BtnCloseClick"
-                           Content="关闭" />
+                           Content="{i18n:T 关闭}" />
             </StackPanel>
         </Grid>
     </Grid>

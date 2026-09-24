@@ -21,7 +21,7 @@ public class QuickSereniteaPotTask
         {
             TaskControl.Sleep(1);
             using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
-            using var ra2 = ra1.Find(RecognitionAssets.Get("QuickSereniteaPot", "BagCloseButton", ra1));
+            using var ra2 = ra1.Find(RecognitionAssets.Get("QuickTeleport", "MapCloseButton", ra1));
             if (ra2.IsEmpty())
             {
                 throw new RetryException("背包未打开");

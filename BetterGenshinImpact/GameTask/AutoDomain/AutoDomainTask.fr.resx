@@ -132,4 +132,40 @@
   <data name="跳过" xml:space="preserve">
     <value>Passer</value>
   </data>
+  <data name="单人挑战" xml:space="preserve">
+    <value>Défisolo</value>
+  </data>
+  <data name="开始挑战" xml:space="preserve">
+    <value>Commencer</value>
+  </data>
+  <data name="是否仍要.*挑战.*秘境" xml:space="preserve">
+    <value>Souhaitez-vous.*vraiment</value>
+  </data>
+  <data name="石化古树" xml:space="preserve">
+    <value>étrifié</value>
+  </data>
+  <data name="数量不足" xml:space="preserve">
+    <value>insuffisant</value>
+  </data>
+  <data name="补充原粹树脂" xml:space="preserve">
+    <value>Recharger.*la.*Résine.*originelle</value>
+  </data>
+  <data name="取消" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="使用" xml:space="preserve">
+    <value>Utiliser</value>
+  </data>
+  <data name="浓缩树脂" xml:space="preserve">
+    <value>Résine condensée</value>
+  </data>
+  <data name="原粹树脂" xml:space="preserve">
+    <value>Résine originelle</value>
+  </data>
+  <data name="须臾树脂" xml:space="preserve">
+    <value>Résine éphémère</value>
+  </data>
+  <data name="脆弱树脂" xml:space="preserve">
+    <value>Résine fragile</value>
+  </data>
 </root>

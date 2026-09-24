@@ -146,6 +146,12 @@ public static class Feature2DExtensions
         feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
         speedTimer.Record("模板生成KeyPoint");
+        if (queryKeyPoints.Length == 0 || queryDescriptors.Empty())
+        {
+            // 查询图未检测到任何特征点时，空描述子会让 knnMatch 抛出 OpenCVException（type=0），直接按匹配失败处理
+            return new Point2f();
+        }
+
         var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
         speedTimer.Record("FlannMatch");
 
@@ -249,6 +255,12 @@ public static class Feature2DExtensions
         feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
         speedTimer.Record("模板生成KeyPoint");
+        if (queryKeyPoints.Length == 0 || queryDescriptors.Empty())
+        {
+            // 查询图未检测到任何特征点时，空描述子会让 knnMatch 抛出 OpenCVException（type=0），直接按匹配失败处理
+            return [];
+        }
+
         var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
         speedTimer.Record("FlannMatch");
 

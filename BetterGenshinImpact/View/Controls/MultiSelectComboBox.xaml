@@ -1,0 +1,222 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.MultiSelectComboBox"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DesignHeight="32"
+             d:DesignWidth="300"
+             mc:Ignorable="d"
+             PreviewKeyDown="Root_PreviewKeyDown">
+    <Grid>
+        <ToggleButton x:Name="DropDownToggle"
+                      Height="32"
+                      Padding="11,4"
+                      HorizontalContentAlignment="Stretch"
+                      AutomationProperties.Name="多选下拉框"
+                      Background="{DynamicResource ControlFillColorDefaultBrush}"
+                      BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                      BorderThickness="1"
+                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                      IsChecked="{Binding IsDropDownOpen, ElementName=Root, Mode=TwoWay}"
+                      PreviewKeyDown="DropDownToggle_PreviewKeyDown"
+                      ToolTip="{Binding SelectionText, ElementName=Root}">
+            <ToggleButton.Template>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Grid>
+                        <Border x:Name="BackgroundBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ControlCornerRadius}">
+                            <Grid Margin="{TemplateBinding Padding}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Margin="0,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           Text="{Binding SelectionText, ElementName=Root}"
+                                           TextTrimming="CharacterEllipsis" />
+
+                                <Path x:Name="Chevron"
+                                      Grid.Column="1"
+                                      Width="10"
+                                      Height="6"
+                                      VerticalAlignment="Center"
+                                      Data="M 1,1 L 5,5 L 9,1"
+                                      SnapsToDevicePixels="True"
+                                      Stroke="{TemplateBinding Foreground}"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeThickness="1.25">
+                                    <Path.RenderTransform>
+                                        <RotateTransform Angle="0" CenterX="5" CenterY="3" />
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Grid>
+                        </Border>
+
+                        <Border x:Name="FocusBorder"
+                                BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                                BorderThickness="2"
+                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                IsHitTestVisible="False"
+                                Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="BackgroundBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="BackgroundBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="BackgroundBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" CenterX="5" CenterY="3" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusBorder" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource TextFillColorDisabledBrush}" />
+                            <Setter TargetName="BackgroundBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource ControlFillColorDisabledBrush}" />
+                            <Setter TargetName="BackgroundBorder"
+                                    Property="BorderBrush"
+                                    Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </ToggleButton.Template>
+        </ToggleButton>
+
+        <Popup x:Name="DropDownPopup"
+               AllowsTransparency="True"
+               IsOpen="{Binding IsDropDownOpen, ElementName=Root, Mode=TwoWay}"
+               Opened="DropDownPopup_Opened"
+               Closed="DropDownPopup_Closed"
+               Placement="Bottom"
+               PlacementTarget="{Binding ElementName=DropDownToggle}"
+               PopupAnimation="Fade"
+               StaysOpen="False"
+               VerticalOffset="4">
+            <Border Width="{Binding ActualWidth, ElementName=Root}"
+                    MinWidth="220"
+                    MaxHeight="{Binding MaxDropDownHeight, ElementName=Root}"
+                    Padding="6"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource ControlCornerRadius}"
+                    SnapsToDevicePixels="True">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16"
+                                      Direction="270"
+                                      Opacity="0.28"
+                                      ShadowDepth="3" />
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <ui:TextBox x:Name="SearchTextBox"
+                                Margin="0,0,0,6"
+                                AutomationProperties.Name="搜索选项"
+                                PlaceholderText="{Binding SearchPlaceholderText, ElementName=Root}"
+                                TextChanged="SearchTextBox_TextChanged"
+                                PreviewKeyDown="SearchTextBox_PreviewKeyDown" />
+
+                    <Grid Grid.Row="1" Margin="2,0,2,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button Padding="8,3"
+                                AutomationProperties.Name="全选筛选结果"
+                                Click="SelectAllButton_Click"
+                                Content="全选" />
+                        <Button Grid.Column="1"
+                                Margin="4,0,0,0"
+                                Padding="8,3"
+                                AutomationProperties.Name="清空选择"
+                                Click="ClearSelectionButton_Click"
+                                Content="清空" />
+                        <TextBlock x:Name="SelectionCountTextBlock"
+                                   Grid.Column="3"
+                                   Margin="8,0,2,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}"
+                            BorderThickness="0,1,0,0">
+                        <Grid>
+                            <ListBox x:Name="OptionsListBox"
+                                     Padding="0,4,0,0"
+                                     AutomationProperties.Name="可选项"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ItemsSource="{Binding FilteredItems, ElementName=Root}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="{x:Type ListBoxItem}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Padding" Value="0" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox MinHeight="30"
+                                                  Padding="8,4"
+                                                  VerticalContentAlignment="Center"
+                                                  AutomationProperties.Name="{Binding DisplayText}"
+                                                  Click="ItemCheckBox_Click"
+                                                  Content="{Binding DisplayText}"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock x:Name="NoResultsTextBlock"
+                                       Margin="12,18"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       IsHitTestVisible="False"
+                                       Text="没有匹配的选项"
+                                       Visibility="Collapsed" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

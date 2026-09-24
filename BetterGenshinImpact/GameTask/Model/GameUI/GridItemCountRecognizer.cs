@@ -257,7 +257,7 @@ internal static class GridItemCountRecognizer
 
     private static string NormalizeNumberText(string text)
     {
-        return StringUtils.ConvertFullWidthNumToHalfWidth(text ?? string.Empty);
+        return StringUtils.ConvertFullWidthNumToHalfWidth(text ?? string.Empty).Trim();
     }
 
     private static Rect Union(IReadOnlyList<Rect> rects)

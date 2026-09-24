@@ -2,7 +2,6 @@ using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
 using CsTrees.Composites;
-using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System;
@@ -26,14 +25,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0,  drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion])
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .GetFishBoxArea("-", new FakeLogger(), false)
                     .End()
                 .End()
@@ -62,13 +61,13 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
-                        .ScreenshotQueue("用例", [imageRegion1, imageRegion2])
+                    .Sequence("用例", false)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2], bb!))
                         .Parallel("-", new ParallelPolicy.SuccessOnOne())
                             .CheckRaiseHook("-", logger, fakeTimeProvider)
-                            .SequenceWithMemory("-")
+                            .Sequence("-", true)
                                 .GetFishBoxArea("-", logger, false, fakeTimeProvider)
                                 .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: new FakeDrawContent())
                             .End()

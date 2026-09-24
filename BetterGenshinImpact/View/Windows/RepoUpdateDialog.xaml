@@ -4,7 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  Width="520"
                  Height="280"
                  MinWidth="400"
@@ -12,7 +12,6 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="NoResize"
                  WindowBackdropType="Auto"
@@ -70,7 +69,7 @@
 
             <!-- 立即更新按钮 -->
             <ui:Button x:Name="PrimaryButton"
-                      Content="立即更新"
+                      Content="{i18n:T 立即更新}"
                       Appearance="Primary"
                       MinWidth="100"
                       Margin="0,0,8,0"
@@ -78,7 +77,7 @@
 
             <!-- 直接打开按钮 -->
             <ui:Button x:Name="SecondaryButton"
-                      Content="直接打开"
+                      Content="{i18n:T 直接打开}"
                       Appearance="Secondary"
                       MinWidth="100"
                       IsEnabled="False"

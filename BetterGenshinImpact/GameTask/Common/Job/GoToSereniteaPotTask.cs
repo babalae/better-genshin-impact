@@ -296,8 +296,6 @@ internal class GoToSereniteaPotTask
             }
         }
         Logger.LogInformation("领取尘歌壶奖励:{text}", "寻找阿圆");
-        CancellationTokenSource treeCts = new();
-        await using var cancellationRegistration = ct.Register(treeCts.Cancel);
         // 中键回正视角
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(900, ct);
@@ -359,26 +357,29 @@ internal class GoToSereniteaPotTask
             }
         }
 
-        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown); // 向前走
-        Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆");
-        var findDialog = new Task(async () =>
+        ct.ThrowIfCancellationRequested();
+        try
         {
-            while (!treeCts.IsCancellationRequested)
+            TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown); // 向前走
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆");
+            while (true)
             {
+                ct.ThrowIfCancellationRequested();
                 using var capture = CaptureToRectArea();
                 if (Bv.FindF(capture, text: this.ayuanHeyString))
                 {
-                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆成功");
-                    treeCts.Cancel();
                     break;
                 }
                 TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.Drop);//防止爬墙
-                await Delay(50, treeCts.Token);
+                await Delay(50, ct);
             }
-        }, treeCts.Token);
-        findDialog.Start();
-        await Task.WhenAll(findDialog);
+        }
+        finally
+        {
+            // 正常结束、取消或异常时都释放前进键。
+            TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        }
     }
 
     private async Task BuyMaxNumber(CancellationToken ct)

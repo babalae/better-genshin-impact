@@ -5,8 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:skillCd="clr-namespace:BetterGenshinImpact.GameTask.SkillCd"
+        xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
         mc:Ignorable="d"
-        Title="角色CD配置"
+        Title="{i18n:T 角色CD配置}"
         Height="600"
         Width="450"
         WindowStartupLocation="CenterOwner"
@@ -27,7 +28,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Title="角色 CD 配置" Grid.Row="0">
+        <ui:TitleBar Title="{i18n:T 角色 CD 配置}" Grid.Row="0">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="Settings24" />
             </ui:TitleBar.Icon>
@@ -42,7 +43,7 @@
 
             <!-- 说明文本 -->
             <TextBlock Grid.Row="0" 
-                       Text="为指定的角色配置未识别到 CD 数字时的默认值。如玛薇卡开 E 会显示摩托车，识别不到 CD 。&#x0a;仅填写了角色名的角色将使用默认 CD。" 
+                       Text="{i18n:T 为指定的角色配置未识别到 CD 数字时的默认值。如玛薇卡开 E 会显示摩托车，识别不到 CD 。仅填写了角色名的角色将使用默认 CD。}" 
                        Margin="0,0,10,15" 
                        TextWrapping="Wrap" />
 
@@ -62,7 +63,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0" Text="角色名:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <TextBlock Grid.Column="0" Text="{i18n:T 角色名:}" VerticalAlignment="Center" Margin="0,0,5,0" />
                                 <ui:TextBox Grid.Column="1"
                                             Text="{Binding RoleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                             Margin="0,0,10,0"
@@ -70,7 +71,7 @@
                                             VerticalAlignment="Center"
                                             VerticalContentAlignment="Center" />
 
-                                <TextBlock Grid.Column="2" Text="CD(秒):" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <TextBlock Grid.Column="2" Text="{i18n:T CD(秒):}" VerticalAlignment="Center" Margin="0,0,5,0" />
                                 <ui:TextBox Grid.Column="3"
                                             Text="{Binding CdValueText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                             MinWidth="80"
@@ -93,7 +94,7 @@
 
             <!-- 底部按钮 -->
             <StackPanel Grid.Row="2" Margin="0,15,10,0">
-                <ui:Button Content="新增配置" 
+                <ui:Button Content="{i18n:T 新增配置}" 
                            Icon="{ui:SymbolIcon Symbol=Add24}" 
                            Appearance="Primary" 
                            HorizontalAlignment="Stretch" 

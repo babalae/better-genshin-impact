@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -16,6 +17,7 @@ using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
@@ -89,34 +91,37 @@ public partial class App : Application
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
-                if (all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true })
-                {
-                    loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
-                        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
-                }
+                // 日志遮罩输出：仅当“遮罩启用且日志框可见”时才真正写入，隐藏时避免不必要的 UI 开销（#3161）。
+                // 条件改为运行时每次写入时动态判断，因此启动后通过快捷键切换 ShowLogBox 也能即时恢复日志（#3357）。
+                loggerConfiguration.WriteTo.Sink(
+                    new ConditionalLogEventSink(
+                        new LoggerConfiguration()
+                            .WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
+                                "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                            .CreateLogger(),
+                        () => all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true }),
+                    LogEventLevel.Information);
 
                 Log.Logger = loggerConfiguration.CreateLogger();
-                services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
-                services.AddSingleton<ITranslationService, JsonTranslationService>();
-
                 services.AddLogging(c => c.AddSerilog());
-                // if ("zh-Hans".Equals(all.OtherConfig.UiCultureInfoName, StringComparison.OrdinalIgnoreCase))
-                // {
-                //     services.AddLogging(c => c.AddSerilog());
-                // }
-                // else
-                // {
-                //     services.AddLogging(logging =>
-                //     {
-                //         logging.ClearProviders();
-                //         logging.SetMinimumLevel(LogLevel.Debug);
-                //         logging.AddFilter("Microsoft", LogLevel.Warning);
-                //         logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
-                //         logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
-                //     });
-                // }
 
                 services.AddLocalization();
+                var i18nService = I18nService.Instance;
+                var uiLanguage = all.OtherConfig.UiCultureInfoName switch
+                {
+                    "zh-CN" => "zh-Hans",
+                    "en-US" => "en",
+                    "ja-JP" => "ja",
+                    _ => all.OtherConfig.UiCultureInfoName,
+                };
+                if (uiLanguage != all.OtherConfig.UiCultureInfoName)
+                {
+                    all.OtherConfig.UiCultureInfoName = uiLanguage;
+                    configService.Save();
+                }
+
+                i18nService.ChangeLanguage(uiLanguage);
+                services.AddSingleton(i18nService);
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
@@ -176,6 +181,9 @@ public partial class App : Application
                 services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<CustomHtmlMaskService>();
+                services.AddSingleton<DialogueOptionVoiceDiagnosticState>();
+                services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
+                services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<RecognitionTemplateAssetService>();
                 services.AddSingleton<RecognitionTemplateEditorService>();
@@ -286,8 +294,8 @@ public partial class App : Application
                 try
                 {
                     System.Windows.Forms.MessageBox.Show(
-                        $"{TranslateText("应用程序启动失败：")}{ex.Message}",
-                        TranslateText("BetterGI 启动失败"),
+                        $"应用程序启动失败：{ex.Message}",
+                        "BetterGI 启动失败",
                         System.Windows.Forms.MessageBoxButtons.OK,
                         System.Windows.Forms.MessageBoxIcon.Error);
                 }
@@ -432,7 +440,7 @@ public partial class App : Application
         // 通过日志遮罩提示用户：非致命异常已记录。
         if (!isTerminating)
         {
-            var nonFatalMessage = TranslateText("发生非致命异常，已记录日志，请查看日志详情。");
+            const string nonFatalMessage = "发生非致命异常，已记录日志，请查看日志详情。";
             GetLogger<App>().LogWarning(nonFatalMessage);
             return false;
         }
@@ -449,7 +457,7 @@ public partial class App : Application
         }
 
         // 确认 Dispatcher 可用后才记录"正在弹窗"，避免与实际行为不一致。
-        var popupShownMessage = TranslateText("发生致命异常，正在弹窗提示，同时已记录日志。");
+        const string popupShownMessage = "发生致命异常，正在弹窗提示，同时已记录日志。";
         GetLogger<App>().LogWarning(popupShownMessage);
 
         try
@@ -482,8 +490,7 @@ public partial class App : Application
                 // 只为"UI 是否开始执行"设置超时：UI 线程被阻塞/死锁时避免无限等待。
                 if (!startedSignal.Wait(TimeSpan.FromSeconds(3)))
                 {
-                    GetLogger<App>().LogWarning(
-                        TranslateText("弹窗调度超时，异常已记录，进程即将退出。"));
+                    GetLogger<App>().LogWarning("弹窗调度超时，异常已记录，进程即将退出。");
                     return false;
                 }
 
@@ -497,21 +504,6 @@ public partial class App : Application
         {
             // 弹窗失败不影响进程退出。
             return false;
-        }
-    }
-
-    /// <summary>
-    /// 翻译一条异常提示文本。翻译服务不可用时返回原文。
-    /// </summary>
-    private static string TranslateText(string text)
-    {
-        try
-        {
-            return ServiceProvider.GetService<ITranslationService>()?.Translate(text) ?? text;
-        }
-        catch
-        {
-            return text;
         }
     }
 

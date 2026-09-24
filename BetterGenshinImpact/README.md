@@ -33,4 +33,4 @@
 
 ## 识别用的模板资源 Recognition.json 如何编写
 
-参考：[RecognitionJson编写说明](Docs/RecognitionJson.md)
+参考：[RecognitionJson编写说明](../Docs/technical/recognition-json.md)

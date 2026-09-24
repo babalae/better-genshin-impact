@@ -4,7 +4,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers.Extensions;
 using CsTrees;
-using CsTrees.FluentBuilder;
+using CsTrees.Blackboard;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System;
@@ -30,7 +30,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
             //
-            ChooseBait sut = new ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), this.session, this.prototypes);
+            ChooseBait sut = new ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, new Blackboard());
             var result = sut.FindBait(imageRegion).OrderBy(r => r.Item1.X).ToArray();
 
             //
@@ -62,12 +62,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             access.Set(new Fishpond(fishNames.Select(n => new OneFish(n, default, 0)).ToList()));
 
             //
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion, imageRegion])
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), this.session, this.prototypes)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer)
                     .End()
                 .End()
                 .Build();
@@ -108,12 +108,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
 
             //
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion, imageRegion, imageRegion])
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), this.session, this.prototypes, fakeTimeProvider)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion, imageRegion], bb!))
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, fakeTimeProvider)
                     .End()
                 .End()
                 .Build();
@@ -174,12 +174,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             #region 第1次失败
             //
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 10))
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), this.session, this.prototypes, fakeTimeProvider)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 10), bb!))
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, fakeTimeProvider)
                     .End()
                 .End()
                 .Build();
@@ -294,12 +294,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             #region 第1次失败
             //
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 8))
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), this.session, this.prototypes, fakeTimeProvider)
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 8), bb!))
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, fakeTimeProvider)
                     .End()
                 .End()
                 .Build();

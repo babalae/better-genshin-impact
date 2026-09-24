@@ -42,19 +42,6 @@ public partial class AutoFightConfig : ObservableObject
     public partial class FightFinishDetectConfig : ObservableObject
     {
         /// <summary>
-        /// 判断战斗结束读条颜色，不同帧率可能下会有些不同，默认为95,235,255
-        /// </summary>
-        [ObservableProperty]
-        private string _battleEndProgressBarColor = "";
-
-        /// <summary>
-        /// 对于上方颜色地偏差值，即±某个值，例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置
-        /// </summary>
-        [ObservableProperty]
-        private string _battleEndProgressBarColorTolerance = "";
-        
-        
-        /// <summary>
         /// 快速检查战斗结束（默认关闭）：完成一轮动作后，如果满足条件，则触发一次战斗结束检查。
         /// </summary>
         [ObservableProperty]
@@ -124,13 +111,13 @@ public partial class AutoFightConfig : ObservableObject
         /// 派蒙辅助检测：按L后当派蒙头像可见时提前跳出战斗结束检测
         /// </summary>
         [ObservableProperty]
-        private bool _paimonEndCheckEnabled = true;
+        private bool _paimonEndCheckEnabled = false;
 
         /// <summary>
-        /// 派蒙辅助检测延时（秒），默认为0.075秒
+        /// 派蒙辅助检测延时（秒），默认为0.2秒
         /// </summary>
         [ObservableProperty]
-        private double _paimonEndCheckDelay = 0.075;
+        private double _paimonEndCheckDelay = 0.2;
 
         /// <summary>
         /// 与"敌人可见时跳过战斗结束检查"互斥：开启旋转寻找敌人时关闭跳过检查，
@@ -156,12 +143,13 @@ public partial class AutoFightConfig : ObservableObject
     private FightFinishDetectConfig _finishDetectConfig = new();
     
     /// <summary>
-    /// 检测战斗结束，默认为每轮脚本后检查
+    /// 战斗结束后光柱扫描掉落物
     /// </summary>
     [ObservableProperty]
-    private bool _pickDropsAfterFightEnabled = false;
+    private bool _pickDropsAfterFightEnabled = true;
+
     /// <summary>
-    /// 检测战斗结束，默认为每轮脚本后检查
+    /// 战斗结束后光柱扫描掉落物的持续秒数
     /// </summary>
     [ObservableProperty]
     private int _pickDropsAfterFightSeconds = 15;
@@ -171,6 +159,7 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int? _battleThresholdForLoot;
+
     /// <summary>
     /// 战斗结束后，如果存在枫原万叶，则使用该角色捡材料
     /// </summary>
@@ -185,9 +174,6 @@ public partial class AutoFightConfig : ObservableObject
     
     [ObservableProperty]
     private bool _guardianCombatSkip = false;
-    
-    [ObservableProperty]
-    private bool _skipModel = false;
     
     [ObservableProperty]
     private bool _guardianAvatarHold = false;

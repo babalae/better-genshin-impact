@@ -5,7 +5,8 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="演奏设置"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T 演奏设置}"
                  Width="720"
                  Height="760"
                  MinWidth="600"
@@ -44,7 +45,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Title="演奏设置">
+        <ui:TitleBar Title="{i18n:T 演奏设置}">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="Settings24" />
             </ui:TitleBar.Icon>
@@ -67,11 +68,11 @@
                                 <ui:SymbolIcon Symbol="MusicNote224" />
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock FontWeight="SemiBold" Text="输出设置" />
+                                <TextBlock FontWeight="SemiBold" Text="{i18n:T 输出设置}" />
                                 <TextBlock Margin="0,3,0,0"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           Text="设置当前曲目的乐器档案与移调；可在下方启用自动换乐器" />
+                                           Text="{i18n:T 设置当前曲目的乐器档案与移调；可在下方启用自动换乐器}" />
                             </StackPanel>
                         </Grid>
 
@@ -84,7 +85,7 @@
                             <StackPanel>
                                 <TextBlock Margin="1,0,0,6"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="乐器档案" />
+                                           Text="{i18n:T 乐器档案}" />
                                 <ComboBox DisplayMemberPath="Name"
                                           ItemsSource="{Binding Profiles}"
                                           SelectedItem="{Binding SelectedInstrumentProfile}" />
@@ -92,7 +93,7 @@
                             <StackPanel Grid.Column="2">
                                 <TextBlock Margin="1,0,0,6"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="半音移调" />
+                                           Text="{i18n:T 半音移调}" />
                                 <ui:NumberBox Maximum="24"
                                               Minimum="-24"
                                               SmallChange="1"
@@ -116,11 +117,11 @@
                                 <ui:SymbolIcon Symbol="Timer24" />
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock FontWeight="SemiBold" Text="演奏控制" />
+                                <TextBlock FontWeight="SemiBold" Text="{i18n:T 演奏控制}" />
                                 <TextBlock Margin="0,3,0,0"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           Text="覆盖曲谱速度，并在每次需要时自动准备对应乐器" />
+                                           Text="{i18n:T 覆盖曲谱速度，并在每次需要时自动准备对应乐器}" />
                             </StackPanel>
                         </Grid>
 
@@ -130,12 +131,12 @@
                                 <ColumnDefinition Width="160" />
                             </Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
-                                <CheckBox Content="使用自定义 BPM"
+                                <CheckBox Content="{i18n:T 使用自定义 BPM}"
                                           IsChecked="{Binding Config.MusicConfig.UseCustomBpm, Mode=TwoWay}" />
                                 <TextBlock Margin="22,3,8,0"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           Text="按曲谱原 BPM 等比例调整整首曲目的播放速度" />
+                                           Text="{i18n:T 按曲谱原 BPM 等比例调整整首曲目的播放速度}" />
                             </StackPanel>
                             <ui:NumberBox Grid.Column="1"
                                           IsEnabled="{Binding Config.MusicConfig.UseCustomBpm}"
@@ -149,12 +150,12 @@
 
                         <Separator Margin="0,14" />
 
-                        <CheckBox Content="演奏前自动更换乐器"
+                        <CheckBox Content="{i18n:T 演奏前自动更换乐器}"
                                   IsChecked="{Binding Config.MusicConfig.AutoSwitchInstrument, Mode=TwoWay}" />
                         <TextBlock Margin="22,3,0,0"
                                    FontSize="12"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                   Text="自动打开背包、装备当前输出乐器并使用；支持内置的十种乐器档案" />
+                                   Text="{i18n:T 自动打开背包、装备当前输出乐器并使用；支持内置的十种乐器档案}" />
                     </StackPanel>
                 </Border>
 
@@ -167,13 +168,13 @@
                                                Symbol="Options24" />
                                 <TextBlock VerticalAlignment="Center"
                                            FontWeight="SemiBold"
-                                           Text="MIDI 轨道" />
+                                           Text="{i18n:T MIDI 轨道}" />
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel Margin="0,14,0,0">
                             <TextBlock Margin="0,0,0,8"
                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       Text="单独启用轨道，并查看音域与映射命中率。" />
+                                       Text="{i18n:T 单独启用轨道，并查看音域与映射命中率。}" />
                             <ItemsControl ItemsSource="{Binding SelectedMusicItem.Tracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -226,7 +227,7 @@
                                                Symbol="Settings24" />
                                 <TextBlock VerticalAlignment="Center"
                                            FontWeight="SemiBold"
-                                           Text="音高映射" />
+                                           Text="{i18n:T 音高映射}" />
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel Margin="0,14,0,0">
@@ -235,7 +236,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center" Text="映射模式" />
+                                <TextBlock VerticalAlignment="Center" Text="{i18n:T 映射模式}" />
                                 <ComboBox Grid.Column="1"
                                           Margin="12,0,0,0"
                                           ItemsSource="{Binding MappingModes}"
@@ -273,7 +274,7 @@
                                        HorizontalAlignment="Right"
                                        Appearance="Primary"
                                        Command="{Binding SaveProfilesCommand}"
-                                       Content="保存映射"
+                                       Content="{i18n:T 保存映射}"
                                        Icon="{ui:SymbolIcon Save24}" />
                         </StackPanel>
                     </Expander>

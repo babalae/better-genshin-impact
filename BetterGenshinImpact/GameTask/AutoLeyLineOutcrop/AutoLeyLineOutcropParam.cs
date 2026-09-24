@@ -15,8 +15,6 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     public bool OpenModeCountMin { get; set; }
     // 是否开启树脂耗尽模式
     public bool IsResinExhaustionMode { get; set; }
-    //是否使用冒险之证寻找地脉花
-    public bool UseAdventurerHandbook { get; set; }
     //好感队名称
     public string FriendshipTeam { get; set; }
     //战斗的队伍名称
@@ -31,8 +29,6 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     public bool UseFragileResin { get; set; }
     //是否使用须臾树脂
     public bool UseTransientResin { get; set; }
-    //通过BGI通知系统发送详细通知
-    public bool IsNotification { get; set; }
     /// <summary>
     /// 是否在领取奖励后扫描掉落物光柱。
     /// </summary>
@@ -53,7 +49,6 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     {
         OpenModeCountMin= config.OpenModeCountMin;
         IsResinExhaustionMode= config.IsResinExhaustionMode;
-        UseAdventurerHandbook= config.UseAdventurerHandbook;
         FriendshipTeam= config.FriendshipTeam;
         Team= config.Team;
         Timeout= config.Timeout;
@@ -61,7 +56,6 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         IsGoToSynthesizer=config.IsGoToSynthesizer;
         UseFragileResin= config.UseFragileResin;
         UseTransientResin= config.UseTransientResin;
-        IsNotification= config.IsNotification;
         ScanDropsAfterRewardEnabled = config.ScanDropsAfterRewardEnabled;
         ScanDropsAfterRewardSeconds = config.ScanDropsAfterRewardSeconds;
         Count = config.Count;

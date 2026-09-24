@@ -6,6 +6,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
       Title="HomePage"
       d:DataContext="{d:DesignInstance Type=pages:MacroSettingsPageViewModel}"
       d:DesignHeight="950"
@@ -18,7 +19,7 @@
     <StackPanel Margin="{StaticResource PagePadding}">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="辅助操控设置" />
+                      Text="{i18n:T 辅助操控设置}" />
 
         <!--  一键战斗宏  -->
         <ui:CardExpander Margin="0,0,0,12"
@@ -37,12 +38,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键宏（按角色）"
+                                  Text="{i18n:T 一键宏（按角色）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="触发后会识别当前出战角色，并根据配置执行对应的宏"
+                                  Text="{i18n:T 触发后会识别当前出战角色，并根据配置执行对应的宏}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -64,12 +65,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快捷键触发方式"
+                                  Text="{i18n:T 快捷键触发方式}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="按住时重复：按住时重复执行；触发：按下启动再按关闭"
+                                  Text="{i18n:T 按住时重复：按住时重复执行；触发：按下启动再按关闭}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -91,14 +92,14 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="宏配置"
+                                  Text="{i18n:T 宏配置}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        配置每个角色执行的宏，比如：胡桃A重跳，<Hyperlink Command="{Binding GoToOneKeyMacroUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看说明
+                        <Run Text="{i18n:T 配置每个角色执行的宏，比如：胡桃A重跳，}" /><Hyperlink Command="{Binding GoToOneKeyMacroUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            <Run Text="{i18n:T 点击查看说明}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:Button Grid.Row="0"
@@ -106,7 +107,7 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding EditAvatarMacroCommand}"
-                               Content="前往设置" />
+                               Content="{i18n:T 前往设置}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -120,12 +121,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="默认战斗宏编号"
+                                  Text="{i18n:T 默认战斗宏编号}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="当角色的 macroPriority 设置为0时，使用此默认宏编号（1~5）"
+                                  Text="{i18n:T 当角色的 macroPriority 设置为0时，使用此默认宏编号（1~5）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -145,11 +146,11 @@
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="角色个性化宏编号设置"
+                                  Text="{i18n:T 角色个性化宏编号设置}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="上方宏配置支持为每个角色单独设置宏编号。在角色宏配置中设置 macroPriority 字段（1-5），设置为0则使用上面的默认战斗宏编号。"
+                                  Text="{i18n:T 上方宏配置支持为每个角色单独设置宏编号。在角色宏配置中设置 macroPriority 字段（1-5），设置为0则使用上面的默认战斗宏编号。}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
@@ -172,19 +173,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键领取奖励"
+                                  Text="{i18n:T 一键领取奖励}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="识别当前页面的领取按钮或礼物图标并点击，需要配置快捷键进行触发"
+                                  Text="{i18n:T 识别当前页面的领取按钮或礼物图标并点击，需要配置快捷键进行触发}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,24,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{i18n:T 绑定快捷键}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -200,12 +201,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="模式选择"
+                                  Text="{i18n:T 模式选择}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="点按一次会领取当前页面可见图标；按住持续会在松开快捷键时立即停止"
+                                  Text="{i18n:T 点按一次会领取当前页面可见图标；按住持续会在松开快捷键时立即停止}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -227,12 +228,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="未找到领取图标时滚轮下滑"
+                                  Text="{i18n:T 未找到领取图标时滚轮下滑}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="仅在按住持续模式下可用"
+                                  Text="{i18n:T 仅在按住持续模式下可用}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -253,12 +254,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="滚轮下滑幅度"
+                                  Text="{i18n:T 滚轮下滑幅度}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="数值越大，每次未找到领取图标时向下滚动越多"
+                                  Text="{i18n:T 数值越大，每次未找到领取图标时向下滚动越多}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -291,19 +292,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="那维莱特 - 转圈圈"
+                                  Text="{i18n:T 那维莱特 - 转圈圈}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速水平平移鼠标，需要配置快捷键进行触发"
+                                  Text="{i18n:T 快速水平平移鼠标，需要配置快捷键进行触发}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,24,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{i18n:T 绑定快捷键}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -319,12 +320,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="移动鼠标距离"
+                                  Text="{i18n:T 移动鼠标距离}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可以为负数，绝对值越大移动越快，请不要配置太大"
+                                  Text="{i18n:T 可以为负数，绝对值越大移动越快，请不要配置太大}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -345,12 +346,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="移动鼠标间隔（毫秒）"
+                                  Text="{i18n:T 移动鼠标间隔（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="尽量设置大于0的数字，配置完毕后请切换页签生效（其他配置也一样）"
+                                  Text="{i18n:T 尽量设置大于0的数字，配置完毕后请切换页签生效（其他配置也一样）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -379,19 +380,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速强化圣遗物"
+                                  Text="{i18n:T 快速强化圣遗物}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速跳过强化结果展示，需要配置快捷键进行触发"
+                                  Text="{i18n:T 快速跳过强化结果展示，需要配置快捷键进行触发}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,24,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{i18n:T 绑定快捷键}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -407,12 +408,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="强化的额外等待时间（毫秒）"
+                                  Text="{i18n:T 强化的额外等待时间（毫秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="高延迟下无法跳过强化结果显示时，需要延长这个时间配置"
+                                  Text="{i18n:T 高延迟下无法跳过强化结果显示时，需要延长这个时间配置}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -437,18 +438,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键购买"
+                                  Text="{i18n:T 一键购买}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在物品购买/兑换页使用，从选中物品处开始，长按持续购买"
+                                  Text="{i18n:T 在物品购买/兑换页使用，从选中物品处开始，长按持续购买}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding GoToHotKeyPageCommand}"
-                       Content="绑定快捷键" />
+                       Content="{i18n:T 绑定快捷键}" />
         </ui:CardControl>
 
         <!--  一键进出尘歌壶  -->
@@ -462,18 +463,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键进出尘歌壶"
+                                  Text="{i18n:T 一键进出尘歌壶}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="一键自动打开背包，放置尘歌壶并进入"
+                                  Text="{i18n:T 一键自动打开背包，放置尘歌壶并进入}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding GoToHotKeyPageCommand}"
-                       Content="绑定快捷键" />
+                       Content="{i18n:T 绑定快捷键}" />
         </ui:CardControl>
 
         <!--  一键确认/取消  -->
@@ -487,18 +488,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键确认/取消"
+                                  Text="{i18n:T 一键确认/取消}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="绑定快捷键到原神的确认/取消按钮"
+                                  Text="{i18n:T 绑定快捷键到原神的确认/取消按钮}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding GoToHotKeyPageCommand}"
-                       Content="绑定快捷键" />
+                       Content="{i18n:T 绑定快捷键}" />
         </ui:CardControl>
 
 
@@ -514,12 +515,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="长按空格等于连续按下空格"
+                                  Text="{i18n:T 长按空格等于连续按下空格}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="轻松解除冻结，由于在水下存在长按的空格的场景，所以不推荐启用"
+                                  Text="{i18n:T 轻松解除冻结，由于在水下存在长按的空格的场景，所以不推荐启用}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -536,12 +537,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="长按 F 等于连续按下 F "
+                                  Text="{i18n:T 长按 F 等于连续按下 F }"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速拾取大量掉落物，有自动拾取的功能下，就显得比较鸡肋了"
+                                  Text="{i18n:T 快速拾取大量掉落物，有自动拾取的功能下，就显得比较鸡肋了}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>

@@ -36,6 +36,11 @@ public class BigFishType
     public static readonly BigFishType CrystalEye = new("crystal eye", BaitType.RefreshingLakkaBait, "明眼鱼", 9);
     public static readonly BigFishType AxeheadFish = new ("axehead", BaitType.BerryBait, "巨斧鱼", 9);
 
+    // 雪圆鳍为球形浅层鱼(炮鲀远亲), RodNet 借用炮鲀参数 (NetIndex=5)
+    public static readonly BigFishType Snowfin = new("snowfin", BaitType.GlimmeringBait, "雪鳍鱼", 5);
+    // 星花鱼沿用近期新增鱼类的默认 RodNet 参数 (NetIndex=9)
+    public static readonly BigFishType Starbloom = new("starbloom", BaitType.GlimmeringBait, "星花鱼", 9);
+
     public static IEnumerable<BigFishType> Values
     {
         get
@@ -63,6 +68,8 @@ public class BigFishType
             yield return MaulerShark;
             yield return CrystalEye;
             yield return AxeheadFish;
+            yield return Snowfin;
+            yield return Starbloom;
         }
     }
 

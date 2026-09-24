@@ -2,7 +2,6 @@ using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
-using CsTrees.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 
@@ -26,11 +25,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
             var access = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion, imageRegion])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
                         .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -66,11 +65,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             throwRodNoBaitFishFailuresAccess.Set(throwRodNoTargetFishfailures.ToList());
             var fishpondAccess = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
                     .End()
                 .End()
@@ -107,11 +106,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
             var fishpondAccess = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
 
-            var sut = TreeBuilder.Create()
+            var sut = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
-                    .Sequence("用例")
+                    .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
-                        .ScreenshotQueue("用例", [imageRegion])
+                        .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
                         .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
                     .End()
                 .End()

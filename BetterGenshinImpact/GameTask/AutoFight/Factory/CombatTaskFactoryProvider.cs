@@ -13,7 +13,8 @@ public static class CombatTaskFactoryProvider
 
     static CombatTaskFactoryProvider()
     {
-        // 注册顺序：json 优先，txt 兜底
+        // 注册顺序：自动连招优先，json 次之，txt 兜底
+        RegisterFactory(new ComboCombatTaskFactory());
         RegisterFactory(new JsonCombatTaskFactory());
         RegisterFactory(new TxtCombatTaskFactory());
     }

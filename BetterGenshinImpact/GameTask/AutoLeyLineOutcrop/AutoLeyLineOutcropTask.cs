@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -23,6 +24,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -59,13 +61,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private double _leyLineX;
     private double _leyLineY;
     private int _currentRunTimes;
-    private bool _marksStatus = true;
     private int _recheckCount;
     private int _consecutiveFailureCount;
     private DateTime _lastRewardNavLog = DateTime.MinValue;
 
-    private RecognitionObject? _openRo;
-    private RecognitionObject? _closeRo;
     private RecognitionObject? _paimonMenuRo;
     private RecognitionObject? _boxIconRo;
     private RecognitionObject? _mapSettingButtonRo;
@@ -79,6 +78,12 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private const int MaxRecheckCount = 3;
     private const int MaxConsecutiveFailures = 5;
+    private const int MaxCountryScrollAttempts = 8;
+    private const int CountryScrollDelayMs = 250;
+    private const double CountryListLeftRatio = 0.55;
+    private const double CountryListTopRatio = 0.15;
+    private const double CountryListRightRatio = 0.95;
+    private const double CountryListVisibleBottomRatio = 0.74;
     private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
@@ -103,6 +108,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
+        Notify.Event(NotificationEvent.LeyLineStart).Success($"{Name}启动");
 
         try
         {
@@ -130,11 +136,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             _logger.LogDebug(e, "自动地脉花执行失败");
             _logger.LogError("自动地脉花执行失败:" + e.Message);
-            if (_taskParam.IsNotification)
-            {
-                Notify.Event("AutoLeyLineOutcrop").Error($"任务失败: {e.Message}");
-            }
-
+            Notify.Event(NotificationEvent.LeyLineInfo).Error($"任务失败: {e.Message}");
             throw new Exception($"自动地脉花执行失败: {e.Message}", e);
         }
         finally
@@ -149,16 +151,15 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 {
                     _logger.LogDebug(ex, "地脉花结束后尝试退出奖励界面失败");
                 }
-
-                if (!_marksStatus)
+                finally
                 {
-                    await OpenCustomMarks();
+                    ClearOcrOverlayKeys();
+                    RestoreMaskOverlayVisible();
                 }
             }
             finally
             {
-                ClearOcrOverlayKeys();
-                RestoreMaskOverlayVisible();
+                Notify.Event(NotificationEvent.LeyLineEnd).Success($"{Name}结束");
             }
         }
     }
@@ -234,8 +235,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private void LoadRecognitionObjects()
     {
         // Template ROIs are tuned for the 1080p capture region.
-        _openRo = BuildTemplate("Assets/icon/open.png");
-        _closeRo = BuildTemplate("Assets/icon/close.png");
         _paimonMenuRo = BuildTemplate("Assets/icon/paimon_menu.png", new Rect(0, 0, ScaleTo1080(640), ScaleTo1080(216)));
         _boxIconRo = BuildTemplate("Assets/icon/box.png");
         _mapSettingButtonRo = BuildTemplate("Assets/icon/map_setting_button.bmp");
@@ -309,17 +308,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
             _taskParam.Count = result.Count;
         }
 
-        if (_taskParam.IsNotification)
-        {
-            var text =
-                "树脂耗尽模式统计结果:\n" +
-                $"原粹树脂次数: {result.OriginalResinTimes}\n" +
-                $"浓缩树脂次数: {result.CondensedResinTimes}\n" +
-                $"须臾树脂次数: {result.TransientResinTimes}\n" +
-                $"脆弱树脂次数: {result.FragileResinTimes}\n" +
-                $"总次数: {result.Count}";
-            Notify.Event("AutoLeyLineOutcrop").Send(text);
-        }
+        var text =
+            "树脂耗尽模式统计结果:\n" +
+            $"原粹树脂次数: {result.OriginalResinTimes}\n" +
+            $"浓缩树脂次数: {result.CondensedResinTimes}\n" +
+            $"须臾树脂次数: {result.TransientResinTimes}\n" +
+            $"脆弱树脂次数: {result.FragileResinTimes}\n" +
+            $"总次数: {result.Count}";
+        Notify.Event(NotificationEvent.LeyLineInfo).Send(text);
 
         return _taskParam.Count;
     }
@@ -338,12 +334,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await TrySwitchPartyAndSync(_taskParam.Team);
         }
 
-        if (_taskParam.UseAdventurerHandbook)
-        {
-            // The config flag means "do NOT use handbook"; close custom marks for manual navigation.
-            await CloseCustomMarks();
-        }
-
         TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
     }
 
@@ -351,16 +341,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         while (_currentRunTimes < _taskParam.Count)
         {
-            if (!_taskParam.UseAdventurerHandbook)
-            {
-                // Handbook flow: open the book and track a ley line target.
-                await FindLeyLineOutcropByBook(_taskParam.Country, _taskParam.LeyLineOutcropType);
-            }
-            else
-            {
-                // Manual flow: detect the ley line on the big map.
-                await FindLeyLineOutcrop(_taskParam.Country, _taskParam.LeyLineOutcropType);
-            }
+            await FindLeyLineOutcropByBook(_taskParam.Country, _taskParam.LeyLineOutcropType);
 
             var foundStrategy = await ExecuteMatchingStrategy();
             if (!foundStrategy)
@@ -814,49 +795,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         };
     }
 
-    private async Task FindLeyLineOutcrop(string country, string type)
-    {
-        if (_configData?.MapPositions == null)
-        {
-            throw new Exception("地图位置配置缺失");
-        }
-
-        if (!_configData.MapPositions.TryGetValue(country, out var positions) || positions.Count == 0)
-        {
-            throw new Exception($"未找到国家 {country} 的位置信息");
-        }
-
-        await _returnMainUiTask.Start(_ct);
-        await _tpTask.OpenBigMapUi();
-
-        await _tpTask.MoveMapTo(positions[0].X, positions[0].Y, MapTypes.Teyvat.ToString());
-        var found = await LocateLeyLineOutcrop(type);
-        if (found)
-        {
-            return;
-        }
-
-        for (var i = 1; i < positions.Count; i++)
-        {
-            var pos = positions[i];
-            _logger.LogInformation("尝试定位地脉花: {Name}", pos.Name ?? $"{pos.X},{pos.Y}");
-            await _tpTask.MoveMapTo(pos.X, pos.Y, MapTypes.Teyvat.ToString());
-            if (await LocateLeyLineOutcrop(type))
-            {
-                return;
-            }
-        }
-
-        await EnsureExitRewardPage();
-        if (_taskParam.UseAdventurerHandbook)
-        {
-            _logger.LogWarning("寻找地脉花失败：当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
-            throw new Exception("寻找地脉花失败：未在地图上识别到地脉花图标。当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
-        }
-
-        throw new Exception("寻找地脉花失败：未在地图上识别到地脉花图标");
-    }
-
     private async Task<bool> LocateLeyLineOutcrop(string type)
     {
         await Delay(500, _ct);
@@ -895,10 +833,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private void HandleNoStrategyFound()
     {
         _logger.LogError("未找到对应的地脉花策略");
-        if (_taskParam.IsNotification)
-        {
-            Notify.Event("AutoLeyLineOutcrop").Error("未找到对应的地脉花策略");
-        }
+        Notify.Event(NotificationEvent.LeyLineInfo).Error("未找到对应的地脉花策略");
     }
 
     private async Task<bool> ProcessLeyLineOutcrop(int timeoutSeconds, string targetPath, string rerunPath, bool fromTeleportStart, int retries = 0)
@@ -2170,57 +2105,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
     }
 
-    private async Task CloseCustomMarks()
-    {
-        await _returnMainUiTask.Start(_ct);
-        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-        await Delay(1000, _ct);
-        GameCaptureRegion.GameRegion1080PPosClick(60, 1020);
-        await Delay(600, _ct);
-
-        using var capture = CaptureToRectArea();
-        if (_openRo == null)
-        {
-            return;
-        }
-
-        var button = capture.Find(_openRo);
-        if (button.IsExist())
-        {
-            _marksStatus = false;
-            button.Click();
-            await Delay(600, _ct);
-        }
-
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-    }
-
-    private async Task OpenCustomMarks()
-    {
-        await _returnMainUiTask.Start(_ct);
-        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-        await Delay(1000, _ct);
-        GameCaptureRegion.GameRegion1080PPosClick(60, 1020);
-        await Delay(600, _ct);
-
-        if (_closeRo == null)
-        {
-            return;
-        }
-
-        using var capture = CaptureToRectArea();
-        var buttons = capture.FindMulti(_closeRo);
-        foreach (var button in buttons)
-        {
-            if (button.Y > ScaleTo1080(280) && button.Y < ScaleTo1080(350))
-            {
-                button.Click();
-                _marksStatus = true;
-                break;
-            }
-        }
-    }
-
     private async Task FindLeyLineOutcropByBook(string country, string type)
     {
         await OpenLeyLineOutcropCountryInHandbook(country, type);
@@ -2295,15 +2179,44 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task FindAndClickCountry(string country)
     {
         var match = country == "挪德卡莱" ? "挪德卡" : country;
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        var target = list.FirstOrDefault(r => r.Text.Contains(match, StringComparison.Ordinal));
-        if (target == null)
+
+        for (var attempt = 0; attempt <= MaxCountryScrollAttempts; attempt++)
         {
-            throw new Exception($"冒险之证未找到国家: {country}");
+            using var capture = CaptureToRectArea();
+            var list = capture.FindMulti(_ocrRoThis);
+            var matchingTargets = list.Where(r => r.Text.Contains(match, StringComparison.Ordinal)).ToList();
+            var target = matchingTargets.FirstOrDefault(r => IsCountryOptionFullyVisible(r, capture));
+            if (target != null)
+            {
+                target.Click();
+                return;
+            }
+
+            if (matchingTargets.Count > 0)
+            {
+                _logger.LogDebug("国家 {Country} 仅在冒险之证下拉列表裁切区域中被识别，继续向下滚动", country);
+            }
+
+            if (attempt == MaxCountryScrollAttempts)
+            {
+                break;
+            }
+
+            GameCaptureRegion.GameRegion1080PPosMove(1500, 600);
+            Simulation.SendInput.Mouse.VerticalScroll(-1);
+            await Delay(CountryScrollDelayMs, _ct);
         }
 
-        target.Click();
+        _logger.LogWarning("冒险之证向下滚动{ScrollAttempts}次后仍未找到国家: {Country}", MaxCountryScrollAttempts, country);
+        throw new Exception($"冒险之证未找到国家: {country}");
+    }
+
+    private static bool IsCountryOptionFullyVisible(Region region, ImageRegion capture)
+    {
+        return region.Left >= capture.Width * CountryListLeftRatio
+               && region.Top >= capture.Height * CountryListTopRatio
+               && region.Right <= capture.Width * CountryListRightRatio
+               && region.Bottom <= capture.Height * CountryListVisibleBottomRatio;
     }
 
     private async Task<bool> TryOpenBigMapFromHandbook()
@@ -2594,23 +2507,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
         [JsonPropertyName("errorThreshold")]
         public double ErrorThreshold { get; set; }
 
-        [JsonPropertyName("mapPositions")]
-        public Dictionary<string, List<MapPosition>> MapPositions { get; set; } = [];
-
         [JsonPropertyName("leyLinePositions")]
         public Dictionary<string, List<LeyLinePosition>> LeyLinePositions { get; set; } = [];
-    }
-
-    private class MapPosition
-    {
-        [JsonPropertyName("x")]
-        public double X { get; set; }
-
-        [JsonPropertyName("y")]
-        public double Y { get; set; }
-
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
     }
 
     private class LeyLinePosition

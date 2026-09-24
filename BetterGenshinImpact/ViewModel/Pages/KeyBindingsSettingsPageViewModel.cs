@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel;
@@ -26,6 +26,19 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     /// 配置文件
     /// </summary>
     private readonly KeyBindingsConfig _config;
+    private readonly GenshinStartConfig _genshinStartConfig;
+
+    public sealed record GenshinRegistrySourceOption(GenshinRegistryType RegistryType, string DisplayName);
+
+    public IReadOnlyList<GenshinRegistrySourceOption> RegistrySourceOptions { get; } =
+    [
+        new(GenshinRegistryType.Auto, "自动判断"),
+        new(GenshinRegistryType.Chinese, "国服"),
+        new(GenshinRegistryType.Global, "国际服")
+    ];
+
+    [ObservableProperty]
+    private GenshinRegistrySourceOption _selectedRegistrySource;
 
     [ObservableProperty]
     private ObservableCollection<KeyBindingSettingModel> _keyBindingSettingModels = [];
@@ -33,9 +46,12 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     public KeyBindingsSettingsPageViewModel(IConfigService configService, ILogger<KeyBindingsSettingsPageViewModel> logger)
     {
         _logger = logger;
+        _selectedRegistrySource = RegistrySourceOptions[0];
 
         // 获取本模块的配置文件
-        _config = configService.Get().KeyBindingsConfig;
+        var config = configService.Get();
+        _config = config.KeyBindingsConfig;
+        _genshinStartConfig = config.GenshinStartConfig;
 
         BuildKeyBindingsList();
 
@@ -358,7 +374,7 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     private void FetchFromRegistry()
     {
         // 读取注册表
-        SettingsContainer settings = new();
+        SettingsContainer settings = new(SelectedRegistrySource.RegistryType, _genshinStartConfig.InstallPath);
         settings.FromReg();
 
         var keySetting = settings.OverrideController?.KeyboardMap?.ActionElementMap;

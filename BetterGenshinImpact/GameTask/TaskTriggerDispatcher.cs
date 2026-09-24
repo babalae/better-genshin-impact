@@ -147,10 +147,14 @@ namespace BetterGenshinImpact.GameTask
             // }
 
             // 启动截图
+            // WGC 限流：0 = 不启用；>0 = DWM 最小推帧间隔（毫秒）
             GameCapture.Start(hWnd,
                 new Dictionary<string, object>()
                 {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt },
+                    { "MinUpdateIntervalMs", TaskContext.Instance().Config.WgcMinUpdateIntervalMs },
+                    // WGC V2 开关：CPU 颜色转换回退（默认 GPU 打包）
+                    { "UseCpuConvert", TaskContext.Instance().Config.WgcV2UseCpuConvert }
                 }
             );
 
@@ -360,7 +364,11 @@ namespace BetterGenshinImpact.GameTask
 
                 var speedTimer = new SpeedTimer();
                 // 从真正开始截图处计时，前面的窗口状态检查不计入 BetterGI 本轮处理耗时。
-                tickMetrics.Begin();
+                // 仅在遮罩指标开启时启动采样：未 Begin 时 EndCapture/AddTriggerCost/Publish 均按设计空转。
+                if (_metricsService is { IsEnabled: true })
+                {
+                    tickMetrics.Begin();
+                }
                 // 捕获游戏画面
                 var captureFrame = GameCapture.Capture();
                 var bitmap = captureFrame?.Frame;

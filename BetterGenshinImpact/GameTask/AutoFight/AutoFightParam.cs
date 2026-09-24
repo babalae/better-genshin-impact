@@ -10,11 +10,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 public class AutoFightParam : BaseTaskParam<AutoFightTask>
 {
+    /// <summary>
+    /// 自动连招（LLM 行为树）策略的固定名称；该名称不对应任何策略文件，
+    /// 命中时由 ComboCombatTaskFactory 路由到 AutoComboRunTask，并复用此名称作为 CombatStrategyPath
+    /// </summary>
+    public const string ComboStrategyName = "自动连招（实验）";
+
     public class FightFinishDetectConfig
     {
-        public string BattleEndProgressBarColor { get; set; } = "";
-
-        public string BattleEndProgressBarColorTolerance { get; set; } = "";
         public bool FastCheckEnabled = false;
         public string FastCheckParams = "";
         public bool CheckAfterSwitchAvatar = false;
@@ -52,9 +55,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
         BattleThresholdForLoot = autoFightConfig.BattleThresholdForLoot ?? BattleThresholdForLoot;
-        //下面参数固定，只取自动战斗里面的
-        FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
-        FinishDetectConfig.BattleEndProgressBarColorTolerance = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
 
         GuardianAvatar = autoFightConfig.GuardianAvatar;
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
@@ -80,7 +80,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public string CombatStrategyPath { get; set; }
 
     public bool FightFinishDetectEnabled { get; set; } = false;
-    public bool PickDropsAfterFightEnabled { get; set; } = false;
+    public bool PickDropsAfterFightEnabled { get; set; } = true;
     public int PickDropsAfterFightSeconds { get; set; } = 15;
     public int BattleThresholdForLoot { get; set; } = -1;
     public int Timeout { get; set; } = 120;
@@ -132,6 +132,10 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         {
             CombatStrategyPath =  Global.Absolute(@"User\AutoFight\");
         }
+        else if (ComboStrategyName.Equals(strategyName))
+        {
+            CombatStrategyPath = strategyName;
+        }
         else
         {
             CombatStrategyPath =  Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
@@ -150,6 +154,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         {
             var dir = Global.Absolute(@"User\AutoFight\");
             return (dir, "txt");
+        }
+
+        if (ComboStrategyName.Equals(strategyName))
+        {
+            return (strategyName, "combo");
         }
 
         var baseDir = Global.Absolute(@"User\AutoFight\");
@@ -190,9 +199,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
         BattleThresholdForLoot = autoFightConfig.BattleThresholdForLoot ?? BattleThresholdForLoot;
-        //下面参数固定，只取自动战斗里面的
-        FinishDetectConfig.BattleEndProgressBarColor = autoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
-        FinishDetectConfig.BattleEndProgressBarColorTolerance = autoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
 
         GuardianAvatar = autoFightConfig.GuardianAvatar;
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;

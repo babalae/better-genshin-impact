@@ -412,6 +412,7 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
         }
 
         var text = OcrText(capture, Rect1080(1466, 131, 244, 38));
+        _logger.LogDebug("角色养成识别：OCR角色名称({name})", text);
         var matched = CurrentTarget.MatchesDisplayText(text);
         return matched;
     }

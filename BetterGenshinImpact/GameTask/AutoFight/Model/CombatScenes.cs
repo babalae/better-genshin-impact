@@ -25,6 +25,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Core.Recognition;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -44,6 +45,15 @@ public class CombatScenes : IDisposable
     /// 最近一次识别出的出战角色编号，从1开始，-1表示未识别
     /// </summary>
     public int LastActiveAvatarIndex { get; set; } = -1;
+
+    private int _lastTrySwitchTargetIndex = -1;
+
+    internal bool UpdateTrySwitchTarget(int targetIndex)
+    {
+        var targetChanged = _lastTrySwitchTargetIndex != targetIndex;
+        _lastTrySwitchTargetIndex = targetIndex;
+        return targetChanged;
+    }
 
     public MultiGameStatus? CurrentMultiGameStatus { set; get; }
 
@@ -406,6 +416,32 @@ public class CombatScenes : IDisposable
         }
 
         return names;
+    }
+
+    /// <summary>
+    /// 截屏识别队伍角色并初始化战斗场景，失败重试（最多 5 次，间隔 1 秒），全部失败抛异常
+    /// </summary>
+    public static CombatScenes GetCombatScenesWithRetry()
+    {
+        const int maxRetries = 5;
+        const int retryDelayMs = 1000;
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            using var imageRegion = CaptureToRectArea();
+            var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
+            if (combatScenes.CheckTeamInitialized())
+            {
+                return combatScenes;
+            }
+
+            if (attempt < maxRetries)
+            {
+                Thread.Sleep(retryDelayMs);
+            }
+        }
+
+        throw new Exception("识别队伍角色失败（已重试 5 次）");
     }
 
     public void BeforeTask(CancellationToken ct)

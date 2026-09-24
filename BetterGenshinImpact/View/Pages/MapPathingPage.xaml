@@ -11,6 +11,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
              xmlns:drawer="clr-namespace:BetterGenshinImpact.View.Controls.Drawer"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              d:DataContext="{d:DesignInstance Type=pages:MapPathingViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -40,27 +41,27 @@
             <ui:TextBlock Grid.Row="0"
                           Margin="0,0,0,8"
                           FontTypography="BodyStrong"
-                          Text="地图追踪（实验功能）" />
+                          Text="{i18n:T 地图追踪（实验功能）}" />
             <ui:TextBlock Grid.Row="1"
                           Margin="0,0,0,8"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                           TextWrapping="Wrap">
-                可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！
+                <Run Text="{i18n:T 可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！}" />
                 <Hyperlink Command="{Binding GoToPathingUrlCommand}"
                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                    点击查看地图追踪与录制使用教程
-                </Hyperlink>
+                            <Run Text="{i18n:T 点击查看地图追踪与录制使用教程}" />
+                        </Hyperlink>
             </ui:TextBlock>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal">
                 <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                           Content="打开任务目录"
+                           Content="{i18n:T 打开任务目录}"
                            Icon="{ui:SymbolIcon FolderOpen24}" />
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Icon="{ui:SymbolIcon Archive24}">
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <ui:TextBlock>脚本仓库</ui:TextBlock>
+                        <ui:TextBlock Text="{i18n:T 脚本仓库}" />
                         <ui:InfoBadge Margin="0,-8,-14,0"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Top"
@@ -71,11 +72,11 @@
                 </ui:Button>
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenSettingsCommand}"
-                           Content="设置"
+                           Content="{i18n:T 设置}"
                            Icon="{ui:SymbolIcon Settings24}" />
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenDevToolsCommand}"
-                           Content="开发者工具" />
+                           Content="{i18n:T 开发者工具}" />
             </StackPanel>
 
             <Separator Grid.Row="3"
@@ -111,7 +112,7 @@
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
                                 <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}"
-                                                   Header="名称">
+                                                   Header="{i18n:T 名称}">
                                     <ui:GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <ui:TreeRowExpander>
@@ -137,12 +138,12 @@
                             <ContextMenu>
                                 <MenuItem Command="{Binding StartCommand}"
                                           CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                          Header="执行任务" />
-                                <MenuItem Command="{Binding RefreshCommand}" Header="刷新" />
+                                          Header="{i18n:T 执行任务}" />
+                                <MenuItem Command="{Binding RefreshCommand}" Header="{i18n:T 刷新}" />
                                 <Separator />
                                 <MenuItem Command="{Binding DeleteCommand}"
                                           CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                          Header="删除" />
+                                          Header="{i18n:T 删除}" />
                             </ContextMenu>
                         </ui:TreeListView.ContextMenu>
                     </ui:TreeListView>
