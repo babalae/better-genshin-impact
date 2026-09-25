@@ -2150,6 +2150,29 @@
     "nameEn": "Odette",
     "skillCD": 15,
     "weapon": "10"
+  },{
+    "alias": [
+      "沃雅妮莎",
+      "Vodyanitsa"
+    ],
+    "burstCD": 15,
+    "id": "10000140",
+    "name": "沃雅妮莎",
+    "nameEn": "Vodyanitsa",
+    "skillCD": 16,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "薇斯纳",
+      "Vesna"
+    ],
+    "burstCD": 15,
+    "id": "10000143",
+    "name": "薇斯纳",
+    "nameEn": "Vesna",
+    "skillCD": 18,
+    "weapon": "10"
   },
   {
     "alias": [
