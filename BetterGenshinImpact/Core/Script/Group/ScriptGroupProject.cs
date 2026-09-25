@@ -238,7 +238,7 @@ public partial class ScriptGroupProject : ObservableObject
             }
             var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
-            if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
+            if (!pathingTask.PartyConfig.Enabled || pathingTask.PartyConfig.AutoPickEnabled)
             {
                 TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             }

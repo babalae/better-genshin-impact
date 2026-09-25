@@ -87,7 +87,10 @@ public class AutoFightTask : ISoloTask
         public double BlockCheckBeforeBattleSeconds = 0;
         public bool PaimonEndCheckEnabled = true;
         public int PaimonEndCheckDelayMs = 75;
+        public int RotaryFactor = 6;
 
+        // 保留仅传入结束检测配置的构造方式，兼容不持有完整 AutoFightParam 的调用方。
+        // 此路径沿用 RotaryFactor 的默认值；持有完整参数时由下方构造函数覆盖为用户配置值。
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
             FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
@@ -103,6 +106,12 @@ public class AutoFightTask : ISoloTask
             PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
             // 派蒙检测延时（秒）限制在 0.05-0.4 之间，超出范围时修饰到对应上下限
             PaimonEndCheckDelayMs = (int)(Math.Clamp(finishDetectConfig.PaimonEndCheckDelay, 0.05, 0.4) * 1000);
+        }
+
+        public TaskFightFinishDetectConfig(AutoFightParam taskParam)
+            : this(taskParam.FinishDetectConfig)
+        {
+            RotaryFactor = Math.Clamp(taskParam.RotaryFactor, 1, 13);
         }
 
         public static void ParseCheckTimeString(
@@ -195,7 +204,7 @@ public class AutoFightTask : ISoloTask
             _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
         }
 
-        _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
+        _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam);
     }
     // 方法1：判断是否是单个数字
 
@@ -339,7 +348,7 @@ public class AutoFightTask : ISoloTask
                         {
                             using (AvatarRecognition.BeginExclusiveOperation())
                             {
-                                await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
+                                await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _finishDetectConfig.RotaryFactor);
                             }
                         }
                         
@@ -890,7 +899,8 @@ public class AutoFightTask : ISoloTask
                 bool? result = null;
                 try
                 {
-                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct);
+                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,
+                        rotaryFactor: finishDetectConfig.RotaryFactor);
                 }
                 catch (Exception ex)
                 {
