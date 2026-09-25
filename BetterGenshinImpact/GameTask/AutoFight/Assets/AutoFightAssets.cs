@@ -25,6 +25,7 @@ public sealed class AutoFightAssets
 
     public Rect ERect { get; private set; }
     public Rect ECooldownRect { get; private set; }
+    public Rect ERectForClassify { get; private set; }
     public Rect QRect { get; private set; }
     public Rect QRectForClassify { get; private set; }
     public Rect ZCooldownRect { get; private set; }
@@ -68,6 +69,8 @@ public sealed class AutoFightAssets
             (int)(77 * AssetScale), (int)(77 * AssetScale));
         ECooldownRect = new Rect(CaptureRect.Width - (int)(241 * AssetScale), CaptureRect.Height - (int)(97 * AssetScale),
             (int)(41 * AssetScale), (int)(18 * AssetScale));
+        ERectForClassify = new Rect(CaptureRect.Width - (int)(262 * AssetScale), CaptureRect.Height - (int)(130 * AssetScale),
+            (int)(82 * AssetScale), (int)(82 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
         QRectForClassify = new Rect(CaptureRect.Width - (int)(172 * AssetScale), CaptureRect.Height - (int)(166 * AssetScale),

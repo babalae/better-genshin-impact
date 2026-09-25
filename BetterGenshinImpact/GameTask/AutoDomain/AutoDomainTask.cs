@@ -190,12 +190,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 建树令牌链接主令牌，秘境流程结束（含异常退出）时在 finally 中取消
         if (_useComboStrategy)
         {
-            var avatarNames = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
-            Logger.LogInformation("自动秘境：后台启动 LLM 建树");
+            var avatars = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+            Logger.LogInformation("自动秘境：识别队伍：{Avatars}，后台启动 LLM 建树", string.Join("、", avatars.Select(a => a.Name)));
 
             var config = TaskContext.Instance().Config.AutoComboBuildConfig;
             _comboBuildCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatarNames, config, Logger, _comboBuildCts.Token);
+            _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatars, config, Logger, _comboBuildCts.Token);
         }
 
         try

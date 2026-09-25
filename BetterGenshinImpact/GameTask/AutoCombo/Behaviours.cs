@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
@@ -10,39 +12,15 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoCombo;
 
 /// <summary>
-/// 队伍数据访问辅助
+/// 爆发就绪检测辅助
 /// </summary>
 internal static class BehaviourHelper
 {
     /// <summary>
-    /// 按名字解析目标角色
-    /// </summary>
-    public static Avatar? ResolveAvatar(CombatScenes combatScenes, string avatarName)
-    {
-        return combatScenes.SelectAvatar(avatarName);
-    }
-
-    /// <summary>
-    /// 切换到目标角色（合并切人语义）
-    /// Switch 内部会先截图判断是否已在该角色，再决定是否按键重试，已在场则无操作
-    /// </summary>
-    public static Avatar? SwitchIfNeeded(CombatScenes combatScenes, string avatarName)
-    {
-        var avatar = ResolveAvatar(combatScenes, avatarName);
-        if (avatar == null)
-        {
-            return null;
-        }
-
-        avatar.Switch();
-        return avatar;
-    }
-
-    /// <summary>
     /// 检测指定角色Q爆发是否就绪（IsBurstReady 与 UseBurstIfReady 共用判定）
     /// cached 输出本次结果是否来自缓存
     /// </summary>
-    public static bool CheckBurstReady(Avatar avatar, BehaviourKeyAccess<BurstReadyState>? port, out bool cached)
+    public static bool CheckBurstReady(Avatar avatar, out bool cached)
     {
         using var frame = CaptureToRectArea();
 
@@ -51,14 +29,14 @@ internal static class BehaviourHelper
         // 在场路径用与 UseBurst 内部同源的 ONNX 分类器判定（连通域检测会把"能量未充满"误判为就绪）；
         // 场下路径用侧边栏 Hough 圆环检测。分类器低置信度返回 Unknown，按未就绪处理
         var isActive = Bv.IsCharacterActive(frame, avatar.Index);
-        cached = !isActive && port != null && port.TryGet(out var state) && state == BurstReadyState.Ready;
+        cached = !isActive && avatar.IsBurstReady;
 
         var ready = cached || (isActive
             ? Avatar.IsBurstReadyByClassify(frame) == BurstReadyState.Ready
             : Bv.IsSkillReady(frame, avatar.Index, true));
         if (ready && !cached)
         {
-            port?.Set(BurstReadyState.Ready);
+            avatar.IsBurstReady = true;
         }
 
         return ready;
@@ -71,27 +49,20 @@ internal static class BehaviourHelper
 /// </summary>
 public partial class UseSkill : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly bool _hold;
 
-    private UseSkill(string name, string avatarName, bool hold) : base(name)
+    public UseSkill(string name, Avatar avatar, bool hold) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
         _hold = hold;
     }
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        avatar.UseSkill(_hold);
+        // Switch 内部会先截图判断是否已在该角色，再决定是否按键重试，已在场则无操作
+        _avatar.Switch();
+        _avatar.UseSkill(_hold);
         return Status.Success;
     }
 }
@@ -102,57 +73,22 @@ public partial class UseSkill : Behaviour
 /// </summary>
 public partial class UseBurst : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady1 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady2 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady3 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady4 { get; private set; } = null!;
-
-    private readonly string _avatarName;
-
-    private UseBurst(string name, string avatarName) : base(name)
+    public UseBurst(string name, Avatar avatar) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
     }
 
-    /// <summary>按队伍序号取对应黑板端口</summary>
-    private BehaviourKeyAccess<BurstReadyState>? Port(int index)
-    {
-        return index switch
-        {
-            1 => BurstReady1,
-            2 => BurstReady2,
-            3 => BurstReady3,
-            4 => BurstReady4,
-            _ => null,
-        };
-    }
+    private readonly Avatar _avatar;
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        var port = Port(avatar.Index);
-
-        // 先复位该角色的缓存条目（Unset 删键），后续 IsBurstReady 将重新检测
-        port?.Unset();
+        // 先复位该角色的就绪缓存，后续 IsBurstReady 将重新检测
+        _avatar.IsBurstReady = false;
 
         // TODO: Avatar.UseBurst 内部仍会自行检测就绪状态；待其支持信任外部就绪状态后，
         // 可信任 IsBurstReady 缓存的 Ready 跳过这次复检
-        avatar.UseBurst();
+        _avatar.Switch();
+        _avatar.UseBurst();
 
         return Status.Success;
     }
@@ -165,35 +101,31 @@ public partial class UseBurst : Behaviour
 /// </summary>
 public partial class IsSkillReady : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
+    private readonly Avatar _avatar;
 
-    private readonly string _avatarName;
-
-    private IsSkillReady(string name, string avatarName) : base(name)
+    private IsSkillReady(string name, Avatar avatar) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
     }
+
+    /// <summary>
+    /// 黑板键（只读）：UseEQThenDoActions 起手技流程中写入自身 _avatar。
+    /// 读到与自身 _avatar 匹配 → 处于某 UseEQ 子节点链 → 判 02/03 就绪；
+    /// 读不到或不匹配 → 默认判原始 E 01。
+    /// </summary>
+    [BlackboardKey(Access = Access.Read)]
+    public BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; private set; } = null!;
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.ResolveAvatar(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        var state = avatar.GetSkillCdState();
+        // 读到匹配角色 → 处于某 UseEQ 子节点链 → 放宽E技能图标判定；否则只认01
+        var inLeadCast = LeadCastingAvatar.TryGet(out var lead) && ReferenceEquals(lead, _avatar);
+        var state = _avatar.GetSkillCdState(!inLeadCast);
         if (state == SkillCdState.Unknown)
         {
-            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
-            if (BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName) == null)
-            {
-                return Status.Failure;
-            }
-
-            avatar.RefreshSkillCd();
-            state = avatar.GetSkillCdState();
+            // E 冷却图标只显示当前场上角色，切人后让视觉判定生效（GetSkillCdState 内部已含 OCR 兜底）
+            _avatar.Switch();
+            state = _avatar.GetSkillCdState(!inLeadCast);
         }
 
         return state == SkillCdState.Ready ? Status.Success : Status.Failure;
@@ -203,58 +135,24 @@ public partial class IsSkillReady : Behaviour
 /// <summary>
 /// 查询Q爆发是否就绪（条件节点）
 /// 场上角色用 ONNX 分类器检测底部中央图标（与 UseBurst 内部判定同源），场下角色检测右侧队伍栏图标。
-/// 仅缓存就绪结果（黑板键：BurstReady1 ~ BurstReady4，按队伍序号分键）——就绪状态在释放前是单调的，
-/// 直至 UseBurst 释放后 Unset 复位；未就绪不缓存，每次都重新检测。
+/// 仅缓存就绪结果（Avatar.IsBurstReady）——就绪状态在释放前是单调的，
+/// 直至 UseBurst 释放后复位；未就绪不缓存，每次都重新检测。
 /// 场上角色不读缓存（避免切人后命中过期状态），每次都重新检测，但检测结果仍写入缓存；
 /// 场下角色命中就绪缓存时直接返回，未就绪不缓存，每次都重新检测。
 /// 就绪返回 Success，未就绪返回 Failure。不切人、不阻塞、无按键副作用。
 /// </summary>
 public partial class IsBurstReady : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady1 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady2 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady3 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady4 { get; private set; } = null!;
-
-    private readonly string _avatarName;
-
-    private IsBurstReady(string name, string avatarName) : base(name)
+    public IsBurstReady(string name, Avatar avatar) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
     }
 
-    /// <summary>按队伍序号取对应黑板端口</summary>
-    private BehaviourKeyAccess<BurstReadyState>? Port(int index)
-    {
-        return index switch
-        {
-            1 => BurstReady1,
-            2 => BurstReady2,
-            3 => BurstReady3,
-            4 => BurstReady4,
-            _ => null,
-        };
-    }
+    private readonly Avatar _avatar;
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.ResolveAvatar(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        return BehaviourHelper.CheckBurstReady(avatar, Port(avatar.Index), out _)
+        return BehaviourHelper.CheckBurstReady(_avatar, out _)
             ? Status.Success
             : Status.Failure;
     }
@@ -267,68 +165,28 @@ public partial class IsBurstReady : Behaviour
 /// </summary>
 public partial class UseBurstIfReady : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady1 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady2 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady3 { get; private set; } = null!;
-
-    [BlackboardKey(Access = Access.Write)]
-    public BehaviourKeyAccess<BurstReadyState> BurstReady4 { get; private set; } = null!;
-
-    private readonly string _avatarName;
-
-    private UseBurstIfReady(string name, string avatarName) : base(name)
+    public UseBurstIfReady(string name, Avatar avatar) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
     }
 
-    /// <summary>按队伍序号取对应黑板端口</summary>
-    private BehaviourKeyAccess<BurstReadyState>? Port(int index)
-    {
-        return index switch
-        {
-            1 => BurstReady1,
-            2 => BurstReady2,
-            3 => BurstReady3,
-            4 => BurstReady4,
-            _ => null,
-        };
-    }
+    private readonly Avatar _avatar;
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.ResolveAvatar(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        var port = Port(avatar.Index);
-
         // 未就绪直接 Failure，上层 Selector 自然落到下位替代；不切人、不产生无效按键
-        if (!BehaviourHelper.CheckBurstReady(avatar, port, out _))
+        if (!BehaviourHelper.CheckBurstReady(_avatar, out _))
         {
             return Status.Failure;
         }
 
-        if (BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName) == null)
-        {
-            return Status.Failure;
-        }
-
-        // 先复位该角色的缓存条目（Unset 删键），后续 IsBurstReady 将重新检测
-        port?.Unset();
+        // 先复位该角色的就绪缓存，后续 IsBurstReady 将重新检测
+        _avatar.IsBurstReady = false;
 
         // TODO: Avatar.UseBurst 内部仍会自行检测就绪状态；待其支持信任外部就绪状态后，
         // 可信任 CheckBurstReady 的就绪结果跳过这次复检
-        avatar.UseBurst();
+        _avatar.Switch();
+        _avatar.UseBurst();
 
         return Status.Success;
     }
@@ -342,84 +200,103 @@ public partial class UseBurstIfReady : Behaviour
 /// </summary>
 public partial class UseSkillIfReady : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly bool _hold;
 
-    private UseSkillIfReady(string name, string avatarName, bool hold) : base(name)
+    private UseSkillIfReady(string name, Avatar avatar, bool hold) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
         _hold = hold;
     }
 
+    /// <summary>
+    /// 黑板键（只读）：UseEQThenDoActions 起手技流程中写入自身 _avatar。
+    /// 读到与自身 _avatar 匹配 → 处于某 UseEQ 子节点链 → 判 02/03 就绪；
+    /// 读不到或不匹配 → 默认判原始 E 01。
+    /// </summary>
+    [BlackboardKey(Access = Access.Read)]
+    public BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; private set; } = null!;
+
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.ResolveAvatar(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        var state = avatar.GetSkillCdState();
+        // 读到匹配角色 → 处于某 UseEQ 子节点链 → 放宽E技能图标判定；否则只认01
+        var inLeadCast = LeadCastingAvatar.TryGet(out var lead) && ReferenceEquals(lead, _avatar);
+        var state = _avatar.GetSkillCdState(!inLeadCast);
         if (state == SkillCdState.Unknown)
         {
-            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
-            if (BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName) == null)
-            {
-                return Status.Failure;
-            }
-
-            avatar.RefreshSkillCd();
-            state = avatar.GetSkillCdState();
+            // E 冷却图标只显示当前场上角色，切人后让视觉判定生效（GetSkillCdState 内部已含 OCR 兜底）
+            _avatar.Switch();
+            state = _avatar.GetSkillCdState(!inLeadCast);
         }
 
-        // Unknown状态也当Ready，不然目前逻辑会永久Unknown   // todo 等底层E技能识别模型，再细化逻辑
-        if (state == SkillCdState.Cooldown)
+        // 只有 Ready 才释放，Unknown/Cooldown 都视为未就绪
+        if (state != SkillCdState.Ready)
         {
             return Status.Failure;
         }
 
-        if (BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName) == null)
-        {
-            return Status.Failure;
-        }
-
-        avatar.UseSkill(_hold);
+        _avatar.Switch();
+        _avatar.UseSkill(_hold);
         return Status.Success;
     }
 }
 
 /// <summary>
-/// 普通攻击，每 0.2 秒点击一次左键，持续指定时长
+/// 普通攻击（非阻塞）：每 0.2 秒点击一次左键，持续指定时长，期间返回 Running，时间到返回 Success
 /// 若目标角色不在场，先切换到该角色
 /// </summary>
 public partial class Attack : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly double _seconds;
+    private readonly TimeProvider _timeProvider;
 
-    private Attack(string name, string avatarName, double seconds) : base(name)
+    /// <summary>点击间隔（毫秒），与 Avatar.Attack 的节奏一致</summary>
+    private const int ClickIntervalMs = 200;
+
+    /// <summary>窗口起点；null 表示尚未开始（首次 Tick 时切人并点击第一下）</summary>
+    private DateTimeOffset? _startAt;
+
+    private DateTimeOffset _lastClickAt;
+
+    public Attack(string name, Avatar avatar, double seconds, TimeProvider? timeProvider = null) : base(name)
     {
         AssertUtils.IsTrue(seconds > 0, "attack时长必须大于0");
-        _avatarName = avatarName;
+        _avatar = avatar;
         _seconds = seconds;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    protected override void Initialize()
+    {
+        _startAt = null;
     }
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
+        var now = _timeProvider.GetLocalNow();
+
+        // 首次进入：切人，记录窗口起点
+        if (_startAt == null)
         {
-            return Status.Failure;
+            _avatar.Switch();
+            _startAt = now;
         }
 
-        avatar.Attack((int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
-        return Status.Success;
+        // 时间到：窗口正常结束（首拍 now - _startAt == 0，不可能命中）
+        if (now - _startAt >= TimeSpan.FromSeconds(_seconds))
+        {
+            return Status.Success;
+        }
+
+        // 按固定节奏点击，两次点击不足间隔时本拍空转
+        if (now - _lastClickAt >= TimeSpan.FromMilliseconds(ClickIntervalMs))
+        {
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            _lastClickAt = now;
+        }
+
+        return Status.Running;
     }
 }
 
@@ -429,28 +306,20 @@ public partial class Attack : Behaviour
 /// </summary>
 public partial class Charge : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly double _seconds;
 
-    private Charge(string name, string avatarName, double seconds) : base(name)
+    public Charge(string name, Avatar avatar, double seconds) : base(name)
     {
         AssertUtils.IsTrue(seconds > 0, "charge时长必须大于0");
-        _avatarName = avatarName;
+        _avatar = avatar;
         _seconds = seconds;
     }
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        avatar.Charge((int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
+        _avatar.Switch();
+        _avatar.Charge((int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
         return Status.Success;
     }
 }
@@ -461,32 +330,24 @@ public partial class Charge : Behaviour
 /// </summary>
 public partial class Walk : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly string _direction;
     private readonly double _seconds;
 
-    private Walk(string name, string avatarName, string direction, double seconds) : base(name)
+    public Walk(string name, Avatar avatar, string direction, double seconds) : base(name)
     {
         direction = direction.Trim().ToLowerInvariant();
         AssertUtils.IsTrue(direction is "w" or "a" or "s" or "d", $"walk方向必须是w/a/s/d，当前是{direction}");
         AssertUtils.IsTrue(seconds > 0, "walk时长必须大于0");
-        _avatarName = avatarName;
+        _avatar = avatar;
         _direction = direction;
         _seconds = seconds;
     }
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        avatar.Walk(_direction, (int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
+        _avatar.Switch();
+        _avatar.Walk(_direction, (int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
         return Status.Success;
     }
 }
@@ -497,28 +358,20 @@ public partial class Walk : Behaviour
 /// </summary>
 public partial class Dash : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
-
-    private readonly string _avatarName;
+    private readonly Avatar _avatar;
     private readonly double _seconds;
 
-    private Dash(string name, string avatarName, double seconds) : base(name)
+    public Dash(string name, Avatar avatar, double seconds) : base(name)
     {
         AssertUtils.IsTrue(seconds > 0, "dash时长必须大于0");
-        _avatarName = avatarName;
+        _avatar = avatar;
         _seconds = seconds;
     }
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        avatar.Dash((int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
+        _avatar.Switch();
+        _avatar.Dash((int)TimeSpan.FromSeconds(_seconds).TotalMilliseconds);
         return Status.Success;
     }
 }
@@ -529,26 +382,17 @@ public partial class Dash : Behaviour
 /// </summary>
 public partial class Jump : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
+    private readonly Avatar _avatar;
 
-    private readonly string _avatarName;
-
-    private Jump(string name, string avatarName) : base(name)
+    public Jump(string name, Avatar avatar) : base(name)
     {
-        _avatarName = avatarName;
+        _avatar = avatar;
     }
 
     protected async override Task<Status> Update()
     {
-        var avatar = BehaviourHelper.SwitchIfNeeded(CombatScenes.Get(), _avatarName);
-        if (avatar == null)
-        {
-            return Status.Failure;
-        }
-
-        avatar.Jump();
+        _avatar.Switch();
+        _avatar.Jump();
         return Status.Success;
     }
 }
-
