@@ -256,6 +256,18 @@ public class GameLoadingTrigger : ITaskTrigger
             return;
         }
 
+        // 键鼠主界面识别不到手柄模式下的派蒙图标，点击画面切换输入模式。
+        using (var controllerMainUi = content.CaptureRectArea.Find(
+                   RecognitionAssets.Get("GameLoading", "ControllerMainUiPaimon", content.CaptureRectArea)))
+        {
+            if (!controllerMainUi.IsEmpty())
+            {
+                GameCaptureRegion.GameRegion1080PPosClick(960, 900);
+                _logger.LogInformation("检测到手柄主界面，已点击屏幕切换为键鼠操作");
+                return;
+            }
+        }
+
         if ((DateTime.Now - _prevAgePromptOcrTime).TotalMilliseconds >= 1000)
         {
             _prevAgePromptOcrTime = DateTime.Now;
