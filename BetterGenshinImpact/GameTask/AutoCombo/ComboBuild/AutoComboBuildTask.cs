@@ -105,8 +105,8 @@ public class AutoComboBuildTask : ISoloTask
             var chatClient = CreateChatClient(config, logger, tools);
 
             var aiFunctions = tools.Tools
-                // 禁止 LLM 调用 RunTree
-                .Where(d => d.Method.Name != nameof(AutoComboBuildTools.RunTree))
+                // 禁止 LLM 调用 RunTree/ShowTreeStatus
+                .Where(d => !new[] { nameof(AutoComboBuildTools.RunTree), nameof(AutoComboBuildTools.ShowTreeStatus) }.Contains(d.Method.Name))
                 .Select(d => AIFunctionFactory.Create(d))
                 .ToArray();
 
@@ -203,8 +203,8 @@ public class AutoComboBuildTask : ISoloTask
         var chatClient = CreateChatClient(config, logger, tools);
 
         var aiFunctions = tools.Tools
-            // 禁止 LLM 调用 RunTree
-            .Where(d => d.Method.Name != nameof(AutoComboBuildTools.RunTree))
+            // 禁止 LLM 调用 RunTree/ShowTreeStatus
+            .Where(d => !new[] { nameof(AutoComboBuildTools.RunTree), nameof(AutoComboBuildTools.ShowTreeStatus) }.Contains(d.Method.Name))
             .Select(d => AIFunctionFactory.Create(d))
             .ToArray();
 

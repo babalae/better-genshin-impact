@@ -1,5 +1,6 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees;
+using CsTrees.Blackboard;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -32,6 +33,11 @@ public abstract class UseEQThenDoActions : Composite
     /// <summary>起手技是否已释放；窗口被打断重进时不重复释放，整体重启时重置</summary>
     private bool _leadDone;
 
+    /// <summary>
+    /// 黑板键：标记"该角色正在 UseEQ 流程中"。
+    /// </summary>
+    public abstract BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; set; }
+
     protected UseEQThenDoActions(string name, Avatar avatar, double seconds, int times, IEnumerable<Behaviour> children) : base(name, children)
     {
         _avatar = avatar;
@@ -51,6 +57,13 @@ public abstract class UseEQThenDoActions : Composite
         _index = 0;
         _completedLoops = 0;
         _startTicks = Stopwatch.GetTimestamp();
+        // 标记"该角色正在 UseEQ 流程中"，子节点链读到匹配将判 02/03 就绪
+        LeadCastingAvatar.Set(_avatar);
+    }
+
+    protected override void Terminate(Status newStatus)
+    {
+        LeadCastingAvatar.Unset();
     }
 
     public override async IAsyncEnumerable<Behaviour> Tick()
@@ -169,7 +182,10 @@ public partial class UseSkillIfReadyThenDoActionsByDuration : UseEQThenDoActions
 {
     private readonly bool _hold;
 
-    public UseSkillIfReadyThenDoActionsByDuration(string name, Avatar avatar, bool hold, double seconds, IEnumerable<Behaviour> children)
+    [BlackboardKey(Access = Access.Write)]
+    public override BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; set; } = null!;
+
+    private UseSkillIfReadyThenDoActionsByDuration(string name, Avatar avatar, bool hold, double seconds, IEnumerable<Behaviour> children)
         : base(name, avatar, seconds, 0, children)
     {
         _hold = hold;
@@ -180,14 +196,13 @@ public partial class UseSkillIfReadyThenDoActionsByDuration : UseEQThenDoActions
         var state = _avatar.GetSkillCdState();
         if (state == SkillCdState.Unknown)
         {
-            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
+            // E 冷却图标只显示当前场上角色，切人后让视觉判定生效（GetSkillCdState 内部已含 OCR 兜底）
             _avatar.Switch();
-            _avatar.RefreshSkillCd();
             state = _avatar.GetSkillCdState();
         }
 
-        // Unknown状态也当Ready，不然目前逻辑会永久Unknown   // todo 等底层E技能识别模型，再细化逻辑
-        if (state == SkillCdState.Cooldown)
+        // 只有 Ready 才释放，Unknown/Cooldown 都视为未就绪
+        if (state != SkillCdState.Ready)
         {
             return false;
         }
@@ -206,7 +221,10 @@ public partial class UseSkillIfReadyThenDoActionsByCount : UseEQThenDoActions
 {
     private readonly bool _hold;
 
-    public UseSkillIfReadyThenDoActionsByCount(string name, Avatar avatar, bool hold, int times, IEnumerable<Behaviour> children)
+    [BlackboardKey(Access = Access.Write)]
+    public override BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; set; } = null!;
+
+    private UseSkillIfReadyThenDoActionsByCount(string name, Avatar avatar, bool hold, int times, IEnumerable<Behaviour> children)
         : base(name, avatar, 0, times, children)
     {
         _hold = hold;
@@ -217,14 +235,13 @@ public partial class UseSkillIfReadyThenDoActionsByCount : UseEQThenDoActions
         var state = _avatar.GetSkillCdState();
         if (state == SkillCdState.Unknown)
         {
-            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
+            // E 冷却图标只显示当前场上角色，切人后让视觉判定生效（GetSkillCdState 内部已含 OCR 兜底）
             _avatar.Switch();
-            _avatar.RefreshSkillCd();
             state = _avatar.GetSkillCdState();
         }
 
-        // Unknown状态也当Ready，不然目前逻辑会永久Unknown   // todo 等底层E技能识别模型，再细化逻辑
-        if (state == SkillCdState.Cooldown)
+        // 只有 Ready 才释放，Unknown/Cooldown 都视为未就绪
+        if (state != SkillCdState.Ready)
         {
             return false;
         }
@@ -241,7 +258,10 @@ public partial class UseSkillIfReadyThenDoActionsByCount : UseEQThenDoActions
 /// </summary>
 public partial class UseBurstIfReadyThenDoActionsByDuration : UseEQThenDoActions
 {
-    public UseBurstIfReadyThenDoActionsByDuration(string name, Avatar avatar, double seconds, IEnumerable<Behaviour> children)
+    [BlackboardKey(Access = Access.Write)]
+    public override BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; set; } = null!;
+
+    private UseBurstIfReadyThenDoActionsByDuration(string name, Avatar avatar, double seconds, IEnumerable<Behaviour> children)
         : base(name, avatar, seconds, 0, children)
     {
     }
@@ -271,7 +291,10 @@ public partial class UseBurstIfReadyThenDoActionsByDuration : UseEQThenDoActions
 /// </summary>
 public partial class UseBurstIfReadyThenDoActionsByCount : UseEQThenDoActions
 {
-    public UseBurstIfReadyThenDoActionsByCount(string name, Avatar avatar, int times, IEnumerable<Behaviour> children)
+    [BlackboardKey(Access = Access.Write)]
+    public override BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; set; } = null!;
+
+    private UseBurstIfReadyThenDoActionsByCount(string name, Avatar avatar, int times, IEnumerable<Behaviour> children)
         : base(name, avatar, 0, times, children)
     {
     }

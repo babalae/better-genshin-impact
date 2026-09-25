@@ -1,5 +1,6 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees;
+using CsTrees.Blackboard;
 using CsTrees.FluentBuilder;
 using System;
 using System.Collections.Generic;
@@ -37,8 +38,9 @@ public class AutoComboBuildCatalog(Avatar[] avatars) : IBehaviourCatalog
     public UseSkillIfReady UseSkillIfReady(
         string name,
         [Description("角色名")] string avatarName,
-        [Description("是否长按")] bool hold)
-        => new(name, GetAvatarByName(avatarName), hold);
+        [Description("是否长按")] bool hold,
+        Blackboard blackboard)
+        => new(name, GetAvatarByName(avatarName), hold, blackboard);
 
     [Description("使用元素爆发Q：若目标角色不在场则先切换到该角色，再释放爆发。注意：能量不足或冷却中时内部静默跳过但仍返回Success，什么都不做。返回Success")]
     public UseBurst UseBurst(
@@ -49,8 +51,9 @@ public class AutoComboBuildCatalog(Avatar[] avatars) : IBehaviourCatalog
     [Description("查询E技能是否就绪：就绪返回Success，冷却中返回Failure")]
     public IsSkillReady IsSkillReady(
         string name,
-        [Description("角色名")] string avatarName)
-        => new(name, GetAvatarByName(avatarName));
+        [Description("角色名")] string avatarName,
+        Blackboard blackboard)
+        => new(name, GetAvatarByName(avatarName), blackboard);
 
     [Description("查询Q爆发是否就绪：场上角色检测中央图标，场下角色检测右侧队伍栏图标，就绪返回Success，未就绪返回Failure。不切人")]
     public IsBurstReady IsBurstReady(
@@ -102,8 +105,9 @@ public class AutoComboBuildCatalog(Avatar[] avatars) : IBehaviourCatalog
         [Description("角色名")] string avatarName,
         [Description("是否长按战技")] bool hold,
         [Description("站场秒数")] double seconds,
-        IEnumerable<Behaviour> children)
-        => new(name, GetAvatarByName(avatarName), hold, seconds, children);
+        IEnumerable<Behaviour> children,
+        Blackboard blackboard)
+        => new(name, GetAvatarByName(avatarName), hold, seconds, children, blackboard);
 
     [Description("先检查角色的元素战技E，冷却中返回Failure，就绪则释放，然后打开一个按次数循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定轮数，子节点失败会被跳过，轮数完成返回 Success。")]
     public UseSkillIfReadyThenDoActionsByCount UseSkillIfReadyThenDoActionsByCount(
@@ -111,22 +115,25 @@ public class AutoComboBuildCatalog(Avatar[] avatars) : IBehaviourCatalog
         [Description("角色名")] string avatarName,
         [Description("是否长按战技")] bool hold,
         [Description("循环执行轮数")] int times,
-        IEnumerable<Behaviour> children)
-        => new(name, GetAvatarByName(avatarName), hold, times, children);
+        IEnumerable<Behaviour> children,
+        Blackboard blackboard)
+        => new(name, GetAvatarByName(avatarName), hold, times, children, blackboard);
 
     [Description("先检查角色的元素爆发Q，未就绪返回Failure，就绪则释放，然后打开一个按时长循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定秒数，子节点失败会被跳过，时间到返回 Success。")]
     public UseBurstIfReadyThenDoActionsByDuration UseBurstIfReadyThenDoActionsByDuration(
         [Description("节点名，应附带站场秒数")] string name,
         [Description("角色名")] string avatarName,
         [Description("站场秒数")] double seconds,
-        IEnumerable<Behaviour> children)
-        => new(name, GetAvatarByName(avatarName), seconds, children);
+        IEnumerable<Behaviour> children,
+        Blackboard blackboard)
+        => new(name, GetAvatarByName(avatarName), seconds, children, blackboard);
 
     [Description("先检查角色的元素爆发Q，未就绪返回Failure，就绪则释放，然后打开一个按次数循环动作序列的作用域，打开后须要在其中依次添加动作子节点，会循环执行序列指定轮数，子节点失败会被跳过，轮数完成返回 Success。")]
     public UseBurstIfReadyThenDoActionsByCount UseBurstIfReadyThenDoActionsByCount(
         [Description("节点名，应附带站场轮数")] string name,
         [Description("角色名")] string avatarName,
         [Description("循环执行轮数")] int times,
-        IEnumerable<Behaviour> children)
-        => new(name, GetAvatarByName(avatarName), times, children);
+        IEnumerable<Behaviour> children,
+        Blackboard blackboard)
+        => new(name, GetAvatarByName(avatarName), times, children, blackboard);
 }

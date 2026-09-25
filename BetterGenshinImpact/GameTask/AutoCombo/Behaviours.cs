@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
 using CsTrees;
+using CsTrees.Blackboard;
 using System;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -102,20 +103,29 @@ public partial class IsSkillReady : Behaviour
 {
     private readonly Avatar _avatar;
 
-    public IsSkillReady(string name, Avatar avatar) : base(name)
+    private IsSkillReady(string name, Avatar avatar) : base(name)
     {
         _avatar = avatar;
     }
 
+    /// <summary>
+    /// 黑板键（只读）：UseEQThenDoActions 起手技流程中写入自身 _avatar。
+    /// 读到与自身 _avatar 匹配 → 处于某 UseEQ 子节点链 → 判 02/03 就绪；
+    /// 读不到或不匹配 → 默认判原始 E 01。
+    /// </summary>
+    [BlackboardKey(Access = Access.Read)]
+    public BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; private set; } = null!;
+
     protected async override Task<Status> Update()
     {
-        var state = _avatar.GetSkillCdState();
+        // 读到匹配角色 → 处于某 UseEQ 子节点链 → 放宽E技能图标判定；否则只认01
+        var inLeadCast = LeadCastingAvatar.TryGet(out var lead) && ReferenceEquals(lead, _avatar);
+        var state = _avatar.GetSkillCdState(!inLeadCast);
         if (state == SkillCdState.Unknown)
         {
-            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
+            // E 冷却图标只显示当前场上角色，切人后让视觉判定生效（GetSkillCdState 内部已含 OCR 兜底）
             _avatar.Switch();
-            _avatar.RefreshSkillCd();
-            state = _avatar.GetSkillCdState();
+            state = _avatar.GetSkillCdState(!inLeadCast);
         }
 
         return state == SkillCdState.Ready ? Status.Success : Status.Failure;
@@ -193,25 +203,34 @@ public partial class UseSkillIfReady : Behaviour
     private readonly Avatar _avatar;
     private readonly bool _hold;
 
-    public UseSkillIfReady(string name, Avatar avatar, bool hold) : base(name)
+    private UseSkillIfReady(string name, Avatar avatar, bool hold) : base(name)
     {
         _avatar = avatar;
         _hold = hold;
     }
 
+    /// <summary>
+    /// 黑板键（只读）：UseEQThenDoActions 起手技流程中写入自身 _avatar。
+    /// 读到与自身 _avatar 匹配 → 处于某 UseEQ 子节点链 → 判 02/03 就绪；
+    /// 读不到或不匹配 → 默认判原始 E 01。
+    /// </summary>
+    [BlackboardKey(Access = Access.Read)]
+    public BehaviourKeyAccess<Avatar> LeadCastingAvatar { get; private set; } = null!;
+
     protected async override Task<Status> Update()
     {
-        var state = _avatar.GetSkillCdState();
+        // 读到匹配角色 → 处于某 UseEQ 子节点链 → 放宽E技能图标判定；否则只认01
+        var inLeadCast = LeadCastingAvatar.TryGet(out var lead) && ReferenceEquals(lead, _avatar);
+        var state = _avatar.GetSkillCdState(!inLeadCast);
         if (state == SkillCdState.Unknown)
         {
-            // E 冷却图标只显示当前场上角色，切人后刷新识别消歧
+            // E 冷却图标只显示当前场上角色，切人后让视觉判定生效（GetSkillCdState 内部已含 OCR 兜底）
             _avatar.Switch();
-            _avatar.RefreshSkillCd();
-            state = _avatar.GetSkillCdState();
+            state = _avatar.GetSkillCdState(!inLeadCast);
         }
 
-        // Unknown状态也当Ready，不然目前逻辑会永久Unknown   // todo 等底层E技能识别模型，再细化逻辑
-        if (state == SkillCdState.Cooldown)
+        // 只有 Ready 才释放，Unknown/Cooldown 都视为未就绪
+        if (state != SkillCdState.Ready)
         {
             return Status.Failure;
         }
