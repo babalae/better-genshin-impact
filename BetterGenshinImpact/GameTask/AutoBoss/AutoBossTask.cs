@@ -50,6 +50,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
+    private int _successfulRewardCount;
 
     private static readonly TimeSpan OriginalResinRecoveryInterval = TimeSpan.FromMinutes(8);
     private const int MaxQuickUseQuantity = 20;
@@ -101,6 +102,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         _ct = ct;
         _rewardSummary.Clear();
+        _successfulRewardCount = 0;
         Validate();
         LogScreenResolution();
 
@@ -146,13 +148,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         // 1.切换队伍
         await Prepare();
         
-        var rewardCount = 0;
         var shouldNavigateToBoss = true;
         //2.根据剩余次数判断是否继续
-        while (ShouldContinueBeforeRound(rewardCount))
+        while (ShouldContinueBeforeRound())
         {
             _ct.ThrowIfCancellationRequested();
-            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, rewardCount + 1, _taskParam.BossName);
+            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, _successfulRewardCount + 1, _taskParam.BossName);
             
             //3.树脂不足则退出
             if (!await EnsureResinBeforeRound())
@@ -181,8 +182,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 break;
             }
 
-            rewardCount++;
-            if (!ShouldContinueBeforeRound(rewardCount))
+            _successfulRewardCount++;
+            _taskParam.RewardClaimedCallback?.Invoke();
+            if (!ShouldContinueBeforeRound())
             {
                 break;
             }
@@ -206,11 +208,10 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 判断本轮开始前是否还有继续讨伐的次数。
     /// </summary>
-    /// <param name="rewardCount">本次任务已成功领取奖励的次数。</param>
     /// <returns>树脂耗尽模式始终返回 true；指定次数模式下未达到目标次数时返回 true。</returns>
-    private bool ShouldContinueBeforeRound(int rewardCount)
+    private bool ShouldContinueBeforeRound()
     {
-        return !_taskParam.SpecifyRunCount || rewardCount < _taskParam.RunCount;
+        return !_taskParam.SpecifyRunCount || _successfulRewardCount < _taskParam.RunCount;
     }
 
     /// <summary>

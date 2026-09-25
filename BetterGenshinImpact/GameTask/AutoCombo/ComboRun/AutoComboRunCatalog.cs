@@ -1,4 +1,4 @@
-using CsTrees.Blackboard;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees.FluentBuilder;
 
 namespace BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 /// 连招行为树测试专用目录
 /// 仅挂载在 AutoComboRunBuilder 上，不进入 AutoComboBuildBuilder 的 LLM 建树词汇表
 /// </summary>
-public class AutoComboRunCatalog : IBehaviourCatalog
+public class AutoComboRunCatalog(Avatar[] avatars) : IBehaviourCatalog
 {
-    public CheckFightFinish CheckFightFinish(string name, Blackboard blackboard) => new(name, blackboard);
+    public CheckFightFinish CheckFightFinish(string name) => new(name, avatars);
 }

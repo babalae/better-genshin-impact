@@ -4,7 +4,6 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.View.Drawable;
 using CsTrees;
-using CsTrees.Blackboard;
 using CsTrees.Display;
 using CsTrees.Visitors;
 using Microsoft.Extensions.Logging;
@@ -51,30 +50,39 @@ public class AutoComboRunTask : ISoloTask
     {
         var session = _session;
 
-        // 标准消费者协议：重新识别队伍（顺带由 BindAndBuild 校验与建树队伍是否一致）→ BeforeTask 写入本任务令牌
-        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+        // 标准消费者协议：FromAvatars 重新识别队伍并校验与建树队伍一致，接管建树会话的 Avatar 实例 → BeforeTask 写入本任务令牌
+        var combatScenes = CombatScenes.FromAvatars(_session.Avatars);
         combatScenes.BeforeTask(ct);
 
-        // 清黑板 → 授权写入 CombatScenes → 重新 Build 得到全新节点实例的行为树（行为状态复位）
-        var comboTree = session.BindAndBuild(combatScenes);
+        // 清黑板（复位上次运行的键值状态）→ 重新 Build 得到全新节点实例的行为树（节点内状态随实例自然复位）
+        var (comboTree, fallbackTree) = session.BindAndBuild();
 
         // 按宿主意图决定是否包装自带战斗结束检测：外部控制结束时（如秘境）关闭，只认取消令牌
         Behaviour extendedRoot;
         if (_param.FightFinishDetectEnabled)
         {
             Logger.LogInformation("{Name}扩展行为树：包装 LLM 树与战斗结束检测", Name);
-            extendedRoot = new AutoComboRunBuilder()
+            extendedRoot = new AutoComboRunBuilder(session.Avatars)
                 .WithBlackboard(session.Blackboard)
                     .Sequence("-", true)
                         .CheckFightFinish("战斗结束检测")
-                        .Leaf(() => comboTree)
+                        .Selector("-", false)
+                            .Leaf(() => comboTree)
+                            .Leaf(() => fallbackTree)
+                        .End()
                     .End()
                 .End().Build();
         }
         else
         {
             Logger.LogInformation("{Name}使用宿主场景的结束控制，不包装战斗结束检测", Name);
-            extendedRoot = comboTree;
+            extendedRoot = new AutoComboRunBuilder(session.Avatars)
+                .WithBlackboard(session.Blackboard)
+                    .Selector("-", false)
+                        .Leaf(() => comboTree)
+                        .Leaf(() => fallbackTree)
+                    .End()
+                .End().Build();
         }
 
         Logger.LogInformation("{Name}任务启动，持续 Tick 行为树", Name);
@@ -135,11 +143,7 @@ public class AutoComboRunTask : ISoloTask
                     previouslyVisited: snapshot.PreviouslyVisited);
                 Logger.LogInformation("Tick {Count}：\n{Path}", tree.Count, path);
 
-                // 树完成一轮评估（根节点非 Running）时稍作等待，避免空转
-                if (tree.Root.Status != Status.Running)
-                {
-                    Sleep(200, ct);
-                }
+                Sleep(35, ct);
             }
         }
         catch (OperationCanceledException)
@@ -175,16 +179,16 @@ public class AutoComboRunTask : ISoloTask
 /// </summary>
 public partial class CheckFightFinish : Behaviour
 {
-    [BlackboardKey(Access = Access.Read)]
-    public BehaviourKeyAccess<CombatScenes> CombatScenes { get; private set; } = null!;
+    private readonly Avatar[] _avatars;
 
     /// <summary>上次完整检查时间（静态共享：多个检查节点实例共用同一节流周期）</summary>
     private static DateTime _lastCheckTime = DateTime.MinValue;
 
     private TaskFightFinishDetectConfig _detectConfig = null!;
 
-    private CheckFightFinish(string name) : base(name)
+    public CheckFightFinish(string name, Avatar[] avatars) : base(name)
     {
+        _avatars = avatars;
     }
 
     protected override void Initialize()
@@ -218,7 +222,7 @@ public partial class CheckFightFinish : Behaviour
         _lastCheckTime = DateTime.Now;
 
         // 令牌与其他行为节点保持同源（BeforeTask 写入 Avatar.Ct 的那个）
-        var avatar = CombatScenes.Get().GetAvatars().FirstOrDefault();
+        var avatar = _avatars.FirstOrDefault();
         var ct = avatar?.Ct ?? CancellationToken.None;
         if (await AutoFightTask.CheckFightFinish(_detectConfig, ct))
         {
