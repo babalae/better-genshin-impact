@@ -3,8 +3,8 @@ using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -201,8 +201,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger _logger;
         private readonly IInputSimulator _input;
-        private readonly InferenceSession _session;
-        private readonly Dictionary<string, float[]> _prototypes;
+        private readonly IItemIconRecognizer _itemRecognizer;
         private readonly TimeProvider _timeProvider;
         private DateTimeOffset? _pressFWaitEndTime;
         private DateTimeOffset? _clickWhiteConfirmButtonWaitEndTime;
@@ -225,12 +224,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<bool> PitchReset { get; private set; } = null!;
 
-        private EnterFishingMode(string name, ILogger logger, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private EnterFishingMode(string name, ILogger logger, IInputSimulator input, IItemIconRecognizer itemRecognizer, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
         {
             _logger = logger;
             _input = input;
-            _session = session;
-            _prototypes = prototypes;
+            _itemRecognizer = itemRecognizer;
             _timeProvider = timeProvider ?? TimeProvider.System;
             _fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
         }
@@ -261,7 +259,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 经验算在 16:9 常见分辨率（720p/1080p/1440p）下 Y+H 不会超出图像高度，暂不加钳位
                 using Mat subMat = imageRegion.SrcMat.SubMat(new Rect((int)(0.824 * imageRegion.Width), (int)(0.669 * imageRegion.Height), (int)(0.065 * imageRegion.Width), (int)(0.065 * imageRegion.Width)));
                 using Mat resized = subMat.Resize(new Size(125, 125));
-                (string? predName, _) = GridIconsAccuracyTestTask.Infer(resized, _session, _prototypes);
+                string? predName = _itemRecognizer.Recognize(resized);
                 if (predName!.TryGetEnumValueFromDescription(out BaitType? parsedBait))
                 {
                     SelectedBait.Set(parsedBait);

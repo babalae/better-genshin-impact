@@ -721,9 +721,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private static PathingPartyConfig BuildLeyLinePathingPartyConfig()
     {
-        var partyConfig = PathingPartyConfig.BuildDefault();
-        partyConfig.SkipPartySwitch = true;
-        return partyConfig;
+        // 地脉路径使用程序化默认配置，不走配置组禁用时的回退逻辑。
+        return new PathingPartyConfig
+        {
+            Enabled = true,
+            AutoFightEnabled = true,
+            SkipPartySwitch = true
+        };
     }
 
     private async Task<NodeData> LoadNodeData()

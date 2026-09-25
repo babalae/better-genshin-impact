@@ -12,11 +12,19 @@ internal sealed class SileroVadDetector : IDisposable
     public const int SampleRate = 16000;
     public const int FrameSampleCount = 512;
 
+    /// <summary>
+    /// 模型要求每帧额外拼接上一帧末尾的上下文采样，16kHz 下为 64 点。
+    /// 因此实际输入长度为 576，缺失上下文会显著破坏模型输出。
+    /// </summary>
+    private const int ContextSampleCount = 64;
+
     private const int StatePlaneCount = 2;
     private const int StateBatchCount = 1;
     private const int StateSize = 128;
     private readonly InferenceSession _session;
     private readonly float[] _state = new float[StatePlaneCount * StateBatchCount * StateSize];
+    private readonly float[] _context = new float[ContextSampleCount];
+    private readonly float[] _input = new float[ContextSampleCount + FrameSampleCount];
     private readonly long[] _sampleRate = [SampleRate];
 
     public SileroVadDetector()
@@ -33,6 +41,7 @@ internal sealed class SileroVadDetector : IDisposable
     public void Reset()
     {
         Array.Clear(_state);
+        Array.Clear(_context);
     }
 
     public float Predict(float[] samples)
@@ -42,7 +51,11 @@ internal sealed class SileroVadDetector : IDisposable
             throw new ArgumentException($"Silero VAD 需要 {FrameSampleCount} 个采样点", nameof(samples));
         }
 
-        var inputTensor = new DenseTensor<float>(samples, [1, FrameSampleCount]);
+        Array.Copy(_context, 0, _input, 0, ContextSampleCount);
+        Array.Copy(samples, 0, _input, ContextSampleCount, FrameSampleCount);
+        Array.Copy(_input, FrameSampleCount, _context, 0, ContextSampleCount);
+
+        var inputTensor = new DenseTensor<float>(_input, [1, _input.Length]);
         var stateTensor = new DenseTensor<float>(_state, [StatePlaneCount, StateBatchCount, StateSize]);
         var sampleRateTensor = new DenseTensor<long>(_sampleRate, Array.Empty<int>());
 

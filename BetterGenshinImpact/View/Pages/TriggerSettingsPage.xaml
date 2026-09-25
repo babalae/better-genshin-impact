@@ -714,6 +714,133 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="{i18n:T Silero VAD 实时诊断}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后持续读取游戏进程音频并调用模型，不依赖对话选项或画面识别}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.AutoSkipConfig.DialogueOptionVoiceVadDiagnosticEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Border Margin="16,0,16,12"
+                        Padding="16,14"
+                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Visibility="{Binding Config.AutoSkipConfig.DialogueOptionVoiceVadDiagnosticEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         Margin="0,0,8,0"
+                                         VerticalAlignment="Center"
+                                         Fill="{DynamicResource AccentFillColorDefaultBrush}" />
+                                <ui:TextBlock FontTypography="BodyStrong"
+                                              Text="{Binding VoiceDiagnosticState.VerdictText}" />
+                            </StackPanel>
+                            <ui:TextBlock Grid.Column="1"
+                                          FontSize="18"
+                                          FontWeight="SemiBold"
+                                          Text="{Binding VoiceDiagnosticState.ProbabilityText}" />
+                        </Grid>
+                        <ProgressBar Grid.Row="1"
+                                     Height="6"
+                                     Margin="0,12,0,14"
+                                     Maximum="1"
+                                     Value="{Binding VoiceDiagnosticState.Probability}" />
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 模型概率}" />
+                                <ui:TextBlock Margin="0,4,0,0"
+                                              FontWeight="SemiBold"
+                                              Text="{Binding VoiceDiagnosticState.ProbabilityText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T RMS}" />
+                                <ui:TextBlock Margin="0,4,0,0"
+                                              FontWeight="SemiBold"
+                                              Text="{Binding VoiceDiagnosticState.RmsText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 峰值}" />
+                                <ui:TextBlock Margin="0,4,0,0"
+                                              FontWeight="SemiBold"
+                                              Text="{Binding VoiceDiagnosticState.PeakText}" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid Grid.Row="3" Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock FontWeight="SemiBold"
+                                          Text="{Binding VoiceDiagnosticState.DecisionText}" />
+                            <ui:TextBlock Grid.Column="1"
+                                          Margin="12,0,0,0"
+                                          VerticalAlignment="Center"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{Binding VoiceDiagnosticState.StatusText}" />
+                        </Grid>
+                        <ui:TextBlock Grid.Row="4"
+                                      Margin="0,8,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding VoiceDiagnosticState.ThresholdText}"
+                                      TextWrapping="Wrap" />
+                        <Grid Grid.Row="5" Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Margin="0,0,12,0"
+                                          VerticalAlignment="Center"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{Binding VoiceDiagnosticState.RecordingStatusText}"
+                                          TextTrimming="CharacterEllipsis" />
+                            <ui:Button Grid.Column="1"
+                                       Command="{Binding ToggleVoiceDiagnosticRecordingCommand}"
+                                       Content="{Binding VoiceDiagnosticState.RecordingButtonText}" />
+                        </Grid>
+                    </Grid>
+                </Border>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="{i18n:T 语音结束检测最大等待（秒）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"

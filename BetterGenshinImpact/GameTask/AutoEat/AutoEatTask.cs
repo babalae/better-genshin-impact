@@ -85,7 +85,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenInventory(GridScreenName.Food, _input, _logger, _ct);
 
-            using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
+            using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
 
             GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
@@ -97,8 +97,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                     using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                    string predName = result.Item1;
+                    string? predName = iconRecognizer.Recognize(icon);
                     if (predName == _taskParam.FoodName)
                     {
                         // 点击item

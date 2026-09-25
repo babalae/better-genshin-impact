@@ -64,7 +64,7 @@ public partial class PathExecutor
 
     public PathingPartyConfig PartyConfig
     {
-        get => _partyConfig ?? PathingPartyConfig.BuildDefault();
+        get => _partyConfig ??= PathingPartyConfig.BuildDefault();
         set => _partyConfig = value;
     }
 
@@ -356,7 +356,7 @@ public partial class PathExecutor
             {
                 // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
                 var partyName = FilterPartyNameByConditionConfig(task);
-                if (!await SwitchParty(partyName))
+                if (!await SwitchParty(partyName, false))
                 {
                     Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
                     return false;
@@ -364,7 +364,7 @@ public partial class PathExecutor
             }
             else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
             {
-                if (!await SwitchParty(PartyConfig.PartyName))
+                if (!await SwitchParty(PartyConfig.PartyName, PartyConfig.IsVisitStatueBeforeSwitchParty))
                 {
                     Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
                     return false;
@@ -405,8 +405,9 @@ public partial class PathExecutor
     /// 切换队伍
     /// </summary>
     /// <param name="partyName"></param>
+    /// <param name="forceTp">切换前是否前往七天神像</param>
     /// <returns></returns>
-    private async Task<bool> SwitchParty(string? partyName)
+    private async Task<bool> SwitchParty(string? partyName, bool forceTp)
     {
         bool success = true;
         if (!string.IsNullOrEmpty(partyName))
@@ -415,8 +416,6 @@ public partial class PathExecutor
             {
                 return success;
             }
-
-            bool forceTp = PartyConfig.IsVisitStatueBeforeSwitchParty;
 
             if (forceTp) // 强制传送模式
             {
