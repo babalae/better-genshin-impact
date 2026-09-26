@@ -698,8 +698,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 检查和最终结束的任务
         await new TaskRunner().RunThreadAsync(async () =>
         {
-            await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
-            await Task.Delay(500);
+            // await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+            // await Task.Delay(500);
             if (CancellationContext.Instance.IsManualStop is false)
             {
                 Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
