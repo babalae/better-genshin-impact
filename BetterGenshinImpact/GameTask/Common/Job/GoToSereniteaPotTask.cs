@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -77,41 +78,31 @@ internal class GoToSereniteaPotTask
 
     private async Task<bool> IntoSereniteaPot(CancellationToken ct)
     {
-        // 退出到主页面
-        await new ReturnMainUiTask().Start(ct);
-
-        await Delay(200, ct);
-
-        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
-        await Delay(900, ct);
-
-        // 进入 壶
-        TpTask tpTask = new TpTask(ct);
-        await tpTask.SwitchArea("尘歌壶");
-        
-        // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
-        for (int i = 0; i < 5; i++){
-            using var ra = CaptureToRectArea();
-            //确定洞天名称
-            var list = ra.FindMulti(new RecognitionObject
+        var mapReady = false;
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
             {
-                RecognitionType = RecognitionTypes.Ocr,
-                RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height*9/10, (int)(ra.Width * 0.073), (int)(ra.Height*0.04))
-            });
-            if (list.Count > 0)
-            {
-                dongTianName = list[0].Text;
-                Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
-                await Task.Delay(100, ct);
+                // 每次重试从主界面开始，避免反复点击已展开的区域菜单。
+                await new ReturnMainUiTask().Start(ct);
+                if (!await WaitForUi(Bv.IsInMainUi, ct))
+                    throw new TimeoutException("未返回主界面");
+                TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap);
+                if (!await WaitForUi(Bv.IsInBigMapUi, ct))
+                    throw new TimeoutException("大地图未打开");
+                await new TpTask(ct).SwitchArea("尘歌壶", waitForSlowUi: true);
+                if (!await ReadRealmName(ct))
+                    throw new TimeoutException("未识别到洞天名称");
+                mapReady = true;
                 break;
             }
-            else
+            catch (Exception e) when (e is not OperationCanceledException and not NormalEndException && !ct.IsCancellationRequested)
             {
-                dongTianName = "";
-                Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
+                Logger.LogWarning("领取尘歌壶奖励:打开尘歌壶地图失败（{Attempt}/3）：{Message}", attempt, e.Message);
             }
-            await Task.Delay(100, ct);
         }
+        ct.ThrowIfCancellationRequested();
+        if (!mapReady) return false;
 
         for (int i = 0; i < 5; i++)
         {
@@ -184,69 +175,82 @@ internal class GoToSereniteaPotTask
             await Delay(800, ct);    // 重试间隔
         }
         
-        await NewRetry.WaitForAction(() =>
-        {
-            using var capture = CaptureToRectArea();
-            return Bv.IsInMainUi(capture);
-        }, ct);
-        return true;
+        // 已确认过地图界面；恢复到壶内主界面本身就是状态转换，兼容快速传送。
+        return await WaitForPotEntry(ct, requireTransition: false);
     }
 
     /// <summary>
-    /// 通过背包中的壶进入尘歌壶
+    /// 通过背包中的壶进入尘歌壶，并确认洞天名称。
     /// </summary>
-    /// <param name="ct"></param>
-    /// <returns>成功进入壶并初始化壶名称返回 true。</returns>
     private async Task<bool> IntoSereniteaPotByBag(CancellationToken ct)
     {
-        // 尝试使用背包的壶进入。
-        QuickSereniteaPotTask.Done();
-        await Delay(5000, ct); // 在点击壶之后的特殊加载页面会有 mainUI
-        await Bv.WaitForMainUi(ct);
-        // 判断是否在尘歌壶中
-        using var ra0 = CaptureToRectArea();
-        if (ra0.Find(ElementRecognition.Get("FingerIcon", ra0)).IsExist())
+        if (!QuickSereniteaPotTask.TryEnter(ct, out var potUiVisibleBeforeInteraction)
+            || !await WaitForPotEntry(ct, requireTransition: potUiVisibleBeforeInteraction))
+            return false;
+
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap);
+        if (!await ReadRealmName(ct)) return false;
+        await new ReturnMainUiTask().Start(ct);
+        return await WaitForPotEntry(ct, requireTransition: false);
+    }
+
+    private static Task<bool> WaitForUi(Func<ImageRegion, bool> isReady, CancellationToken ct, int retryTimes = 60)
+    {
+        return NewRetry.WaitForAction(() =>
         {
-            await Delay(1000, ct);
-            // 尝试获取尘歌壶名称
-            TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
-            await Delay(1000, ct);
-            for (int i = 0; i < 5; i++)
+            using var capture = CaptureToRectArea(forceNew: true);
+            ct.ThrowIfCancellationRequested();
+            var ready = isReady(capture);
+            ct.ThrowIfCancellationRequested();
+            return ready;
+        }, ct, retryTimes, 500);
+    }
+
+    private async Task<bool> ReadRealmName(CancellationToken ct)
+    {
+        dongTianName = "";
+        var candidate = "";
+        var stableChecks = 0;
+        var ready = await WaitForUi(capture =>
+        {
+            var name = "";
+            if (Bv.IsInBigMapUi(capture))
             {
-                using var ra = CaptureToRectArea();
-                //确定洞天名称
-                var list = ra.FindMulti(new RecognitionObject
+                var list = capture.FindMulti(new RecognitionObject
                 {
                     RecognitionType = RecognitionTypes.Ocr,
-                    RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height * 9 / 10, (int)(ra.Width * 0.073), (int)(ra.Height * 0.04))
+                    RegionOfInterest = new Rect((int)(capture.Width * 0.86), capture.Height * 9 / 10,
+                        (int)(capture.Width * 0.073), (int)(capture.Height * 0.04))
                 });
-                if (list.Count > 0)
-                {
-                    dongTianName = list[0].Text;
-                    Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
-                    await Task.Delay(100, ct);
-                    for(int z  = 1; z < 5; z++) { 
-                        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); await Delay(1000, ct);
-                        using var mainUiCapture = CaptureToRectArea();
-                        if (Bv.IsInMainUi(mainUiCapture))
-                        {
-                            break;
-                        }
-                    }
-                    await Task.Delay(100, ct);
-                    return true;
-                }
-                else
-                {
-                    dongTianName = "";
-                    Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
-                }
-                await Delay(200, ct);
+                name = list.FirstOrDefault()?.Text.Trim() ?? "";
             }
-            return false;
-        }
-        Logger.LogInformation("领取尘歌壶奖励:未识别到手指");
-        return false;
+            stableChecks = name.Length == 0 ? 0 : name == candidate ? stableChecks + 1 : 1;
+            candidate = name;
+            return stableChecks >= 3;
+        }, ct);
+        if (!ready) return false;
+        ct.ThrowIfCancellationRequested();
+        dongTianName = candidate;
+        Logger.LogInformation("领取尘歌壶奖励:洞天名称：{Name}", dongTianName);
+        return true;
+    }
+
+    private static async Task<bool> WaitForPotEntry(CancellationToken ct, bool requireTransition = true)
+    {
+        // 原界面若已满足识别条件，必须先观察到它消失，再确认连续稳定的到达状态。
+        // 不固定等待五秒，避免漏掉短暂的加载过程。
+        var transitionObserved = !requireTransition;
+        var stableChecks = 0;
+        var ready = await WaitForUi(capture =>
+        {
+            using var finger = capture.Find(ElementRecognition.Get("FingerIcon", capture));
+            var inPotUi = Bv.IsInMainUi(capture) && finger.IsExist();
+            if (!inPotUi) transitionObserved = true;
+            stableChecks = transitionObserved && inPotUi ? stableChecks + 1 : 0;
+            return stableChecks >= 3;
+        }, ct, retryTimes: 120);
+        if (!ready) Logger.LogWarning("领取尘歌壶奖励:等待进入尘歌壶超时");
+        return ready;
     }
 
     // 寻找阿圆并靠近
@@ -627,6 +631,8 @@ internal class GoToSereniteaPotTask
 
     public async Task DoOnce(CancellationToken ct)
     {
+        fail = false;
+        dongTianName = "";
         InitConfigList();
         // /**
         //  * 1. 首先退出到主页面
@@ -647,7 +653,8 @@ internal class GoToSereniteaPotTask
         }
         if (!success)
         {
-            await Finished(ct);
+            Logger.LogWarning("领取尘歌壶奖励:进入失败，停止领取");
+            await new ReturnMainUiTask().Start(ct);
             return;
         }
         

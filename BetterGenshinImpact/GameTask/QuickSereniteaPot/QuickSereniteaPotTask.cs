@@ -4,135 +4,130 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using Wpf.Ui.Violeta.Controls;
-using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 public class QuickSereniteaPotTask
 {
-    private static void WaitForBagToOpen()
+    private static void WaitForUi(Func<ImageRegion, bool> isReady, string failureMessage, CancellationToken ct)
     {
-        NewRetry.Do(() =>
+        // 慢速设备允许约 30 秒加载；暂停期间不消耗识别次数。
+        for (var i = 0; i < 60; i++)
         {
-            TaskControl.Sleep(1);
-            using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
-            using var ra2 = ra1.Find(RecognitionAssets.Get("QuickTeleport", "MapCloseButton", ra1));
-            if (ra2.IsEmpty())
-            {
-                throw new RetryException("背包未打开");
-            }
-        }, TimeSpan.FromMilliseconds(500), 5);
+            TaskControl.Sleep(500, ct);
+            using var capture = TaskControl.CaptureToRectArea(forceNew: true);
+            ct.ThrowIfCancellationRequested();
+            var ready = isReady(capture);
+            ct.ThrowIfCancellationRequested();
+            if (ready) return;
+        }
+        throw new RetryException(failureMessage);
     }
 
-    private static void FindPotIcon()
-    {
-        NewRetry.Do(() =>
-        {
-            TaskControl.Sleep(1);
-            using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
-            using var ra2 = ra1.Find(RecognitionAssets.Get("QuickSereniteaPot", "SereniteaPotIcon", ra1));
-            if (ra2.IsEmpty())
-            {
-                throw new RetryException("未检测到壶");
-            }
-            else
-            {
-                ra2.Click();
-            }
-        }, TimeSpan.FromMilliseconds(200), 3);
-    }
+    public static void Done() => TryEnter(CancellationToken.None, out _);
 
-    public static void Done()
+    // 返回值表示已触发进出壶交互；调用者仍需等待加载并确认壶内状态。
+    internal static bool TryEnter(CancellationToken ct, out bool potUiVisibleBeforeInteraction)
     {
+        potUiVisibleBeforeInteraction = false;
         if (!TaskContext.Instance().IsInitialized)
         {
             Toast.Warning("请先启动");
-            return;
+            return false;
         }
 
         if (!SystemControl.IsGenshinImpactActiveByProcess())
         {
-            return;
+            return false;
         }
 
         try
         {
-            // 打开背包
-            Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
-            TaskControl.CheckAndSleep(500);
-            WaitForBagToOpen();
-
-            // 点击道具页
-            GameCaptureRegion.GameRegion1080PPosClick(1050, 50);
-            TaskControl.CheckAndSleep(200);
-
-            // 尝试放置壶
-            FindPotIcon();
-            TaskControl.CheckAndSleep(200);
-
-            // 点击放置 右下225,60
-            // GameCaptureRegion.GameRegionClick((size, assetScale) => (size.Width - 225 * assetScale, size.Height - 60 * assetScale));
-            // 也可以使用下面的方法点击放置按钮
-            using (var confirmCapture = TaskControl.CaptureToRectArea())
+            var bagRequested = false;
+            WaitForUi(capture =>
             {
-                Bv.ClickWhiteConfirmButton(confirmCapture);
-            }
-            TaskControl.CheckAndSleep(800);
-            // 校验是否部署成功
-            var seccess = false;
-            for (int i = 0; i < 5; i++)
-            {
-                using var mainUiCapture = TaskControl.CaptureToRectArea();
-                if (Bv.IsInMainUi(mainUiCapture))
+                using var close = capture.Find(RecognitionAssets.Get("QuickTeleport", "MapCloseButton", capture));
+                if (close.IsExist() && !Bv.IsInBigMapUi(capture)) return true;
+                // 等主界面加载后只按一次 B；已经打开背包时不再关闭它。
+                if (!bagRequested && Bv.IsInMainUi(capture))
                 {
-                    seccess = true;
-                    break;
+                    ct.ThrowIfCancellationRequested();
+                    Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
+                    bagRequested = true;
                 }
-            }
-            if (!seccess) {
-                for (int i = 0; i < 5; ++i)
-                {
-                    using var bigMapCapture = TaskControl.CaptureToRectArea();
-                    if (!Bv.IsInBigMapUi(bigMapCapture))
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-            }
-            // 校验F交互是否是 进入/离开[尘歌壶] 
-            using var capture = TaskControl.CaptureToRectArea();
-            bool isEnter = Bv.FindF(capture, "进入", "尘歌壶");
-            bool isLeave = Bv.FindF(capture, "离开", "尘歌壶");
+                return false;
+            }, "背包未打开", ct);
 
-            if (isEnter || isLeave) {
-                string action = isEnter ? "进入" : "离开";
-                TaskControl.Logger.LogInformation($"快速进出尘歌壶:识别到 {action}尘歌壶");
-                
-                // 按F触发交互
-                Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
-                TaskControl.Logger.LogInformation($"快速进出尘歌壶:F{action}尘歌壶");
-                TaskControl.CheckAndSleep(200);
-                // 点击进入/离开尘歌壶
-                // 如果不是联机状态，此时玩家应已进入传送界面，本次点击不会影响实际功能
-                GameCaptureRegion.GameRegion1080PPosClick(1010, 760);
-            }
-            else
+            // 等待道具页选中，不能在切页动画期间查找壶。
+            var tabClicked = false;
+            WaitForUi(capture =>
             {
-                TaskControl.Logger.LogInformation("快速进出尘歌壶:未识别到 进入或离开尘歌壶");
+                using var selected = capture.Find(ElementRecognition.Get("BagGadgetChecked", capture));
+                if (selected.IsExist()) return true;
+                using var tab = capture.Find(ElementRecognition.Get("BagGadgetUnchecked", capture));
+                if (!tabClicked && tab.IsExist())
+                {
+                    ct.ThrowIfCancellationRequested();
+                    tab.Click();
+                    tabClicked = true;
+                }
+                return false;
+            }, "道具页未打开", ct);
+
+            WaitForUi(capture =>
+            {
+                using var pot = capture.Find(RecognitionAssets.Get("QuickSereniteaPot", "SereniteaPotIcon", capture));
+                if (pot.IsEmpty()) return false;
+                ct.ThrowIfCancellationRequested();
+                pot.Click();
+                return true;
+            }, "未检测到壶", ct);
+
+            WaitForUi(capture =>
+            {
+                using var confirm = capture.Find(ElementRecognition.Get("BtnWhiteConfirm", capture));
+                if (confirm.IsEmpty()) return false;
+                ct.ThrowIfCancellationRequested();
+                confirm.Click();
+                return true;
+            }, "未找到尘歌壶放置按钮", ct);
+            WaitForUi(Bv.IsInMainUi, "放置尘歌壶后未返回主界面", ct);
+
+            bool isEnter = false;
+            WaitForUi(capture =>
+            {
+                isEnter = Bv.FindF(capture, "进入", "尘歌壶");
+                return isEnter || Bv.FindF(capture, "离开", "尘歌壶");
+            }, "未识别到进入或离开尘歌壶", ct);
+
+            string action = isEnter ? "进入" : "离开";
+            TaskControl.Logger.LogInformation("快速进出尘歌壶:识别到 {Action}尘歌壶", action);
+            // 记录交互前的状态，避免把未响应的原界面当作已经加载完成。
+            using (var capture = TaskControl.CaptureToRectArea(forceNew: true))
+            {
+                using var finger = capture.Find(ElementRecognition.Get("FingerIcon", capture));
+                potUiVisibleBeforeInteraction = Bv.IsInMainUi(capture) && finger.IsExist();
             }
+            ct.ThrowIfCancellationRequested();
+            Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+            TaskControl.Sleep(500, ct);
+            // 联机状态下确认进入/离开；单人状态下此时已经开始传送。
+            GameCaptureRegion.GameRegion1080PPosClick(1010, 760);
+            return true;
         }
+        catch (OperationCanceledException) { throw; }
+        catch (NormalEndException) { throw; }
         catch (Exception e)
         {
             TaskControl.Logger.LogWarning(e.Message);
+            return false;
         }
         finally
         {
