@@ -9,23 +9,23 @@
     "bgi_version": "0.45.0",
     "description": "",
     "enable_monster_loot_split": false,
-    "last_modified_time": 1790158274226,
+    "last_modified_time": 1790405641993,
     "map_match_method": "TemplateMatch",
     "map_name": "Teyvat",
-    "name": "不灭衍生造物前往",
+    "name": "游雪的护刃前往",
     "tags": [],
     "type": "collect",
     "version": "1.0"
   },
   "positions": [
     {
-      "action": "",
+      "action": "force_tp",
       "action_params": "",
       "id": 1,
       "move_mode": "walk",
       "type": "teleport",
-      "x": 7164.0811,
-      "y": 9309.9551
+      "x": 6278.2637,
+      "y": 7655.835
     },
     {
       "action": "",
@@ -33,8 +33,8 @@
       "id": 2,
       "move_mode": "walk",
       "type": "path",
-      "x": 7165.3457,
-      "y": 9326.8311
+      "x": 6248.4414,
+      "y": 7674.5337
     },
     {
       "action": "",
@@ -42,8 +42,8 @@
       "id": 3,
       "move_mode": "walk",
       "type": "path",
-      "x": 7165.3096,
-      "y": 9347.4238
+      "x": 6228.9082,
+      "y": 7706.9521
     },
     {
       "action": "",
@@ -51,8 +51,26 @@
       "id": 4,
       "move_mode": "walk",
       "type": "path",
-      "x": 7213.6914,
-      "y": 9415.123
+      "x": 6214.4238,
+      "y": 7720.5264
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 5,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 6206.293,
+      "y": 7768.3086
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 6,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 6202.0068,
+      "y": 7781.3105
     }
   ]
 }
