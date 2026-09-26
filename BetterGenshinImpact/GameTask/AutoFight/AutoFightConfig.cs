@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -168,9 +170,25 @@ public partial class AutoFightConfig : ObservableObject
     
     [ObservableProperty]
     private bool _qinDoublePickUp = false;
-    
+
+    /// <summary>
+    /// 盾奶位下拉框"自动"选项对应的配置值。
+    /// 选择"自动"后，开战识别到队伍时会根据内置盾奶名单自动匹配几号位是盾奶位，无需手动指定。
+    /// 空字符串仍表示关闭该功能。
+    /// </summary>
+    public const string GuardianAvatarAutoValue = "自动";
+
+    /// <summary>
+    /// 盾奶位角色在队伍中的位置（""=关闭；"自动"=根据识别到的队伍自动匹配盾奶角色；"1"~"4"=手动指定号位）
+    /// </summary>
     [ObservableProperty]
     private string _guardianAvatar = string.Empty;
+
+    /// <summary>
+    /// 盾奶位下拉框可选值：空选（关闭）、自动（识别队伍后按内置盾奶名单自动匹配）、1~4（手动指定号位）
+    /// </summary>
+    [JsonIgnore]
+    public List<string> GuardianAvatarIndexList { get; } = ["", GuardianAvatarAutoValue, "1", "2", "3", "4"];
     
     [ObservableProperty]
     private bool _guardianCombatSkip = false;
