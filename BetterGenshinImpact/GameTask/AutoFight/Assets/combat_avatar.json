@@ -1,6 +1,17 @@
 [
   {
     "alias": [
+      "未知"
+    ],
+    "burstCD": 20,
+    "id": "99999999",
+    "name": "未知角色",
+    "nameEn": "Unknown",
+    "skillCD": 20,
+    "weapon": "0"
+  },
+  {
+    "alias": [
       "旅行者",
       "主角",
       "卑鄙的外乡人",
@@ -2180,14 +2191,15 @@
     ]
   },
   {
+    "id": "10000137",
+    "name": "瓦列里",
+    "nameEn": "Valeriy",
+    "weapon": "1",
+    "skillCD": 10,
+    "burstCD": 15,
     "alias": [
-      "未知"
-    ],
-    "burstCD": 20,
-    "id": "99999999",
-    "name": "未知角色",
-    "nameEn": "Unknown",
-    "skillCD": 20,
-    "weapon": "0"
+      "瓦列里",
+      "Valeriy"
+    ]
   }
 ]
