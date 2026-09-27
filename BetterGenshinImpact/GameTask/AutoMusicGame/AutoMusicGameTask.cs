@@ -65,11 +65,13 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
             if (TaskContext.Instance().Config.AutoMusicGameConfig.UseCapturePipeline)
             {
                 // 截图管线模式：单采集循环驱动全部键位（替代每键独立 GDI 轮询）
+                // 注意：CaptureToRectArea 返回的 SrcMat 在采集宽度大于 1920 时已归一化为 1920x1080，
+                // 坐标必须停留在 assetScale 缩放空间，不能再用 ConvertPositionToGameCaptureRegion
+                // 换算回原始采集分辨率（否则 2K/4K 下全部越界、按键被跳过）
                 var keys = new List<(User32.VK Key, int X, int Y)>();
                 foreach (var keyValuePair in _keyX)
                 {
-                    var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
-                    keys.Add((keyValuePair.Key, x, y));
+                    keys.Add((keyValuePair.Key, (int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale)));
                 }
 
                 taskList.Add(Task.Run(() => DoWhitePressPipeline(ct, keys), ct));
