@@ -407,11 +407,21 @@ public class BgiOnnxFactory
                         break;
                     case ProviderType.Cpu:
                         sessionOptions.AppendExecutionProvider_CPU();
-                        // if (model.Name.Contains("PpOcr") || model.Name.Contains("Yap"))
-                        // {
-                        //     sessionOptions.IntraOpNumThreads = 2;  // 限制算子内部并行线程数
-                        //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）  
-                        // }
+                        if (model.Name.StartsWith("PpOcr") || model.Name.StartsWith("Yap"))
+                        {
+                            // OCR 推理按模型类型限制线程数，避免全核推理占满 CPU 导致游戏掉帧：
+                            // - 识别模型(Rec/Yap)输入小，全核调度开销大于并行收益，限少量线程反而更快（实测 12 核下 307ms -> 35ms）
+                            // - 检测模型(Det)输入大，但实测限到核数一半与全核耗时几乎相同，且全核 p75 抖动更差（92.8ms vs 93.7ms, p75 149ms）
+                            sessionOptions.InterOpNumThreads = 1; // 算子间顺序执行
+                            if (model.Name.Contains("Rec") || model.Name.StartsWith("Yap"))
+                            {
+                                sessionOptions.IntraOpNumThreads = Math.Clamp(Environment.ProcessorCount / 4, 2, 4);
+                            }
+                            else
+                            {
+                                sessionOptions.IntraOpNumThreads = Math.Max(2, Environment.ProcessorCount / 2);
+                            }
+                        }
                         break;
                     case ProviderType.Dnnl:
                         sessionOptions.AppendExecutionProvider_Dnnl();
