@@ -2,6 +2,7 @@ using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.ViewModel.Windows;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
 using CsTrees.MEAI;
@@ -32,6 +33,8 @@ public class AutoComboBuildTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
+        // 展示行为树浮窗：建树过程（含 LLM 多轮 preview）实时可见；AutoDomain 等任意调用方均生效
+        AutoComboTreeWindowService.Instance.Show();
         try
         {
             Logger.LogInformation("{Name}任务启动", Name);
@@ -52,6 +55,7 @@ public class AutoComboBuildTask : ISoloTask
         }
         finally
         {
+            AutoComboTreeWindowService.Instance.Hide();
             Logger.LogInformation("{Name}任务结束", Name);
         }
     }
@@ -102,7 +106,7 @@ public class AutoComboBuildTask : ISoloTask
             builder = new AutoComboBuildBuilder(avatars).WithBlackboard(blackboard);
             var tools = new AutoComboBuildTools(builder, avatars);
 
-            var chatClient = CreateChatClient(config, logger, tools);
+            var chatClient = CreateChatClient(config, logger, tools, builder);
 
             var aiFunctions = tools.Tools
                 // 禁止 LLM 调用 RunTree/ShowTreeStatus
@@ -135,6 +139,8 @@ public class AutoComboBuildTask : ISoloTask
             var root = builder.Build();
 
             var ascii = CsTrees.Display.Display.AsciiTree(root);
+            // 更新行为树浮窗数据源（建树预览一次性，INPC 通知自动推送到 UI）
+            AutoComboTreeViewModel.Instance.LatestTreeAscii = ascii;
             logger.LogInformation("生成的行为树：\n{Tree}", ascii);
 
             // 第二次调用：兜底攻击建树，失败则降级为使用队伍第一个角色普攻
@@ -176,7 +182,9 @@ public class AutoComboBuildTask : ISoloTask
                 {
                     // Preview 不消耗 builder，未关闭作用域以占位节点呈现并自动回滚
                     var preview = builder.Preview();
-                    logger.LogInformation("异常时的行为树预览：\n{Tree}", CsTrees.Display.Display.AsciiTree(preview));
+                    var previewAscii = CsTrees.Display.Display.AsciiTree(preview);
+                    AutoComboTreeViewModel.Instance.LatestTreeAscii = previewAscii;
+                    logger.LogInformation("异常时的行为树预览：\n{Tree}", previewAscii);
                 }
                 catch (Exception ex)
                 {
@@ -200,7 +208,7 @@ public class AutoComboBuildTask : ISoloTask
         var builder = new AutoComboBuildFallbackBuilder(avatars).WithBlackboard(blackboard).PushComposite(children => new Sequence("兜底攻击序列", true, children));
         var tools = new AutoComboBuildFallbackTools(builder);
 
-        var chatClient = CreateChatClient(config, logger, tools);
+        var chatClient = CreateChatClient(config, logger, tools, null, builder);
 
         var aiFunctions = tools.Tools
             // 禁止 LLM 调用 RunTree/ShowTreeStatus
@@ -230,6 +238,8 @@ public class AutoComboBuildTask : ISoloTask
 
         var root = builder.Build();
         var ascii = CsTrees.Display.Display.AsciiTree(root);
+        // 兜底树写入浮窗的兜底栏位（INPC 通知自动推送到 UI）
+        AutoComboTreeViewModel.Instance.LatestFallbackTreeAscii = ascii;
         logger.LogInformation("生成的兜底行为树：\n{Tree}", ascii);
 
         return builder;
@@ -261,7 +271,7 @@ public class AutoComboBuildTask : ISoloTask
     /// <summary>
     /// 根据 LLM 配置创建带工具调用循环的 IChatClient
     /// </summary>
-    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, IBuildToolsState buildTools)
+    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, IBuildToolsState buildTools, AutoComboBuildBuilder? mainBuilder, AutoComboBuildFallbackBuilder? fallbackBuilder = null)
     {
         if (string.IsNullOrWhiteSpace(config.PlanningLlmEndpoint) ||
             string.IsNullOrWhiteSpace(config.ModelName))
@@ -316,6 +326,9 @@ public class AutoComboBuildTask : ISoloTask
 
         // CsTrees.MEAI 自带工具屏蔽装饰：builder 尚在初始检查点（空树）时屏蔽 ResetTree/Undo，避免模型在没有任何上下文时误用
         client = new ResetTreeGuardChatClient(client, buildTools);
+
+        // 中途行为树 preview 刷新装饰：每轮请求入口把当前 builder 预览写入 AutoComboRuntime 供 UI 浮窗展示
+        client = new TreePreviewRefreshChatClient(client, logger, buildTools, mainBuilder, fallbackBuilder);
 
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
         client = new FunctionInvokingChatClient(client)

@@ -1,0 +1,101 @@
+<Window x:Class="BetterGenshinImpact.View.Windows.AutoComboTreeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="自动连招行为树"
+        Width="465"
+        Height="550"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual">
+    <Border x:Name="RootBorder"
+            BorderBrush="#40FFFFFF"
+            BorderThickness="1"
+            CornerRadius="16"
+            SnapsToDevicePixels="True">
+        <Grid Margin="8,8,8,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <ScrollViewer Grid.Row="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!--  主树：技能连招  -->
+                    <TextBlock Text="连招树"
+                               FontSize="12"
+                               Margin="4,0,0,2"
+                               Foreground="#99FFFFFF" />
+                    <TextBox x:Name="TreeText"
+                             Text="{Binding LatestTreeAscii, Mode=OneWay, TargetNullValue=等待LLM思考…}"
+                             IsReadOnly="True"
+                             FontFamily="Cascadia Mono, Consolas, monospace"
+                             FontSize="13"
+                             Background="Transparent"
+                             Foreground="#FFF0F0F0"
+                             BorderThickness="0"
+                             TextWrapping="NoWrap"
+                             AcceptsReturn="True"
+                             Focusable="False"
+                             IsReadOnlyCaretVisible="False"
+                             VerticalAlignment="Top">
+                        <TextBox.Effect>
+                            <DropShadowEffect Color="Black"
+                                              BlurRadius="6"
+                                              ShadowDepth="0"
+                                              Opacity="0.85" />
+                        </TextBox.Effect>
+                    </TextBox>
+
+                    <!--  兜底树：基础攻击  -->
+                    <TextBlock Text="兜底攻击树"
+                               FontSize="12"
+                               Margin="4,6,0,2"
+                               Foreground="#99FFFFFF" />
+                    <TextBox x:Name="FallbackTreeText"
+                             Text="{Binding LatestFallbackTreeAscii, Mode=OneWay, TargetNullValue=尚未构建…}"
+                             IsReadOnly="True"
+                             FontFamily="Cascadia Mono, Consolas, monospace"
+                             FontSize="12"
+                             Background="Transparent"
+                             Foreground="#FFD0D0D0"
+                             BorderThickness="0"
+                             TextWrapping="NoWrap"
+                             AcceptsReturn="True"
+                             Focusable="False"
+                             IsReadOnlyCaretVisible="False"
+                             VerticalAlignment="Top">
+                        <TextBox.Effect>
+                            <DropShadowEffect Color="Black"
+                                              BlurRadius="6"
+                                              ShadowDepth="0"
+                                              Opacity="0.85" />
+                        </TextBox.Effect>
+                    </TextBox>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Button x:Name="CloseButton"
+                    Width="24"
+                    Height="24"
+                    Margin="0,-6,0,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Panel.ZIndex="1"
+                    Background="#80000000"
+                    Foreground="#FFF0F0F0"
+                    BorderThickness="0"
+                    Content="x"
+                    FontSize="13"
+                    Padding="0"
+                    Click="OnCloseButtonClick" />
+        </Grid>
+    </Border>
+</Window>

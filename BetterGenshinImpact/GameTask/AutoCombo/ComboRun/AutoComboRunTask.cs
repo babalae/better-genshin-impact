@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.ViewModel.Windows;
 using CsTrees;
 using CsTrees.Display;
 using CsTrees.Visitors;
@@ -126,6 +127,9 @@ public class AutoComboRunTask : ISoloTask
             }
         }, overlayCts.Token);
 
+        // 行为树与并发循环均已就绪，进入正式运行段：显示浮窗
+        AutoComboTreeWindowService.Instance.Show();
+
         try
         {
             // 接管 CD 遮罩显示：挂起 SkillCd 触发器，避免两套 CD 显示叠加
@@ -135,13 +139,22 @@ public class AutoComboRunTask : ISoloTask
             {
                 await tree.Tick();
 
-                // 只渲染本次 Tick 遍历的路径，未访问的子树折叠为占位符
+                var vm = AutoComboTreeViewModel.Instance;
+
+                // 只渲染本次 Tick 遍历的路径，未访问的子树折叠为占位符（主树与兜底树共用同一快照）
                 var path = Display.AsciiTree(
                     comboTree,
                     showOnlyVisited: true,
                     visited: snapshot.Visited,
                     previouslyVisited: snapshot.PreviouslyVisited);
-                Logger.LogInformation("Tick {Count}：\n{Path}", tree.Count, path);
+                vm.LatestTreeAscii = path;
+
+                var fallbackPath = Display.AsciiTree(
+                    fallbackTree,
+                    showOnlyVisited: true,
+                    visited: snapshot.Visited,
+                    previouslyVisited: snapshot.PreviouslyVisited);
+                vm.LatestFallbackTreeAscii = fallbackPath;
 
                 Sleep(35, ct);
             }
@@ -152,6 +165,9 @@ public class AutoComboRunTask : ISoloTask
         }
         finally
         {
+            // 暂停/结束时隐藏浮窗，下次启动由 Start 重新显示
+            AutoComboTreeWindowService.Instance.Hide();
+
             // 暂停/结束时先停止索敌与 CD 遮罩循环并等待其完成清理，避免与后续收尾操作冲突
             if (targetingTask != null)
             {
