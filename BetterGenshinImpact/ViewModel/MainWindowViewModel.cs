@@ -15,6 +15,7 @@ using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeviceId;
+using Fischless.GameCapture;
 using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -442,7 +443,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         await CheckRedeemCodeFeedsUpdateAsync();
 
         //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
-        if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
+        if (OsVersionHelper.IsWindows11_OrGreater
+            && Config.AutoFixWin11BitBlt
+            && Config.CaptureMode == nameof(CaptureModes.BitBlt))
         {
             BitBltRegistryHelper.SetDirectXUserGlobalSettings();
         }
