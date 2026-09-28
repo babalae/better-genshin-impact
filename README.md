@@ -135,4 +135,4 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[1045965909](https://qm.qq.com/q/v5yJPb63Ze)
+提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[761949201](https://qm.qq.com/q/vYdEp5htTi)
