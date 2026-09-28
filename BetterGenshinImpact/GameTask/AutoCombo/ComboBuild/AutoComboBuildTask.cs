@@ -86,7 +86,14 @@ public class AutoComboBuildTask : ISoloTask
         }
 
         var combatScenes = CombatScenes.GetCombatScenesWithRetry();
-        return combatScenes.GetAvatars().ToArray();
+        var avatars = combatScenes.GetAvatars().ToArray();
+        // 启用 E 技能 ONNX 分类识别
+        foreach (var avatar in avatars)
+        {
+            avatar.EnableESkillClassify = true;
+        }
+
+        return avatars;
     }
 
     /// <summary>

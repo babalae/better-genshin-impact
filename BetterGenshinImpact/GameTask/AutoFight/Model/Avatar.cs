@@ -63,6 +63,13 @@ public class Avatar
     public double ManualSkillCd { get; set; }
 
     /// <summary>
+    /// 是否启用 E 技能 ONNX 分类识别（<see cref="IsESkillReadyByClassify"/>）。
+    /// YoloSharp 分类器不支持并发调用，仅 AutoCombo 等串行调用方启用；
+    /// 默认 false，<see cref="ReadSkillCdFromScreenshot"/> 回退为纯 OCR。
+    /// </summary>
+    public bool EnableESkillClassify { get; set; }
+
+    /// <summary>
     /// 最近一次使用元素战技的时间
     /// </summary>
     public DateTime LastSkillTime { get; set; }
@@ -285,7 +292,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                ESkillClassifyViewModel.Instance.Result = null;
+                if (EnableESkillClassify)
+                {
+                    ESkillClassifyViewModel.Instance.Result = null;
+                }
                 return;
             }
 
@@ -609,13 +619,26 @@ public class Avatar
     }
 
     /// <summary>
-    /// 从截图中判定 E 技能状态并读取剩余 CD：先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
+    /// 从截图中判定 E 技能状态并读取剩余 CD：<see cref="EnableESkillClassify"/> 启用时
+    /// 先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
     /// 仅在明确判定 Cooldown 时才 OCR 读取具体剩余秒数；就绪返回 0；
+    /// 未启用时 State 恒为 Unknown，仅 OCR 提取 CD 数值；
     /// 未知（置信度不足/角色不匹配）时不 OCR，避免在不确定截图归属时误读并污染记录。
     /// 注意 Cooldown 状态下 OCR 可能读不到数字（<see cref="Cd"/> 为 <c>null</c>），调用方须以 State 为准。
     /// </summary>
     private (SkillCdState State, double? Cd) ReadSkillCdFromScreenshot(ImageRegion imageRegion, bool onlyCode01Ready = true)
     {
+        // 未启用分类识别（默认）：不做状态分类，State 恒为 Unknown，仅 OCR 提取 CD 数
+        if (!EnableESkillClassify)
+        {
+            var ocrCd = ReadSkillCdByOcr(imageRegion);
+            if (ocrCd > 0)
+            {
+                ESkillCdTracker.Record(Name, ocrCd.Value);
+            }
+            return (SkillCdState.Unknown, ocrCd);
+        }
+
         var (State, Code) = IsESkillReadyByClassify(imageRegion, onlyCode01Ready);
         if (State == SkillCdState.Ready)
         {
