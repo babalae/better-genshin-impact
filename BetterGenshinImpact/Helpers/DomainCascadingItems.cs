@@ -9,9 +9,18 @@ namespace BetterGenshinImpact.Helpers;
 public static class DomainCascadingItems
 {
     private static IReadOnlyList<ICascadingItem>? _items;
+    private static IReadOnlyList<ICascadingItem>? _manualItems;
 
     public static IReadOnlyList<ICascadingItem> Items =>
         _items ??= BuildItems();
+
+    /// <summary>
+    /// 仅包含可手动指定的秘境，不包含“自动选择”等自动规划入口。
+    /// </summary>
+    public static IReadOnlyList<ICascadingItem> ManualItems =>
+        _manualItems ??= BuildManualItems();
+
+    public static IReadOnlyList<string> RewardSelectionIndices { get; } = ["", "1", "2", "3"];
 
     private static readonly Dictionary<string, (int Order, string Text)> TalentRewardDisplays = new()
     {
@@ -43,7 +52,20 @@ public static class DomainCascadingItems
 
     private static IReadOnlyList<ICascadingItem> BuildItems()
     {
-        var items = MapLazyAssets.Get().CountryToDomains.Keys
+        var items = ManualItems.ToList();
+        items.Insert(0, new CascadingItem("自动选择", new ICascadingItem[]
+        {
+            new CascadingItem(AutoDomainTask.TrainingGuideOption)
+            {
+                Tag = AutoDomainTask.TrainingGuideOption
+            }
+        }));
+        return items;
+    }
+
+    private static IReadOnlyList<ICascadingItem> BuildManualItems()
+    {
+        return MapLazyAssets.Get().CountryToDomains.Keys
             .Reverse()
             .Select(country => (ICascadingItem)new CascadingItem(
                 country,
@@ -57,14 +79,6 @@ public static class DomainCascadingItems
                     })
             ))
             .ToList();
-        items.Insert(0, new CascadingItem("自动选择", new ICascadingItem[]
-        {
-            new CascadingItem(AutoDomainTask.DevelopmentGuideOption)
-            {
-                Tag = AutoDomainTask.DevelopmentGuideOption
-            }
-        }));
-        return items;
     }
 
     private static string FormatRewards(IEnumerable<string> rewards)

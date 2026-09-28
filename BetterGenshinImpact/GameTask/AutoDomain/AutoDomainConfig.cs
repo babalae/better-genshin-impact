@@ -1,6 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -98,5 +99,67 @@ public partial class AutoDomainConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _rewardRecognitionEnabled = false;
+
+    /// <summary>
+    /// 是否根据提升指南中的培养计划自动计算今日刷取次数。
+    /// 这是培养计划扫描、动态调整和备选秘境逻辑的总开关。
+    /// </summary>
+    [ObservableProperty]
+    private bool _developmentGuideCalculateRunsEnabled = true;
+
+    /// <summary>
+    /// 培养计划刷取偏好。0：预留合成天赋收益；1：不依赖合成天赋收益。
+    /// </summary>
+    [ObservableProperty]
+    private int _developmentGuideRunPreference;
+
+    /// <summary>
+    /// 预留的合成天赋收益百分比，取值范围 0～20。
+    /// </summary>
+    [ObservableProperty]
+    private int _developmentGuideCraftingBonusReservePercent = 7;
+
+    partial void OnDevelopmentGuideRunPreferenceChanged(int value)
+    {
+        if (value is not (0 or 1))
+        {
+            DevelopmentGuideRunPreference = 0;
+        }
+    }
+
+    partial void OnDevelopmentGuideCraftingBonusReservePercentChanged(int value)
+    {
+        var normalized = Math.Clamp(value, 0, TrainingGuideRunCalculator.MaxCraftingBonusReservePercent);
+        if (value != normalized)
+        {
+            DevelopmentGuideCraftingBonusReservePercent = normalized;
+        }
+    }
+
+    /// <summary>
+    /// 保留任务参数对普通奖励识别的控制；培养计划仅在总开关打开且选中提升指南时补充启用。
+    /// </summary>
+    public bool ShouldRecognizeRewards(string domainName, bool taskRewardRecognitionEnabled) =>
+        taskRewardRecognitionEnabled ||
+        (domainName == AutoDomainTask.TrainingGuideOption &&
+         DevelopmentGuideCalculateRunsEnabled && DevelopmentGuideRewardRecognitionEnabled);
+
+    /// <summary>
+    /// 使用培养计划刷取时是否启用奖励识别。默认开启，用于后续动态调整刷取次数。
+    /// 即使常规自动秘境奖励识别关闭，本选项开启时培养计划刷取仍会识别奖励。
+    /// </summary>
+    [ObservableProperty]
+    private bool _developmentGuideRewardRecognitionEnabled = true;
+
+    /// <summary>保留培养材料浮窗每次 OCR 尝试的原图和识别输入图，仅在独立任务设置页提供开关。</summary>
+    [ObservableProperty]
+    private bool _developmentGuideOcrDebugEnabled;
+    // 培养计划完成或当天没有可刷取目标时使用的备选秘境
+    [ObservableProperty]
+    private string _developmentGuideFallbackDomainName = string.Empty;
+
+    // 备选秘境在周日或限时活动中的奖励选择序号
+    [ObservableProperty]
+    private string _developmentGuideFallbackSundaySelectedValue = string.Empty;
 
 }
