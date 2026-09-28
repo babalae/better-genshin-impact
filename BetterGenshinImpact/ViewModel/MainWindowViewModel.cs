@@ -383,6 +383,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 应用上次保存的主题
         ApplyTheme(Config.CommonConfig.CurrentThemeType);
 
+        // 非主实例仅应用自身窗口主题；后续迁移、检查更新等启动操作由主实例统一执行。
+        if (!InstanceBootstrap.Current.Context.IsRoot)
+        {
+            return;
+        }
+
         // 版本是否运行过
         if (Config.CommonConfig.RunForVersion != Global.Version)
         {

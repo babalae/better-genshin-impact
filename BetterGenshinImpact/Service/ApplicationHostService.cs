@@ -63,7 +63,7 @@ public class ApplicationHostService(
                 // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
                 // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
                 var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-                if (scriptConfig.AutoUpdateBeforeCommandLineRun)
+                if (instanceService.Context.IsRoot && scriptConfig.AutoUpdateBeforeCommandLineRun)
                 {
                     ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
                         Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
