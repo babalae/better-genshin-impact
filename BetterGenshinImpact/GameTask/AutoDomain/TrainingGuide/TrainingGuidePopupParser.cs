@@ -9,9 +9,20 @@ public sealed record TrainingGuideMaterialReading(
 /// <summary>只解析局部 OCR 的四个字段。缺失数字不等于零。</summary>
 public static class TrainingGuidePopupParser
 {
-    public static TrainingGuideMaterialReading? Parse(string title, string category, string footer, string source)
+    public static TrainingGuideMaterialReading? Parse(string title, string category, string footer, string source,
+        TrainingGuideMaterial? expectedMaterial = null, string? expectedSource = null)
     {
         var material = TrainingGuideMaterialCatalog.Find(title);
+        if (expectedMaterial != null)
+        {
+            // 明确识别为另一材料时拒绝覆盖，防止未切换弹窗或入口选错后串账。
+            if (material != null && material != expectedMaterial) return null;
+            if (string.IsNullOrEmpty(expectedSource) ||
+                TrainingGuideEntryCatalog.NormalizeEntry(source) != TrainingGuideEntryCatalog.NormalizeEntry(expectedSource)) return null;
+            // 仅在家族文字和弹窗来源都得到确认时，按入口及图标等级补足难识别的名称。
+            if (material == null && TrainingGuideMaterialCatalog.Normalize(title)
+                .Contains(TrainingGuideMaterialCatalog.Normalize(expectedMaterial.Family))) material = expectedMaterial;
+        }
         if (material == null) return null;
         category = TrainingGuideMaterialCatalog.Normalize(category);
         if (material.IsWeapon ? !category.Contains("武器突破素材") :

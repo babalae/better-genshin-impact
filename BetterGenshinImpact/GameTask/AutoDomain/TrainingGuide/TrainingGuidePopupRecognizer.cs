@@ -14,12 +14,14 @@ namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 /// <summary>浮窗局部 OCR。每种预处理方式连续读两帧，关键数字一致才接受。</summary>
 public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationToken ct, bool debugEnabled = false)
 {
-    public async Task<TrainingGuideMaterialReading?> ReadStable()
+    public async Task<TrainingGuideMaterialReading?> ReadStable(TrainingGuideMaterial? expectedMaterial = null,
+        TrainingGuideEntry? entry = null)
     {
         TrainingGuideMaterialReading? previous = null;
         var diagnostic = string.Empty;
         var parsedCount = 0;
-        var debugId = debugEnabled ? $"popup-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}" : null;
+        var captureId = $"popup-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
+        var debugId = debugEnabled ? captureId : null;
         for (var attempt = 0; attempt < 6; attempt++)
         {
             ct.ThrowIfCancellationRequested();
@@ -39,15 +41,29 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
             var titles = headers.Select(TrainingGuideMaterialCatalog.Find)
                 .OfType<TrainingGuideMaterial>().Distinct().ToArray();
             var footer = ReadLines(capture, footerRect, mode, debugPrefix, "footer");
-            var title = titles.Length == 1 ? titles[0].Name : string.Empty;
+            var title = titles.Length == 1 ? titles[0].Name : titles.Length == 0 ? headers.FirstOrDefault() ?? string.Empty : string.Empty;
             var source = footer.FirstOrDefault(line => line.Contains("炼武秘境") || line.Contains("精通秘境")) ?? string.Empty;
-            var current = TrainingGuidePopupParser.Parse(title, string.Join("\n", headers), string.Join("\n", footer), source);
+            var current = TrainingGuidePopupParser.Parse(title, string.Join("\n", headers), string.Join("\n", footer), source,
+                expectedMaterial, entry?.Entry);
             diagnostic = $"标题/分类：{string.Join(" | ", headers)}；底部：{string.Join(" | ", footer)}";
+            var inferred = current != null && titles.Length == 0;
+            var consistent = current != null && SameNumbers(current, previous);
+            // 第一帧尚无对照，不算异常；解析失败、标题回退或已有两帧结果不一致才落盘。
+            if (current == null || inferred || (previous != null && !consistent))
+                TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
+                    $"尝试 {attempt + 1}/6，预处理 {mode}；秘境={entry?.Domain}；入口={entry?.Entry}；预期材料={expectedMaterial?.Name}；" +
+                    $"{diagnostic}；结果={current?.Material.Name ?? "解析失败"}；入口推定={inferred}；" +
+                    $"库存={current?.Stock}；目标={(current?.IsTarget == true ? current.Required.ToString() : "-")}；两帧一致={consistent}");
             if (current != null) parsedCount++;
             if (debugEnabled)
                 logger.LogInformation("培养浮窗OCR尝试 {Attempt}/6，预处理 {Mode}，字段解析 {Parsed}，与前帧一致 {Consistent}：{Detail}",
                     attempt + 1, mode, current != null, current != null && SameNumbers(current, previous), diagnostic);
-            if (current != null && SameNumbers(current, previous)) return current;
+            if (current != null && consistent)
+            {
+                if (inferred) logger.LogInformation("培养材料标题未完整识别，按入口 {Entry} 及等级确定为 {Material}，库存 {Stock}，已通过两帧校验",
+                    entry?.Entry, current.Material.Name, current.Stock);
+                return current;
+            }
             // 更换预处理方式后重新取得两帧一致的结果。
             previous = attempt % 2 == 0 ? current : null;
             await Delay(300, ct);
@@ -63,7 +79,7 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
     private void SaveDebugImage(Mat image, string? prefix, string part)
     {
         if (prefix == null) return;
-        TrainingGuideDiagnostics.Save(image, logger, $"{prefix}-{part}");
+        TrainingGuideDiagnostics.Save(image, logger, part, prefix);
     }
 
     private IReadOnlyList<string> ReadLines(ImageRegion capture, Rect bounds, int mode, string? debugPrefix, string part)

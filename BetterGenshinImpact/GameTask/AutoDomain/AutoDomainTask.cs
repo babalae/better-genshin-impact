@@ -111,7 +111,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
             Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
         }
-        else
+        else if (!_taskParam.TrainingGuideOcrScanAllEnabled)
         {
             _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
         }
@@ -181,6 +181,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     {
         _ct = ct;
         _rewardSummary.Clear();
+
+        if (_taskParam.TrainingGuideOcrScanAllEnabled)
+        {
+            await RunTrainingGuideOcrScan();
+            return _rewardSummary;
+        }
 
         _guidePlanning = _taskParam.DomainName == TrainingGuideOption && _taskParam.TrainingGuideCalculateRunsEnabled;
         _guideRounds = 0;
@@ -529,7 +535,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         return true;
     }
 
-    private async Task EnterDomain()
+    private async Task EnterDomain(bool scanOnly = false)
     {
         AutoFightAssets fightAssets;
         AutoPickAssets pickAssets;
@@ -587,6 +593,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         if (!menuFound)
         {
             Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
+            if (scanOnly) throw new InvalidOperationException("未确认秘境入口界面，跳过扫描");
         }
 
         using var limitedFullyStringRa = CaptureToRectArea();
@@ -603,6 +610,15 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         foreach (var region in limitedFullyStringRaocrList) region.Dispose();
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
+        if (scanOnly)
+        {
+            var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
+                || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 }
+                || limitedFullyStringRaocrListdone != null;
+            RecordGuideScan($"{domainName}：{(allOpen ? "全开，扫描底部三个入口" : "非全开，仅扫描当前开放入口，其余入口未覆盖")}");
+            await SelectPlannedGuideLevel(allOpen, scanOnly: true);
+            return;
+        }
         if (_guidePlanning)
         {
             var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }

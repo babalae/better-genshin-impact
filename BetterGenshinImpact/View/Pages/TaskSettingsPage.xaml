@@ -1655,20 +1655,45 @@
                             </Grid>
                         </StackPanel>
                         <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-                        <Grid Margin="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                        <ui:CardExpander Margin="16" ContentPadding="0" IsExpanded="False">
+                            <ui:CardExpander.Header>
+                                <ui:TextBlock Text="开发者工具" FontTypography="Body" />
+                            </ui:CardExpander.Header>
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 培养材料OCR调试模式}" />
-                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 保留材料浮窗及领奖统计每次OCR的原图和识别输入图，保存至 User/Diagnostics/AutoDomain.TrainingGuide}"
+                                <Grid Margin="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <ui:TextBlock FontTypography="Body" Text="培养材料 OCR 调试截图" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="保留材料浮窗及领奖统计每次 OCR 的原图和识别输入图，保存至 User/Diagnostics/AutoDomain.TrainingGuide"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
+                                                     IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideOcrDebugEnabled, Mode=TwoWay}" />
+                                </Grid>
+                                <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+                                <Grid Margin="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <ui:TextBlock FontTypography="Body" Text="遍历材料秘境 OCR" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="开启后启动独立自动秘境，将前往全部已知材料秘境，扫描当前开放入口的所有材料后退出，不战斗、不消耗树脂。无需需求角色；全开期间可覆盖全部材料。仅影响独立任务，正常刷取前请关闭。"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
+                                                     IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideOcrScanAllEnabled, Mode=TwoWay}" />
+                                </Grid>
+                                <ui:TextBlock Margin="16,0,16,16" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="扫描汇总与 OCR 纠错日志均保存在 User/Diagnostics/AutoDomain.TrainingGuide；ocr-issues.log 不依赖截图开关。"
                                               TextWrapping="Wrap" />
                             </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
-                                             IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideOcrDebugEnabled, Mode=TwoWay}" />
-                        </Grid>
+                        </ui:CardExpander>
                     </StackPanel>
                 </ui:CardExpander>
 

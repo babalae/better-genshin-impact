@@ -160,7 +160,7 @@ public partial class AutoDomainTask
         }
     }
 
-    private async Task SelectPlannedGuideLevel(bool allOpen)
+    private async Task SelectPlannedGuideLevel(bool allOpen, bool scanOnly = false)
     {
         using (var screen = CaptureToRectArea())
             BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(screen.Width * .25), (int)(screen.Height * .5));
@@ -183,9 +183,20 @@ public partial class AutoDomainTask
             foreach (var candidate in candidates)
             {
                 var key = _guideDomainName + ":" + TrainingGuideMaterialCatalog.Normalize(candidate.Text);
-                if (_guideCompletedLevels.Contains(key)) continue;
+                if (!scanOnly && _guideCompletedLevels.Contains(key)) continue;
                 candidate.Click();
                 await Delay(700, _ct);
+                if (scanOnly)
+                {
+                    try { await ReadEntryMaterials(candidate.Text, scanOnly: true); }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception e)
+                    {
+                        _guideScanEntryFailed++;
+                        RecordGuideScan($"{key}：入口扫描失败，{e.Message}");
+                    }
+                    continue;
+                }
                 using var detail = CaptureToRectArea();
                 using var demand = detail.Find(RecognitionObject.Ocr(detail.Width * .48, detail.Height * .49, detail.Width * .5, detail.Height * .33));
                 if (!demand.Text.Contains("需求角色"))
@@ -193,7 +204,7 @@ public partial class AutoDomainTask
                     Logger.LogInformation("培养计划：{Level} 未出现需求角色，跳过", candidate.Text);
                     continue;
                 }
-                var materials = await ReadEntryMaterials();
+                var materials = await ReadEntryMaterials(candidate.Text);
                 if (!_guidePlans.TryGetValue(key, out var plan)) _guidePlans[key] = plan = new(materials);
                 else plan.Refresh(materials);
                 var remaining = plan.RemainingResin(GuideReservePercent);
@@ -202,6 +213,7 @@ public partial class AutoDomainTask
                 if (remaining == 0) _guideCompletedLevels.Add(key);
                 else planned.Add((candidate, key));
             }
+            if (scanOnly) return;
             if (planned.Count == 0) throw new GuideDomainCompleteException();
             var selected = planned[0];
             selected.Region.Click();
@@ -212,7 +224,7 @@ public partial class AutoDomainTask
         finally { foreach (var row in rows) row.Dispose(); }
     }
 
-    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials()
+    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(string level, bool scanOnly = false)
     {
         using var capture = CaptureToRectArea();
         var texts = capture.FindMulti(RecognitionObject.Ocr(capture.Width * .48, capture.Height * .35, capture.Width * .5, capture.Height * .4));
@@ -237,21 +249,49 @@ public partial class AutoDomainTask
             throw new InvalidOperationException($"秘境入口未确认完整的5/6个图标（摩拉、阅历及3/4级材料图标），已停止点击，请查看材料图标区域定位日志");
         }
         var materials = new List<TrainingGuideMaterialReading>();
+        var entry = TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, level);
+        if (entry == null) Logger.LogInformation("培养入口 {Level} 未收录于对照表，使用完整材料名称识别", level);
         Logger.LogInformation("秘境入口定位到 {Count} 个材料图标及固定奖励图标，开始逐个点击材料读取库存/目标", icons.Count);
-        foreach (var icon in icons.Skip(2))
+        for (var index = 0; index < icons.Count - 2; index++)
         {
+            var icon = icons[index + 2];
+            var expected = entry?.MaterialAt(index, icons.Count - 2);
+            if (entry != null && expected == null)
+                throw new InvalidOperationException($"{level}：材料图标数量与入口对照表不一致，停止规划");
             capture.ClickTo(band.X + icon.X + icon.Width / 2, band.Y + icon.Y + icon.Height / 2);
             await Delay(600, _ct);
-            var reading = await new TrainingGuidePopupRecognizer(Logger, _ct,
-                _taskParam.TrainingGuideOcrDebugEnabled).ReadStable();
-            using (var popup = CaptureToRectArea()) popup.ClickTo(popup.Width * .94, popup.Height * .40);
-            await Delay(400, _ct);
+            TrainingGuideMaterialReading? reading;
+            try
+            {
+                reading = await new TrainingGuidePopupRecognizer(Logger, _ct,
+                    _taskParam.TrainingGuideOcrDebugEnabled).ReadStable(expected, entry);
+            }
+            finally
+            {
+                if (!_ct.IsCancellationRequested)
+                {
+                    using (var popup = CaptureToRectArea()) popup.ClickTo(popup.Width * .94, popup.Height * .40);
+                    await Delay(400, _ct);
+                }
+            }
             if (reading == null)
             {
+                if (scanOnly)
+                {
+                    _guideScanFailed++;
+                    RecordGuideScan($"{_guideDomainName}/{level}：材料 {index + 1}（{expected?.Name ?? "未知"}）识别失败");
+                    continue;
+                }
                 throw new InvalidOperationException("秘境材料库存识别失败，请查看培养浮窗OCR日志；停止以避免错误刷取");
             }
             materials.Add(reading);
+            if (scanOnly)
+            {
+                _guideScanSucceeded++;
+                RecordGuideScan($"{_guideDomainName}/{level}：{reading.Material.Name} {reading.Stock}/{(reading.IsTarget ? reading.Required.ToString() : "-")}");
+            }
         }
+        if (scanOnly) return materials;
         if (!materials.Any(m => m.IsTarget))
             throw new InvalidOperationException("已确认需求角色，但未读到材料的培养需求数字，暂不能规划");
         if (materials.Select(m => m.Material.Family).Distinct().Count() != 1)
@@ -261,7 +301,8 @@ public partial class AutoDomainTask
 
     private void ReportGuidePlan(string level, TrainingGuideFamilyPlan plan, int remaining)
     {
-        var materials = string.Join("、", plan.Materials.Where(m => m.IsTarget).Select(m => $"{m.Material.Name} {m.Stock}/{m.Required}"));
+        var materials = string.Join("、", plan.Materials.Select(m =>
+            $"{m.Material.Name} {m.Stock}/{(m.IsTarget ? m.Required.ToString() : "-")}"));
         Logger.LogInformation("培养材料（库存/目标）{Level}：{Materials}", level, materials);
         var allocation = DescribeGuideResinAllocation(remaining);
         Logger.LogInformation("培养树脂规划 {Level}：当前进度 {Spent}/{Total}体；{Allocation}；合成预留 {Reserve}%",

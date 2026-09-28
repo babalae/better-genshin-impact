@@ -83,6 +83,9 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     /// <summary>Save training guide OCR diagnostic images.</summary>
     public bool TrainingGuideOcrDebugEnabled { get; set; }
 
+    // 不从持久化配置自动继承，避免独立任务开发开关影响一条龙和 JS。
+    public bool TrainingGuideOcrScanAllEnabled { get; set; }
+
     /// <summary>Fallback domain after training targets are complete. Empty disables fallback.</summary>
     public string TrainingGuideFallbackDomainName { get; set; } = string.Empty;
 
