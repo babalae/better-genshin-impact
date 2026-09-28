@@ -498,7 +498,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
         {
             await new TaskRunner().RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)
             {
-                TrainingGuideOcrScanAllEnabled = scanOnly
+                TrainingGuideOcrScanAllEnabled = scanOnly,
+                TrainingGuideOcrScanDomains = Config.AutoDomainConfig.TrainingGuideOcrScanDomains,
+                TrainingGuideOcrScanMaterials = Config.AutoDomainConfig.TrainingGuideOcrScanMaterials
             }));
         }
         finally { SwitchAutoDomainEnabled = false; }

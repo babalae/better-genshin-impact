@@ -1683,7 +1683,7 @@
                                     <StackPanel>
                                         <ui:TextBlock FontTypography="Body" Text="遍历材料秘境 OCR" />
                                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="开启后启动独立自动秘境，将前往全部已知材料秘境，扫描当前开放入口的所有材料后退出，不战斗、不消耗树脂。无需需求角色；全开期间可覆盖全部材料。仅影响独立任务，正常刷取前请关闭。"
+                                                      Text="开启后启动独立自动秘境，将按下方筛选扫描当前开放入口的材料后退出，不战斗、不消耗树脂。两框留空时遍历全部已知材料秘境。无需需求角色；仅影响独立任务，正常刷取前请关闭。"
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
@@ -1692,6 +1692,19 @@
                                 <ui:TextBlock Margin="16,0,16,16" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               Text="扫描汇总与 OCR 纠错日志均保存在 User/Diagnostics/AutoDomain.TrainingGuide；ocr-issues.log 不依赖截图开关。"
                                               TextWrapping="Wrap" />
+                                <StackPanel Margin="16,0,16,16">
+                                    <ui:TextBlock Text="测试秘境名称（多个用 ; 分隔）" />
+                                    <ui:TextBox Margin="0,6,0,12"
+                                                PlaceholderText="例如：砂流之庭;昏识塔"
+                                                Text="{Binding Config.AutoDomainConfig.TrainingGuideOcrScanDomains, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ui:TextBlock Text="测试天赋素材名称（多个用 ; 分隔）" />
+                                    <ui:TextBox Margin="0,6,0,6"
+                                                PlaceholderText="例如：自由;「慈爱」的哲学"
+                                                Text="{Binding Config.AutoDomainConfig.TrainingGuideOcrScanMaterials, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="秘境名称会选择该秘境的全部开放入口；天赋素材可填完整名称或家族名，自动定位秘境并扫描该家族全部等级。两框同时填写时合并目标并去重。填写后启动独立自动秘境即可；未开放入口只记录，不强行进入。"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
                             </StackPanel>
                         </ui:CardExpander>
                     </StackPanel>

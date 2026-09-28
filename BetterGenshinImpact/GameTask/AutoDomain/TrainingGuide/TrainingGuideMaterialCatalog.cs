@@ -182,7 +182,8 @@ public static class TrainingGuideMaterialCatalog
     ]);
 
     public static string Normalize(string text) => Regex.Replace(text, @"\s+", "")
-        .Replace('“', '「').Replace('”', '」').Replace("凛雪帝皇的辞诀", "凛雪帝皇的辞决");
+        .Replace('“', '「').Replace('”', '」').Replace("凛雪帝皇的辞诀", "凛雪帝皇的辞决")
+        .Replace("「净言」", "「诤言」");
 
     public static TrainingGuideMaterial? Find(string text)
     {

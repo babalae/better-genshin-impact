@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,12 +14,14 @@ namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 /// <summary>浮窗局部 OCR。每种预处理方式连续读两帧，关键数字一致才接受。</summary>
 public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationToken ct, bool debugEnabled = false)
 {
-    public async Task<TrainingGuideMaterialReading?> ReadStable(TrainingGuideMaterial? expectedMaterial = null,
+    public async Task<TrainingGuideMaterialReading?> ReadStable(TrainingGuideMaterial expectedMaterial,
         TrainingGuideEntry? entry = null)
     {
+        ArgumentNullException.ThrowIfNull(expectedMaterial);
         TrainingGuideMaterialReading? previous = null;
         var diagnostic = string.Empty;
         var parsedCount = 0;
+        var hadIssue = false;
         var captureId = $"popup-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
         var debugId = debugEnabled ? captureId : null;
         for (var attempt = 0; attempt < 6; attempt++)
@@ -29,52 +31,48 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
             var mode = attempt / 2;
             var debugPrefix = debugId == null ? null : $"{debugId}-attempt-{attempt + 1}-mode-{mode}";
             SaveDebugImage(capture.SrcMat, debugPrefix, "capture");
-            // 使用固定比例粗裁，避免不同品质的浮窗边缘对比度造成顶部误定位。
-            var header = new Rect((int)(capture.Width * .365), (int)(capture.Height * .10),
-                (int)(capture.Width * .27), (int)(capture.Height * .36));
             // 底部从46%覆盖至98%，给较高浮窗的库存/培养需求条保留空间。
             var footerTop = (int)(capture.Height * .46);
-            var footerRect = new Rect(header.X, footerTop, header.Width,
+            var footerRect = new Rect((int)(capture.Width * .365), footerTop, (int)(capture.Width * .27),
                 (int)(capture.Height * .98) - footerTop);
-            if (debugEnabled) logger.LogInformation("培养浮窗固定裁剪：标题 {Header}，底部 {Footer}", header, footerRect);
-            var headers = ReadLines(capture, header, mode, debugPrefix, "header");
-            var titles = headers.Select(TrainingGuideMaterialCatalog.Find)
-                .OfType<TrainingGuideMaterial>().Distinct().ToArray();
+            if (debugEnabled) logger.LogInformation("培养浮窗数量裁剪：{Footer}", footerRect);
             var footer = ReadLines(capture, footerRect, mode, debugPrefix, "footer");
-            var title = titles.Length == 1 ? titles[0].Name : titles.Length == 0 ? headers.FirstOrDefault() ?? string.Empty : string.Empty;
-            var source = footer.FirstOrDefault(line => line.Contains("炼武秘境") || line.Contains("精通秘境")) ?? string.Empty;
-            var current = TrainingGuidePopupParser.Parse(title, string.Join("\n", headers), string.Join("\n", footer), source,
-                expectedMaterial, entry?.Entry);
-            diagnostic = $"标题/分类：{string.Join(" | ", headers)}；底部：{string.Join(" | ", footer)}";
-            var inferred = current != null && titles.Length == 0;
+            var current = TrainingGuidePopupParser.ParseQuantities(expectedMaterial, string.Join("\n", footer));
+            diagnostic = $"图标材料：{expectedMaterial.Name}；底部：{string.Join(" | ", footer)}";
             var consistent = current != null && SameNumbers(current, previous);
-            // 第一帧尚无对照，不算异常；解析失败、标题回退或已有两帧结果不一致才落盘。
-            if (current == null || inferred || (previous != null && !consistent))
+            // 第一帧尚无对照，不算异常；解析失败或已有两帧结果不一致才落盘。
+            if (current == null || (previous != null && !consistent))
+            {
+                hadIssue = true;
                 TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
-                    $"尝试 {attempt + 1}/6，预处理 {mode}；秘境={entry?.Domain}；入口={entry?.Entry}；预期材料={expectedMaterial?.Name}；" +
-                    $"{diagnostic}；结果={current?.Material.Name ?? "解析失败"}；入口推定={inferred}；" +
+                    $"尝试 {attempt + 1}/6，预处理 {mode}；秘境={entry?.Domain}；入口={entry?.Entry}；预期材料={expectedMaterial.Name}；" +
+                    $"{diagnostic}；结果={current?.Material.Name ?? "解析失败"}；身份来源=图标；" +
                     $"库存={current?.Stock}；目标={(current?.IsTarget == true ? current.Required.ToString() : "-")}；两帧一致={consistent}");
+            }
             if (current != null) parsedCount++;
             if (debugEnabled)
                 logger.LogInformation("培养浮窗OCR尝试 {Attempt}/6，预处理 {Mode}，字段解析 {Parsed}，与前帧一致 {Consistent}：{Detail}",
                     attempt + 1, mode, current != null, current != null && SameNumbers(current, previous), diagnostic);
             if (current != null && consistent)
             {
-                if (inferred) logger.LogInformation("培养材料标题未完整识别，按入口 {Entry} 及等级确定为 {Material}，库存 {Stock}，已通过两帧校验",
-                    entry?.Entry, current.Material.Name, current.Stock);
+                if (hadIssue)
+                    TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
+                        $"最终结果=重试成功；尝试次数={attempt + 1}；材料={expectedMaterial.Name}；库存={current.Stock}；目标={(current.IsTarget ? current.Required.ToString() : "-")}");
                 return current;
             }
             // 更换预处理方式后重新取得两帧一致的结果。
             previous = attempt % 2 == 0 ? current : null;
             await Delay(300, ct);
         }
+        TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
+            $"最终结果=重试耗尽；材料={expectedMaterial.Name}；有效解析次数={parsedCount}/6；未取得同一预处理方式下连续两帧一致结果");
         logger.LogWarning("培养浮窗OCR失败：6次尝试中 {ParsedCount} 次字段解析成功，未取得连续两次有效且一致的结果；最后一次：{Detail}", parsedCount, diagnostic);
         return null;
     }
 
     public static bool SameNumbers(TrainingGuideMaterialReading current, TrainingGuideMaterialReading? previous) =>
         previous != null && current.Material == previous.Material && current.Stock == previous.Stock &&
-        current.Required == previous.Required && current.Craftable == previous.Craftable && current.IsTarget == previous.IsTarget;
+        current.Required == previous.Required && current.IsTarget == previous.IsTarget;
 
     private void SaveDebugImage(Mat image, string? prefix, string part)
     {

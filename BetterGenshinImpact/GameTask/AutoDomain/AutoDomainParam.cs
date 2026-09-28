@@ -7,6 +7,15 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 {
+    /// <summary>仅本次运行使用。null 沿用游戏培养计划；JSON 数组元素为 material 和 target（目标库存）。</summary>
+    public string? TrainingTargetsJson { get; set; }
+
+    /// <summary>JS 使用 JSON.stringify([{material: "材料完整名称", target: 28}]) 传入。</summary>
+    public void SetTrainingTargets(string json)
+    {
+        TrainingGuide.TrainingGuideCustomTargets.Parse(json);
+        TrainingTargetsJson = json;
+    }
     public int DomainRoundNum { get; set; }
 
     public string CombatStrategyPath { get; set; }
@@ -85,6 +94,8 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 
     // 不从持久化配置自动继承，避免独立任务开发开关影响一条龙和 JS。
     public bool TrainingGuideOcrScanAllEnabled { get; set; }
+    public string TrainingGuideOcrScanDomains { get; set; } = string.Empty;
+    public string TrainingGuideOcrScanMaterials { get; set; } = string.Empty;
 
     /// <summary>Fallback domain after training targets are complete. Empty disables fallback.</summary>
     public string TrainingGuideFallbackDomainName { get; set; } = string.Empty;
@@ -93,6 +104,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     public string TrainingGuideFallbackSundaySelectedValue { get; set; } = string.Empty;
 
     public bool ShouldRecognizeRewards() => RewardRecognitionEnabled ||
+        (TrainingTargetsJson != null && TrainingGuideRewardRecognitionEnabled) ||
         (DomainName == AutoDomainTask.TrainingGuideOption &&
          TrainingGuideCalculateRunsEnabled && TrainingGuideRewardRecognitionEnabled);
 

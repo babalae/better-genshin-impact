@@ -97,6 +97,9 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
+        _guideCustomTargets = TrainingGuide.TrainingGuideCustomTargets.Parse(taskParam.TrainingTargetsJson);
+        if (_guideCustomTargets != null && taskParam.TrainingGuideOcrScanAllEnabled)
+            throw new ArgumentException("自定义培养目标不能与仅扫描开发模式同时启用");
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
@@ -188,7 +191,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             return _rewardSummary;
         }
 
-        _guidePlanning = _taskParam.DomainName == TrainingGuideOption && _taskParam.TrainingGuideCalculateRunsEnabled;
+        _guidePlanning = _guideCustomTargets != null ||
+            (_taskParam.DomainName == TrainingGuideOption && _taskParam.TrainingGuideCalculateRunsEnabled);
         _guideRounds = 0;
         _guideResinStatus = null;
         _guideReenter = false;
@@ -196,6 +200,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         _guideActivePlan = null;
         _guideCompletedLevels.Clear();
         _guideCompletedDomains.Clear();
+        _guideUnavailableFamilies.Clear();
+        _guideDomainCandidates = null;
         _guidePlans.Clear();
 
         Init();
@@ -420,7 +426,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             await SelectTrainingGuideDestination();
         }
         // 传送到秘境
-        if (!string.IsNullOrEmpty(_taskParam.DomainName))
+        if (!string.IsNullOrEmpty(_guideDomainName ?? _taskParam.DomainName))
         {
             if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_guideDomainName ?? _taskParam.DomainName, out var domainPosition))
             {
@@ -615,7 +621,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
                 || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 }
                 || limitedFullyStringRaocrListdone != null;
-            RecordGuideScan($"{domainName}：{(allOpen ? "全开，扫描底部三个入口" : "非全开，仅扫描当前开放入口，其余入口未覆盖")}");
+            RecordGuideScan($"{domainName}：{(allOpen ? "全开，检测底部三个候选入口，按筛选条件扫描" : "非全开，检测当前开放入口，按筛选条件扫描；未开放入口未覆盖")}");
             await SelectPlannedGuideLevel(allOpen, scanOnly: true);
             return;
         }

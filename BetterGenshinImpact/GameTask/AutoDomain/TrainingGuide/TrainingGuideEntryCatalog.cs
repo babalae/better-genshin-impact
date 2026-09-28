@@ -5,16 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
-public sealed record TrainingGuideEntry(string Domain, string Entry, string Family, bool IsWeapon)
-{
-    public TrainingGuideMaterial? MaterialAt(int index, int count)
-    {
-        var expectedCount = IsWeapon ? 4 : 3;
-        if (count != expectedCount || index < 0 || index >= count) return null;
-        return TrainingGuideMaterialCatalog.Materials.SingleOrDefault(m =>
-            m.Family == Family && m.IsWeapon == IsWeapon && m.Tier == count - index - 1);
-    }
-}
+public sealed record TrainingGuideEntry(string Domain, string Entry, string Family, bool IsWeapon);
 
 /// <summary>入口名称决定家族；最高难度的材料图标从高等级到低等级排列。</summary>
 public static class TrainingGuideEntryCatalog
