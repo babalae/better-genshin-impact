@@ -137,14 +137,6 @@ public partial class AutoDomainConfig : ObservableObject
     }
 
     /// <summary>
-    /// 保留任务参数对普通奖励识别的控制；培养计划仅在总开关打开且选中提升指南时补充启用。
-    /// </summary>
-    public bool ShouldRecognizeRewards(string domainName, bool taskRewardRecognitionEnabled) =>
-        taskRewardRecognitionEnabled ||
-        (domainName == AutoDomainTask.TrainingGuideOption &&
-         DevelopmentGuideCalculateRunsEnabled && DevelopmentGuideRewardRecognitionEnabled);
-
-    /// <summary>
     /// 使用培养计划刷取时是否启用奖励识别。默认开启，用于后续动态调整刷取次数。
     /// 即使常规自动秘境奖励识别关闭，本选项开启时培养计划刷取仍会识别奖励。
     /// </summary>

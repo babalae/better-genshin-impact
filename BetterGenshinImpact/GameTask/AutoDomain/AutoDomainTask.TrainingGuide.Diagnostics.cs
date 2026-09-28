@@ -85,6 +85,8 @@ public partial class AutoDomainTask
 
     private async Task RunTrainingGuideOcrScan()
     {
+        // 扫描同样依赖 16:9 坐标布局，但不启用 Init 中的战斗等任务行为。
+        LogScreenResolution();
         // 先验证所有输入，避免拼写错误意外触发完整遍历或部分传送。
         var selectedEntries = ResolveGuideScanEntries();
         _guideScanId = $"scan-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
@@ -123,6 +125,7 @@ public partial class AutoDomainTask
                 catch (Exception e)
                 {
                     failedDomains++;
+                    Logger.LogWarning(e, "培养 OCR 遍历：秘境 {Domain} 扫描异常", domain);
                     RecordGuideScan($"{domain}：未完成扫描，{e.Message}");
                 }
             }

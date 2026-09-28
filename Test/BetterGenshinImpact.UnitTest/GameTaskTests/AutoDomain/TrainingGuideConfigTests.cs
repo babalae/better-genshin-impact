@@ -6,21 +6,24 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoDomain;
 public class TrainingGuideConfigTests
 {
     [Fact]
-    public void RewardRecognition_AllSwitchCombinationsPreserveLegacyGate()
+    public void RewardRecognition_AllSwitchCombinationsCoverGameAndCustomTargets()
     {
         foreach (var guide in new[] { false, true })
         foreach (var calculate in new[] { false, true })
         foreach (var planRewards in new[] { false, true })
         foreach (var taskRewards in new[] { false, true })
+        foreach (var customTargets in new[] { false, true })
         {
-            var config = new AutoDomainConfig
-            {
-                DevelopmentGuideCalculateRunsEnabled = calculate,
-                DevelopmentGuideRewardRecognitionEnabled = planRewards
-            };
-            var domain = guide ? AutoDomainTask.TrainingGuideOption : "普通秘境";
-            Assert.Equal(taskRewards || (guide && calculate && planRewards),
-                config.ShouldRecognizeRewards(domain, taskRewards));
+            // 构造函数读取全局游戏配置；本测试仅调用纯参数判断，显式初始化它依赖的全部字段。
+            var param = (AutoDomainParam)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(AutoDomainParam));
+            param.DomainName = guide ? AutoDomainTask.TrainingGuideOption : "普通秘境";
+            param.TrainingGuideCalculateRunsEnabled = calculate;
+            param.TrainingGuideRewardRecognitionEnabled = planRewards;
+            param.RewardRecognitionEnabled = taskRewards;
+            param.TrainingTargetsJson = customTargets
+                ? "[{\"material\":\"「诤言」的哲学\",\"target\":28}]" : null;
+            Assert.Equal(taskRewards || (planRewards && (customTargets || (guide && calculate))),
+                param.ShouldRecognizeRewards());
         }
     }
 

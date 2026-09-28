@@ -27,7 +27,7 @@ public static class TrainingGuideDiagnostics
                 File.AppendAllText(Path.Combine(folder, fileName),
                     $"{DateTime.Now:O} {message}{Environment.NewLine}");
         }
-        catch (Exception e) { logger.LogWarning("培养 OCR 记录保存失败：{Message}", e.Message); }
+        catch (Exception e) { logger.LogWarning(e, "培养 OCR 记录保存失败：{Message}", e.Message); }
     }
 
     public static void Save(Mat image, ILogger logger, string stage, string? captureId = null)
@@ -42,6 +42,6 @@ public static class TrainingGuideDiagnostics
             if (!Cv2.ImWrite(path, image)) logger.LogWarning("培养诊断截图保存失败：{Path}", path);
             else logger.LogDebug("培养诊断截图：{Path}", path);
         }
-        catch (Exception e) { logger.LogWarning("培养诊断截图保存失败：{Message}", e.Message); }
+        catch (Exception e) { logger.LogWarning(e, "培养诊断截图保存失败：{Message}", e.Message); }
     }
 }
