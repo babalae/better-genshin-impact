@@ -21,6 +21,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Windows;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -284,6 +285,7 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
+                ESkillClassifyViewModel.Instance.Result = null;
                 return;
             }
 
@@ -757,7 +759,8 @@ public class Avatar
     /// </param>
     public (SkillCdState State, string? Code) IsESkillReadyByClassify(ImageRegion imageRegion, bool onlyCode01Ready = true)
     {
-        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ERectForClassify);
+        var eRect1080 = AutoFightAssets.Get(imageRegion).ERectForClassify;
+        using var eRa = imageRegion.DeriveCrop(eRect1080);
         var result = ESkillClassifierLazy.Value.Predictor.Classify(eRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
@@ -809,37 +812,18 @@ public class Avatar
             }
         }
 
-        DrawESkillClassifyResult(imageRegion, classifyResult.State, classifyResult.Code);
-        return classifyResult;
-    }
-
-    /// <summary>
-    /// 在 E 技能图标上方绘制 <see cref="IsESkillReadyByClassify"/> 的识别结果（就绪/冷却/未知 + 编号）。
-    /// 仅在遮罩窗口存在且开启"显示识别结果"时可见（MaskWindow 渲染时统一过滤）。
-    /// 遮罩窗口未初始化（如单元测试环境）时直接跳过，不影响调用方。
-    /// </summary>
-    private void DrawESkillClassifyResult(ImageRegion imageRegion, SkillCdState state, string? code)
-    {
-        if (View.MaskWindow.InstanceNullable() == null)
+        // 识别结果写入 VM，由需要显示的模块（如 AutoComboRunTask）订阅 INPC 变更后绘制（数据与显示解耦）
+        var domainToCaptureFactor = (double)TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / imageRegion.Width;
+        var eRectCapture = new Rect((int)(eRect1080.X * domainToCaptureFactor), (int)(eRect1080.Y * domainToCaptureFactor),
+            (int)(eRect1080.Width * domainToCaptureFactor), (int)(eRect1080.Height * domainToCaptureFactor));
+        ESkillClassifyViewModel.Instance.Result = new ESkillClassifyResult
         {
-            return;
-        }
-
-        var eRect = AutoFightAssets.Get(imageRegion).ERectForClassify;
-        var stateText = state switch
-        {
-            SkillCdState.Ready => "就绪",
-            SkillCdState.Cooldown => "冷却",
-            _ => "未知",
+            State = classifyResult.State,
+            Code = classifyResult.Code,
+            ClassifyRect = eRectCapture.ToWindowsRectangle(),
+            TextPosition = new System.Windows.Point(eRectCapture.X, eRectCapture.Y - 24 * domainToCaptureFactor),
         };
-
-        if (!string.IsNullOrEmpty(code))
-        {
-            stateText += $"({code})";
-        }
-
-        View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveTextList("ESkillClassify",
-            [new View.Drawable.TextDrawable(stateText, new System.Windows.Point(eRect.X, eRect.Y - 24))]);
+        return classifyResult;
     }
 
     // /// <summary>
