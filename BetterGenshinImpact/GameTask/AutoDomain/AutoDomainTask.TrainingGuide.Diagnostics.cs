@@ -69,7 +69,7 @@ public partial class AutoDomainTask
     private bool ShouldScanGuideEntry(string level)
     {
         var entry = TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, level);
-        if (entry != null && _guideScanEntries?.Contains(entry) == true)
+        if (entry == null || _guideScanEntries?.Contains(entry) == true)
         {
             return true;
         }

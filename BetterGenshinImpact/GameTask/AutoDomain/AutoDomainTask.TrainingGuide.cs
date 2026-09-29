@@ -210,17 +210,8 @@ public partial class AutoDomainTask
             var count = allOpen ? 3 : 1;
             if (levels.Length < count) throw new InvalidOperationException("未完整识别底部最高难度关卡，停止培养规划");
             var candidates = levels.TakeLast(count).ToArray();
-            if (!scanOnly && _guideCustomTargets != null)
-            {
-                var requestedEntries = TrainingGuideEntryCatalog.Entries.Where(e => e.Domain == _guideDomainName &&
-                    _guideCustomTargets.Keys.Any(m => m.Family == e.Family && m.IsWeapon == e.IsWeapon)).ToArray();
-                var availableEntries = candidates.Select(r => TrainingGuideEntryCatalog.Find(_guideDomainName!, r.Text)).ToHashSet();
-                foreach (var unavailable in requestedEntries.Where(e => !availableEntries.Contains(e)))
-                {
-                    _guideUnavailableFamilies.Add(unavailable.Family);
-                    Logger.LogWarning("自定义培养目标：{Domain}/{Entry} 未开放或入口未识别，本次跳过", unavailable.Domain, unavailable.Entry);
-                }
-            }
+            var availableEntries = candidates.Select(r => TrainingGuideEntryCatalog.Find(_guideDomainName!, r.Text))
+                .OfType<TrainingGuideEntry>().ToHashSet();
             var tiers = candidates.Select(r => System.Text.RegularExpressions.Regex.Match(r.Text.Trim(), @"[IVXⅠⅡⅢⅣⅤⅥ]+$",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase).Value).Distinct().ToArray();
             if (tiers.Length != 1) throw new InvalidOperationException("底部候选难度不一致，列表可能未滚到底部");
@@ -232,7 +223,7 @@ public partial class AutoDomainTask
                 if (!scanOnly && _guideCustomTargets != null)
                 {
                     var entry = TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, candidate.Text);
-                    if (entry == null || !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) continue;
+                    if (entry != null && !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) continue;
                 }
                 if (scanOnly && !ShouldScanGuideEntry(candidate.Text)) continue;
                 if (scanOnly) MarkGuideScanAttempt(TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, candidate.Text));
@@ -259,7 +250,8 @@ public partial class AutoDomainTask
                         continue;
                     }
                 }
-                var materials = await ReadEntryMaterials(candidate.Text);
+                var materials = await ReadEntryMaterials(candidate.Text, availableEntries: availableEntries);
+                if (materials.Count == 0) continue;
                 if (!_guidePlans.TryGetValue(key, out var plan)) _guidePlans[key] = plan = new(materials);
                 else plan.Refresh(materials);
                 var remaining = plan.RemainingResin(GuideReservePercent);
@@ -269,6 +261,17 @@ public partial class AutoDomainTask
                 else planned.Add((candidate, key));
             }
             if (scanOnly) return;
+            if (_guideCustomTargets != null)
+            {
+                var requestedEntries = TrainingGuideEntryCatalog.Entries.Where(e => e.Domain == _guideDomainName &&
+                    _guideCustomTargets.Keys.Any(m => m.Family == e.Family && m.IsWeapon == e.IsWeapon)).ToArray();
+                foreach (var available in availableEntries) _guideUnavailableFamilies.Remove(available.Family);
+                foreach (var unavailable in requestedEntries.Where(e => !availableEntries.Contains(e)))
+                {
+                    _guideUnavailableFamilies.Add(unavailable.Family);
+                    Logger.LogWarning("自定义培养目标：{Domain}/{Entry} 未开放或入口未识别，本次跳过", unavailable.Domain, unavailable.Entry);
+                }
+            }
             if (planned.Count == 0) throw new GuideDomainCompleteException();
             var selected = planned[0];
             selected.Region.Click();
@@ -279,7 +282,8 @@ public partial class AutoDomainTask
         finally { foreach (var row in rows) row.Dispose(); }
     }
 
-    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(string level, bool scanOnly = false)
+    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(string level, bool scanOnly = false,
+        ISet<TrainingGuideEntry>? availableEntries = null)
     {
         using var capture = CaptureToRectArea();
         var texts = capture.FindMulti(RecognitionObject.Ocr(capture.Width * .48, capture.Height * .35, capture.Width * .5, capture.Height * .4));
@@ -343,6 +347,13 @@ public partial class AutoDomainTask
         // 入口文字识别失败时，用已经确认的完整图标家族补全入口身份。
         entry ??= TrainingGuideEntryCatalog.Entries.FirstOrDefault(e => e.Domain == _guideDomainName &&
             e.Family == family.Family && e.IsWeapon == family.IsWeapon);
+        if (entry == null)
+            throw new InvalidOperationException($"{level}: 图标家族不属于当前秘境，停止本入口识别");
+        availableEntries?.Add(entry);
+        // 完整图标家族确认入口后再筛选，非目标入口不读取弹窗、不计入扫描成功数。
+        if (scanOnly && _guideScanEntries?.Contains(entry) != true) return materials;
+        if (!scanOnly && _guideCustomTargets != null &&
+            !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) return materials;
         if (scanOnly) MarkGuideScanAttempt(entry);
         foreach (var (icon, expected) in identified)
         {
