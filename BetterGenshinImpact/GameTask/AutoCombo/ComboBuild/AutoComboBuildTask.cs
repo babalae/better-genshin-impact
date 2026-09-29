@@ -2,6 +2,7 @@ using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.ViewModel.Windows;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
 using CsTrees.MEAI;
@@ -32,6 +33,8 @@ public class AutoComboBuildTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
+        // 展示行为树浮窗：建树过程（含 LLM 多轮 preview）实时可见；AutoDomain 等任意调用方均生效
+        AutoComboTreeWindowService.Instance.Show();
         try
         {
             Logger.LogInformation("{Name}任务启动", Name);
@@ -52,6 +55,7 @@ public class AutoComboBuildTask : ISoloTask
         }
         finally
         {
+            AutoComboTreeWindowService.Instance.Hide();
             Logger.LogInformation("{Name}任务结束", Name);
         }
     }
@@ -82,7 +86,14 @@ public class AutoComboBuildTask : ISoloTask
         }
 
         var combatScenes = CombatScenes.GetCombatScenesWithRetry();
-        return combatScenes.GetAvatars().ToArray();
+        var avatars = combatScenes.GetAvatars().ToArray();
+        // 启用 E 技能 ONNX 分类识别
+        foreach (var avatar in avatars)
+        {
+            avatar.EnableESkillClassify = true;
+        }
+
+        return avatars;
     }
 
     /// <summary>
@@ -102,7 +113,7 @@ public class AutoComboBuildTask : ISoloTask
             builder = new AutoComboBuildBuilder(avatars).WithBlackboard(blackboard);
             var tools = new AutoComboBuildTools(builder, avatars);
 
-            var chatClient = CreateChatClient(config, logger, tools);
+            var chatClient = CreateChatClient(config, logger, tools, builder);
 
             var aiFunctions = tools.Tools
                 // 禁止 LLM 调用 RunTree/ShowTreeStatus
@@ -112,7 +123,7 @@ public class AutoComboBuildTask : ISoloTask
 
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, BuildInstructions(avatarNames, config.ExtraPrompt, logger)),
+                new(ChatRole.System, AutoComboBuildPrompts.BuildMain(avatarNames, config, logger)),
                 new(ChatRole.User, $"请为当前队伍构建战斗策略行为树"),
             };
             var options = new ChatOptions { Tools = aiFunctions };
@@ -135,6 +146,8 @@ public class AutoComboBuildTask : ISoloTask
             var root = builder.Build();
 
             var ascii = CsTrees.Display.Display.AsciiTree(root);
+            // 更新行为树浮窗数据源（建树预览一次性，INPC 通知自动推送到 UI）
+            AutoComboTreeViewModel.Instance.LatestTreeAscii = ascii;
             logger.LogInformation("生成的行为树：\n{Tree}", ascii);
 
             // 第二次调用：兜底攻击建树，失败则降级为使用队伍第一个角色普攻
@@ -176,7 +189,9 @@ public class AutoComboBuildTask : ISoloTask
                 {
                     // Preview 不消耗 builder，未关闭作用域以占位节点呈现并自动回滚
                     var preview = builder.Preview();
-                    logger.LogInformation("异常时的行为树预览：\n{Tree}", CsTrees.Display.Display.AsciiTree(preview));
+                    var previewAscii = CsTrees.Display.Display.AsciiTree(preview);
+                    AutoComboTreeViewModel.Instance.LatestTreeAscii = previewAscii;
+                    logger.LogInformation("异常时的行为树预览：\n{Tree}", previewAscii);
                 }
                 catch (Exception ex)
                 {
@@ -200,7 +215,7 @@ public class AutoComboBuildTask : ISoloTask
         var builder = new AutoComboBuildFallbackBuilder(avatars).WithBlackboard(blackboard).PushComposite(children => new Sequence("兜底攻击序列", true, children));
         var tools = new AutoComboBuildFallbackTools(builder);
 
-        var chatClient = CreateChatClient(config, logger, tools);
+        var chatClient = CreateChatClient(config, logger, tools, null, builder);
 
         var aiFunctions = tools.Tools
             // 禁止 LLM 调用 RunTree/ShowTreeStatus
@@ -210,7 +225,7 @@ public class AutoComboBuildTask : ISoloTask
 
         var messages = new List<ChatMessage>
         {
-            new(ChatRole.System, BuildFallbackInstructions(avatarNames, logger)),
+            new(ChatRole.System, AutoComboBuildPrompts.BuildFallback(avatarNames, config, logger)),
             new(ChatRole.User, $"请为当前队伍构建兜底攻击行为树"),
         };
         var options = new ChatOptions { Tools = aiFunctions };
@@ -230,38 +245,17 @@ public class AutoComboBuildTask : ISoloTask
 
         var root = builder.Build();
         var ascii = CsTrees.Display.Display.AsciiTree(root);
+        // 兜底树写入浮窗的兜底栏位（INPC 通知自动推送到 UI）
+        AutoComboTreeViewModel.Instance.LatestFallbackTreeAscii = ascii;
         logger.LogInformation("生成的兜底行为树：\n{Tree}", ascii);
 
         return builder;
     }
 
     /// <summary>
-    /// 兜底建树给 LLM 的系统指令：任务范围刻意收窄——只选一个角色、只用基础动作、只产出一条循环输出序列
-    /// </summary>
-    private static string BuildFallbackInstructions(List<string> avatarNames, ILogger logger)
-    {
-        return $$"""
-            你将通过工具调用构建一棵兜底攻击行为树：它会在所有技能都不可用的间隙执行，为队伍提供基础输出
-
-            ## 建树规范
-            - 行为树的根（Sequence 作用域）已由程序预建打开，你只需在其中依次添加1~5个基础动作子节点
-            - 添加完所有动作后使用一次End来关闭作用域，然后调用 BuildTree 来完成构建
-            - 技能策略行为树由外部单独构建，并且已考虑到技能效果中可能包含的基础动作需求
-
-            ## 动作设计
-            - 从当前队伍中选择站场输出最合适的角色承担兜底攻击
-            - 依据角色特性，一般一个普攻子节点即可，如有特殊则按顺序编排若干个基础动作
-            - 序列是会被循环 Tick 的，因此序列中必须避免没有意义的重复
-
-            ## 当前队伍
-            {{AvatarProfiles.BuildTeamSection(avatarNames, logger)}}
-            """;
-    }
-
-    /// <summary>
     /// 根据 LLM 配置创建带工具调用循环的 IChatClient
     /// </summary>
-    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, IBuildToolsState buildTools)
+    private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, IBuildToolsState buildTools, AutoComboBuildBuilder? mainBuilder, AutoComboBuildFallbackBuilder? fallbackBuilder = null)
     {
         if (string.IsNullOrWhiteSpace(config.PlanningLlmEndpoint) ||
             string.IsNullOrWhiteSpace(config.ModelName))
@@ -317,6 +311,9 @@ public class AutoComboBuildTask : ISoloTask
         // CsTrees.MEAI 自带工具屏蔽装饰：builder 尚在初始检查点（空树）时屏蔽 ResetTree/Undo，避免模型在没有任何上下文时误用
         client = new ResetTreeGuardChatClient(client, buildTools);
 
+        // 中途行为树 preview 刷新装饰：每轮请求入口把当前 builder 预览写入 AutoComboRuntime 供 UI 浮窗展示
+        client = new TreePreviewRefreshChatClient(client, logger, buildTools, mainBuilder, fallbackBuilder);
+
         // 外层装饰：自动执行 LLM 的工具调用并把结果回传，循环直至 LLM 输出最终回复
         client = new FunctionInvokingChatClient(client)
         {
@@ -326,53 +323,5 @@ public class AutoComboBuildTask : ISoloTask
 
         // 截断检查装饰：LLM 因上下文耗尽或达到 max_tokens 被截断时（finish_reason=length）显式报错
         return new LengthCutoffCheckChatClient(client, logger);
-    }
-
-    /// <summary>
-    /// 构建给 LLM 的系统指令（静态内容，配合 provider 端前缀缓存）
-    /// </summary>
-    private static string BuildInstructions(List<string> avatarNames, string extraPrompt, ILogger logger)
-    {
-        // 只展开与当前队伍标签相关的交叉描述，无匹配内容时整段省略
-        var tagPairSection = AvatarProfiles.BuildTagPairSection(avatarNames);
-        var extraPromptSection = string.IsNullOrWhiteSpace(extraPrompt) ? "" : $"\n\n## 用户自定义要求\n{extraPrompt.Trim()}";
-        return $$"""
-            你将通过工具调用构建一棵技能策略行为树。
-            你的做法是先分析并输出设计思路、构建过程的伪代码和行为树草图，然后通过工具调用进行构建，最终调用 BuildTree 完成构建。
-
-            ## 建树规范
-            - 每层打开的作用域必须填入正确的子节点、退出前使用一次End来关闭，所有作用域关闭后才可调用 BuildTree 来构建树
-            - 减少没有意义的组合节点嵌套
-            - 工具调用返回的结果中包含 tree 字段，它就是当前行为树的完整预览，其缩进表示层级。由于系统会裁剪历史记录，你只会看到最后一次调用的 tree
-            - `--> ...` 表示当前正在构建的位置，其缩进表示层级
-            - 每次响应允许多次工具调用，有把握时应尽快构建
-            
-            ## 术语说明
-            - 元素战技就是E技能，元素爆发就是Q技能，两者统称技能
-            - 通常，元素战技在使用后会进入冷却，元素爆发在使用后充能会归零
-            - 通常，元素战技造成伤害时会产生能量，为全队累积充能，因此爆发的使用间隔一般比战技长
-            - 应分辨各个技能是否属于站场技能，站场技能是效果只在角色前台登场时成立、切人后无法起效的一类技能，一般是强化角色自身，或为了持续生效角色必须留在场上
-              站场期间如果因技能效果有额外的技能可用，应优先于基础动作尝试使用
-            
-            ## 战术要求
-            优先使用连招，单一角色的技能其次，所有技能都应有机会被使用。因此使用 Selector 作为外层逻辑，然后按优先级顺序添加以下类型的子节点
-                1. 连招序列，使用 Sequence 作为子节点，内部再按以下规则设计子节点序列
-                    1.1. 连招是为了用元素反应或技能效果，去加成单次爆发或在某种短暂状态下才能打出的关键伤害，因此序列中负责铺垫的行为在前，被加成的行为在后
-                    1.2. 一个连招序列至少要有一种技能效果，和至多一种元素反应主题
-                    1.3. 连招中的元素反应应考虑元素消耗量，持续性效果的技能更适合为持续性的关键伤害做铺垫
-                    1.4. 连招序列中如果有多个技能，先连续添加多个 IsXXXReady ，所有检查完成后，再按顺序使用技能：非站场技能使用 UseXXX；站场技能使用 UseXXXIfReadyThenDoActionsByXXX
-                    1.5. 不要单纯为了触发元素反应而设计连招，因为实际上外层的运转已经在随机触发元素反应了
-                2. 单独使用E技能或Q技能
-                    2.1. 由于冷却或充能的存在，下一次 Tick 就会被拦截，从而执行其他兄弟节点
-                    2.2. 对每个角色来说，Q技能已经存在于某个连招序列的情况下可以不单独使用，而E技能必须有单独使用的场合以保证队伍充能
-                    2.3. 非站场技能直接使用 UseXXXIfReady 作为叶子节点；站场技能使用 UseXXXIfReadyThenDoActionsByXXX
-            基础攻击兜底由外部单独构建，所有技能暂不可用时整体返回 Failure 即可
-
-            ## 当前队伍
-            {{AvatarProfiles.BuildTeamSection(avatarNames, logger)}}
-
-            ## 元素反应
-            {{tagPairSection}}{{extraPromptSection}}
-            """;
     }
 }

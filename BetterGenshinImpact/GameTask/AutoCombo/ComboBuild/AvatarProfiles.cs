@@ -1,16 +1,28 @@
 using BetterGenshinImpact.GameTask.AutoFight.Config;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BetterGenshinImpact.GameTask.AutoCombo;
+namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
 /// <summary>
 /// 角色档案：角色名、战术描述与类别标签
 /// Tags 可同时存多个，如 ["雷元素", "月兆"]；元素用"X元素"，月反应体系用"月兆"，星反应体系用"星之楔"
+/// 作为描述覆盖项存入配置时只使用 Name/Description，Tags 由内置档案决定
 /// </summary>
-internal sealed record AvatarProfile(string Name, string Description, string[] Tags);
+public sealed record AvatarProfile
+{
+    public AvatarProfile(string name, string description, string[] tags)
+    {
+        Name = name;
+        Description = description;
+        Tags = tags;
+    }
+
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string[] Tags { get; set; }
+}
 
 /// <summary>
 /// 标签两两交叉描述（如"火元素 + 水元素 → 蒸发"类反应知识）
@@ -25,6 +37,11 @@ internal sealed record TagPairProfile(string TagA, string TagB, string Descripti
 /// </summary>
 internal static class AvatarProfiles
 {
+    /// <summary>
+    /// 内置档案覆盖的角色名（已剔除暂不支持的角色），供下拉选择
+    /// </summary>
+    public static List<string> GetProfileNames() => Profiles.Select(p => p.Name).ToList();
+
     /// <summary>
     /// 角色战术描述：定位、技能要点、连招注意事项，自由文本
     /// </summary>
@@ -51,7 +68,7 @@ internal static class AvatarProfiles
         new("达达利亚", "基础攻击弓形态普攻与下落为物理伤害，重击满蓄力为水伤；E技能切换近战形态挂水，再次按E切回远程；Q技能造成大范围水伤。", ["水元素"]), // todo
         new("诺艾尔", "基础攻击为物理伤害；E技能生成护盾；Q技能持续15秒强化自身站场输出，退场时失效。可在Q期间输出。", ["岩元素"]),
         new("七七", "基础攻击为物理伤害；E技能持续15秒，造成冰伤害并治疗场上角色；Q技能造成冰伤害，并对敌人附加诅咒，在15秒内任意角色对被诅咒的敌人造成伤害时可以回血。不站场。", ["冰元素"]),
-        new("重云", "基础攻击为物理伤害；E技能造成冰伤，并在12秒内为队伍中近战武器角色附加冰元素和提高攻速；Q技能造成三段冰伤。不站场。", ["冰元素"]),
+        new("重云", "基础攻击为物理伤害；E技能造成冰伤，并在12秒内为队伍中近战武器角色附加冰元素和提高普攻的速度；Q技能造成三段冰伤。不站场。", ["冰元素"]),
         new("甘雨", "基础攻击普攻与下落为物理伤害，重击为蓄力冰伤；E技能造成冰伤并放置持续5秒的嘲讽物；Q技能在15秒内后台持续冰伤并挂冰。目前不站场。", ["冰元素"]),
         new("阿贝多", "基础攻击为物理伤害；E技能放置后台协同岩伤的召唤物；Q技能造成大范围岩伤。默认定位为后台副C，常规循环为：放E后立刻切走，召唤物在后台自动输出，仅危局补Q切上来放完切走。不站场。", ["岩元素"]),
         new("迪奥娜", "基础攻击普攻与下落为物理伤害，重击满蓄力为冰伤；E技能长按生成冰护盾；Q技能在12秒内持续挂冰并治疗。不站场。", ["冰元素"]),
@@ -59,7 +76,7 @@ internal static class AvatarProfiles
         new("刻晴", "基础攻击为物理伤害；E技能位移造成雷伤并挂雷；Q技能造成大范围雷伤。可短暂站场，使用重击普攻交替攻击。", ["雷元素"]),
         new("砂糖", "基础攻击为风属性；E技能点按造成风伤并小范围聚怪扩散；Q技能造成6秒持续风伤并聚怪扩散。不站场。", ["风元素"]),
         new("辛焱", "基础攻击为物理伤害；E技能造成火伤并生成护盾；Q技能造成火伤并击飞。默认定位为护盾物理辅，常规循环为：E开盾挂火后切走。不站场输出。", ["火元素"]),   // todo 掺杂“默认定位”文本的都是要调整的
-        new("罗莎莉亚", "基础攻击为物理伤害；E技能突进造成冰伤并挂冰；Q技能在8秒内持续造成冰伤。不站场。", ["冰元素"]),
+        new("罗莎莉亚", "基础攻击为物理伤害；E技能突进造成冰伤；Q技能在8秒内持续造成冰伤。不站场。", ["冰元素"]),
         new("胡桃", "基础攻击为物理伤害；E技能强化自身状态9秒，大幅提升攻击力、将基础攻击变为火伤、强化重击，自身退场时解除，E状态结束或解除时还会提升其他队友暴击12秒；Q技能造成范围火伤并回血。可在E期间站场。", ["火元素"]),
         new("枫原万叶", "基础攻击为物理伤害；E技能点按造成风伤并扩散挂风；Q技能持续扩散并染色挂元素。默认定位为增伤辅助，常规循环为：主C挂元素后切万叶E或Q扩散加对应元素增伤后切走。不站场。", ["风元素"]),
         new("烟绯", "基础攻击为火属性；E技能造成火伤并挂火；Q技能造成范围火伤。默认定位为前台站场主C，常规循环为：E接重击普攻输出，打一套切走。可站场。", ["火元素"]),
@@ -72,8 +89,8 @@ internal static class AvatarProfiles
         new("五郎", "基础攻击普攻与下落为物理伤害，重击满蓄力为岩伤；E技能造成岩伤并在10秒内提升前台角色防御；Q技能造成范围岩伤并在9秒内持续造成岩伤并提升全队防御。不站场。", ["岩元素"]),
         new("九条裟罗", "基础攻击普攻与下落为物理伤害，重击满蓄力为雷伤；E技能造成雷伤并给前台加攻击；Q技能造成范围雷伤。默认定位为雷系攻击拐，常规循环为：E给主C加攻后切走，Q仅补雷或收尾。不站场。", ["雷元素"]),
         new("荒泷一斗", "基础攻击为物理伤害；E技能投掷召唤物造成岩伤并嘲讽敌人，持续6秒；Q技能持续11秒，期间基础攻击伤害提升并转为岩伤，退场时解除。推荐站场输出。", ["岩元素"]),
-        new("八重神子", "基础攻击为雷属性；E技能放置最多三座后台挂雷的召唤物；Q技能造成大范围雷伤。默认定位为后台副C，常规循环为：放满三座召唤物后切走，召唤物自动挂雷，危局Q收尾。不站场。", ["雷元素"]),
-        new("鹿野院平藏", "基础攻击为风属性；E技能造成风伤并小范围聚怪；Q技能造成大范围风伤并击飞。默认定位为速切风副C，常规循环为：主C挂元素后切他E接Q扩散后切走。不站场。", ["风元素"]),
+        new("八重神子", "基础攻击为雷属性；E技能放置后台挂雷的召唤物；Q技能造成大范围雷伤。不站场。", ["雷元素"]),
+        new("鹿野院平藏", "基础攻击为风属性；E技能造成风伤；Q技能造成大范围风伤并轻微聚怪。自身触发扩散可增强下一次E技能伤害", ["风元素"]),
         new("夜兰", "基础攻击普攻与下落为物理伤害，重击满蓄力为水伤；E技能突进造成水伤并挂水；Q技能后台高频挂水并给前台增伤。默认定位为后台挂水副C兼增伤，常规循环为：E挂水后开Q切走。不站场。", ["水元素"]),
         new("绮良良", "基础攻击为物理伤害；E技能造成范围草伤并生成草护盾；Q技能造成范围草伤。不站场。", ["草元素"]),
         new("埃洛伊", "基础攻击普攻与下落为物理伤害，重击满蓄力为冰伤；E技能造成冰伤并在10秒内强化自身普攻并提升攻击力；Q技能造成范围冰伤。可在E期间站场。", ["冰元素"]),
@@ -106,7 +123,7 @@ internal static class AvatarProfiles
         new("芙宁娜", "基础攻击为物理伤害；E技能点按后台持续挂水造成水伤；Q技能按全队生命值变动给全队增伤。默认定位为全队增伤副C兼后台挂水，常规循环为：E挂水后切走，主C输出中段切她开Q增伤再切走。不站场。", ["水元素"]), // todo
         new("夏沃蕾", "基础攻击为物理伤害；E技能造成火伤并在12秒内持续治疗前台角色；Q技能造成二段范围火伤。不站场。", ["火元素"]),
         new("娜维娅", "基础攻击为物理伤害；E技能点按造成岩伤，越贴近敌人伤害越高，可连续点按两次；Q技能岩伤爆发。默认定位为前台岩C，常规循环为：切娜维娅E后普攻重击站场，Q收尾切走。可站场。", ["岩元素"]),
-        new("嘉明", "基础攻击为物理伤害；E技能跳起并使自身能使用1次附带火伤的下落攻击，应跟随E立刻打出1次普攻以完成这次下落攻击；Q技能进入强化状态12秒，可以使用额外的E技能，期间应持续普攻来触发被E技能强化的下落攻击。", ["火元素"]),
+        new("嘉明", "基础攻击为物理伤害；E技能跳起并使自身能使用1次附带火伤的下落攻击，必须跟随E立刻打出1次普攻以完成这次下落攻击；Q技能造成范围火伤并进入强化状态12秒，期间可以使用额外的E技能，退场失效。", ["火元素"]),
         new("闲云", "基础攻击为风属性；E技能造成风伤并飞跃，使用方法为连续点按1-3次，必须紧跟1次普攻完成降落；Q技能持续治疗16秒，期间加强跳跃并为下落攻击附带风伤8次，在次数范围内可使用任意角色以[跳跃-普攻]打出下落攻击进行输出。不站场。", ["风元素"]),
         new("千织", "基础攻击为物理伤害；E技能召唤后台持续岩伤的召唤物；Q技能造成岩伤。默认定位为后台岩副C，常规循环为：E后切走，岩队补后台不站场。", ["岩元素"]),
         new("希格雯", "基础攻击普攻与下落为物理伤害，重击为蓄力水伤；E技能点按造成水伤并持续治疗全队；Q技能造成水伤并治疗全队。默认定位为水奶辅，常规循环为：E挂水治疗后切走，血低时Q。不站场。", ["水元素"]),
@@ -128,7 +145,7 @@ internal static class AvatarProfiles
         new("瓦雷莎", "基础攻击为雷属性；E技能点按向前突进造成雷伤并强化下落攻击；Q技能造成大量雷伤。默认定位为前台下落主C，常规循环为：切瓦雷莎E后下落攻击站场，Q收尾，结束切走。", ["雷元素"]), // todo
         new("爱可菲", "基础攻击为物理伤害；E技能点按造成冰伤并在20秒内持续后台挂冰和冰伤；Q技能造成冰伤并治疗全队并在9秒内持续治疗前台角色。不站场。", ["冰元素"]),
         new("伊法", "基础攻击为风属性；E技能进入浮空状态最多10秒或直到再次按E，期间加强自身普攻造成风伤并治疗全队，不再普攻后必须再次按E确保及时降落，降落前无法切人；Q技能风伤并聚怪。不站场。", ["风元素"]),
-        new("丝柯克", "基础攻击为物理伤害；E技能点按开启强化状态，之后应使用本角色进行普攻重击若干次（造成冰伤并挂冰），E后按Q为增益大招强化后续普攻而非直接造成伤害；Q技能在E状态外使用为爆发大招。默认定位为前台站场主C，常规循环为：E后Q增益，再普攻重击站场输出，打满切走。典型站场。", ["冰元素"]), // todo
+        new("丝柯克", "基础攻击为物理伤害；E技能点按开启强化状态约8秒，期间自身基础攻击变为冰伤，应以2份以上普攻和1份重击的比例输出，期间应施放额外Q技能以获得普攻加强的效果。E技能长按累计特殊能量；Q技能造成大量范围冰伤。", ["冰元素"]),
         new("塔利雅", "基础攻击为物理伤害；E技能点按放置陷阱，敌人触碰时引爆造成水伤；Q技能造成水伤并提供攻速加成与护盾。默认定位为水攻速盾辅，常规循环为：主C上台前切塔利雅E后切走，Q补攻速护盾。不站场。", ["水元素"]),
         new("伊涅芙", "基础攻击为物理伤害；E技能开护盾并在20秒内持续造成雷伤和挂雷；Q技能大量雷伤并刷新E持续时间。不站场。", ["雷元素", "月兆"]),
         new("菈乌玛", "基础攻击为草属性；E技能点按展开跟随前台持续挂草并减水草抗的领域；Q技能提升全队绽放类反应伤害。默认定位为绽放专拐，常规循环为：E铺场后切走，绽放队主C输出前开Q。不站场。", ["草元素", "月兆"]), // todo
@@ -140,14 +157,16 @@ internal static class AvatarProfiles
         new("哥伦比娅", "基础攻击为水属性；E技能在25秒内持续造成水伤和挂水；Q技能造成水伤并在20秒内为全队提供月曜增伤。若队伍中有草系角色和其他月兆角色，可间断地使用重击进行输出。", ["水元素", "月兆"]),
         new("兹白", "基础攻击为物理伤害；E技能开启强化状态，之后应使用本角色进行普攻重击若干次（造成岩伤），期间E会替换为强力岩伤攻击；Q技能造成岩伤并延长该状态。默认定位为前台站场主C，常规循环为：挂水后切兹白开E普攻重击站场，E亮了再按，Q在E状态中随意放，打满切走。典型长站场。", ["岩元素", "月兆"]), // todo
         new("叶洛亚", "基础攻击为物理伤害；E技能造成岩伤；Q技能造成岩伤并在20秒内给增强前台角色的岩元素伤害并给全队的岩伤加暴击。不站场。", ["岩元素", "月兆"]),
-        new("法尔伽", "基础攻击为物理伤害；E技能点按开启强化状态12秒，期间为自身普攻、重击附加风伤并附带队友元素伤害，可以使用额外的E技能，但无法进行下落攻击，下场时失去强化；Q技能造成风伤并附带队友元素伤害。仅在E技能期间输出。", ["风元素"]),
+        new("法尔伽", "基础攻击为物理伤害；E技能造成混合伤害并开启强化状态12秒，期间自身普攻变为混合伤害并可以使用额外的E技能（造成混合伤害），但无法进行下落攻击，下场失效；Q技能造成混合伤害。仅在E技能期间输出。混合伤害指风伤加上队友元素伤害", ["风元素"]),
         new("莉奈娅", "基础攻击普攻与下落为物理伤害，重击满蓄力为岩伤；E技能召唤后台持续岩伤并减岩抗的召唤物；Q技能治疗全队。默认定位为后台岩副C兼治疗，常规循环为：E后切走，Q危局补治疗。不站场。", ["岩元素", "月兆"]),
         new("洛恩", "基础攻击为物理伤害；E技能开启强化状态，之后应使用本角色进行普攻重击若干次（造成冰伤并挂冰），期间E会替换为强力冰伤攻击，队友后台伤害越高加成越高；Q技能消耗积攒造成冰伤爆发。默认定位为前台站场主C，常规循环为：队友铺后台伤害后切洛恩开E普攻重击站场，E亮了再按，Q收尾切走。典型站场，依赖后台队友输出。", ["冰元素"]), // todo
         new("尼可", "基础攻击为火属性；E技能给全队增加攻击并开盾；Q技能造成火伤并跟随前台协同攻击。默认定位为攻盾拐，常规循环为：主C上台前切尼可E后切走，Q可补协同伤害。不站场，E启动即走。", ["火元素"]), // todo
         new("布伦妮", "基础攻击为风属性；E技能造成风伤并给前台增加伤害；Q技能跟随前台持续造成风伤并挂风。默认定位为风系增伤拐，常规循环为：E给主C加伤后切走，Q补后台风伤挂风供扩散。不站场。", ["风元素"]), // todo
         new("桑多涅", "基础攻击普攻与下落为物理伤害，重击为冰伤；E技能造成冰伤并恢复重击能量；Q技能造成冰伤爆发。默认定位为前台重击主C，常规循环为：切桑多涅重击站场，重击乏力时按E恢复再继续重击，Q收尾切走。典型重击站场，依赖雷元素队友挂雷。", ["冰元素", "星之楔"]),  // todo
         new("阿罗夏", "基础攻击为物理伤害；E技能造成范围雷伤；Q技能在14秒内持续雷伤并嘲讽，并治疗前台和提升前台攻击力。不站场。", ["雷元素"]),
-        new("奥黛塔", "基础攻击为物理伤害；E技能需连续点按两次，第一次召唤后台持续冰伤，第二次打出强力冰伤；Q技能造成冰伤并提升自身反应伤害，一般不用。默认定位为后台冰副C，常规循环为：E接E后切走，E好了再回来补一组。不站场。", ["冰元素", "星之楔"]),
+        new("奥黛塔", "基础攻击为物理伤害；E技能召唤物提供后台持续20秒冰伤，且施放后获得1次额外E技能（打出强力冰伤），应在6秒内立即打出；Q技能造成冰伤并在20秒内提升自身星烁反应伤害。不站场。", ["冰元素", "星之楔"]),
+        new("薇斯纳", "基础攻击为物理伤害；E技能造成风伤并开启强化状态15秒，期间自身基础攻击变为风伤并可以使用额外的E技能；Q技能造成范围风伤。", ["风元素", "星之楔"]),
+        new("沃雅妮莎", "基础攻击为水属性；E技能造成范围水伤并在16秒内造成持续水伤，期间还降低敌人的水元素抗性和冰元素抗性，期间还能持续治疗前台角色；Q技能造成范围水伤，处于E技能状态下时，造成的伤害还会进一步提升。不站场。", ["水元素", "星之楔"]),
     ];
 
     /// <summary>
@@ -189,7 +208,7 @@ internal static class AvatarProfiles
             throw new Exception($"AvatarProfiles 中存在非法角色名（不在 combat_avatar.json 名单内）：{string.Join("、", invalidNames)}");
         }
 
-        // 标签必须合法，且每条有且仅有一个元素标签（BuildTeamSection 依赖它还原"X元素角色"前缀）
+        // 标签必须合法，且每条有且仅有一个元素标签（AutoComboBuildPrompts 的队伍段落依赖它还原"X元素角色"前缀）
         var invalidTags = Profiles.SelectMany(p => p.Tags).Where(t => !ValidTags.Contains(t)).Distinct().ToList();
         if (invalidTags.Count > 0)
         {
@@ -222,48 +241,24 @@ internal static class AvatarProfiles
 
     /// <summary>
     /// 取角色档案，缺失返回 null
+    /// 存在描述覆盖时返回合成档案：内置 Tags + 覆盖 Description；内置无此角色时 Tags 为空（只列名字的降级路径）
     /// </summary>
-    public static AvatarProfile? TryGet(string name)
+    public static AvatarProfile? TryGet(string name, List<AvatarProfile>? descriptionOverrides = null)
     {
-        return Profiles.FirstOrDefault(p => p.Name == name);
-    }
-
-    /// <summary>
-    /// 把队伍展开成提示词的"当前队伍"段落
-    /// 有档案的角色展开为"名字：X元素角色、月兆角色等（顿号连接），描述"；缺失档案的角色只列名字并记日志
-    /// </summary>
-    public static string BuildTeamSection(List<string> avatarNames, ILogger logger)
-    {
-        var lines = new List<string>();
-        foreach (var name in avatarNames)
+        var builtIn = Profiles.FirstOrDefault(p => p.Name == name);
+        var overrideDesc = descriptionOverrides?.FirstOrDefault(p => p.Name == name)?.Description;
+        if (overrideDesc != null)
         {
-            var profile = TryGet(name);
-            if (profile != null)
-            {
-                // 元素标签还原为"X元素角色"，其余标签（月兆/星之楔）加"角色"后缀，统一用顿号连接
-                var element = profile.Tags.FirstOrDefault(t => t.EndsWith("元素"));
-                var others = profile.Tags.Where(t => !t.EndsWith("元素")).Select(t => $"{t}角色").ToList();
-                if (element != null)
-                {
-                    others.Insert(0, $"{element}角色");
-                }
-                var head = string.Join("、", others);
-                lines.Add($"- {name}：{head}，{GetAdaptedDescription(profile)}");
-            }
-            else
-            {
-                logger.LogWarning("角色 {Name} 无内置战术描述，提示词中将只列出名字", name);
-                lines.Add($"- {name}");
-            }
+            return builtIn == null ? new AvatarProfile(name, overrideDesc, []) : builtIn with { Description = overrideDesc };
         }
 
-        return string.Join("\n", lines);
+        return builtIn;
     }
 
     /// <summary>
     /// 取角色适配后的描述：基础攻击句中含蓄力重击的（均为弓箭手），将该句替换为重击不适配的说明
     /// </summary>
-    private static string GetAdaptedDescription(AvatarProfile profile)
+    internal static string GetAdaptedDescription(AvatarProfile profile)
     {
         var separatorIndex = profile.Description.IndexOf('；');
         if (separatorIndex < 0)
@@ -284,34 +279,5 @@ internal static class AvatarProfiles
     public static string? TryGetTagPair(string tagA, string tagB)
     {
         return TagPairs.FirstOrDefault(p => p.TagA == tagA && p.TagB == tagB || p.TagA == tagB && p.TagB == tagA)?.Description;
-    }
-
-    /// <summary>
-    /// 把队伍内标签的两两交叉描述展开成提示词段落
-    /// 稀疏：只展开已录入的标签对，未录入的组合不输出
-    /// </summary>
-    public static string BuildTagPairSection(List<string> avatarNames)
-    {
-        var tags = avatarNames
-            .Select(name => TryGet(name)?.Tags)
-            .Where(t => t != null)
-            .SelectMany(t => t!)
-            .Distinct()
-            .ToList();
-
-        var lines = new List<string>();
-        for (var i = 0; i < tags.Count; i++)
-        {
-            for (var j = i + 1; j < tags.Count; j++)
-            {
-                var desc = TryGetTagPair(tags[i], tags[j]);
-                if (desc != null)
-                {
-                    lines.Add($"- {tags[i].Replace("元素", "")} × {tags[j].Replace("元素", "")}：{desc}");
-                }
-            }
-        }
-
-        return string.Join("\n", lines);
     }
 }

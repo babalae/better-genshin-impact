@@ -21,6 +21,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Windows;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -60,6 +61,13 @@ public class Avatar
     /// 手动配置的技能CD，有它就不使用OCR,小于0为自动
     /// </summary>
     public double ManualSkillCd { get; set; }
+
+    /// <summary>
+    /// 是否启用 E 技能 ONNX 分类识别（<see cref="IsESkillReadyByClassify"/>）。
+    /// YoloSharp 分类器不支持并发调用，仅 AutoCombo 等串行调用方启用；
+    /// 默认 false，<see cref="ReadSkillCdFromScreenshot"/> 回退为纯 OCR。
+    /// </summary>
+    public bool EnableESkillClassify { get; set; }
 
     /// <summary>
     /// 最近一次使用元素战技的时间
@@ -284,6 +292,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
+                if (EnableESkillClassify)
+                {
+                    ESkillClassifyViewModel.Instance.Result = null;
+                }
                 return;
             }
 
@@ -607,13 +619,26 @@ public class Avatar
     }
 
     /// <summary>
-    /// 从截图中判定 E 技能状态并读取剩余 CD：先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
+    /// 从截图中判定 E 技能状态并读取剩余 CD：<see cref="EnableESkillClassify"/> 启用时
+    /// 先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
     /// 仅在明确判定 Cooldown 时才 OCR 读取具体剩余秒数；就绪返回 0；
+    /// 未启用时 State 恒为 Unknown，仅 OCR 提取 CD 数值；
     /// 未知（置信度不足/角色不匹配）时不 OCR，避免在不确定截图归属时误读并污染记录。
     /// 注意 Cooldown 状态下 OCR 可能读不到数字（<see cref="Cd"/> 为 <c>null</c>），调用方须以 State 为准。
     /// </summary>
     private (SkillCdState State, double? Cd) ReadSkillCdFromScreenshot(ImageRegion imageRegion, bool onlyCode01Ready = true)
     {
+        // 未启用分类识别（默认）：不做状态分类，State 恒为 Unknown，仅 OCR 提取 CD 数
+        if (!EnableESkillClassify)
+        {
+            var ocrCd = ReadSkillCdByOcr(imageRegion);
+            if (ocrCd > 0)
+            {
+                ESkillCdTracker.Record(Name, ocrCd.Value);
+            }
+            return (SkillCdState.Unknown, ocrCd);
+        }
+
         var (State, Code) = IsESkillReadyByClassify(imageRegion, onlyCode01Ready);
         if (State == SkillCdState.Ready)
         {
@@ -757,7 +782,8 @@ public class Avatar
     /// </param>
     public (SkillCdState State, string? Code) IsESkillReadyByClassify(ImageRegion imageRegion, bool onlyCode01Ready = true)
     {
-        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ERectForClassify);
+        var eRect1080 = AutoFightAssets.Get(imageRegion).ERectForClassify;
+        using var eRa = imageRegion.DeriveCrop(eRect1080);
         var result = ESkillClassifierLazy.Value.Predictor.Classify(eRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
@@ -809,37 +835,19 @@ public class Avatar
             }
         }
 
-        DrawESkillClassifyResult(imageRegion, classifyResult.State, classifyResult.Code);
-        return classifyResult;
-    }
-
-    /// <summary>
-    /// 在 E 技能图标上方绘制 <see cref="IsESkillReadyByClassify"/> 的识别结果（就绪/冷却/未知 + 编号）。
-    /// 仅在遮罩窗口存在且开启"显示识别结果"时可见（MaskWindow 渲染时统一过滤）。
-    /// 遮罩窗口未初始化（如单元测试环境）时直接跳过，不影响调用方。
-    /// </summary>
-    private void DrawESkillClassifyResult(ImageRegion imageRegion, SkillCdState state, string? code)
-    {
-        if (View.MaskWindow.InstanceNullable() == null)
+        // 识别结果写入 VM，由需要显示的模块（如 AutoComboRunTask）订阅 INPC 变更后绘制（数据与显示解耦）
+        var domainToCaptureFactor = (double)TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / imageRegion.Width;
+        var eRectCapture = new Rect((int)(eRect1080.X * domainToCaptureFactor), (int)(eRect1080.Y * domainToCaptureFactor),
+            (int)(eRect1080.Width * domainToCaptureFactor), (int)(eRect1080.Height * domainToCaptureFactor));
+        ESkillClassifyViewModel.Instance.Result = new ESkillClassifyResult
         {
-            return;
-        }
-
-        var eRect = AutoFightAssets.Get(imageRegion).ERectForClassify;
-        var stateText = state switch
-        {
-            SkillCdState.Ready => "就绪",
-            SkillCdState.Cooldown => "冷却",
-            _ => "未知",
+            State = classifyResult.State,
+            Code = classifyResult.Code,
+            AvatarName = CombatAvatar.Name,
+            ClassifyRect = eRectCapture.ToWindowsRectangle(),
+            TextPosition = new System.Windows.Point(eRectCapture.X, eRectCapture.Y - 24 * domainToCaptureFactor),
         };
-
-        if (!string.IsNullOrEmpty(code))
-        {
-            stateText += $"({code})";
-        }
-
-        View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveTextList("ESkillClassify",
-            [new View.Drawable.TextDrawable(stateText, new System.Windows.Point(eRect.X, eRect.Y - 24))]);
+        return classifyResult;
     }
 
     // /// <summary>
