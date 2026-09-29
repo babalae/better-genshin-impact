@@ -1,9 +1,11 @@
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Windows;
+using System.Windows.Media;
 using CsTrees;
 using CsTrees.Display;
 using CsTrees.Visitors;
@@ -225,12 +227,41 @@ public class AutoComboRunTask : ISoloTask
             stateText += $"({result.Code})";
         }
 
+        var textColor = GetElementColor(result.AvatarName);
+
         // 坐标（ClassifyRect/TextPosition）已由 Avatar 换算到捕获像素域，直接绘制
         var drawContent = VisionContext.Instance().DrawContent;
         drawContent.PutOrRemoveRectList("ESkillClassifyRegion",
             [result.ClassifyRect.ToRectDrawable(System.Drawing.Pens.White)]);
         drawContent.PutOrRemoveTextList("ESkillClassify",
-            [new TextDrawable(stateText, result.TextPosition)]);
+            [new TextDrawable(stateText, result.TextPosition, textColor)]);
+    }
+
+    /// <summary>
+    /// 根据角色名经 AvatarProfiles 推导元素颜色，无档案或非元素标签时回退默认识别文本色
+    /// </summary>
+    private static System.Windows.Media.Color GetElementColor(string? avatarName)
+    {
+        var defaultColor = (System.Windows.Media.Color)ColorConverter.ConvertFromString(
+            TaskContext.Instance().Config.MaskWindowConfig.RecognitionTextColor);
+        if (string.IsNullOrEmpty(avatarName))
+        {
+            return defaultColor;
+        }
+
+        var profile = AvatarProfiles.TryGet(avatarName);
+        var elementTag = profile?.Tags.FirstOrDefault(t => t.EndsWith("元素", StringComparison.Ordinal));
+        return elementTag switch
+        {
+            "火元素" => System.Windows.Media.Color.FromRgb(0xFF, 0x57, 0x49),
+            "水元素" => System.Windows.Media.Color.FromRgb(0x33, 0xA6, 0xFF),
+            "风元素" => System.Windows.Media.Color.FromRgb(0x3F, 0xCE, 0xC0),
+            "雷元素" => System.Windows.Media.Color.FromRgb(0xB3, 0x80, 0xFF),
+            "草元素" => System.Windows.Media.Color.FromRgb(0x9A, 0xD9, 0x36),
+            "冰元素" => System.Windows.Media.Color.FromRgb(0x7A, 0xF2, 0xF2),
+            "岩元素" => System.Windows.Media.Color.FromRgb(0xFF, 0xB5, 0x3A),
+            _ => defaultColor,
+        };
     }
 
     private void RemoveESkillClassifyDrawables()

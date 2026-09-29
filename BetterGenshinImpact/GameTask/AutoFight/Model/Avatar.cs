@@ -843,6 +843,7 @@ public class Avatar
         {
             State = classifyResult.State,
             Code = classifyResult.Code,
+            AvatarName = CombatAvatar.Name,
             ClassifyRect = eRectCapture.ToWindowsRectangle(),
             TextPosition = new System.Windows.Point(eRectCapture.X, eRectCapture.Y - 24 * domainToCaptureFactor),
         };

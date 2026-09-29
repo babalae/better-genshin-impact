@@ -1,6 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
-using System;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -17,8 +16,8 @@ public class ESkillClassifyResult
     /// <summary>分类器输出的编号段（"01"/"02"...），置信度不足或角色不匹配时为 null</summary>
     public string? Code { get; init; }
 
-    /// <summary>识别时刻，供显示端判断新鲜度/后续过期清理</summary>
-    public DateTime Time { get; init; } = DateTime.UtcNow;
+    /// <summary>识别结果所属角色中文名，供显示端按角色元素着色等用途，可能为 null</summary>
+    public string? AvatarName { get; init; }
 
     /// <summary>E 技能分类裁剪框（捕获像素坐标），可绘制用于对齐检测</summary>
     public System.Windows.Rect ClassifyRect { get; init; }
