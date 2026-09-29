@@ -35,6 +35,7 @@ public class AutoComboBuildTask : ISoloTask
     {
         // 展示行为树浮窗：建树过程（含 LLM 多轮 preview）实时可见；AutoDomain 等任意调用方均生效
         AutoComboTreeWindowService.Instance.Show();
+        AutoComboTreeViewModel.Instance.Clear();
         try
         {
             Logger.LogInformation("{Name}任务启动", Name);
