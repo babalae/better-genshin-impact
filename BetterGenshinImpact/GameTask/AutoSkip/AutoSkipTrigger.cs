@@ -258,7 +258,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             // 自动剧情点击3s内判断
             if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
             {
-                if (!TaskContext.Instance().Config.AutoSkipConfig.SubmitGoodsEnabled)
+                if (!_config.SubmitGoodsEnabled)
                 {
                     return;
                 }
@@ -278,7 +278,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         if (isPlaying)
         {
             _prevPlayingTime = DateTime.Now;
-            if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
+            if (_config.QuicklySkipConversationsEnabled)
             {
                 if (_config.BeforeClickConfirmDelay > 0)
                 {
