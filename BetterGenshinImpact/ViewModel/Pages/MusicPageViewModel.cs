@@ -8,7 +8,7 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Ookii.Dialogs.Wpf;
+using Wpf.Ui.Violeta.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -331,7 +331,7 @@ public partial class MusicPageViewModel : ViewModel
     [RelayCommand]
     private async Task ChooseFolderAsync()
     {
-        var dialog = new VistaFolderBrowserDialog
+        var dialog = new OpenFolderDialog
         {
             Description = "选择曲谱根目录",
             UseDescriptionForTitle = true,
