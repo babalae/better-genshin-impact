@@ -18,7 +18,7 @@ public class TrainingGuideMaterialRecognitionTests
     public void WeaponDrops_UseHighestAdventureRankExpectations()
     {
         var readings = TrainingGuideMaterialCatalog.Materials.Where(m => m.Family == "凛雪帝皇")
-            .Select(m => new TrainingGuideMaterialReading(m, 0, m.Tier == 3 ? 4 : 0, null, m.Tier == 3, "")).ToArray();
+            .Select(m => new TrainingGuideMaterialReading(m, 0, m.Tier == 3 ? 4 : 0, m.Tier == 3)).ToArray();
         Assert.Equal(160, TrainingGuideResinEstimator.Estimate(readings, 0, 20));
         Assert.Equal(180, TrainingGuideResinEstimator.Estimate(readings, 0, 60));
     }
@@ -35,15 +35,14 @@ public class TrainingGuideMaterialRecognitionTests
     }
 
     [Theory]
-    [InlineData("培养需求 0/4\n可合成数量：2", 0, 4, 2)]
-    [InlineData("培养需求 17 / 9\n可合成数量: 0", 17, 9, 0)]
-    public void Popup_ParsesActualStockWithoutCapping(string footer, int stock, int required, int craft)
+    [InlineData("培养需求 0/4\n可合成数量：2", 0, 4)]
+    [InlineData("培养需求 17 / 9\n可合成数量: 0", 17, 9)]
+    public void Popup_ParsesActualStockWithoutCapping(string footer, int stock, int required)
     {
-        var reading = TrainingGuidePopupParser.Parse("凛雪帝皇的辞诀", "武器突破素材", footer, "炼武秘境：断钢");
+        var reading = TrainingGuidePopupParser.ParseQuantities(TrainingGuideMaterialCatalog.Find("凛雪帝皇的辞诀")!, footer);
         Assert.NotNull(reading);
         Assert.Equal(stock, reading.Stock);
         Assert.Equal(required, reading.Required);
-        Assert.Equal(craft, reading.Craftable);
     }
 
     [Theory]
@@ -52,13 +51,13 @@ public class TrainingGuideMaterialRecognitionTests
     [InlineData("可合成数量:2")]
     [InlineData("培养需求 999999999999999/4")]
     public void Popup_MissingOrInvalidStockNeverBecomesZero(string footer) =>
-        Assert.Null(TrainingGuidePopupParser.Parse("凛雪帝皇的辞决", "武器突破素材", footer, ""));
+        Assert.Null(TrainingGuidePopupParser.ParseQuantities(TrainingGuideMaterialCatalog.Find("凛雪帝皇的辞决")!, footer));
 
     [Fact]
     public void DecimalDrops_AreAccumulatedBeforeRounding()
     {
         var family = TrainingGuideMaterialCatalog.Materials.Where(m => m.Family == "「自由」").OrderBy(m => m.Tier)
-            .Select(m => new TrainingGuideMaterialReading(m, 0, m.Tier == 2 ? 1 : 0, null, m.Tier == 2, "")).ToArray();
+            .Select(m => new TrainingGuideMaterialReading(m, 0, m.Tier == 2 ? 1 : 0, m.Tier == 2)).ToArray();
         Assert.Equal(40, TrainingGuideResinEstimator.Estimate(family, 0, 20));
         Assert.Equal(40, TrainingGuideResinEstimator.Estimate(family, 0, 40));
         Assert.Equal(60, TrainingGuideResinEstimator.Estimate(family, 0, 60));

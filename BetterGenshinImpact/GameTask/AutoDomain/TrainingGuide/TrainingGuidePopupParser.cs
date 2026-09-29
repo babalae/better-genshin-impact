@@ -1,44 +1,34 @@
-using System;
 using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
 public sealed record TrainingGuideMaterialReading(
-    TrainingGuideMaterial Material, int Stock, int Required, int? Craftable, bool IsTarget, string Source);
+    TrainingGuideMaterial Material, int Stock, int Required, bool IsTarget);
 
-/// <summary>只解析局部 OCR 的四个字段。缺失数字不等于零。</summary>
+/// <summary>只解析局部 OCR 的库存和培养目标。缺失数字不等于零。</summary>
 public static class TrainingGuidePopupParser
 {
-    public static TrainingGuideMaterialReading? Parse(string title, string category, string footer, string source)
+    /// <summary>材料身份由图标确认；只接受明确的库存/培养标签，不依赖描述、来源或可合成数量。</summary>
+    public static TrainingGuideMaterialReading? ParseQuantities(TrainingGuideMaterial material, string footer)
     {
-        var material = TrainingGuideMaterialCatalog.Find(title);
-        if (material == null) return null;
-        category = TrainingGuideMaterialCatalog.Normalize(category);
-        if (material.IsWeapon ? !category.Contains("武器突破素材") :
-            !(category.Contains("天赋") && category.Contains("素材"))) return null;
-        footer = Regex.Replace(footer.Replace('／', '/'), @"[^\S\r\n]+", "");
-        var demands = Regex.Matches(footer, @"培养需求[:：]?\s*([0-9]+)\s*/\s*([0-9]+)(?=\s|$)");
-        if (demands.Count > 1) return null;
-        var demand = demands.Count == 1 ? demands[0] : Match.Empty;
-        int stock, required;
-        if (demand.Success)
+        var lines = footer.Replace('／', '/').Split('\n');
+        TrainingGuideMaterialReading? result = null;
+        foreach (var raw in lines)
         {
-            if (!int.TryParse(demand.Groups[1].Value, out stock) ||
-                !int.TryParse(demand.Groups[2].Value, out required)) return null;
+            var line = Regex.Replace(raw, @"\s+", "");
+            var demand = Regex.Match(line, @"^培养需求[:：]?([0-9]+)/([0-9]+)$");
+            var inventory = Regex.Match(line, @"^当前拥有[:：]?([0-9]+)$");
+            if (!demand.Success && !inventory.Success)
+            {
+                if (line.Contains("培养需求") || line.Contains("当前拥有")) return null;
+                continue;
+            }
+            if (result != null) return null;
+            if (!int.TryParse((demand.Success ? demand : inventory).Groups[1].Value, out var stock)) return null;
+            var required = 0;
+            if (demand.Success && (!int.TryParse(demand.Groups[2].Value, out required) || required <= 0)) return null;
+            result = new(material, stock, required, demand.Success);
         }
-        else
-        {
-            // 未标记的低级材料仅接受明确库存标签，不猜测描述中的任意数字。
-            if (footer.Contains("培养需求")) return null;
-            var inventory = Regex.Match(footer, @"(?:^|\n)(?:当前)?(?:拥有|持有|库存)(?:数量)?[:：]?\s*([0-9]+)(?=\s|$)");
-            if (!inventory.Success || !int.TryParse(inventory.Groups[1].Value, out stock)) return null;
-            required = 0;
-        }
-        var craft = Regex.Match(footer, @"可合成数量[:：]?\s*([0-9]+)(?=\s|$)");
-        int? craftable = null;
-        if (craft.Success && int.TryParse(craft.Groups[1].Value, out var count)) craftable = count;
-        else if (footer.Contains("可合成数量")) return null;
-        return new(material, stock, required, craftable, demand.Success,
-            TrainingGuideMaterialCatalog.Normalize(source));
+        return result;
     }
 }
