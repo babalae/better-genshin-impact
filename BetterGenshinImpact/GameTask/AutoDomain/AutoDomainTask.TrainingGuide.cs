@@ -332,17 +332,21 @@ public partial class AutoDomainTask
                 if (material != null) identified.Add((rect, material));
             }
         }
+        // 最高难度奖励按等级从高到低横向排列，防止同一家族的等级互认后绑定错误库存。
+        var tiersByPosition = identified.OrderBy(x => x.Icon.X).Select(x => x.Material.Tier).ToArray();
+        var tiersInOrder = tiersByPosition.SequenceEqual(tiersByPosition.OrderByDescending(tier => tier));
         var family = identified.FirstOrDefault().Material;
         if (family == null || identified.Count != (family.IsWeapon ? 4 : 3) ||
             identified.Any(x => x.Material.Family != family.Family || x.Material.IsWeapon != family.IsWeapon) ||
             identified.Select(x => x.Material.Tier).Distinct().Count() != identified.Count ||
+            !tiersInOrder ||
             (entry != null && (family.Family != entry.Family || family.IsWeapon != entry.IsWeapon)))
         {
             TrainingGuideDiagnostics.Save(capture.SrcMat, Logger, "capture", recognitionId);
             TrainingGuideDiagnostics.Save(strip, Logger, "strip", recognitionId);
             TrainingGuideDiagnostics.AppendOcrIssue(Logger, recognitionId,
-                $"入口={level}；图标数量={icons.Count}；已识别={string.Join("、", identified.Select(x => x.Material.Name))}；结果=家族或等级不完整/与入口冲突");
-            throw new InvalidOperationException($"{level}：图标识别未确认完整材料家族，停止本入口扫描");
+                $"入口={level}；图标数量={icons.Count}；已识别={string.Join("、", identified.Select(x => x.Material.Name))}；横向等级={string.Join(",", tiersByPosition)}；结果=家族或等级不完整/等级顺序异常/与入口冲突");
+            throw new InvalidOperationException($"{level}：图标识别未确认完整材料家族或等级顺序，停止本入口扫描");
         }
         // 入口文字识别失败时，用已经确认的完整图标家族补全入口身份。
         entry ??= TrainingGuideEntryCatalog.Entries.FirstOrDefault(e => e.Domain == _guideDomainName &&
