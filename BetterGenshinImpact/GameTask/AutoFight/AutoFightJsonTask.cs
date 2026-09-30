@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -353,9 +353,9 @@ public class AutoFightJsonTask : ISoloTask
                                             {
                                                 Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
                                                 // 防止在纳塔飞天或爬墙
-                                                Simulation.ReleaseAllKey();
-                                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                                                Simulation.SendInput.SimulateAction(GIActions.Drop);
+                                                InputHub.ReleaseAll();
+                                                InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
+                                                InputHub.Foreground.SimulateAction(GIActions.Drop);
                                                 await Delay(200, _ct);
                                                 // 重新执行整个动作
                                                 await ExecuteAction(combatScenes, action);
@@ -400,7 +400,7 @@ public class AutoFightJsonTask : ISoloTask
                 }
                 finally
                 {
-                    Simulation.ReleaseAllKey();
+                    InputHub.ReleaseAll();
                     AutoFightTask.FightStatusFlag = false;
                 }
             }, cts2.Token);
@@ -563,7 +563,7 @@ public class AutoFightJsonTask : ISoloTask
         }
         finally
         {
-            Simulation.ReleaseAllKey();
+            InputHub.ReleaseAll();
         }
     }
 
@@ -639,7 +639,7 @@ public class AutoFightJsonTask : ISoloTask
 
                 for (int attempt = 0; attempt < 6; attempt++)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                    InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
                         ElementRecognition.Get("PartyBtnChooseView"),
                         () => { },
@@ -728,7 +728,7 @@ public class AutoFightJsonTask : ISoloTask
 
             if (picker != null)
             {
-                Simulation.ReleaseAllKey();
+                InputHub.ReleaseAll();
 
                 if (picker.Name == "枫原万叶")
                 {
@@ -819,7 +819,7 @@ public class AutoFightJsonTask : ISoloTask
                                 }
                             }
 
-                            Simulation.ReleaseAllKey();
+                            InputHub.ReleaseAll();
                         }
                     }
                 }

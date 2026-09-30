@@ -1,7 +1,7 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Input;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
@@ -46,11 +46,11 @@ public class NahidaCollectHandler : IActionHandler
         int x = (int)(400 * dpi), y = (int)(-30 * dpi);
         int i = 60;
         // 视角拉到最下面
-        Simulation.SendInput.Mouse.MoveMouseBy(0, 10000);
+        InputHub.Foreground.Mouse.MoveMouseBy(0, 10000);
         await Delay(200, ct);
 
         // 按住E技能 无死角扫码
-        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
         try
         {
             await Delay(200, ct);
@@ -58,7 +58,7 @@ public class NahidaCollectHandler : IActionHandler
             // 先地面来一圈
             for (int j = 0; j < 15; j++)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy(x, 500);
+                InputHub.Foreground.Mouse.MoveMouseBy(x, 500);
                 await Delay(30, ct);
             }
 
@@ -71,14 +71,14 @@ public class NahidaCollectHandler : IActionHandler
                     y -= (int)(20 * dpi);
                 }
 
-                Simulation.SendInput.Mouse.MoveMouseBy(x, y);
+                InputHub.Foreground.Mouse.MoveMouseBy(x, y);
                 await Delay(30, ct);
             }
         }
         finally
         {
             // 就算被终止也要让按键弹回
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
             // 更新纳西妲CD
             if (!ct.IsCancellationRequested)
             {
@@ -90,7 +90,7 @@ public class NahidaCollectHandler : IActionHandler
 
         await Delay(800, ct);
         // 恢复视角
-        Simulation.SendInput.Mouse.MiddleButtonClick();
+        InputHub.Foreground.Mouse.MiddleButtonClick();
         await Delay(1000, ct);
     }
 }

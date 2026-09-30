@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -50,15 +50,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
-            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
             Mat mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pFishBite}");
-            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
-            FakeInputSimulator input = new FakeInputSimulator();
+            FakeInputChannel input = new FakeInputChannel();
 
             //
             FishBiteTimeout fishBiteTimeoutBehaviour = new FishBiteTimeout("-", 15, logger, input, blackboard, fakeTimeProvider);
@@ -109,7 +109,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 

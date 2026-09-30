@@ -1,9 +1,9 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
@@ -196,7 +196,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (HasScrollIcon(content.CaptureRectArea))
             {
                 // 滚轮下
-                Simulation.SendInput.Mouse.VerticalScroll(2);
+                InputHub.Foreground.Mouse.VerticalScroll(2);
                 Thread.Sleep(50);
             }
 
@@ -208,7 +208,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (_externalConfig is { ForceInteraction: true })
         {
             LogPick(content, "直接拾取");
-            Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
+            InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
             return;
         }
 
@@ -270,7 +270,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         //    {
         //        _fastModePickCount = 0;
         //        LogPick(content, "急速拾取");
-        //        Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+        //        InputHub.Foreground.Keyboard.KeyPress(VirtualKeyCode.VK_F);
         //    }
         //    return;
         //}
@@ -360,7 +360,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 if (_whitelistModeFinalPickList.Contains(text))
                 {
                     LogPick(content, text);
-                    Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
+                    InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
                 }
 
                 return;
@@ -369,7 +369,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (config.BlacklistModePickEnabled && _whiteList.Contains(text))
             {
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
+                InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
                 return;
             }
 
@@ -397,7 +397,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             speedTimer.Record("黑名单判断");
 
             LogPick(content, text);
-            Simulation.SendInput.Keyboard.KeyPress(_autoPickAssets.PickVk);
+            InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
         }
 
         speedTimer.DebugPrint();

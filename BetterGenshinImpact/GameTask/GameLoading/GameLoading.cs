@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using System;
@@ -322,7 +323,7 @@ public class GameLoadingTrigger : ITaskTrigger
 
         if (!ra.IsEmpty())
         {
-            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+            InputHub.Background.Mouse.LeftButtonClick();
             biliLoginClicked = true;
             return;
         }
@@ -356,7 +357,7 @@ public class GameLoadingTrigger : ITaskTrigger
                         // 添加延时确保窗口完全消失
                         Thread.Sleep(2000);
                         // 点击屏幕尝试找回焦点
-                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                        InputHub.Background.Mouse.LeftButtonClick();
                         biliLoginClicked = true;
                     }
                 }
@@ -366,7 +367,7 @@ public class GameLoadingTrigger : ITaskTrigger
         if (Bv.IsInBlessingOfTheWelkinMoon(content.CaptureRectArea))
         {
             GameCaptureRegion.GameRegion1080PPosMove(100, 100);
-            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+            InputHub.Background.Mouse.LeftButtonClick();
             Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
             // TaskControl.Logger.LogInformation("自动点击月卡");
             return;
@@ -377,7 +378,7 @@ public class GameLoadingTrigger : ITaskTrigger
         if (!ysRa.IsEmpty())
         {
             GameCaptureRegion.GameRegion1080PPosMove(100, 100);
-            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+            InputHub.Background.Mouse.LeftButtonClick();
             Debug.WriteLine("[GameLoading] 跳过原石");
             return;
         }

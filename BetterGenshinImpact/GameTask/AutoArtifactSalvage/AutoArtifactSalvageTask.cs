@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -13,7 +13,6 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using Microsoft.Extensions.Localization;
@@ -40,7 +39,7 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 public class AutoArtifactSalvageTask : ISoloTask
 {
     private readonly ILogger logger;
-    private readonly InputSimulator input = Simulation.SendInput;
+    private IInputChannel input => InputHub.Foreground;
 
     private CancellationToken ct;
 
@@ -88,7 +87,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
-    public static async Task OpenInventory(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
+    public static async Task OpenInventory(GridScreenName gridScreenName, IInputChannel input, ILogger logger, CancellationToken ct)
     {
         var (recognitionObjectChecked, recognitionObjectUnchecked) = GetTabRecognitionObjects(gridScreenName);
 
@@ -175,7 +174,7 @@ public class AutoArtifactSalvageTask : ISoloTask
     /// <param name="input">输入模拟器。</param>
     /// <param name="logger">日志记录器。</param>
     /// <param name="ct">取消令牌。</param>
-    public static async Task SwitchInventoryTab(GridScreenName targetTab, InputSimulator input, ILogger logger, CancellationToken ct)
+    public static async Task SwitchInventoryTab(GridScreenName targetTab, IInputChannel input, ILogger logger, CancellationToken ct)
     {
         var (checkedObj, uncheckedObj) = GetTabRecognitionObjects(targetTab);
 

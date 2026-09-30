@@ -1,8 +1,8 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
@@ -91,8 +91,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// 优先自动点击的选项
     /// </summary>
     private List<string> _selectList = [];
-
-    private PostMessageSimulator? _postMessageSimulator;
     
     private readonly bool _isCustomConfiguration;
 
@@ -121,7 +119,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
         IsEnabled = _config.Enabled;
         IsBackgroundRunning = _config.RunBackgroundEnabled;
         // IsUseInteractionKey = _config.SelectChatOptionType == SelectChatOptionTypes.UseInteractionKey;
-        _postMessageSimulator = TaskContext.Instance().PostMessageSimulator;
 
         if (!_isCustomConfiguration)
         {
@@ -287,11 +284,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
                 if (IsUseInteractionKey)
                 {
-                    _postMessageSimulator? .SimulateActionBackground(GIActions.PickUpOrInteract); // 注意这里不是交互键 NOTE By Ayu0K: 这里确实是交互键
+                    InputHub.Background.SimulateAction(GIActions.PickUpOrInteract); // 注意这里不是交互键 NOTE By Ayu0K: 这里确实是交互键
                 }
                 else
                 {
-                    _postMessageSimulator?.KeyPressBackground(User32.VK.VK_SPACE);
+                    InputHub.Background.Keyboard.KeyPress(User32.VK.VK_SPACE);
                 }
             }
 
@@ -367,11 +364,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 if (UseBackgroundOperation)
                 {
-                    TaskContext.Instance().PostMessageSimulator?.LeftButtonClickBackground();
+                    InputHub.Background.Mouse.LeftButtonClick();
                 }
                 else
                 {
-                    Simulation.SendInput.Mouse.LeftButtonClick();
+                    InputHub.Foreground.Mouse.LeftButtonClick();
                 }
 
                 _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
@@ -554,7 +551,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             Thread.Sleep(100);
             GameCaptureRegion.GameRegion1080PPosMove(960, 900);
-            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+            InputHub.Background.Mouse.LeftButtonClick();
             _prevGetDailyRewardsTime = DateTime.MinValue;
             primogemRa.Dispose();
         });
@@ -594,7 +591,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var fKey = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk;
             if (_config.IsClickFirstChatOption())
             {
-                _postMessageSimulator?.KeyPressBackground(fKey);
+                InputHub.Background.Keyboard.KeyPress(fKey);
             }
             else if (_config.IsClickRandomChatOption())
             {
@@ -603,18 +600,18 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 var r = random.Next(0, 5);
                 for (var j = 0; j < r; j++)
                 {
-                    _postMessageSimulator?.KeyPressBackground(User32.VK.VK_S);
+                    InputHub.Background.Keyboard.KeyPress(User32.VK.VK_S);
                     Thread.Sleep(100);
                 }
 
                 Thread.Sleep(50);
-                _postMessageSimulator?.KeyPressBackground(fKey);
+                InputHub.Background.Keyboard.KeyPress(fKey);
             }
             else
             {
-                _postMessageSimulator?.KeyPressBackground(User32.VK.VK_W);
+                InputHub.Background.Keyboard.KeyPress(User32.VK.VK_W);
                 Thread.Sleep(100);
-                _postMessageSimulator?.KeyPressBackground(fKey);
+                InputHub.Background.Keyboard.KeyPress(fKey);
             }
             
             AutoSkipLog("交互键点击(后台)");
@@ -855,7 +852,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             using var pickRa = region.Find(pickAssets.ChatPickRo);
             if (pickRa.IsExist())
             {
-                _postMessageSimulator?.KeyPressBackground(pickAssets.PickVk);
+                InputHub.Background.Keyboard.KeyPress(pickAssets.PickVk);
                 AutoSkipLog("无气泡图标，但存在交互键，直接按下交互键");
             }
         }
@@ -1092,7 +1089,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
                 if (!Bv.IsInBigMapUi(content.CaptureRectArea))
                 {
-                    TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+                    InputHub.Background.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
 
                     AutoSkipLog("关闭弹出页");
                     ResetPageCloseRecognition();

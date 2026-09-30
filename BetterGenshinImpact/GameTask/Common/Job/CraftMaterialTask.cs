@@ -1,13 +1,12 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic.FileIO;
 using OpenCvSharp;
@@ -92,7 +91,7 @@ public class CraftMaterialTask
     private static readonly Lazy<Dictionary<string, string>> MaterialTypes = new(LoadMaterialTypes);
 
     private readonly ILogger<CraftMaterialTask> _logger = App.GetLogger<CraftMaterialTask>();
-    private readonly InputSimulator _input = Simulation.SendInput;
+    private IInputChannel _input => InputHub.Foreground;
     private readonly string _materialName;
     private readonly int _targetQuantity;
     private readonly string? _materialType;

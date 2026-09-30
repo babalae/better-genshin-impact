@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using Microsoft.Extensions.Logging;
@@ -20,12 +20,12 @@ public class WalkToFTask
     /// <returns></returns>
     public async Task<bool> Start(CancellationToken ct, bool needPress = true, bool runToF = false, int timeoutMilliseconds = 30000)
     {
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         await Delay(30, ct);
         // 组合键好像不能直接用 postmessage
         if (runToF)
         {
-            Simulation.SendInput.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyDown);
         }
 
         try
@@ -40,7 +40,7 @@ public class WalkToFTask
             {
                 if (needPress)
                 {
-                    Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk);
+                    InputHub.Foreground.Keyboard.KeyPress(pickAssets.PickVk);
                 }
 
                 Logger.LogInformation("检测到交互键");
@@ -54,11 +54,11 @@ public class WalkToFTask
         }
         finally
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             Sleep(50);
             if (runToF)
             {
-                Simulation.SendInput.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyUp);
             }
         }
     }

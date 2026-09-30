@@ -1,9 +1,9 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -540,7 +540,7 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
     [StateHandler(CharacterDevelopmentState.MainUi, RetryTimeout = 15000, RetryInterval = 500, TransitionTimeout = 7000)]
     private async Task<StateHandlerResult> HandleMainUi(BvPage page)
     {
-        Simulation.SendInput.SimulateAction(GIActions.OpenCharacterScreen);
+        InputHub.Foreground.SimulateAction(GIActions.OpenCharacterScreen);
         _workflowState = CharacterDevelopmentState.OpenCharacterList;
         await Delay(500, _ct);
         return StateHandlerResult.Success;
@@ -693,7 +693,7 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
     [StateHandler(CharacterDevelopmentState.SelectedCharacter, RetryTimeout = 12000, RetryInterval = 300, TransitionTimeout = 5000)]
     private Task<StateHandlerResult> HandleSelectedCharacter(BvPage page)
     {
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+        InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
         _workflowState = CharacterDevelopmentState.SwitchCategory;
         return Task.FromResult(StateHandlerResult.Success);
     }
@@ -821,7 +821,7 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
                 throw new InvalidOperationException("未能完整识别普通攻击、元素战技和元素爆发三个天赋。");
             }
 
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             _workflowState = CharacterDevelopmentState.SwitchCategory;
         }
 

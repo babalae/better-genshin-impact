@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -175,25 +175,25 @@ public static class AvatarSpecialAction
             {
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Sleep(300, avatar.Ct);
                     for (int j = 0; j < 10; j++)
                     {
-                        Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+                        InputHub.Foreground.Mouse.MoveMouseBy(1000, 0);
                         Sleep(50);
                     }
 
                     Sleep(300);
-                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                    InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                     return true;
                 }
             }
             // 坎蒂丝长按 E：固定等待 3 秒
             case "坎蒂丝":
             {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                 Thread.Sleep(3000);
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                 return true;
             }
             default:
@@ -214,7 +214,7 @@ public static class AvatarSpecialAction
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
                     var dpi = TaskContext.Instance().DpiScale;
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
                     try
                     {
                         while (ms >= 0)
@@ -224,14 +224,14 @@ public static class AvatarSpecialAction
                                 return true;
                             }
 
-                            Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                            InputHub.Foreground.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                             ms -= 50;
                             Sleep(50);
                         }
                     }
                     finally
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
                     }
                 }
                 return true;
@@ -242,7 +242,7 @@ public static class AvatarSpecialAction
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
                     var dpi = TaskContext.Instance().DpiScale;
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
                     try
                     {
                         int tick = -4;
@@ -286,7 +286,7 @@ public static class AvatarSpecialAction
                                 rateY = 0;
                             }
 
-                            Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
+                            InputHub.Foreground.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
                             tick = (tick + 1) % 100;
                             Sleep(25);
                             ms -= 25;
@@ -296,7 +296,7 @@ public static class AvatarSpecialAction
                     }
                     finally
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
                     }
                 }
             }
@@ -311,7 +311,7 @@ public static class AvatarSpecialAction
                     var drawResults = visConfig.DrawRecognitionResults;
                     var lockLostWaitTime = visConfig.LockLostWaitTime;
 
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
 
                     DateTime? lastSeenTargetTime = null;
                     var startTime = DateTime.UtcNow;
@@ -361,7 +361,7 @@ public static class AvatarSpecialAction
                                     //Logger.LogInformation("追踪血条: 裁剪坐标({X},{Y}) 大小({W}×{H})", nearest.x, nearest.y, nearest.width, nearest.height);
                                     var offsetX = (nearest.x + nearest.width / 2) - preAimX;
                                     var offsetY = (nearest.y + nearest.height / 2) - preAimY;
-                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                                    InputHub.Foreground.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
 
                                     if (drawResults)
                                     {
@@ -384,7 +384,7 @@ public static class AvatarSpecialAction
                                         lastSeenTargetTime = DateTime.UtcNow;
                                         var offsetX = dcx - preAimX;
                                         var offsetY = dcy - preAimY;
-                                        Simulation.SendInput.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
+                                        InputHub.Foreground.Mouse.MoveMouseBy((int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                                         if (drawResults)
                                         {
                                             drawList.Add(capture.ToRectDrawable(
@@ -406,7 +406,7 @@ public static class AvatarSpecialAction
 
                                         if (!lastSeenTargetTime.HasValue || (DateTime.UtcNow - lastSeenTargetTime.Value).TotalSeconds >= lockLostWaitTime)
                                         {
-                                            Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
+                                            InputHub.Foreground.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                                         }
                                     }
                                 }
@@ -424,7 +424,7 @@ public static class AvatarSpecialAction
                     finally
                     {
                         View.Drawable.VisionContext.Instance().DrawContent.RemoveRect("SandroneBloodBars");
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
                     }
                 }
 

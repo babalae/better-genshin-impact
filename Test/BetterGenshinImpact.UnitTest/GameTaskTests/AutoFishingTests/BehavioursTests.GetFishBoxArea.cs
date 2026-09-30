@@ -69,7 +69,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                             .CheckRaiseHook("-", logger, fakeTimeProvider)
                             .Sequence("-", true)
                                 .GetFishBoxArea("-", logger, false, fakeTimeProvider)
-                                .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: new FakeDrawContent())
+                                .Fishing("-", logger, false, new FakeInputChannel(), fakeTimeProvider, drawContent: new FakeDrawContent())
                             .End()
                         .End()
                     .End()

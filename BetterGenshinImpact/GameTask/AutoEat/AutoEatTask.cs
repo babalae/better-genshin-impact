@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -11,7 +11,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -34,7 +33,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
     private readonly AutoEatParam _taskParam;
     private readonly AutoEatConfig _config;
     private readonly ILogger _logger = App.GetLogger<AutoEatTask>();
-    private readonly InputSimulator _input = Simulation.SendInput;
+    private IInputChannel _input => InputHub.Foreground;
     private CancellationToken _ct;
 
     public AutoEatTask(AutoEatParam taskParam)
@@ -171,7 +170,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                     if ((now - lastEatTime).TotalMilliseconds >= _config.EatInterval)
                     {
                         // 模拟按键 "Z" 使用便携营养袋
-                        Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+                        InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                         lastEatTime = now;
 
                         _logger.LogInformation("检测到红血，自动吃药");

@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Script;
+﻿using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 
 using BetterGenshinImpact.View;
@@ -7,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -183,7 +183,7 @@ public class TaskRunner
             return;
         }
 
-        Simulation.ReleaseAllKey();
+        InputHub.ReleaseAll();
 
         // 还原实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();

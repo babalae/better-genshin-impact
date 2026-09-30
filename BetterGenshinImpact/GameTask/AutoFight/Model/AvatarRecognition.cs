@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
@@ -455,7 +455,7 @@ public static class AvatarRecognition
                         lock (_seekLock)
                         {
                             if (_skipSeekCount > 0) continue;
-                            Simulation.SendInput.Mouse.MoveMouseBy(
+                            InputHub.Foreground.Mouse.MoveMouseBy(
                                 (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                         }
 
@@ -488,7 +488,7 @@ public static class AvatarRecognition
                             lock (_seekLock)
                             {
                                 if (_skipSeekCount > 0) continue;
-                                Simulation.SendInput.Mouse.MoveMouseBy(
+                                InputHub.Foreground.Mouse.MoveMouseBy(
                                     (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                             }
 
@@ -512,7 +512,7 @@ public static class AvatarRecognition
                                 lock (_seekLock)
                                 {
                                     if (_skipSeekCount > 0) continue;
-                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(250 * dpi), 0);
+                                    InputHub.Foreground.Mouse.MoveMouseBy((int)(250 * dpi), 0);
                                 }
                             }
                         }
@@ -532,9 +532,9 @@ public static class AvatarRecognition
             // 退出时释放所有按键、点按中键回正视角、清除叠加层
             // 注意：清理阶段使用 CancellationToken.None，因为 ct 可能在到此之前已被取消，
             // 若使用已取消的 token 会导致 Task.Delay 抛出异常，跳过中键复位和叠加层清理。
-            Simulation.ReleaseAllKey();
+            InputHub.ReleaseAll();
             await Task.Delay(50, CancellationToken.None);
-            Simulation.SendInput.Mouse.MiddleButtonClick();
+            InputHub.Foreground.Mouse.MiddleButtonClick();
             VisionContext.Instance().DrawContent.RemoveRect("ContinuousTargeting");
         }
     }

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
@@ -6,7 +7,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -24,7 +24,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private readonly InputSimulator input = Simulation.SendInput;
+        private IInputChannel input => InputHub.Foreground;
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }
@@ -228,7 +228,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", 0, moveY);
-                Simulation.SendInput.Mouse.MoveMouseBy(0, moveY);
+                InputHub.Foreground.Mouse.MoveMouseBy(0, moveY);
                 return (0, minDistance);
             }
 
@@ -248,7 +248,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", moveX, 0);
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                InputHub.Foreground.Mouse.MoveMouseBy(moveX, 0);
                 return (minDistance, 0);
             }
 
@@ -281,7 +281,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", moveX, moveY);
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
+                InputHub.Foreground.Mouse.MoveMouseBy(moveX, moveY);
                 return (dpX, dpY);
             }
 

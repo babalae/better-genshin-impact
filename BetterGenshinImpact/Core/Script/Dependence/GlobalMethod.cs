@@ -1,5 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -13,7 +13,6 @@ using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.ViewModel.Pages;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -32,106 +31,21 @@ public class GlobalMethod
 
     #region 键盘操作
 
+    // 鼠标键（VK_LBUTTON、VK_RBUTTON、VK_MBUTTON、VK_XBUTTON1、VK_XBUTTON2）由输入通道转成对应的鼠标键，
+    // 扩展键的处理也在通道内部完成
     public static void KeyDown(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonDown();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonDown();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonDown();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
-                break;
-            default:
-                if (InputBuilder.IsExtendedKey(vk))
-                {
-                    Simulation.SendInput.Keyboard.KeyDown(false, vk);
-                }
-                else
-                {
-                    Simulation.SendInput.Keyboard.KeyDown(vk);
-                }
-
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyDown(KeyBindingsSettingsPageViewModel.MappingKey(ToVk(key)));
     }
 
     public static void KeyUp(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonUp();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonUp();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonUp();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
-                break;
-            default:
-                if (InputBuilder.IsExtendedKey(vk))
-                {
-                    Simulation.SendInput.Keyboard.KeyUp(false, vk);
-                }
-                else
-                {
-                    Simulation.SendInput.Keyboard.KeyUp(vk);
-                }
-
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyUp(KeyBindingsSettingsPageViewModel.MappingKey(ToVk(key)));
     }
 
     public static void KeyPress(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonClick();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonClick();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonClick();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
-                break;
-            default:
-                if (InputBuilder.IsExtendedKey(vk))
-                {
-                    Simulation.SendInput.Keyboard.KeyPress(false, vk);
-                }
-                else
-                {
-                    Simulation.SendInput.Keyboard.KeyPress(vk);
-                }
-                
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyPress(KeyBindingsSettingsPageViewModel.MappingKey(ToVk(key)));
     }
 
     private static User32.VK ToVk(string key)
@@ -177,7 +91,7 @@ public class GlobalMethod
         var realDpi = TaskContext.Instance().DpiScale;
         x = (int)(x * realDpi / _dpi);
         y = (int)(y * realDpi / _dpi);
-        Simulation.SendInput.Mouse.MoveMouseBy(x, y);
+        InputHub.Foreground.Mouse.MoveMouseBy(x, y);
     }
 
     public static void MoveMouseTo(int x, int y)
@@ -202,52 +116,52 @@ public class GlobalMethod
 
     public static void LeftButtonClick()
     {
-        Simulation.SendInput.Mouse.LeftButtonDown().Sleep(60).LeftButtonUp();
+        InputHub.Foreground.Mouse.LeftButtonDown().Sleep(60).LeftButtonUp();
     }
 
     public static void LeftButtonDown()
     {
-        Simulation.SendInput.Mouse.LeftButtonDown();
+        InputHub.Foreground.Mouse.LeftButtonDown();
     }
 
     public static void LeftButtonUp()
     {
-        Simulation.SendInput.Mouse.LeftButtonUp();
+        InputHub.Foreground.Mouse.LeftButtonUp();
     }
 
     public static void RightButtonClick()
     {
-        Simulation.SendInput.Mouse.RightButtonDown().Sleep(60).RightButtonUp();
+        InputHub.Foreground.Mouse.RightButtonDown().Sleep(60).RightButtonUp();
     }
 
     public static void RightButtonDown()
     {
-        Simulation.SendInput.Mouse.RightButtonDown();
+        InputHub.Foreground.Mouse.RightButtonDown();
     }
 
     public static void RightButtonUp()
     {
-        Simulation.SendInput.Mouse.RightButtonUp();
+        InputHub.Foreground.Mouse.RightButtonUp();
     }
 
     public static void MiddleButtonClick()
     {
-        Simulation.SendInput.Mouse.MiddleButtonClick();
+        InputHub.Foreground.Mouse.MiddleButtonClick();
     }
 
     public static void MiddleButtonDown()
     {
-        Simulation.SendInput.Mouse.MiddleButtonDown();
+        InputHub.Foreground.Mouse.MiddleButtonDown();
     }
 
     public static void MiddleButtonUp()
     {
-        Simulation.SendInput.Mouse.MiddleButtonUp();
+        InputHub.Foreground.Mouse.MiddleButtonUp();
     }
 
     public static void VerticalScroll(int scrollAmountInClicks)
     {
-        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
+        InputHub.Foreground.Mouse.VerticalScroll(scrollAmountInClicks);
     }
 
     #endregion 鼠标操作
@@ -286,12 +200,13 @@ public class GlobalMethod
             // 将要输入的文本复制到剪贴板
             UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(text));
 
-            // 模拟Ctrl+V粘贴操作
-            Simulation.SendInput.Keyboard.KeyDown(false, VK.VK_CONTROL);
+            // 通过剪贴板 + Ctrl+V 输入文字，只面向键鼠后端。
+            // 手柄场景用不到文字输入，这里不做手柄适配；将来如果需要，请单独实现，不要依赖 Ctrl 的映射。
+            InputHub.Foreground.Keyboard.KeyDown(VK.VK_CONTROL);
             Sleep(20);
-            Simulation.SendInput.Keyboard.KeyPress(VK.VK_V);
+            InputHub.Foreground.Keyboard.KeyPress(VK.VK_V);
             Sleep(20);
-            Simulation.SendInput.Keyboard.KeyUp(false, VK.VK_CONTROL);
+            InputHub.Foreground.Keyboard.KeyUp(VK.VK_CONTROL);
 
             // 等待一小段时间确保粘贴完成
             Sleep(100);

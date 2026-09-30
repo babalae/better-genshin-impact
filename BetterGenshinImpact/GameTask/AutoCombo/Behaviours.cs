@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -292,7 +292,7 @@ public partial class Attack : Behaviour
         // 按固定节奏点击，两次点击不足间隔时本拍空转
         if (now - _lastClickAt >= TimeSpan.FromMilliseconds(ClickIntervalMs))
         {
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
             _lastClickAt = now;
         }
 

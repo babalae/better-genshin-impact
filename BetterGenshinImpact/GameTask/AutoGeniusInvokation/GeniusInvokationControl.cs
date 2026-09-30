@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
@@ -601,7 +601,7 @@ public class GeniusInvokationControl
     public void ActionPhaseElementalTuning(int currentCardCount)
     {
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var m = Simulation.SendInput.Mouse;
+        var m = InputHub.Foreground.Mouse;
         ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
         Sleep(1500);
         if (currentCardCount == 1)
@@ -624,7 +624,7 @@ public class GeniusInvokationControl
     {
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var info = TaskContext.Instance().SystemInfo;
-        var m = Simulation.SendInput.Mouse;
+        var m = InputHub.Foreground.Mouse;
 
         var startY = rect.Y + rect.Height - 50;
         var endX = rect.X + rect.Width - 50;

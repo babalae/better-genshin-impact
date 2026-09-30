@@ -7,3 +7,4 @@
 ## 文档列表
 
 - [BetterGI 多实例命名管道协议](multi-instance-ipc.md)
+- [BetterGI 输入层 InputHub 设计](input-hub.md)

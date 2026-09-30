@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Input;
 using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Macro
@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.GameTask.Macro
                 TaskContext.Instance().Config.MacroConfig.RunaroundMouseXInterval = 1;
             }
 
-            Simulation.SendInput.Mouse.MoveMouseBy(TaskContext.Instance().Config.MacroConfig.RunaroundMouseXInterval, 0);
+            InputHub.Foreground.Mouse.MoveMouseBy(TaskContext.Instance().Config.MacroConfig.RunaroundMouseXInterval, 0);
             Thread.Sleep(TaskContext.Instance().Config.MacroConfig.RunaroundInterval);
         }
     }

@@ -1,6 +1,6 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
@@ -96,8 +96,8 @@ public class Region : IDisposable
     public void BackgroundClick()
     {
         User32.GetCursorPos(out var p);
-        this.Move();  // 必须移动实际鼠标
-        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+        this.Move();  // 必须移动实际鼠标（前台通道）
+        InputHub.Background.Mouse.LeftButtonClick(); // 后台通道点击
         Thread.Sleep(10);
         DesktopRegion.DesktopRegionMove(p.X, p.Y); // 鼠标移动回原来位置
     }

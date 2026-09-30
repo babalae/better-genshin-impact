@@ -24,9 +24,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250314164703100_FishBite_Succeeded_FP.png");
 
-            FakeInputSimulator input = new FakeInputSimulator();
+            FakeInputChannel input = new FakeInputChannel();
             FakeDrawContent drawContent = new FakeDrawContent();
-            var imageRegion1 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(input.Mouse), converter: new ScaleConverter(1d), drawContent);
+            var imageRegion1 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -56,7 +56,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250306111749714_CheckThrowRod_Succeeded.png");   // 一张正常下杆的图片
-            var imageRegion2 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(input.Mouse), converter: new ScaleConverter(1d), drawContent);
+            var imageRegion2 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent);
 
             blackboard = new CsTrees.Blackboard.Blackboard();
 

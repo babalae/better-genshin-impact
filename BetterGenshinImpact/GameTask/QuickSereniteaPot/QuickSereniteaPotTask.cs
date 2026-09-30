@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
@@ -63,7 +63,7 @@ public class QuickSereniteaPotTask
         try
         {
             // 打开背包
-            Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
+            InputHub.Foreground.SimulateAction(GIActions.OpenInventory);
             TaskControl.CheckAndSleep(500);
             WaitForBagToOpen();
 
@@ -100,7 +100,7 @@ public class QuickSereniteaPotTask
                     using var bigMapCapture = TaskControl.CaptureToRectArea();
                     if (!Bv.IsInBigMapUi(bigMapCapture))
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
+                        InputHub.Foreground.SimulateAction(GIActions.OpenInventory);
                     }
                     else
                     {
@@ -118,7 +118,7 @@ public class QuickSereniteaPotTask
                 TaskControl.Logger.LogInformation($"快速进出尘歌壶:识别到 {action}尘歌壶");
                 
                 // 按F触发交互
-                Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+                InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
                 TaskControl.Logger.LogInformation($"快速进出尘歌壶:F{action}尘歌壶");
                 TaskControl.CheckAndSleep(200);
                 // 点击进入/离开尘歌壶

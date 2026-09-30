@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -7,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
@@ -89,7 +89,7 @@ public class LinneaMiningTask
         {
             // Logger.LogInformation("开始寻矿");
 
-            Simulation.SendInput.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
+            InputHub.Foreground.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             aimingModeEntered = true;
             await Delay(400, ct);
 
@@ -97,7 +97,7 @@ public class LinneaMiningTask
 
             for (var round = 0; round < _scanRounds && !ct.IsCancellationRequested; round++)
             {
-                Simulation.SendInput.Mouse.MiddleButtonDown();
+                InputHub.Foreground.Mouse.MiddleButtonDown();
                 await Delay(1500, ct);
                 _lastRefreshTime = Environment.TickCount64;
 
@@ -113,39 +113,39 @@ public class LinneaMiningTask
                         continue;
                     }
 
-                    Simulation.SendInput.Mouse.MiddleButtonUp();
+                    InputHub.Foreground.Mouse.MiddleButtonUp();
                     await Delay(300, ct);
 
                     if (compensateDx != 0 || compensateDy != 0)
                     {
-                        Simulation.SendInput.Mouse.MiddleButtonDown();
+                        InputHub.Foreground.Mouse.MiddleButtonDown();
                         await Delay(1500, ct);
                         _lastRefreshTime = Environment.TickCount64;
-                        Simulation.SendInput.Mouse.MoveMouseBy(-compensateDx, -compensateDy);
+                        InputHub.Foreground.Mouse.MoveMouseBy(-compensateDx, -compensateDy);
                         await Delay(800, ct);
-                        Simulation.SendInput.Mouse.MiddleButtonUp();
+                        InputHub.Foreground.Mouse.MiddleButtonUp();
                         await Delay(300, ct);
                     }
 
                     if (round < _scanRounds - 1)
                     {
-                        Simulation.SendInput.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
+                        InputHub.Foreground.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
                         await Delay(800, ct);
                     }
                     continue;
                 }
 
-                Simulation.SendInput.Mouse.MiddleButtonUp();
+                InputHub.Foreground.Mouse.MiddleButtonUp();
                 await Delay(300, ct);
 
                 if (round < _scanRounds - 1)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
                 }
                 await Delay(800, ct);
             }
 
-            Simulation.SendInput.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
+            InputHub.Foreground.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             aimingModeEntered = false;
         }
         catch (OperationCanceledException)
@@ -160,10 +160,10 @@ public class LinneaMiningTask
         {
             if (aimingModeEntered)
             {
-                Simulation.SendInput.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
+                InputHub.Foreground.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             }
 
-            Simulation.SendInput.Mouse.MiddleButtonUp();
+            InputHub.Foreground.Mouse.MiddleButtonUp();
             VisionContext.Instance().DrawContent.ClearAll();
         }
     }
@@ -181,9 +181,9 @@ public class LinneaMiningTask
         {
             if (Environment.TickCount64 - _lastRefreshTime >= ElementSightRefreshMs)
             {
-                Simulation.SendInput.Mouse.MiddleButtonUp();
+                InputHub.Foreground.Mouse.MiddleButtonUp();
                 await Delay(100, ct);
-                Simulation.SendInput.Mouse.MiddleButtonDown();
+                InputHub.Foreground.Mouse.MiddleButtonDown();
                 await Delay(1500, ct);
                 _lastRefreshTime = Environment.TickCount64;
             }
@@ -197,7 +197,7 @@ public class LinneaMiningTask
             // 前面所有循环都检测成功时，以不计入总次数的方式兜底射击一次
             if (isAligned || (isLast && hadResult))
             {
-                Simulation.SendInput.Mouse.MiddleButtonUp();
+                InputHub.Foreground.Mouse.MiddleButtonUp();
                 await Delay(300, ct);
                 Logger.LogInformation("开始挖矿");
                 await Mine(ct, totalDy < 0);
@@ -206,7 +206,7 @@ public class LinneaMiningTask
 
             var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactorX / _widthScale);
             var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactorY / _heightScale);
-            Simulation.SendInput.Mouse.MoveMouseBy(mouseDx, mouseDy);
+            InputHub.Foreground.Mouse.MoveMouseBy(mouseDx, mouseDy);
             totalDx += mouseDx;
             totalDy += mouseDy;
             await Delay(150, ct);
@@ -229,10 +229,10 @@ public class LinneaMiningTask
     {
         if (compensateUp)
         {
-            Simulation.SendInput.Mouse.MoveMouseBy(0, -25);
+            InputHub.Foreground.Mouse.MoveMouseBy(0, -25);
             await Delay(10, ct);
         }
-        Simulation.SendInput.Mouse.LeftButtonClick();
+        InputHub.Foreground.Mouse.LeftButtonClick();
         await Delay(2000, ct);
     }
 
