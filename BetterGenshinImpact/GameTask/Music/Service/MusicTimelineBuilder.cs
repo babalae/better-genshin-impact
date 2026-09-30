@@ -34,6 +34,7 @@ public sealed class MusicTimelineBuilder(IInstrumentProfileService profileServic
             track.MappedNoteCount = 0;
         }
 
+        var notesByKey = new Dictionary<char, List<MidiNoteData>>();
         foreach (var note in selectedNotes)
         {
             if (!outputProfile.TryGetKey(note.NoteNumber + transpose, out var key))
@@ -48,8 +49,54 @@ public sealed class MusicTimelineBuilder(IInstrumentProfileService profileServic
                 track.MappedNoteCount++;
             }
 
-            events.Add(new PerformanceEvent(note.Start, key, PerformanceEventType.KeyDown));
-            events.Add(new PerformanceEvent(note.End, key, PerformanceEventType.KeyUp));
+            if (!notesByKey.TryGetValue(key, out var list))
+            {
+                list = [];
+                notesByKey[key] = list;
+            }
+
+            list.Add(note);
+        }
+
+        // 同一键的音符按开始时间展开:交叠时强制重触发,松开精确落在每个音符
+        // 自己写定的结束时刻,而不是延长到交叠链末尾。
+        // 拨弦乐器只认按下沿;可持续乐器(圆号)下释放时机可闻,必须精确,
+        // 否则声部互相渗血、听感发 muddy。
+        foreach (var pair in notesByKey)
+        {
+            var key = pair.Key;
+            var ordered = pair.Value.OrderBy(x => x.Start).ToList();
+            var hasHold = false;
+            var holdStart = TimeSpan.Zero;
+            var holdEnd = TimeSpan.Zero;
+            foreach (var note in ordered)
+            {
+                if (hasHold)
+                {
+                    if (note.Start < holdEnd)
+                    {
+                        var retriggerUpTime = note.Start - RetriggerGap;
+                        events.Add(new PerformanceEvent(
+                            retriggerUpTime > holdStart ? retriggerUpTime : note.Start,
+                            key,
+                            PerformanceEventType.KeyUp));
+                    }
+                    else
+                    {
+                        events.Add(new PerformanceEvent(holdEnd, key, PerformanceEventType.KeyUp));
+                    }
+                }
+
+                events.Add(new PerformanceEvent(note.Start, key, PerformanceEventType.KeyDown));
+                holdStart = note.Start;
+                holdEnd = note.End;
+                hasHold = true;
+            }
+
+            if (hasHold)
+            {
+                events.Add(new PerformanceEvent(holdEnd, key, PerformanceEventType.KeyUp));
+            }
         }
 
         score.MappedNoteCount = mappedTotal;
@@ -101,9 +148,13 @@ public sealed class MusicTimelineBuilder(IInstrumentProfileService profileServic
 
     private static IReadOnlyList<PerformanceEvent> Normalize(IEnumerable<PerformanceEvent> source)
     {
+        // 注意:两处排序都必须使用稳定排序,且不能按“松开优先”二次排序。
+        // 同一时刻的“松开/按下”,各生产者在插入时已是正确顺序(松开在前);
+        // 若按类型重排,会把补拍的松开挪到同键上一次按下的前面,
+        // 形成“松开、按下、按下”:传输层吞掉一次触发,后续释放配对整体错位一位,
+        // 按住被延长到交叠链末尾(实测单键延长数十秒),可持续乐器听感发 muddy。
         var sorted = source
             .OrderBy(x => x.Time)
-            .ThenBy(x => x.Type == PerformanceEventType.KeyUp ? 0 : 1)
             .ToList();
         var activeCounts = new Dictionary<char, int>();
         var holdStarts = new Dictionary<char, TimeSpan>();
