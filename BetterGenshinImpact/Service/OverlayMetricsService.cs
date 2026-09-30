@@ -407,13 +407,13 @@ public sealed class OverlayMetricsService : IDisposable
     {
         try
         {
-            var context = TaskContext.Instance();
-            if (!context.IsInitialized || context.SystemInfo.GameProcess.HasExited)
+            var window = TaskContext.Instance().Runtime?.Window;
+            if (window is not { IsAlive: true })
             {
                 return null;
             }
 
-            return context.SystemInfo.GameProcessId;
+            return window.ProcessId;
         }
         catch
         {

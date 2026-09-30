@@ -11,6 +11,8 @@ using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
@@ -185,6 +187,10 @@ public partial class App : Application
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());
                 services.AddSingleton<TaskTriggerDispatcher>();
+                // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
+                services.AddSingleton<Win32RuntimeProvider>();
+                services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<Win32RuntimeProvider>());
+                services.AddSingleton<GameRuntimeService>();
                 services.AddSingleton<RecognitionTemplateAssetService>();
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();

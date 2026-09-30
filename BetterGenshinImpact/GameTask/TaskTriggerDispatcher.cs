@@ -14,6 +14,7 @@ using System.Threading;
 using System.Windows;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
+using BetterGenshinImpact.GameTask.Runtime;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Model;
@@ -34,7 +35,15 @@ namespace BetterGenshinImpact.GameTask
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
 
-        public IGameCapture? GameCapture { get; private set; }
+        /// <summary>
+        /// 当前绑定的运行环境，由 GameRuntimeService 通过 Start / Stop 设置。Tick 线程只读
+        /// </summary>
+        private volatile GameRuntime? _runtime;
+
+        /// <summary>
+        /// 当前运行环境的截图器，未启动时为 null
+        /// </summary>
+        public IGameCapture? GameCapture => _runtime?.Capture;
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
@@ -46,18 +55,10 @@ namespace BetterGenshinImpact.GameTask
 
         private static readonly object _triggerListLocker = new();
 
-        private User32.HWINEVENTHOOK _winEventHookMoveSize;
-        private User32.HWINEVENTHOOK _winEventHookLocation;
-        private User32.WinEventProc _winEventProc;
-        private const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
-        private const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
-        private const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
-        private const uint WINEVENT_SKIPOWNTHREAD = 0x0001;
-        private const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
-
+        /// <summary>
+        /// 截图器停止或游戏已退出。由 GameRuntimeService 订阅并停止运行环境
+        /// </summary>
         public event EventHandler? UiTaskStopTickEvent;
-
-        public event EventHandler? UiTaskStartTickEvent;
 
         private GameUiCategory PrevGameUiCategory = GameUiCategory.Unknown; // 上一个UI类别
         private DateTime PrevGameUiChangeTime = DateTime.Now; // 上一次UI变化时间
@@ -126,43 +127,21 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
+        /// <summary>
+        /// 开始调度。运行环境的截图器、输入和 TaskContext 已由 GameRuntimeService 准备好
+        /// </summary>
+        public void Start(GameRuntime runtime, int interval = 50)
         {
-            // 初始化截图器
+            ArgumentNullException.ThrowIfNull(runtime);
             ChatUiHotkeyGuard.Reset();
-            GameCapture = GameCaptureFactory.Create(mode);
-            // 激活窗口 保证后面能够正常获取窗口信息
-            SystemControl.ActivateWindow(hWnd);
-
-            // 初始化任务上下文(一定要在初始化触发器前完成)
-            TaskContext.Instance().Init(hWnd);
+            _runtime = runtime;
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
             GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
 
-            // if (GraphicsCapture.IsHdrEnabled(hWnd))
-            // {
-            //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
-            // }
-
-            // 启动截图
-            // WGC 限流：0 = 不启用；>0 = DWM 最小推帧间隔（毫秒）
-            GameCapture.Start(hWnd,
-                new Dictionary<string, object>()
-                {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt },
-                    { "MinUpdateIntervalMs", TaskContext.Instance().Config.WgcMinUpdateIntervalMs },
-                    // WGC V2 开关：CPU 颜色转换回退（默认 GPU 打包）
-                    { "UseCpuConvert", TaskContext.Instance().Config.WgcV2UseCpuConvert }
-                }
-            );
-
-            // 使用 SetWinEventHook 监听窗口移动和大小变化事件
-            _winEventProc = WinEventCallback;
-            var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
-            _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
-            _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
+            // 窗口移动、缩放时同步遮罩位置（Tick 中也会轮询）
+            runtime.Window.ViewportChanged += OnViewportChanged;
 
             // 启动定时器
             _frameIndex = 0;
@@ -173,26 +152,24 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 停止调度。截图器和窗口监听随运行环境一起由 GameRuntimeService 释放
+        /// </summary>
         public void Stop()
         {
             _timer.Stop();
             ChatUiHotkeyGuard.Reset();
-            GameCapture?.Stop();
+            var runtime = _runtime;
+            if (runtime != null)
+            {
+                runtime.Window.ViewportChanged -= OnViewportChanged;
+                _runtime = null;
+            }
+
             _gameRect = RECT.Empty;
             _prevGameActive = false;
             PictureInPictureService.Hide(resetManual: true);
             HtmlMaskWindow.CloseAll();
-            if (_winEventHookMoveSize != default)
-            {
-                User32.UnhookWinEvent(_winEventHookMoveSize);
-                _winEventHookMoveSize = default;
-            }
-
-            if (_winEventHookLocation != default)
-            {
-                User32.UnhookWinEvent(_winEventHookLocation);
-                _winEventHookLocation = default;
-            }
         }
 
         public void StartTimer()
@@ -233,12 +210,29 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-                // 检查截图器是否初始化
-                var maskWindow = MaskWindow.Instance();
-                if (GameCapture == null || !GameCapture.IsCapturing)
+                var runtime = _runtime;
+                if (runtime == null)
                 {
+                    // Stop 之后残留的一次调度
+                    return;
+                }
+
+                var window = runtime.Window;
+                var gameCapture = runtime.Capture;
+
+                // 检查截图器是否在运行、游戏是否已退出
+                var maskWindow = MaskWindow.Instance();
+                var alive = window.IsAlive;
+                if (!gameCapture.IsCapturing || !alive)
+                {
+                    if (!ReferenceEquals(_runtime, runtime))
+                    {
+                        // 本轮调度期间运行环境已被主动停止并释放，不是游戏退出
+                        return;
+                    }
+
                     ChatUiHotkeyGuard.Reset();
-                    if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    if (alive)
                     {
                         _logger.LogError("截图器未初始化!");
                     }
@@ -255,7 +249,7 @@ namespace BetterGenshinImpact.GameTask
                 }
                 
                 // 如果是最小化状态，直接不进行截图
-                if (SystemControl.IsGenshinImpactMinimized())
+                if (window.IsMinimized)
                 {
                     ChatUiHotkeyGuard.Reset();
                     PictureInPictureService.Hide();
@@ -269,59 +263,55 @@ namespace BetterGenshinImpact.GameTask
                                                  && autoSkipConfig.PictureInPictureEnabled
                                                  && !PictureInPictureService.IsManuallyClosed
                                                  && TaskControl.TaskSemaphore.CurrentCount == 1; // 没有任务持有锁（也就是没有任务正在运行）
-                var active = SystemControl.IsGenshinImpactActive();
+                var active = window.IsForeground;
                 if (!active)
                 {
                     ChatUiHotkeyGuard.Reset();
-                    // 检查游戏是否已结束
-                    if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
-                    {
-                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
-                        UiTaskStopTickEvent?.Invoke(sender, e);
-                        return;
-                    }
 
                     if (_prevGameActive)
                     {
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
                     }
 
-                    var pName = SystemControl.GetActiveProcessName();
-                    if (pName != "Idle" && pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                    if (!IsForegroundOwnedByBetterGiOrGame(window))
                     {
-                        // Debug.WriteLine(pName + "：hide mask window");
                         maskWindow.Invoke(() => { maskWindow.HideSelf(); });
                         HtmlMaskWindow.HideAll();
                     }
 
                     _prevGameActive = active;
 
-                    if (_triggers != null)
+                    // 输入依赖前台时，失焦后只执行后台触发器；
+                    // 输入不依赖前台的运行环境（网页版）失焦后照常执行全部触发器
+                    if (window.RequiresForeground)
                     {
-                        lock (_triggerListLocker)
+                        if (_triggers != null)
                         {
-                            var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                            if (exclusive != null)
+                            lock (_triggerListLocker)
                             {
-                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
-                            }
-                            else
-                            {
-                                hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                                var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                                if (exclusive != null)
+                                {
+                                    hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                                }
+                                else
+                                {
+                                    hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                                }
                             }
                         }
-                    }
 
-                    if (!hasBackgroundTriggerToRun && shouldShowPictureInPicture)
-                    {
-                        hasBackgroundTriggerToRun = true;
-                    }
+                        if (!hasBackgroundTriggerToRun && shouldShowPictureInPicture)
+                        {
+                            hasBackgroundTriggerToRun = true;
+                        }
 
-                    if (!hasBackgroundTriggerToRun)
-                    {
-                        // 没有后台运行的触发器，这次不再进行截图
-                        PictureInPictureService.Hide();
-                        return;
+                        if (!hasBackgroundTriggerToRun)
+                        {
+                            // 没有后台运行的触发器，这次不再进行截图
+                            PictureInPictureService.Hide();
+                            return;
+                        }
                     }
                 }
                 else
@@ -370,7 +360,7 @@ namespace BetterGenshinImpact.GameTask
                     tickMetrics.Begin();
                 }
                 // 捕获游戏画面
-                var captureFrame = GameCapture.Capture();
+                var captureFrame = gameCapture.Capture();
                 var bitmap = captureFrame?.Frame;
                 tickMetrics.EndCapture();
                 speedTimer.Record("截图");
@@ -476,8 +466,13 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         private bool SyncMaskWindowPosition()
         {
-            var hWnd = TaskContext.Instance().GameHandle;
-            var currentRect = SystemControl.GetCaptureRect(hWnd);
+            var runtime = _runtime;
+            if (runtime == null)
+            {
+                return false;
+            }
+
+            var currentRect = runtime.Window.Viewport.ScreenRect;
             if (_gameRect == RECT.Empty)
             {
                 _gameRect = new RECT(currentRect);
@@ -514,24 +509,28 @@ namespace BetterGenshinImpact.GameTask
             return rect.Width == 0 || rect.Height == 0;
         }
 
-        private void WinEventCallback(User32.HWINEVENTHOOK hWinEventHook, uint @event, HWND hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        /// <summary>
+        /// 游戏窗口移动或缩放（由 IGameWindow 在 UI 线程上通知）
+        /// </summary>
+        private void OnViewportChanged(object? sender, EventArgs e)
         {
-            var target = TaskContext.Instance().GameHandle;
-            if (target == IntPtr.Zero)
+            SyncMaskWindowPosition();
+        }
+
+        /// <summary>
+        /// 游戏不在前台时，前台窗口属于 BetterGI 自身或游戏进程（或者没有前台窗口）就保留遮罩。
+        /// 按进程 ID 判断，另一个 BetterGI 实例在前台时本实例的遮罩会隐藏，避免多个置顶遮罩叠在一起
+        /// </summary>
+        private static bool IsForegroundOwnedByBetterGiOrGame(IGameWindow window)
+        {
+            var foreground = User32.GetForegroundWindow();
+            if (foreground.IsNull)
             {
-                return;
+                return true;
             }
 
-            if (idObject != 0)
-            {
-                return;
-            }
-
-            var hwndPtr = hwnd.DangerousGetHandle();
-            if (hwndPtr == target)
-            {
-                SyncMaskWindowPosition();
-            }
+            _ = User32.GetWindowThreadProcessId(foreground, out var pid);
+            return pid == 0 || pid == (uint)Environment.ProcessId || pid == (uint)window.ProcessId;
         }
 
         public void TakeScreenshot()

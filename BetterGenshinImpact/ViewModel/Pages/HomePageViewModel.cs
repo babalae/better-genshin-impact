@@ -4,6 +4,8 @@ using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -72,13 +74,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
-    private readonly TaskTriggerDispatcher _taskDispatcher;
+    private readonly GameRuntimeService _gameRuntimeService;
+    private readonly Win32RuntimeProvider _win32RuntimeProvider;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
     private readonly IBannerImageService _bannerImageService;
     private CancellationTokenSource? _bannerDownloadCancellationTokenSource;
-
-    // 记录上次使用原神的句柄
-    private IntPtr _hWnd;
 
     [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
@@ -92,11 +92,15 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     public HomePageViewModel(
         IConfigService configService,
-        TaskTriggerDispatcher taskTriggerDispatcher,
+        GameRuntimeService gameRuntimeService,
+        Win32RuntimeProvider win32RuntimeProvider,
         ChildSessionService childSessionService,
         IBannerImageService bannerImageService)
     {
-        _taskDispatcher = taskTriggerDispatcher;
+        _gameRuntimeService = gameRuntimeService;
+        _win32RuntimeProvider = win32RuntimeProvider;
+        _gameRuntimeService.Started += OnRuntimeStarted;
+        _gameRuntimeService.Stopped += OnRuntimeStopped;
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
         Config = configService.Get();
@@ -196,8 +200,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
         _disposed = true;
         OnClosed();
-        _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-        _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
+        _gameRuntimeService.Started -= OnRuntimeStarted;
+        _gameRuntimeService.Stopped -= OnRuntimeStopped;
         WeakReferenceMessenger.Default.UnregisterAll(this);
         _mouseKeyMonitor.Dispose();
         GC.SuppressFinalize(this);
@@ -248,8 +252,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         {
             if (hWnd != IntPtr.Zero)
             {
-                _hWnd = hWnd;
-                Start(hWnd);
+                // 已在运行时与改造前一致：不做任何事
+                if (!_gameRuntimeService.IsRunning)
+                {
+                    _gameRuntimeService.Start(_win32RuntimeProvider.AttachTo(hWnd));
+                }
             }
             else
             {
@@ -269,101 +276,13 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     private bool CanStartTrigger() => StartButtonEnabled;
 
+    /// <summary>
+    /// 启动截图器。找窗、关联启动、HDR 处理都由运行环境的 Provider 完成
+    /// </summary>
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
-        await DisableGenshinHdrIfNeededAsync();
-
-        var hWnd = SystemControl.FindGenshinImpactHandle();
-        if (hWnd == IntPtr.Zero)
-        {
-            if (Config.GenshinStartConfig.LinkedStartEnabled)
-            {
-                if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
-                {
-                    await ThemedMessageBox.ErrorAsync("没有找到原神的安装路径");
-                    return;
-                }
-
-                hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
-                if (hWnd != IntPtr.Zero)
-                {
-                    TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
-                }
-                else
-                {
-                    return;
-                }
-            }
-
-            if (hWnd == IntPtr.Zero)
-            {
-                await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
-                return;
-            }
-        }
-
-        Start(hWnd);
-    }
-
-    private Task DisableGenshinHdrIfNeededAsync()
-    {
-        if (!Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (!GenshinHdrRegistryHelper.TryDisableHdr(out _))
-        {
-            return Task.CompletedTask;
-        }
-
-        // 这行日志可能看不到
-        _logger.LogWarning(
-            "检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
-        return Task.CompletedTask;
-    }
-
-    private void Start(IntPtr hWnd)
-    {
-        Debug.WriteLine($"原神启动句柄{hWnd}");
-        lock (this)
-        {
-            if (Config.TriggerInterval <= 0)
-            {
-                ThemedMessageBox.Error("触发器触发频率必须大于0");
-                return;
-            }
-
-            if (!TaskDispatcherEnabled)
-            {
-                _hWnd = hWnd;
-                _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
-                _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
-                _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
-                _maskWindow ??= new MaskWindow();
-                _maskWindow.Show();
-                MaskWindow.Instance().RefreshPosition();
-                App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
-                _mouseKeyMonitor.Subscribe(hWnd);
-                TaskDispatcherEnabled = true;
-            }
-        }
-    }
-
-    private CaptureModes GetCaptureMode()
-    {
-        try
-        {
-            return Config.CaptureMode.ToCaptureMode();
-        }
-        catch (Exception e)
-        {
-            TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
-            return CaptureModes.BitBlt;
-        }
+        await _gameRuntimeService.StartAsync();
     }
 
     private bool CanStopTrigger() => StopButtonEnabled;
@@ -371,42 +290,39 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [RelayCommand(CanExecute = nameof(CanStopTrigger))]
     private void OnStopTrigger()
     {
-        Stop();
+        _gameRuntimeService.Stop();
     }
 
-    private void Stop()
+    /// <summary>
+    /// 运行环境绑定完成（UI 线程）：显示遮罩、订阅键鼠监听
+    /// </summary>
+    private void OnRuntimeStarted(object? sender, EventArgs e)
     {
-        lock (this)
+        _maskWindow ??= new MaskWindow();
+        _maskWindow.Show();
+        MaskWindow.Instance().RefreshPosition();
+        App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
+        _mouseKeyMonitor.Subscribe(_gameRuntimeService.Current!.Window.Handle);
+        TaskDispatcherEnabled = true;
+    }
+
+    /// <summary>
+    /// 运行环境解绑完成（UI 线程）：隐藏遮罩、取消键鼠监听
+    /// </summary>
+    private void OnRuntimeStopped(object? sender, EventArgs e)
+    {
+        if (_maskWindow != null && _maskWindow.IsExist())
         {
-            if (TaskDispatcherEnabled)
-            {
-                CancellationContext.Instance.Cancel(); // 取消独立任务的运行
-                _taskDispatcher.Stop();
-                if (_maskWindow != null && _maskWindow.IsExist())
-                {
-                    _maskWindow?.Hide();
-                }
-                else
-                {
-                    _maskWindow?.Close();
-                    _maskWindow = null;
-                }
-
-                TaskDispatcherEnabled = false;
-                _mouseKeyMonitor.Unsubscribe();
-                TaskContext.Instance().IsInitialized = false;
-            }
+            _maskWindow.Hide();
         }
-    }
+        else
+        {
+            _maskWindow?.Close();
+            _maskWindow = null;
+        }
 
-    private void OnUiTaskStopTick(object? sender, EventArgs e)
-    {
-        UIDispatcherHelper.Invoke(Stop);
-    }
-
-    private void OnUiTaskStartTick(object? sender, EventArgs e)
-    {
-        UIDispatcherHelper.Invoke(() => Start(_hWnd));
+        TaskDispatcherEnabled = false;
+        _mouseKeyMonitor.Unsubscribe();
     }
 
     [RelayCommand]

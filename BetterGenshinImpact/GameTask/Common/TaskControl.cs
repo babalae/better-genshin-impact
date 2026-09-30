@@ -96,6 +96,20 @@ public class TaskControl
 
     private static void CheckAndActivateGameWindow()
     {
+        var window = TaskContext.Instance().Runtime?.Window;
+        if (window is { RequiresForeground: false })
+        {
+            // 输入不依赖前台的运行环境（网页版）不检查焦点、不抢前台，
+            // 只保证窗口没有最小化：最小化后截图器拿不到新帧
+            if (window.IsMinimized)
+            {
+                Logger.LogInformation("游戏窗口已最小化，尝试还原");
+                window.Activate();
+            }
+
+            return;
+        }
+
         if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
         {
             if (!SystemControl.IsGenshinImpactActiveByProcess())

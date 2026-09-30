@@ -1,4 +1,6 @@
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
@@ -27,9 +29,40 @@ public class SystemControl
         @"(?<!\S)(?:-popupwindow|-screen-(?:width|height)(?:\s*=\s*(?:""[^""]*""|\S+)|\s+(?:""[^""]*""|(?!-)\S+))?)(?=\s|$)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    /// <summary>
+    /// 游戏进程名列表：已绑定 Win32 游戏窗口时只返回该窗口的进程名，否则返回候选进程名（含安装路径中的自定义 exe 名）
+    /// </summary>
+    public static List<string> GetGenshinGameProcessNameList()
+    {
+        if (TaskContext.Instance().Runtime is { Kind: GameRuntimeKind.Win32Window, Window: Win32GameWindow window })
+        {
+            return [window.ProcessName];
+        }
+
+        List<string> list = ["YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud"];
+        try
+        {
+            var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+            if (!string.IsNullOrEmpty(installPath))
+            {
+                var customName = Path.GetFileNameWithoutExtension(installPath);
+                if (!string.IsNullOrEmpty(customName) && !list.Contains(customName))
+                {
+                    list.Add(customName);
+                }
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        return list;
+    }
+
     public static nint FindGenshinImpactHandle()
     {
-        var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+        var processNames = GetGenshinGameProcessNameList();
 
         // 其他设置：窗口类名优先检测（默认关闭，关闭时走原始进程名+MainWindowHandle 路径）
         // 开启后：①按窗口类名枚举 → ②按进程枚举最大可见窗口 → ③原版方式（均未命中才回退）
@@ -265,15 +298,24 @@ public class SystemControl
             : $"{arguments} {ChildSessionGenshinStartArgs}";
     }
 
+    /// <summary>
+    /// 调用方实际是在问"现在能不能操作游戏"：
+    /// 输入不依赖前台的运行环境（网页版）恒为 true，否则判断前台窗口是否属于游戏进程
+    /// </summary>
     public static bool IsGenshinImpactActiveByProcess()
     {
+        if (TaskContext.Instance().Runtime?.Window is { RequiresForeground: false })
+        {
+            return true;
+        }
+
         var name = GetActiveProcessName();
         if (string.IsNullOrEmpty(name))
         {
             return false;
         }
 
-        var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+        var processNames = GetGenshinGameProcessNameList();
         return processNames.Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
     }
     
@@ -422,14 +464,13 @@ public class SystemControl
         User32.SetForegroundWindow(hWnd);
     }
 
+    /// <summary>
+    /// 让当前游戏窗口进入可操作状态，具体行为由运行环境决定（网页版只从最小化还原，不抢前台）
+    /// </summary>
     public static void ActivateWindow()
     {
-        if (!TaskContext.Instance().IsInitialized)
-        {
-            throw new Exception("请先启动BetterGI");
-        }
-
-        ActivateWindow(TaskContext.Instance().GameHandle);
+        var runtime = TaskContext.Instance().Runtime ?? throw new Exception("请先启动BetterGI");
+        runtime.Window.Activate();
     }
     public static void RestartApplication(string[] newArgs)
     {
@@ -550,12 +591,31 @@ public class SystemControl
     //     // TODO：点完之后有个15s的倒计时，好像不处理也没什么问题，直接睡个20s吧
     //     Thread.Sleep(20000);
     // }
+    /// <summary>
+    /// 关闭当前运行环境的游戏。保留为静态入口：OneDragonFlowViewModel 也会被直接 new，无法构造注入
+    /// </summary>
     public static void CloseGame()
+    {
+        var service = App.GetService<GameRuntimeService>();
+        if (service != null)
+        {
+            service.CloseGame();
+        }
+        else
+        {
+            CloseGameProcesses();
+        }
+    }
+
+    /// <summary>
+    /// 结束同一 Windows Session 中的原神进程，由 Win32RuntimeProvider 调用
+    /// </summary>
+    public static void CloseGameProcesses()
     {
         try
         {
             var currentSessionId = Process.GetCurrentProcess().SessionId;
-            var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+            var processNames = GetGenshinGameProcessNameList();
             var processes = new List<Process>();
             foreach (var name in processNames)
             {

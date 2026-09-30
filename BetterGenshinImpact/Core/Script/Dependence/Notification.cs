@@ -26,7 +26,7 @@ public class Notification
     {
         try
         {
-            var currentProject = TaskContext.Instance().CurrentScriptProject;
+            var currentProject = RunnerContext.Instance.CurrentScriptProject;
             return _config.NotificationConfig.JsNotificationEnabled &&
                    (currentProject?.AllowJsNotification ?? true);
         }

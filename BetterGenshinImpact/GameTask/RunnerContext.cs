@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -16,6 +17,12 @@ namespace BetterGenshinImpact.GameTask;
 /// </summary>
 public class RunnerContext : Singleton<RunnerContext>
 {
+    /// <summary>
+    /// 当前正在执行的脚本项目，用于 JS 的 HTTP、通知等权限校验。
+    /// 由 ScriptService.ExecuteProject 写入；Clear / Reset 不会重置它，与迁出 TaskContext 前的行为一致
+    /// </summary>
+    public ScriptGroupProject? CurrentScriptProject { get; set; }
+
     /// <summary>
     /// 是否是连续执行配置组的场景
     /// </summary>

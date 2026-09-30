@@ -1,8 +1,8 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
 using Vanara.PInvoke;
 using Size = System.Drawing.Size;
 
@@ -48,33 +48,16 @@ namespace BetterGenshinImpact.GameTask.Model
         /// </summary>
         public Rect ScaleMax1080PCaptureRect { get; set; }
 
-        public Process GameProcess { get; }
-
-        public string GameProcessName { get; }
-
-        public int GameProcessId { get; }
-
         public DesktopRegion DesktopRectArea { get; }
 
-        public SystemInfo(IntPtr hWnd)
+        /// <param name="viewport">游戏画面区域，由运行环境提供。最小化检查已在附着窗口时完成</param>
+        public SystemInfo(GameViewport viewport)
         {
-            var p = SystemControl.GetProcessByHandle(hWnd);
-            GameProcess = p ?? throw new ArgumentException("通过句柄获取游戏进程失败");
-            GameProcessName = GameProcess.ProcessName;
-            GameProcessId = GameProcess.Id;
-
             DisplaySize = PrimaryScreen.WorkingArea;
             DesktopRectArea = new DesktopRegion();
 
-            // 判断最小化
-            if (User32.IsIconic(hWnd))
-            {
-                throw new ArgumentException("游戏窗口不能最小化");
-            }
-
             // 注意截图区域要和游戏窗口实际区域一致
-            // todo 窗口移动后？
-            GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
+            GameScreenSize = new RECT(0, 0, viewport.Width, viewport.Height);
             if (GameScreenSize.Width < 800 || GameScreenSize.Height < 600)
             {
                 throw new ArgumentException("游戏窗口分辨率不得小于 800x600 ！");
@@ -88,7 +71,7 @@ namespace BetterGenshinImpact.GameTask.Model
             }
             ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
 
-            CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
+            CaptureAreaRect = viewport.ScreenRect;
             if (CaptureAreaRect.Width > 1920)
             {
                 var scale = CaptureAreaRect.Width / 1920d;

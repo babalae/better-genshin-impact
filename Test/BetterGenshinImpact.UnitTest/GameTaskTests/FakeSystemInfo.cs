@@ -40,12 +40,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
         public RECT CaptureAreaRect { get ; set ; }
         public Rect ScaleMax1080PCaptureRect { get; set; } = new Rect(0, 0, 1920, 1080);
 
-        public Process GameProcess => throw new NotImplementedException();
-
-        public string GameProcessName => throw new NotImplementedException();
-
-        public int GameProcessId => throw new NotImplementedException();
-
         public DesktopRegion DesktopRectArea { get; set; }
     }
 }
