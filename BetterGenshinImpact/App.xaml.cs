@@ -322,6 +322,16 @@ public partial class App : Application
 
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
 
+        // 写入防抖窗口内尚未落盘的配置改动
+        try
+        {
+            _host.Services.GetService<IConfigService>()?.Flush();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
         TempManager.CleanUp();
 
         await _host.StopAsync();

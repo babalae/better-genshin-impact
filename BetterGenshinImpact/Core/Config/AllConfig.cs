@@ -292,49 +292,34 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public ChildSessionConfig ChildSessionConfig { get; set; } = new();
 
+    /// <summary>
+    /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）
+    /// </summary>
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
+    private ConfigChangeTracker? _changeTracker;
+
+    /// <summary>
+    /// 开始追踪整个配置对象图的变更（含嵌套对象与集合），重复调用无副作用
+    /// </summary>
     public void InitEvent()
     {
-        PropertyChanged += OnAnyPropertyChanged;
-        MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
-        CommonConfig.PropertyChanged += OnAnyPropertyChanged;
-        GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
-        NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
+        if (_changeTracker != null)
+        {
+            return;
+        }
+
         NotificationConfig.PropertyChanged += OnNotificationPropertyChanged;
-        KeyBindingsConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
-        QuickTeleportConfig.PropertyChanged += OnAnyPropertyChanged;
-        MacroConfig.PropertyChanged += OnAnyPropertyChanged;
-        HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoBossConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoStygianOnslaughtConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoRedeemCodeConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoLeyLineOutcropConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoCookConfig.PropertyChanged += OnAnyPropertyChanged;
-        MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
-        TpConfig.PropertyChanged += OnAnyPropertyChanged;
-        MusicConfig.PropertyChanged += OnAnyPropertyChanged;
-        ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
-        PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
-        DevConfig.PropertyChanged += OnAnyPropertyChanged;
-        HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
-        ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
-        SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
+        _changeTracker = new ConfigChangeTracker(OnConfigChanged);
+        _changeTracker.Track(this);
     }
 
-    public void OnAnyPropertyChanged(object? sender, EventArgs args)
+    /// <param name="sender">触发变更的对象（某个子配置、嵌套对象或集合）</param>
+    private void OnConfigChanged(object sender)
     {
-        GameTaskManager.RefreshTriggerConfigs();
+        // 同步、定向刷新：只重新 Init 依赖该子配置的触发器，保证开关类配置立即生效
+        GameTaskManager.RefreshTriggerConfigs(sender);
         OnAnyChangedAction?.Invoke();
     }
 

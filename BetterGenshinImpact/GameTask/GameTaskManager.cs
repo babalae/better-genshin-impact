@@ -127,6 +127,43 @@ internal class GameTaskManager
         ReloadAssets();
     }
 
+    /// <summary>
+    /// 按变更来源定向刷新触发器。
+    /// 各触发器的 Init() 只依赖自身对应的子配置，因此只有该子配置变化时才重新 Init（避免无关配置变化时重读名单文件、重置技能 CD 等）。
+    /// 刷新了触发器或遮罩配置变化时清空画布，以擦除被关闭功能的残留绘制。
+    /// </summary>
+    /// <param name="changedConfig">触发变更的配置对象</param>
+    public static void RefreshTriggerConfigs(object? changedConfig)
+    {
+        var triggerName = changedConfig switch
+        {
+            AutoPick.AutoPickConfig => "AutoPick",
+            AutoSkipConfig => "AutoSkip",
+            AutoFishing.AutoFishingConfig => "AutoFish",
+            QuickTeleport.QuickTeleportConfig => "QuickTeleport",
+            AutoEat.AutoEatConfig => "AutoEat",
+            MapMaskConfig => "MapMask",
+            SkillCdConfig => "SkillCd",
+            _ => null
+        };
+
+        if (triggerName == null && changedConfig is not MaskWindowConfig)
+        {
+            return;
+        }
+
+        if (TriggerDictionary is { Count: > 0 })
+        {
+            if (triggerName != null)
+            {
+                TriggerDictionary.GetValueOrDefault(triggerName)?.Init();
+            }
+
+            // 清理画布
+            VisionContext.Instance().DrawContent.ClearAll();
+        }
+    }
+
     public static void ReloadAssets()
     {
         // RecognitionAssets.ClearAll();

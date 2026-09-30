@@ -1,6 +1,7 @@
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -450,6 +451,9 @@ public class SystemControl
         }
         restartArgs.Add(CommandLineOptions.RestartFromProcessIdArgument);
         restartArgs.Add(Environment.ProcessId.ToString());
+
+        // 新进程会立即读取 config.json，先写入防抖窗口内尚未落盘的配置改动
+        App.GetService<IConfigService>()?.Flush();
 
         // 启动新进程
         var startInfo = new ProcessStartInfo
