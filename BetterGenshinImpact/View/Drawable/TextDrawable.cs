@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Windows;
+using System.Windows.Media;
 
 namespace BetterGenshinImpact.View.Drawable;
 
@@ -9,10 +10,19 @@ public class TextDrawable
     public string Text { get; set; }
     public Point Point { get; set; }
 
+    public Color? Color { get; set; }
+
     public TextDrawable(string text, Point point)
     {
         Text = text;
         Point = point;
+    }
+
+    public TextDrawable(string text, Point point, Color color)
+    {
+        Text = text;
+        Point = point;
+        Color = color;
     }
 
     public override bool Equals(object? obj)

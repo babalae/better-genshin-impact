@@ -590,12 +590,15 @@ public partial class MaskWindow : Window
                             else
                             {
                                 double defaultFontSize = (Math.Max(1, maskConfig.RecognitionTextFontSize) * scaleTo1080) / pixelsPerDip;
+                                var textBrush = drawable.Color.HasValue
+                                    ? new SolidColorBrush(drawable.Color.Value)
+                                    : OverlayStyleHelper.CreateBrush(maskConfig.RecognitionTextColor, Colors.Black);
                                 drawingContext.DrawText(new FormattedText(drawable.Text,
                                     CultureInfo.GetCultureInfo("zh-cn"),
                                     FlowDirection.LeftToRight,
                                     _typeface,
                                     defaultFontSize,
-                                    OverlayStyleHelper.CreateBrush(maskConfig.RecognitionTextColor, Colors.Black),
+                                    textBrush,
                                     pixelsPerDip), renderPoint);
                             }
                         }

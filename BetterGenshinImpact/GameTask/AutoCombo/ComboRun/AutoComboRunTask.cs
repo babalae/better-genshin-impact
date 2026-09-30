@@ -1,13 +1,17 @@
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.ViewModel.Windows;
+using System.Windows.Media;
 using CsTrees;
 using CsTrees.Display;
 using CsTrees.Visitors;
 using Microsoft.Extensions.Logging;
 using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -126,6 +130,12 @@ public class AutoComboRunTask : ISoloTask
             }
         }, overlayCts.Token);
 
+        // 行为树与并发循环均已就绪，进入正式运行段：显示浮窗
+        AutoComboTreeWindowService.Instance.Show();
+
+        // E 技能识别结果显示：订阅 VM 通知，运行期间 Avatar 分类结果自动渲染到遮罩
+        ESkillClassifyViewModel.Instance.PropertyChanged += OnESkillClassifyResultChanged;
+
         try
         {
             // 接管 CD 遮罩显示：挂起 SkillCd 触发器，避免两套 CD 显示叠加
@@ -135,13 +145,22 @@ public class AutoComboRunTask : ISoloTask
             {
                 await tree.Tick();
 
-                // 只渲染本次 Tick 遍历的路径，未访问的子树折叠为占位符
+                var vm = AutoComboTreeViewModel.Instance;
+
+                // 只渲染本次 Tick 遍历的路径，未访问的子树折叠为占位符（主树与兜底树共用同一快照）
                 var path = Display.AsciiTree(
                     comboTree,
                     showOnlyVisited: true,
                     visited: snapshot.Visited,
                     previouslyVisited: snapshot.PreviouslyVisited);
-                Logger.LogInformation("Tick {Count}：\n{Path}", tree.Count, path);
+                vm.LatestTreeAscii = path;
+
+                var fallbackPath = Display.AsciiTree(
+                    fallbackTree,
+                    showOnlyVisited: true,
+                    visited: snapshot.Visited,
+                    previouslyVisited: snapshot.PreviouslyVisited);
+                vm.LatestFallbackTreeAscii = fallbackPath;
 
                 Sleep(35, ct);
             }
@@ -152,6 +171,13 @@ public class AutoComboRunTask : ISoloTask
         }
         finally
         {
+            // 暂停/结束时隐藏浮窗，下次启动由 Start 重新显示
+            AutoComboTreeWindowService.Instance.Hide();
+
+            // 停止 E 技能识别结果显示并清除残留绘制内容
+            ESkillClassifyViewModel.Instance.PropertyChanged -= OnESkillClassifyResultChanged;
+            RemoveESkillClassifyDrawables();
+
             // 暂停/结束时先停止索敌与 CD 遮罩循环并等待其完成清理，避免与后续收尾操作冲突
             if (targetingTask != null)
             {
@@ -169,6 +195,80 @@ public class AutoComboRunTask : ISoloTask
 
             Logger.LogInformation("{Name}任务暂停，可再次点击继续", Name);
         }
+    }
+
+    /// <summary>
+    /// E 技能识别结果显示：将最新的分类结果（就绪/冷却/未知 + 编号）绘制到遮罩 E 技能图标上方，
+    /// 是否可见仍由 MaskWindow 渲染时的"显示识别结果"开关统一过滤
+    /// </summary>
+    private void OnESkillClassifyResultChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ESkillClassifyViewModel.Result))
+        {
+            return;
+        }
+
+        var result = ESkillClassifyViewModel.Instance.Result;
+        if (result == null)
+        {
+            RemoveESkillClassifyDrawables();
+            return;
+        }
+
+        var stateText = result.State switch
+        {
+            SkillCdState.Ready => "就绪",
+            SkillCdState.Cooldown => "冷却",
+            _ => "未知",
+        };
+
+        if (!string.IsNullOrEmpty(result.Code))
+        {
+            stateText += $"({result.Code})";
+        }
+
+        var textColor = GetElementColor(result.AvatarName);
+
+        // 坐标（ClassifyRect/TextPosition）已由 Avatar 换算到捕获像素域，直接绘制
+        var drawContent = VisionContext.Instance().DrawContent;
+        drawContent.PutOrRemoveRectList("ESkillClassifyRegion",
+            [result.ClassifyRect.ToRectDrawable(System.Drawing.Pens.White)]);
+        drawContent.PutOrRemoveTextList("ESkillClassify",
+            [new TextDrawable(stateText, result.TextPosition, textColor)]);
+    }
+
+    /// <summary>
+    /// 根据角色名经 AvatarProfiles 推导元素颜色，无档案或非元素标签时回退默认识别文本色
+    /// </summary>
+    private static System.Windows.Media.Color GetElementColor(string? avatarName)
+    {
+        var defaultColor = (System.Windows.Media.Color)ColorConverter.ConvertFromString(
+            TaskContext.Instance().Config.MaskWindowConfig.RecognitionTextColor);
+        if (string.IsNullOrEmpty(avatarName))
+        {
+            return defaultColor;
+        }
+
+        var profile = AvatarProfiles.TryGet(avatarName);
+        var elementTag = profile?.Tags.FirstOrDefault(t => t.EndsWith("元素", StringComparison.Ordinal));
+        return elementTag switch
+        {
+            "火元素" => System.Windows.Media.Color.FromRgb(0xFF, 0x57, 0x49),
+            "水元素" => System.Windows.Media.Color.FromRgb(0x33, 0xA6, 0xFF),
+            "风元素" => System.Windows.Media.Color.FromRgb(0x3F, 0xCE, 0xC0),
+            "雷元素" => System.Windows.Media.Color.FromRgb(0xB3, 0x80, 0xFF),
+            "草元素" => System.Windows.Media.Color.FromRgb(0x9A, 0xD9, 0x36),
+            "冰元素" => System.Windows.Media.Color.FromRgb(0x7A, 0xF2, 0xF2),
+            "岩元素" => System.Windows.Media.Color.FromRgb(0xFF, 0xB5, 0x3A),
+            _ => defaultColor,
+        };
+    }
+
+    private void RemoveESkillClassifyDrawables()
+    {
+        var drawContent = VisionContext.Instance().DrawContent;
+        drawContent.PutOrRemoveTextList("ESkillClassify", null);
+        drawContent.PutOrRemoveRectList("ESkillClassifyRegion", null);
     }
 }
 

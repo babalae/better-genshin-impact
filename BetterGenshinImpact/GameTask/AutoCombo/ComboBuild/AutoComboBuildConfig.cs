@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.ObjectModel;
 
 namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 
@@ -31,4 +32,25 @@ public partial class AutoComboBuildConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _extraPrompt = "";
+
+    /// <summary>
+    /// 主建树系统指令的正文，留空使用内置默认正文
+    /// “当前队伍”“元素反应”“用户自定义要求”小节由程序固定拼接在正文之后，无需填写
+    /// </summary>
+    [ObservableProperty]
+    private string _mainPrompt = "";
+
+    /// <summary>
+    /// 兜底建树系统指令的正文，留空使用内置默认正文
+    /// “当前队伍”小节由程序固定拼接在正文之后，无需填写
+    /// </summary>
+    [ObservableProperty]
+    private string _fallbackPrompt = "";
+
+    /// <summary>
+    /// 角色战术描述覆盖：只使用 Name/Description 字段，Tags 由内置档案决定（忽略）
+    /// 未覆盖的角色使用内置描述，删除行即恢复内置描述
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<AvatarProfile> _avatarDescriptionOverrides = [];
 }
