@@ -14,9 +14,6 @@ public static class TrainingGuideDiagnostics
     public static void AppendOcrIssue(ILogger logger, string captureId, string message)
         => AppendText(logger, "ocr-issues.log", $"[{captureId}] {message}");
 
-    public static void AppendScan(ILogger logger, string scanId, string message)
-        => AppendText(logger, $"{scanId}.log", message);
-
     private static void AppendText(ILogger logger, string fileName, string message)
     {
         try

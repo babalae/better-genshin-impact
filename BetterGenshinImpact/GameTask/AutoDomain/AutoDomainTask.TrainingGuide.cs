@@ -22,6 +22,7 @@ public partial class AutoDomainTask
     private bool _guidePlanning;
     private bool _guideAdvance;
     private bool _guideReenter;
+    private bool _guideDemandRefreshUsed;
     private int _guideRounds;
     private int _guideRoundResin;
     private Model.ResinStatus? _guideResinStatus;
@@ -35,6 +36,7 @@ public partial class AutoDomainTask
     private readonly Dictionary<TrainingGuideMaterial, int>? _guideCustomTargets;
     private readonly HashSet<string> _guideUnavailableFamilies = new();
     private sealed class GuideDomainCompleteException : Exception { }
+    private sealed class GuideDemandUnconfirmedException : Exception { }
 
     private int GuideReservePercent => TrainingGuideRunCalculator.ResolveCraftingBonusReservePercent(
         _taskParam.TrainingGuideRunPreference, _taskParam.TrainingGuideCraftingBonusReservePercent);
@@ -61,6 +63,21 @@ public partial class AutoDomainTask
             }
             _guideAdvance = false;
             try { await DoDomain(); }
+            catch (GuideDemandUnconfirmedException)
+            {
+                if (_guideDemandRefreshUsed)
+                    throw new InvalidOperationException("刷新提升指南后仍无法确认秘境需求，停止任务，不进入备选秘境");
+                _guideDemandRefreshUsed = true;
+                Logger.LogWarning("培养计划：所有待处理入口均未确认需求，重新扫描提升指南后重试一次");
+                await new ReturnMainUiTask().Start(_ct);
+                _guideDomainCandidates = await ScanGuideDomains();
+                _guideCompletedDomains.Clear();
+                // 保留已由库存确认完成的关卡，其他入口根据新列表重新核对。
+                _guideDomainName = null;
+                _guideReenter = false;
+                _guideActivePlan = null;
+                continue;
+            }
             catch (GuideDomainCompleteException)
             {
                 _guideCompletedDomains.Add(_guideDomainName);
@@ -109,6 +126,12 @@ public partial class AutoDomainTask
         var foundAny = false;
         var domains = new List<string>();
         var seen = new HashSet<string>();
+        // 周本和圣遗物秘境可作为页面识别成功的证据，但不能进入材料培养规划。
+        var matcher = new TrainingGuideDomainMatcher(MapLazyAssets.Get().ScenesDic.Values
+            .SelectMany(scene => scene.Points)
+            .Where(point => point.Type is "BlessDomain" or "ForgeryDomain" or "MasteryDomain" or "TrounceDomain")
+            .Select(point => point.Name).OfType<string>().Where(name => !string.IsNullOrWhiteSpace(name)),
+            NormalizeGuideDomainName);
         for (var page = 0; page < 20; page++)
         {
             using var capture = CaptureToRectArea();
@@ -121,11 +144,12 @@ public partial class AutoDomainTask
                 signature = string.Join("|", rows.OrderBy(r => r.Y).Select(r => $"{NormalizeGuideDomainName(r.Text)}@{r.Y / 4}"));
                 foreach (var row in rows.OrderBy(r => r.Y))
                 {
-                    var text = NormalizeGuideDomainName(row.Text);
-                    var matches = MapLazyAssets.Get().DomainPositionMap.Keys.Where(n => text.Contains(NormalizeGuideDomainName(n))).ToArray();
-                    if (matches.Length != 1) continue;
+                    var match = matcher.Match(row.Text);
+                    if (match == null) continue;
                     foundAny = true;
-                    if (seen.Add(matches[0])) domains.Add(matches[0]);
+                    if (!seen.Add(match.Value.Name)) continue;
+                    if (match.Value.Supported) domains.Add(match.Value.Name);
+                    else Logger.LogInformation("培养计划：忽略不支持材料规划的目标 {Domain}", match.Value.Name);
                 }
             }
             finally { foreach (var row in rows) row.Dispose(); }
@@ -194,7 +218,7 @@ public partial class AutoDomainTask
         }
     }
 
-    private async Task SelectPlannedGuideLevel(bool allOpen, bool scanOnly = false)
+    private async Task SelectPlannedGuideLevel(bool allOpen)
     {
         using (var screen = CaptureToRectArea())
             BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(screen.Width * .25), (int)(screen.Height * .5));
@@ -216,51 +240,47 @@ public partial class AutoDomainTask
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase).Value).Distinct().ToArray();
             if (tiers.Length != 1) throw new InvalidOperationException("底部候选难度不一致，列表可能未滚到底部");
             var planned = new List<(BetterGenshinImpact.GameTask.Model.Area.Region Region, string Key)>();
-            foreach (var candidate in candidates)
+            for (var demandPass = 0; demandPass < 2; demandPass++)
             {
-                var key = _guideDomainName + ":" + TrainingGuideMaterialCatalog.Normalize(candidate.Text);
-                if (!scanOnly && _guideCompletedLevels.Contains(key)) continue;
-                if (!scanOnly && _guideCustomTargets != null)
+                var unconfirmedDemand = false;
+                foreach (var candidate in candidates)
                 {
-                    var entry = TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, candidate.Text);
-                    if (entry != null && !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) continue;
-                }
-                if (scanOnly && !ShouldScanGuideEntry(candidate.Text)) continue;
-                if (scanOnly) MarkGuideScanAttempt(TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, candidate.Text));
-                candidate.Click();
-                await Delay(700, _ct);
-                if (scanOnly)
-                {
-                    try { await ReadEntryMaterials(candidate.Text, scanOnly: true); }
-                    catch (OperationCanceledException) { throw; }
-                    catch (Exception e)
+                    var key = _guideDomainName + ":" + TrainingGuideMaterialCatalog.Normalize(candidate.Text);
+                    if (_guideCompletedLevels.Contains(key)) continue;
+                    if (_guideCustomTargets != null)
                     {
-                        _guideScanEntryFailed++;
-                        RecordGuideScan($"{key}：入口扫描失败，{e.Message}");
+                        var entry = TrainingGuideEntryCatalog.Find(_guideDomainName ?? string.Empty, candidate.Text);
+                        if (entry != null && !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) continue;
                     }
-                    continue;
-                }
-                if (_guideCustomTargets == null)
-                {
-                    using var detail = CaptureToRectArea();
-                    using var demand = detail.Find(RecognitionObject.Ocr(detail.Width * .48, detail.Height * .49, detail.Width * .5, detail.Height * .33));
-                    if (!demand.Text.Contains("需求角色"))
+                    candidate.Click();
+                    await Delay(700, _ct);
+                    if (_guideCustomTargets == null)
                     {
-                        Logger.LogInformation("培养计划：{Level} 未出现需求角色，跳过", candidate.Text);
-                        continue;
+                        using var detail = CaptureToRectArea();
+                        using var demand = detail.Find(RecognitionObject.Ocr(detail.Width * .48, detail.Height * .49, detail.Width * .5, detail.Height * .33));
+                        if (!demand.Text.Contains("需求角色"))
+                        {
+                            Logger.LogInformation("培养计划：{Level} 暂未识别到需求角色", candidate.Text);
+                            unconfirmedDemand = true;
+                            continue;
+                        }
                     }
+                    var materials = await ReadEntryMaterials(candidate.Text, availableEntries: availableEntries);
+                    if (materials.Count == 0) continue;
+                    if (!_guidePlans.TryGetValue(key, out var plan)) _guidePlans[key] = plan = new(materials);
+                    else if (_taskParam.TrainingGuideRewardRecognitionEnabled) plan.Refresh(materials);
+                    var remaining = RemainingGuideResin(plan);
+                    if (remaining == null) throw new InvalidOperationException($"{candidate.Text}：低级库存不完整，不能开始刷取");
+                    ReportGuidePlan(candidate.Text, plan, remaining.Value);
+                    if (remaining == 0) _guideCompletedLevels.Add(key);
+                    else planned.Add((candidate, key));
                 }
-                var materials = await ReadEntryMaterials(candidate.Text, availableEntries: availableEntries);
-                if (materials.Count == 0) continue;
-                if (!_guidePlans.TryGetValue(key, out var plan)) _guidePlans[key] = plan = new(materials);
-                else plan.Refresh(materials);
-                var remaining = plan.RemainingResin(GuideReservePercent);
-                if (remaining == null) throw new InvalidOperationException($"{candidate.Text}：低级库存不完整，不能开始刷取");
-                ReportGuidePlan(candidate.Text, plan, remaining.Value);
-                if (remaining == 0) _guideCompletedLevels.Add(key);
-                else planned.Add((candidate, key));
+                // 正常路径不增加截图或等待；只有没有可执行目标且存在未确认入口时复查。
+                if (planned.Count > 0 || !unconfirmedDemand) break;
+                if (demandPass == 1) throw new GuideDemandUnconfirmedException();
+                Logger.LogWarning("培养计划：未确认任何待处理入口的需求，稍后重新截图复查");
+                await Delay(500, _ct);
             }
-            if (scanOnly) return;
             if (_guideCustomTargets != null)
             {
                 var requestedEntries = TrainingGuideEntryCatalog.Entries.Where(e => e.Domain == _guideDomainName &&
@@ -282,7 +302,7 @@ public partial class AutoDomainTask
         finally { foreach (var row in rows) row.Dispose(); }
     }
 
-    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(string level, bool scanOnly = false,
+    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(string level,
         ISet<TrainingGuideEntry>? availableEntries = null)
     {
         using var capture = CaptureToRectArea();
@@ -354,11 +374,9 @@ public partial class AutoDomainTask
         if (entry == null)
             throw new InvalidOperationException($"{level}: 图标家族不属于当前秘境，停止本入口识别");
         availableEntries?.Add(entry);
-        // 完整图标家族确认入口后再筛选，非目标入口不读取弹窗、不计入扫描成功数。
-        if (scanOnly && _guideScanEntries?.Contains(entry) != true) return materials;
-        if (!scanOnly && _guideCustomTargets != null &&
+        // 完整图标家族确认入口后再筛选，非目标入口不读取弹窗。
+        if (_guideCustomTargets != null &&
             !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) return materials;
-        if (scanOnly) MarkGuideScanAttempt(entry);
         foreach (var (icon, expected) in identified)
         {
             capture.ClickTo(band.X + icon.X + icon.Width / 2, band.Y + icon.Y + icon.Height / 2);
@@ -379,32 +397,14 @@ public partial class AutoDomainTask
             }
             if (reading == null)
             {
-                if (scanOnly)
-                {
-                    _guideScanFailed++;
-                    if (entry != null) _guideScanFailedMaterials.Add(expected);
-                    RecordGuideScan($"{_guideDomainName}/{level}：材料 {expected.Name} 数量识别失败");
-                    continue;
-                }
                 throw new InvalidOperationException("秘境材料库存识别失败，请查看培养浮窗OCR日志；停止以避免错误刷取");
             }
-            if (!scanOnly && _guideCustomTargets != null)
+            if (_guideCustomTargets != null)
             {
                 var required = _guideCustomTargets.GetValueOrDefault(reading.Material);
                 reading = reading with { Required = required, IsTarget = required > 0 };
             }
             materials.Add(reading);
-            if (scanOnly)
-            {
-                _guideScanSucceeded++;
-                if (entry != null) _guideScanReadMaterials.Add(reading.Material);
-                RecordGuideScan($"{_guideDomainName}/{level}：{reading.Material.Name} {reading.Stock}/{(reading.IsTarget ? reading.Required.ToString() : "-")}");
-            }
-        }
-        if (scanOnly)
-        {
-            if (entry != null && materials.Count == identified.Count) _guideScanCompletedEntries.Add(entry);
-            return materials;
         }
         if (!materials.Any(m => m.IsTarget))
             throw new InvalidOperationException("已确认需求角色，但未读到材料的培养需求数字，暂不能规划");
@@ -464,7 +464,7 @@ public partial class AutoDomainTask
 
     private async Task<bool> UseTrainingGuideResin(Model.ResinStatus status)
     {
-        var remaining = _guideActivePlan?.RemainingResin(GuideReservePercent);
+        var remaining = _guideActivePlan == null ? null : RemainingGuideResin(_guideActivePlan);
         if (remaining == null || remaining <= 0)
             throw new InvalidOperationException("培养计划剩余需求无效，停止领取以避免错误消耗树脂");
 
@@ -525,17 +525,24 @@ public partial class AutoDomainTask
         finally { foreach (var text in texts) text.Dispose(); }
     }
 
-    private void SaveGuideRewardOcrImage(Mat image, string stage) =>
-        TrainingGuideDiagnostics.Save(image, Logger, $"reward-{stage}");
+    private int? RemainingGuideResin(TrainingGuideFamilyPlan plan) =>
+        _taskParam.TrainingGuideRewardRecognitionEnabled
+            ? plan.RemainingResin(GuideReservePercent)
+            : plan.RemainingInitialResin(GuideReservePercent);
 
     private bool UpdateGuideAfterReward(bool resinExhausted)
     {
         if (!_guidePlanning || _guideActivePlan == null) return false;
         _guideRounds++;
-        var updated = _guideActivePlan.ApplyRewards(_guideRoundRewards, _guideRoundResin);
+        var useRewards = _taskParam.TrainingGuideRewardRecognitionEnabled;
+        if (!useRewards && _guideRoundResin <= 0)
+            throw new InvalidOperationException("培养计划：本轮树脂消耗未确认，无法扣减初始预算，停止任务");
+        var updated = _guideActivePlan.ApplyRewards(useRewards ? _guideRoundRewards : null, _guideRoundResin);
         if (_guideRoundResin == 0)
             Logger.LogWarning("培养计划：本轮树脂用量未确认，仅按材料更新库存，不计入每体掉落样本");
-        var remaining = updated ? _guideActivePlan.RemainingResin(GuideReservePercent) : null;
+        var remaining = !useRewards || updated ? RemainingGuideResin(_guideActivePlan) : null;
+        if (!useRewards)
+            Logger.LogInformation("培养计划：按初始预算执行，本轮消耗 {Spent}体，剩余预计 {Remaining}体", _guideRoundResin, remaining);
         if (remaining == 0 && _guideLevelKey != null) _guideCompletedLevels.Add(_guideLevelKey);
         if (remaining != null) ReportGuidePlan(_guideLevelKey ?? "当前关卡", _guideActivePlan, remaining.Value);
         else Logger.LogWarning("培养计划：奖励数据不完整，将退出并在入口重新读取库存");

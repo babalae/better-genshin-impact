@@ -52,7 +52,7 @@ public class RewardResultRecognizer
     /// </summary>
     /// <param name="maxPages">最大识别页数。</param>
     /// <returns>奖励名称到总数量的映射。</returns>
-    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3, Action<Mat, string>? saveOcrDebugImage = null, bool requireReliableCounts = false)
+    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3, bool requireReliableCounts = false)
     {
         if (!IsSupportedRewardResolution())
         {
@@ -75,9 +75,7 @@ public class RewardResultRecognizer
             }
 
             using var screen = CaptureRewardPageScreen();
-            Action<Mat, string>? savePageImage = saveOcrDebugImage == null ? null : (image, stage) => saveOcrDebugImage(image, $"page-{currentPage}-{stage}");
-            savePageImage?.Invoke(screen.SrcMat, "capture");
-            var pageResult = RecognizeRewardPage(screen, iconRecognizer, savePageImage);
+            var pageResult = RecognizeRewardPage(screen, iconRecognizer);
             SaveRewardDebugImage(currentPage, screen.SrcMat, pageResult.CardRects);
 
             if (pageResult.Rewards.Count == 0)
@@ -160,11 +158,11 @@ public class RewardResultRecognizer
     /// <param name="screen">当前页全屏截图。</param>
     /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <returns>本页奖励与卡片位置。</returns>
-    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer, Action<Mat, string>? saveOcrDebugImage = null)
+    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer)
     {
         using var bandMat = new Mat(screen.SrcMat, new Rect(220, 444, 1480, 220));
         var cardRects = DetectCardRects(bandMat);
-        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer, saveOcrDebugImage: saveOcrDebugImage);
+        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer);
         return new RewardPageRecognitionResult(recognizedRewards, cardRects);
     }
 
@@ -330,7 +328,7 @@ public class RewardResultRecognizer
     /// <param name="cardRects">已定位的卡片矩形。</param>
     /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <param name="ocrService">OCR 服务，为空时使用 Paddle OCR。</param>
-    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null, Action<Mat, string>? saveOcrDebugImage = null)
+    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null)
     {
         ocrService ??= OcrFactory.Paddle;
 
@@ -361,7 +359,7 @@ public class RewardResultRecognizer
             }
 
             // === 数量 OCR ===
-            var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx, saveOcrDebugImage);
+            var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx);
 
             results.Add(new RecognizedReward(iconName, count));
         }
@@ -397,12 +395,12 @@ public class RewardResultRecognizer
     /// <param name="ocrService">OCR 服务。</param>
     /// <param name="cardIdx">卡片序号。</param>
     /// <returns>识别到的数量；失败时返回 -1。</returns>
-    private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx, Action<Mat, string>? saveOcrDebugImage = null)
+    private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx)
     {
         try
         {
             using GridItemCountRecognitionResult result =
-                GridItemCountRecognizer.RecognizeCropped(cardMat, ocrService, saveOcrDebugImage: saveOcrDebugImage == null ? null : (image, stage) => saveOcrDebugImage(image, $"material-{cardIdx}-{stage}"));
+                GridItemCountRecognizer.RecognizeCropped(cardMat, ocrService);
             if (result.Count >= 0)
             {
                 return result.Count;

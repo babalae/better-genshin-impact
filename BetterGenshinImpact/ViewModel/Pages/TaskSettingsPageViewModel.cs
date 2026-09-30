@@ -487,9 +487,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnSwitchAutoDomain()
     {
-        var scanOnly = Config.AutoDomainConfig.TrainingGuideOcrScanAllEnabled;
-        var path = string.Empty;
-        if (!scanOnly && GetFightStrategy(out path))
+        if (GetFightStrategy(out var path))
         {
             return;
         }
@@ -497,12 +495,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoDomainEnabled = true;
         try
         {
-            await new TaskRunner().RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)
-            {
-                TrainingGuideOcrScanAllEnabled = scanOnly,
-                TrainingGuideOcrScanDomains = Config.AutoDomainConfig.TrainingGuideOcrScanDomains,
-                TrainingGuideOcrScanMaterials = Config.AutoDomainConfig.TrainingGuideOcrScanMaterials
-            }));
+            await new TaskRunner().RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
         }
         finally { SwitchAutoDomainEnabled = false; }
     }

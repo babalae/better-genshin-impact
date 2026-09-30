@@ -146,13 +146,7 @@ public partial class AutoDomainConfig : ObservableObject
     /// <summary>保留培养材料浮窗每次 OCR 尝试的原图和识别输入图，仅在独立任务设置页提供开关。</summary>
     [ObservableProperty]
     private bool _developmentGuideOcrDebugEnabled;
-    /// <summary>仅由独立任务启动入口读取：遍历材料秘境进行 OCR，不战斗、不领奖。</summary>
-    [ObservableProperty]
-    private bool _trainingGuideOcrScanAllEnabled;
-    [ObservableProperty]
-    private string _trainingGuideOcrScanDomains = string.Empty;
-    [ObservableProperty]
-    private string _trainingGuideOcrScanMaterials = string.Empty;
+
     // 培养计划完成或当天没有可刷取目标时使用的备选秘境
     [ObservableProperty]
     private string _developmentGuideFallbackDomainName = string.Empty;

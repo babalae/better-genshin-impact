@@ -6,6 +6,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
+      xmlns:training="clr-namespace:BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide"
       xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -1551,7 +1552,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 默认开启，用于动态调整刷取次数}"
+                                          Text="{i18n:T 默认开启，用于动态调整刷取次数；关闭后不更新库存，按初始预计体力刷取，实际材料可能有偏差}"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -1637,7 +1638,7 @@
                                                        HorizontalAlignment="Stretch"
                                                        behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay}"
                                                        behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
-                                                       ItemsSource="{x:Static helpers:DomainCascadingItems.ManualItems}"
+                                                       ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
                                                        SelectedCascadingItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                 <StackPanel Grid.Column="1" Margin="16,0,12,0">
                                     <ui:TextBlock FontTypography="Body"
@@ -1650,7 +1651,7 @@
                                 <ComboBox Grid.Column="2"
                                           Width="72"
                                           HorizontalContentAlignment="Center"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.RewardSelectionIndices}"
+                                          ItemsSource="{x:Static training:TrainingGuideDomainOptions.RewardSelectionIndices}"
                                           SelectedItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
                             </Grid>
                         </StackPanel>
@@ -1668,43 +1669,12 @@
                                     <StackPanel>
                                         <ui:TextBlock FontTypography="Body" Text="培养材料 OCR 调试截图" />
                                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="保留材料浮窗及领奖统计每次 OCR 的原图和识别输入图，保存至 User/Diagnostics/AutoDomain.TrainingGuide"
+                                                      Text="保留培养材料浮窗每次 OCR 的原图和识别输入图，保存至 User/Diagnostics/AutoDomain.TrainingGuide"
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
                                                      IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideOcrDebugEnabled, Mode=TwoWay}" />
                                 </Grid>
-                                <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-                                <Grid Margin="16">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <ui:TextBlock FontTypography="Body" Text="遍历材料秘境 OCR" />
-                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="开启后启动独立自动秘境，将按下方筛选扫描当前开放入口的材料后退出，不战斗、不消耗树脂。两框留空时遍历全部已知材料秘境。无需需求角色；仅影响独立任务，正常刷取前请关闭。"
-                                                      TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
-                                                     IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideOcrScanAllEnabled, Mode=TwoWay}" />
-                                </Grid>
-                                <ui:TextBlock Margin="16,0,16,16" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="扫描汇总与 OCR 纠错日志均保存在 User/Diagnostics/AutoDomain.TrainingGuide；ocr-issues.log 不依赖截图开关。"
-                                              TextWrapping="Wrap" />
-                                <StackPanel Margin="16,0,16,16">
-                                    <ui:TextBlock Text="测试秘境名称（多个用 ; 分隔）" />
-                                    <ui:TextBox Margin="0,6,0,12"
-                                                PlaceholderText="例如：砂流之庭;昏识塔"
-                                                Text="{Binding Config.AutoDomainConfig.TrainingGuideOcrScanDomains, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    <ui:TextBlock Text="测试天赋素材名称（多个用 ; 分隔）" />
-                                    <ui:TextBox Margin="0,6,0,6"
-                                                PlaceholderText="例如：自由;「慈爱」的哲学"
-                                                Text="{Binding Config.AutoDomainConfig.TrainingGuideOcrScanMaterials, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="秘境名称会选择该秘境的全部开放入口；天赋素材可填完整名称或家族名，自动定位秘境并扫描该家族全部等级。两框同时填写时合并目标并去重。填写后启动独立自动秘境即可；未开放入口只记录，不强行进入。"
-                                                  TextWrapping="Wrap" />
-                                </StackPanel>
                             </StackPanel>
                         </ui:CardExpander>
                     </StackPanel>

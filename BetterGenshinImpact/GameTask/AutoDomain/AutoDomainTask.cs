@@ -98,8 +98,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     {
         _taskParam = taskParam;
         _guideCustomTargets = TrainingGuide.TrainingGuideCustomTargets.Parse(taskParam.TrainingTargetsJson);
-        if (_guideCustomTargets != null && taskParam.TrainingGuideOcrScanAllEnabled)
-            throw new ArgumentException("自定义培养目标不能与仅扫描开发模式同时启用");
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
@@ -114,7 +112,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
             Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
         }
-        else if (!_taskParam.TrainingGuideOcrScanAllEnabled)
+        else
         {
             _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
         }
@@ -185,17 +183,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         _ct = ct;
         _rewardSummary.Clear();
 
-        if (_taskParam.TrainingGuideOcrScanAllEnabled)
-        {
-            await RunTrainingGuideOcrScan();
-            return _rewardSummary;
-        }
-
         _guidePlanning = _guideCustomTargets != null ||
             (_taskParam.DomainName == TrainingGuideOption && _taskParam.TrainingGuideCalculateRunsEnabled);
         _guideRounds = 0;
         _guideResinStatus = null;
         _guideReenter = false;
+        _guideDemandRefreshUsed = false;
         _guideDomainName = null;
         _guideActivePlan = null;
         _guideCompletedLevels.Clear();
@@ -541,7 +534,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         return true;
     }
 
-    private async Task EnterDomain(bool scanOnly = false)
+    private async Task EnterDomain()
     {
         AutoFightAssets fightAssets;
         AutoPickAssets pickAssets;
@@ -599,7 +592,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         if (!menuFound)
         {
             Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
-            if (scanOnly) throw new InvalidOperationException("未确认秘境入口界面，跳过扫描");
         }
 
         using var limitedFullyStringRa = CaptureToRectArea();
@@ -616,15 +608,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         foreach (var region in limitedFullyStringRaocrList) region.Dispose();
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
-        if (scanOnly)
-        {
-            var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
-                || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 }
-                || limitedFullyStringRaocrListdone != null;
-            RecordGuideScan($"{domainName}：{(allOpen ? "全开，检测底部三个候选入口，按筛选条件扫描" : "非全开，检测当前开放入口，按筛选条件扫描；未开放入口未覆盖")}");
-            await SelectPlannedGuideLevel(allOpen, scanOnly: true);
-            return;
-        }
         if (_guidePlanning)
         {
             var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
@@ -1662,10 +1645,10 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
             // 使用多页识别（自动检测是否需要翻页）
             Logger.LogInformation("自动秘境：开始奖励识别");
+            var useRewardsForPlanning = _guidePlanning && _taskParam.TrainingGuideRewardRecognitionEnabled;
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(
-                saveOcrDebugImage: _taskParam.TrainingGuideOcrDebugEnabled ? SaveGuideRewardOcrImage : null,
-                requireReliableCounts: _guidePlanning);
-            if (_guidePlanning && _taskParam.TrainingGuideRewardRecognitionEnabled)
+                requireReliableCounts: useRewardsForPlanning);
+            if (useRewardsForPlanning)
                 _guideRoundRewards = new Dictionary<string, int>(rewards);
 
             RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);

@@ -96,10 +96,9 @@ internal static class GridItemCountRecognizer
     public static GridItemCountRecognitionResult RecognizeCropped(
         Mat item,
         IOcrService ocrService,
-        GridItemCountRecognizerOptions? options = null, Action<Mat, string>? saveOcrDebugImage = null)
+        GridItemCountRecognizerOptions? options = null)
     {
         options ??= DefaultOptions;
-        saveOcrDebugImage?.Invoke(item, "source");
 
         // 固定裁剪格子底部的数量区域并放大，避免图标和星级区域干扰数字提取。
         using Mat resized = CropCountArea(item, options.Scale);
@@ -156,7 +155,6 @@ internal static class GridItemCountRecognizer
         try
         {
             // 固定区域已经完成前景定位，直接调用无检测器 OCR，避免单字符 1 被检测阶段漏掉。
-            saveOcrDebugImage?.Invoke(normalized, "ocr-input");
             string rawText = ocrService.OcrWithoutDetector(normalized);
             string normalizedText = NormalizeNumberText(rawText);
             bool isNarrowOne = components.Count == 1

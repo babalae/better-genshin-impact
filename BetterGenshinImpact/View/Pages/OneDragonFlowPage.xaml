@@ -7,6 +7,7 @@
              xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
+      xmlns:training="clr-namespace:BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
@@ -637,7 +638,7 @@
                                                            HorizontalAlignment="Stretch"
                                                            behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay}"
                                                            behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
-                                                           ItemsSource="{x:Static helpers:DomainCascadingItems.ManualItems}"
+                                                           ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
                                                            SelectedCascadingItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                     <StackPanel Grid.Column="1" Margin="16,0,12,0">
                                         <ui:TextBlock FontTypography="Body"
@@ -650,7 +651,7 @@
                                     <ComboBox Grid.Column="2"
                                               Width="72"
                                               HorizontalContentAlignment="Center"
-                                              ItemsSource="{x:Static helpers:DomainCascadingItems.RewardSelectionIndices}"
+                                              ItemsSource="{x:Static training:TrainingGuideDomainOptions.RewardSelectionIndices}"
                                               SelectedItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
                                 </Grid>
                             </StackPanel>

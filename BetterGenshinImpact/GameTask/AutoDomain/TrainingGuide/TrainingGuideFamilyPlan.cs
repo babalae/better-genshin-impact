@@ -11,8 +11,16 @@ public sealed class TrainingGuideFamilyPlan
     public int KnownResinSpent { get; private set; }
     private readonly Dictionary<string, long> _observedDrops = new();
     private int _observedResinSpent;
+    private int? _initialResinBudget;
     public TrainingGuideFamilyPlan(IEnumerable<TrainingGuideMaterialReading> materials) => Materials = materials.ToList();
     public void Refresh(IEnumerable<TrainingGuideMaterialReading> materials) => Materials = materials.ToList();
+
+    /// <summary>不使用奖励更新库存时，按首次估算的预算扣除实际消耗。</summary>
+    public int? RemainingInitialResin(int reservePercent)
+    {
+        _initialResinBudget ??= RemainingResin(reservePercent);
+        return _initialResinBudget is int budget ? Math.Max(0, budget - KnownResinSpent) : null;
+    }
 
     public bool ApplyRewards(IReadOnlyDictionary<string, int>? rewards, int resin)
     {
