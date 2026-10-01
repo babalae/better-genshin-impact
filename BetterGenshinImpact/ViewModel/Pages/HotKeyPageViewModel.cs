@@ -57,6 +57,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
+    private readonly TaskTriggerDispatcher _taskTriggerDispatcher;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -75,11 +76,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         IConfigService configService,
         ILogger<HotKeyPageViewModel> logger,
         TaskSettingsPageViewModel taskSettingsPageViewModel,
-        RecognitionTemplateEditorService recognitionTemplateEditorService)
+        RecognitionTemplateEditorService recognitionTemplateEditorService,
+        TaskTriggerDispatcher taskTriggerDispatcher)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
+        _taskTriggerDispatcher = taskTriggerDispatcher;
         // 获取配置
         Config = configService.Get();
 
@@ -415,7 +418,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.TakeScreenshotHotkey),
             Config.HotKeyConfig.TakeScreenshotHotkey,
             Config.HotKeyConfig.TakeScreenshotHotkeyType,
-            (_, _) => { TaskTriggerDispatcher.Instance().TakeScreenshot(); }
+            (_, _) => { _taskTriggerDispatcher.TakeScreenshot(); }
         );
         systemDirectory.Children.Add(takeScreenshotHotKeySettingModel);
 

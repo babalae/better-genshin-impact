@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
 using BetterGenshinImpact.GameTask.QuickTeleport;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.View.Drawable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
@@ -318,8 +319,12 @@ public partial class AllConfig : ObservableObject
     /// <param name="sender">触发变更的对象（某个子配置、嵌套对象或集合）</param>
     private void OnConfigChanged(object sender)
     {
-        // 同步、定向刷新：只重新 Init 依赖该子配置的触发器，保证开关类配置立即生效
-        GameTaskManager.RefreshTriggerConfigs(sender);
+        // 实时触发器每帧读取配置，不需要在这里通知；只有切换遮罩显示相关的开关时清掉旧的识别结果
+        if (sender is MaskWindowConfig)
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
+        }
+
         OnAnyChangedAction?.Invoke();
     }
 

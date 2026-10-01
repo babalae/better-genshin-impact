@@ -324,7 +324,9 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
+        var capture = TaskContext.Instance().Runtime?.Capture
+                      ?? throw new InvalidOperationException("截图器未初始化!");
+        var image = CaptureGameImage(capture);
         var content = new CaptureContent(image, 0, 0);
         return content.CaptureRectArea;
     }

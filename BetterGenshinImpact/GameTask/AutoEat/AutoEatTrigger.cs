@@ -21,7 +21,7 @@ public class AutoEatTrigger : ITaskTrigger
     private readonly ILogger<AutoEatTrigger> _logger = App.GetLogger<AutoEatTrigger>();
 
     public string Name => "自动吃药";
-    public bool IsEnabled { get; set; }
+    public bool IsEnabledByConfig => _config.Enabled;
     public int Priority => 25; // 中等优先级
     public bool IsExclusive => false;
 
@@ -38,9 +38,14 @@ public class AutoEatTrigger : ITaskTrigger
         _config = TaskContext.Instance().Config.AutoEatConfig;
     }
 
-    public void Init()
+    public void OnEnabled(object? options)
     {
-        IsEnabled = _config.Enabled;
+        // 与原来"重新创建实例"时的初始状态一致
+        _lastRecoveryCheckTime = DateTime.MinValue;
+        _lastResurrectionTime = DateTime.MinValue;
+        _lastEatTime = DateTime.MinValue;
+        _recoveryDetected = false;
+        _prevExecute = DateTime.MinValue;
     }
 
     public void OnCapture(CaptureContent content)

@@ -92,6 +92,8 @@ XAML 里约有 44 处配置绑定使用了 `UpdateSourceTrigger=PropertyChanged`
 
 ### 4.2 触发器定向刷新
 
+> 已被 [实时触发器生命周期与启停设计](realtime-trigger.md) 取代：`RefreshTriggerConfigs` 已删除，tracker 回调只负责保存（`sender` 为 `MaskWindowConfig` 时额外清画布），触发器改为每帧读取配置。下文保留为历史记录。
+
 `AllConfig.InitEvent()` 改为创建 tracker，回调中做两件事：
 
 1. `GameTaskManager.RefreshTriggerConfigs(sender)`（新增重载）。

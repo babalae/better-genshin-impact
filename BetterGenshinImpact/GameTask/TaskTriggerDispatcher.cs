@@ -12,9 +12,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoEat;
+using BetterGenshinImpact.GameTask.AutoPick;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Model;
@@ -26,14 +29,46 @@ namespace BetterGenshinImpact.GameTask
 {
     public class TaskTriggerDispatcher : IDisposable
     {
-        private readonly ILogger<TaskTriggerDispatcher> _logger = App.GetLogger<TaskTriggerDispatcher>();
-        private readonly OverlayMetricsService? _metricsService = App.GetService<OverlayMetricsService>();
-        private readonly CustomHtmlMaskService? _customHtmlMaskService = App.GetService<CustomHtmlMaskService>();
-
-        private static TaskTriggerDispatcher? _instance;
+        private readonly ILogger<TaskTriggerDispatcher> _logger;
+        private readonly OverlayMetricsService _metricsService;
+        private readonly CustomHtmlMaskService _customHtmlMaskService;
 
         private readonly System.Timers.Timer _timer = new();
-        private List<ITaskTrigger>? _triggers;
+
+        /// <summary>
+        /// 脚本可以通过 AddTrigger 启用的触发器
+        /// </summary>
+        private static readonly Dictionary<string, Type> ScriptTriggerTypes = new()
+        {
+            ["AutoPick"] = typeof(AutoPickTrigger),
+            ["AutoSkip"] = typeof(AutoSkipTrigger),
+            ["AutoEat"] = typeof(AutoEatTrigger),
+        };
+
+        /// <summary>
+        /// 本次截图会话的触发器，按优先级从高到低排列。Start 时整体替换，之后不再修改；启停状态只在 Tick 中读写
+        /// </summary>
+        private volatile List<TriggerSlot> _slots = [];
+
+        /// <summary>
+        /// 保护 _inTask 与 _leases。任意线程修改，Tick 在锁内拷贝一份后使用，锁内不做其他事
+        /// </summary>
+        private readonly object _leaseLock = new();
+
+        /// <summary>
+        /// 是否正在执行独立任务。任务中不看用户配置，只运行启用名单里的触发器
+        /// </summary>
+        private bool _inTask;
+
+        /// <summary>
+        /// 任务期间的启用名单，按加入顺序排列
+        /// </summary>
+        private readonly List<TriggerLease> _leases = [];
+
+        /// <summary>
+        /// 上一次截图会话留下的触发器，下一帧对其中仍处于启用状态的调用 OnDisabled。由 _leaseLock 保护
+        /// </summary>
+        private readonly List<TriggerSlot> _retiredSlots = [];
 
         /// <summary>
         /// 当前绑定的运行环境，由 GameRuntimeService 通过 Start / Stop 设置。Tick 线程只读
@@ -41,9 +76,9 @@ namespace BetterGenshinImpact.GameTask
         private volatile GameRuntime? _runtime;
 
         /// <summary>
-        /// 当前运行环境的截图器，未启动时为 null
+        /// 仅供本类保存截图使用；当前运行环境的截图器，未启动时为 null
         /// </summary>
-        public IGameCapture? GameCapture => _runtime?.Capture;
+        private IGameCapture? GameCapture => _runtime?.Capture;
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
@@ -52,8 +87,6 @@ namespace BetterGenshinImpact.GameTask
         private bool _prevGameActive;
 
         private DateTime _prevManualGc = DateTime.MinValue;
-
-        private static readonly object _triggerListLocker = new();
 
         /// <summary>
         /// 截图器停止或游戏已退出。由 GameRuntimeService 订阅并停止运行环境
@@ -64,66 +97,108 @@ namespace BetterGenshinImpact.GameTask
         private DateTime PrevGameUiChangeTime = DateTime.Now; // 上一次UI变化时间
         
 
-        public TaskTriggerDispatcher()
+        public TaskTriggerDispatcher(
+            ILogger<TaskTriggerDispatcher> logger,
+            OverlayMetricsService metricsService,
+            CustomHtmlMaskService customHtmlMaskService)
         {
-            _instance = this;
+            _logger = logger;
+            _metricsService = metricsService;
+            _customHtmlMaskService = customHtmlMaskService;
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
         }
 
         public static TaskTriggerDispatcher Instance()
         {
-            if (_instance == null)
-            {
-                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
-            }
-
-            return _instance;
+            return App.GetService<TaskTriggerDispatcher>()
+                   ?? throw new InvalidOperationException("调度器未注册");
         }
 
-        public static IGameCapture GlobalGameCapture
+        /// <summary>
+        /// 兼容旧调用方，从 DI 容器获取调度器；截图器是否已启动应查看当前 GameRuntime
+        /// </summary>
+        public static TaskTriggerDispatcher? InstanceNullable() => App.GetService<TaskTriggerDispatcher>();
+
+        /// <summary>
+        /// 任务开始：进入任务模式并清空启用名单。用户开启的触发器在下一帧停用
+        /// </summary>
+        public void BeginTask()
         {
-            get
+            lock (_leaseLock)
             {
-                _instance = Instance();
-
-                if (_instance.GameCapture == null)
-                {
-                    throw new Exception("截图器未初始化!");
-                }
-
-                return _instance.GameCapture;
+                _inTask = true;
+                _leases.Clear();
             }
         }
 
+        /// <summary>
+        /// 任务结束：退出任务模式并清空启用名单，下一帧按用户配置恢复。重复调用无副作用
+        /// </summary>
+        public void EndTask()
+        {
+            lock (_leaseLock)
+            {
+                _inTask = false;
+                _leases.Clear();
+            }
+        }
+
+        /// <summary>
+        /// 任务期间启用一个触发器（加入启用名单）。只接受 "AutoPick"、"AutoSkip"、"AutoEat"。
+        /// 同一个触发器在名单里有多条时，使用最后加入那一条的参数。不在任务中时名单不生效
+        /// </summary>
+        /// <param name="name">触发器名称</param>
+        /// <param name="options">脚本传入的参数，AutoPick 为 AutoPickExternalConfig，AutoSkip 为 AutoSkipConfig</param>
+        /// <returns>租约，Dispose 时撤销这一条；名称不支持时返回 null。不需要中途撤销的调用方可以忽略返回值</returns>
+        public IDisposable? AddTrigger(string name, object? options = null)
+        {
+            if (!ScriptTriggerTypes.TryGetValue(name, out var triggerType))
+            {
+                return null;
+            }
+
+            var lease = new TriggerLease(this, triggerType, options);
+            lock (_leaseLock)
+            {
+                _leases.Add(lease);
+            }
+
+            return lease;
+        }
+
+        /// <summary>
+        /// 清空启用名单，不销毁任何触发器实例
+        /// </summary>
         public void ClearTriggers()
         {
-            lock (_triggerListLocker)
+            lock (_leaseLock)
             {
-                GameTaskManager.ClearTriggers();
-                _triggers?.Clear();
+                _leases.Clear();
             }
         }
 
-        public void SetTriggers(List<ITaskTrigger> list)
+        /// <summary>
+        /// 取当前截图会话中的触发器实例，供诊断等只读场景使用。截图器未启动时返回 null
+        /// </summary>
+        public T? GetTrigger<T>() where T : class, ITaskTrigger
         {
-            lock (_triggerListLocker)
+            foreach (var slot in _slots)
             {
-                _triggers = list;
-            }
-        }
-
-        public bool AddTrigger(string name, object? externalConfig)
-        {
-            lock (_triggerListLocker)
-            {
-                if (GameTaskManager.AddTrigger(name, externalConfig))
+                if (slot.Trigger is T trigger)
                 {
-                    SetTriggers(GameTaskManager.ConvertToTriggerList(true));
-                    return true;
+                    return trigger;
                 }
+            }
 
-                return false;
+            return null;
+        }
+
+        private void RemoveLease(TriggerLease lease)
+        {
+            lock (_leaseLock)
+            {
+                _leases.Remove(lease);
             }
         }
 
@@ -136,9 +211,14 @@ namespace BetterGenshinImpact.GameTask
             ChatUiHotkeyGuard.Reset();
             _runtime = runtime;
 
-            // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadInitialTriggers();
-            GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
+            // 创建本次截图会话的触发器(一定要在任务上下文初始化完毕后使用)。初始全部为停用，第一帧按规则启用。
+            // 上一次会话中仍处于启用状态的触发器交给下一帧调用 OnDisabled，清理它们留在遮罩上的内容
+            var previousSlots = _slots;
+            _slots = GameTaskManager.CreateTriggers().Select(t => new TriggerSlot(t)).ToList();
+            lock (_leaseLock)
+            {
+                _retiredSlots.AddRange(previousSlots);
+            }
 
             // 窗口移动、缩放时同步遮罩位置（Tick 中也会轮询）
             runtime.Window.ViewportChanged += OnViewportChanged;
@@ -217,6 +297,9 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
+                // 先同步触发器启停状态，再做最小化、前台等判断：游戏在后台时，停用也能及时收尾
+                var runnableTriggers = SyncTriggerStates();
+
                 var window = runtime.Window;
                 var gameCapture = runtime.Capture;
 
@@ -285,20 +368,14 @@ namespace BetterGenshinImpact.GameTask
                     // 输入不依赖前台的运行环境（网页版）失焦后照常执行全部触发器
                     if (window.RequiresForeground)
                     {
-                        if (_triggers != null)
+                        var exclusive = runnableTriggers.FirstOrDefault(t => t.IsExclusive);
+                        if (exclusive != null)
                         {
-                            lock (_triggerListLocker)
-                            {
-                                var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                                if (exclusive != null)
-                                {
-                                    hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
-                                }
-                                else
-                                {
-                                    hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
-                                }
-                            }
+                            hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                        }
+                        else
+                        {
+                            hasBackgroundTriggerToRun = runnableTriggers.Any(t => t.IsBackgroundRunning);
                         }
 
                         if (!hasBackgroundTriggerToRun && shouldShowPictureInPicture)
@@ -342,7 +419,7 @@ namespace BetterGenshinImpact.GameTask
                     }
                 }
 
-                var hasEnabledTriggers = _triggers != null && _triggers.Exists(t => t.IsEnabled);
+                var hasEnabledTriggers = runnableTriggers.Count > 0;
                 if (!hasEnabledTriggers && !active)
                 {
                     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
@@ -389,50 +466,47 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-                lock (_triggerListLocker)
+                var needRunTriggers = new List<ITaskTrigger>(); // 最终要执行的触发器列表
+                var exclusiveTrigger = runnableTriggers.FirstOrDefault(t => t.IsExclusive);
+                if (exclusiveTrigger != null)
                 {
-                    var needRunTriggers = new List<ITaskTrigger>(); // 最终要执行的触发器列表
-                    var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                    if (exclusiveTrigger != null)
+                    needRunTriggers.Add(exclusiveTrigger);
+                }
+                else
+                {
+                    IEnumerable<ITaskTrigger> runningTriggers = runnableTriggers;
+                    if (hasBackgroundTriggerToRun)
                     {
-                        needRunTriggers.Add(exclusiveTrigger);
-                    }
-                    else
-                    {
-                        var runningTriggers = _triggers!.Where(t => t.IsEnabled);
-                        if (hasBackgroundTriggerToRun)
-                        {
-                            runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
-                        }
-
-                        needRunTriggers.AddRange(runningTriggers);
+                        runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
                     }
 
-                    if (needRunTriggers.Count > 0)
+                    needRunTriggers.AddRange(runningTriggers);
+                }
+
+                if (needRunTriggers.Count > 0)
+                {
+                    // 判断当前UI
+                    content.CurrentGameUiCategory = Bv.WhichGameUiForTriggers(content.CaptureRectArea);
+                    
+                    if (content.CurrentGameUiCategory != PrevGameUiCategory)
                     {
-                        // 判断当前UI
-                        content.CurrentGameUiCategory = Bv.WhichGameUiForTriggers(content.CaptureRectArea);
-                        
-                        if (content.CurrentGameUiCategory != PrevGameUiCategory)
-                        {
-                            PrevGameUiChangeTime = DateTime.Now;
-                        }
-
-                        foreach (var trigger in needRunTriggers)
-                        {
-                            if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
-                                || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
-                            {
-                                // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
-                                var triggerStart = Stopwatch.GetTimestamp();
-                                trigger.OnCapture(content);
-                                tickMetrics.AddTriggerCost(triggerStart);
-                                speedTimer.Record(trigger.Name);
-                            }
-                        }
-
-                        PrevGameUiCategory = content.CurrentGameUiCategory;
+                        PrevGameUiChangeTime = DateTime.Now;
                     }
+
+                    foreach (var trigger in needRunTriggers)
+                    {
+                        if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
+                            || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
+                        {
+                            // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
+                            var triggerStart = Stopwatch.GetTimestamp();
+                            trigger.OnCapture(content);
+                            tickMetrics.AddTriggerCost(triggerStart);
+                            speedTimer.Record(trigger.Name);
+                        }
+                    }
+
+                    PrevGameUiCategory = content.CurrentGameUiCategory;
                 }
 
                 speedTimer.DebugPrint();
@@ -458,6 +532,146 @@ namespace BetterGenshinImpact.GameTask
                     tickMetrics.Publish(_metricsService);
                 }
             }
+        }
+
+        /// <summary>
+        /// 算出每个触发器本帧的状态，与上一帧不同时调用 OnEnabled / OnDisabled。只在 Tick 中调用（持有 _locker）。
+        /// <para>规则：任务中只看启用名单，同一个触发器取最后加入那一条的参数；不在任务中只看用户配置。</para>
+        /// </summary>
+        /// <returns>本帧可以调用 OnCapture 的触发器，按优先级排列。暂停计数大于 0 时为空</returns>
+        private List<ITaskTrigger> SyncTriggerStates()
+        {
+            bool inTask;
+            TriggerLease[] leases;
+            TriggerSlot[] retiredSlots;
+            lock (_leaseLock)
+            {
+                inTask = _inTask;
+                leases = [.. _leases];
+                retiredSlots = [.. _retiredSlots];
+                _retiredSlots.Clear();
+            }
+
+            // 上一次截图会话留下的触发器：只做收尾，不再运行
+            foreach (var slot in retiredSlots)
+            {
+                if (slot.IsActive)
+                {
+                    slot.IsActive = false;
+                    slot.Options = null;
+                    InvokeSafely(slot.Trigger, nameof(ITaskTrigger.OnDisabled), static t => t.OnDisabled());
+                }
+            }
+
+            var slots = _slots;
+            var disabledByUser = false;
+            var activeTriggers = new List<ITaskTrigger>(slots.Count);
+            foreach (var slot in slots)
+            {
+                var trigger = slot.Trigger;
+                bool shouldBeActive;
+                object? options = null;
+                if (inTask)
+                {
+                    var lease = FindLastLease(leases, trigger.GetType());
+                    shouldBeActive = lease != null;
+                    options = lease?.Options;
+                }
+                else
+                {
+                    shouldBeActive = trigger.IsEnabledByConfig;
+                }
+
+                // 参数按引用比较；参数变了等同于重新启用，运行状态随之重置
+                if (shouldBeActive != slot.IsActive || !ReferenceEquals(options, slot.Options))
+                {
+                    if (slot.IsActive)
+                    {
+                        InvokeSafely(trigger, nameof(ITaskTrigger.OnDisabled), static t => t.OnDisabled());
+                        disabledByUser |= !shouldBeActive && !inTask;
+                    }
+
+                    slot.IsActive = shouldBeActive;
+                    slot.Options = options;
+                    if (shouldBeActive)
+                    {
+                        InvokeSafely(trigger, nameof(ITaskTrigger.OnEnabled), t => t.OnEnabled(options));
+                    }
+
+                    _logger.LogDebug("实时触发器 {Name} {State}", trigger.Name, shouldBeActive ? "启用" : "停用");
+                }
+
+                if (slot.IsActive)
+                {
+                    activeTriggers.Add(trigger);
+                }
+            }
+
+            if (disabledByUser)
+            {
+                // 用户关闭了触发器：擦掉留在遮罩上的识别结果。任务开始、结束时的清理由 TaskRunner 负责
+                VisionContext.Instance().DrawContent.ClearAll();
+            }
+
+            // 暂停（热键、战斗、传送、选 F 选项等）：本帧不调用任何 OnCapture，触发器状态保留
+            if (RunnerContext.Instance.AutoPickTriggerStopCount > 0)
+            {
+                return [];
+            }
+
+            return activeTriggers;
+        }
+
+        private static TriggerLease? FindLastLease(TriggerLease[] leases, Type triggerType)
+        {
+            for (var i = leases.Length - 1; i >= 0; i--)
+            {
+                if (leases[i].TriggerType == triggerType)
+                {
+                    return leases[i];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 回调抛出的异常只记日志，不影响其他触发器，也不影响状态迁移
+        /// </summary>
+        private void InvokeSafely(ITaskTrigger trigger, string callbackName, Action<ITaskTrigger> callback)
+        {
+            try
+            {
+                callback(trigger);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "实时触发器 {Name} 执行 {Callback} 失败", trigger.Name, callbackName);
+            }
+        }
+
+        /// <summary>
+        /// 一个触发器实例，以及它上一帧的启停状态和参数。只在 Tick 中读写
+        /// </summary>
+        private sealed class TriggerSlot(ITaskTrigger trigger)
+        {
+            public ITaskTrigger Trigger { get; } = trigger;
+
+            public bool IsActive { get; set; }
+
+            public object? Options { get; set; }
+        }
+
+        /// <summary>
+        /// 启用名单中的一条。Dispose 时从名单中删除，重复调用无副作用
+        /// </summary>
+        private sealed class TriggerLease(TaskTriggerDispatcher owner, Type triggerType, object? options) : IDisposable
+        {
+            public Type TriggerType { get; } = triggerType;
+
+            public object? Options { get; } = options;
+
+            public void Dispose() => owner.RemoveLease(this);
         }
 
         /// <summary>

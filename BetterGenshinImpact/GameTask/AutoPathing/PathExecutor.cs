@@ -1407,7 +1407,8 @@ public partial class PathExecutor
                     ClosePopupPagedEnabled = true,
                     ClickChatOption = "优先选择最后一个选项",
                 });
-                _autoSkipTrigger.Init();
+                // 这个实例由路径追踪自己驱动，不经过调度器，需要手动进入启用状态
+                _autoSkipTrigger.OnEnabled(null);
             }
 
             int noDisabledUiButtonTimes = 0;

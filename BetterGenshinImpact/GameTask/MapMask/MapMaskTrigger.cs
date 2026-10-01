@@ -26,7 +26,7 @@ public class MapMaskTrigger : ITaskTrigger
     private readonly ILogger<MapMaskTrigger> _logger = App.GetLogger<MapMaskTrigger>();
 
     public string Name => "地图遮罩";
-    public bool IsEnabled { get; set; }
+    public bool IsEnabledByConfig => _config.Enabled;
     public int Priority => 1; // 低优先级
     public bool IsExclusive => false;
 
@@ -78,37 +78,43 @@ public class MapMaskTrigger : ITaskTrigger
     private int _miniMapWorkerRunning;
 
     /// <summary>
-    /// 初始化触发器状态，并在关闭时同步隐藏遮罩UI
+    /// 是否处于启用状态。后台计算线程和 UI 线程据此丢弃停用之后才到达的结果
     /// </summary>
-    public void Init()
+    private volatile bool _active;
+
+    public void OnEnabled(object? options)
     {
-        IsEnabled = _config.Enabled;
+        _active = true;
+    }
 
-        // 关闭时隐藏UI
-        if (!IsEnabled)
+    /// <summary>
+    /// 停用时丢弃待计算的帧，并隐藏遮罩上的点位
+    /// </summary>
+    public void OnDisabled()
+    {
+        _active = false;
+
+        var pendingBigMapCompute = Interlocked.Exchange(ref _pendingBigMapCompute, null);
+        pendingBigMapCompute?.Dispose();
+        var pendingMiniMapCompute = Interlocked.Exchange(ref _pendingMiniMapCompute, null);
+        pendingMiniMapCompute?.Dispose();
+
+        Interlocked.Exchange(ref _pendingUiUpdate, null);
+
+        UIDispatcherHelper.BeginInvoke(() =>
         {
-            var pendingBigMapCompute = Interlocked.Exchange(ref _pendingBigMapCompute, null);
-            pendingBigMapCompute?.Dispose();
-            var pendingMiniMapCompute = Interlocked.Exchange(ref _pendingMiniMapCompute, null);
-            pendingMiniMapCompute?.Dispose();
-
-            Interlocked.Exchange(ref _pendingUiUpdate, null);
-
-            UIDispatcherHelper.BeginInvoke(() =>
+            if (MaskWindow.InstanceNullable() != null)
             {
-                if (MaskWindow.InstanceNullable() != null)
+                var window = MaskWindow.Instance();
+                if (window.DataContext is MaskWindowViewModel vm)
                 {
-                    var window = MaskWindow.Instance();
-                    if (window.DataContext is MaskWindowViewModel vm)
-                    {
-                        vm.IsInBigMapUi = false;
-                    }
-
-                    window.PointsCanvasControl.UpdateViewport(0, 0, 0, 0);
-                    window.MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+                    vm.IsInBigMapUi = false;
                 }
-            });
-        }
+
+                window.PointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+                window.MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+            }
+        });
     }
 
     /// <summary>
@@ -407,7 +413,7 @@ public class MapMaskTrigger : ITaskTrigger
         if (update != null)
         {
             var window = MaskWindow.Instance();
-            if (!_config.Enabled)
+            if (!_active)
             {
                 if (window.DataContext is MaskWindowViewModel vmWhenDisabled)
                 {

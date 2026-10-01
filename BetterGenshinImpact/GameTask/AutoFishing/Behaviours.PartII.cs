@@ -440,7 +440,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         protected async override Task<Status> Update()
         {
             _bitmap?.Dispose();
-            _bitmap = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.Instance().GameCapture);
+            _bitmap = TaskControl.CaptureGameImageNoRetry(TaskContext.Instance().Runtime?.Capture);
             if (_bitmap == null)
             {
                 _logger.LogWarning("截图失败");
