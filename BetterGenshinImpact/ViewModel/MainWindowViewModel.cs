@@ -294,6 +294,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 break;
         }
 
+        Wpf.Ui.Violeta.Appearance.SystemMenuThemeManager.Apply(
+            themeType is ThemeType.DarkNone or ThemeType.DarkMica or ThemeType.DarkAcrylic
+                ? Wpf.Ui.Violeta.Appearance.SystemMenuTheme.Dark
+                : Wpf.Ui.Violeta.Appearance.SystemMenuTheme.Light);
+
         // 立即应用主题到当前窗口
         if (Application.Current.MainWindow != null)
         {
