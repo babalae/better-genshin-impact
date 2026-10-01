@@ -118,6 +118,12 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     {
         AutoFightViewModel.OnOpenLocalScriptRepo();
     }
+
+    [RelayCommand]
+    public void OnOpenGuardianAvatarList()
+    {
+        BetterGenshinImpact.View.Windows.GuardianAvatarListDialog.OpenForOwner();
+    }
     [RelayCommand]
     public void OnGetExecutionOrder()
     {
