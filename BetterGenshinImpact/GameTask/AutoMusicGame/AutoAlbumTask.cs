@@ -7,9 +7,12 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
@@ -17,11 +20,22 @@ namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 /// <summary>
 /// 自动音乐专辑
 /// </summary>
-public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
+public class AutoAlbumTask : ISoloTask
 {
     public string Name => "自动音游专辑";
 
-    private AutoMusicGameTask _autoMusicGameTask = new AutoMusicGameTask(taskParam);
+    private readonly AutoMusicGameTask _autoMusicGameTask;
+
+    private readonly string allLocalizedString;
+
+    public AutoAlbumTask(AutoMusicGameParam taskParam)
+    {
+        _autoMusicGameTask = new AutoMusicGameTask(taskParam);
+
+        IStringLocalizer<AutoAlbumTask> stringLocalizer = App.GetService<IStringLocalizer<AutoAlbumTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.allLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "全部");
+    }
 
     public async Task Start(CancellationToken ct)
     {
@@ -58,7 +72,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             // OCR 后再次判断，区分是否是全部歌曲页面
             using var ocrArea = ra1.DeriveCrop(iconRa.Right, iconRa.Top, ra1.Width * 0.16, iconRa.Height);
             var ocrRes = ocrArea.FindMulti(RecognitionObject.OcrThis);
-            if (ocrRes.Any(region => region.Text.Contains("全部")))
+            if (ocrRes.Any(region => region.Text.Contains(this.allLocalizedString)))
             {
                 throw new Exception("当前在全部歌曲页面，此页面无法运行本任务。请返回到主界面选择专辑列表中以国家为主题的专辑页！");
             }
