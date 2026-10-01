@@ -2608,6 +2608,7 @@
                                              DisableCommand="{Binding StopSoloTaskCommand}"
                                              DisableContent="停止"
                                              EnableCommand="{Binding SwitchHutaoCultivationCommand}"
+                                             EnableContent="启动"
                                              IsChecked="{Binding SwitchHutaoCultivationEnabled}" />
                 </Grid>
             </ui:CardExpander.Header>
