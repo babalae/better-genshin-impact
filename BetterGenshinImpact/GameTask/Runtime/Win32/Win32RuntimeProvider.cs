@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input.Backends.Win32;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using Fischless.GameCapture;
@@ -13,7 +14,11 @@ namespace BetterGenshinImpact.GameTask.Runtime.Win32;
 /// <summary>
 /// 本机 Win32 游戏窗口的运行环境：本地原神、Windows 云原神
 /// </summary>
-public sealed class Win32RuntimeProvider(IConfigService configService, ILogger<Win32RuntimeProvider> logger)
+public sealed class Win32RuntimeProvider(
+    IConfigService configService,
+    IMaskWindowDrawingBoard maskWindowDrawingBoard,
+    IMaskWindowMapState maskWindowMapState,
+    ILogger<Win32RuntimeProvider> logger)
     : IGameRuntimeProvider
 {
     public GameRuntimeKind Kind => GameRuntimeKind.Win32Window;
@@ -77,7 +82,8 @@ public sealed class Win32RuntimeProvider(IConfigService configService, ILogger<W
             var config = configService.Get();
             capture = GameCaptureFactory.Create(GetCaptureMode(config));
             capture.Start(hWnd, GameCaptureSettings.From(config));
-            var runtime = new GameRuntime(Kind, window, capture, new Win32InputBackend(hWnd));
+            var runtime = new GameRuntime(Kind, window, capture, new Win32InputBackend(hWnd),
+                maskWindowDrawingBoard, maskWindowMapState);
 
             // 自动查找、关联启动、手动选窗都经过这里；同一个游戏进程只通知一次
             StarwardPlaytime.TryRecord(window, config.GenshinStartConfig);

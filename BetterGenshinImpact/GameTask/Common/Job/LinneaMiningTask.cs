@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -164,7 +164,7 @@ public class LinneaMiningTask
             }
 
             InputHub.Foreground.Mouse.MiddleButtonUp();
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 
@@ -283,12 +283,12 @@ public class LinneaMiningTask
             .ToList();
 
         // 画框
-        var drawList = oreBoxes.Select(r => ra.ToRectDrawable(r, "ore")).ToList();
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("BgiMine", drawList);
+        var drawList = oreBoxes.Select(r => ra.ToMaskWindowDrawingRect(r)).ToList();
+        ra.DrawingBoard.Set("BgiMine", drawList);
 
         if (oreBoxes.Count == 0)
         {
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList("MiningCluster", null);
+            ra.DrawingBoard.Clear("MiningCluster");
             return (null, centerX, centerY);
         }
 
@@ -300,12 +300,9 @@ public class LinneaMiningTask
         {
             var mark = new Rect((int)(c.TargetX - c.TargetWidth / 2) - expansion, (int)(c.TargetY - c.TargetHeight / 2) - expansion,
                 (int)c.TargetWidth + expansion * 2, (int)c.TargetHeight + expansion * 2);
-            return ra.ToRectDrawable(mark,
-                $"({(int)c.TargetX},{(int)c.TargetY})",
-                new Pen(Color.DodgerBlue, 2)
-            );
+            return ra.ToMaskWindowDrawingRect(mark, new Pen(Color.DodgerBlue, 2));
         }).ToList();
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("MiningCluster", clusterDrawList);
+        ra.DrawingBoard.Set("MiningCluster", clusterDrawList);
 
         // 忽略屏幕边缘聚类，仅当中间区域存在聚类时生效
         var imgW = ra.CacheImage.Width;

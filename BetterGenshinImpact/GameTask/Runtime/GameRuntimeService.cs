@@ -172,6 +172,9 @@ public sealed class GameRuntimeService
         _dispatcher.Stop();
         ReleaseInputBeforeDetach();
         InputHub.Attach(new Win32InputBackend(IntPtr.Zero));
+        // 绘制内容和地图点位状态都以这次运行环境为坐标，解绑后不再有意义
+        runtime.MaskWindowDrawingBoard.ClearAll();
+        runtime.MaskWindowMapState.Reset();
         TaskContext.Instance().Bind(null);
         runtime.Dispose();
         Stopped?.Invoke(this, EventArgs.Empty);

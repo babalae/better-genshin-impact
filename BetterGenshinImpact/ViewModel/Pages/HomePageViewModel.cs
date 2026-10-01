@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -90,7 +91,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
-    private MaskWindow? _maskWindow;
+    private readonly IMaskWindowHost _maskWindowHost;
+    private readonly CustomHtmlMaskService _customHtmlMaskService;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
     private readonly GameRuntimeService _gameRuntimeService;
@@ -118,10 +120,14 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         ChildSessionService childSessionService,
         IBannerImageService bannerImageService,
         WebViewInstanceStore webViewInstanceStore,
-        WebViewInstanceLauncher webViewInstanceLauncher)
+        WebViewInstanceLauncher webViewInstanceLauncher,
+        IMaskWindowHost maskWindowHost,
+        CustomHtmlMaskService customHtmlMaskService)
     {
         _gameRuntimeService = gameRuntimeService;
         _win32RuntimeProvider = win32RuntimeProvider;
+        _maskWindowHost = maskWindowHost;
+        _customHtmlMaskService = customHtmlMaskService;
         _gameRuntimeService.Started += OnRuntimeStarted;
         _gameRuntimeService.Stopped += OnRuntimeStopped;
         _gameRuntimeService.StartingChanged += OnRuntimeStartingChanged;
@@ -227,7 +233,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         CancelBannerDownload();
         _ = OnStopTrigger();
         // 等待任务结束
-        _maskWindow?.Close();
+        _maskWindowHost.Close();
     }
 
     public void Dispose()
@@ -338,15 +344,46 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     /// </summary>
     private void OnRuntimeStarted(object? sender, EventArgs e)
     {
-        _maskWindow ??= new MaskWindow();
-        _maskWindow.Show();
-        MaskWindow.Instance().RefreshPosition();
-        App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
+        var handle = _gameRuntimeService.Current!.Window.Handle;
+        _maskWindowHost.Attach(handle);
+        _customHtmlMaskService.ShowIfEnabled();
         if (_gameRuntimeService.Kind != GameRuntimeKind.WebPage)
         {
-            _mouseKeyMonitor.Subscribe(_gameRuntimeService.Current!.Window.Handle);
+            _mouseKeyMonitor.Subscribe(handle);
         }
         TaskDispatcherEnabled = true;
+        PrintSystemInfo();
+    }
+
+    /// <summary>
+    /// 截图器启动后输出运行环境信息，并检查常见的识别干扰项
+    /// </summary>
+    private void PrintSystemInfo()
+    {
+        _logger.LogInformation("更好的原神 {Version}", Global.Version);
+        var systemInfo = TaskContext.Instance().SystemInfo;
+        var width = systemInfo.GameScreenSize.Width;
+        var height = systemInfo.GameScreenSize.Height;
+        var dpiScale = TaskContext.Instance().DpiScale;
+        _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
+            width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
+
+        if (width * 9 != height * 16)
+        {
+            _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
+        }
+
+        // MSIAfterburner.exe 在左上角会导致识别失败
+        if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
+        {
+            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！");
+        }
+
+        // 读取游戏注册表配置。网页版的游戏设置保存在云端，本机注册表里的是本地原神的设置，检查结果会误导用户
+        if (_gameRuntimeService.Kind != GameRuntimeKind.WebPage)
+        {
+            Genshin.Settings2.GameSettingsChecker.LoadGameSettingsAndCheck();
+        }
     }
 
     /// <summary>
@@ -354,15 +391,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     /// </summary>
     private void OnRuntimeStopped(object? sender, EventArgs e)
     {
-        if (_maskWindow != null && _maskWindow.IsExist())
-        {
-            _maskWindow.Hide();
-        }
-        else
-        {
-            _maskWindow?.Close();
-            _maskWindow = null;
-        }
+        _maskWindowHost.Detach();
 
         TaskDispatcherEnabled = false;
         _mouseKeyMonitor.Unsubscribe();

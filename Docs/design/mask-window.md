@@ -237,14 +237,13 @@ public interface IMaskWindowHost
     void Detach();                                 // UI 线程。隐藏窗口并解除绑定，窗口实例保留复用
     void Close();                                  // UI 线程。关闭并释放窗口（程序退出时）
     void ReportGameWindow(GameWindowState state);  // 任意线程，每帧可调；宿主去重后决定显隐、置顶、跟随
-    IDisposable KeepVisible(string reason);        // 任务期间保持可见，Dispose 时归还
     MaskWindowState State { get; }                 // 缓存值，任意线程可读
     event EventHandler<MaskWindowState>? StateChanged; // 在 UI 线程触发，附属遮罩订阅
 }
 
 /// 描述游戏窗口，不是遮罩窗口，所以不加 MaskWindow 前缀
 public readonly record struct GameWindowState(
-    bool IsCapturing, bool IsActive, bool IsMinimized, string? ForegroundProcess, RECT Bounds);
+    bool IsCapturing, bool IsActive, bool IsMinimized, bool IsForegroundOwnedByBetterGiOrGame, RECT Bounds);
 
 public readonly record struct MaskWindowState(bool IsVisible, Rect Bounds);
 ```
@@ -254,11 +253,11 @@ public readonly record struct MaskWindowState(bool IsVisible, Rect Bounds);
 | 条件 | 遮罩 |
 | --- | --- |
 | 未 Attach | 隐藏 |
-| 布局编辑模式，或存在 `KeepVisible` 租约 | 显示 |
+| 布局编辑模式 | 显示 |
 | `IsCapturing = false` | 隐藏 |
 | `IsMinimized` | 保持不变 |
 | `IsActive` | 显示；从非活动转为活动时置顶一次 |
-| 前台进程是 BetterGI、Idle 或游戏进程 | 保持不变 |
+| 前台窗口属于 BetterGI 自身或游戏进程，或没有前台窗口（按进程 ID 判断） | 保持不变 |
 | 其他 | 隐藏 |
 
 `Bounds` 变化时重新定位遮罩。位置按游戏窗口所在显示器的 DPI 换算，与 `HtmlMaskWindow` 一样使用 `DpiHelper.GetScale(gameHandle)`。
@@ -333,30 +332,55 @@ public sealed class UiCoalescer(Action apply, TimeSpan minInterval = default,
   - `OverlayMetricsService.MetricsUpdated` 的回调里同步调用了 `UIDispatcherHelper.Invoke`。
   - `FpsInspector` 回调直接写 `Fps`。
 
-## 8. 获取方式与调用对照
+## 8. 归属、获取方式与调用对照
 
-各类调用方获取 `IMaskWindowDrawingBoard` 等接口的方式：
+### 8.1 归属
+
+```text
+DI 容器
+ ├─ MaskWindowDrawingBoard 单例 ··················· 所有者，生命周期 = 进程
+ │   ├─ 读端 → MaskWindowViewModel（构造注入）→ MaskWindowDrawingLayer
+ │   └─ 写端 → Win32RuntimeProvider（构造注入）
+ │        └─ new GameRuntime(..., drawingBoard, mapState) ···· 借用，Dispose 不释放
+ │             └─ TaskContext.Bind(runtime) → SystemInfo.DesktopRectArea → 截图区域树继承
+ ├─ MaskWindowMapState 单例 ······················ 同上：读端 VM，写端经 Provider 放进 GameRuntime
+ └─ IMaskWindowHost 单例 ························· 窗口显示策略，不属于运行环境，只做构造注入
+```
+
+- 绘制内容和地图点位状态以这次运行环境的捕获像素为坐标，放在 `GameRuntime` 上，与 `Capture`、`Input` 并列：没有运行环境就没有可画的地方。
+- 实例由 DI 拥有，`GameRuntime` 只借用。`GameRuntimeService.Stop` 解绑时 `ClearAll` 并 `Reset`，下一次运行环境不会带着旧内容。
+- `IMaskWindowHost` 管的是遮罩窗口本身（创建、显隐、跟随），和运行环境的生命周期无关，不放进 `GameRuntime`。
+
+### 8.2 获取方式
 
 | 调用方 | 获取方式 |
 | --- | --- |
-| DI 构造的类型 | 构造注入 |
-| `Region` 体系 | 沿用现有的 `drawContent` 参数，类型改为接口。根区域创建时传入，子区域继承。业务代码优先调用 `region.DrawRect/DrawSelf/DrawLine` |
-| `new` 出来的 Task、Trigger、Behaviour | 构造参数 `IMaskWindowDrawingBoard? drawing = null`，缺省值为 `App.GetService<IMaskWindowDrawingBoard>() ?? NullMaskWindowDrawingBoard.Instance`，保存到字段 |
-| 单测 | `NullMaskWindowDrawingBoard.Instance`，或自己写一个记录调用的 fake |
+| DI 构造的类型 | 构造注入 `IMaskWindowHost`；读端注入 `IMaskWindowSnapshotSource<>` |
+| 手上有截图区域（触发器 `OnCapture`、识别、画框） | `region.DrawingBoard`，或直接 `region.DrawSelf/DrawRect/DrawLine` |
+| 手上没有截图区域（任务开始 / 结束、静态方法、行为树 `Terminate`） | 用到时读 `TaskContext.Instance().Runtime?.MaskWindowDrawingBoard`；截图器未启动时为 null，没有可清的内容 |
+| 地图点位 | `TaskContext.Instance().Runtime?.MaskWindowMapState` |
+| 单测 | 区域不传绘制入口即为空实现，不会碰到 DI 容器 |
 
-不再提供任何静态入口，不会再出现 `XxxContext.Instance().Drawing` 这类写法。
+规则：
+
+- 业务代码不调用 `App.GetService<IMaskWindow…>`。
+- 不把绘制入口缓存到跨运行环境存活的对象里（触发器实例、静态字段）。单次任务内可以在 `Start` 时取一次；行为树节点在 `Terminate` 时截图可能已释放，可保存最近一次截图的 `DrawingBoard`。
+- 等 GameRuntime P3 把任务改成由 DI 创建后，`TaskContext.Instance().Runtime` 换成注入的 `GameRuntime`，写法不变。
+
+### 8.3 调用对照
 
 | 场景 | 改造前 | 改造后 |
 | --- | --- | --- |
-| 区域画框 | `region.DrawSelf("Name")` | 写法不变，内部改为调用 `IMaskWindowDrawingBoard` |
-| 识别结果 | `VisionContext.Instance().DrawContent.PutOrRemoveRectList(key, list)` | `_drawingBoard.Set(key, list)` |
-| 清除 | `RemoveRect(key)`、`PutOrRemoveTextList(key, null)` | `_drawingBoard.Clear(key)` |
-| 技能 CD | `PutOrRemoveTextList("SkillCdText", list)`，由 `OnRender` 特判样式 | `_drawingBoard.Set(SkillCdGroup, texts)`。`SkillCdGroup = new("SkillCd", MaskWindowDrawingKind.Feature)`，颜色和字号由生产方写进 `MaskWindowDrawingTextStyle` |
-| 任务期间的提示 | 临时改写用户配置，再设置 `Topmost`、调用 `BringToTop`、`Refresh()` | 先 `using var visible = _maskWindowHost.KeepVisible("地脉花")`，再 `using var scope = _drawingBoard.Scope(group)`，分组类型为 `Feature` |
+| 区域画框 | `region.DrawSelf("Name")` | 写法不变，内部写入 `region.DrawingBoard` |
+| 识别结果 | `VisionContext.Instance().DrawContent.PutOrRemoveRectList(key, list)` | `region.DrawingBoard.Set(key, list)` |
+| 清除 | `RemoveRect(key)`、`PutOrRemoveTextList(key, null)` | `region.DrawingBoard.Clear(key)` |
+| 清空（任务边界） | `VisionContext.Instance().DrawContent.ClearAll()` | `TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll()` |
+| 技能 CD | `PutOrRemoveTextList("SkillCdText", list)`，由 `OnRender` 特判样式 | `SkillCdOverlayRenderer.Update(board, key, cds)`，分组类型为 `Feature`，颜色和字号由生产方写进 `MaskWindowDrawingTextStyle` |
+| 任务期间的提示 | 临时改写用户配置，再设置 `Topmost`、调用 `BringToTop`、`Refresh()` | `using var scope = capture.DrawingBoard.Scope(group)`，分组类型为 `Feature`；游戏在前台时遮罩本来就显示 |
 | 跟随与显隐 | `maskWindow.Invoke(HideSelf)`、`BeginInvoke(Show)`、`RefreshPosition()` | `_maskWindowHost.ReportGameWindow(state)` |
-| 启动 / 停止 | `new MaskWindow()`、`Show()`、`Hide()`、`Close()` | `_maskWindowHost.Attach(hWnd)`、`Detach()` |
-| 大地图状态 | `vm.IsInBigMapUi = x`、`window.PointsCanvasControl.UpdateViewport(...)` | `_mapState.Update(isInBigMap: x, bigMapViewport: r)` |
-| 任务开始 | `UIDispatcherHelper.Invoke(() => vm.IsInBigMapUi = false)`、`maskWindow.Invoke(Show)` | `_mapState.Reset()`，显示交给下一帧的 `ReportGameWindow` |
+| 启动 / 停止 | `new MaskWindow()`、`Show()`、`Hide()`、`Close()` | `GameRuntimeService.Started / Stopped` 中 `_maskWindowHost.Attach(handle)`、`Detach()` |
+| 大地图状态 | `vm.IsInBigMapUi = x`、`window.PointsCanvasControl.UpdateViewport(...)` | `Runtime?.MaskWindowMapState.Update(isInBigMap: x, bigMapViewport: r)` |
+| 任务开始 | `UIDispatcherHelper.Invoke(() => vm.IsInBigMapUi = false)`、`maskWindow.Invoke(Show)` | `Runtime?.MaskWindowMapState.Reset()`，显示交给下一帧的 `ReportGameWindow` |
 | 样式变更后刷新 | `MaskWindow.InstanceNullable()?.Refresh()` | 删除，由绑定自动重绘 |
 | 通用 UI 调度 | `maskWindow.Invoke(...)` | `UIDispatcherHelper` |
 
@@ -374,7 +398,7 @@ public sealed class UiCoalescer(Action apply, TimeSpan minInterval = default,
    - `HomePageViewModel`：改用 `Attach` / `Detach`。
    - `TaskTriggerDispatcher`：`Tick` 和 `SyncMaskWindowPosition` 改用 `ReportGameWindow`。
    - `TaskRunner`：删除对遮罩窗口的操作。
-   - `AutoLeyLineOutcropTask`：改用 `KeepVisible` 加 `Feature` 分组，删除 `EnsureMaskOverlayVisible`、`RestoreMaskOverlayVisible`、`RefreshMaskWindowForOverlay`。
+   - `AutoLeyLineOutcropTask`：OCR 区域提示改用 `Feature` 分组，删除 `EnsureMaskOverlayVisible`、`RestoreMaskOverlayVisible`、`RefreshMaskWindowForOverlay`。
    - `CustomHtmlMaskService`：改为订阅 `StateChanged`。
 4. 绘制调用方：
    - `Region`、`ImageRegion`、`GameCaptureRegion` 中的 `drawContent` 换成 `IMaskWindowDrawingBoard`。
@@ -383,7 +407,7 @@ public sealed class UiCoalescer(Action apply, TimeSpan minInterval = default,
    - `SkillCdOverlayRenderer` 负责生成带样式的 `MaskWindowDrawingText`。
    - `AutoArtifactSalvageTask` 的文字坐标改用捕获像素。
 5. 地图：
-   - `MapMaskTrigger` 和 `TaskRunner` 改为写 `IMaskWindowMapState`。
+   - `MapMaskTrigger` 和 `TaskRunner` 改为写当前运行环境的 `MaskWindowMapState`。
    - 两个 Canvas 新增 `Viewport` 依赖属性。
 6. 清理：
    - 删除整个 `View/Drawable/` 目录和 `FakeDrawContent`。
@@ -417,7 +441,7 @@ public sealed class UiCoalescer(Action apply, TimeSpan minInterval = default,
 | 快照 | `MaskWindowDrawingSnapshot` / `MaskWindowDrawingEntry` | |
 | 读端 | `IMaskWindowSnapshotSource<T>` | |
 | 窗口宿主 | `IMaskWindowHost` / `MaskWindowHost` | `IMaskWindowController`、`IMaskWindowManager` |
-| 宿主方法 | `Attach` / `Detach` / `ReportGameWindow` / `KeepVisible` | `KeepVisible` → `Pin` |
+| 宿主方法 | `Attach` / `Detach` / `Close` / `ReportGameWindow` | |
 | 宿主状态 | `MaskWindowState` | |
 | 地图点位 | `IMaskWindowMapState` / `MaskWindowMapSnapshot` | `IMaskWindowMapPointState` |
 | View 渲染层 | `MaskWindowDrawingLayer` / `MaskWindowCrosshairLayer` | |
@@ -445,17 +469,18 @@ public sealed class UiCoalescer(Action apply, TimeSpan minInterval = default,
 | `IMaskWindowHost` | 无 `Close` | 增加 `Close()` | 程序退出时需要真正关闭窗口 |
 | 遮罩隐藏 / 最小化 → 关闭弹窗 | `EventTrigger` | `WindowHiddenCommandBehavior` | `IsVisibleChanged` 的参数不是 `EventArgs`，`EventTrigger` 无法绑定 |
 | 布局提交事件 | 经 `EventArgsConverter` 转成纯数据 | 保持 `OverlayLayoutCommittedEventArgs` | 它本身就是纯数据类，不含 WPF 类型 |
-| 获取绘制入口 | Region 沿用 `drawContent` 参数 | `Region.DrawingBoard`：显式传入 → 继承父区域 → 空实现；截图区域树的根 `SystemInfo.DesktopRectArea` 在 `TaskContext.Init` 时拿到 DI 单例 | 子区域自动继承，业务代码拿到截图就能画；不在截图树下的 Region 本来就无法换算坐标 |
-| 静态方法 | 不提供静态入口 | `GameTaskManager.RefreshTriggerConfigs`、`QuickBuyTask.Done`、`QuickSereniteaPotTask.Done` 三个静态方法内直接 `App.GetService` | 没有注入点，改成实例方法超出本次范围 |
-| 单测中构造的任务 | 构造时解析 | `AutoArtifactSalvageTask` 延迟解析 | 单测只调用识别方法，不应触发 DI 容器初始化 |
+| 获取绘制入口 | 构造参数 + `App.GetService` 兜底 | 归属 `GameRuntime`，见第 8 节；`Region.DrawingBoard`：显式传入 → 继承父区域 → 空实现 | 绘制坐标属于这次运行环境；子区域自动继承，业务代码拿到截图就能画 |
+| 地图点位状态 | 构造注入 | 同样放进 `GameRuntime.MaskWindowMapState` | 视口也是这次运行环境的坐标，解绑时统一重置 |
+| `IMaskWindowHost.KeepVisible` | 任务期间保持遮罩可见 | 删除 | 唯一的使用方（地脉花）改用 `Feature` 分组后不再需要 |
 | 渲染层坐标换算 | 用窗口 DPI | `MaskWindowLayerMetrics` 同时计入"本层 → 窗口"的缩放和"窗口 → 设备"的缩放 | `DpiAwarenessController` 会给窗口内容加 `LayoutTransform`，渲染层在它下面，单用 DPI 会错位 |
 
 ### 11.2 行为变化
 
 - 技能 CD（含 AutoCombo 接管时）改为 `Feature` 分组，不再受「在遮罩上显示识别结果」开关控制。
-- 地脉花任务不再临时改写 `DisplayRecognitionResultsOnMask`，改用 `KeepVisible` 租约；OCR 区域提示是 `Feature` 分组，任务期间其他识别框仍按用户开关显示。
+- 地脉花任务不再临时改写 `DisplayRecognitionResultsOnMask`，也不再强制显示遮罩；OCR 区域提示是 `Feature` 分组，任务期间其他识别框仍按用户开关显示。
 - `AutoArtifactSalvageTask` 的"识别失败 / 套装名"文字改用捕获像素坐标，修复了高 DPI 下位置偏移。
-- 系统信息与 MSI Afterburner 检查从遮罩窗口 `Loaded` 移到 `HomePageViewModel.Start`，每次启动截图器都会输出。
+- 系统信息与 MSI Afterburner 检查从遮罩窗口 `Loaded` 移到 `HomePageViewModel.OnRuntimeStarted`，每次启动截图器都会输出。
+- 截图器停止时清空所有绘制内容并重置地图点位状态。
 - HTML 遮罩改为只在主遮罩显隐或移动时同步，不再每帧 `ShowAll`。
 
 ### 11.3 验证情况

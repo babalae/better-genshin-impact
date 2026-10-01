@@ -10,7 +10,6 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -88,7 +87,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 
             GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-            gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+            gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             int? count = null;
             try
             {
@@ -131,7 +130,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             }
             finally
             {
-                VisionContext.Instance().DrawContent.ClearAll();
+                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             }
             if (count == null)
             {

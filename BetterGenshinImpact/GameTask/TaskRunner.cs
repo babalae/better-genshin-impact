@@ -1,9 +1,8 @@
-﻿using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 
 using BetterGenshinImpact.View;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -14,7 +13,6 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using BetterGenshinImpact.ViewModel;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -156,25 +154,15 @@ public class TaskRunner
 
         // 进入任务模式：用户开启的实时触发器在下一帧停用，任务期间只运行任务或脚本通过 AddTrigger 启用的触发器
         TaskTriggerDispatcher.Instance().BeginTask();
-        
-        // 隐藏地图遮罩。地图遮罩触发器停用时也会复位，但那要等下一帧；
-        // 这里同步复位，保证任务第一次点击之前遮罩已经恢复点击穿透
-        UIDispatcherHelper.Invoke(() =>
-        {
-            if (MaskWindow.InstanceNullable() != null)
-            {
-                if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
-                {
-                    vm.IsInBigMapUi = false;
-                }
-            }
-        });
-        VisionContext.Instance().DrawContent.ClearAll(); 
-        
-        // 激活原神窗口
-        var maskWindow = MaskWindow.Instance();
+
+        // 地图遮罩触发器停用时也会复位，但要等下一帧；这里同步复位，保证任务第一次点击之前恢复点击穿透
+        // 清空绘制内容（上面已确认截图器在运行，当前运行环境一定存在）
+        var runtime = TaskContext.Instance().Runtime;
+        runtime?.MaskWindowMapState.Reset();
+        runtime?.MaskWindowDrawingBoard.ClearAll();
+
+        // 激活原神窗口；遮罩的显示由下一帧上报给 IMaskWindowHost 后自动恢复
         SystemControl.ActivateWindow();
-        maskWindow.Invoke(maskWindow.Show);
     }
 
     public void End()
@@ -190,7 +178,7 @@ public class TaskRunner
 
         InputHub.ReleaseAll();
 
-        VisionContext.Instance().DrawContent.ClearAll();
+        TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         HtmlMaskWindow.CloseAll();
     }
 

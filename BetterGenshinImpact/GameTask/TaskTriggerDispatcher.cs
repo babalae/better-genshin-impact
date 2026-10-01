@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
@@ -17,7 +18,6 @@ using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Runtime;
-using BetterGenshinImpact.View.Drawable;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Model;
@@ -31,7 +31,7 @@ namespace BetterGenshinImpact.GameTask
     {
         private readonly ILogger<TaskTriggerDispatcher> _logger;
         private readonly OverlayMetricsService _metricsService;
-        private readonly CustomHtmlMaskService _customHtmlMaskService;
+        private readonly IMaskWindowHost _maskWindowHost;
 
         private readonly System.Timers.Timer _timer = new();
 
@@ -100,11 +100,11 @@ namespace BetterGenshinImpact.GameTask
         public TaskTriggerDispatcher(
             ILogger<TaskTriggerDispatcher> logger,
             OverlayMetricsService metricsService,
-            CustomHtmlMaskService customHtmlMaskService)
+            IMaskWindowHost maskWindowHost)
         {
             _logger = logger;
             _metricsService = metricsService;
-            _customHtmlMaskService = customHtmlMaskService;
+            _maskWindowHost = maskWindowHost;
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
         }
@@ -304,7 +304,6 @@ namespace BetterGenshinImpact.GameTask
                 var gameCapture = runtime.Capture;
 
                 // 检查截图器是否在运行、游戏是否已退出
-                var maskWindow = MaskWindow.Instance();
                 var alive = window.IsAlive;
                 if (!gameCapture.IsCapturing || !alive)
                 {
@@ -325,9 +324,8 @@ namespace BetterGenshinImpact.GameTask
                     }
 
                     PictureInPictureService.Hide(resetManual: true);
+                    _maskWindowHost.ReportGameWindow(new GameWindowState(false, false, false, false, default));
                     UiTaskStopTickEvent?.Invoke(sender, e);
-                    maskWindow.Invoke(maskWindow.HideSelf);
-                    HtmlMaskWindow.HideAll();
                     return;
                 }
                 
@@ -336,6 +334,7 @@ namespace BetterGenshinImpact.GameTask
                 {
                     ChatUiHotkeyGuard.Reset();
                     PictureInPictureService.Hide();
+                    _maskWindowHost.ReportGameWindow(new GameWindowState(true, false, true, false, default));
                     return;
                 }
 
@@ -356,11 +355,9 @@ namespace BetterGenshinImpact.GameTask
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
                     }
 
-                    if (!IsForegroundOwnedByBetterGiOrGame(window))
-                    {
-                        maskWindow.Invoke(() => { maskWindow.HideSelf(); });
-                        HtmlMaskWindow.HideAll();
-                    }
+                    // 只上报事实，前台是其他进程时是否隐藏遮罩由遮罩宿主统一判断
+                    _maskWindowHost.ReportGameWindow(new GameWindowState(true, false, false,
+                        IsForegroundOwnedByBetterGiOrGame(window), default));
 
                     _prevGameActive = active;
 
@@ -394,22 +391,9 @@ namespace BetterGenshinImpact.GameTask
                 else
                 {
                     PictureInPictureService.Hide(resetManual: true);
-                    // if (!_prevGameActive)
-                    // {
-                    maskWindow.BeginInvoke(() =>
-                    {
-                        if (maskWindow.IsExist())
-                        {
-                            maskWindow.Show();
-                            if (!_prevGameActive)
-                            {
-                                maskWindow.BringToTop();
-                            }
-                        }
-                    });
-                    _customHtmlMaskService?.ShowIfEnabled();
-                    HtmlMaskWindow.ShowAll();
-                    // }
+                    // 只上报事实，显示、置顶、跟随位置由遮罩宿主去重后决定，不会每帧切 UI 线程
+                    _maskWindowHost.ReportGameWindow(new GameWindowState(true, true, false, true,
+                        window.Viewport.ScreenRect));
 
                     _prevGameActive = active;
                     // // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
@@ -610,7 +594,7 @@ namespace BetterGenshinImpact.GameTask
             if (disabledByUser)
             {
                 // 用户关闭了触发器：擦掉留在遮罩上的识别结果。任务开始、结束时的清理由 TaskRunner 负责
-                VisionContext.Instance().DrawContent.ClearAll();
+                _runtime?.MaskWindowDrawingBoard.ClearAll();
             }
 
             // 暂停（热键、战斗、传送、选 F 选项等）：本帧不调用任何 OnCapture，触发器状态保留
@@ -710,8 +694,15 @@ namespace BetterGenshinImpact.GameTask
 
                 _gameRect = new RECT(currentRect);
                 TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
-                MaskWindow.Instance().RefreshPosition();
-                HtmlMaskWindow.UpdateAllPositions();
+                // 遮罩和 HTML 遮罩的位置由遮罩宿主统一跟随
+                var window = runtime.Window;
+                var active = window.IsForeground;
+                _maskWindowHost.ReportGameWindow(new GameWindowState(
+                    runtime.Capture.IsCapturing,
+                    active,
+                    window.IsMinimized,
+                    active || IsForegroundOwnedByBetterGiOrGame(window),
+                    currentRect));
                 return true;
             }
 

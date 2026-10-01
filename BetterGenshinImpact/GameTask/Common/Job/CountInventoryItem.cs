@@ -3,7 +3,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
-using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -153,7 +152,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         {
             GridScreen gridScreen = new GridScreen(CreateGridParams(page), logger, ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-            gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+            gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
 
             // 本页尚未找到的目标物品
             List<string> notFound = pageItemNames.Where(name => !results.ContainsKey(name)).ToList();
@@ -202,7 +201,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             }
             finally
             {
-                VisionContext.Instance().DrawContent.ClearAll();
+                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             }
         }
 

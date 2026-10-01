@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Input.Backends.WebSdk;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using Fischless.GameCapture;
@@ -23,6 +24,8 @@ namespace BetterGenshinImpact.GameTask.Runtime.WebPage;
 public sealed class WebPageRuntimeProvider(
     Func<CloudWebHostWindow> hostFactory,
     IConfigService configService,
+    IMaskWindowDrawingBoard maskWindowDrawingBoard,
+    IMaskWindowMapState maskWindowMapState,
     ILogger<WebPageRuntimeProvider> logger) : IGameRuntimeProvider
 {
     private CloudWebHostWindow? _host;
@@ -62,7 +65,7 @@ public sealed class WebPageRuntimeProvider(
 
             // 输入坐标与截图使用同一块画面区域
             var input = new WebSdkInputBackend(host.Bridge!, () => window.Viewport.ScreenRect);
-            return new GameRuntime(Kind, window, capture, input);
+            return new GameRuntime(Kind, window, capture, input, maskWindowDrawingBoard, maskWindowMapState);
         }
         catch
         {

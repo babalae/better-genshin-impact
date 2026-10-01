@@ -12,7 +12,6 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
-using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -444,8 +443,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         HangoutOptionClick(target);
                         _logger.LogInformation("邀约分支[{Text}]关键词命中，选择[{Option}]", _config.AutoHangoutEndChoose, target.OptionTextSrc);
                         AutoHangoutSkipLog(target.OptionTextSrc);
-                        VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-                        VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                        captureRegion.DrawingBoard.Clear("HangoutSelected");
+                        captureRegion.DrawingBoard.Clear("HangoutUnselected");
                         return;
                     }
                 }
@@ -456,16 +455,16 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 {
                     HangoutOptionClick(unselectedOption);
                     AutoHangoutSkipLog(unselectedOption.OptionTextSrc);
-                    VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-                    VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                    captureRegion.DrawingBoard.Clear("HangoutSelected");
+                    captureRegion.DrawingBoard.Clear("HangoutUnselected");
                     return;
                 }
 
                 // 没有未点击的选项时选择第一个已点击选项，推进对话状态。
                 HangoutOptionClick(hangoutOptionList[0]);
                 AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
-                VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
-                VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+                captureRegion.DrawingBoard.Clear("HangoutSelected");
+                captureRegion.DrawingBoard.Clear("HangoutUnselected");
             }
             finally
             {
@@ -1322,7 +1321,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 btnWhiteConfirmRa.Click();
                 _logger.LogInformation("提交物品：{Text}", "3. 交付");
 
-                VisionContext.Instance().DrawContent.ClearAll();
+                ra2.DrawingBoard.ClearAll();
             }
 
             // 最多4个物品 现在就支持一个
