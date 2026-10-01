@@ -1,5 +1,4 @@
 using BetterGenshinImpact.Core.Input.Backends.Win32;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 
@@ -32,7 +31,8 @@ public static class InputHub
     public static IInputChannel Background => Backend.Background;
 
     /// <summary>
-    /// 替换当前后端：旧后端先 ReleaseAll 再 Dispose。只在没有任务运行时调用。
+    /// 替换当前后端并释放旧后端。按键释放由停止流程显式处理，避免绑定新后端时释放全局按键。
+    /// 只在没有任务运行时调用。
     /// (a,b)、c、d 之间的切换都通过它完成
     /// </summary>
     public static void Attach(IInputBackend backend)
@@ -44,15 +44,6 @@ public static class InputHub
             if (ReferenceEquals(old, backend))
             {
                 return;
-            }
-
-            try
-            {
-                old.ReleaseAll();
-            }
-            catch (Exception e)
-            {
-                App.GetLogger<IInputBackend>().LogDebug(e, "切换输入后端时释放旧后端按键失败");
             }
 
             Volatile.Write(ref _backend, backend);

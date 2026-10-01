@@ -314,8 +314,11 @@ public partial class MaskWindow : Window
 
         AfterburnerWarning();
 
-        // 读取游戏注册表配置
-        GameSettingsChecker.LoadGameSettingsAndCheck();
+        // 读取游戏注册表配置。网页版的游戏设置保存在云端，本机注册表里的是本地原神的设置，检查结果会误导用户
+        if (TaskContext.Instance().Runtime?.Kind != GameTask.Runtime.GameRuntimeKind.WebPage)
+        {
+            GameSettingsChecker.LoadGameSettingsAndCheck();
+        }
     }
 
     /**

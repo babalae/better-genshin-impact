@@ -31,6 +31,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
 using System.Collections.Frozen;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -59,7 +60,25 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty] private bool _taskDispatcherEnabled = false;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    private bool _taskDispatcherEnabled = false;
+
+    /// <summary>
+    /// 正在获取运行环境（找窗、关联启动游戏）
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    private bool _isRuntimeStarting;
+
+    /// <summary>
+    /// 启动按钮显示为"停止"：运行中，或正在启动（此时点击提交停止请求，本次启动结束后不再绑定）
+    /// </summary>
+    public bool IsTriggerButtonChecked => TaskDispatcherEnabled || IsRuntimeStarting;
+
+    /// <summary>
+    /// 「云原神网页版」卡片只在 Primary 显示
+    /// </summary>
+    public bool IsCloudWebEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
@@ -89,22 +108,34 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [ObservableProperty]
     private bool _isCustomNetworkBanner = false;
     private readonly ChildSessionService _childSessionService;
+    private readonly WebViewInstanceStore _webViewInstanceStore;
+    private readonly WebViewInstanceLauncher _webViewInstanceLauncher;
 
     public HomePageViewModel(
         IConfigService configService,
         GameRuntimeService gameRuntimeService,
         Win32RuntimeProvider win32RuntimeProvider,
         ChildSessionService childSessionService,
-        IBannerImageService bannerImageService)
+        IBannerImageService bannerImageService,
+        WebViewInstanceStore webViewInstanceStore,
+        WebViewInstanceLauncher webViewInstanceLauncher)
     {
         _gameRuntimeService = gameRuntimeService;
         _win32RuntimeProvider = win32RuntimeProvider;
         _gameRuntimeService.Started += OnRuntimeStarted;
         _gameRuntimeService.Stopped += OnRuntimeStopped;
+        _gameRuntimeService.StartingChanged += OnRuntimeStartingChanged;
+        _webViewInstanceStore = webViewInstanceStore;
+        _webViewInstanceLauncher = webViewInstanceLauncher;
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
         Config = configService.Get();
-        ReadGameInstallPath();
+        // 本地原神的安装目录与网页版无关，网页版实例不去读注册表，也不写共享配置
+        if (!InstanceBootstrap.Current.Context.IsWebView)
+        {
+            ReadGameInstallPath();
+        }
+
         InitializeBannerImage();
 
 
@@ -134,9 +165,10 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             }
             else if (msg.PropertyName == "SwitchTriggerStatus")
             {
-                if (_taskDispatcherEnabled)
+                // 启动中也按"停止"处理：本次启动结束后不再绑定
+                if (IsTriggerButtonChecked)
                 {
-                    OnStopTrigger();
+                    _ = OnStopTrigger();
                 }
                 else
                 {
@@ -159,6 +191,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     {
         // OnTest();
 
+        // 每次进入首页都刷新网页版实例的运行状态
+        if (IsCloudWebEntryVisible)
+        {
+            RefreshCloudWebInstances();
+        }
+
         // 组件首次加载时运行一次。
         if (!_autoRun)
         {
@@ -174,7 +212,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     public void HandleActivation(CommandLineOptions commandLineOptions)
     {
-        if (commandLineOptions.Action == CommandLineAction.Start)
+        // 网页版实例没有主界面，启动后总是打开宿主窗口并等待绑定（见 ApplicationHostService.HandleWebViewActivation）
+        if (commandLineOptions.Action == CommandLineAction.Start || InstanceBootstrap.Current.Context.IsWebView)
         {
             _ = OnStartTriggerAsync();
         }
@@ -186,7 +225,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private void OnClosed()
     {
         CancelBannerDownload();
-        OnStopTrigger();
+        _ = OnStopTrigger();
         // 等待任务结束
         _maskWindow?.Close();
     }
@@ -202,6 +241,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         OnClosed();
         _gameRuntimeService.Started -= OnRuntimeStarted;
         _gameRuntimeService.Stopped -= OnRuntimeStopped;
+        _gameRuntimeService.StartingChanged -= OnRuntimeStartingChanged;
         WeakReferenceMessenger.Default.UnregisterAll(this);
         _mouseKeyMonitor.Dispose();
         GC.SuppressFinalize(this);
@@ -214,7 +254,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         if (TaskDispatcherEnabled)
         {
             _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
-            OnStopTrigger();
+            await OnStopTrigger();
             await OnStartTriggerAsync();
         }
     }
@@ -288,13 +328,13 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private bool CanStopTrigger() => StopButtonEnabled;
 
     [RelayCommand(CanExecute = nameof(CanStopTrigger))]
-    private void OnStopTrigger()
+    private async Task OnStopTrigger()
     {
-        _gameRuntimeService.Stop();
+        await _gameRuntimeService.StopAsync();
     }
 
     /// <summary>
-    /// 运行环境绑定完成（UI 线程）：显示遮罩、订阅键鼠监听
+    /// 运行环境绑定完成（UI 线程）：显示遮罩；仅 Win32 实例订阅键鼠监听
     /// </summary>
     private void OnRuntimeStarted(object? sender, EventArgs e)
     {
@@ -302,7 +342,10 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         _maskWindow.Show();
         MaskWindow.Instance().RefreshPosition();
         App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
-        _mouseKeyMonitor.Subscribe(_gameRuntimeService.Current!.Window.Handle);
+        if (_gameRuntimeService.Kind != GameRuntimeKind.WebPage)
+        {
+            _mouseKeyMonitor.Subscribe(_gameRuntimeService.Current!.Window.Handle);
+        }
         TaskDispatcherEnabled = true;
     }
 
@@ -324,6 +367,117 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         TaskDispatcherEnabled = false;
         _mouseKeyMonitor.Unsubscribe();
     }
+
+    private void OnRuntimeStartingChanged(object? sender, EventArgs e)
+    {
+        IsRuntimeStarting = _gameRuntimeService.IsStarting;
+    }
+
+    #region 云原神网页版实例（Primary 首页）
+
+    [ObservableProperty]
+    private ObservableCollection<CloudWebInstanceItem> _cloudWebInstances = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LaunchCloudWebInstanceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteCloudWebInstanceCommand))]
+    private CloudWebInstanceItem? _selectedCloudWebInstance;
+
+    /// <summary>
+    /// 重新读取实例列表与运行状态，尽量保持当前选中项
+    /// </summary>
+    [RelayCommand]
+    private void RefreshCloudWebInstances()
+    {
+        var selectedName = SelectedCloudWebInstance?.Name;
+        var items = _webViewInstanceStore.List()
+            .Select(name => new CloudWebInstanceItem(name, WebViewInstanceStore.IsRunning(name)))
+            .ToList();
+        CloudWebInstances = new ObservableCollection<CloudWebInstanceItem>(items);
+        SelectedCloudWebInstance = items.FirstOrDefault(i => string.Equals(i.Name, selectedName, StringComparison.OrdinalIgnoreCase))
+                                   ?? items.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void CreateCloudWebInstance()
+    {
+        var name = PromptDialog.Prompt(
+            $"实例名用于区分不同账号，同时作为该实例 WebView 数据（登录态等）的目录名。\n最多 {WebViewInstanceStore.MaxNameLength} 个字符，不能包含 \\ / : * ? \" < > |",
+            "新建云原神网页版实例");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        try
+        {
+            var created = _webViewInstanceStore.Create(name);
+            RefreshCloudWebInstances();
+            SelectedCloudWebInstance = CloudWebInstances.FirstOrDefault(i => i.Name == created);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            ThemedMessageBox.Warning(ex.Message, "新建实例失败");
+        }
+    }
+
+    private bool CanOperateCloudWebInstance() => SelectedCloudWebInstance is { IsRunning: false };
+
+    [RelayCommand(CanExecute = nameof(CanOperateCloudWebInstance))]
+    private async Task LaunchCloudWebInstanceAsync()
+    {
+        var item = SelectedCloudWebInstance;
+        if (item == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _webViewInstanceLauncher.Launch(item.Name);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+        {
+            ThemedMessageBox.Warning(ex.Message, "启动实例失败");
+            RefreshCloudWebInstances();
+            return;
+        }
+
+        // 新进程获取实例名互斥体需要一点时间，稍后再刷新运行状态
+        await Task.Delay(3000);
+        RefreshCloudWebInstances();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateCloudWebInstance))]
+    private async Task DeleteCloudWebInstanceAsync()
+    {
+        var item = SelectedCloudWebInstance;
+        if (item == null)
+        {
+            return;
+        }
+
+        var result = await ThemedMessageBox.QuestionAsync(
+            $"确定删除实例「{item.Name}」吗？\n该实例的登录态等 WebView 数据会一并删除，且无法恢复。",
+            "删除云原神网页版实例");
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            _webViewInstanceStore.Delete(item.Name);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            ThemedMessageBox.Warning(ex.Message, "删除实例失败");
+        }
+
+        RefreshCloudWebInstances();
+    }
+
+    #endregion
 
     [RelayCommand]
     public void OnGoToWikiUrl()

@@ -7,6 +7,11 @@ internal sealed class ConnectionOpenRequest
 {
     public BetterGiInstanceType RequestedType { get; init; }
 
+    /// <summary>
+    /// 网页版实例的实例名，其他实例为 null
+    /// </summary>
+    public string? InstanceName { get; init; }
+
     public int? RestartFromProcessId { get; init; }
 
     public string[] Arguments { get; init; } = [];

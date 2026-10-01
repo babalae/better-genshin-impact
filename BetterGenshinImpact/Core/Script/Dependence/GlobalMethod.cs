@@ -185,6 +185,15 @@ public class GlobalMethod
 
     #region 文字输入操作
 
+    /// <summary>
+    /// 通过本机剪贴板 + Ctrl+V 输入文字。
+    /// <para>
+    /// 注意：云原神网页版（WebSdk 后端）尚未适配。写本机剪贴板对云端无效，Ctrl+V 粘贴不到内容。
+    /// 需要时可以在 <c>InputHub.Backend is WebSdkInputBackend web</c> 分支里，把"写本机剪贴板"换成
+    /// <c>web.Sdk.Invoke("sendClipboard", text)</c> 后再发 Ctrl+V，或直接调用 <c>web.Sdk.Invoke("sendIme", text)</c>。
+    /// 两种方式都未实测。
+    /// </para>
+    /// </summary>
     public static void InputText(string text)
     {
         if (string.IsNullOrEmpty(text))

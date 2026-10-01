@@ -1,6 +1,23 @@
 # BetterGI 游戏运行环境 GameRuntime 设计
 
-> 状态：P1 已实现，P2 待实施（第 3 版） · 2026-09-30 · 前置：[InputHub 设计](input-hub.md)
+> 状态：P1、P2 已实现（第 6 版） · 2026-09-30 · 前置：[InputHub 设计](input-hub.md)
+
+第 6 版变更（维护者要求与 feat/yys 的目标对齐，正文已同步，汇总见第 11 节）：
+
+- 实例名参数改为 `--instance-name`，并登记到根实例的端点。
+- 数据目录改为 `WebView2Data/CloudGame/<实例名>`。
+- 页面地址固定为 `https://ys.mihoyo.com/cloud/?autobegin=1`，删除 `CloudWebConfig`。
+- WebView2 禁止缩放、关闭状态栏，开发者工具只在 Debug 下可用。
+- 页面固定按 100% 渲染，不跟随系统缩放；宿主改为直接托管 `CoreWebView2Controller`，不再使用 WPF `WebView2` 控件（7.2）。
+- 宏回放改走 InputHub；网页版跳过本地原神设置检查。
+
+第 5 版变更（维护者要求，正文已同步）：
+
+- 网页版截图改用 WGC（`GraphicsCapture`），不再用 `GraphicsCaptureV2`。
+- 宿主客户区锁定为 1920×1080 物理像素，不能调整大小或最大化。
+- 网页版实例不显示主界面，只显示宿主窗口；关闭宿主即退出实例。原先为网页版准备的主界面改动随之删除。
+
+第 4 版变更：P2 落地，与设计有出入的地方已同步到正文，汇总见第 11 节"P2 实施说明"。
 
 第 3 版变更：落实第 15 节的确认结果。
 
@@ -73,7 +90,7 @@ BetterGI 目前只支持一种运行环境：本机上的一个 Win32 游戏窗�
 | 游戏窗口（`IGameWindow`） | 游戏画面所在的顶层 Win32 窗口；网页版就是宿主窗口 |
 | 画面区域（`GameViewport`） | 游戏画面在屏幕上的物理像素矩形，即现在的 `CaptureAreaRect` |
 | Provider（`IGameRuntimeProvider`） | 负责某种运行环境的获取和关闭，产出 `GameRuntime` |
-| 网页版实例 | 以 `--instance webview --name <实例名>` 启动的独立 BetterGI.exe 进程 |
+| 网页版实例 | 以 `--instance webview --instance-name <实例名>` 启动的独立 BetterGI.exe 进程 |
 | 实例名 | 网页版实例启动前由用户指定，用于区分实例和 WebView 数据目录 |
 | 宿主窗口（`CloudWebHostWindow`） | 网页版实例中承载云原神页面的 WPF 窗口 |
 
@@ -95,11 +112,11 @@ Primary（BetterGI.exe）
 └─ 首页「云原神网页版」卡片 ─ WebViewInstanceStore（实例名列表）
       │ WebViewInstanceLauncher.Launch("小号A")
       ▼
-网页版实例「小号A」（BetterGI.exe --instance webview --name 小号A start）
+网页版实例「小号A」（BetterGI.exe --instance webview --instance-name 小号A start）
 ├─ GameRuntimeService ─ WebPageRuntimeProvider
-├─ 调度器 / 任务 / 脚本 / 遮罩（功能完整）
-├─ MainWindow（正常显示）
-└─ CloudWebHostWindow ─ WebView2（数据目录 WebView2Instances/小号A）
+├─ 调度器 / 任务 / 脚本 / 遮罩（功能完整，由命令行驱动）
+├─ 不创建 MainWindow
+└─ CloudWebHostWindow ─ WebView2（唯一界面，即 Application.MainWindow；数据目录 WebView2Data/CloudGame/小号A）
 
 网页版实例「小号B」……（结构相同，与「小号A」互不影响）
 ```
@@ -140,7 +157,7 @@ classDiagram
         +GameRuntime? Current
         +StartAsync(CancellationToken ct) Task~bool~
         +Start(GameRuntime runtime) bool
-        +Stop()
+        +StopAsync()
         +CloseGame()
         +event Started
         +event Stopped
@@ -189,7 +206,7 @@ classDiagram
     class CloudWebHostWindow {
         +WebView2InputBridge Bridge
         +bool IsGameReady
-        +WaitGameReadyAsync(ct) Task
+        +WaitGameReadyAsync(ct) Task~bool~
     }
 
     GameRuntimeService --> IGameRuntimeProvider : 按实例类型选定
@@ -308,10 +325,11 @@ public interface IGameRuntimeProvider
 | --- | --- |
 | `Kind` | 由实例类型决定，进程内不变 |
 | `Current` / `IsRunning` | 当前运行环境 |
-| `StartAsync(ct)` | 切到 UI 线程串行执行；已在运行时直接返回 true；等待期间可以被 `Stop()` 取消 |
+| `StartAsync(ct)` | 切到 UI 线程串行执行；已在运行时直接返回 true；停止请求会等待启动完成后再解绑 |
 | `Start(GameRuntime)` | 用外部构造的运行环境启动，只用于手动选窗 |
-| `Stop()` / `CloseGame()` | 停止截图器 / 关闭游戏（转发给 Provider） |
+| `StopAsync()` / `CloseGame()` | 等待启动完成后停止截图器 / 关闭游戏（转发给 Provider） |
 | `Started` / `Stopped` | 供 HomePageViewModel 管理遮罩和 MouseKeyMonitor |
+| `IsStarting` / `StartingChanged` | 正在执行 `AcquireAsync`（找窗、关联启动、网页版等待登录）。首页据此把启动按钮显示为"停止"，网页版实例显示等待提示 |
 
 ## 6. Win32 实现（P1）
 
@@ -365,16 +383,18 @@ WinEventHook 从 Dispatcher 搬进这里，同时做两处调整：
 实例名规则由 `WebViewInstanceStore` 统一校验：
 
 - 去掉首尾空白后长度为 1~32；
-- 不含 `\ / : * ? " < > |` 和控制字符，不以 `.` 结尾；
-- 不能是 Windows 保留名（CON、PRN、AUX、NUL、COM1~9、LPT1~9）；
+- 不含 `\ / : * ? " < > |` 和控制字符，不以 `.` 结尾（因此也排除了 `.` 和 `..`）；
+- 不能是 Windows 保留名（CON、PRN、AUX、NUL、COM1~9、LPT1~9），按第一个 `.` 之前的部分判断，`CON.txt` 同样被拒绝；
 - 不区分大小写，不能重名。
+
+这套规则与 feat/yys 的 `WebViewInstanceName` 等价，唯一的区别是末尾空格：feat/yys 直接拒绝，这里去掉后接受。
 
 `WebViewInstanceStore` 同时负责存储：
 
 | 成员 | 说明 |
 | --- | --- |
-| `Root` | `<exe目录>/WebView2Instances`。不放进 `WebView2Data`，那是 HtmlMask 等功能共用的用户数据目录 |
-| `List()` | 列出 `Root` 下的子目录名，目录就是实例名的唯一存储，不另建索引文件 |
+| `Root` | `<exe目录>/WebView2Data/CloudGame`，与 feat/yys 一致。`WebView2Data` 本身是 HtmlMask 等功能共用的用户数据目录，它们不会使用 `CloudGame` 子目录，各实例的用户数据互相独立 |
+| `List()` | 列出 `Root` 下名称合法的子目录，目录就是实例名的唯一存储，不另建索引文件 |
 | `GetDataFolder(name)` | `Root/<name>`，作为该实例的 WebView2 用户数据目录 |
 | `Create(name)` / `Delete(name)` | 新建目录 / 删除目录。删除只在实例未运行时可用，UI 需要二次确认 |
 | `IsRunning(name)` | `Mutex.TryOpenExisting(MutexName(name))` |
@@ -382,16 +402,24 @@ WinEventHook 从 Dispatcher 搬进这里，同时做两处调整：
 
 启动参数与实例身份：
 
-- `WebViewInstanceLauncher.Launch(name)` 的参数为 `--instance webview --name <name> start`，路径取 `Environment.ProcessPath`。以 dotnet dll 方式运行时，参考 `ChildSessionProcessLauncher.CreateBetterGiStartInfo`。
-- `CommandLineOptions` 像处理 `--instance` 那样剥离 `--name`，存为 `InstanceName`。`InstanceContext` 增加 `InstanceName`，只有 WebView 实例有值。
+- `WebViewInstanceLauncher.Launch(name)` 的参数为 `--instance webview --instance-name <name> start`，路径取 `Environment.ProcessPath`。以 dotnet dll 方式运行时，参考 `ChildSessionProcessLauncher.CreateBetterGiStartInfo`。参数名与 feat/yys 一致。
+- `CommandLineOptions` 像处理 `--instance` 那样剥离 `--instance-name`，存为 `InstanceName`。`InstanceContext` 增加 `InstanceName`，只有 WebView 实例有值。
 - `InstanceBootstrap` 对 WebView 实例额外做两件事：
-  - 没有 `--name` 时提示并退出；
-  - 获取实例名互斥体（进程内一直持有），已被占用时提示"实例「name」已在运行"并退出。
+  - 没有 `--instance-name` 或名称不合法时提示并退出；
+  - 获取实例名互斥体（进程内一直持有），已被占用时提示"实例「name」已在运行"并退出。带 `--restart-from-pid` 时最多等待 15 秒，让应用内重启的旧进程先退出；旧进程未释放就退出时按已获取处理（`AbandonedMutexException`）。
   - 提示使用 WinForms MessageBox，和 App 启动失败时的兜底方式一样。
-- `SystemControl.RestartApplication` 对 WebView 实例追加 `--name`。
+- `WebViewInstanceLauncher.Launch` 只启动已存在的实例（目录存在）且未在运行的实例，启动前先 `IConfigService.Flush()`，与桌面分身一致。
+- `SystemControl.RestartApplication` 对 WebView 实例追加 `--instance-name`。
 - 日志标识 `BgiInstance` 带上实例名，例如 `WebView(小号A):S1:P1234:T…`。
+- 实例名随 `connection.open`（`ConnectionOpenRequest.InstanceName`）登记到根实例，写入 `InstanceEndpoint.InstanceName`，`webview.list` 按实例名排序。Primary 和其他实例因此能按名称识别网页版实例。
+  - 根实例不按名称判重，同名互斥只由互斥体保证。应用内重启时，旧进程的连接可能还没被根清理，在根上判重会误拒新进程。
 
-`start` 走现有的命令行路径：`HomePageViewModel.HandleActivation` → `GameRuntimeService.StartAsync`。所以实例一启动，就会打开宿主窗口并等待绑定。
+网页版实例不创建 MainWindow，`ApplicationHostService` 改走 `HandleWebViewActivation`：
+
+- 总是调用 `HomePageViewModel.HandleActivation` → `GameRuntimeService.StartAsync`，与有没有 `start` 参数无关（例如应用内重启）。宿主窗口在 `StartAsync` 的同步阶段创建，并设为 `Application.MainWindow`，之后等待绑定。
+- 一条龙：依次调用 `OneDragonFlowViewModel.OnNavigatedTo()`（加载配置列表）和 `LoadedCommand`（读取命令行后执行），与页面被导航到时的顺序一致。
+- 配置组 / 任务进度：直接调用 `ScriptControlViewModel` 的对应方法。
+- 这些命令都由 `StartGameTask` 自行启动截图器，与上面的自动启动走同一个串行的 `StartAsync`，不会重复绑定。
 
 ### 7.2 宿主窗口 CloudWebHostWindow
 
@@ -399,9 +427,18 @@ WinEventHook 从 Dispatcher 搬进这里，同时做两处调整：
 
 - 使用系统标题栏的普通 WPF `Window`，不用自绘标题栏（例如 FluentWindow + ExtendsContentIntoTitleBar）。自绘标题栏属于 Win32 客户区，会被截进画面，坐标也会偏。
 - WebView2 铺满客户区，不留边距，也不放工具栏。
-- 用 `WindowAspectRatioBehavior` 锁定 16:9，客户区最小 1280×720。`SystemInfo` 要求画面不小于 800×600。
+- 页面固定按 100% 渲染，不跟随系统缩放：
+  - WebView2 默认按显示器 DPI 设置 `RasterizationScale`。150% 缩放时页面视口只有 1280×720 CSS 像素，页面自己的悬浮菜单、登录框等都会跟着放大，不同机器上的页面布局也不一样。
+  - 宿主关闭 `ShouldDetectMonitorScaleChanges`，把 `RasterizationScale` 固定为 1，`BoundsMode = UseRawPixels`、`Bounds` 为客户区物理像素。页面视口因此始终是 1920×1080 CSS 像素，`devicePixelRatio` 为 1。
+  - WPF 的 `WebView2` 控件不公开 `CoreWebView2Controller`，做不到这一点，所以宿主不用该控件，而是用 `CoreWebView2Environment.CreateCoreWebView2ControllerAsync(Handle)` 直接托管在窗口句柄上。宿主自己负责：客户区尺寸变化时更新 `Bounds`、窗口移动时 `NotifyParentWindowPositionChanged`、窗口激活时 `MoveFocus`（否则登录时键盘输入不进页面）、关闭时 `Close`。
+  - 标题栏和边框属于非客户区，仍由系统按 DPI 绘制，不影响截图。
+- 客户区锁定为 1920×1080 物理像素，不随 DPI 缩放，截图和识图直接工作在 1080P 下：
+  - `ResizeMode="CanMinimize"`：不能拖动调整大小，也不能最大化；
+  - `SourceInitialized` 中用 `SetWindowPos` 设置外框尺寸（当前边框 + 1920×1080），不走 DIP 换算，避免舍入误差；首次设置时按 `Screen.FromHandle` 的物理像素工作区居中，工作区放不下时记 warn，窗口会超出屏幕；
+  - `OnDpiChanged`（拖到 DPI 不同的显示器）中重新锁定，因为 WPF 会按 DIP 缩放窗口。
 - 不设 Topmost。现有 WGC 对 Topmost 窗口不做客户区裁剪。
-- 标题为"云原神 · {实例名}"。关闭宿主窗口不会退出实例，下次启动截图器时会重新打开。
+- 网页版实例没有主界面，宿主就是唯一的窗口：由 `WebPageRuntimeProvider` 设为 `Application.MainWindow`，供对话框 Owner、`UIDispatcherHelper.MainWindow` 等使用。
+- 标题为"云原神 · {实例名}"。关闭宿主窗口即退出实例（`Closed` 中 `BeginInvoke(Application.Shutdown)`），`CloseGame` 也会走到这里。
 
 初始化：
 
@@ -415,16 +452,23 @@ WinEventHook 从 Dispatcher 搬进这里，同时做两处调整：
    - 前两项让宿主在被遮挡时照常渲染，否则 WGC 会一直拿到旧帧（7.4）。
    - 后两项让页面在后台不降低优先级，也不限流定时器。SDK 的 `tapKey` / `click` 用 `setTimeout` 控制按住时长，限流后按键时序会被拉长。
    - 每个实例的数据目录都是独立的，这些参数不会和 HtmlMask 等功能的 WebView2 环境冲突。
-2. `bridge = await WebView2InputBridge.InstallAsync(core)`：注入 SDK 和分发脚本，然后返回桥（7.5）。
-3. 导航到 `CloudWebConfig.Url`，默认值为 `https://ys.mihoyo.com/cloud/`。
+2. `controller = await environment.CreateCoreWebView2ControllerAsync(Handle)`，然后设置（`ConfigureController`）。页面必须按 1:1 铺满 1920×1080 客户区，截图与输入坐标才一致：
+   - `ShouldDetectMonitorScaleChanges = false`，`RasterizationScale = 1`，`BoundsMode = UseRawPixels`：不跟随系统缩放（见上）；
+   - `IsZoomControlEnabled = false`，`ZoomFactor = 1`：禁止 Ctrl + 滚轮 / Ctrl + +/- 缩放（与 feat/yys 一致，下同）；
+   - `IsStatusBarEnabled = false`：左下角的链接状态栏会被截进画面；
+   - `AreDevToolsEnabled = RuntimeHelper.IsDebug`：开发者工具只在 Debug 下可用；
+   - `IsWebMessageEnabled = true`：输入桥依赖 WebMessage，显式开启。
+3. `bridge = await WebView2InputBridge.InstallAsync(core)`：注入 SDK 和分发脚本，然后返回桥（7.5）。
+4. 导航到固定地址 `https://ys.mihoyo.com/cloud/?autobegin=1`（常量 `CloudGameUrl`，与 feat/yys 一致）。`autobegin=1` 让页面加载后自动开始游戏，不需要手动点"开始游戏"。不提供配置项：`config.json` 由所有实例共享，没法按实例区分。
 
 就绪检测：
 
 - 用 DispatcherTimer 每秒调用一次 `bridge.GetStatusAsync()`。`rtcDataChannelState == "open"` 且 `gameDataStarted == true` 时，`IsGameReady` 为 true。
 - 已就绪之后，连续 3 次未就绪（约 3 秒）才判定为断开，避免单次查询失败就停掉任务。
-- 断开后只让截图器停止（Tick 发现 `IsAlive == false`），不自动刷新页面，也不自动重新绑定。用户在宿主里重新进入游戏后，需要再次启动截图器。这条限制要写进 `CloudWebHostWindow` 和 `WebPageGameWindow.IsAlive` 的代码注释，避免以后有人误以为这里会自动重连。
+- 断开后只让截图器停止（Tick 发现 `IsAlive == false`），不自动刷新页面，也不自动重新绑定。网页版实例没有主界面、不响应热键，无法手动重新启动截图器，需要关闭宿主窗口（即退出实例）后从 Primary 重新启动。这条限制写在 `CloudWebHostWindow` 和 `WebPageGameWindow.IsAlive` 的代码注释里，避免以后有人误以为这里会自动重连。
 - `IsGameReady` 用 volatile 字段保存。Tick 线程通过 `WebPageGameWindow.IsAlive` 读取它。
-- `WaitGameReadyAsync(ct)` 等到就绪为止，不设短超时，因为登录和排队可能要几分钟。SDK 报错时（例如页面更新导致 ClientCore 模块找不到）会限频记录原因。
+- `WaitGameReadyAsync(ct)` 等到就绪为止，不设短超时，因为登录和排队可能要几分钟。就绪返回 true，宿主被关闭返回 false，取消时抛 `OperationCanceledException`。未就绪的原因（例如页面更新导致 ClientCore 模块找不到）只在变化时记一条 Debug 日志。
+- 初始化失败（例如未安装 WebView2 Runtime）时弹出错误提示并关闭窗口，等待中的启动随之返回。
 
 ### 7.3 运行环境：WebPageGameWindow 与 WebPageRuntimeProvider
 
@@ -453,29 +497,32 @@ public sealed class WebPageGameWindow(CloudWebHostWindow host) : Win32GameWindow
 - `Viewport`、`IsForeground`、`IsMinimized`、`ProcessId`（即当前进程）；
 - `ViewportChanged`：钩子限定到当前进程即可收到宿主事件。
 
-`WebPageGameWindow` 还订阅宿主的 Closing 事件，在其中调用 `InputHub.ReleaseAll()`（input-hub.md 5.7.5 第 5 步）。
+`WebPageGameWindow` 还订阅宿主的 Closing 事件，在其中调用 `InputHub.ReleaseAll()`（input-hub.md 5.7.5 第 5 步）。Closing 在 UI 线程上触发，桥会直接投递 `releaseAll`（7.5），能在页面销毁前送达。
+
+`AcquireAsync` 在就绪后先调用一次 `window.Activate()`：宿主最小化时 WGC 拿不到帧，画面尺寸也不满足 `SystemInfo` 的要求。
 
 `WebPageRuntimeProvider.AcquireAsync`：
 
 ```text
-1. host = 已有宿主 ?? 新建 CloudWebHostWindow 并 Show()        Provider 持有宿主，关闭后置空
+1. host = 已有宿主 ?? 新建 CloudWebHostWindow，设为 Application.MainWindow 并 Show()   Provider 持有宿主
 2. await host.WaitGameReadyAsync(ct)                           日志：等待云原神就绪（登录 / 排队）
 3. window  = new WebPageGameWindow(host)
-   capture = new GraphicsCaptureV2(); capture.Start(host.Handle, GameCaptureSettings.From(config))
+   capture = new GraphicsCapture(); capture.Start(host.Handle, GameCaptureSettings.From(config))
+             与 Win32 路径一样在 UI 线程上创建（帧池用 Direct3D11CaptureFramePool.Create）
    input   = new WebSdkInputBackend(host.Bridge, () => window.Viewport.ScreenRect)
 4. return new GameRuntime(GameRuntimeKind.WebPage, window, capture, input)
 ```
 
-`CloseGame` 关闭宿主窗口（经 Dispatcher 切到 UI 线程）。`GameRuntime.Dispose` 不关闭宿主，和"停止截图器不关闭本地游戏"一致。
+`CloseGame` 关闭宿主窗口（经 Dispatcher 切到 UI 线程），宿主关闭即退出实例。`GameRuntime.Dispose` 不关闭宿主，和"停止截图器不关闭本地游戏"一致。
 
 ### 7.4 截图
 
-- 固定使用 `GraphicsCaptureV2`，对宿主窗口句柄截图，参数取 `MinUpdateIntervalMs` 和 `UseCpuConvert`，不读 `CaptureMode`。
+- 固定使用 WGC（`GraphicsCapture`，不是 `GraphicsCaptureV2`），对宿主窗口句柄截图，参数取 `GameCaptureSettings.From(config)`，不读 `CaptureMode`。
   - 不读 `CaptureMode` 是因为 `config.json` 由所有实例共享，网页版实例改了它会影响 Primary。
-  - 网页版实例的首页因此隐藏截图模式选项。
-- `Fischless.GameCapture` 不改。现有 WGC 已经会从窗口裁出客户区，而 7.2 的约束保证客户区就是游戏画面。
-- 宿主和 BetterGI 同进程，WGC 可以用 `CreateForWindow` 截取本进程的窗口。WebView2 WPF 控件的内容在子 HWND 中渲染，由 DWM 合成到宿主窗口，需要实测确认能截到（13.2 #3）。
-- `GraphicsCaptureV2` 在没有新帧时会返回缓存帧。如果 Chromium 在宿主被遮挡时停止渲染，任务会拿到旧画面而不自知。因此宿主通过浏览器参数禁用了遮挡降帧（7.2），测试见 13.2 #5。
+  - 网页版实例没有主界面，截图模式等 Win32 专属设置本来就看不到。
+- `Fischless.GameCapture` 不改。现有 WGC 已经会从窗口裁出客户区，而 7.2 的约束保证客户区就是 1920×1080 的游戏画面。
+- 宿主和 BetterGI 同进程，WGC 可以用 `CreateForWindow` 截取本进程的窗口。WebView2 的内容在宿主的子 HWND 中渲染，由 DWM 合成到宿主窗口，需要实测确认能截到（13.2 #3）。
+- WGC 在没有新帧时会返回缓存帧。如果 Chromium 在宿主被遮挡时停止渲染，任务会拿到旧画面而不自知。因此宿主通过浏览器参数禁用了遮挡降帧（7.2），测试见 13.2 #5。
 - 扩展方式：以后如果需要其他截图方式（例如 `CoreWebView2.CapturePreviewAsync`），新增一个 `IGameCapture` 实现，由 `WebPageRuntimeProvider` 选择，上层不受影响。
 
 ### 7.5 输入：接入与精简
@@ -494,11 +541,13 @@ public sealed class WebPageGameWindow(CloudWebHostWindow host) : Win32GameWindow
 
 桥的实现要点：
 
-- 注入：`ys-input-inject.js` 设为 `EmbeddedResource`，`InstallAsync` 用 `AddScriptToExecuteOnDocumentCreatedAsync` 注入它和 `BootstrapScript`。宿主只需要调用这一个方法。
-- 调用：`Invoke` 由 `Dispatcher.Invoke` 改为 `Dispatcher.BeginInvoke`。
-  - 同优先级的调用按 FIFO 执行，顺序不变；
+- 注入：`ys-input-inject.js` 设为 `EmbeddedResource`（LogicalName `BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js`），`InstallAsync` 用 `AddScriptToExecuteOnDocumentCreatedAsync` 注入它和 `BootstrapScript`。宿主只需要调用这一个方法，构造函数和 `BootstrapScript` 改为私有。
+  - 注入脚本也会在子 frame 中执行，而子 frame 没有 `chrome.webview`：SDK 原文不改，外面包一层 `if (window.top === window)`；分发脚本同样只在顶层文档生效。
+- 调用：其他线程由 `Dispatcher.Invoke` 改为 `Dispatcher.BeginInvoke`，UI 线程上直接投递。
+  - 同优先级的调用按 FIFO 执行，同一线程内顺序不变；
   - 任务线程不再阻塞，也不会在 UI 线程同步等待任务时死锁；
-  - 投递失败（例如页面已关闭）在 UI 线程内捕获并限频打 warn。
+  - UI 线程直接投递，保证宿主 Closing 中发出的 `releaseAll` 能在页面销毁前送达；
+  - 投递失败（例如页面已关闭）在 UI 线程内捕获并限频打 warn；桥已释放时 `Invoke` 同步抛 `InvalidOperationException`，与原契约一致。
 - 状态：`GetStatusAsync()` 执行 `ExecuteScriptAsync`，在页面内用 try/catch 包住 `window.__ysInputInject?.status()`，返回 `WebSdkStatus(RtcDataChannelState, GameDataStarted, Error)`，其中 `IsReady => RtcDataChannelState == "open" && GameDataStarted == true`。
 - 错误：删除 `InvokeFailed` 事件。它现在没有订阅者，页面断开改由状态轮询发现。页面回报的调用错误限频打 warn。
 
@@ -516,39 +565,42 @@ public sealed class WebPageGameWindow(CloudWebHostWindow host) : Win32GameWindow
 ### 7.6 界面
 
 Primary 的首页新增「云原神网页版」卡片，只在 `IsRoot` 时显示：
-- 实例名下拉框，数据来自 `WebViewInstanceStore.List()`，并用 `IsRunning` 标出运行中的实例；
-- 新建（输入名称并校验）、启动、删除（二次确认）三个按钮。
-- 实例正在运行时禁用启动和删除。
+- 实例名下拉框，数据来自 `WebViewInstanceStore.List()`，并用 `IsRunning` 标出运行中的实例（"名称（运行中）"）；
+- 刷新、启动、新建（`PromptDialog` 输入名称并校验）、删除（`ThemedMessageBox.QuestionAsync` 二次确认）四个按钮。
+- 实例正在运行时禁用启动和删除。运行状态在进入首页、启动实例 3 秒后、点击刷新时更新。
+
+Primary 的首页：截图器启动过程中（`GameRuntimeService.IsStarting`），启动按钮显示为"停止"；停止按钮提交停止请求，在本次启动结束后解绑（获取完成后直接放弃，不再绑定）。
 
 网页版实例：
 
-- MainWindow 正常显示，标题栏徽章为"云原神网页版 · {实例名}"，对应新增的 `MainWindowViewModel.IsWebViewInstance` 与 `InstanceName`。
-- 首页隐藏 Win32 专属设置：截图模式、安装路径与关联启动、HDR、手动选窗、截图测试。
-- 等待就绪期间，首页显示"等待云原神就绪"，停止按钮可以取消等待。
+- 不显示主界面，只显示宿主窗口（7.1、7.2）。任务由启动参数决定：默认只启动截图器（实时触发器照常工作），一条龙、配置组、任务进度由对应的命令行参数触发。
+- 因为没有主界面，原先为网页版准备的界面改动都已去掉：标题栏徽章、首页隐藏 Win32 专属设置、"等待云原神就绪"提示、热键页 InfoBar。
+  - "同时启动原神"卡片里的配置仍按共享配置生效，例如"自动进入游戏"对网页版同样有效。
+- 要结束等待或结束实例，关闭云原神窗口即可。
 - 不响应任何热键，全局热键和键鼠监听都算在内：
-  - `HotKeyPageViewModel` 在网页版实例中跳过全部 `RegisterHotKey`，热键页顶部提示"网页版实例不响应热键"；
-  - 热键配置仍然可以编辑，因为它由所有实例共享，改动会作用于 Primary；
+  - `HotKeyPageViewModel.IsHotKeyEnabled` 在网页版实例中为 false，跳过全部 `RegisterHotKey`。热键原本在 `HomePage` 构造时初始化，网页版实例不创建页面，所以这里只是兜底；
+  - 热键配置由所有实例共享，只能在 Primary 中编辑；
   - 这样也避开了同一 Session 中全局热键只能被先启动的实例注册的问题。
-- 其他页面（调度器、一条龙、脚本、设置等）不做限制，功能完整。
 
 ## 8. 生命周期、所有权与 DI
 
 ```text
 启动（首页按钮 / ScriptService.StartGameTask / 命令行 start）
   GameRuntimeService.StartAsync(ct)             切到 UI 线程；串行；已在运行时返回 true
-    1. runtime = await provider.AcquireAsync(ct)    返回 null 时整体返回 false
+    1. runtime = await provider.AcquireAsync(ct)    期间 IsStarting = true；返回 null 时整体返回 false
+       获取期间收到停止请求（stopVersion 变化）：释放 runtime，返回 false，不绑定
     2. TaskContext.Instance().Bind(runtime)         由 Viewport 构建 SystemInfo，记录 DpiScale 快照
     3. InputHub.Attach(runtime.Input)
     4. dispatcher.Start(runtime, interval)          加载触发器，订阅 ViewportChanged，启动定时器
-    5. 触发 Started                                  HomePageViewModel 显示遮罩，订阅 MouseKeyMonitor
+    5. 触发 Started                                  HomePageViewModel 显示遮罩；Win32 实例订阅 MouseKeyMonitor
     第 2~4 步任一步抛异常：回滚已完成的步骤，然后 runtime.Dispose()
 
 停止（按钮 / Tick 发现 !IsAlive 或截图器停止 / 切换截图模式）
-  GameRuntimeService.Stop()
-    0. 取消进行中的 StartAsync
+  GameRuntimeService.StopAsync()
+    0. 等待 _startLock；停止请求之前排队的 StartAsync 跳过绑定
     1. CancellationContext.Instance.Cancel()
     2. dispatcher.Stop()
-    3. InputHub.Attach(new Win32InputBackend(IntPtr.Zero))   旧后端先 ReleaseAll 再释放
+    3. InputHub.ReleaseAll()，然后 Attach 未绑定后端     显式释放旧后端输入，再切换
     4. TaskContext.Instance().Bind(null)
     5. runtime.Dispose()
     6. 触发 Stopped                                  HomePageViewModel 隐藏遮罩，取消订阅
@@ -556,10 +608,10 @@ Primary 的首页新增「云原神网页版」卡片，只在 `IsRoot` 时显�
 
 | 资源 | 创建方 | 释放方 |
 | --- | --- | --- |
-| `GameRuntime` | Provider | `GameRuntimeService.Stop` |
+| `GameRuntime` | Provider | `GameRuntimeService.StopAsync` |
 | `IGameCapture`、`IGameWindow` | Provider | `GameRuntime.Dispose` |
 | `IInputBackend` | Provider | `InputHub`（被替换时） |
-| `CloudWebHostWindow` | `WebPageRuntimeProvider` | 用户关闭 / `CloseGame` / 进程退出 |
+| `CloudWebHostWindow` | `WebPageRuntimeProvider` | 用户关闭 / `CloseGame`，关闭后退出实例 |
 | `WebView2InputBridge` | `CloudWebHostWindow` | 宿主关闭时 |
 | 实例名互斥体 | `InstanceBootstrap` | 进程退出 |
 
@@ -578,7 +630,7 @@ services.AddSingleton<WebViewInstanceLauncher>();
 - `IEnumerable<IGameRuntimeProvider>`，按 `InstanceType == WebView ? WebPage : Win32Window` 从中选定；
 - `InstanceBootstrap`、`TaskTriggerDispatcher`、`IConfigService`、`ILogger<GameRuntimeService>`。
 
-`HomePageViewModel` 在启动时一定会被创建，因为 `ApplicationHostService` 总是先导航到首页。所以遮罩交给它管理，`GameRuntimeService` 不依赖任何 View。
+`HomePageViewModel` 在启动时一定会被创建：Primary 中 `ApplicationHostService` 总是先导航到首页；网页版实例没有页面，由 `HandleWebViewActivation` 直接从 DI 取出它。所以遮罩交给它管理，`GameRuntimeService` 不依赖任何 View。
 
 ## 9. TaskContext 拆分
 
@@ -652,12 +704,16 @@ public class TaskContext
 | `SystemControl.IsGenshinImpactActiveByProcess` | `RequiresForeground == false` 时返回 true，否则保持原逻辑。它的 9 个调用点实际是在问"现在能不能操作游戏" | P1 |
 | `SystemControl.StartFromLocalAsync` / `CloseGameProcesses`（原 `CloseGame` 的实现） | 保留为 L0 函数，由 `Win32RuntimeProvider` 调用 | P1 |
 | `TaskControl.CheckAndActivateGameWindow` | `RequiresForeground == false` 时，只在最小化时调用 `Activate()` | P1 |
-| `CommandLineOptions` / `InstanceContext` / `InstanceBootstrap` | 支持 `--name`，获取实例名互斥体 | P2 |
+| `CommandLineOptions` / `InstanceContext` / `InstanceBootstrap` | 支持 `--instance-name`，获取实例名互斥体 | P2 |
+| `ConnectionOpenRequest` / `InstanceEndpoint` / `InstanceRequestHandler` / `InstanceService` | 登记与展示实例名，`webview.list` 按实例名排序 | P2 |
+| `KeyMouseMacroPlayer` | 改走 `InputHub.Foreground`，网页版中也能回放（input-hub.md 第 6 版） | P2 |
+| `MaskWindow` / `HomePageViewModel` | 网页版跳过本地原神的注册表设置检查和安装目录读取 | P2 |
 | `SystemControl.RestartApplication`、`App.xaml.cs` 日志标识 | 带上实例名 | P2 |
 | `BetterGenshinImpact.csproj` | 把 `ys-input-inject.js` 设为 EmbeddedResource | P2 |
 | `GlobalMethod.InputText` | 只加注释，说明网页版的替代方式（7.5） | P2 |
-| `HotKeyPageViewModel` | 网页版实例中不注册任何热键，并在页面上提示 | P2 |
-| `HomePage` / `MainWindow` | 7.6 所述的卡片、徽章和隐藏项 | P2 |
+| `HotKeyPageViewModel` | 网页版实例中不注册任何热键（兜底） | P2 |
+| `ApplicationHostService` | 网页版实例不创建 MainWindow，改走 `HandleWebViewActivation`（7.1） | P2 |
+| `HomePage` | Primary 的「云原神网页版」卡片；启动按钮改绑 `IsTriggerButtonChecked`（7.6） | P2 |
 
 以下调用点不用改：
 - `MaskWindow` / `HtmlMaskWindow` 定位；
@@ -685,13 +741,40 @@ P1 实施说明：
 
 P2：网页版。
 
-1. 实例命名：`--name` 参数、`InstanceName`、互斥体、重启参数、日志标识。
+1. 实例命名：`--instance-name` 参数、`InstanceName`、互斥体、重启参数、日志标识。
 2. `WebViewInstanceStore`、`WebViewInstanceLauncher`，以及 Primary 首页卡片。
 3. 按 7.5 精简输入，并把脚本改为嵌入资源。
 4. `CloudWebHostWindow`：初始化、注入、就绪检测。
-5. `WebPageGameWindow`、`WebPageRuntimeProvider`、`CloudWebConfig`，并完成 DI 注册。
+5. `WebPageGameWindow`、`WebPageRuntimeProvider`，并完成 DI 注册。
 6. 网页版实例界面（7.6）。
 7. 按 13.2 测试，并标定相对移动和滚轮系数。
+
+P2 实施说明：
+- 已完成步骤 1~6，解决方案编译通过，命令行解析的单元测试（`InstanceIpcProtocolTests`）通过。步骤 7 的手动测试与系数标定尚未进行。
+- P1 的 Win32 回退已删除：找不到对应的 Provider 时 `GameRuntimeService` 直接抛异常。
+- 与设计的出入（正文已同步）：
+  - 获取期间收到停止请求时，获取完成后直接放弃，不绑定（原设计是绑定后再解绑，效果相同，但不会闪一下遮罩、也不会加载触发器）。网页版要立即结束等待，关闭宿主窗口即可。
+  - 桥在 UI 线程上直接投递，其他线程才用 `BeginInvoke`（7.5），否则 Closing 里的 `releaseAll` 送不到页面。
+  - SDK 注入外包 `if (window.top === window)`，分发脚本也只在顶层文档生效（7.5）。
+  - 网页版实例没有 `start` 参数也会自动打开宿主（7.1）。
+- 第 5 版调整（正文已同步）：
+  - 截图由 `GraphicsCaptureV2` 改为 `GraphicsCapture`（7.3、7.4）。
+  - 宿主由"锁定 16:9、最小 1280×720"改为客户区固定 1920×1080 物理像素，`ResizeMode="CanMinimize"`，DPI 变化后重新锁定（7.2）。删除了 `WindowAspectRatioBehavior` 的使用、`WS_MAXIMIZEBOX` 处理和 `StateChanged` 兜底。
+  - 网页版实例不创建 MainWindow，宿主成为 `Application.MainWindow`，关闭即退出实例；命令行任务由 `ApplicationHostService.HandleWebViewActivation` 驱动（7.1、7.2）。原来的"随主窗口关闭"逻辑删除。
+  - 删除了看不到的网页版界面改动：MainWindow 徽章（`MainWindowViewModel.IsWebViewInstance` / `InstanceName`）、首页隐藏 Win32 设置和"等待云原神就绪"提示、热键页 InfoBar。
+  - RTC 断开后没有界面可以重新启动截图器，需要关闭宿主后从 Primary 重新启动（7.2）。
+- 新增文件：
+  - `GameTask/Runtime/WebPage/{WebPageGameWindow,WebPageRuntimeProvider}.cs`
+  - `View/Windows/CloudWebHostWindow.xaml(.cs)`
+  - `Service/Instance/{WebViewInstanceStore,WebViewInstanceLauncher}.cs`
+  - `Model/CloudWebInstanceItem.cs`
+- 删除文件：`Core/Input/Backends/WebSdk/WebSdkChannel.cs`。
+- 第 6 版调整（与 feat/yys 的目标对齐，正文已同步）：
+  - 启动参数 `--name` 改为 `--instance-name`；实例名登记到根实例的端点（7.1）。
+  - 数据目录由 `WebView2Instances/<name>` 改为 `WebView2Data/CloudGame/<name>`（7.1）。旧目录不迁移，里面的登录态需要重新登录。
+  - 地址改为固定的 `https://ys.mihoyo.com/cloud/?autobegin=1`，删除 `CloudWebConfig`（7.2）。已保存到 `config.json` 的 `CloudWebConfig` 字段在读取时被忽略。
+  - 补上 WebView2 设置：禁止缩放、关闭状态栏、开发者工具只在 Debug 下可用（7.2）。
+  - 宏回放改走 InputHub；网页版跳过本地原神设置检查（第 10 节）。
 
 P3：渐进收敛。
 
@@ -704,6 +787,7 @@ P3：渐进收敛。
 ### 12.1 Win32（P1 之后）
 
 - 触发频率的检查（必须大于 0）提前到获取运行环境之前，配置不合法时不会先去启动游戏。
+- （P2）获取运行环境期间（例如关联启动游戏时）首页启动按钮显示为"停止"。点击后提交停止请求，游戏仍会启动，但截图器不会绑定。原来这段时间按钮显示为"启动"，也无法中止。
 - 停止后，`InputHub` 换回一个未绑定窗口的 Win32 后端：前台输入照常可用，后台输入只打 warn。
 - 前台是另一个 BetterGI 实例时，本实例的遮罩会隐藏。原来按进程名 "BetterGI" 放行，多个实例的置顶遮罩会叠在一起。
 - WinEventHook 只接收游戏进程的事件，UI 线程上的回调次数明显减少。
@@ -717,11 +801,14 @@ P3：渐进收敛。
 | 宿主失焦 | 截图和全部触发器照常运行，遮罩隐藏 |
 | 任务中的 Sleep / Delay | 不检查前台，不抢焦点；宿主最小化时自动还原 |
 | `ActivateWindow()` | 只从最小化还原，不置前 |
-| 截图方式 | 固定 WGC V2，忽略截图模式配置 |
-| 游戏退出判定 | 宿主窗口关闭，或 RTC 通道连续约 3 秒未就绪。之后只停止截图器，不自动刷新页面或重新绑定 |
+| 截图方式 | 固定 WGC（`GraphicsCapture`），忽略截图模式配置 |
+| 画面尺寸 | 客户区固定 1920×1080 物理像素，不能调整大小；页面固定按 100% 渲染，不跟随系统缩放 |
+| 界面 | 没有主界面，只有宿主窗口；关闭宿主即退出实例 |
+| 游戏退出判定 | 宿主窗口关闭，或 RTC 通道连续约 3 秒未就绪。之后只停止截图器，不自动刷新页面或重新绑定；要继续运行需关闭宿主，从 Primary 重新启动 |
 | 热键 | 不响应任何热键 |
 | 文字输入 `inputText` | 未适配，写本机剪贴板对云端无效 |
 | 遮罩 FPS 指标 | 不反映游戏帧率，因为页面在 WebView2 自己的进程中渲染 |
+| 本地原神设置检查 | 跳过（亮度、灵敏度、小地图等注册表检查，以及安装目录读取）。网页版的游戏设置保存在云端 |
 | 登录、排队、进入游戏 | 由用户在宿主窗口中完成；绑定之后，游戏内的流程与 Win32 相同 |
 
 ## 13. 手动测试
@@ -746,18 +833,22 @@ P3：渐进收敛。
 | # | 场景 | 关注点 |
 | --- | --- | --- |
 | 1 | 新建实例名：非法字符、保留名、与已有名称仅大小写不同 | 都被拒绝，并给出原因 |
-| 2 | 启动实例「A」 | MainWindow 与宿主窗口都显示；登录、排队后自动绑定；数据写入 `WebView2Instances/A` |
-| 3 | 100% 与 150% 缩放的显示器 | 截图尺寸、遮罩位置与画面一致，截到的是游戏画面而不是黑屏 |
+| 2 | 启动实例「A」 | 只显示宿主窗口，没有主界面；页面自动开始游戏，排队后自动绑定；数据写入 `WebView2Data/CloudGame/A`；遮罩启动时日志里没有本地原神的亮度、灵敏度等检查结果 |
+| 3 | 100% 与 150% 缩放的显示器，以及在两者之间拖动宿主 | 客户区始终为 1920×1080 物理像素；截图尺寸、遮罩位置与画面一致，截到的是游戏画面而不是黑屏 |
 | 4 | 识图后点击、键盘移动、视角转动 | 坐标准确，按键不卡住 |
 | 5 | 宿主失焦、被其他窗口完全遮挡 | 任务继续，截图画面不冻结 |
 | 6 | 宿主最小化 | 任务的下一次 Sleep 自动还原窗口 |
-| 7 | 关闭宿主窗口；断网 | 截图器自动停止，没有卡住的按键；再次启动会重新打开宿主 |
+| 7 | 任务运行中关闭宿主窗口 | 没有卡住的按键，实例进程退出 |
 | 8 | 同时运行实例「A」「B」和 Primary | 各自登录不同账号，任务、遮罩、输入互不干扰 |
 | 9 | 实例「A」运行时再次启动「A」 | Primary 禁用启动按钮；手动用命令行启动时提示已在运行 |
 | 10 | 在实例「A」中通过设置页重启 | 重启后仍然是「A」，登录态保留 |
 | 11 | 删除未运行的实例「B」 | 二次确认后，目录被删除，列表中不再出现 |
 | 12 | 在网页版实例的宿主窗口处于前台时按热键 | 网页版实例没有反应；Primary 的热键照常工作 |
 | 13 | 运行中断开 RTC（例如断网或长时间挂机被踢） | 约 3 秒后截图器停止，页面保持原样，不自动刷新 |
+| 14 | 用命令行启动网页版实例并附带一条龙 / 配置组参数 | 进入游戏后自动绑定，并执行对应任务 |
+| 15 | 在宿主中按 Ctrl + 滚轮、Ctrl + +/-、F12 | 页面不缩放；Release 构建打不开开发者工具 |
+| 17 | 100%、150% 缩放下分别打开宿主，并在两块缩放不同的显示器之间拖动；Debug 下在开发者工具里查看 `devicePixelRatio`、`innerWidth` | 始终为 1 和 1920，页面布局与 100% 时相同；登录框能用键盘输入；移动窗口后下拉框位置正确 |
+| 16 | 网页版中运行含键鼠脚本的配置组、AutoBoss 宏路线 | 输入落到页面，桌面前台窗口收不到按键 |
 
 ## 14. 决策记录
 
@@ -774,7 +865,10 @@ P3：渐进收敛。
 | 多实例 | 按实例名运行多个进程，每个进程一个运行环境 | 进程级单例天然隔离；`WebView2InputBridge` 需要和 WebView2 同进程 |
 | 实例名存储 | 每个实例一个目录，不建索引文件 | 数据目录本身就是实例名的唯一来源，不会出现不一致 |
 | 同名互斥 | 命名互斥体，不走 IPC | 不依赖 Primary 是否在线，也不需要改协议 |
-| 截图方式 | 网页版固定 WGC V2，由 Provider 决定 | 截图模式配置由所有实例共享，不能被网页版实例修改 |
+| 截图方式 | 网页版固定 WGC（`GraphicsCapture`），由 Provider 决定 | 维护者指定用 WGC 而不是 V2；截图模式配置由所有实例共享，不能被网页版实例修改 |
+| 宿主尺寸 | 客户区固定 1920×1080 物理像素 | 维护者确认；识图直接工作在 1080P 下，不需要缩放 |
+| 页面缩放 | 固定 `RasterizationScale = 1`，不跟随系统；为此不用 WPF `WebView2` 控件，直接托管 `CoreWebView2Controller` | 维护者要求；WPF 控件不公开 Controller。用 `ZoomFactor = 1/DPI` 抵消也能做到，但缩放比例会有舍入误差，也不影响右键菜单、滚动条等；反射取私有字段则会随 SDK 升级失效 |
+| 网页版界面 | 不显示主界面，宿主即主窗口，关闭即退出 | 维护者确认；实例只用于自动化，任务由启动参数决定 |
 | 画面裁剪 | 不裁剪，约定 WebView 铺满客户区 | 复用现有 WGC 的客户区裁剪，只做几何计算的旧调用点不用改 |
 | 失焦策略 | 由 `IGameWindow.RequiresForeground` 声明 | 是否依赖前台是输入通道的属性，不是任务的属性 |
 | WebSdk 后端 | 后端兼任通道，脚本注入和状态查询收进桥 | 文件从 5 个减到 4 个，宿主只需调用一个方法 |
@@ -784,7 +878,10 @@ P3：渐进收敛。
 | TaskContext.DpiScale | 绑定时快照 | 与现状一致 |
 | 输入后端所有权 | 交给 InputHub；停止时 Attach 一个未绑定后端 | 沿用 InputHub"替换即释放"的规则 |
 | 宿主窗口所有权 | 由 Provider 持有，GameRuntime 不关闭它 | 停止截图器不应关闭游戏 |
-| 页面默认地址 | `https://ys.mihoyo.com/cloud/`，可在 `CloudWebConfig.Url` 中修改 | 维护者确认 |
+| 页面地址 | 固定 `https://ys.mihoyo.com/cloud/?autobegin=1`，不提供配置 | 维护者要求与 feat/yys 对齐；自动开始游戏，配置文件又是所有实例共享的 |
+| 实例名参数与数据目录 | `--instance-name`，`WebView2Data/CloudGame/<name>` | 维护者要求与 feat/yys 对齐 |
+| 实例名登记 | 写入根实例的端点，但根不判重 | 名称对 Primary 可见；判重交给互斥体，避免应用内重启时被误拒 |
+| 宏回放 | 走 `InputHub.Foreground`，不区分后端 | 维护者要求；宏回放是对游戏的模拟操作 |
 | 网页版实例的热键 | 全部不响应 | 维护者确认；同时避开全局热键的跨实例冲突 |
 | 遮挡与后台降频 | 通过浏览器参数禁用 | 降频会影响自动化：WGC 会拿到旧帧，SDK 的按键时序会被拉长 |
 | RTC 断线 | 只停止截图器，并在代码注释中写明 | 维护者确认；自动重连涉及页面状态，本期不做 |

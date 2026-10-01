@@ -64,7 +64,7 @@ public class Win32GameWindow : IGameWindow
     /// </summary>
     public string ProcessName { get; }
 
-    public GameViewport Viewport => new(SystemControl.GetCaptureRect(Handle), DpiHelper.GetScale(Handle).Y);
+    public virtual GameViewport Viewport => new(SystemControl.GetCaptureRect(Handle), DpiHelper.GetScale(Handle).Y);
 
     public virtual bool IsAlive
     {

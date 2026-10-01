@@ -489,6 +489,8 @@ public class SystemControl
         {
             restartArgs.Add(CommandLineOptions.InstanceArgument);
             restartArgs.Add("webview");
+            restartArgs.Add(CommandLineOptions.InstanceNameArgument);
+            restartArgs.Add(InstanceBootstrap.Current.Context.InstanceName ?? string.Empty);
         }
         restartArgs.Add(CommandLineOptions.RestartFromProcessIdArgument);
         restartArgs.Add(Environment.ProcessId.ToString());

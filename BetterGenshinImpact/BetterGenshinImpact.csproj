@@ -38,6 +38,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- 云原神网页版输入 SDK，由 WebView2InputBridge.InstallAsync 读取并注入页面 -->
+		<None Remove="Resources\JavaScript\ys-input-inject.js" />
+		<EmbeddedResource Include="Resources\JavaScript\ys-input-inject.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />

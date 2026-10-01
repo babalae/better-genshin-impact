@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.Runtime.Win32;
+using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
@@ -72,8 +73,12 @@ public partial class App : Application
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
                 var instanceContext = InstanceBootstrap.Current.Context;
+                // 网页版实例带上实例名，例如 WebView(小号A):S1:P1234:T…
+                var instanceTypeLabel = instanceContext.InstanceName is { } instanceName
+                    ? $"{instanceContext.InstanceType}({instanceName})"
+                    : instanceContext.InstanceType.ToString();
                 var instanceIdentity =
-                    $"{instanceContext.InstanceType}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
+                    $"{instanceTypeLabel}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
 
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
@@ -190,7 +195,13 @@ public partial class App : Application
                 // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
                 services.AddSingleton<Win32RuntimeProvider>();
                 services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<Win32RuntimeProvider>());
+                services.AddSingleton<IGameRuntimeProvider, WebPageRuntimeProvider>();
+                services.AddTransient<CloudWebHostWindow>();
+                services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
                 services.AddSingleton<GameRuntimeService>();
+                // 云原神网页版实例：实例名存储与启动器（Primary 首页使用）
+                services.AddSingleton<WebViewInstanceStore>();
+                services.AddSingleton<WebViewInstanceLauncher>();
                 services.AddSingleton<RecognitionTemplateAssetService>();
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();

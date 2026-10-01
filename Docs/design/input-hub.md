@@ -1,6 +1,15 @@
 # BetterGI 输入层 InputHub 设计
 
-> 状态：已实现（第 4 版，Win32 + WebSdk 输入层；网页版宿主与手柄未实现） · 2026-09-30
+> 状态：已实现（第 6 版，Win32 + WebSdk 输入层；手柄未实现） · 2026-09-30
+
+第 6 版变更：宏回放（`KeyMouseMacroPlayer`）移出 L0 白名单，改走 `InputHub.Foreground`，网页版实例中也能回放。见 5.1 和第 8 节。
+
+第 5 版变更：网页版宿主已由 [GameRuntime 设计](game-runtime.md) 实现，WebSdk 后端随之精简。
+- `WebSdkChannel` 并入 `WebSdkInputBackend`，后端兼任通道。
+- `WebView2InputBridge` 只保留 `InstallAsync` 入口，新增 `GetStatusAsync`，删除 `InvokeFailed`。
+- SDK 改为嵌入资源。
+- 后端改由 `GameRuntimeService` 在绑定运行环境时 Attach，不再经过 `TaskContext.Init`。
+- 相关段落（3、5.1、5.2、5.7、5.9、9.3）已同步。
 
 ## 1. 背景
 
@@ -49,8 +58,8 @@ Windows 平台上前台和后台总是同时使用，不存在整体从前台切
 
 | 平台 | 后端 | 由谁接入 |
 | --- | --- | --- |
-| Windows 原神 / Windows 云原神 | Win32（默认）、Gamepad（预留） | `TaskContext.Init(hWnd)` |
-| 云原神网页版 | WebSdk | 宿主，在 `TaskContext.Init` 之后 |
+| Windows 原神 / Windows 云原神 | Win32（默认）、Gamepad（预留） | `Win32RuntimeProvider` 创建，`GameRuntimeService` Attach |
+| 云原神网页版 | WebSdk | `WebPageRuntimeProvider` 创建，`GameRuntimeService` Attach |
 
 ## 4. 改造前
 
@@ -223,23 +232,23 @@ L3 入口层    InputHub
 L2 抽象层    IInputBackend -> IInputChannel -> IKeyboardInput / IMouseInput
                │ InputChannelBase：按下状态、默认动作映射、warn 限频
 L1 后端层    Win32InputBackend     Foreground: SendInputChannel   Background: PostMessageChannel
-             WebSdkInputBackend    Foreground = Background: WebSdkChannel
+             WebSdkInputBackend    Foreground = Background = 自身（后端兼任通道）
              GamepadInputBackend   Foreground = Background: GamepadChannel（预留）
                │
 L0 原始层    Simulation / Fischless.WindowsInput / PostMessageSimulator
              IWebInputBridge <- WebView2InputBridge -> ys-input-inject.js（页面内）
              手柄驱动（预留，本期不定义）
 
-接入         TaskContext.Init(hWnd) -> InputHub.Attach(new Win32InputBackend(hWnd))
-             网页版宿主 -> InputHub.Attach(new WebSdkInputBackend(...))
+接入         IGameRuntimeProvider 创建后端 -> GameRuntimeService 绑定时 InputHub.Attach(runtime.Input)
+             停止时 InputHub.Attach(new Win32InputBackend(IntPtr.Zero))
 ```
 
 规则：
 
 - 只允许上层依赖下层。L4 只能看到 L3 和 L2。
 - L0 只被 L1 引用。白名单：
-  - `KeyMouseMacroPlayer`：宏回放本身就是 Win32 键鼠回放。
   - `RelativeMouseMessageHandler`：把根实例上用户的真实鼠标位移转发到桌面分身的桌面，不是对游戏的模拟操作，不应跟随后端切换。
+- 宏回放（`KeyMouseMacroPlayer`）是对游戏的模拟操作，和其他业务代码一样走 `InputHub.Foreground`，不区分后端。原来它作为"Win32 键鼠回放"在白名单里，网页版实例中会把按键发到桌面前台，第 6 版移出白名单。
 - 命名空间：`BetterGenshinImpact.Core.Input`，后端放在 `Core/Input/Backends/{Win32,WebSdk,Gamepad}`。
 
 ### 5.2 类图
@@ -326,6 +335,8 @@ classDiagram
     class WebSdkInputBackend {
         +IWebInputBridge Sdk
         +WebSdkInputBackend(IWebInputBridge sdk, Func~RECT~ canvasRect)
+        -double RelativeMoveScaleX
+        -double RelativeMoveScaleY
     }
     class GamepadInputBackend {
         <<reserved>>
@@ -336,10 +347,6 @@ classDiagram
         -IntPtr _hWnd
         -Point _pointer
     }
-    class WebSdkChannel {
-        -double RelativeMoveScaleX
-        -double RelativeMoveScaleY
-    }
     class GamepadChannel {
         <<reserved>>
     }
@@ -349,9 +356,8 @@ classDiagram
         +Invoke(string method, params object[] args)
     }
     class WebView2InputBridge {
-        +string BootstrapScript
-        +event InvokeFailed
-        +WebView2InputBridge(CoreWebView2 core, Dispatcher dispatcher)
+        +InstallAsync(CoreWebView2 core)$ Task~WebView2InputBridge~
+        +GetStatusAsync() Task~WebSdkStatus~
     }
     class WebKeyCodes {
         <<static>>
@@ -383,7 +389,7 @@ classDiagram
         <<static>>
     }
 
-    TaskContext ..> InputHub : Init 时 Attach Win32 后端
+    GameRuntimeService ..> InputHub : 绑定运行环境时 Attach 后端
     InputHub --> IInputBackend : 持有当前后端
     IInputBackend --> IInputChannel : Foreground / Background
     IInputChannel --> IKeyboardInput
@@ -398,19 +404,18 @@ classDiagram
     IMouseInput <|.. InputChannelBase
     InputChannelBase <|-- SendInputChannel
     InputChannelBase <|-- PostMessageChannel
-    InputChannelBase <|-- WebSdkChannel
+    InputChannelBase <|-- WebSdkInputBackend : 后端兼任通道
     InputChannelBase <|-- GamepadChannel
     InputChannelBase ..> SimulateKeyHelper : 默认动作映射
 
     Win32InputBackend *-- SendInputChannel : Foreground
     Win32InputBackend *-- PostMessageChannel : Background
-    WebSdkInputBackend *-- WebSdkChannel : 前后台同一实例
     GamepadInputBackend *-- GamepadChannel : 前后台同一实例
 
     SendInputChannel ..> Simulation : L0
     PostMessageChannel --> PostMessageSimulator : L0
-    WebSdkChannel --> IWebInputBridge : L0
-    WebSdkChannel ..> WebKeyCodes
+    WebSdkInputBackend --> IWebInputBridge : L0
+    WebSdkInputBackend ..> WebKeyCodes
     IWebInputBridge <|.. WebView2InputBridge
     WebView2InputBridge ..> YsInputInject : PostWebMessageAsJson
 ```
@@ -482,7 +487,7 @@ public static class InputHub
     public static IInputChannel Foreground => _backend.Foreground;
     public static IInputChannel Background => _backend.Background;
 
-    /// <summary>替换当前后端：旧后端先 ReleaseAll 再 Dispose。只在没有任务运行时调用</summary>
+    /// <summary>替换当前后端并 Dispose 旧后端；停止流程负责在替换前显式 ReleaseAll</summary>
     public static void Attach(IInputBackend backend);
 
     public static void ReleaseAll() => _backend.ReleaseAll();
@@ -544,12 +549,11 @@ WM_KEYUP   = 1 | (scan << 16) | (1 << 30) | (1 << 31)   // 之前为按下 + 状
 
 | 层 | 文件 | 说明 |
 | --- | --- | --- |
-| L1 | `Core/Input/Backends/WebSdk/WebSdkInputBackend.cs` | 后端，前后台返回同一个 `WebSdkChannel` |
-| L1 | `Core/Input/Backends/WebSdk/WebSdkChannel.cs` | 把通道操作翻译成 SDK 函数调用 |
+| L1 | `Core/Input/Backends/WebSdk/WebSdkInputBackend.cs` | 后端兼任通道（继承 `InputChannelBase`），前后台都返回自身；把通道操作翻译成 SDK 函数调用 |
 | L1 | `Core/Input/Backends/WebSdk/WebKeyCodes.cs` | `VK` 到 `KeyboardEvent.code` 的映射表，内容取自 `feat/yys` 的 `ToCode` |
 | L0 | `Core/Input/Backends/WebSdk/IWebInputBridge.cs` | 通用调用接口：`Invoke(method, args)` |
-| L0 | `Core/Input/Backends/WebSdk/WebView2InputBridge.cs` | WebView2 实现，含一段页面侧的分发脚本 |
-| L0 | `Assets/JavaScript/ys-input-inject.js` | 从 `feat/yys` 原样复制，csproj 设为 `PreserveNewest` |
+| L0 | `Core/Input/Backends/WebSdk/WebView2InputBridge.cs` | WebView2 实现：注入 SDK 与页面侧分发脚本、投递调用、查询 SDK 状态 |
+| L0 | `Resources/JavaScript/ys-input-inject.js` | 从 `feat/yys` 原样复制，csproj 设为 `EmbeddedResource`，由 `InstallAsync` 读取注入 |
 
 SDK 的工作方式：脚本通过 webpack 拿到云原神页面内部的 `ClientCore` 模块，直接调用它的键鼠方法，经 RTC 数据通道发给云端。它不派发 DOM 事件，也不需要 Pointer Lock。SDK 自己保存指针位置（`setAbsPosition`），鼠标按键和相对移动默认使用这个位置。
 
@@ -604,9 +608,10 @@ C# -> 页面   { "channel": "bgi.input", "method": "tapKey", "args": ["KeyF"] }
 
 `WebView2InputBridge`：
 
-- 构造参数：`CoreWebView2` 和它所在线程的 `Dispatcher`。
-- `Invoke`：序列化成上面的 JSON，调用 `PostWebMessageAsJson`。不在 UI 线程时用 `Dispatcher.Invoke`，只等到消息投递完成，不等页面执行。
-- 收到 `bgi.input.error` 时打 warn 日志，并触发 `event Action<string, string>? InvokeFailed`（参数为 method、error），由宿主决定是否停止任务。
+- 入口：`static Task<WebView2InputBridge> InstallAsync(CoreWebView2 core)`，在 UI 线程、首次导航前调用。它注入嵌入资源中的 SDK（外包 `if (window.top === window)`，只在顶层文档执行）和分发脚本，然后返回桥。构造函数与分发脚本都是私有的。
+- `Invoke`：序列化成上面的 JSON，调用 `PostWebMessageAsJson`，不等页面执行。UI 线程上直接投递，其他线程用 `Dispatcher.BeginInvoke`（同优先级 FIFO，任务线程不阻塞）。投递失败限频打 warn；桥已释放时同步抛 `InvalidOperationException`。
+- `GetStatusAsync()`：在页面内执行 `window.__ysInputInject?.status()`（异常转成 error 字段），返回 `WebSdkStatus(RtcDataChannelState, GameDataStarted, Error)`，`IsReady` 表示 RTC 为 open 且已进入游戏。宿主每秒轮询一次，用来判断就绪和断开。
+- 收到 `bgi.input.error` 时限频打 warn 日志。原来的 `InvokeFailed` 事件没有订阅者，已删除，页面断开改由状态轮询发现。
 
 灵活性：
 
@@ -640,6 +645,7 @@ C# -> 页面   { "channel": "bgi.input", "method": "tapKey", "args": ["KeyF"] }
 #### 5.7.4 实现要点
 
 ```csharp
+// 第 5 版起并入 WebSdkInputBackend : InputChannelBase, IInputBackend，下面的内容不变
 internal sealed class WebSdkChannel(IWebInputBridge sdk, Func<RECT> canvasRect) : InputChannelBase
 {
     // TODO(云原神网页版)：鼠标相对移动的偏差值尚未实测，暂按 1:1 透传。
@@ -678,17 +684,17 @@ internal sealed class WebSdkChannel(IWebInputBridge sdk, Func<RECT> canvasRect) 
 
 - 坐标：`MoveMouseTo` 收到的是桌面 0~65535 坐标。先按 `PrimaryScreen.WorkingArea` 换算成物理像素（与 `DesktopRegion` 的归一化方式一致），再相对 `canvasRect()` 归一化，截断到 0~1。`canvasRect` 由宿主提供，是游戏画面在屏幕上的物理像素矩形，应与截图区域一致。1080P 换算仍由 `Region` 体系完成，和桌面端一样。
 - 时序：`Invoke` 返回时页面还没执行。页面串行执行，`tapKey` / `click` 会在页面内按住一段时间，后续指令排队等待。按键后接识图时，延时要把页面内的按住时长算进去。
-- 异常：映射表以外的按键、侧键 warn 后忽略。SDK 执行失败（如 RTC 数据通道未打开）由页面回报，桥接打 warn 并触发 `InvokeFailed`。WebView2 已关闭时 `Invoke` 直接抛 `InvalidOperationException`。
+- 异常：映射表以外的按键、侧键 warn 后忽略。SDK 执行失败（如 RTC 数据通道未打开）由页面回报，桥接限频打 warn。桥已释放时 `Invoke` 直接抛 `InvalidOperationException`，`ReleaseAll` 会吞掉这个异常。
 
-#### 5.7.5 宿主接入约定（本期范围外）
+#### 5.7.5 宿主接入（已由 GameRuntime 实现）
 
-宿主按以下步骤接入，输入层不依赖宿主的其他实现：
+宿主即 `CloudWebHostWindow`，接入由 [game-runtime.md](game-runtime.md) 第 7 节实现，输入层不依赖宿主的其他实现：
 
-1. 用 `AddScriptToExecuteOnDocumentCreatedAsync` 注入 `ys-input-inject.js` 和 `WebView2InputBridge.BootstrapScript`。两者顺序无要求，分发脚本在调用时才查找 SDK。
-2. `var bridge = new WebView2InputBridge(webView.CoreWebView2, webView.Dispatcher);`
-3. 在 `TaskContext.Init` 之后调用 `InputHub.Attach(new WebSdkInputBackend(bridge, GetCanvasRect));`。
-4. 订阅 `bridge.InvokeFailed`，决定是否停止任务，例如 RTC 数据通道断开时。
-5. 页面关闭前调用 `InputHub.ReleaseAll()`。
+1. `CloudWebHostWindow` 在 CoreWebView2 初始化后、首次导航前调用 `bridge = await WebView2InputBridge.InstallAsync(core)`。
+2. `WebPageRuntimeProvider` 在游戏就绪后创建 `new WebSdkInputBackend(host.Bridge, () => window.Viewport.ScreenRect)`，画面区域与截图区域一致。
+3. `GameRuntimeService` 绑定时调用 `InputHub.Attach(runtime.Input)`。
+4. 页面断开由宿主轮询 `GetStatusAsync()` 发现，截图器随之停止，不自动重连。
+5. `WebPageGameWindow` 在宿主 Closing 时调用 `InputHub.ReleaseAll()`；Closing 在 UI 线程上触发，`releaseAll` 会被直接投递。
 
 #### 5.7.6 SDK 已知问题
 
@@ -710,16 +716,17 @@ internal sealed class WebSdkChannel(IWebInputBridge sdk, Func<RECT> canvasRect) 
 进程启动
    └─ InputHub 持有 Win32InputBackend(IntPtr.Zero)      // 前台可用，后台 warn
 
-TaskContext.Init(hWnd)
-   └─ InputHub.Attach(new Win32InputBackend(hWnd))
+GameRuntimeService 绑定运行环境（见 game-runtime.md 第 8 节）
+   ├─ Win32：   InputHub.Attach(new Win32InputBackend(hWnd))
+   └─ 网页版：  InputHub.Attach(new WebSdkInputBackend(bridge, () => window.Viewport.ScreenRect))
 
-网页版宿主（TaskContext.Init 之后）
-   └─ InputHub.Attach(new WebSdkInputBackend(bridge, GetCanvasRect))
+GameRuntimeService 解绑运行环境
+   ├─ InputHub.ReleaseAll()
+   └─ InputHub.Attach(new Win32InputBackend(IntPtr.Zero))
 
 InputHub.Attach(backend)
-   1. 旧后端 ReleaseAll()
-   2. Interlocked.Exchange 替换
-   3. 旧后端 Dispose()
+   1. 替换当前后端
+   2. 旧后端 Dispose()
 ```
 
 - 切换：(a,b)、c、d 之间的切换就是 `Attach` 一个新后端，不另设 `Switch`。只在没有任务运行时调用。
@@ -820,7 +827,10 @@ InputHub.Attach(backend)
   现在两条路径统一使用 `ExtendedKeys`，行为与真实键盘一致。默认键位中只有“呼出鼠标”的左 Alt 在原列表里，它走 `SimulateAction`，前后都不带扩展标志，因此默认配置下没有变化；只有改绑到上述按键的用户会受影响。
 - 后台 PostMessage 按键消息对扩展键设置 lParam 第 24 位，之前恒为 0。
 - 键盘接口收到鼠标键 VK 时按鼠标键处理。`TaskControl.TrySuspend` 暂停时会释放所有按下的键，用户此时按住的鼠标键现在也会被释放；之前对鼠标键发的是无效的键盘消息。
-- `TaskContext.Init` 替换后端时会先对旧后端 `ReleaseAll`，其中包含 `Simulation.ReleaseAllKey()` 兜底，与任务结束时的释放行为相同。
+- `InputHub.Attach` 不执行全局按键释放；运行环境停止或绑定失败后的回滚会在替换后端前显式 `ReleaseAll`。
+- （第 6 版）宏回放改走 `InputHub.Foreground`：
+  - 扩展标志改用 `ExtendedKeys`。原来对 `IsExtendedKey` 列表里的键强制不带扩展标志，其余键也不带，相当于所有键都不带；现在方向键、Insert 等带扩展标志，左 Alt 仍然不带。只有录制里包含这些扩展键的宏受影响。
+  - 侧键仍然忽略，与原来一致。
 
 ## 9. 手动测试
 
@@ -849,6 +859,7 @@ InputHub.Attach(backend)
 | 5 | 开启“长按空格 / F 连发”宏，在游戏内长按空格和 F | 连发正常，松开后停止 |
 | 6 | 扩展标志：① 把拾取键改绑到方向键或 Insert，跑自动拾取；② 把“向前移动”改绑到方向键上，跑一段路径追踪；③ 默认左 Alt 呼出鼠标的任务（如需要点击界面的一条龙任务）；④ 脚本 `keyPress("VK_LEFT")` 与 `new PostMessage().KeyPress("VK_LEFT")` | 游戏识别为对应的按键，而不是小键盘按键或右 Alt |
 | 7 | 任务运行中用快捷键暂停，暂停时按住鼠标左键 | 暂停后左键被释放，恢复后任务正常继续 |
+| 8 | 回放一段包含 WASD、左 Alt、方向键和视角转动的键鼠宏 | 与改造前一致；方向键识别为方向键而不是小键盘按键 |
 
 ### 9.3 云原神网页版（宿主接入后）
 
@@ -859,8 +870,9 @@ InputHub.Attach(backend)
 | 3 | 坐标点击：`GameRegion1080PPosClick` 点击界面按钮，如派蒙菜单项、背包格子 | 点击位置准确 |
 | 4 | 滚轮：在背包、商店列表里滚动 | 方向和步长与桌面端一致，用来确认 5.7.4 的滚轮 TODO |
 | 5 | 原后台调用：自动剧情、尘歌壶任务 | 经 `Background` 通道落到 SDK，行为与前台调用一致 |
-| 6 | 断开网络或刷新页面后发送输入 | 日志里有 SDK 报错，`InvokeFailed` 被触发 |
+| 6 | 断开网络或刷新页面后发送输入 | 日志里有 SDK 报错（限频）；约 3 秒后宿主判定断开，截图器停止 |
 | 7 | 侧键 | 只打 warn，不中断任务 |
+| 8 | 宏回放：配置组里的键鼠脚本、JS `keyMouseScript.run`、AutoBoss 的宏路线 | 输入落到页面，桌面前台窗口收不到任何按键 |
 
 ## 10. 决策记录
 
