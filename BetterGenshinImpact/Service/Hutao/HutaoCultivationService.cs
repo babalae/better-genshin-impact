@@ -29,7 +29,7 @@ internal sealed class HutaoCultivationService : IHutaoCultivationService
 
     public async Task<(bool Started, string Message)> FetchAndFarmAsync()
     {
-        AutomationCultivationProject? project = hutaoNamedPipe.TryQueryCurrentCultivationProject();
+        AutomationCultivationProject? project = await Task.Run(hutaoNamedPipe.TryQueryCurrentCultivationProject);
         if (project is null)
         {
             return (false, "未能获取胡桃养成存档，请确认胡桃已运行并选中养成项目");
