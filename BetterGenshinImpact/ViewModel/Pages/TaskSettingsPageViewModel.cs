@@ -672,18 +672,23 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchHutaoCultivation()
     {
-        SwitchHutaoCultivationEnabled = true;
-        (bool started, string message) = await _hutaoCultivationService.FetchAndFarmAsync();
-        if (started)
+        try
         {
-            Toast.Success(message);
+            SwitchHutaoCultivationEnabled = true;
+            (bool started, string message) = await _hutaoCultivationService.FetchAndFarmAsync();
+            if (started)
+            {
+                Toast.Success(message);
+            }
+            else
+            {
+                Toast.Warning(message);
+            }
         }
-        else
+        finally
         {
-            Toast.Warning(message);
+            SwitchHutaoCultivationEnabled = false;
         }
-
-        SwitchHutaoCultivationEnabled = false;
     }
 
     [RelayCommand]
