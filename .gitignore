@@ -29,6 +29,9 @@ github_actions_cache/
 
 *.zip
 
+# WPF temporary project files
+*_wpftmp.csproj
+
 # Rider
 .idea
 
