@@ -54,18 +54,38 @@ public class KeyMouseHook: IDisposable
     /// <param name="eventType">事件类型描述</param>
     private void HandleCallbackException(Exception ex, string eventType)
     {
+        bool isCanceled = ex is OperationCanceledException
+            || (ex is ScriptEngineException see && IsTaskCanceledInside(see));
+
         if (ex is ScriptEngineException scriptEx)
         {
-            _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message); 
-            _logger.LogDebug("{scriptEx}",scriptEx);
+            if (!isCanceled)
+            {
+                _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message);
+                _logger.LogDebug("{scriptEx}",scriptEx);
+            }
         }
         else
         {
-            _logger.LogError("执行{eventType}回调时发生错误:{ex.Message}，清除所有回调,如果此异常出现在JS脚本结束时,请在JS脚本结束前手动调用Dispose()方法",eventType,ex.Message);
-            _logger.LogDebug("{ex}",ex);
+            if (!isCanceled)
+            {
+                _logger.LogError("执行{eventType}回调时发生错误:{ex.Message}，清除所有回调,如果此异常出现在JS脚本结束时,请在JS脚本结束前手动调用Dispose()方法",eventType,ex.Message);
+                _logger.LogDebug("{ex}",ex);
+            }
         }
 
         Dispose();
+    }
+
+    private static bool IsTaskCanceledInside(Exception ex)
+    {
+        var inner = ex.InnerException;
+        while (inner != null)
+        {
+            if (inner is OperationCanceledException) return true;
+            inner = inner.InnerException;
+        }
+        return false;
     }
     
     /// <summary>
