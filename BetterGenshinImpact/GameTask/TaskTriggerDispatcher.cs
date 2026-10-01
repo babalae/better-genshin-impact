@@ -29,11 +29,9 @@ namespace BetterGenshinImpact.GameTask
 {
     public class TaskTriggerDispatcher : IDisposable
     {
-        private readonly ILogger<TaskTriggerDispatcher> _logger = App.GetLogger<TaskTriggerDispatcher>();
-        private readonly OverlayMetricsService? _metricsService = App.GetService<OverlayMetricsService>();
-        private readonly CustomHtmlMaskService? _customHtmlMaskService = App.GetService<CustomHtmlMaskService>();
-
-        private static TaskTriggerDispatcher? _instance;
+        private readonly ILogger<TaskTriggerDispatcher> _logger;
+        private readonly OverlayMetricsService _metricsService;
+        private readonly CustomHtmlMaskService _customHtmlMaskService;
 
         private readonly System.Timers.Timer _timer = new();
 
@@ -78,9 +76,9 @@ namespace BetterGenshinImpact.GameTask
         private volatile GameRuntime? _runtime;
 
         /// <summary>
-        /// 当前运行环境的截图器，未启动时为 null
+        /// 仅供本类保存截图使用；当前运行环境的截图器，未启动时为 null
         /// </summary>
-        public IGameCapture? GameCapture => _runtime?.Capture;
+        private IGameCapture? GameCapture => _runtime?.Capture;
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
@@ -99,42 +97,28 @@ namespace BetterGenshinImpact.GameTask
         private DateTime PrevGameUiChangeTime = DateTime.Now; // 上一次UI变化时间
         
 
-        public TaskTriggerDispatcher()
+        public TaskTriggerDispatcher(
+            ILogger<TaskTriggerDispatcher> logger,
+            OverlayMetricsService metricsService,
+            CustomHtmlMaskService customHtmlMaskService)
         {
-            _instance = this;
+            _logger = logger;
+            _metricsService = metricsService;
+            _customHtmlMaskService = customHtmlMaskService;
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
         }
 
         public static TaskTriggerDispatcher Instance()
         {
-            if (_instance == null)
-            {
-                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
-            }
-
-            return _instance;
-        }
-
-        public static IGameCapture GlobalGameCapture
-        {
-            get
-            {
-                _instance = Instance();
-
-                if (_instance.GameCapture == null)
-                {
-                    throw new Exception("截图器未初始化!");
-                }
-
-                return _instance.GameCapture;
-            }
+            return App.GetService<TaskTriggerDispatcher>()
+                   ?? throw new InvalidOperationException("调度器未注册");
         }
 
         /// <summary>
-        /// 调度器可能还没创建（例如截图器从未启动过），此时返回 null
+        /// 兼容旧调用方，从 DI 容器获取调度器；截图器是否已启动应查看当前 GameRuntime
         /// </summary>
-        public static TaskTriggerDispatcher? InstanceNullable() => _instance;
+        public static TaskTriggerDispatcher? InstanceNullable() => App.GetService<TaskTriggerDispatcher>();
 
         /// <summary>
         /// 任务开始：进入任务模式并清空启用名单。用户开启的触发器在下一帧停用

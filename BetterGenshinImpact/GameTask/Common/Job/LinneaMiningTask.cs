@@ -261,7 +261,9 @@ public class LinneaMiningTask
     private (MineralCluster? cluster, double centerX, double centerY) FindNearestMineralCluster()
     {
         var systemInfo = TaskContext.Instance().SystemInfo;
-        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
+        var capture = TaskContext.Instance().Runtime?.Capture
+                      ?? throw new InvalidOperationException("截图器未初始化!");
+        var image = CaptureGameImage(capture);
         var ra = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
 
         // SaveDebugImage(ra.SrcMat);
