@@ -2549,6 +2549,33 @@
                         </ui:Button.Style>
                     </ui:Button>
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 消息格式}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 选择文字消息的发送格式，不影响图片发送}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                              Width="120"
+                              Margin="0,0,36,0"
+                              HorizontalAlignment="Right"
+                              SelectedValue="{Binding Config.NotificationConfig.QqMessageFormat, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="{i18n:T 普通消息}" Tag="text" />
+                        <ComboBoxItem Content="Markdown" Tag="markdown" />
+                    </ComboBox>
+                </Grid>
                 <ui:TextBlock Margin="16,0,16,0"
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                               Text="{Binding QqStatus}"

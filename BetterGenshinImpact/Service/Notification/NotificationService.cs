@@ -363,7 +363,8 @@ public class NotificationService : IHostedService, IDisposable
             _notificationConfig.QqAppId,
             _notificationConfig.QqClientSecret,
             _notificationConfig.QqOpenId,
-            _notificationConfig.QqGroupOpenId
+            _notificationConfig.QqGroupOpenId,
+            _notificationConfig.QqMessageFormat
         ));
     }
 
