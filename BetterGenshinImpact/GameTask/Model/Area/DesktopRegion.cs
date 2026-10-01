@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
 using Fischless.GameCapture;
@@ -20,6 +21,14 @@ public class DesktopRegion : Region
     }
 
     public DesktopRegion() : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
+    {
+    }
+
+    /// <summary>
+    /// 截图区域树的根。从它派生的所有区域都绘制到这个遮罩窗口绘制入口
+    /// </summary>
+    public DesktopRegion(IMaskWindowDrawingBoard? drawingBoard)
+        : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height, drawingBoard: drawingBoard)
     {
     }
 

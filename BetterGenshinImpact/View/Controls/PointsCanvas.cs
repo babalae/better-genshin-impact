@@ -73,6 +73,28 @@ public class PointsCanvas : FrameworkElement
             new PropertyMetadata(null));
 
     /// <summary>
+    /// 可视区域（2048 级地图坐标），由 VM 绑定
+    /// </summary>
+    public static readonly DependencyProperty ViewportProperty =
+        DependencyProperty.Register(
+            nameof(Viewport),
+            typeof(Rect),
+            typeof(PointsCanvas),
+            new PropertyMetadata(Rect.Empty, OnViewportChanged));
+
+    public Rect Viewport
+    {
+        get => (Rect)GetValue(ViewportProperty);
+        set => SetValue(ViewportProperty, value);
+    }
+
+    private static void OnViewportChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var rect = (Rect)e.NewValue;
+        ((PointsCanvas)d).UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height);
+    }
+
+    /// <summary>
     /// 点击命令
     /// </summary>
     public ICommand PointClickCommand
@@ -608,7 +630,7 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 更新可视区域
     /// </summary>
-    public void UpdateViewport(double x, double y, double width, double height)
+    private void UpdateViewport(double x, double y, double width, double height)
     {
         var newRect = new Rect(x, y, width, height);
         if (newRect.Equals(_viewportRect))

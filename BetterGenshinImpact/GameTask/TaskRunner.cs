@@ -3,7 +3,6 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 
 using BetterGenshinImpact.View;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -14,7 +13,6 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using BetterGenshinImpact.ViewModel;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -156,24 +154,14 @@ public class TaskRunner
 
         // 清空实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();
-        
-        // 隐藏地图遮罩
-        UIDispatcherHelper.Invoke(() =>
-        {
-            if (MaskWindow.InstanceNullable() != null)
-            {
-                if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
-                {
-                    vm.IsInBigMapUi = false;
-                }
-            }
-        });
-        VisionContext.Instance().DrawContent.ClearAll(); 
-        
-        // 激活原神窗口
-        var maskWindow = MaskWindow.Instance();
+
+        // 隐藏地图遮罩、清空绘制内容（上面已确认截图器在运行，当前运行环境一定存在）
+        var runtime = TaskContext.Instance().Runtime;
+        runtime?.MaskWindowMapState.Reset();
+        runtime?.MaskWindowDrawingBoard.ClearAll();
+
+        // 激活原神窗口；遮罩的显示由下一帧上报给 IMaskWindowHost 后自动恢复
         SystemControl.ActivateWindow();
-        maskWindow.Invoke(maskWindow.Show);
     }
 
     public void End()
@@ -189,7 +177,7 @@ public class TaskRunner
         TaskTriggerDispatcher.Instance().ClearTriggers();
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
 
-        VisionContext.Instance().DrawContent.ClearAll();
+        TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         HtmlMaskWindow.CloseAll();
     }
 

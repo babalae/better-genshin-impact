@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
@@ -25,8 +26,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250314164703100_FishBite_Succeeded_FP.png");
 
             FakeInputChannel input = new FakeInputChannel();
-            FakeDrawContent drawContent = new FakeDrawContent();
-            var imageRegion1 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent);
+            IMaskWindowDrawingBoard drawingBoard = NullMaskWindowDrawingBoard.Instance;
+            var imageRegion1 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawingBoard);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -41,7 +42,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1], bb!))
                         .Parallel("下杆中", new ParallelPolicy.SuccessOnOne())
                             .CheckThrowRod("检查抛竿结果", logger, timeProvider)    // todo 后面串联一个召回率高的下杆中检测方法
-                            .CheckFishBite("自动提竿", logger, OcrService, drawContent)
+                            .CheckFishBite("自动提竿", logger, OcrService)
                             .FishBiteTimeout("下杆超时检查", 15, logger, input, timeProvider)
                         .End()
                     .End()
@@ -56,7 +57,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250306111749714_CheckThrowRod_Succeeded.png");   // 一张正常下杆的图片
-            var imageRegion2 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawContent);
+            var imageRegion2 = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawingBoard);
 
             blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -68,7 +69,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                             .CheckRaiseHook("检查提竿结果", logger, timeProvider)
                             .Sequence("拉条序列", true)
                                 .GetFishBoxArea("等待拉条出现", logger, false, timeProvider)
-                                .Fishing("钓鱼拉条", logger, false, input, timeProvider, drawContent)
+                                .Fishing("钓鱼拉条", logger, false, input, timeProvider)
                             .End()
                         .End()
                     .End()

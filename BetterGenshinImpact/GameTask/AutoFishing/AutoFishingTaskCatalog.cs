@@ -2,7 +2,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.View.Drawable;
 using CsTrees.Blackboard;
 using CsTrees.FluentBuilder;
 using BetterGenshinImpact.Core.Input;
@@ -43,8 +42,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             ILogger logger,
             BgiYoloPredictor predictor,
             Blackboard blackboard,
-            TimeProvider? timeProvider = null,
-            DrawContent? drawContent = null) => new GetFishpond(name, logger, predictor, blackboard, timeProvider, drawContent);
+            TimeProvider? timeProvider = null) => new GetFishpond(name, logger, predictor, blackboard, timeProvider);
 
         public FindFishTimeout FindFishTimeout(
             string name,
@@ -85,8 +83,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             IInputChannel input,
             BgiYoloPredictor predictor,
             Blackboard blackboard,
-            TimeProvider? timeProvider = null,
-            DrawContent? drawContent = null) => new LiftRod(name, logger, input, predictor, blackboard, timeProvider, drawContent);
+            TimeProvider? timeProvider = null) => new LiftRod(name, logger, input, predictor, blackboard, timeProvider);
 
         public Cast Cast(
             string name,
@@ -110,9 +107,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             ILogger logger,
             IOcrService ocrService,
             Blackboard blackboard,
-            DrawContent? drawContent = null,
             CultureInfo? cultureInfo = null,
-            IStringLocalizer? stringLocalizer = null) => new CheckFishBite(name, logger, ocrService, blackboard, drawContent, cultureInfo, stringLocalizer);
+            IStringLocalizer? stringLocalizer = null) => new CheckFishBite(name, logger, ocrService, blackboard, cultureInfo, stringLocalizer);
 
         public RaiseHook RaiseHook(
             string name,
@@ -148,8 +144,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             bool saveScreenshotOnError,
             IInputChannel input,
             Blackboard blackboard,
-            TimeProvider? timeProvider = null,
-            DrawContent? drawContent = null) => new Fishing(name, logger, saveScreenshotOnError, input, blackboard, timeProvider, drawContent);
+            TimeProvider? timeProvider = null) => new Fishing(name, logger, saveScreenshotOnError, input, blackboard, timeProvider);
 
         public BubbleAbortCheck BubbleAbortCheck(
             string name,

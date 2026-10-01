@@ -25,7 +25,7 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -92,9 +92,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private static readonly Rect HandbookTrackActionButtonRoi = new(ScaleTo1080(1120), ScaleTo1080(680), ScaleTo1080(700), ScaleTo1080(320));
     private static readonly System.Drawing.Pen OcrOverlayPen = new(System.Drawing.Color.Lime, 2);
     private static readonly object PickLock = new();
-    private bool _overlayDisplayTemporarilyEnabled;
-    private bool _overlayDisplayOriginalValue;
-    private DateTime _lastMaskBringTopTime = DateTime.MinValue;
     private bool _friendshipTeamSwitched;
 
     public string Name => "自动地脉花";
@@ -113,7 +110,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             Initialize();
-            EnsureMaskOverlayVisible();
             var runTimesValue = await HandleResinExhaustionMode();
             if (runTimesValue <= 0)
             {
@@ -154,7 +150,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 finally
                 {
                     ClearOcrOverlayKeys();
-                    RestoreMaskOverlayVisible();
                 }
             }
             finally
@@ -1655,9 +1650,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return HasRewardPrompt(capture);
     }
 
+    /// <summary>
+    /// 在遮罩上标出本次 OCR 的区域。功能提示类分组不受「显示识别结果」开关影响，Dispose 时清除
+    /// </summary>
     private IDisposable DrawOcrOverlayScope(ImageRegion capture, string key, params Rect[] rois)
     {
-        var drawList = new List<RectDrawable>(rois.Length);
+        var group = new MaskWindowDrawingGroup(key, MaskWindowDrawingKind.Feature);
+        var drawList = new List<MaskWindowDrawingShape>(rois.Length);
         foreach (var roi in rois)
         {
             var clamped = roi.ClampTo(capture.Width, capture.Height);
@@ -1666,98 +1665,25 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 continue;
             }
 
-            drawList.Add(capture.ToRectDrawable(clamped, key, OcrOverlayPen));
+            drawList.Add(capture.ToMaskWindowDrawingRect(clamped, OcrOverlayPen));
         }
 
-        var drawContent = VisionContext.Instance().DrawContent;
-        drawContent.PutOrRemoveRectList(key, drawList.Count > 0 ? drawList : null);
-        RefreshMaskWindowForOverlay();
-        return new OcrOverlayScope(drawContent, key, RefreshMaskWindowForOverlay);
+        capture.DrawingBoard.Set(group, drawList);
+        return capture.DrawingBoard.Scope(group);
     }
 
     private void ClearOcrOverlayKeys()
     {
-        var drawContent = VisionContext.Instance().DrawContent;
-        drawContent.RemoveRect(OcrFlowOverlayKey);
-        drawContent.RemoveRect(OcrFightOverlayKey);
-        drawContent.PutOrRemoveTextList(OcrFlowOverlayKey, null);
-        drawContent.PutOrRemoveTextList(OcrFightOverlayKey, null);
-        RefreshMaskWindowForOverlay();
+        // 任务结束时截图区域已释放，从当前运行环境取；截图器已停止时解绑已清空，这里不做任何事
+        var drawingBoard = TaskContext.Instance().Runtime?.MaskWindowDrawingBoard;
+        drawingBoard?.Clear(OcrFlowOverlayKey);
+        drawingBoard?.Clear(OcrFightOverlayKey);
     }
 
     private async Task WaitOcrOverlayRenderTick()
     {
         await Task.Yield();
         await Task.Delay(OcrOverlayRenderLeadMs, _ct);
-    }
-
-    private void EnsureMaskOverlayVisible()
-    {
-        var config = TaskContext.Instance().Config.MaskWindowConfig;
-        _overlayDisplayOriginalValue = config.DisplayRecognitionResultsOnMask;
-        if (!config.DisplayRecognitionResultsOnMask)
-        {
-            config.DisplayRecognitionResultsOnMask = true;
-            _overlayDisplayTemporarilyEnabled = true;
-        }
-
-        var maskWindow = MaskWindow.InstanceNullable();
-        if (maskWindow != null)
-        {
-            maskWindow.Invoke(() =>
-            {
-                maskWindow.Topmost = true;
-                if (!maskWindow.IsVisible)
-                {
-                    maskWindow.Show();
-                }
-
-                maskWindow.BringToTop();
-            });
-        }
-    }
-
-    private void RestoreMaskOverlayVisible()
-    {
-        if (!_overlayDisplayTemporarilyEnabled)
-        {
-            return;
-        }
-
-        TaskContext.Instance().Config.MaskWindowConfig.DisplayRecognitionResultsOnMask = _overlayDisplayOriginalValue;
-        _overlayDisplayTemporarilyEnabled = false;
-    }
-
-    private void RefreshMaskWindowForOverlay()
-    {
-        var maskWindow = MaskWindow.InstanceNullable();
-        if (maskWindow == null)
-        {
-            return;
-        }
-
-        var now = DateTime.UtcNow;
-        var shouldBringTop = now - _lastMaskBringTopTime > TimeSpan.FromSeconds(1);
-        if (shouldBringTop)
-        {
-            _lastMaskBringTopTime = now;
-        }
-
-        maskWindow.Invoke(() =>
-        {
-            maskWindow.Topmost = true;
-            if (!maskWindow.IsVisible)
-            {
-                maskWindow.Show();
-            }
-
-            if (shouldBringTop)
-            {
-                maskWindow.BringToTop();
-            }
-
-            maskWindow.Refresh();
-        });
     }
 
     private async Task<bool> TryUseRewardResin()
@@ -2625,24 +2551,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         public int CondensedResinTimes { get; set; }
         public int TransientResinTimes { get; set; }
         public int FragileResinTimes { get; set; }
-    }
-
-    private sealed class OcrOverlayScope(DrawContent drawContent, string key, Action refreshAction) : IDisposable
-    {
-        private bool _disposed;
-
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-            drawContent.RemoveRect(key);
-            drawContent.PutOrRemoveTextList(key, null);
-            refreshAction();
-        }
     }
 
     private sealed class AutoFightConfigScope(AllConfig allConfig, AutoFightConfig originalConfig) : IDisposable

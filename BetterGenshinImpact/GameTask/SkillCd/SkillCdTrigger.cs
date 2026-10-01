@@ -5,7 +5,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
@@ -24,6 +24,11 @@ namespace BetterGenshinImpact.GameTask.SkillCd;
 /// </summary>
 public class SkillCdTrigger : ITaskTrigger
 {
+    /// <summary>
+    /// 技能 CD 遮罩文字的分组名，AutoCombo 接管显示时共用
+    /// </summary>
+    public const string OverlayKey = "SkillCdText";
+
     public string Name => "SkillCd";
     public bool IsEnabled
     {
@@ -82,10 +87,10 @@ public class SkillCdTrigger : ITaskTrigger
     /// 挂起本触发器：外部任务（如 AutoCombo）接管 CD 遮罩显示期间调用，
     /// 同时清掉自己的遮罩文字，避免两套显示叠加
     /// </summary>
-    public static void Suspend()
+    public static void Suspend(IMaskWindowDrawingBoard drawingBoard)
     {
         _suspended = true;
-        VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+        drawingBoard.Clear(OverlayKey);
     }
 
     /// <summary>
@@ -138,7 +143,8 @@ public class SkillCdTrigger : ITaskTrigger
 
         if (!IsEnabled)
         {
-            VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+            // 触发器实例跨运行环境复用，绘制入口每次从当前运行环境取；未启动时没有可清的内容
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.Clear(OverlayKey);
             _wasEnabled = false;
         }
     }
@@ -148,13 +154,14 @@ public class SkillCdTrigger : ITaskTrigger
     /// </summary>
     public void OnCapture(CaptureContent content)
     {
+        var drawingBoard = content.CaptureRectArea.DrawingBoard;
         var enabled = IsEnabled;
         if (!enabled)
         {
             // 仅在启用→禁用的状态变化边沿清理一次遮罩文字，避免每帧重复清 key
             if (_wasEnabled)
             {
-                VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+                drawingBoard.Clear(OverlayKey);
             }
             _wasEnabled = enabled;
             return;
@@ -219,7 +226,7 @@ public class SkillCdTrigger : ITaskTrigger
         {
             if (_wasInContext)
             {
-                VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+                drawingBoard.Clear(OverlayKey);
                 _wasInContext = false;
                 _contextEnterTime = DateTime.MinValue;
                 _lastActiveIndex = -1;
@@ -399,7 +406,7 @@ public class SkillCdTrigger : ITaskTrigger
             content.CaptureRectArea.Y
         );
 
-        UpdateOverlay();
+        UpdateOverlay(drawingBoard);
     }
 
     /// <summary>
@@ -629,13 +636,11 @@ public class SkillCdTrigger : ITaskTrigger
     /// <summary>
     /// 更新 UI 层渲染
     /// </summary>
-    private void UpdateOverlay()
+    private void UpdateOverlay(IMaskWindowDrawingBoard drawingBoard)
     {
-        var drawContent = VisionContext.Instance().DrawContent;
-
         if (_isSyncingTeam)
         {
-            drawContent.PutOrRemoveTextList("SkillCdText", null);
+            drawingBoard.Clear(OverlayKey);
             return;
         }
 
@@ -645,11 +650,8 @@ public class SkillCdTrigger : ITaskTrigger
 
         if (validAvatarCount != 4)
         {
-            // 不是4人，确保清空
-            if (drawContent.TextList.ContainsKey("SkillCdText"))
-            {
-               drawContent.PutOrRemoveTextList("SkillCdText", null);
-            }
+            // 不是4人，确保清空（分组不存在时 Clear 不会触发重绘）
+            drawingBoard.Clear(OverlayKey);
             return;
         }
 
@@ -662,6 +664,6 @@ public class SkillCdTrigger : ITaskTrigger
             }
         }
 
-        SkillCdOverlayRenderer.Update("SkillCdText", slotCds);
+        SkillCdOverlayRenderer.Update(drawingBoard, OverlayKey, slotCds);
     }
 }

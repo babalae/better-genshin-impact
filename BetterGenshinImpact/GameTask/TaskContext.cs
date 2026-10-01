@@ -80,7 +80,7 @@ namespace BetterGenshinImpact.GameTask
             if (runtime is not null)
             {
                 var viewport = runtime.Window.Viewport;
-                SystemInfo = new SystemInfo(viewport);
+                SystemInfo = new SystemInfo(viewport, runtime.MaskWindowDrawingBoard);
                 DpiScale = viewport.DpiScale;
                 GameHandle = runtime.Window.Handle;
             }

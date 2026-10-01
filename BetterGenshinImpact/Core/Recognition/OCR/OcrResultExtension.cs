@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
-using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
@@ -35,17 +31,6 @@ public static class OcrResultExtension
                 return item.Rect.BoundingRect();
 
         return default;
-    }
-
-    public static List<RectDrawable> ToRectDrawableList(this OcrResult result, Pen? pen = null)
-    {
-        return result.Regions.Select(item => item.Rect.BoundingRect().ToRectDrawable(pen)).ToList();
-    }
-
-    public static List<RectDrawable> ToRectDrawableListOffset(this OcrResult result, int offsetX, int offsetY,
-        Pen? pen = null)
-    {
-        return result.Regions.Select(item => item.Rect.BoundingRect().ToRectDrawable(offsetX, offsetY, pen)).ToList();
     }
 
     public static PaddleOcrResultRect ToOcrResultRect(this OcrResultRegion region)

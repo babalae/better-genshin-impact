@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
@@ -25,7 +26,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -53,9 +54,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\202503012143011486@900p.png");
-            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawContent: new FakeDrawContent());
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
             Mat mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\20250306111752769_GetFishBoxArea_Succeeded.png");
-            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawContent: new FakeDrawContent());
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
 
@@ -69,7 +70,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                             .CheckRaiseHook("-", logger, fakeTimeProvider)
                             .Sequence("-", true)
                                 .GetFishBoxArea("-", logger, false, fakeTimeProvider)
-                                .Fishing("-", logger, false, new FakeInputChannel(), fakeTimeProvider, drawContent: new FakeDrawContent())
+                                .Fishing("-", logger, false, new FakeInputChannel(), fakeTimeProvider)
                             .End()
                         .End()
                     .End()

@@ -10,7 +10,6 @@ using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
-using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -120,8 +119,8 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
-            // 清理画布
-            VisionContext.Instance().DrawContent.ClearAll();
+            // 清理画布：绘制内容属于当前运行环境，未启动时没有可清的内容
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
 
         ReloadAssets();
@@ -159,8 +158,8 @@ internal class GameTaskManager
                 TriggerDictionary.GetValueOrDefault(triggerName)?.Init();
             }
 
-            // 清理画布
-            VisionContext.Instance().DrawContent.ClearAll();
+            // 清理画布：绘制内容属于当前运行环境，未启动时没有可清的内容
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 

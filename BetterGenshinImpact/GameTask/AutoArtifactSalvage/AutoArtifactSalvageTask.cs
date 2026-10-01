@@ -12,7 +12,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using Microsoft.Extensions.Localization;
@@ -341,9 +341,8 @@ public class AutoArtifactSalvageTask : ISoloTask
                 using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
                 ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
                 string drawKey = "ArtifactSetFilter";
-                var drawRectList = new List<RectDrawable>();
-                var drawTextList = new List<TextDrawable>();
-                gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
+                var drawShapes = new List<MaskWindowDrawingShape>();
+                gridScreen.OnBeforeScroll += () => { TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.Clear(drawKey); drawShapes.Clear(); };
                 try
                 {
                     await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
@@ -353,19 +352,17 @@ public class AutoArtifactSalvageTask : ISoloTask
                         string? predName = iconRecognizer.Recognize(img125);
                         if (predName == null)
                         {
-                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey);
-                            drawRectList.Add(rectDrawable);
-                            VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
-                            drawTextList.Add(new TextDrawable("识别失败", new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
-                            VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
+                            var rect = itemRegion.SelfToMaskWindowDrawingRect();
+                            drawShapes.Add(rect);
+                            drawShapes.Add(new MaskWindowDrawingText("识别失败", new System.Windows.Point(rect.Bounds.X + rect.Bounds.Width / 3, rect.Bounds.Y)));
+                            itemRegion.DrawingBoard.Set(drawKey, drawShapes);
                         }
                         else
                         {
-                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, System.Drawing.Pens.Lime);
-                            drawRectList.Add(rectDrawable);
-                            VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
-                            drawTextList.Add(new TextDrawable(predName, new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
-                            VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
+                            var rect = itemRegion.SelfToMaskWindowDrawingRect(System.Drawing.Pens.Lime);
+                            drawShapes.Add(rect);
+                            drawShapes.Add(new MaskWindowDrawingText(predName, new System.Windows.Point(rect.Bounds.X + rect.Bounds.Width / 3, rect.Bounds.Y)));
+                            itemRegion.DrawingBoard.Set(drawKey, drawShapes);
                             if (this.artifactSetFilter.Contains(predName))
                             {
                                 itemRegion.Click();
@@ -376,7 +373,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 }
                 finally
                 {
-                    VisionContext.Instance().DrawContent.ClearAll();
+                    TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
                 }
                 // 点击确认筛选
                 using var confirmFilterBtnRegion = CaptureToRectArea();
@@ -412,7 +409,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         GridParams gridParams = GridParams.Templates[GridScreenName.ArtifactSalvage];
         GridScreen gridScreen = new GridScreen(gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         try
         {
             await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
@@ -473,7 +470,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 

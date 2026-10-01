@@ -3,7 +3,6 @@ using System;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
@@ -82,7 +81,7 @@ public class QuickBuyTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
@@ -24,6 +25,7 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Mask;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
@@ -183,6 +185,18 @@ public partial class App : Application
                 services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<CustomHtmlMaskService>();
+
+                // 遮罩窗口：业务侧只依赖 IMaskWindowDrawingBoard / IMaskWindowHost / IMaskWindowMapState
+                services.AddSingleton<MaskWindowDrawingBoard>();
+                services.AddSingleton<IMaskWindowDrawingBoard>(sp => sp.GetRequiredService<MaskWindowDrawingBoard>());
+                services.AddSingleton<IMaskWindowSnapshotSource<MaskWindowDrawingSnapshot>>(sp => sp.GetRequiredService<MaskWindowDrawingBoard>());
+                services.AddSingleton<MaskWindowMapState>();
+                services.AddSingleton<IMaskWindowMapState>(sp => sp.GetRequiredService<MaskWindowMapState>());
+                services.AddSingleton<IMaskWindowSnapshotSource<MaskWindowMapSnapshot>>(sp => sp.GetRequiredService<MaskWindowMapState>());
+                services.AddSingleton<MaskWindowViewModel>();
+                services.AddTransient<MaskWindow>();
+                services.AddSingleton<Func<MaskWindow>>(sp => () => sp.GetRequiredService<MaskWindow>());
+                services.AddSingleton<IMaskWindowHost, MaskWindowHost>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticState>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());

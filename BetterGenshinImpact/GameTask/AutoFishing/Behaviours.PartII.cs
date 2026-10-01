@@ -7,7 +7,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using Compunet.YoloSharp;
 using CsTrees;
 using CsTrees.Blackboard;
@@ -149,7 +149,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 sleep(1000);
-                VisionContext.Instance().DrawContent.ClearAll();
+                imageRegion.DrawingBoard.ClearAll();
 
                 var oneFourthX = imageRegion.CacheImage.Width / 4;
                 var threeFourthX = imageRegion.CacheImage.Width * 3 / 4;

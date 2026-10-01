@@ -2,7 +2,6 @@ using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -70,7 +69,7 @@ public class OneKeyExpeditionTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 }

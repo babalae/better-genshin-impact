@@ -1,7 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -49,7 +48,7 @@ public class ExpeditionTask
         }
 
         TaskControl.Logger.LogInformation("探索派遣：{Text}", "重新派遣完成");
-        VisionContext.Instance().DrawContent.ClearAll();
+        content.CaptureRectArea.DrawingBoard.ClearAll();
     }
 
     private void InitConfig()
