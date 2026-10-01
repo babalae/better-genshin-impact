@@ -552,26 +552,24 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     }
 
     [RelayCommand]
-    public async Task SelectInstallPathAsync()
+    public void SelectInstallPath()
     {
-        await Task.Run(() =>
+        var dialog = new OpenFileDialog
         {
-            // 弹出选择文件夹对话框
-            var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
-            {
-                Filter = "原神|YuanShen.exe;GenshinImpact.exe|可执行文件|*.exe|所有文件|*.*"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                var path = dialog.FileName;
-                if (string.IsNullOrEmpty(path))
-                {
-                    return;
-                }
+            Filter = "原神|YuanShen.exe;GenshinImpact.exe|可执行文件|*.exe|所有文件|*.*"
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
 
-                Config.GenshinStartConfig.InstallPath = path;
-            }
-        });
+        var path = dialog.FileName;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        Config.GenshinStartConfig.InstallPath = path;
     }
 
     private void ReadGameInstallPath()
@@ -640,7 +638,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 内容行
 
         // 创建 TitleBar
-        var titleBar = new TitleBar
+        var titleBar = new Wpf.Ui.Controls.TitleBar
         {
             Title = "启动参数说明",
             Icon = new ImageIcon
