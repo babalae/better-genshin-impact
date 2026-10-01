@@ -77,7 +77,11 @@ public sealed class Win32RuntimeProvider(IConfigService configService, ILogger<W
             var config = configService.Get();
             capture = GameCaptureFactory.Create(GetCaptureMode(config));
             capture.Start(hWnd, GameCaptureSettings.From(config));
-            return new GameRuntime(Kind, window, capture, new Win32InputBackend(hWnd));
+            var runtime = new GameRuntime(Kind, window, capture, new Win32InputBackend(hWnd));
+
+            // 自动查找、关联启动、手动选窗都经过这里；同一个游戏进程只通知一次
+            StarwardPlaytime.TryRecord(window, config.GenshinStartConfig);
+            return runtime;
         }
         catch
         {

@@ -55,6 +55,12 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private ISystemInfo _systemInfo = null!;
 
     private CancellationToken _ct;
+
+    /// <summary>
+    /// 本任务启用的自动拾取，任务结束时撤销
+    /// </summary>
+    private IDisposable? _autoPickLease;
+
     private AutoLeyLineConfigData? _configData;
     private NodeData? _nodeData;
 
@@ -153,6 +159,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 }
                 finally
                 {
+                    _autoPickLease?.Dispose();
+                    _autoPickLease = null;
                     ClearOcrOverlayKeys();
                     RestoreMaskOverlayVisible();
                 }
@@ -334,7 +342,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await TrySwitchPartyAndSync(_taskParam.Team);
         }
 
-        TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+        _autoPickLease?.Dispose();
+        _autoPickLease = TaskTriggerDispatcher.Instance().AddTrigger("AutoPick");
     }
 
     private async Task RunLeyLineChallenges()

@@ -10,8 +10,6 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System.IO;
-using System.Text.RegularExpressions;
-using Microsoft.Win32;
 using System.Linq;
 using System.Threading;
 using System.Text;
@@ -21,11 +19,12 @@ namespace BetterGenshinImpact.GameTask.GameLoading;
 
 public class GameLoadingTrigger : ITaskTrigger
 {
-    public static bool GlobalEnabled = true;
-    
     public string Name => "自动开门";
 
-    public bool IsEnabled { get => GlobalEnabled; set {} }
+    /// <summary>
+    /// 开启了自动进入游戏，并且本次截图会话中还没有完成（进入主界面或超过 5 分钟后自停）
+    /// </summary>
+    public bool IsEnabledByConfig => _config.AutoEnterGameEnabled && !_finished;
 
     public int Priority => 999;
 
@@ -46,13 +45,15 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private DateTime _prevExecuteTime = DateTime.MinValue;
 
-    private DateTime _triggerStartTime = DateTime.Now;
+    /// <summary>
+    /// 实例在启动截图器时创建，5 分钟计时从这里开始
+    /// </summary>
+    private readonly DateTime _triggerStartTime = DateTime.Now;
 
-    private string GameServer = "";
-
-    private string channelValue = "";
-
-    private string FileName = "";
+    /// <summary>
+    /// 已经进入游戏或超时，本次截图会话内不再运行
+    /// </summary>
+    private volatile bool _finished;
 
     private bool biliLoginClicked = false;
     private (double x1080, double y1080)? lastAgreementClickPos = null;
@@ -62,175 +63,6 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public GameLoadingTrigger()
     {
-    }
-
-    public void InnerSetEnabled(bool enabled)
-    {
-        GlobalEnabled = enabled;
-    }
-
-    public void Init()
-    {
-        if (!_config.AutoEnterGameEnabled)
-        {
-            InnerSetEnabled(false);
-        }
-
-        // // 前面没有联动启动原神，这个任务也不用启动
-        // if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
-        // {
-        //     IsEnabled = false;
-        // }
-        if (_config.RecordGameTimeEnabled)
-        {
-            FileName = Path.GetFileName(_config.InstallPath);
-            if (FileName == "GenshinImpact.exe")
-            {
-                GameServer = "hk4e_global";
-                StartStarward();
-            }
-
-            if (FileName == "YuanShen.exe")
-            {
-                string iniPath = Path.GetDirectoryName(_config.InstallPath) + "//config.ini";
-                string iniContent;
-                string pattern = @"
-            ^\s*\[General\]\s*$
-            (?:(?!\[).|\r?\n)*
-            ^\s*channel=(\S+)
-        ";
-
-                try
-                {
-                    iniContent = File.ReadAllText(iniPath);
-                    Regex regex = new Regex(pattern,
-                        RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase);
-                    Match match = regex.Match(iniContent);
-                    channelValue = match.Success ? match.Groups[1].Value : "";
-                }
-                catch (Exception e)
-                {
-                }
-
-                // channelValue = 1 ： 官服
-                // channelValue = 14 ： B服
-                if (channelValue == "1")
-                {
-                    GameServer = "hk4e_cn";
-                    StartStarward();
-                }
-
-                if (channelValue == "14")
-                {
-                    GameServer = "hk4e_bilibili";
-                    StartStarward();
-                }
-
-
-                Debug.WriteLine($"[GameLoading] 从文件读取到游戏区服：{GameServer}");
-                // 这里注册表的优先级要比读取文件低，因为使用starward安装原神不会写入注册表
-                if (GameServer == null)
-                {
-                    GameServer = GetGameServerRegistry();
-                    Debug.WriteLine($"[GameLoading] 从注册表读取到游戏区服：{GameServer}");
-                    StartStarward();
-                }
-            }
-        }
-    }
-
-    public bool StartStarward()
-    {
-        try
-        {
-            Debug.WriteLine($"[GameLoading] 服务器：{GameServer}");
-            if (IsStarwardProtocolRegistered())
-            {
-                Process.Start(new ProcessStartInfo($"starward://playtime/{GameServer}") { UseShellExecute = true });
-                return true;
-            }
-            else
-            {
-                // TaskControl.Logger.LogWarning("没有检测到 Starward 协议注册，请查看帮助文档！");
-                return false;
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[GameLoading] Starward记录时间失败");
-            return false;
-        }
-    }
-
-    public string GetGameServerRegistry()
-    {
-        try
-        {
-            var cn =
-                Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\1_1\hk4e_cn", "GameInstallPath",
-                    null) as string;
-            if (!string.IsNullOrEmpty(cn))
-            {
-                var filePath = Path.Combine(cn, "YuanShen.exe");
-                GameServer = "hk4e_cn";
-                return GameServer;
-            }
-
-            var global = Registry.GetValue($@"HKEY_CURRENT_USER\Software\Cognosphere\HYP\1_0\hk4e_global",
-                "GameInstallPath", null) as string;
-            if (!string.IsNullOrEmpty(global))
-            {
-                var filePath = Path.Combine(global, "GenshinImpact.exe");
-                GameServer = "hk4e_global";
-                return GameServer;
-            }
-
-            var bilibili =
-                Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\standalone\14_0\hk4e_cn\umfgRO5gh5\hk4e_cn",
-                    "GameInstallPath", null) as string;
-            if (!string.IsNullOrEmpty(bilibili))
-            {
-                var filePath = Path.Combine(bilibili, "YuanShen.exe");
-                GameServer = "hk4e_bilibili";
-                return GameServer;
-            }
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e, "获取服务器失败");
-        }
-
-        return "";
-    }
-
-    public bool IsStarwardProtocolRegistered()
-    {
-        try
-        {
-            // 打开注册表路径 HKEY_CLASSES_ROOT\starward
-            using (RegistryKey key = Registry.ClassesRoot.OpenSubKey("starward"))
-            {
-                // 如果键存在
-                if (key != null)
-                {
-                    // 检查是否存在 URL Protocol 值
-                    object urlProtocol = key.GetValue("URL Protocol");
-                    // 如果 URL Protocol 存在且值为空字符串（标准配置），认为协议已注册
-                    if (urlProtocol != null && urlProtocol.ToString() == "")
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // 如果访问注册表时发生错误，记录调试信息
-            Debug.WriteLine($"[GameLoading] 检查 Starward 协议时发生错误: {ex.Message}");
-        }
-
-        // 如果键不存在或不符合条件，返回 false
-        return false;
     }
 
     public void OnCapture(CaptureContent content)
@@ -245,7 +77,7 @@ public class GameLoadingTrigger : ITaskTrigger
         // 5min 后自动停止
         if ((DateTime.Now - _triggerStartTime).TotalMinutes >= 5)
         {
-            InnerSetEnabled(false);
+            _finished = true;
             return;
         }
         
@@ -253,7 +85,7 @@ public class GameLoadingTrigger : ITaskTrigger
         if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
             // _logger.LogInformation("当前在游戏主界面");
-            InnerSetEnabled(false);
+            _finished = true;
             return;
         }
 

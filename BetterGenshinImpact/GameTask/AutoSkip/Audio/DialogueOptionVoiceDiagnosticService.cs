@@ -194,7 +194,7 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
 
     private static string BuildDecisionText()
     {
-        var trigger = GameTaskManager.TriggerDictionary?.GetValueOrDefault("AutoSkip") as AutoSkipTrigger;
+        var trigger = TaskTriggerDispatcher.InstanceNullable()?.GetTrigger<AutoSkipTrigger>();
         if (trigger == null || !trigger.VoiceWaiter.TryGetProgress(out var progress))
         {
             return "未在等待选项";

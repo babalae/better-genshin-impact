@@ -38,32 +38,21 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
 
     public string Name => "自动剧情";
-    private bool _isEnabled;
-    public bool IsEnabled
-    {
-        get => _isEnabled;
-        set
-        {
-            if (_isEnabled == value)
-            {
-                return;
-            }
 
-            _isEnabled = value;
-            if (!value)
-            {
-                ReleaseChooseOptionWait("触发器关闭");
-                ResetPageCloseRecognition();
-            }
-        }
-    }
+    /// <summary>
+    /// 用户开关，始终读全局配置。脚本启用时不看这个值（与原来"强制启用"一致）
+    /// </summary>
+    public bool IsEnabledByConfig => TaskContext.Instance().Config.AutoSkipConfig.Enabled;
+
     public int Priority => 20;
     public bool IsExclusive => false;
     
     public GameUiCategory SupportedGameUiCategory => GameUiCategory.Talk;
 
-
-    public bool IsBackgroundRunning { get; private set; }
+    /// <summary>
+    /// 实时读取当前生效的配置（全局配置或脚本传入的配置）
+    /// </summary>
+    public bool IsBackgroundRunning => _config.RunBackgroundEnabled;
     
     public bool UseBackgroundOperation { get; private set; }
 
@@ -72,7 +61,18 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private const int PlayingFlagDisappearDelaySeconds = 10; // 播放标识消失后继续识别的秒数
     private const int PageCloseRecognitionDelayMilliseconds = 200;
 
-    private readonly AutoSkipConfig _config;
+    /// <summary>
+    /// 构造时指定的配置：无参构造为全局配置，内部调用方可以传入自定义配置
+    /// </summary>
+    private readonly AutoSkipConfig _defaultConfig;
+
+    private readonly bool _isDefaultCustomConfiguration;
+
+    /// <summary>
+    /// 本次启用期间生效的配置。脚本通过 AddTrigger 传入 AutoSkipConfig 时使用它，否则使用 _defaultConfig
+    /// </summary>
+    private AutoSkipConfig _config;
+
     private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter = new();
 
     internal DialogueOptionAudioWaiter VoiceWaiter => _dialogueOptionAudioWaiter;
@@ -92,8 +92,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private List<string> _selectList = [];
     
-    private readonly bool _isCustomConfiguration;
-
     private static RecognitionObject GetRecognitionObject(string objectName, ImageRegion region)
     {
         return RecognitionAssets.Get("AutoSkip", objectName, region.Width, region.Height);
@@ -101,29 +99,55 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     public AutoSkipTrigger()
     {
-        _config = TaskContext.Instance().Config.AutoSkipConfig;
+        _defaultConfig = TaskContext.Instance().Config.AutoSkipConfig;
+        _config = _defaultConfig;
     }
     
     /// <summary>
-    /// 用于内部的其他方法调用
+    /// 用于内部的其他方法调用，调用方需自行调用 OnEnabled(null) 后再调用 OnCapture
     /// </summary>
     /// <param name="config"></param>
     public AutoSkipTrigger(AutoSkipConfig config)
     {
+        _defaultConfig = config;
+        _isDefaultCustomConfiguration = true;
         _config = config;
-        _isCustomConfiguration = true;
     }
 
-    public void Init()
+    /// <summary>
+    /// 选定本次生效的配置，并重置运行状态。使用全局配置时读取关键词文件，使用自定义配置时不使用关键词
+    /// </summary>
+    /// <param name="options">脚本传入的 AutoSkipConfig，没有则为 null</param>
+    public void OnEnabled(object? options)
     {
-        IsEnabled = _config.Enabled;
-        IsBackgroundRunning = _config.RunBackgroundEnabled;
+        var customConfig = options as AutoSkipConfig;
+        _config = customConfig ?? _defaultConfig;
         // IsUseInteractionKey = _config.SelectChatOptionType == SelectChatOptionTypes.UseInteractionKey;
 
-        if (!_isCustomConfiguration)
+        _prevPlayingTime = DateTime.MinValue;
+        _prevExecute = DateTime.MinValue;
+        _prevHangoutExecute = DateTime.MinValue;
+        _prevGetDailyRewardsTime = DateTime.MinValue;
+        _prevClickTime = DateTime.MinValue;
+        _prevBringToFrontTime = DateTime.MinValue;
+        _chooseOptionDelayUntil = DateTime.MinValue;
+        _chooseOptionWaitRecheckUntil = DateTime.MinValue;
+        _pendingBringToFront = false;
+        ResetPageCloseRecognition();
+
+        _defaultPauseList = [];
+        _pauseList = [];
+        _selectList = [];
+        if (customConfig == null && !_isDefaultCustomConfiguration)
         {
             InitKeyword();
         }
+    }
+
+    public void OnDisabled()
+    {
+        ReleaseChooseOptionWait("触发器关闭");
+        ResetPageCloseRecognition();
     }
 
     private void InitKeyword()
@@ -139,7 +163,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情默认暂停点击关键词列表失败");
-            ThemedMessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！");
+            // 在截图线程上读取，弹窗投递到 UI 线程，不等待用户确认
+            UIDispatcherHelper.BeginInvoke(() => ThemedMessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！"));
         }
 
         try
@@ -153,7 +178,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情暂停点击关键词列表失败");
-            ThemedMessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！");
+            UIDispatcherHelper.BeginInvoke(() => ThemedMessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！"));
         }
 
         try
@@ -167,7 +192,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情优先点击选项列表失败");
-            ThemedMessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！");
+            UIDispatcherHelper.BeginInvoke(() => ThemedMessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！"));
         }
     }
 

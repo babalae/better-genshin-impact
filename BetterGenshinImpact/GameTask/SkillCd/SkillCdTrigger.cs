@@ -25,11 +25,7 @@ namespace BetterGenshinImpact.GameTask.SkillCd;
 public class SkillCdTrigger : ITaskTrigger
 {
     public string Name => "SkillCd";
-    public bool IsEnabled
-    {
-        get => TaskContext.Instance().Config.SkillCdConfig.Enabled;
-        set => TaskContext.Instance().Config.SkillCdConfig.Enabled = value;
-    }
+    public bool IsEnabledByConfig => TaskContext.Instance().Config.SkillCdConfig.Enabled;
 
     public int Priority => 10;
     public bool IsExclusive => false;
@@ -48,8 +44,6 @@ public class SkillCdTrigger : ITaskTrigger
 
     private DateTime _lastTickTime = DateTime.Now;
     private DateTime _contextEnterTime = DateTime.MinValue;
-    /// <summary>上一帧的启用状态，用于边沿触发清理遮罩文字</summary>
-    private bool _wasEnabled = true;
     /// <summary>
     /// 离开场景时间，用于0.8秒防抖避免识别失误导致UI闪烁（仅影响UI渲染，不影响CD计时）
     /// </summary>
@@ -105,42 +99,52 @@ public class SkillCdTrigger : ITaskTrigger
     private readonly AvatarActiveCheckContext _activeCheckContext = new();
 
     /// <summary>
-    /// 初始化
+    /// 启用时清空帧缓存和全部 CD 状态，从零开始计时
     /// </summary>
-    public void Init()
+    public void OnEnabled(object? options)
     {
-        // 清空帧缓存
+        DisposeFrameCache();
+        lock (_stateLock)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                _cds[i] = 0;
+                _prevKeys[i] = false;
+                _teamAvatarNames[i] = string.Empty;
+                _teamIndexRects[i] = default;
+                _lastSetTime[i] = DateTime.MinValue;
+                _lastTeamAvatarNames[i] = string.Empty;
+            }
+
+            _prevEKey = false;
+            _lastEKeyPress = DateTime.MinValue;
+            _wasInContext = false;
+            _contextEnterTime = DateTime.MinValue;
+            _contextLeaveTime = DateTime.MinValue;
+            _lastTickTime = DateTime.Now;
+            _lastActiveIndex = -1;
+            _lastSwitchFromSlot = -1;
+            _lastSwitchTime = DateTime.MinValue;
+            _lastPressIndexTime = DateTime.MinValue;
+            _lastSyncTime = DateTime.MinValue;
+        }
+    }
+
+    /// <summary>
+    /// 停用时清除遮罩上的 CD 文字，释放帧缓存
+    /// </summary>
+    public void OnDisabled()
+    {
+        VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+        DisposeFrameCache();
+    }
+
+    private void DisposeFrameCache()
+    {
         _lastImage?.Dispose();
         _lastImage = null;
         _penultimateImage?.Dispose();
         _penultimateImage = null;
-        for (int i = 0; i < 4; i++)
-        {
-            _cds[i] = 0;
-            _prevKeys[i] = false;
-            _teamAvatarNames[i] = string.Empty;
-            _teamIndexRects[i] = default;
-            _lastSetTime[i] = DateTime.MinValue;
-            _lastTeamAvatarNames[i] = string.Empty;
-        }
-
-        _prevEKey = false;
-        _lastEKeyPress = DateTime.MinValue;
-        _wasInContext = false;
-        _contextEnterTime = DateTime.MinValue;
-        _contextLeaveTime = DateTime.MinValue;
-        _lastTickTime = DateTime.Now;
-        _lastActiveIndex = -1;
-        _lastSwitchFromSlot = -1;
-        _lastSwitchTime = DateTime.MinValue;
-        _lastPressIndexTime = DateTime.MinValue;
-        _lastSyncTime = DateTime.MinValue;
-
-        if (!IsEnabled)
-        {
-            VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
-            _wasEnabled = false;
-        }
     }
 
     /// <summary>
@@ -148,19 +152,6 @@ public class SkillCdTrigger : ITaskTrigger
     /// </summary>
     public void OnCapture(CaptureContent content)
     {
-        var enabled = IsEnabled;
-        if (!enabled)
-        {
-            // 仅在启用→禁用的状态变化边沿清理一次遮罩文字，避免每帧重复清 key
-            if (_wasEnabled)
-            {
-                VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
-            }
-            _wasEnabled = enabled;
-            return;
-        }
-        _wasEnabled = enabled;
-
         // 被外部任务挂起：整体跳过（不渲染、不计时、不做识别），数据由接管方维护
         if (_suspended)
         {
@@ -194,8 +185,8 @@ public class SkillCdTrigger : ITaskTrigger
             var multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(content.CaptureRectArea);
             if (multiGameStatus.IsInMultiGame)
             {
-                // 检测到联机状态，自动关闭SkillCd
-                IsEnabled = false;
+                // 检测到联机状态，自动关闭SkillCd：写回用户配置，下一帧由调度器停用并调用 OnDisabled
+                TaskContext.Instance().Config.SkillCdConfig.Enabled = false;
                 _logger.LogWarning("检测到联机状态，自动关闭冷却提示");
                 return;
             }
