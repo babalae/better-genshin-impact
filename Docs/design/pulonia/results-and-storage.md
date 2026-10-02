@@ -78,6 +78,8 @@ WindowKey = 规则对应周期起点，滚动资源则使用其活动状态
 
 ```text
 User/Pulonia/
+├─ plan-order.json                  # 编辑器计划列表顺序，不参与执行修订
+├─ plan-order.json.bak              # 上一个有效列表顺序
 ├─ plans/<planId>.json              # 元信息、root_task、触发器、账号绑定
 ├─ presets/<presetId>.json          # 可选共享预设
 ├─ accounts/<accountId>.json        # 账号资料；托管阶段含目标与最近状态快照
@@ -86,7 +88,7 @@ User/Pulonia/
 └─ history/<planId>/<runId>.json    # 已结束运行的不可变快照及节点结果
 ```
 
-文件用稳定 ID 命名，名称只用于展示。计划重命名不改变引用和历史位置。`PuloniaTaskStore` 返回模型，ViewModel 只负责编辑；新文件用 Newtonsoft.Json、UTF-8 无 BOM，既有文件仍按原格式导入。
+文件用稳定 ID 命名，名称只用于展示。计划重命名不改变引用和历史位置。`plan-order.json` 只保存计划稳定 ID 的显示顺序，未知或已删除 ID 在列出计划时忽略；拖拽排序不改写计划文件、不增加内容修订号。目录文件损坏时明确报错，不用随机文件枚举顺序静默替代。`PuloniaTaskStore` 返回模型，ViewModel 只负责编辑；新文件用 Newtonsoft.Json、UTF-8 无 BOM，既有文件仍按原格式导入。
 
 配置文件可分别保存，但运行时在开始前将用到的计划、预设、账号绑定与资源版本固定进 `ActiveRun.Snapshot`。不同配置文件不要求同步提交，实际用的是哪一版在快照中可追溯；调用者不能边执行边改这份快照。
 

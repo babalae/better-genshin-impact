@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
@@ -166,6 +167,7 @@ public partial class App : Application
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
+                services.AddView<PuloniaTaskPlanPage, PuloniaTaskPlanViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
                 services.AddSingleton<IBannerImageService, BannerImageService>();
@@ -222,6 +224,10 @@ public partial class App : Application
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
+                // Pulonia 步骤 2：注册配置存储、运行准备和进程内编辑剪贴板；仍不启动执行或游戏会话。
+                services.AddSingleton<PuloniaTaskStore>();
+                services.AddSingleton<PuloniaTaskBuilder>();
+                services.AddSingleton<PuloniaTaskClipboardService>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
                 services.AddSingleton<IMusicStateStore, MusicStateStore>();
                 services.AddSingleton<IInstrumentProfileService, InstrumentProfileService>();

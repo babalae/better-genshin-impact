@@ -27,6 +27,8 @@ flowchart LR
 
 目录结构按 `Pulonia/Models`、`Pulonia/Services`、`Pulonia/Executors` 组织；WPF View/ViewModel 保持现有项目位置。Model 是普通数据，ViewModel 包装同一模型进行编辑；执行时深复制并固定配置，防止编辑影响运行。实现可以按功能分文件，但不增加仅透传参数的层。
 
+现有原型中各类型的职责、所属层级与必要性见[类型职责与关系图](task-model.md#先看清当前类型的职责和关系)。该节的准备流程到快照为止，尚不执行任务。正式执行仍通过统一任务服务调用准备入口和类型执行器；Builder 不另设排队、取消或历史管理入口，Json/Validator 保持直接调用的技术辅助。
+
 ### 按需求获取资源
 
 | 能力 | 所需资源 | 生命周期 |

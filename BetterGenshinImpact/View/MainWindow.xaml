@@ -12,8 +12,8 @@
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  Title="{i18n:T 更好的原神}"
-                 Width="900"
-                 Height="600"
+                 Width="1050"
+                 Height="700"
                  d:Background="#D2D2D2"
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -94,6 +94,14 @@
                                        TargetPageType="{x:Type pages:TaskSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem Content="{i18n:T 任务计划}"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:PuloniaTaskPlanPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="BranchFork24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
