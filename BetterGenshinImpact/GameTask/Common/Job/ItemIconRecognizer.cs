@@ -172,6 +172,10 @@ internal sealed class ItemRecognizer : IItemIconRecognizer
             .FirstOrDefault() ?? ItemIconCandidate.Empty;
     }
 
+    /// <summary>一次推理返回最高分候选及默认阈值，供调用方诊断或应用专用接受策略。</summary>
+    internal (ItemIconCandidate Candidate, double Threshold) MatchWithThreshold(Mat icon)
+        => (Match(icon), MatchThreshold);
+
     public string? Recognize(Mat icon)
     {
         var candidate = Match(icon);

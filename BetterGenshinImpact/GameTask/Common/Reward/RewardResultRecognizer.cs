@@ -1,4 +1,5 @@
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
@@ -52,7 +53,7 @@ public class RewardResultRecognizer
     /// </summary>
     /// <param name="maxPages">最大识别页数。</param>
     /// <returns>奖励名称到总数量的映射。</returns>
-    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3)
+    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3, bool requireReliableCounts = false)
     {
         if (!IsSupportedRewardResolution())
         {
@@ -75,8 +76,18 @@ public class RewardResultRecognizer
             }
 
             using var screen = CaptureRewardPageScreen();
-            var pageResult = RecognizeRewardPage(screen, iconRecognizer);
+            if (requireReliableCounts)
+                TrainingGuideDiagnostics.Detail("培养领奖：开始识别第 {Page} 页", currentPage);
+            var pageResult = RecognizeRewardPage(screen, iconRecognizer, requireReliableCounts);
             SaveRewardDebugImage(currentPage, screen.SrcMat, pageResult.CardRects);
+
+            // 培养严格模式失败时先保留证据，再按原有逻辑返回或抛异常。
+            if (requireReliableCounts && TrainingGuideDiagnostics.Enabled && (pageResult.Rewards.Count == 0 ||
+                pageResult.Rewards.Any(r => string.IsNullOrEmpty(r.Name) ||
+                    (!TrainingGuideRewardPolicy.IsCommonReward(r.Name) && r.Count <= 0))))
+                BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide.TrainingGuideRewardDiagnostics.Record(
+                    screen.SrcMat, pageResult.CardRects,
+                    pageResult.Rewards.Select(r => (r.Name, r.Count)).ToArray(), currentPage, _logger);
 
             if (pageResult.Rewards.Count == 0)
             {
@@ -84,17 +95,49 @@ public class RewardResultRecognizer
                 break;
             }
 
+            // 培养规划不能使用识别失败后猜测的数量，也不能忽略未识别名称的材料。
+            if (requireReliableCounts && pageResult.Rewards.Any(r => string.IsNullOrEmpty(r.Name) ||
+                (!TrainingGuideRewardPolicy.IsCommonReward(r.Name) && r.Count <= 0)))
+                throw new InvalidOperationException("奖励数量或名称未可靠识别，本轮不更新培养库存");
             var currentPageRewards = ToRewardItems(pageResult.Rewards);
+            // 同排同序名称表示翻页未移动。即使OCR数量波动，也不得当新奖励累加。
+            if (previousPageRewards != null && currentPageRewards.Select(r => r.Name)
+                    .SequenceEqual(previousPageRewards.Select(r => r.Name)))
+            {
+                if (requireReliableCounts && !currentPageRewards.Where(r => !TrainingGuideRewardPolicy.IsCommonReward(r.Name)).Select(r => r.Quantity)
+                        .SequenceEqual(previousPageRewards.Where(r => !TrainingGuideRewardPolicy.IsCommonReward(r.Name)).Select(r => r.Quantity)))
+                {
+                    TrainingGuideRewardDiagnostics.RecordComparison(screen.SrcMat, currentPage,
+                        previousPageRewards.Select(r => (r.Name, r.Quantity)).ToArray(),
+                        currentPageRewards.Select(r => (r.Name, r.Quantity)).ToArray(), "同页数量不一致");
+                    throw new InvalidOperationException("同页奖励数量两次识别不一致，本轮不更新培养库存");
+                }
+                break;
+            }
             int duplicateCount = previousPageRewards is { Count: > 0 }
                 ? DetectDuplicates(currentPageRewards, previousPageRewards)
                 : 0;
+            if (requireReliableCounts && duplicateCount > 0 && previousPageRewards != null)
+                for (var i = 0; i < duplicateCount; i++)
+                    if (!TrainingGuideRewardPolicy.IsCommonReward(currentPageRewards[i].Name) &&
+                        currentPageRewards[i].Quantity != previousPageRewards[previousPageRewards.Count - duplicateCount + i].Quantity)
+                    {
+                        TrainingGuideRewardDiagnostics.RecordComparison(screen.SrcMat, currentPage,
+                            previousPageRewards.Select(r => (r.Name, r.Quantity)).ToArray(),
+                            currentPageRewards.Select(r => (r.Name, r.Quantity)).ToArray(),
+                            $"重叠材料数量不一致；重叠数={duplicateCount}；当前卡片={i + 1}");
+                        throw new InvalidOperationException("翻页重叠材料数量识别不一致，本轮不更新培养库存");
+                    }
             var newRewards = duplicateCount > 0
                 ? currentPageRewards.Skip(duplicateCount).ToList()
                 : currentPageRewards;
 
             if (newRewards.Count > 0)
             {
-                allRewards.AddRange(newRewards);
+                allRewards.AddRange(requireReliableCounts
+                    ? newRewards.Where(r => !TrainingGuideRewardPolicy.IsCommonReward(r.Name) ||
+                        pageResult.Rewards.Any(p => p.Name == r.Name && p.Count > 0))
+                    : newRewards);
             }
 
             if (duplicateCount > 0)
@@ -142,11 +185,11 @@ public class RewardResultRecognizer
     /// <param name="screen">当前页全屏截图。</param>
     /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <returns>本页奖励与卡片位置。</returns>
-    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer)
+    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer, bool trainingPolicy = false)
     {
         using var bandMat = new Mat(screen.SrcMat, new Rect(220, 444, 1480, 220));
         var cardRects = DetectCardRects(bandMat);
-        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer);
+        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer, trainingPolicy: trainingPolicy);
         return new RewardPageRecognitionResult(recognizedRewards, cardRects);
     }
 
@@ -224,32 +267,22 @@ public class RewardResultRecognizer
     /// <returns>重复奖励数量。</returns>
     private static int DetectDuplicates(List<RewardItem> currentPage, List<RewardItem> previousPage)
     {
-        int duplicateCount = 0;
-
-        // 从当前页的第一个开始，依次与上一页的后面部分比对
-        for (int i = 0; i < currentPage.Count && i < previousPage.Count; i++)
+        // 只接受上一页后缀与当前页前缀的连续重叠，数量变化不代表新物品。
+        for (var count = Math.Min(currentPage.Count, previousPage.Count); count > 0; count--)
         {
-            bool foundMatch = false;
-
-            // 检查当前页第i个是否与上一页某个匹配
-            for (int j = Math.Max(0, previousPage.Count - 10); j < previousPage.Count; j++)
+            var matches = true;
+            for (var i = 0; i < count; i++)
             {
-                if (IsSameRewardCard(currentPage[i], previousPage[j]))
+                var previous = previousPage[previousPage.Count - count + i];
+                if (!IsSameRewardCard(currentPage[i], previous))
                 {
-                    foundMatch = true;
-                    duplicateCount++;
+                    matches = false;
                     break;
                 }
             }
-
-            // 如果当前位置没有匹配，说明重复序列已经结束
-            if (!foundMatch)
-            {
-                break;
-            }
+            if (matches) return count;
         }
-
-        return duplicateCount;
+        return 0;
     }
 
     /// <summary>
@@ -257,12 +290,11 @@ public class RewardResultRecognizer
     /// </summary>
     /// <param name="current">当前页卡片。</param>
     /// <param name="previous">上一页卡片。</param>
-    /// <returns>名称、稀有度和数量都一致时返回 true。</returns>
+    /// <returns>名称和稀有度一致时返回 true；数量不参与翻页身份判断。</returns>
     private static bool IsSameRewardCard(RewardItem current, RewardItem previous)
     {
         return current.Name == previous.Name
-               && current.QualityLevel == previous.QualityLevel
-               && current.Quantity == previous.Quantity;
+               && current.QualityLevel == previous.QualityLevel;
     }
 
     /// <summary>
@@ -323,7 +355,7 @@ public class RewardResultRecognizer
     /// <param name="cardRects">已定位的卡片矩形。</param>
     /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <param name="ocrService">OCR 服务，为空时使用 Paddle OCR。</param>
-    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null)
+    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null, bool trainingPolicy = false)
     {
         ocrService ??= OcrFactory.Paddle;
 
@@ -344,15 +376,17 @@ public class RewardResultRecognizer
             using var cardMat = new Mat(bandMat, cardRect);
 
             // === 图标识别===
-            var iconName = RecognizeIcon(iconRecognizer, cardMat, cardIdx);
+            var iconName = RecognizeIcon(iconRecognizer, cardMat, cardIdx, trainingPolicy);
             if (iconName == null)
             {
-                _logger.LogWarning("奖励识别：已跳过一个未识别的奖励图标");
+                _logger.LogWarning("奖励识别：存在未识别的奖励图标");
+                // 保留失败占位，使严格模式能够拒绝不完整结果；普通模式会在 ToRewardItems 中过滤该项。
+                results.Add(new RecognizedReward(null, -1));
                 continue;
             }
 
             // === 数量 OCR ===
-            var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx);
+            var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx, trainingPolicy);
 
             results.Add(new RecognizedReward(iconName, count));
         }
@@ -367,15 +401,18 @@ public class RewardResultRecognizer
     /// <param name="cardMat">奖励卡片图像。</param>
     /// <param name="cardIdx">卡片序号。</param>
     /// <returns>奖励名称；未识别时返回 null。</returns>
-    private string? RecognizeIcon(IItemIconRecognizer iconRecognizer, Mat cardMat, int cardIdx)
+    private string? RecognizeIcon(IItemIconRecognizer iconRecognizer, Mat cardMat, int cardIdx, bool trainingPolicy = false)
     {
         try
         {
             using Mat icon = cardMat.GetGridIcon(); // 归一化为 125×125
+            if (trainingPolicy) return TrainingGuideRewardPolicy.Recognize(iconRecognizer, icon, cardIdx);
             return iconRecognizer.Recognize(icon);
         }
         catch (Exception ex)
         {
+            if (trainingPolicy)
+                TrainingGuideDiagnostics.Detail("培养领奖图标异常：位置={Index}；异常={Exception}", cardIdx + 1, ex);
             _logger.LogDebug(ex, "奖励识别：卡片 {CardIndex} 图标识别异常，已忽略", cardIdx);
             return null;
         }
@@ -387,18 +424,27 @@ public class RewardResultRecognizer
     /// <param name="cardMat">奖励卡片图像。</param>
     /// <param name="ocrService">OCR 服务。</param>
     /// <param name="cardIdx">卡片序号。</param>
+    /// <param name="trainingPolicy">培养模式使用独立诊断，不采用普通模式的数量兜底提示。</param>
     /// <returns>识别到的数量；失败时返回 -1。</returns>
-    private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx)
+    private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx, bool trainingPolicy)
     {
         try
         {
             using GridItemCountRecognitionResult result =
                 GridItemCountRecognizer.RecognizeCropped(cardMat, ocrService);
+            if (trainingPolicy)
+                TrainingGuideDiagnostics.Detail("培养领奖数量：位置={Index}；OCR原文={RawText}；数量={Count}；原因={Reason}；有效连通域={Components}",
+                    cardIdx + 1, result.RawText, result.Count, result.Reason, result.ComponentCount);
             if (result.Count >= 0)
             {
                 return result.Count;
             }
 
+            if (trainingPolicy)
+            {
+                _logger.LogWarning("培养领奖：卡片 {Index} 数量未确认；通用奖励数量忽略，材料数量失败则不更新本轮库存", cardIdx + 1);
+                return -1;
+            }
             _logger.LogWarning(
                 "奖励识别：卡片 {CardIndex} 数量没有识别出来，OCR 原文：{RawText}，原因：{Reason}，有效连通域：{ComponentCount}，已按 1 个计入。",
                 cardIdx,
@@ -408,6 +454,12 @@ public class RewardResultRecognizer
         }
         catch (Exception ex)
         {
+            if (trainingPolicy)
+            {
+                TrainingGuideDiagnostics.Detail("培养领奖数量异常：位置={Index}；异常={Exception}", cardIdx + 1, ex);
+                _logger.LogWarning("培养领奖：卡片 {Index} 数量识别异常；通用奖励数量忽略，材料数量失败则不更新本轮库存", cardIdx + 1);
+                return -1;
+            }
             _logger.LogDebug(ex, "奖励识别：卡片 {CardIndex} 数量OCR异常，数量保持 -1", cardIdx);
             _logger.LogWarning("奖励识别：卡片 {CardIndex} 数量识别异常，已按 1 个计入。", cardIdx);
         }

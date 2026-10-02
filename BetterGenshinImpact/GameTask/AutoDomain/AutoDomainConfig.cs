@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -98,5 +99,64 @@ public partial class AutoDomainConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _rewardRecognitionEnabled = false;
+
+    /// <summary>
+    /// 是否根据提升指南中的培养计划自动计算今日刷取次数。
+    /// 这是培养计划扫描、动态调整和备选秘境逻辑的总开关。
+    /// </summary>
+    [ObservableProperty]
+    private bool _developmentGuideCalculateRunsEnabled = true;
+
+    /// <summary>
+    /// 培养计划刷取偏好。0：预留合成天赋收益；1：不依赖合成天赋收益。
+    /// </summary>
+    [ObservableProperty]
+    private int _developmentGuideRunPreference;
+
+    /// <summary>
+    /// 预留的合成天赋收益百分比，取值范围 0～20。
+    /// </summary>
+    [ObservableProperty]
+    private int _developmentGuideCraftingBonusReservePercent = 7;
+
+    partial void OnDevelopmentGuideRunPreferenceChanged(int value)
+    {
+        if (value is not (0 or 1))
+        {
+            DevelopmentGuideRunPreference = 0;
+        }
+    }
+
+    partial void OnDevelopmentGuideCraftingBonusReservePercentChanged(int value)
+    {
+        var normalized = Math.Clamp(value, 0, TrainingGuideRunCalculator.MaxCraftingBonusReservePercent);
+        if (value != normalized)
+        {
+            DevelopmentGuideCraftingBonusReservePercent = normalized;
+        }
+    }
+
+    /// <summary>
+    /// 使用培养计划刷取时是否启用奖励识别。默认开启，用于后续动态调整刷取次数。
+    /// 即使常规自动秘境奖励识别关闭，本选项开启时培养计划刷取仍会识别奖励。
+    /// </summary>
+    [ObservableProperty]
+    private bool _developmentGuideRewardRecognitionEnabled = true;
+
+    /// <summary>奖励识别失败后允许当前入口按原预算继续；默认关闭，失败即结束任务。</summary>
+    [ObservableProperty]
+    private bool _trainingGuideRewardFailureBudgetEnabled;
+
+    /// <summary>培养详细诊断开关，默认关闭；统一保存文字记录和诊断截图。</summary>
+    [ObservableProperty]
+    private bool _trainingGuideDiagnosticsEnabled;
+
+    // 培养计划完成或当天没有可刷取目标时使用的备选秘境
+    [ObservableProperty]
+    private string _developmentGuideFallbackDomainName = string.Empty;
+
+    // 备选秘境在周日或限时活动中的奖励选择序号
+    [ObservableProperty]
+    private string _developmentGuideFallbackSundaySelectedValue = string.Empty;
 
 }

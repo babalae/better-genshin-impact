@@ -7,6 +7,7 @@
              xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
+      xmlns:training="clr-namespace:BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
@@ -552,6 +553,108 @@
                                 </ComboBox>
 
                             </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                        <ui:CardExpander.Icon>
+                            <ui:FontIcon Glyph="&#xf51e;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardExpander.Icon>
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              FontTypography="Body"
+                                              FontWeight="SemiBold"
+                                              Text="{i18n:T 培养计划刷取设置}"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 仅在选择“根据提升指南选择秘境”时启用}"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="{i18n:T 自动计算今日刷取次数}"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 在秘境入口读取培养材料并自动刷取，完成后使用备选秘境}"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="16,0,20,0"
+                                                 IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideCalculateRunsEnabled, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+
+                            <StackPanel Margin="16">
+                                <ui:TextBlock FontTypography="Body"
+                                              Text="{i18n:T 刷取偏好}"
+                                              TextWrapping="Wrap" />
+                                <ComboBox Margin="0,8,20,0"
+                                          HorizontalAlignment="Stretch"
+                                          SelectedIndex="{Binding Config.AutoDomainConfig.DevelopmentGuideRunPreference, Mode=TwoWay}">
+                                    <ComboBoxItem Content="{i18n:T 适量刷取，依靠合成天赋收益补足材料}" />
+                                    <ComboBoxItem Content="{i18n:T 充分刷取，直到满足培养计划需求}" />
+                                </ComboBox>
+                            </StackPanel>
+
+                            <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+
+                            <StackPanel Margin="16">
+                                <ui:TextBlock FontTypography="Body"
+                                              Text="{i18n:T 备选秘境}"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 培养计划完成或无可刷秘境时使用}"
+                                              TextWrapping="Wrap" />
+                                <Grid Margin="0,8,20,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <vio:CascadingComboBox Grid.Column="0"
+                                                           MinWidth="180"
+                                                           HorizontalAlignment="Stretch"
+                                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay}"
+                                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                                           ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
+                                                           SelectedCascadingItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                    <StackPanel Grid.Column="1" Margin="16,0,12,0">
+                                        <ui:TextBlock FontTypography="Body"
+                                                      Text="{i18n:T 周日或限时}"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{i18n:T 选择序号}"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="2"
+                                              Width="72"
+                                              HorizontalContentAlignment="Center"
+                                              ItemsSource="{x:Static training:TrainingGuideDomainOptions.RewardSelectionIndices}"
+                                              SelectedItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
                     </ui:CardExpander>
 
