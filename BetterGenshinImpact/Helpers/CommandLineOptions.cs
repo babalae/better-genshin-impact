@@ -13,6 +13,16 @@ public class CommandLineOptions
     public const string InstanceArgument = "--instance";
     public const string RestartFromProcessIdArgument = "--restart-from-pid";
 
+    /// <summary>
+    /// 桌面分身完成任务后自动关闭自身并请求主身 BGI 关闭（配合 #3506 的根实例关闭能力）。
+    /// </summary>
+    public const string CloseOnCompleteArgument = "--close-on-complete";
+
+    /// <summary>
+    /// 根实例一键拉起桌面分身并执行任务：其后所有参数作为分身的任务参数透传。
+    /// </summary>
+    public const string StartCloneTaskArgument = "--start-clone-task";
+
     private static CommandLineOptions? _instance;
 
     public static CommandLineOptions Instance => _instance ??= Parse(Environment.GetCommandLineArgs());
@@ -33,6 +43,21 @@ public class CommandLineOptions
     /// 应用重启时被替换的旧进程 ID。
     /// </summary>
     public int? RestartFromProcessId { get; }
+
+    /// <summary>
+    /// 桌面分身是否在完成任务后自动关闭自身并请求主身 BGI 关闭。
+    /// </summary>
+    public bool CloseOnComplete { get; }
+
+    /// <summary>
+    /// 根实例是否要一键拉起桌面分身执行任务。
+    /// </summary>
+    public bool HasStartCloneTask { get; }
+
+    /// <summary>
+    /// 透传给桌面分身的任务参数（配合 <see cref="StartCloneTaskArgument"/>）。
+    /// </summary>
+    public string[] CloneTaskArguments { get; } = [];
 
     /// <summary>
     /// startOneDragon 时可选的配置名称（第 3 个参数）
@@ -63,7 +88,10 @@ public class CommandLineOptions
         string[]? groupNames = null,
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
         bool hasExplicitInstanceType = false,
-        int? restartFromProcessId = null)
+        int? restartFromProcessId = null,
+        bool closeOnComplete = false,
+        bool hasStartCloneTask = false,
+        string[]? cloneTaskArguments = null)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
@@ -71,6 +99,9 @@ public class CommandLineOptions
         InstanceType = instanceType;
         HasExplicitInstanceType = hasExplicitInstanceType;
         RestartFromProcessId = restartFromProcessId;
+        CloseOnComplete = closeOnComplete;
+        HasStartCloneTask = hasStartCloneTask;
+        CloneTaskArguments = cloneTaskArguments ?? [];
     }
 
     internal static CommandLineOptions Parse(string[] args)
@@ -79,6 +110,9 @@ public class CommandLineOptions
         var instanceType = BetterGiInstanceType.Primary;
         var hasExplicitInstanceType = false;
         int? restartFromProcessId = null;
+        var closeOnComplete = false;
+        var hasStartCloneTask = false;
+        string[]? cloneTaskArguments = null;
         var commandArgs = new List<string>();
 
         for (var index = 0; index < launchArgs.Length; index++)
@@ -112,6 +146,25 @@ public class CommandLineOptions
                     restartFromProcessId = parsedProcessId;
                 }
                 continue;
+            }
+
+            if (argument.Equals(CloseOnCompleteArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                closeOnComplete = true;
+                continue;
+            }
+
+            if (argument.Equals(StartCloneTaskArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                // 其后所有参数都作为要转发给桌面分身的任务参数，根实例自身不再执行任务。
+                var remaining = launchArgs.Skip(index + 1).ToArray();
+                if (remaining.Length > 0)
+                {
+                    hasStartCloneTask = true;
+                    cloneTaskArguments = remaining;
+                }
+
+                break;
             }
 
             commandArgs.Add(argument);
@@ -164,7 +217,10 @@ public class CommandLineOptions
                 groupNames,
                 instanceType,
                 hasExplicitInstanceType,
-                restartFromProcessId);
+                restartFromProcessId,
+                closeOnComplete,
+                hasStartCloneTask,
+                cloneTaskArguments);
         }
     }
 
