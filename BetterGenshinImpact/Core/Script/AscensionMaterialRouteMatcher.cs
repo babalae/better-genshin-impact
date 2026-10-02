@@ -9,6 +9,21 @@ namespace BetterGenshinImpact.Core.Script;
 /// </summary>
 internal static class AscensionMaterialRouteMatcher
 {
+    public static Dictionary<string, HashSet<string>> BuildMaterialSourceCatalog(
+        IEnumerable<(string? Name, IEnumerable<string?> Sources)> entries)
+    {
+        return entries
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+            .GroupBy(entry => entry.Name!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.SelectMany(entry => entry.Sources ?? [])
+                    .Where(source => !string.IsNullOrWhiteSpace(source))
+                    .Select(source => source!)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
     public static HashSet<string> FindRelatedMaterials(
         string directoryName,
         IEnumerable<string> materials,

@@ -237,8 +237,11 @@
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
-                    <ui:Button Command="{Binding QuickAddAscensionRoutesCommand}"
-                               Content="快速添加材料路线"
+                    <ui:Button Command="{Binding QuickAddCharacterAscensionRoutesCommand}"
+                               Content="{i18n:T 快速添加角色材料路线}"
+                               Icon="{ui:SymbolIcon Add24}" />
+                    <ui:Button Command="{Binding QuickAddWeaponAscensionRoutesCommand}"
+                               Content="{i18n:T 快速添加武器材料路线}"
                                Icon="{ui:SymbolIcon Add24}" />
                     <Separator Width="10" Opacity="0" />
                     <ui:DropDownButton Content="{i18n:T 更多功能}">

@@ -900,32 +900,46 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private sealed record AscensionCatalogEntry(string Name, string Kind, HashSet<string> Materials)
+    private sealed record AscensionCatalogEntry(string Name, string Kind, string Version, HashSet<string> Materials)
     {
-        public string DisplayName => $"{Name}  [{Kind}]";
+        public string DisplayName => $"{Name}  (v{Version})";
     }
+
+    private static string AscensionText(string text) => BetterGenshinImpact.Service.I18n.I18nService.Instance.Translate(text);
+
+    private static System.Version ParseCatalogVersion(string version) =>
+        System.Version.TryParse(version, out var parsed) ? parsed : new System.Version(0, 0);
+
+    private static IOrderedEnumerable<AscensionCatalogEntry> OrderByNewestVersion(IEnumerable<AscensionCatalogEntry> entries) =>
+        entries.OrderByDescending(entry => ParseCatalogVersion(entry.Version))
+            .ThenBy(entry => entry.Name, StringComparer.Ordinal);
 
     private static readonly HttpClient AscensionCatalogClient = new() { Timeout = TimeSpan.FromSeconds(45) };
     private static readonly HttpClient BiliwikiClient = new() { Timeout = TimeSpan.FromSeconds(8) };
     private const string AscensionCatalogEndpoint = "https://genshin-db-api.vercel.app/api/v5/";
 
     [RelayCommand]
-    private async Task QuickAddAscensionRoutes()
+    private Task QuickAddCharacterAscensionRoutes() => QuickAddAscensionRoutesAsync("角色");
+
+    [RelayCommand]
+    private Task QuickAddWeaponAscensionRoutes() => QuickAddAscensionRoutesAsync("武器");
+
+    private async Task QuickAddAscensionRoutesAsync(string kind)
     {
         if (SelectedScriptGroup == null)
         {
-            Toast.Warning("请先选择一个调度器配置组");
+            Toast.Warning(AscensionText("请先选择一个调度器配置组"));
             return;
         }
 
         try
         {
-            Toast.Information("正在从在线资料加载角色、武器及突破材料...");
+            Toast.Information(AscensionText("正在从在线资料加载角色、武器及突破材料..."));
             var entries = await Task.Run(LoadAscensionCatalogAsync);
-            var picker = BuildAscensionCatalogPicker(entries);
+            var picker = BuildAscensionCatalogPicker(entries, kind);
             var result = PromptDialog.Prompt(
-                "先筛选类型并搜索，再从下拉列表选择项目并加入选择；确认后会按在线突破材料和 GitHub 路线创建每日任务。",
-                "快速添加角色/武器材料路线",
+                string.Format(AscensionText("搜索并选择{0}，可加入多个项目；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。"), AscensionText(kind == "角色" ? "角色材料" : "武器材料")),
+                AscensionText(kind == "角色" ? "快速添加角色材料路线" : "快速添加武器材料路线"),
                 picker,
                 new Size(650, 760));
 
@@ -935,19 +949,19 @@ public partial class ScriptControlViewModel : ViewModel
                 .ToList();
             if (selected.Count == 0)
             {
-                Toast.Warning("请至少选择一个角色或武器");
+                Toast.Warning(AscensionText("请至少选择一个角色或武器"));
                 return;
             }
 
             var materials = selected.SelectMany(x => x.Materials).ToHashSet(StringComparer.Ordinal);
             if (materials.Count == 0)
             {
-                Toast.Warning("在线资料没有返回所选项目的突破材料");
+                Toast.Warning(AscensionText("在线资料没有返回所选项目的突破材料"));
                 return;
             }
 
             var materialSources = await Task.Run(LoadMaterialSourceCatalogAsync);
-            Toast.Information("正在同步 GitHub 脚本仓库...");
+            Toast.Information(AscensionText("正在同步 GitHub 脚本仓库..."));
             var githubRepoUrl = ScriptRepoUpdater.RepoChannels["GitHub"];
             var (scriptRepoPath, _) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(githubRepoUrl, null);
             var localRoot = MapPathingViewModel.PathJsonPath;
@@ -985,8 +999,8 @@ public partial class ScriptControlViewModel : ViewModel
                 if (!confirmImport)
                 {
                     confirmImport = await ThemedMessageBox.QuestionAsync(
-                        $"订阅并导入仓库中的 {subscriptionPaths.Count} 个材料路线文件夹？\n其中 {existingMaterialFolders} 个材料文件夹已存在本地，导入会用仓库版本替换这些文件夹。",
-                        "确认订阅材料路线") == System.Windows.MessageBoxResult.Yes;
+                        string.Format(AscensionText("订阅并导入仓库中的 {0} 个材料路线文件夹？\n其中 {1} 个材料文件夹已存在本地，导入会用仓库版本替换这些文件夹。"), subscriptionPaths.Count, existingMaterialFolders),
+                        AscensionText("确认订阅材料路线")) == System.Windows.MessageBoxResult.Yes;
                 }
                 if (confirmImport)
                 {
@@ -1046,22 +1060,22 @@ public partial class ScriptControlViewModel : ViewModel
             WriteScriptGroup(SelectedScriptGroup);
             var foundMaterials = resolvedRoutes.Select(x => x.Material).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var missing = materials.Except(foundMaterials, StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
-            var detail = $"所选项目 {selected.Count} 个，材料 {materials.Count} 种；新增路线 {added} 条。";
+            var detail = string.Format(AscensionText("所选项目 {0} 个，材料 {1} 种；新增路线 {2} 条。"), selected.Count, materials.Count, added);
             if (missing.Count > 0)
             {
                 var preview = string.Join("、", missing.Take(12));
-                detail += $"\n未找到路线的材料 {missing.Count} 种：{preview}{(missing.Count > 12 ? "…" : "")}";
+                detail += "\n" + string.Format(AscensionText("未找到路线的材料 {0} 种：{1}{2}"), missing.Count, preview, missing.Count > 12 ? "…" : "");
             }
             var biliwikiMatchCount = await CheckBiliwikiMaterialIndexesAsync(materials);
             detail += biliwikiMatchCount.HasValue
-                ? $"\n材料来自 Genshin-DB 在线目录；Biliwiki 突破材料索引中找到 {biliwikiMatchCount}/{materials.Count} 个材料名称。"
-                : "\n材料来自 Genshin-DB 在线目录；Biliwiki 索引暂时无法访问，未完成交叉核对。";
-            await ThemedMessageBox.InformationAsync(detail, "快速添加材料路线");
+                ? "\n" + string.Format(AscensionText("材料来自 Genshin-DB 在线目录；Biliwiki 突破材料索引中找到 {0}/{1} 个材料名称。"), biliwikiMatchCount, materials.Count)
+                : "\n" + AscensionText("材料来自 Genshin-DB 在线目录；Biliwiki 索引暂时无法访问，未完成交叉核对。");
+            await ThemedMessageBox.InformationAsync(detail, AscensionText("快速添加材料路线"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "快速添加角色/武器材料路线失败");
-            Toast.Error($"快速添加材料路线失败：{ex.Message}");
+            _logger.LogError(ex, "快速添加{Kind}材料路线失败", kind);
+            Toast.Error(string.Format(AscensionText("快速添加材料路线失败：{0}"), ex.Message));
         }
     }
 
@@ -1086,10 +1100,10 @@ public partial class ScriptControlViewModel : ViewModel
                     .Where(material => !string.IsNullOrWhiteSpace(material))
                     .Select(material => material!)
                     .ToHashSet(StringComparer.Ordinal);
-                result.Add(new AscensionCatalogEntry(name, kind, materials));
+                result.Add(new AscensionCatalogEntry(name, kind, item.Value<string>("version") ?? "0.0", materials));
             }
         }
-        return result.OrderBy(entry => entry.Kind).ThenBy(entry => entry.Name, StringComparer.Ordinal).ToList();
+        return result;
     }
 
     private static async Task<int?> CheckBiliwikiMaterialIndexesAsync(HashSet<string> materials)
@@ -1128,51 +1142,43 @@ public partial class ScriptControlViewModel : ViewModel
         using var response = await AscensionCatalogClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = JArray.Parse(await response.Content.ReadAsStringAsync());
-        return json.OfType<JObject>()
-            .Where(item => !string.IsNullOrWhiteSpace(item.Value<string>("name")))
-            .ToDictionary(
-                item => item.Value<string>("name")!,
-                item => (item["sources"] as JArray ?? new JArray())
-                    .Values<string>()
-                    .Where(source => !string.IsNullOrWhiteSpace(source))
-                    .Select(source => source!)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
-                StringComparer.OrdinalIgnoreCase);
+        return AscensionMaterialRouteMatcher.BuildMaterialSourceCatalog(json.OfType<JObject>()
+            .Select(item => (
+                Name: item.Value<string>("name"),
+                Sources: (item["sources"] as JArray ?? new JArray()).Values<string>())));
     }
 
-    private static ScrollViewer BuildAscensionCatalogPicker(List<AscensionCatalogEntry> entries)
+    private static ScrollViewer BuildAscensionCatalogPicker(List<AscensionCatalogEntry> entries, string kind)
     {
         var panel = new System.Windows.Controls.StackPanel();
-        var search = new System.Windows.Controls.TextBox { Margin = new Thickness(0, 0, 0, 8), MinWidth = 580 };
-        search.ToolTip = "搜索角色或武器名称";
-        var category = new ComboBox
+        var selectedEntries = new HashSet<AscensionCatalogEntry>();
+
+        var search = new System.Windows.Controls.TextBox { Margin = new Thickness(0, 0, 0, 6), MinWidth = 580 };
+        search.ToolTip = AscensionText(kind == "角色" ? "搜索角色名称" : "搜索武器名称");
+        var controls = new System.Windows.Controls.StackPanel { Orientation = Orientation.Horizontal };
+        var picker = new ComboBox
         {
-            ItemsSource = new[] { "全部", "角色", "武器" },
-            SelectedIndex = 0,
-            MinWidth = 140,
-            Margin = new Thickness(0, 0, 8, 0),
-        };
-        var itemPicker = new ComboBox
-        {
-            MinWidth = 430,
+            MinWidth = 470,
             IsTextSearchEnabled = true,
             MaxDropDownHeight = 360,
             DisplayMemberPath = nameof(AscensionCatalogEntry.DisplayName),
         };
-        var selectedEntries = new HashSet<AscensionCatalogEntry>();
-        var selectionControls = new System.Windows.Controls.StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 0, 0, 8),
-        };
         var add = new System.Windows.Controls.Button
         {
-            Content = "加入选择",
+            Content = AscensionText("加入选择"),
             Margin = new Thickness(8, 0, 0, 0),
         };
-        selectionControls.Children.Add(category);
-        selectionControls.Children.Add(itemPicker);
-        selectionControls.Children.Add(add);
+        controls.Children.Add(picker);
+        controls.Children.Add(add);
+
+        void RefreshItems()
+        {
+            var query = search.Text.Trim();
+            picker.ItemsSource = OrderByNewestVersion(entries.Where(entry => entry.Kind == kind
+                && entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
+            picker.SelectedItem = null;
+        }
+        search.TextChanged += (_, _) => RefreshItems();
 
         var selectedItems = new ListBox
         {
@@ -1185,39 +1191,27 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Orientation = Orientation.Horizontal,
         };
-        var remove = new System.Windows.Controls.Button { Content = "移除选中项" };
-        var clear = new System.Windows.Controls.Button { Content = "清除选择", Margin = new Thickness(8, 0, 0, 0) };
+        var remove = new System.Windows.Controls.Button { Content = AscensionText("移除选中项") };
+        var clear = new System.Windows.Controls.Button { Content = AscensionText("清除选择"), Margin = new Thickness(8, 0, 0, 0) };
         selectedControls.Children.Add(remove);
         selectedControls.Children.Add(clear);
-
-        void RefreshItems()
-        {
-            var query = search.Text.Trim();
-            var selectedCategory = category.SelectedItem as string;
-            itemPicker.ItemsSource = entries.Where(entry =>
-                    (selectedCategory == "全部" || entry.Kind == selectedCategory)
-                    && entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            itemPicker.SelectedItem = null;
-        }
 
         void RefreshSelectedItems()
         {
             selectedItems.ItemsSource = selectedEntries
-                .OrderBy(entry => entry.Kind, StringComparer.Ordinal)
+                .OrderBy(entry => entry.Kind == "角色" ? 0 : 1)
+                .ThenByDescending(entry => ParseCatalogVersion(entry.Version))
                 .ThenBy(entry => entry.Name, StringComparer.Ordinal)
                 .ToList();
         }
-
-        search.TextChanged += (_, _) => RefreshItems();
-        category.SelectionChanged += (_, _) => RefreshItems();
         add.Click += (_, _) =>
         {
-            if (itemPicker.SelectedItem is AscensionCatalogEntry selected)
+            if (picker.SelectedItem is AscensionCatalogEntry selected)
             {
                 selectedEntries.Add(selected);
                 RefreshSelectedItems();
-                itemPicker.SelectedItem = null;
+                picker.SelectedItem = null;
+                RefreshItems();
             }
         };
         remove.Click += (_, _) =>
@@ -1235,11 +1229,17 @@ public partial class ScriptControlViewModel : ViewModel
         };
 
         RefreshItems();
-        panel.Children.Add(search);
-        panel.Children.Add(selectionControls);
         panel.Children.Add(new System.Windows.Controls.TextBlock
         {
-            Text = "已选择项目",
+            Text = AscensionText(kind == "角色" ? "角色材料" : "武器材料"),
+            Margin = new Thickness(0, 4, 0, 4),
+            FontWeight = FontWeights.SemiBold,
+        });
+        panel.Children.Add(search);
+        panel.Children.Add(controls);
+        panel.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = AscensionText("已选择项目"),
             Margin = new Thickness(0, 4, 0, 4),
             FontWeight = FontWeights.SemiBold,
         });

@@ -5,6 +5,21 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.Script;
 public class AscensionMaterialRouteMatcherTests
 {
     [Fact]
+    public void MergesDuplicateMaterialCatalogNamesAndCombinesSources()
+    {
+        var catalog = AscensionMaterialRouteMatcher.BuildMaterialSourceCatalog(
+        [
+            ("Vesna's Bloom", new string?[] { "Gathered in the wild" }),
+            ("vesna's bloom", new string?[] { "Sold by a merchant", "Gathered in the wild" }),
+        ]);
+
+        Assert.Single(catalog);
+        Assert.Equal(2, catalog["VESNA'S BLOOM"].Count);
+        Assert.Contains("Gathered in the wild", catalog["Vesna's Bloom"]);
+        Assert.Contains("Sold by a merchant", catalog["Vesna's Bloom"]);
+    }
+
+    [Fact]
     public void FindsExactMaterialFolderAndMultipleSourceFolders()
     {
         var materials = new[] { "云岩裂叶", "稚嫩的尖齿", "老练的坚齿" };
