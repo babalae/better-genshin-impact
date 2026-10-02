@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,11 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
 {
     /// <summary>
+    /// 连续编辑完成后等待写盘的时间，避免快速勾选或拖拽产生无意义的中间修订。
+    /// </summary>
+    private const int AutoSaveDelayMilliseconds = 350;
+
+    /// <summary>
     /// 计划与预设的文件存储服务。
     /// </summary>
     private readonly PuloniaTaskStore _store;
@@ -35,6 +41,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 当前从存储加载的共享预设。
     /// </summary>
     private IReadOnlyList<PuloniaTaskPreset> _presets = [];
+
+    /// <summary>
+    /// 每个计划当前等待执行的自动保存延迟，用于合并短时间内的连续操作。
+    /// </summary>
+    private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, CancellationTokenSource> _autoSaveDelays = [];
+
+    /// <summary>
+    /// 每个计划独立的保存门，确保同一计划的修订始终按顺序写入。
+    /// </summary>
+    private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, SemaphoreSlim> _saveGates = [];
 
     /// <summary>
     /// 是否已经完成首次加载，避免导航缓存重复覆盖未保存草稿。
@@ -88,12 +104,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     public bool CanPaste => _clipboard.HasContent && SelectedDocument is not null;
 
     /// <summary>
-    /// 当前是否可以保存计划。
-    /// </summary>
-    public bool CanSave => !IsBusy && SelectedDocument?.IsDirty == true;
-
-    /// <summary>
-    /// 当前是否存在可供引用的其他已保存计划。
+    /// 当前是否存在可供引用的其他计划。
     /// </summary>
     public bool CanAddPlanReference => !IsBusy && SelectedDocument is not null && ReferencePlans.Count > 0;
 
@@ -115,7 +126,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 首次加载存储内容；空存储会建立一个尚未保存的新计划。
+    /// 首次加载存储内容；空存储会建立一个等待自动保存的新计划。
     /// </summary>
     [RelayCommand]
     private async Task InitializeAsync()
@@ -134,6 +145,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
                 AddDocument(CreateNewDocument("我的任务计划"));
             SelectedDocument = Documents[0];
             _isInitialized = true;
+            if (SelectedDocument.IsDirty)
+                ScheduleAutoSave(SelectedDocument);
             StatusMessage = $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。";
         }
         catch (Exception ex)
@@ -149,7 +162,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 新建一个仅存在于内存中的计划，首次保存成功后才写入文件。
+    /// 新建计划并加入自动保存队列。
     /// </summary>
     [RelayCommand]
     private void NewPlan()
@@ -162,7 +175,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         var document = CreateNewDocument(name);
         AddDocument(document);
         SelectedDocument = document;
-        StatusMessage = "已新建计划草稿；保存前不会写入磁盘。";
+        ScheduleAutoSave(document);
+        StatusMessage = "已新建计划。";
     }
 
     /// <summary>
@@ -178,34 +192,27 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             return;
         SelectedDocument = document;
         document.Name = name;
-        StatusMessage = $"计划已重命名为“{name}”；保存后写入磁盘。";
+        StatusMessage = $"计划已重命名为“{name}”。";
     }
 
     /// <summary>
-    /// 保存当前计划；失败时保留整个内存草稿和错误信息。
+    /// 保存指定计划文档；自动保存和建立计划引用前的立即提交共用此串行入口。
     /// </summary>
-    [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task SaveAsync()
+    private async Task<bool> SaveDocumentAsync(PuloniaTaskPlanDocumentViewModel document)
     {
-        var document = SelectedDocument;
-        if (document is null)
-            return;
-        await SaveDocumentAsync(document, reportSuccess: true);
-    }
-
-    /// <summary>
-    /// 保存指定计划文档；既供当前计划保存，也供建立引用前提交目标计划。
-    /// </summary>
-    private async Task<bool> SaveDocumentAsync(PuloniaTaskPlanDocumentViewModel document, bool reportSuccess)
-    {
-        IsBusy = true;
+        CancelPendingAutoSave(document);
+        var saveGate = GetSaveGate(document);
+        await saveGate.WaitAsync();
         try
         {
+            if (!document.IsDirty)
+                return true;
+
+            // Store 会在首次让出线程前复制当前模型；保存期间发生的新编辑仍留在内存，并在本次完成后再次保存。
             var saved = await _store.SavePlanAsync(document.Plan);
-            document.AcceptSaved(saved);
-            if (reportSuccess)
-                StatusMessage = $"“{saved.Name}”已保存为修订 {saved.Revision}。";
-            _ = PersistPlanOrderAsync();
+            document.AcceptAutoSaved(saved);
+            if (saved.Revision == 1)
+                _ = PersistPlanOrderAsync();
             return true;
         }
         catch (Exception ex)
@@ -217,7 +224,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         }
         finally
         {
-            IsBusy = false;
+            saveGate.Release();
             NotifyCommandStates();
         }
     }
@@ -241,13 +248,17 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
                 return;
         }
 
+        CancelPendingAutoSave(document);
+        var saveGate = GetSaveGate(document);
         IsBusy = true;
+        await saveGate.WaitAsync();
         try
         {
             var diskPlan = await _store.LoadPlanAsync(document.Id);
             if (diskPlan is null)
             {
                 StatusMessage = "该计划尚未保存，磁盘上没有可重新加载的版本。";
+                ScheduleAutoSave(document);
                 return;
             }
             document.ReplaceFromDisk(diskPlan);
@@ -257,9 +268,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         {
             StatusMessage = "重新加载失败，当前草稿未变：" + ex.Message;
             await ThemedMessageBox.ErrorAsync(StatusMessage, "任务计划重新加载失败");
+            ScheduleAutoSave(document);
         }
         finally
         {
+            saveGate.Release();
             IsBusy = false;
             NotifyCommandStates();
         }
@@ -390,15 +403,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             return;
         }
 
-        if (referencePlan.IsDirty)
-        {
-            var result = await ThemedMessageBox.ShowAsync(
-                $"被引用计划“{referencePlan.Name}”包含尚未保存的内容。计划引用只能指向可读取的磁盘版本，是否先保存它并继续？",
-                "保存引用目标", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question,
-                MessageBoxResult.Yes);
-            if (result != MessageBoxResult.Yes || !await SaveDocumentAsync(referencePlan, reportSuccess: false))
-                return;
-        }
+        // 引用必须指向已落盘版本；若目标仍在防抖窗口中，则立即完成它的自动保存，不再要求用户确认。
+        if (referencePlan.IsDirty && !await SaveDocumentAsync(referencePlan))
+            return;
 
         // 保存引用目标期间用户仍可能切换计划；插入位置始终以发起右键操作的节点为准。
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
@@ -565,7 +572,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private void AddDocument(PuloniaTaskPlanDocumentViewModel document)
     {
         Documents.Add(document);
+        _saveGates.Add(document, new SemaphoreSlim(1, 1));
         document.Changed += OnDocumentChanged;
+        document.ContentChanged += OnDocumentContentChanged;
         RefreshReferencePlans();
     }
 
@@ -576,6 +585,75 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         OnPropertyChanged(nameof(CanPaste));
         NotifyCommandStates();
+    }
+
+    /// <summary>
+    /// 计划内容变化后安排自动保存；保存失败后等待下一次真实编辑再重试。
+    /// </summary>
+    private void OnDocumentContentChanged(object? sender, EventArgs e)
+    {
+        if (sender is PuloniaTaskPlanDocumentViewModel { IsDirty: true, LastSaveError: null } document)
+            ScheduleAutoSave(document);
+    }
+
+    /// <summary>
+    /// 重新安排指定计划的自动保存；短时间内的连续操作只保留最后一个延迟任务。
+    /// </summary>
+    private void ScheduleAutoSave(PuloniaTaskPlanDocumentViewModel document)
+    {
+        if (!Documents.Contains(document) || !document.IsDirty || document.LastSaveError is not null)
+            return;
+
+        CancelPendingAutoSave(document);
+        var cancellation = new CancellationTokenSource();
+        _autoSaveDelays[document] = cancellation;
+        _ = AutoSaveAfterDelayAsync(document, cancellation);
+    }
+
+    /// <summary>
+    /// 等待防抖时间后保存计划；取消只终止尚未开始的延迟，不中断原子文件替换。
+    /// </summary>
+    private async Task AutoSaveAfterDelayAsync(PuloniaTaskPlanDocumentViewModel document,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(AutoSaveDelayMilliseconds, cancellation.Token);
+            if (Documents.Contains(document) && document.IsDirty)
+                await SaveDocumentAsync(document);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            // 新操作已重新安排保存，本次延迟正常结束。
+        }
+        finally
+        {
+            if (_autoSaveDelays.TryGetValue(document, out var current)
+                && ReferenceEquals(current, cancellation))
+                _autoSaveDelays.Remove(document);
+            cancellation.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 取消指定计划尚处于防抖等待中的自动保存。
+    /// </summary>
+    private void CancelPendingAutoSave(PuloniaTaskPlanDocumentViewModel document)
+    {
+        if (_autoSaveDelays.Remove(document, out var cancellation))
+            cancellation.Cancel();
+    }
+
+    /// <summary>
+    /// 取得指定计划的串行保存门。
+    /// </summary>
+    private SemaphoreSlim GetSaveGate(PuloniaTaskPlanDocumentViewModel document)
+    {
+        if (_saveGates.TryGetValue(document, out var saveGate))
+            return saveGate;
+        saveGate = new SemaphoreSlim(1, 1);
+        _saveGates.Add(document, saveGate);
+        return saveGate;
     }
 
     /// <summary>
@@ -734,9 +812,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private void NotifyCommandStates()
     {
         OnPropertyChanged(nameof(CanPaste));
-        OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(CanAddPlanReference));
-        SaveCommand.NotifyCanExecuteChanged();
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
     }
 }

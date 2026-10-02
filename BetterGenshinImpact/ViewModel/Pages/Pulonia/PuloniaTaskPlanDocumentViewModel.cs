@@ -122,6 +122,11 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     public event EventHandler? Changed;
 
     /// <summary>
+    /// 计划持久化内容发生变化时通知页面安排自动保存；纯选择变化不会触发。
+    /// </summary>
+    public event EventHandler? ContentChanged;
+
+    /// <summary>
     /// 当前编辑模型，仅供保存服务使用。
     /// </summary>
     internal PuloniaTaskPlan Plan => _plan;
@@ -175,11 +180,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             OnPropertyChanged();
         }
     }
-
-    /// <summary>
-    /// 计划列表中的未保存标记。
-    /// </summary>
-    public string DirtyMark => IsDirty ? "●" : string.Empty;
 
     /// <summary>
     /// 当前是否可以撤销最近一次结构或配置编辑。
@@ -236,6 +236,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             SelectedNode = selection;
         RefreshSelectedEditor();
         Changed?.Invoke(this, EventArgs.Empty);
+        ContentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -245,8 +246,10 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(mutation);
         mutation();
+        LastSaveError = null;
         UpdateDirtyState();
         Changed?.Invoke(this, EventArgs.Empty);
+        ContentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -414,21 +417,16 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 用保存服务返回的新修订替换编辑模型，并建立新的保存检查点。
+    /// 接受自动保存返回的磁盘修订，并保留保存期间产生的新编辑及现有撤销历史。
     /// </summary>
-    internal void AcceptSaved(PuloniaTaskPlan savedPlan)
+    internal void AcceptAutoSaved(PuloniaTaskPlan savedPlan)
     {
-        var selectedId = SelectedNode?.Id;
-        _plan = savedPlan;
+        // 只推进当前模型的修订号，不能用较早的保存副本覆盖等待期间产生的新编辑。
+        _plan.Revision = savedPlan.Revision;
         _savedSnapshot = SerializeForHistory(savedPlan);
-        _undoSnapshots.Clear();
         LastSaveError = null;
-        RebuildTree(selectedId);
         UpdateDirtyState();
         OnPropertyChanged(nameof(Revision));
-        OnPropertyChanged(nameof(Name));
-        OnPropertyChanged(nameof(Description));
-        UndoCommand.NotifyCanExecuteChanged();
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -622,7 +620,11 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         var selectedId = SelectedNode?.Id;
         var snapshot = _undoSnapshots[^1];
         _undoSnapshots.RemoveAt(_undoSnapshots.Count - 1);
+        var currentRevision = _plan.Revision;
         _plan = DeserializeHistory(snapshot);
+        // 撤销恢复的是内容而不是磁盘版本；沿用最新修订，避免自动保存被误判为旧版本覆盖。
+        _plan.Revision = currentRevision;
+        LastSaveError = null;
         RebuildTree(selectedId);
         UpdateDirtyState();
         OnPropertyChanged(nameof(Name));
@@ -630,6 +632,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         OnPropertyChanged(nameof(Revision));
         UndoCommand.NotifyCanExecuteChanged();
         Changed?.Invoke(this, EventArgs.Empty);
+        ContentChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -651,14 +654,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     {
         RefreshSelectedEditor();
         Changed?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// 在脏状态变化时同步计划列表标记。
-    /// </summary>
-    partial void OnIsDirtyChanged(bool value)
-    {
-        OnPropertyChanged(nameof(DirtyMark));
     }
 
     /// <summary>
