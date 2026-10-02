@@ -10,6 +10,9 @@ public class DomainNotificationData : BaseNotificationData
 {
     public AutoDomainParam? Domain { get; set; }
 
+    /// <summary>
+    /// 创建秘境成功通知，将奖励复制为快照并附加到消息中；没有奖励时保留原消息。
+    /// </summary>
     public static DomainNotificationData CreateSuccess(NotificationEvent notificationEvent, string message,
         IReadOnlyDictionary<string, int>? rewards)
     {

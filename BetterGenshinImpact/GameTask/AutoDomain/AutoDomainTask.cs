@@ -1538,6 +1538,10 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
     }
 
+    /// <summary>
+    /// 识别本轮奖励并计入累计汇总。未启用识别、结果页未就绪或识别失败时返回 null，取消和正常结束异常继续向上抛出。
+    /// </summary>
+    /// <returns>本轮奖励；识别结果可能为空字典，未完成识别时为 null。</returns>
     private async Task<Dictionary<string, int>?> TryRecognizeRewardResult()
     {
         if (!_taskParam.RewardRecognitionEnabled)
