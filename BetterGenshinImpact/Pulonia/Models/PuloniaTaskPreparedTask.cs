@@ -41,7 +41,7 @@ public sealed class PuloniaTaskPreparedTask
     public string SourceTaskId { get; }
 
     /// <summary>
-    /// 包含计划调用路径和重复轮次的地址，不依赖名称或数组下标。
+    /// 包含计划调用路径和分组执行轮次的地址，不依赖名称或数组下标。
     /// </summary>
     [JsonProperty("task_address")]
     public string TaskAddress { get; }

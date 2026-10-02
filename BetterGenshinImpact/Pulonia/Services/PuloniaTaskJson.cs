@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 public static class PuloniaTaskJson
 {
     /// <summary>
-    /// 从 JSON 读取并校验计划；不在缺少身份时悄悄生成新 ID。
+    /// 从 JSON 读取并校验当前计划格式；不在缺少身份时生成新 ID。
     /// </summary>
     public static PuloniaTaskPlan ReadPlan(string json)
     {
@@ -113,4 +113,5 @@ public static class PuloniaTaskJson
         foreach (var child in task.Children)
             AssignNewIds(child);
     }
+
 }

@@ -13,7 +13,6 @@ using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GongSolutions.Wpf.DragDrop;
-using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -352,25 +351,6 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 新增一个带单一子分组的固定次数重复节点。
-    /// </summary>
-    [RelayCommand]
-    private void AddRepeat(PuloniaTaskNodeViewModel? targetNode)
-    {
-        if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
-            return;
-        var repeat = new PuloniaTask
-        {
-            Name = "重复 2 次",
-            TaskType = "repeat",
-            Parameters = new JObject { ["count"] = 2 },
-            Children = [new PuloniaTask { Name = "重复内容", TaskType = "group" }]
-        };
-        document.InsertNode(repeat, parent, index);
-        StatusMessage = "已添加固定重复节点。";
-    }
-
-    /// <summary>
     /// 新增对其他计划的引用节点，不复制目标计划内容。
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanAddPlanReference))]
@@ -413,7 +393,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         var reference = new PuloniaTask
         {
             Name = "引用：" + referencePlan.Name,
-            TaskType = "plan",
+            TaskType = "group",
             Source = new PuloniaTaskSource { Kind = "plan", PlanId = referencePlan.Id }
         };
         document.InsertNode(reference, parent, index);
@@ -701,8 +681,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         parent = null!;
         index = 0;
-        if (ReferenceEquals(source, target) || source.ContainsDescendant(target)
-            || source.Parent?.TaskType == "repeat")
+        if (ReferenceEquals(source, target) || source.ContainsDescendant(target))
             return false;
         if (target.CanAcceptChildren && position == RelativeInsertPosition.TargetItemCenter)
         {
@@ -763,7 +742,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private static IEnumerable<string> EnumeratePlanReferenceIds(PuloniaTask task)
     {
-        if (task.TaskType == "plan" && task.Source is { Kind: "plan", PlanId: { } planId })
+        if (task.Source is { Kind: "plan", PlanId: { } planId })
             yield return planId;
         foreach (var child in task.Children)
         foreach (var referencedPlanId in EnumeratePlanReferenceIds(child))

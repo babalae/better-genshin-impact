@@ -259,9 +259,6 @@
                         <MenuItem Header="添加进程内 C# 任务"
                                   Command="{Binding Data.ViewModel.AddCSharpTaskCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}" />
-                        <MenuItem Header="添加固定重复"
-                                  Command="{Binding Data.ViewModel.AddRepeatCommand, Source={StaticResource PageBindingProxy}}"
-                                  CommandParameter="{Binding}" />
                         <MenuItem Header="添加计划引用…"
                                   Command="{Binding Data.ViewModel.AddPlanReferenceCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}" />
@@ -477,9 +474,6 @@
                                                 <MenuItem Header="添加进程内 C# 任务"
                                                           Command="{Binding Data.ViewModel.AddCSharpTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                           CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                <MenuItem Header="添加固定重复"
-                                                          Command="{Binding Data.ViewModel.AddRepeatCommand, Source={StaticResource PageBindingProxy}}"
-                                                          CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
                                                 <MenuItem Header="添加计划引用…"
                                                           Command="{Binding Data.ViewModel.AddPlanReferenceCommand, Source={StaticResource PageBindingProxy}}"
                                                           CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
@@ -549,6 +543,30 @@
                                     <CheckBox Margin="0,10,0,0"
                                               Content="节点自身启用"
                                               IsChecked="{Binding ViewModel.SelectedDocument.SelectedNode.IsEnabled, Mode=TwoWay}" />
+
+                                    <Grid Margin="0,12,0,0"
+                                          Visibility="{Binding ViewModel.SelectedDocument.SelectedNode.CanConfigureRepeat, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="140" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="执行次数"
+                                                   ToolTip="按顺序完整执行本分组内的全部任务；1 表示只执行一轮" />
+                                        <ui:NumberBox Grid.Column="1"
+                                                      AcceptsExpression="False"
+                                                      LargeChange="5"
+                                                      MaxDecimalPlaces="0"
+                                                      Maximum="10000"
+                                                      Minimum="1"
+                                                      SmallChange="1"
+                                                      SpinButtonPlacementMode="Inline"
+                                                      Value="{Binding ViewModel.SelectedDocument.SelectedNode.RepeatCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                            <b:Interaction.Behaviors>
+                                                <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1" />
+                                            </b:Interaction.Behaviors>
+                                        </ui:NumberBox>
+                                    </Grid>
 
                                     <TextBlock Margin="0,12,0,3" Text="资源定位" />
                                     <TextBox IsEnabled="{Binding ViewModel.SelectedDocument.CanEditPath}"

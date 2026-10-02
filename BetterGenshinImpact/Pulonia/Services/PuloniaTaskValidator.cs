@@ -48,8 +48,9 @@ public static class PuloniaTaskValidator
             throw new PuloniaTaskValidationException(location, $"不支持格式版本 {plan.SchemaVersion}。");
         if (plan.Revision < 0 || string.IsNullOrWhiteSpace(plan.Name))
             throw new PuloniaTaskValidationException(location, "修订号不能为负数，名称不能为空。");
-        if (plan.RootTask is null || plan.RootTask.TaskType != "group" || plan.RootTask.Source is not null)
-            throw new PuloniaTaskValidationException(location, "根节点必须是无来源引用的 group。");
+        if (plan.RootTask is null || plan.RootTask.TaskType != "group" || plan.RootTask.Source is not null
+            || plan.RootTask.RepeatCount is not null)
+            throw new PuloniaTaskValidationException(location, "根节点必须是无来源引用、无重复配置的 group。");
         if (plan.Accounts is null || plan.Triggers is null)
             throw new PuloniaTaskValidationException(location, "账号绑定和触发配置不能为 null。");
         ValidateJsonValue(plan.Triggers, location + "/triggers");
@@ -98,7 +99,7 @@ public static class PuloniaTaskValidator
             var address = parent + "/" + task.Id;
             if (depth > MaxTreeDepth || ++nodeCount > MaxTreeNodes)
                 throw new PuloniaTaskValidationException(address, "计划依赖超过深度或节点数量上限。");
-            if (task.TaskType == "plan")
+            if (task.Source is { Kind: "plan" })
             {
                 var targetId = task.Source!.PlanId!;
                 if (!stack.Add(targetId))
@@ -306,13 +307,13 @@ public static class PuloniaTaskValidator
         if (task.PresetId is not null)
             ValidateId(task.PresetId, location + "/preset_id");
 
-        if (task.TaskType is "group" or "plan")
+        if (task.TaskType == "group")
         {
             if (task.Parameters.Count != 0 || task.PresetId is not null || task.Path is not null)
-                throw new PuloniaTaskValidationException(location, "分组/引用使用 parameter_overrides 提供公共参数，不使用叶子参数、预设或 path。");
+                throw new PuloniaTaskValidationException(location, "分组使用 parameter_overrides 提供公共参数，不使用叶子参数、预设或 path。");
         }
         else if (task.ParameterOverrides.Count != 0)
-            throw new PuloniaTaskValidationException(location, "公共参数只能配置在 group 或 plan 节点。");
+            throw new PuloniaTaskValidationException(location, "公共参数只能配置在 group 节点。");
 
         var scopes = new HashSet<(string, string?, int)>();
         foreach (var item in task.ParameterOverrides)
@@ -328,7 +329,7 @@ public static class PuloniaTaskValidator
         {
             if (task.Children.Count != 0)
                 throw new PuloniaTaskValidationException(location, "引用来源与可编辑子节点互斥。");
-            if (task.TaskType == "plan" && source.Kind == "plan")
+            if (task.TaskType == "group" && source.Kind == "plan")
             {
                 ValidateId(source.PlanId, location + "/source/plan_id");
                 if (source.Path is not null || source.TaskType is not null || source.Version is not null)
@@ -342,17 +343,16 @@ public static class PuloniaTaskValidator
             else
                 throw new PuloniaTaskValidationException(location, "来源 kind 与节点类型不匹配。");
         }
-        else if (task.TaskType == "plan")
-            throw new PuloniaTaskValidationException(location, "plan 节点缺少来源。");
 
-        if (task.TaskType == "repeat")
+        if (task.TaskType == "group")
         {
-            if (task.Source is not null || task.Path is not null || task.PresetId is not null || task.Children.Count != 1
-                || task.Parameters.Count != 1 || task.Parameters["count"]?.Type != JTokenType.Integer
-                || task.Parameters["count"]!.Value<long>() is <= 0 or > MaxTreeNodes)
-                throw new PuloniaTaskValidationException(location, "重复原型必须有且只有一棵子树，参数为 count: 1—10000。");
+            if (task.RepeatCount is < 1 or > MaxTreeNodes)
+                throw new PuloniaTaskValidationException(location, "分组执行次数必须为 1—10000。");
         }
-        else if (IsLeafType(task.TaskType) && (task.Children.Count != 0 || task.Source is not null))
+        else if (task.RepeatCount is not null)
+            throw new PuloniaTaskValidationException(location, "只有分组可以配置执行次数。");
+
+        if (IsLeafType(task.TaskType) && (task.Children.Count != 0 || task.Source is not null))
             throw new PuloniaTaskValidationException(location, "具体任务不能带子节点或引用来源。");
         if (task.TaskType is "javascript" or "pathing" or "keymouse" && string.IsNullOrWhiteSpace(task.Path))
             throw new PuloniaTaskValidationException(location, "资源任务必须填写 path。");
@@ -364,12 +364,13 @@ public static class PuloniaTaskValidator
     /// <summary>
     /// 判断具体能力类型，不把控制节点作为参数作用域。
     /// </summary>
-    private static bool IsLeafType(string? type) => IsTaskType(type) && type is not ("group" or "plan" or "repeat");
+    private static bool IsLeafType(string? type) => IsTaskType(type) && type != "group";
 
     /// <summary>
-    /// 任务类型使用稳定的小写机器标识。
+    /// 任务类型使用稳定的小写机器标识；计划来源和分组执行次数不属于任务类型。
     /// </summary>
-    private static bool IsTaskType(string? type) => type is not null && Regex.IsMatch(type, "^[a-z][a-z0-9_.-]{0,95}\\z");
+    private static bool IsTaskType(string? type) => type is not null && type is not ("repeat" or "plan")
+                                                                  && Regex.IsMatch(type, "^[a-z][a-z0-9_.-]{0,95}\\z");
 
     /// <summary>
     /// 判断原型支持的参数类型名称。

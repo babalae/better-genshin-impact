@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -58,18 +59,21 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     /// <summary>
     /// 用户可见的任务类型名称。
     /// </summary>
-    public string TypeDisplayName => _model.TaskType switch
+    public string TypeDisplayName => _model.Source?.Kind switch
     {
-        "group" => "分组",
-        "repeat" => "固定重复",
         "plan" => "计划引用",
-        "pathing" => "地图追踪",
-        "javascript" => "JS 脚本",
-        "keymouse" => "录制回放",
-        "shell" => "Shell",
-        "csharp" => "进程内 C#",
-        _ when _model.TaskType.StartsWith("builtin.", System.StringComparison.Ordinal) => "内置任务",
-        _ => _model.TaskType
+        "directory" => "目录引用",
+        _ => _model.TaskType switch
+        {
+            "group" => "分组",
+            "pathing" => "地图追踪",
+            "javascript" => "JS 脚本",
+            "keymouse" => "录制回放",
+            "shell" => "Shell",
+            "csharp" => "进程内 C#",
+            _ when _model.TaskType.StartsWith("builtin.", System.StringComparison.Ordinal) => "内置任务",
+            _ => _model.TaskType
+        }
     };
 
     /// <summary>
@@ -150,15 +154,36 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     public bool IsRoot => _parent is null;
 
     /// <summary>
+    /// 当前节点是否是允许配置执行次数的可见分组。
+    /// </summary>
+    public bool CanConfigureRepeat => _model.TaskType == "group" && !IsRoot;
+
+    /// <summary>
+    /// 分组完整执行子任务列表的次数；一次执行不写入冗余持久化字段。
+    /// </summary>
+    public int RepeatCount
+    {
+        get => _model.RepeatCount ?? 1;
+        set
+        {
+            var constrainedValue = System.Math.Clamp(value, 1, PuloniaTaskValidator.MaxTreeNodes);
+            int? storedValue = constrainedValue == 1 ? null : constrainedValue;
+            if (_model.RepeatCount == storedValue)
+                return;
+            _document.ApplyMutation(() => _model.RepeatCount = storedValue, this);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
     /// 是否是具体能力节点。
     /// </summary>
-    public bool IsLeaf => _model.TaskType is not ("group" or "plan" or "repeat");
+    public bool IsLeaf => _model.TaskType != "group";
 
     /// <summary>
     /// 是否可以直接接收新子节点。
     /// </summary>
-    public bool CanAcceptChildren => _model.TaskType == "group" && _model.Source is null
-                                     || _model.TaskType == "repeat" && Children.Count == 0;
+    public bool CanAcceptChildren => _model.TaskType == "group" && _model.Source is null;
 
     /// <summary>
     /// 当前节点是否包含可批量启用的直接或间接子节点。
@@ -186,6 +211,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         _parent = parent;
         OnPropertyChanged(nameof(Parent));
         OnPropertyChanged(nameof(IsRoot));
+        OnPropertyChanged(nameof(CanConfigureRepeat));
         NotifyEffectiveEnabledChangedRecursively();
     }
 
@@ -208,6 +234,15 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanAcceptChildren));
         OnPropertyChanged(nameof(HasChildren));
+    }
+
+    /// <summary>
+    /// 引用来源变化后刷新由来源种类决定的节点显示和容器能力。
+    /// </summary>
+    internal void NotifySourceChanged()
+    {
+        OnPropertyChanged(nameof(TypeDisplayName));
+        OnPropertyChanged(nameof(CanAcceptChildren));
     }
 
     /// <summary>

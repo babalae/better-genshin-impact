@@ -53,6 +53,12 @@ public sealed class PuloniaTask
     public List<PuloniaTask> Children { get; set; } = [];
 
     /// <summary>
+    /// 分组完整执行子任务列表的次数；null 与 1 都表示只执行一次。
+    /// </summary>
+    [JsonProperty("repeat_count", NullValueHandling = NullValueHandling.Ignore)]
+    public int? RepeatCount { get; set; }
+
+    /// <summary>
     /// 选用的共享预设 ID；账号绑定可以替换选择。
     /// </summary>
     [JsonProperty("preset_id")]

@@ -39,7 +39,7 @@ public sealed class PuloniaTaskBuildOptions
     public int MaxDepth { get; init; } = 64;
 
     /// <summary>
-    /// 最大展开节点数，防止目录与重复展开无界占用内存。
+    /// 最大展开节点数，防止目录与分组多轮展开无界占用内存。
     /// </summary>
     public int MaxNodes { get; init; } = 10000;
 }

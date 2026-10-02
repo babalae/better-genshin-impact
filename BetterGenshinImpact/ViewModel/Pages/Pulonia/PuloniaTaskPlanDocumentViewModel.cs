@@ -204,7 +204,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// <summary>
     /// 当前参数编辑框的内容说明。
     /// </summary>
-    public string ParameterEditorTitle => SelectedNode?.TaskType is "group" or "plan"
+    public string ParameterEditorTitle => SelectedNode?.TaskType == "group"
         ? "分组公共参数覆盖（JSON 数组）"
         : "节点参数（JSON 对象）";
 
@@ -276,11 +276,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         var sourceParent = node.Parent;
         if (sourceParent is null || ReferenceEquals(node, targetParent) || node.ContainsDescendant(targetParent))
             return;
-        if (sourceParent.TaskType == "repeat")
-        {
-            EditorMessage = "固定重复节点必须保留唯一子树；请移动或删除整个重复节点。";
-            return;
-        }
         if (!targetParent.CanAcceptChildren && !ReferenceEquals(sourceParent, targetParent))
             return;
 
@@ -314,11 +309,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         var parent = node.Parent;
         if (parent is null)
             return;
-        if (parent.TaskType == "repeat")
-        {
-            EditorMessage = "固定重复节点必须保留唯一子树；如需移除，请删除整个重复节点。";
-            return;
-        }
         var index = parent.Children.IndexOf(node);
         if (index < 0)
             return;
@@ -488,7 +478,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
                 return;
             }
 
-            ParameterJson = node.TaskType is "group" or "plan"
+            ParameterJson = node.TaskType == "group"
                 ? JArray.FromObject(node.Model.ParameterOverrides).ToString(Formatting.Indented)
                 : node.Model.Parameters.ToString(Formatting.Indented);
             PolicyJson = JObject.FromObject(node.Model.Policy).ToString(Formatting.Indented);
@@ -543,7 +533,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             return;
         try
         {
-            if (node.TaskType is "group" or "plan")
+            if (node.TaskType == "group")
             {
                 var overrides = ReadParameterOverrides(ParameterJson);
                 ApplyMutation(() => node.Model.ParameterOverrides = overrides, node);
@@ -599,7 +589,11 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             var source = string.IsNullOrWhiteSpace(SourceJson)
                 ? null
                 : PuloniaTaskJson.Read<PuloniaTaskSource>(SourceJson);
-            ApplyMutation(() => node.Model.Source = source, node);
+            ApplyMutation(() =>
+            {
+                node.Model.Source = source;
+                node.NotifySourceChanged();
+            }, node);
             EditorMessage = "引用来源已应用到草稿。";
         }
         catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException)
@@ -757,7 +751,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// <summary>
     /// 判断模型节点是否是具体能力节点。
     /// </summary>
-    private static bool IsLeaf(PuloniaTask task) => task.TaskType is not ("group" or "plan" or "repeat");
+    private static bool IsLeaf(PuloniaTask task) => task.TaskType != "group";
 
     /// <summary>
     /// 深度优先枚举节点及其全部后代。

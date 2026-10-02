@@ -94,7 +94,7 @@ public sealed class PuloniaTaskBuilder
         context.Cancellation.ThrowIfCancellationRequested();
         var address = parentAddress + "/" + task.Id;
         if (depth > context.Options.MaxDepth || ++context.NodeCount > context.Options.MaxNodes)
-            throw new PuloniaTaskValidationException(address, "引用、目录或重复展开超过深度/数量限制。");
+            throw new PuloniaTaskValidationException(address, "引用、目录或分组重复展开超过深度/数量限制。");
         var enabled = parentEnabled && task.IsEnabled;
         var policy = MergePolicy(inheritedPolicy, task.Policy);
         var children = new List<PuloniaTaskPreparedTask>();
@@ -111,31 +111,29 @@ public sealed class PuloniaTaskBuilder
                 children.Add(await BuildTaskAsync(context, plan, child, address, false, policy,
                     ancestorOverrides, referenceOverrides, planStack, depth + 1).ConfigureAwait(false));
         }
-        else if (task.TaskType == "plan")
+        else if (task.TaskType == "group" && task.Source is { Kind: "plan" } planSource)
         {
-            var targetId = task.Source!.PlanId!;
+            var targetId = planSource.PlanId!;
             if (planStack.Contains(targetId))
                 throw new PuloniaTaskValidationException(address, $"计划引用形成循环：{targetId}。");
             var target = context.Plans[targetId];
             var nextStack = new HashSet<string>(planStack, StringComparer.Ordinal) { targetId };
 
             // 引用边界重置普通祖先参数；只有引用节点显式提供的公共参数可以跨入。
-            children.Add(await BuildTaskAsync(context, target, target.RootTask, address + "/@" + targetId,
-                true, MergePolicy(new PuloniaTaskPolicy(), task.Policy), [], task.ParameterOverrides,
-                nextStack, depth + 1).ConfigureAwait(false));
-        }
-        else if (task.TaskType == "repeat")
-        {
-            var count = task.Parameters["count"]!.Value<int>();
-            parameters = (JObject)task.Parameters.DeepClone();
-            sources["count"] = address;
-            for (var iteration = 1; iteration <= count; iteration++)
-                children.Add(await BuildTaskAsync(context, plan, task.Children[0], address + "/#" + iteration,
-                    true, policy, ancestorOverrides, referenceOverrides, planStack, depth + 1).ConfigureAwait(false));
+            var repeatCount = task.RepeatCount ?? 1;
+            for (var iteration = 1; iteration <= repeatCount; iteration++)
+            {
+                var iterationAddress = GetGroupIterationAddress(address, repeatCount, iteration);
+                children.Add(await BuildTaskAsync(context, target, target.RootTask,
+                    iterationAddress + "/@" + targetId, true,
+                    MergePolicy(new PuloniaTaskPolicy(), task.Policy), [], task.ParameterOverrides,
+                    nextStack, depth + 1).ConfigureAwait(false));
+            }
         }
         else if (task.TaskType == "group")
         {
             var nestedOverrides = new List<PuloniaTaskParameterOverride>(ancestorOverrides);
+            var repeatCount = task.RepeatCount ?? 1;
             // 同层通用覆盖先应用，资源专用覆盖后应用；两者都低于更近的祖先。
             nestedOverrides.AddRange(task.ParameterOverrides.OrderBy(item => item.ResourceId is null ? 0 : 1));
             if (task.Source is { Kind: "directory" } directory)
@@ -143,22 +141,27 @@ public sealed class PuloniaTaskBuilder
                 path = ResolvePath(context, directory.Path!, address);
                 var files = EnumerateFiles(context, path, "*.json", directory.Recursive, address);
                 var manifest = new StringBuilder();
-                foreach (var file in files)
+                for (var iteration = 1; iteration <= repeatCount; iteration++)
                 {
-                    var relative = NormalizeRelativePath(path, file);
-                    // ID 来自相对资源位置，与文件内容、数组顺序和组名无关。
-                    var generatedId = "resource-" + HashText(relative.ToLowerInvariant());
-                    var generatedTask = new PuloniaTask
+                    var iterationAddress = GetGroupIterationAddress(address, repeatCount, iteration);
+                    foreach (var file in files)
                     {
-                        Id = generatedId,
-                        Name = System.IO.Path.GetFileNameWithoutExtension(file),
-                        TaskType = directory.TaskType!,
-                        Path = file
-                    };
-                    var prepared = await BuildTaskAsync(context, plan, generatedTask, address, true, policy,
-                        nestedOverrides, referenceOverrides, planStack, depth + 1, task.Id).ConfigureAwait(false);
-                    children.Add(prepared);
-                    manifest.Append(relative).Append('\0').Append(prepared.ResourceVersion).Append('\n');
+                        var relative = NormalizeRelativePath(path, file);
+                        // ID 来自相对资源位置，与文件内容、数组顺序和组名无关。
+                        var generatedId = "resource-" + HashText(relative.ToLowerInvariant());
+                        var generatedTask = new PuloniaTask
+                        {
+                            Id = generatedId,
+                            Name = System.IO.Path.GetFileNameWithoutExtension(file),
+                            TaskType = directory.TaskType!,
+                            Path = file
+                        };
+                        var prepared = await BuildTaskAsync(context, plan, generatedTask, iterationAddress, true, policy,
+                            nestedOverrides, referenceOverrides, planStack, depth + 1, task.Id).ConfigureAwait(false);
+                        children.Add(prepared);
+                        if (iteration == 1)
+                            manifest.Append(relative).Append('\0').Append(prepared.ResourceVersion).Append('\n');
+                    }
                 }
                 version = HashText(manifest.ToString());
                 if (directory.Version is not null && directory.Version != version)
@@ -166,9 +169,13 @@ public sealed class PuloniaTaskBuilder
             }
             else
             {
-                foreach (var child in task.Children)
-                    children.Add(await BuildTaskAsync(context, plan, child, address, true, policy,
-                        nestedOverrides, referenceOverrides, planStack, depth + 1).ConfigureAwait(false));
+                for (var iteration = 1; iteration <= repeatCount; iteration++)
+                {
+                    var iterationAddress = GetGroupIterationAddress(address, repeatCount, iteration);
+                    foreach (var child in task.Children)
+                        children.Add(await BuildTaskAsync(context, plan, child, iterationAddress, true, policy,
+                            nestedOverrides, referenceOverrides, planStack, depth + 1).ConfigureAwait(false));
+                }
             }
         }
         else
@@ -236,6 +243,12 @@ public sealed class PuloniaTaskBuilder
         return new PuloniaTaskPreparedTask(plan.Id, task.Id, sourceTaskId ?? task.Id, address, task.Name,
             task.TaskType, enabled, path, version, parameters, sources, policy, children);
     }
+
+    /// <summary>
+    /// 仅在分组执行多轮时追加轮次地址，保持普通分组原有任务地址不变。
+    /// </summary>
+    private static string GetGroupIterationAddress(string address, int repeatCount, int iteration)
+        => repeatCount > 1 ? address + "/#" + iteration : address;
 
     /// <summary>
     /// 按资源专用说明优先、类型通用说明其次查找能力。
