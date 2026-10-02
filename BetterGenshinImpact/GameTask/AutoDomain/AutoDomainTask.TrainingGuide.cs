@@ -525,13 +525,14 @@ public partial class AutoDomainTask
             {
                 missingTargetFrames = 0;
                 BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(screen.Width * .25), (int)(screen.Height * .5));
-                var scrollCount = direction > 0 ? 5 : 1;
+                // 普通开放的入口同名，每次只滚一格，保持小幅位移跟踪；全开模式可按名称周期对齐。
+                var scrollCount = direction > 0 && layout.Group.Length > 1 ? 5 : 1;
                 for (var step = 0; step < scrollCount; step++)
                 {
                     Simulation.SendInput.Mouse.VerticalScroll(direction);
                     await Delay(60, _ct);
                 }
-                afterUpwardScroll = direction > 0;
+                afterUpwardScroll = direction > 0 && scrollCount > 1;
                 TrainingGuideDiagnostics.Detail("培养入口查找：滚动方向 {Direction}，本次 {Count} 格，等待后重新确认入口排列",
                     direction > 0 ? "向上" : "向下", scrollCount);
             }
