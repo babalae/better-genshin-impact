@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
@@ -226,7 +226,7 @@ public partial class ScriptGroupProject : ObservableObject
         {
             // 加载并执行
             var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
-            await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
+            await KeyMouseMacroPlayer.PlayMacro(json, ScriptCancellationContext.Token, false);
         }
         else if (Type == "Pathing")
         {
@@ -236,7 +236,7 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 return;
             }
-            var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
+            var pathingTask = new PathExecutor(ScriptCancellationContext.Token);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
             if (!pathingTask.PartyConfig.Enabled || pathingTask.PartyConfig.AutoPickEnabled)
             {
@@ -309,7 +309,7 @@ public partial class ScriptGroupProject : ObservableObject
             }
 
             var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
-            await task.Start(CancellationContext.Instance.Cts.Token);
+            await task.Start(ScriptCancellationContext.Token);
         }
 
         if (Type != "Pathing")
@@ -401,7 +401,6 @@ public partial class ScriptGroupProject : ObservableObject
         }
     }
 }
-
 public class ScriptGroupProjectExtensions
 {
     public static readonly Dictionary<string, string> TypeDescriptions = new()

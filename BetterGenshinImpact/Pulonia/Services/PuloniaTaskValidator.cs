@@ -151,6 +151,18 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
+    /// 检查执行器类型说明；通用 JS 能力可不绑定资源，具体预设仍由 <see cref="ValidateScope"/> 严格校验。
+    /// </summary>
+    public static void ValidateDefinitionScope(string type, string? resourceId, int version, JObject? values, string location)
+    {
+        if (!IsLeafType(type) || version <= 0 || values is null)
+            throw new PuloniaTaskValidationException(location, "能力说明必须有具体任务类型、正整数版本和对象参数。");
+        if (resourceId is not null && string.IsNullOrWhiteSpace(resourceId))
+            throw new PuloniaTaskValidationException(location, "能力说明的资源标识不能为空字符串。");
+        ValidateJsonValue(values, location + "/values");
+    }
+
+    /// <summary>
     /// 校验有限超时、重试和失败行为。
     /// </summary>
     public static void ValidatePolicy(PuloniaTaskPolicy? policy, string location)

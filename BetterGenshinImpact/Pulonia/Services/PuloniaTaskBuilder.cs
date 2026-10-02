@@ -55,7 +55,7 @@ public sealed class PuloniaTaskBuilder
             {
                 if (definition is null || definition.ParameterSchema is null || definition.PublicParameters is null)
                     throw new PuloniaTaskValidationException(plan.Id, "类型说明不能为空。");
-                PuloniaTaskValidator.ValidateScope(definition.TaskType, definition.ResourceId,
+                PuloniaTaskValidator.ValidateDefinitionScope(definition.TaskType, definition.ResourceId,
                     definition.SchemaVersion, definition.DefaultParameters, "definition/" + definition.TaskType);
                 if (!definitionKeys.Add((definition.TaskType, definition.ResourceId)))
                     throw new PuloniaTaskValidationException(plan.Id, "类型和资源说明重复注册。");
@@ -226,7 +226,7 @@ public sealed class PuloniaTaskBuilder
             PuloniaTaskValidator.ValidateParameters(parameters, definition.ParameterSchema, address + "/parameters");
             if (task.TaskType is "javascript" or "pathing" or "keymouse")
             {
-                path = ResolvePath(context, task.Path!, address);
+                path = ResolvePath(context, task.Path!, address, definition.ResourceBaseDirectory);
                 try
                 {
                     version = task.TaskType == "javascript" && Directory.Exists(path)
@@ -315,7 +315,7 @@ public sealed class PuloniaTaskBuilder
     /// <summary>
     /// 解析显式路径变量；未知变量在原节点报错。
     /// </summary>
-    private static string ResolvePath(BuildContext context, string path, string address)
+    private static string ResolvePath(BuildContext context, string path, string address, string? baseDirectory = null)
     {
         var expanded = Regex.Replace(path, "\\{([^{}]+)\\}", match =>
             context.Options.PathVariables.TryGetValue(match.Groups[1].Value, out var value)
@@ -323,7 +323,8 @@ public sealed class PuloniaTaskBuilder
                 : throw new PuloniaTaskValidationException(address, $"未知路径变量 {match.Value}。"));
         if (expanded.Contains('{') || expanded.Contains('}'))
             throw new PuloniaTaskValidationException(address, "资源路径包含未解析的变量。");
-        return System.IO.Path.GetFullPath(expanded, System.IO.Path.GetFullPath(context.Options.BaseDirectory));
+        return System.IO.Path.GetFullPath(expanded,
+            System.IO.Path.GetFullPath(baseDirectory ?? context.Options.BaseDirectory));
     }
 
     /// <summary>

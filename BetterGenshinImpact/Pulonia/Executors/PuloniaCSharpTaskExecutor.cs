@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
@@ -16,7 +17,7 @@ public sealed class PuloniaCSharpTaskExecutor : IPuloniaTaskExecutor
     private readonly PuloniaCSharpTaskRegistry _registry;
 
     /// <inheritdoc />
-    public PuloniaTaskDefinition Definition { get; } = new()
+    public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "csharp",
         DefaultParameters = new JObject
@@ -42,7 +43,7 @@ public sealed class PuloniaCSharpTaskExecutor : IPuloniaTaskExecutor
             ["additionalProperties"] = true
         },
         PublicParameters = ["operation", "values", "delay_milliseconds"]
-    };
+    }];
 
     /// <summary>
     /// 使用显式操作注册表建立执行器。

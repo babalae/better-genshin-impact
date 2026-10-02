@@ -9,6 +9,16 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskDefinition
 {
     /// <summary>
+    /// 此能力执行前是否必须准备游戏会话并独占任务输入。
+    /// </summary>
+    public bool RequiresGameSession { get; init; }
+
+    /// <summary>
+    /// 相对资源路径的默认根目录；为空时使用本次构建的基础目录。
+    /// </summary>
+    public string? ResourceBaseDirectory { get; init; }
+
+    /// <summary>
     /// 任务类型。
     /// </summary>
     public string TaskType { get; init; } = string.Empty;

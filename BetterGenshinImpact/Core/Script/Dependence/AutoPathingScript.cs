@@ -21,48 +21,34 @@ public class AutoPathingScript
         _autoPathingFile = new LimitedFile(Global.Absolute(@"User\AutoPathing"));
     }
 
-    public async Task Run(string json)
+    public async Task<bool> Run(string json)
     {
-        try
+        var task = PathingTask.BuildFromJson(json);
+        var pathExecutor = new PathExecutor(ScriptCancellationContext.Token);
+        if (_config != null && _config is PathingPartyConfig patyConfig)
         {
-            var task = PathingTask.BuildFromJson(json);
-            var pathExecutor = new PathExecutor(CancellationContext.Instance.Cts.Token);
-            if (_config != null && _config is PathingPartyConfig patyConfig)
-            {
-                pathExecutor.PartyConfig = patyConfig;
-            }
+            pathExecutor.PartyConfig = patyConfig;
+        }
 
-            await pathExecutor.Pathing(task);
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e,"执行地图追踪时候发生错误");
-            TaskControl.Logger.LogError("执行地图追踪时候发生错误: {Msg}",e.Message);
-        }
+        await pathExecutor.Pathing(task);
+        ScriptCancellationContext.Token.ThrowIfCancellationRequested();
+        return pathExecutor.SuccessEnd;
     }
 
-    public async Task RunFile(string path)
+    public async Task<bool> RunFile(string path)
     {
-        try
-        {
-            var json = await new LimitedFile(_rootPath).ReadText(path);
-            await Run(json);
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e,"读取文件时发生错误");
-            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}",e.Message);
-        }
+        var json = await new LimitedFile(_rootPath).ReadText(path);
+        return await Run(json);
     }
 
     /// <summary>
     /// 从已订阅的内容中获取文件
     /// </summary>
     /// <param name="path">在 `\User\AutoPathing` 目录下获取文件</param>
-    public async Task RunFileFromUser(string path)
+    public async Task<bool> RunFileFromUser(string path)
     {
         var json = await AutoPathingFile.ReadText(path);
-        await Run(json);
+        return await Run(json);
     }
 
     /// <summary>

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -76,7 +77,7 @@ public class ScriptProject
         return scrollViewer;
     }
 
-    private IScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig)
+    private V8ScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig)
     {
         V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
 
@@ -97,13 +98,17 @@ public class ScriptProject
         return engine;
     }
 
-    public async Task ExecuteAsync(dynamic? context = null, PathingPartyConfig? partyConfig = null)
+    public async Task ExecuteAsync(dynamic? context = null, PathingPartyConfig? partyConfig = null,
+        CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         // 默认值
         GlobalMethod.SetGameMetrics(1920, 1080);
         // 加载代码
-        var code = await LoadCode();
+        var code = await LoadCode(ct);
         var engine = BuildScriptEngine(partyConfig);
+        using var cancellationRegistration = ct.Register(() => TryInterrupt(engine));
+        ct.ThrowIfCancellationRequested();
 
         // 使用自定义加载器解析脚本文件
         var loader = (PackageDocumentLoader)engine.DocumentSettings.Loader;
@@ -141,32 +146,42 @@ public class ScriptProject
         catch (Exception e)
         {
             Debug.WriteLine(e);
+            if (ct.IsCancellationRequested)
+                throw new OperationCanceledException("JS 脚本已取消。", e, ct);
             throw;
         }
         finally
         {
             // 终止代码执行
-            try
-            {
-                engine.Interrupt();
-            }
-            catch (Exception e)
-            {
-                TaskControl.Logger.LogError(e, "中断脚本执行异常：" + e.Message);
-            }
-
+            cancellationRegistration.Dispose();
+            TryInterrupt(engine);
             engine.Dispose();
         }
     }
 
-    public async Task<string> LoadCode()
+    public async Task<string> LoadCode(CancellationToken ct = default)
     {
-        var code = await File.ReadAllTextAsync(Path.Combine(ProjectPath, Manifest.Main));
+        var code = await File.ReadAllTextAsync(Path.Combine(ProjectPath, Manifest.Main), ct);
         if (string.IsNullOrEmpty(code))
         {
             throw new FileNotFoundException("main js is empty.");
         }
 
         return code;
+    }
+
+    /// <summary>
+    /// 尽力中断 V8 执行；引擎已经结束或释放时无需覆盖原始执行结果。
+    /// </summary>
+    private static void TryInterrupt(V8ScriptEngine engine)
+    {
+        try
+        {
+            engine.Interrupt();
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "中断脚本执行异常：{Message}", e.Message);
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -21,7 +21,7 @@ public class GlobalMethod
 {
     public static async Task Sleep(int millisecondsTimeout)
     {
-        await Task.Delay(millisecondsTimeout, CancellationContext.Instance.Cts.Token);
+        await Task.Delay(millisecondsTimeout, ScriptCancellationContext.Token);
     }
     
     public static string GetVersion()

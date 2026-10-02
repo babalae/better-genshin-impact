@@ -225,13 +225,18 @@ public partial class App : Application
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
-                // Pulonia 步骤 3：配置存储、快照准备和单协调器执行链；纯任务不会启动游戏会话。
+                // Pulonia：纯任务保持无游戏依赖；游戏能力通过统一协调器按需准备会话和输入所有权。
                 services.AddSingleton<PuloniaTaskStore>();
                 services.AddSingleton<PuloniaTaskBuilder>();
                 services.AddSingleton<PuloniaTaskClipboardService>();
                 services.AddSingleton<PuloniaCSharpTaskRegistry>();
+                services.AddSingleton<PuloniaGameTaskCoordinator>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaCSharpTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaShellTaskExecutor>();
+                services.AddSingleton<IPuloniaTaskExecutor, PuloniaPathingTaskExecutor>();
+                services.AddSingleton<IPuloniaTaskExecutor, PuloniaJavaScriptTaskExecutor>();
+                services.AddSingleton<IPuloniaTaskExecutor, PuloniaKeyMouseTaskExecutor>();
+                services.AddSingleton<IPuloniaTaskExecutor, PuloniaBuiltinTaskExecutor>();
                 services.AddSingleton<PuloniaTaskService>();
                 services.AddSingleton<IPuloniaTaskService>(sp => sp.GetRequiredService<PuloniaTaskService>());
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();

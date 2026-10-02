@@ -77,7 +77,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 页面底部的最近操作结果。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "步骤 3 可运行 Shell 与纯计算 C# 任务，不会启动游戏或截图器。";
+    private string _statusMessage = "纯任务不会启动截图器；游戏任务会按需准备会话并在结束后释放输入。";
 
     /// <summary>
     /// 当前打开的计划编辑文档。
@@ -94,7 +94,13 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     public IReadOnlyList<PuloniaTaskTypeOption> TaskTypes { get; } =
     [
-        new("builtin.sample", "内置任务"),
+        new("builtin.return_main_ui", "返回主界面"),
+        new("builtin.claim_mail", "领取邮件"),
+        new("builtin.claim_battle_pass", "领取纪行"),
+        new("builtin.claim_encounter_points", "领取历练点"),
+        new("builtin.daily_rewards", "领取每日奖励"),
+        new("builtin.craft_condensed_resin", "合成浓缩树脂"),
+        new("builtin.serenitea_pot_rewards", "领取尘歌壶奖励"),
         new("pathing", "地图追踪"),
         new("javascript", "JS 脚本"),
         new("keymouse", "录制回放"),
@@ -303,7 +309,19 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     [RelayCommand]
     private void AddBuiltinTask(PuloniaTaskNodeViewModel? targetNode)
-        => AddTask(targetNode, "builtin.sample");
+    {
+        var builtinTypes = TaskTypes.Where(option => option.TaskType.StartsWith("builtin.", StringComparison.Ordinal)).ToList();
+        var selector = new ComboBox
+        {
+            DisplayMemberPath = nameof(PuloniaTaskTypeOption.DisplayName),
+            ItemsSource = builtinTypes,
+            SelectedIndex = 0,
+            MinWidth = 280
+        };
+        var dialog = new PromptDialog("选择要添加的内置任务。", "添加内置任务", selector, null);
+        if (dialog.ShowDialog() == true && selector.SelectedItem is PuloniaTaskTypeOption selectedType)
+            AddTask(targetNode, selectedType.TaskType);
+    }
 
     /// <summary>
     /// 在指定节点位置新增地图追踪任务。

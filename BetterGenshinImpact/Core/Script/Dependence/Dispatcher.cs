@@ -104,7 +104,7 @@ public class Dispatcher
         // 创建链接的取消令牌源，任何一个取消都会触发
         CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             customCts.Token,
-            CancellationContext.Instance.Cts.Token);
+            ScriptCancellationContext.Token);
         await RunTask(soloTask, linkedCts.Token);
     }
 
@@ -145,7 +145,7 @@ public class Dispatcher
         else
         {
             // 如果没有自定义令牌，就使用全局令牌
-            cancellationToken = CancellationContext.Instance.Cts.Token;
+            cancellationToken = ScriptCancellationContext.Token;
         }
 
         // 根据名称执行任务
@@ -308,7 +308,7 @@ public class Dispatcher
     public CancellationTokenSource GetLinkedCancellationTokenSource()
     {
         // 创建一个新的链接令牌源，链接到全局令牌
-        return CancellationTokenSource.CreateLinkedTokenSource(CancellationContext.Instance.Cts.Token);
+        return CancellationTokenSource.CreateLinkedTokenSource(ScriptCancellationContext.Token);
     }
 
 
@@ -330,7 +330,7 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(param), "秘境任务参数不能为空");  
         }  
   
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
         return await new AutoDomainTask(param).Start(cancellationToken);
     }  
 
@@ -347,7 +347,7 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(param), "自动首领讨伐任务参数不能为空");
         }
 
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
         return await new AutoBossTask(param).Start(cancellationToken);
     }
 
@@ -364,7 +364,7 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(param), "战斗任务参数不能为空");  
         }  
   
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
         var factory = GameTask.AutoFight.Factory.CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
         var fightTask = factory.CreateTask(param);
         await fightTask.Start(cancellationToken);  
@@ -384,7 +384,7 @@ public class Dispatcher
             throw new ArgumentException("策略字符串不能为空", nameof(script));
         }
 
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
 
         // 1. 解析策略字符串（ParseContext 已处理全角符号、注释、分号/逗号分隔）
         var combatScript = CombatScriptParser.ParseContext(script, validate: false, defaultAvatarName: avatarName);
@@ -408,7 +408,7 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(param), "自动地脉花任务参数不能为空");  
         }  
   
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
         await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
     }
 
@@ -426,7 +426,7 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(param), "自动幽境危战任务参数不能为空");
         }
 
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
         await new AutoStygianOnslaughtTask(param).Start(cancellationToken);
     }
     
@@ -443,7 +443,7 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(param), "背包物品计数参数不能为空");
         }
 
-        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        CancellationToken cancellationToken = customCt ?? ScriptCancellationContext.Token;
         object result = await new CountInventoryItem(param).Start(cancellationToken);
 
         dynamic expando = new ExpandoObject();

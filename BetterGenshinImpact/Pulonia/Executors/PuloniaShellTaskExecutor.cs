@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -20,7 +21,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
     private const int MaxCapturedCharacters = 64 * 1024;
 
     /// <inheritdoc />
-    public PuloniaTaskDefinition Definition { get; } = new()
+    public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "shell",
         DefaultParameters = new JObject
@@ -45,7 +46,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
             ["additionalProperties"] = false
         },
         PublicParameters = ["file_name", "arguments", "working_directory"]
-    };
+    }];
 
     /// <inheritdoc />
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,

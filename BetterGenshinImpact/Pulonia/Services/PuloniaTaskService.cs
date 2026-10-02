@@ -36,6 +36,16 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     private readonly IReadOnlyDictionary<string, IPuloniaTaskExecutor> _executors;
 
     /// <summary>
+    /// 按任务类型查找的能力定义，用于判断是否需要游戏会话。
+    /// </summary>
+    private readonly IReadOnlyDictionary<string, PuloniaTaskDefinition> _definitions;
+
+    /// <summary>
+    /// 游戏型节点的会话与输入所有权协调器。
+    /// </summary>
+    private readonly PuloniaGameTaskCoordinator _gameTaskCoordinator;
+
+    /// <summary>
     /// 单写入、多调用方提交但只有一个读取者的运行队列。
     /// </summary>
     private readonly Channel<RunState> _queue = Channel.CreateUnbounded<RunState>(new UnboundedChannelOptions
@@ -77,17 +87,24 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// 建立协调器，校验执行器注册并启动不触碰游戏环境的串行消费循环。
     /// </summary>
     public PuloniaTaskService(PuloniaTaskStore store, PuloniaTaskBuilder builder,
-        IEnumerable<IPuloniaTaskExecutor> executors)
+        IEnumerable<IPuloniaTaskExecutor> executors, PuloniaGameTaskCoordinator gameTaskCoordinator)
     {
         _store = store;
         _builder = builder;
+        _gameTaskCoordinator = gameTaskCoordinator;
         var executorMap = new Dictionary<string, IPuloniaTaskExecutor>(StringComparer.Ordinal);
+        var definitionMap = new Dictionary<string, PuloniaTaskDefinition>(StringComparer.Ordinal);
         foreach (var executor in executors)
         {
-            if (!executorMap.TryAdd(executor.Definition.TaskType, executor))
-                throw new InvalidOperationException($"Pulonia 任务类型 {executor.Definition.TaskType} 重复注册执行器。");
+            foreach (var definition in executor.Definitions)
+            {
+                if (!executorMap.TryAdd(definition.TaskType, executor)
+                    || !definitionMap.TryAdd(definition.TaskType, definition))
+                    throw new InvalidOperationException($"Pulonia 任务类型 {definition.TaskType} 重复注册执行器。");
+            }
         }
         _executors = executorMap;
+        _definitions = definitionMap;
         _worker = ProcessQueueAsync();
     }
 
@@ -102,7 +119,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         // 快照在进入队列前固定；后续编辑计划、预设或调用参数都不会改变已排队运行。
         var snapshot = await _builder.BuildAsync(plan, new PuloniaTaskBuildOptions
         {
-            Definitions = _executors.Values.Select(executor => executor.Definition).ToList(),
+            Definitions = _definitions.Values.ToList(),
             BaseDirectory = AppContext.BaseDirectory,
             AccountId = fixedRequest.AccountId,
             ParameterOverrides = fixedRequest.ParameterOverrides
@@ -322,6 +339,9 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             try
             {
                 var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt);
+                using var gameTaskLease = _definitions[task.TaskType].RequiresGameSession
+                    ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
+                    : null;
                 outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
                 // 兼容暂时未主动观察令牌的旧执行器：只有它真正返回后才确认取消或超时完成。
                 nodeCancellation.Token.ThrowIfCancellationRequested();
@@ -347,7 +367,15 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                         PuloniaTaskNodeStatus.Cancelled, "节点返回时计划已取消，执行器已退出。", startedAt, finishedAt));
                     throw new OperationCanceledException(runToken);
                 }
-                failure = ex;
+                if (nodeTimeout?.IsCancellationRequested == true)
+                {
+                    nodeTimedOut = true;
+                    failure = new TimeoutException($"节点超过时限 {policy.TimeoutSeconds:0.###} 秒。", ex);
+                }
+                else
+                {
+                    failure = ex;
+                }
             }
 
             var finished = DateTimeOffset.UtcNow;

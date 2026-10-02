@@ -46,7 +46,10 @@ public class ClaimEncounterPointsRewardsTask
         }
     }
 
-    public async Task DoOnce(CancellationToken ct)
+    /// <summary>
+    /// 执行一次历练点领取，并返回是否成功进入并处理委托页。
+    /// </summary>
+    public async Task<bool> DoOnce(CancellationToken ct)
     {
         await _returnMainUiTask.Start(ct);
 
@@ -87,7 +90,7 @@ public class ClaimEncounterPointsRewardsTask
         if (!f1Success)
         {
             Logger.LogError("{F}未找到委托按钮,F1打开冒险之证失败", "历练点：");
-            return;
+            return false;
         }
 
         if (earlyClaim)
@@ -96,7 +99,7 @@ public class ClaimEncounterPointsRewardsTask
             await Delay(1000, ct);
 
             // TODO 截图并通知
-            return;
+            return true;
         }
 
         await Delay(1000, ct);
@@ -112,6 +115,7 @@ public class ClaimEncounterPointsRewardsTask
 
         // 关闭
         await _returnMainUiTask.Start(ct);
+        return true;
     }
 
     private static bool ClickClaimBtn(ImageRegion ra2)

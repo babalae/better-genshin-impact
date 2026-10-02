@@ -625,7 +625,10 @@ internal class GoToSereniteaPotTask
         await tp.Tp(4508.97509765625, 3630.557373046875); // TP到枫丹
     }
 
-    public async Task DoOnce(CancellationToken ct)
+    /// <summary>
+    /// 执行一次尘歌壶奖励流程，并返回是否到达领取与收尾阶段。
+    /// </summary>
+    public async Task<bool> DoOnce(CancellationToken ct)
     {
         InitConfigList();
         // /**
@@ -648,7 +651,7 @@ internal class GoToSereniteaPotTask
         if (!success)
         {
             await Finished(ct);
-            return;
+            return false;
         }
         
         // 寻找阿圆并靠近
@@ -657,7 +660,7 @@ internal class GoToSereniteaPotTask
         if (fail)
         {
             await Finished(ct);
-            return;
+            return false;
         }
 
         await Delay(500, ct);
@@ -665,6 +668,7 @@ internal class GoToSereniteaPotTask
 
         // 收尾操作 - 退出到主页面 - 传送到提瓦特大陆
         await Finished(ct);
+        return true;
     }
     
     private void InitConfigList()
