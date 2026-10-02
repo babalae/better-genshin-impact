@@ -1423,8 +1423,6 @@
   "快速添加材料路线": "Quick Add Material Routes",
   "请先选择一个调度器配置组": "Select a scheduler group first",
   "正在从在线资料加载角色、武器及突破材料...": "Loading characters, weapons, and ascension materials from online data...",
-  "分别搜索角色和武器，选择项目后加入清单；确认后会按在线突破材料和 GitHub 路线创建每日任务。": "Search characters and weapons separately, then add items to the selection. Confirm to create daily tasks from online ascension materials and GitHub routes.",
-  "请至少选择一个角色或武器": "Select at least one character or weapon",
   "在线资料没有返回所选项目的突破材料": "Online data returned no ascension materials for the selected items",
   "正在同步 GitHub 脚本仓库...": "Syncing the GitHub script repository...",
   "确认订阅材料路线": "Confirm Material Route Subscription",
@@ -1437,12 +1435,9 @@
   "武器材料": "Weapon Materials",
   "搜索角色名称": "Search character names",
   "搜索武器名称": "Search weapon names",
-  "加入选择": "Add to Selection",
-  "已选择项目": "Selected Items",
-  "移除选中项": "Remove Selected",
-  "清除选择": "Clear Selection",
   "订阅并导入仓库中的 {0} 个材料路线文件夹？\n其中 {1} 个材料文件夹已存在本地，导入会用仓库版本替换这些文件夹。": "Subscribe to and import {0} material route folders from the repository?\n{1} material folders already exist locally and will be replaced with repository versions.",
   "快速添加角色材料路线": "Quick Add Character Materials",
   "快速添加武器材料路线": "Quick Add Weapon Materials",
-  "搜索并选择{0}，可加入多个项目；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。": "Search and select {0}; you can add multiple items. The list is sorted newest to oldest by version. Confirm to create daily tasks using online ascension materials and GitHub routes."
+  "搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。": "Search and select one {0}; the list is sorted newest to oldest by version. Confirm to create daily tasks from online ascension materials and GitHub routes.",
+  "请选择一个项目": "Select one item."
 }

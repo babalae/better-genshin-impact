@@ -938,22 +938,21 @@ public partial class ScriptControlViewModel : ViewModel
             var entries = await Task.Run(LoadAscensionCatalogAsync);
             var picker = BuildAscensionCatalogPicker(entries, kind);
             var result = PromptDialog.Prompt(
-                string.Format(AscensionText("搜索并选择{0}，可加入多个项目；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。"), AscensionText(kind == "角色" ? "角色材料" : "武器材料")),
+                string.Format(AscensionText("搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。"), AscensionText(kind == "角色" ? "角色材料" : "武器材料")),
                 AscensionText(kind == "角色" ? "快速添加角色材料路线" : "快速添加武器材料路线"),
                 picker,
-                new Size(650, 760));
+                new Size(650, 520));
 
             if (string.IsNullOrEmpty(result)) return;
 
-            var selected = ((HashSet<AscensionCatalogEntry>)((System.Windows.Controls.StackPanel)picker.Content).Tag)
-                .ToList();
-            if (selected.Count == 0)
+            var selected = (AscensionCatalogEntry?)((ComboBox)((System.Windows.Controls.StackPanel)picker.Content).Tag).SelectedItem;
+            if (selected == null)
             {
-                Toast.Warning(AscensionText("请至少选择一个角色或武器"));
+                Toast.Warning(AscensionText("请选择一个项目"));
                 return;
             }
 
-            var materials = selected.SelectMany(x => x.Materials).ToHashSet(StringComparer.Ordinal);
+            var materials = selected.Materials;
             if (materials.Count == 0)
             {
                 Toast.Warning(AscensionText("在线资料没有返回所选项目的突破材料"));
@@ -1060,7 +1059,7 @@ public partial class ScriptControlViewModel : ViewModel
             WriteScriptGroup(SelectedScriptGroup);
             var foundMaterials = resolvedRoutes.Select(x => x.Material).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var missing = materials.Except(foundMaterials, StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
-            var detail = string.Format(AscensionText("所选项目 {0} 个，材料 {1} 种；新增路线 {2} 条。"), selected.Count, materials.Count, added);
+            var detail = string.Format(AscensionText("所选项目 {0} 个，材料 {1} 种；新增路线 {2} 条。"), 1, materials.Count, added);
             if (missing.Count > 0)
             {
                 var preview = string.Join("、", missing.Take(12));
@@ -1151,25 +1150,16 @@ public partial class ScriptControlViewModel : ViewModel
     private static ScrollViewer BuildAscensionCatalogPicker(List<AscensionCatalogEntry> entries, string kind)
     {
         var panel = new System.Windows.Controls.StackPanel();
-        var selectedEntries = new HashSet<AscensionCatalogEntry>();
 
         var search = new System.Windows.Controls.TextBox { Margin = new Thickness(0, 0, 0, 6), MinWidth = 580 };
         search.ToolTip = AscensionText(kind == "角色" ? "搜索角色名称" : "搜索武器名称");
-        var controls = new System.Windows.Controls.StackPanel { Orientation = Orientation.Horizontal };
         var picker = new ComboBox
         {
-            MinWidth = 470,
+            MinWidth = 580,
             IsTextSearchEnabled = true,
             MaxDropDownHeight = 360,
             DisplayMemberPath = nameof(AscensionCatalogEntry.DisplayName),
         };
-        var add = new System.Windows.Controls.Button
-        {
-            Content = AscensionText("加入选择"),
-            Margin = new Thickness(8, 0, 0, 0),
-        };
-        controls.Children.Add(picker);
-        controls.Children.Add(add);
 
         void RefreshItems()
         {
@@ -1180,54 +1170,6 @@ public partial class ScriptControlViewModel : ViewModel
         }
         search.TextChanged += (_, _) => RefreshItems();
 
-        var selectedItems = new ListBox
-        {
-            DisplayMemberPath = nameof(AscensionCatalogEntry.DisplayName),
-            MinHeight = 180,
-            MaxHeight = 300,
-            Margin = new Thickness(0, 0, 0, 8),
-        };
-        var selectedControls = new System.Windows.Controls.StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-        };
-        var remove = new System.Windows.Controls.Button { Content = AscensionText("移除选中项") };
-        var clear = new System.Windows.Controls.Button { Content = AscensionText("清除选择"), Margin = new Thickness(8, 0, 0, 0) };
-        selectedControls.Children.Add(remove);
-        selectedControls.Children.Add(clear);
-
-        void RefreshSelectedItems()
-        {
-            selectedItems.ItemsSource = selectedEntries
-                .OrderBy(entry => entry.Kind == "角色" ? 0 : 1)
-                .ThenByDescending(entry => ParseCatalogVersion(entry.Version))
-                .ThenBy(entry => entry.Name, StringComparer.Ordinal)
-                .ToList();
-        }
-        add.Click += (_, _) =>
-        {
-            if (picker.SelectedItem is AscensionCatalogEntry selected)
-            {
-                selectedEntries.Add(selected);
-                RefreshSelectedItems();
-                picker.SelectedItem = null;
-                RefreshItems();
-            }
-        };
-        remove.Click += (_, _) =>
-        {
-            if (selectedItems.SelectedItem is AscensionCatalogEntry selected)
-            {
-                selectedEntries.Remove(selected);
-                RefreshSelectedItems();
-            }
-        };
-        clear.Click += (_, _) =>
-        {
-            selectedEntries.Clear();
-            RefreshSelectedItems();
-        };
-
         RefreshItems();
         panel.Children.Add(new System.Windows.Controls.TextBlock
         {
@@ -1236,16 +1178,8 @@ public partial class ScriptControlViewModel : ViewModel
             FontWeight = FontWeights.SemiBold,
         });
         panel.Children.Add(search);
-        panel.Children.Add(controls);
-        panel.Children.Add(new System.Windows.Controls.TextBlock
-        {
-            Text = AscensionText("已选择项目"),
-            Margin = new Thickness(0, 4, 0, 4),
-            FontWeight = FontWeights.SemiBold,
-        });
-        panel.Children.Add(selectedItems);
-        panel.Children.Add(selectedControls);
-        panel.Tag = selectedEntries;
+        panel.Children.Add(picker);
+        panel.Tag = picker;
         return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
 
