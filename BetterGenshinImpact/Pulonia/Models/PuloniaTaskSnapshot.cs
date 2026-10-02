@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 准备阶段的不可变、可序列化快照原型；尚不执行任务。
+/// 提交运行时固定的不可变、可序列化快照。
 /// </summary>
 public sealed class PuloniaTaskSnapshot
 {
@@ -36,7 +36,7 @@ public sealed class PuloniaTaskSnapshot
     public string? AccountId { get; }
 
     /// <summary>
-    /// 固定后的执行树原型。
+    /// 固定后的只读执行树。
     /// </summary>
     [JsonProperty("root_task")]
     public PuloniaTaskPreparedTask RootTask { get; }
@@ -69,7 +69,7 @@ public sealed class PuloniaTaskSnapshot
     }
 
     /// <summary>
-    /// 输出运行准备结果供查看和保存；恢复绑定属于后续执行阶段。
+    /// 输出运行快照供查看和后续持久化；恢复绑定属于步骤 6。
     /// </summary>
     public string ToJson() => PuloniaTaskJson.Write(this);
 }

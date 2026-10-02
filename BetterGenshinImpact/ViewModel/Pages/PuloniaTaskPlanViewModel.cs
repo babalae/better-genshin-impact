@@ -37,6 +37,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private readonly PuloniaTaskClipboardService _clipboard;
 
     /// <summary>
+    /// 统一的任务提交、状态查询和取消服务。
+    /// </summary>
+    private readonly IPuloniaTaskService _taskService;
+
+    /// <summary>
     /// 当前从存储加载的共享预设。
     /// </summary>
     private IReadOnlyList<PuloniaTaskPreset> _presets = [];
@@ -72,7 +77,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 页面底部的最近操作结果。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "步骤 2 仅编辑配置，不会启动游戏或执行任务。";
+    private string _statusMessage = "步骤 3 可运行 Shell 与纯计算 C# 任务，不会启动游戏或截图器。";
 
     /// <summary>
     /// 当前打开的计划编辑文档。
@@ -110,10 +115,13 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// <summary>
     /// 建立任务计划页面视图模型。
     /// </summary>
-    public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard)
+    public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
+        IPuloniaTaskService taskService)
     {
         _store = store;
         _clipboard = clipboard;
+        _taskService = taskService;
+        _taskService.RunChanged += OnRunChanged;
     }
 
     /// <summary>
@@ -146,6 +154,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             _isInitialized = true;
             if (SelectedDocument.IsDirty)
                 ScheduleAutoSave(SelectedDocument);
+            await RefreshRunsAsync();
             StatusMessage = $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。";
         }
         catch (Exception ex)
@@ -792,6 +801,10 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CanAddPlanReference));
+        OnPropertyChanged(nameof(CanRunPlan));
+        OnPropertyChanged(nameof(CanCancelRun));
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
+        RunPlanCommand.NotifyCanExecuteChanged();
+        CancelRunCommand.NotifyCanExecuteChanged();
     }
 }

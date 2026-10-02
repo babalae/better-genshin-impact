@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 运行准备原型生成的只读节点，保留来源定位但不包含执行行为。
+/// 运行准备生成的只读执行节点，保留来源定位但不把执行行为写进模型。
 /// </summary>
 public sealed class PuloniaTaskPreparedTask
 {

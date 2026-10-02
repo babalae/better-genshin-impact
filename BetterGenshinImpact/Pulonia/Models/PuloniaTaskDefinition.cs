@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 由调用端提供的类型说明；原型不注册真实游戏能力或执行器。
+/// 由执行器提供的任务类型、默认参数及校验说明。
 /// </summary>
 public sealed class PuloniaTaskDefinition
 {
