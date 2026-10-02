@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
@@ -15,7 +15,7 @@ public static class TrainingGuideDomainOptions
 
     public static IReadOnlyList<string> RewardSelectionIndices { get; } = ["", "1", "2", "3"];
 
-    public static IReadOnlyList<ICascadingItem> Filter(IEnumerable<ICascadingItem> items)
+    private static IReadOnlyList<ICascadingItem> Filter(IEnumerable<ICascadingItem> items)
     {
         var result = new List<ICascadingItem>();
         foreach (var item in items)

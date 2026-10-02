@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
@@ -33,7 +33,7 @@ public static class TrainingGuideRunCalculator
     /// <summary>
     /// 顺序枚举首次满足全部等级需求的刷取次数。无法在上限内满足时返回 null。
     /// </summary>
-    public static TrainingGuideRunCalculation? FindMinimumRuns(
+    public static int? FindMinimumRuns(
         IReadOnlyList<TrainingGuideMaterialLevel> levels,
         int craftingBonusReservePercent,
         int maxRuns = 10_000)
@@ -42,10 +42,9 @@ public static class TrainingGuideRunCalculator
 
         for (var runs = 0; ; runs++)
         {
-            var calculation = Calculate(levels, runs, craftingBonusReservePercent);
-            if (calculation.IsSatisfied)
+            if (IsSatisfiedAfterRuns(levels, runs, craftingBonusReservePercent))
             {
-                return calculation;
+                return runs;
             }
             if (runs == maxRuns)
             {
@@ -57,16 +56,13 @@ public static class TrainingGuideRunCalculator
     /// <summary>
     /// 模拟指定刷取次数后的逐级保留与 3:1 合成。
     /// </summary>
-    public static TrainingGuideRunCalculation Calculate(
+    private static bool IsSatisfiedAfterRuns(
         IReadOnlyList<TrainingGuideMaterialLevel> levels,
         int runs,
         int craftingBonusReservePercent)
     {
-        Validate(levels, craftingBonusReservePercent, runs);
-
         var carry = 0;
         var allSatisfied = true;
-        var results = new List<TrainingGuideLevelCalculation>(levels.Count);
 
         for (var i = 0; i < levels.Count; i++)
         {
@@ -87,17 +83,9 @@ public static class TrainingGuideRunCalculator
             var reservedBonus = (int)((long)crafted * craftingBonusReservePercent /
                                       (100 - craftingBonusReservePercent));
             carry = crafted + reservedBonus;
-
-            results.Add(new TrainingGuideLevelCalculation(
-                level.Name,
-                available,
-                level.Required,
-                shortage,
-                crafted,
-                reservedBonus));
         }
 
-        return new TrainingGuideRunCalculation(runs, allSatisfied, results);
+        return allSatisfied;
     }
 
     private static void Validate(

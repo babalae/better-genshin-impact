@@ -12,7 +12,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
 /// <summary>浮窗局部 OCR。每种预处理方式连续读两帧，关键数字一致才接受。</summary>
-public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationToken ct, bool debugEnabled = false)
+public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationToken ct)
 {
     public async Task<TrainingGuideMaterialReading?> ReadStable(TrainingGuideMaterial expectedMaterial,
         TrainingGuideEntry? entry = null)
@@ -23,7 +23,7 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
         var parsedCount = 0;
         var hadIssue = false;
         var captureId = $"popup-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
-        var debugId = debugEnabled ? captureId : null;
+        var debugId = TrainingGuideDiagnostics.Enabled ? captureId : null;
         for (var attempt = 0; attempt < 6; attempt++)
         {
             ct.ThrowIfCancellationRequested();
@@ -35,28 +35,19 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
             var footerTop = (int)(capture.Height * .46);
             var footerRect = new Rect((int)(capture.Width * .365), footerTop, (int)(capture.Width * .27),
                 (int)(capture.Height * .98) - footerTop);
-            if (debugEnabled) logger.LogInformation("培养浮窗数量裁剪：{Footer}", footerRect);
             var footer = ReadLines(capture, footerRect, mode, debugPrefix, "footer");
             var current = TrainingGuidePopupParser.ParseQuantities(expectedMaterial, string.Join("\n", footer));
             diagnostic = $"图标材料：{expectedMaterial.Name}；底部：{string.Join(" | ", footer)}";
             var consistent = current != null && SameNumbers(current, previous);
-            // 第一帧尚无对照，不算异常；解析失败或已有两帧结果不一致才落盘。
-            if (current == null || (previous != null && !consistent))
-            {
-                hadIssue = true;
-                TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
-                    $"尝试 {attempt + 1}/6，预处理 {mode}；秘境={entry?.Domain}；入口={entry?.Entry}；预期材料={expectedMaterial.Name}；" +
-                    $"{diagnostic}；结果={current?.Material.Name ?? "解析失败"}；身份来源=图标；" +
-                    $"库存={current?.Stock}；目标={(current?.IsTarget == true ? current.Required.ToString() : "-")}；两帧一致={consistent}");
-            }
+            var issue = current == null || (previous != null && !consistent);
+            hadIssue |= issue;
+            TrainingGuideDiagnostics.LogEntryVerification(captureId,
+                $"尝试={attempt + 1}/6；预处理={mode}；秘境={entry?.Domain}；入口={entry?.Entry}；裁剪={footerRect}；{diagnostic}；库存={current?.Stock}；目标={current?.Required}；有需求={current?.IsTarget}；两帧一致={consistent}；异常={issue}");
             if (current != null) parsedCount++;
-            if (debugEnabled)
-                logger.LogInformation("培养浮窗OCR尝试 {Attempt}/6，预处理 {Mode}，字段解析 {Parsed}，与前帧一致 {Consistent}：{Detail}",
-                    attempt + 1, mode, current != null, current != null && SameNumbers(current, previous), diagnostic);
             if (current != null && consistent)
             {
                 if (hadIssue)
-                    TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
+                    TrainingGuideDiagnostics.AppendOcrIssue(captureId,
                         $"最终结果=重试成功；尝试次数={attempt + 1}；材料={expectedMaterial.Name}；库存={current.Stock}；目标={(current.IsTarget ? current.Required.ToString() : "-")}");
                 return current;
             }
@@ -64,20 +55,20 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
             previous = attempt % 2 == 0 ? current : null;
             await Delay(300, ct);
         }
-        TrainingGuideDiagnostics.AppendOcrIssue(logger, captureId,
+        TrainingGuideDiagnostics.AppendOcrIssue(captureId,
             $"最终结果=重试耗尽；材料={expectedMaterial.Name}；有效解析次数={parsedCount}/6；未取得同一预处理方式下连续两帧一致结果");
         logger.LogWarning("培养浮窗OCR失败：6次尝试中 {ParsedCount} 次字段解析成功，未取得连续两次有效且一致的结果；最后一次：{Detail}", parsedCount, diagnostic);
         return null;
     }
 
-    public static bool SameNumbers(TrainingGuideMaterialReading current, TrainingGuideMaterialReading? previous) =>
+    private static bool SameNumbers(TrainingGuideMaterialReading current, TrainingGuideMaterialReading? previous) =>
         previous != null && current.Material == previous.Material && current.Stock == previous.Stock &&
         current.Required == previous.Required && current.IsTarget == previous.IsTarget;
 
     private void SaveDebugImage(Mat image, string? prefix, string part)
     {
         if (prefix == null) return;
-        TrainingGuideDiagnostics.Save(image, logger, part, prefix);
+        TrainingGuideDiagnostics.Save(image, part, prefix);
     }
 
     private IReadOnlyList<string> ReadLines(ImageRegion capture, Rect bounds, int mode, string? debugPrefix, string part)

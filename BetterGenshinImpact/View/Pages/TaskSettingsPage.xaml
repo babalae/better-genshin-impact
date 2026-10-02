@@ -1,4 +1,4 @@
-<Page x:Class="BetterGenshinImpact.View.Pages.TaskSettingsPage"
+﻿<Page x:Class="BetterGenshinImpact.View.Pages.TaskSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -1561,6 +1561,22 @@
                                              IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideRewardRecognitionEnabled, Mode=TwoWay}" />
                         </Grid>
 
+                        <Grid Margin="32,0,16,16"
+                              IsEnabled="{Binding Config.AutoDomainConfig.DevelopmentGuideRewardRecognitionEnabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 识别失败时按固定预算继续}" />
+                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前入口按原预规划树脂预算继续，不再动态估算；预算结束不代表材料需求已核实。下次任务生效。}"
+                                              TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
+                                             IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideRewardFailureBudgetEnabled, Mode=TwoWay}" />
+                        </Grid>
+
                         <Separator Margin="16,0" BorderThickness="0,1,0,0" />
 
                         <StackPanel Margin="16">
@@ -1667,13 +1683,13 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <ui:TextBlock FontTypography="Body" Text="培养材料 OCR 调试截图" />
+                                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 培养计划详细诊断}" />
                                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="保留培养材料浮窗每次 OCR 的原图和识别输入图，保存至 User/Diagnostics/AutoDomain.TrainingGuide"
+                                                      Text="{i18n:T 排查问题时开启，下次任务生效。保存 OCR 原文、匹配分数、判断过程及诊断截图至 Diagnostics，不在界面刷屏。}"
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
-                                                     IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideOcrDebugEnabled, Mode=TwoWay}" />
+                                                     IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideDiagnosticsEnabled, Mode=TwoWay}" />
                                 </Grid>
                             </StackPanel>
                         </ui:CardExpander>

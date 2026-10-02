@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
@@ -143,9 +143,13 @@ public partial class AutoDomainConfig : ObservableObject
     [ObservableProperty]
     private bool _developmentGuideRewardRecognitionEnabled = true;
 
-    /// <summary>保留培养材料浮窗每次 OCR 尝试的原图和识别输入图，仅在独立任务设置页提供开关。</summary>
+    /// <summary>奖励识别失败后允许当前入口按原预算继续；默认关闭，失败即结束任务。</summary>
     [ObservableProperty]
-    private bool _developmentGuideOcrDebugEnabled;
+    private bool _trainingGuideRewardFailureBudgetEnabled;
+
+    /// <summary>培养详细诊断开关，默认关闭；统一保存文字记录和诊断截图。</summary>
+    [ObservableProperty]
+    private bool _trainingGuideDiagnosticsEnabled;
 
     // 培养计划完成或当天没有可刷取目标时使用的备选秘境
     [ObservableProperty]

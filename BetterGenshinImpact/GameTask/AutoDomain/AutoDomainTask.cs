@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -185,17 +186,24 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         _guidePlanning = _guideCustomTargets != null ||
             (_taskParam.DomainName == TrainingGuideOption && _taskParam.TrainingGuideCalculateRunsEnabled);
+        using var diagnostics = TrainingGuideDiagnostics.Begin(_guidePlanning && _taskParam.TrainingGuideDiagnosticsEnabled, Logger);
+        if (TrainingGuideDiagnostics.Enabled)
+        {
+            Logger.LogInformation("培养计划详细判断保存至 {Path}，按日期统一记录", TrainingGuideDiagnostics.DirectoryPath);
+            TrainingGuideDiagnostics.Detail("培养任务开始：{StartedAt:O}", DateTime.Now);
+        }
         _guideRounds = 0;
         _guideResinStatus = null;
-        _guideReenter = false;
-        _guideDemandRefreshUsed = false;
+        _guideDomainsWithObservedDemand.Clear();
         _guideDomainName = null;
         _guideActivePlan = null;
-        _guideCompletedLevels.Clear();
-        _guideCompletedDomains.Clear();
+        _guideProcessedLevels.Clear();
+        _guideProcessedDomains.Clear();
         _guideUnavailableFamilies.Clear();
         _guideDomainCandidates = null;
         _guidePlans.Clear();
+        ClearGuideEntryQueue();
+        _guideNextAction = GuideNextAction.Continue;
 
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
@@ -349,8 +357,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
             if (!await GettingTreasure())
             {
-                if (_guidePlanning && _guideAdvance)
-                    Logger.LogInformation("培养计划：退出当前关卡，返回入口切换材料或重新读取库存");
+                if (_guidePlanning && _guideNextAction == GuideNextAction.AdvancePlan)
+                    Logger.LogInformation("培养计划：当前入口执行结束，退出后按缓存计划选择下一步");
                 else
                     Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
                 break;
@@ -407,13 +415,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private async Task TpDomain()
     {
-        if (_guidePlanning && _guideReenter)
-        {
-            _guideReenter = false;
-            await ApproachDomainEntrance(_guideDomainName ?? _taskParam.DomainName);
-            await Delay(300, _ct);
-            return;
-        }
+        // 初次进入及切换目标共用传送路径，不复用上一轮画面坐标。
+        if (_guidePlanning) _guideEntryLayout = null;
         if (_taskParam.DomainName == TrainingGuideOption && !_guidePlanning)
         {
             await SelectTrainingGuideDestination();
@@ -423,10 +426,11 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_guideDomainName ?? _taskParam.DomainName, out var domainPosition))
             {
-                Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
+                Logger.LogInformation("自动秘境：传送到秘境{Text}", _guideDomainName ?? _taskParam.DomainName);
                 await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
                 await Delay(1000, _ct);
-                await Bv.WaitForMainUi(_ct);
+                if (!await Bv.WaitForMainUi(_ct) && _guidePlanning)
+                    throw new InvalidOperationException("传送后未确认回到主界面，停止接近秘境入口");
 
                 await ApproachDomainEntrance(_guideDomainName ?? _taskParam.DomainName);
                 await Delay(300, _ct);
@@ -582,8 +586,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 500
             );
         }
+        // 培养规划先确认菜单，再滚到底检查解锁状态；默认选中的入口可能尚未解锁。
+        using var menuScreen = CaptureToRectArea();
         var menuFound = await NewRetry.WaitForElementAppear(
-            GetConfirmRa(singlePlayerChallengeString),
+            _guidePlanning
+                ? RecognitionObject.OcrMatch(0, 0, menuScreen.Width * .47, menuScreen.Height * .12, "秘境入口")
+                : GetConfirmRa(singlePlayerChallengeString),
             null,//只等待,不执行操作
             _ct,
             20,
@@ -591,6 +599,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         );
         if (!menuFound)
         {
+            if (_guidePlanning) throw new InvalidOperationException("未确认秘境入口菜单，停止培养规划");
             Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
         }
 

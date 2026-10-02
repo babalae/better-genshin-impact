@@ -192,10 +192,5 @@ public static class TrainingGuideMaterialCatalog
         return matches.Length == 1 ? matches[0] : null;
     }
 
-    // 周日/限时全开放时按等级排列，每一级内有三个家族：三六日、二五日、一四日。
-    // familyPosition 是“同一级内”的零基序号，不是整条材料列表的卡片序号。
-    // 不可假设同一家族的所有等级连续出现；扫描结果必须按材料名称归入家族和等级。
-    public static int SelectionIndex(int familyPosition) => familyPosition is >= 0 and <= 2
-        ? 3 - familyPosition : throw new ArgumentOutOfRangeException(nameof(familyPosition));
 }
 
