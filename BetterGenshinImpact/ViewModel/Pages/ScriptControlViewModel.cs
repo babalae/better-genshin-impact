@@ -973,7 +973,7 @@ public partial class ScriptControlViewModel : ViewModel
             var routeDirectories = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var root in new[] { localRoot, repoRoot }.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                foreach (var directory in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories))
+                foreach (var directory in EnumerateDirectoriesSafely(root))
                 {
                     var directoryName = Path.GetFileName(directory);
                     var relatedMaterials = AscensionMaterialRouteMatcher.FindRelatedMaterials(directoryName, materials, materialSources);
@@ -1006,7 +1006,7 @@ public partial class ScriptControlViewModel : ViewModel
                     await ScriptRepoUpdater.Instance.ImportScriptFromRepoPathJson(JsonSerializer.Serialize(subscriptionPaths), scriptRepoPath);
                     if (Directory.Exists(localRoot))
                     {
-                        foreach (var directory in Directory.EnumerateDirectories(localRoot, "*", SearchOption.AllDirectories))
+                        foreach (var directory in EnumerateDirectoriesSafely(localRoot))
                         {
                             var directoryName = Path.GetFileName(directory);
                             var relatedMaterials = AscensionMaterialRouteMatcher.FindRelatedMaterials(directoryName, materials, materialSources);
@@ -1022,7 +1022,7 @@ public partial class ScriptControlViewModel : ViewModel
                          .Where(item => item.Key.StartsWith(localRootPrefix, StringComparison.OrdinalIgnoreCase))
                          .ToList())
             {
-                foreach (var path in Directory.EnumerateFiles(materialDirectory.Key, "*.json", SearchOption.AllDirectories))
+                foreach (var path in EnumerateFilesSafely(materialDirectory.Key, "*.json"))
                 {
                     if (!candidateFiles.TryGetValue(path, out var relatedMaterials))
                         candidateFiles[path] = relatedMaterials = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1044,15 +1044,17 @@ public partial class ScriptControlViewModel : ViewModel
             var existing = SelectedScriptGroup.Projects
                 .Where(p => p.Type == "Pathing")
                 .Select(p => Path.Combine(localRoot, p.FolderName, p.Name))
+                .Select(TryGetFullPath)
+                .Where(path => path != null)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var added = 0;
             foreach (var route in resolvedRoutes)
             {
-                if (existing.Contains(route.Path)) continue;
-                var info = new FileInfo(route.Path);
+                var fullPath = TryGetFullPath(route.Path);
+                if (fullPath == null || !File.Exists(fullPath) || !existing.Add(fullPath)) continue;
+                var info = new FileInfo(fullPath);
                 var relativeFolder = Path.GetRelativePath(localRoot, info.Directory!.FullName);
                 SelectedScriptGroup.AddProject(ScriptGroupProject.BuildPathingProject(info.Name, relativeFolder));
-                existing.Add(route.Path);
                 added++;
             }
 
@@ -1098,11 +1100,47 @@ public partial class ScriptControlViewModel : ViewModel
                     .Select(cost => cost.Value<string>("name"))
                     .Where(material => !string.IsNullOrWhiteSpace(material))
                     .Select(material => material!)
-                    .ToHashSet(StringComparer.Ordinal);
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 result.Add(new AscensionCatalogEntry(name, kind, item.Value<string>("version") ?? "0.0", materials));
             }
         }
-        return result;
+        return result
+            .GroupBy(entry => (Kind: entry.Kind.ToUpperInvariant(), Name: entry.Name.ToUpperInvariant()))
+            .Select(group => new AscensionCatalogEntry(
+                group.First().Name,
+                group.First().Kind,
+                group.Select(entry => entry.Version).OrderByDescending(ParseCatalogVersion).First(),
+                group.SelectMany(entry => entry.Materials).ToHashSet(StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private static readonly EnumerationOptions SafeRecursiveEnumeration = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+    };
+
+    private static IEnumerable<string> EnumerateDirectoriesSafely(string root)
+    {
+        try { return Directory.EnumerateDirectories(root, "*", SafeRecursiveEnumeration).ToArray(); }
+        catch (IOException) { return []; }
+        catch (UnauthorizedAccessException) { return []; }
+    }
+
+    private static IEnumerable<string> EnumerateFilesSafely(string root, string pattern)
+    {
+        try { return Directory.EnumerateFiles(root, pattern, SafeRecursiveEnumeration).ToArray(); }
+        catch (IOException) { return []; }
+        catch (UnauthorizedAccessException) { return []; }
+    }
+
+    private static string? TryGetFullPath(string path)
+    {
+        try { return Path.GetFullPath(path); }
+        catch (ArgumentException) { return null; }
+        catch (NotSupportedException) { return null; }
+        catch (PathTooLongException) { return null; }
     }
 
     private static async Task<int?> CheckBiliwikiMaterialIndexesAsync(HashSet<string> materials)
