@@ -6,6 +6,7 @@
 
 ## 文档列表
 
+- [Pulonia 任务系统设计总览与开发计划](automation-system.md)
 - [BetterGI 多实例命名管道协议](multi-instance-ipc.md)
 - [BetterGI 输入层 InputHub 设计](input-hub.md)
 - [遮罩窗口（MaskWindow）统一设计](mask-window.md)
