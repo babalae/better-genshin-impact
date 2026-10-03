@@ -49,8 +49,19 @@ public class LowerHeadThenWalkToTask
         using var initialCapture = CaptureToRectArea();
         if (initialCapture.Find(_trackPoint).IsEmpty())
         {
-            Logger.LogInformation("未找到追踪点，停止任务");
-            throw new Exception("未找到追踪点");
+            // 第一次未识别到：等待7秒后重试。
+            // 游戏内持续无操作约5秒后会自动缩放视角，被遮挡（如战斗准备交互框）的追踪点图标可能露出，故给一次重试机会
+            Logger.LogInformation("未找到追踪点，等待7秒后重试");
+            await Delay(7000, ct);
+
+            using var retryCapture = CaptureToRectArea();
+            if (retryCapture.Find(_trackPoint).IsEmpty())
+            {
+                Logger.LogInformation("未找到追踪点，停止任务");
+                throw new Exception("未找到追踪点");
+            }
+
+            return await MakeTrackPointDirectlyAbove(ct);
         }
 
         return await MakeTrackPointDirectlyAbove(ct);
