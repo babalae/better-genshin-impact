@@ -484,18 +484,25 @@ public class CombatScenes : IDisposable
         // 释放所有按键
         InputHub.ReleaseAll();
 
-        var mwk = SelectAvatar("玛薇卡");
-        if (mwk != null)
+        // 战斗结束后若队伍中存在会让角色处于特殊移动状态的角色（玛薇卡骑车、薇斯纳飞行等），
+        // 切换到其他角色以退出该状态，避免后续步行领奖时角色失控飞走/冲出领奖区域
+        if (Avatars.Any(a => AfterTaskSwitchAwayAvatars.Contains(a.Name)))
         {
             foreach (var avatar in Avatars)
             {
-                if (avatar.Name != "玛薇卡")
+                if (!AfterTaskSwitchAwayAvatars.Contains(avatar.Name))
                 {
                     avatar.Switch();
                 }
             }
         }
     }
+
+    /// <summary>
+    /// 战斗结束后需要切离的角色（处于载具/飞行等特殊移动状态，会影响后续步行操作）
+    /// </summary>
+    private static readonly HashSet<string> AfterTaskSwitchAwayAvatars = ["玛薇卡", "薇斯纳"];
+
 
     public Avatar? SelectAvatar(string name)
     {
