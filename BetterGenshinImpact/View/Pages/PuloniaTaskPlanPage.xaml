@@ -238,6 +238,11 @@
                     CornerRadius="4">
                 <Border.ContextMenu>
                     <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="编辑配置…"
+                                  Command="{Binding Data.ViewModel.EditNodeConfigurationCommand, Source={StaticResource PageBindingProxy}}"
+                                  CommandParameter="{Binding}"
+                                  InputGestureText="F2" />
+                        <Separator />
                         <MenuItem Header="添加分组"
                                   Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}" />
@@ -334,7 +339,7 @@
                 <TextBlock FontSize="26" FontWeight="SemiBold" Text="任务计划" />
                 <TextBlock Margin="0,4,0,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="编辑内容会自动保存；右键任务树可添加并完整配置任务，运行页可执行当前计划。" />
+                           Text="编辑内容会自动保存；右键可添加任务，双击或按 F2 可编辑所选节点配置。" />
             </StackPanel>
         </Grid>
 
@@ -413,13 +418,7 @@
                 <TabControl BorderThickness="0">
                     <TabItem Header="任务">
                         <Grid Margin="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MinWidth="420" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="360" />
-                            </Grid.ColumnDefinitions>
-
-                            <Grid Grid.Column="0">
+                            <Grid>
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -497,6 +496,9 @@
                                             </ContextMenu>
                                         </TreeView.ContextMenu>
                                         <TreeView.InputBindings>
+                                            <KeyBinding Key="F2"
+                                                        Command="{Binding ViewModel.EditNodeConfigurationCommand}"
+                                                        CommandParameter="{Binding SelectedItem, ElementName=TaskTree}" />
                                             <KeyBinding Key="C"
                                                         Modifiers="Control"
                                                         Command="{Binding ViewModel.SelectedDocument.SelectedNode.CopyCommand}" />
@@ -514,6 +516,12 @@
                                             <Style BasedOn="{StaticResource TaskTreeViewItemStyle}"
                                                    TargetType="TreeViewItem" />
                                         </TreeView.Resources>
+                                        <b:Interaction.Triggers>
+                                            <b:EventTrigger EventName="MouseDoubleClick">
+                                                <b:InvokeCommandAction Command="{Binding ViewModel.EditNodeConfigurationCommand}"
+                                                                       CommandParameter="{Binding SelectedItem, ElementName=TaskTree}" />
+                                            </b:EventTrigger>
+                                        </b:Interaction.Triggers>
                                         <b:Interaction.Behaviors>
                                             <behavior:TreeViewSelectedItemBehavior SelectedItem="{Binding ViewModel.SelectedDocument.SelectedNode, Mode=TwoWay}" />
                                         </b:Interaction.Behaviors>
@@ -538,169 +546,6 @@
                                     </TextBlock>
                                 </Grid>
                             </Grid>
-
-                            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-                                <StackPanel>
-                                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="节点设置" />
-                                    <TextBlock Margin="0,8,0,3" Text="名称" />
-                                    <TextBox Text="{Binding ViewModel.SelectedDocument.SelectedNode.Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                    <CheckBox Margin="0,10,0,0"
-                                              Content="节点自身启用"
-                                              IsChecked="{Binding ViewModel.SelectedDocument.SelectedNode.IsEnabled, Mode=TwoWay}" />
-
-                                    <Grid Margin="0,12,0,0"
-                                          Visibility="{Binding ViewModel.SelectedDocument.SelectedNode.CanConfigureRepeat, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="140" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock VerticalAlignment="Center"
-                                                   Text="执行次数"
-                                                   ToolTip="按顺序完整执行本分组内的全部任务；1 表示只执行一轮" />
-                                        <ui:NumberBox Grid.Column="1"
-                                                      AcceptsExpression="False"
-                                                      LargeChange="5"
-                                                      MaxDecimalPlaces="0"
-                                                      Maximum="10000"
-                                                      Minimum="1"
-                                                      SmallChange="1"
-                                                      SpinButtonPlacementMode="Inline"
-                                                      Value="{Binding ViewModel.SelectedDocument.SelectedNode.RepeatCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                            <b:Interaction.Behaviors>
-                                                <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1" />
-                                            </b:Interaction.Behaviors>
-                                        </ui:NumberBox>
-                                    </Grid>
-
-                                    <TextBlock Margin="0,12,0,3" Text="资源定位" />
-                                    <TextBox IsEnabled="{Binding ViewModel.SelectedDocument.CanEditPath}"
-                                             Text="{Binding ViewModel.SelectedDocument.SelectedNode.Path, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-
-                                    <Grid Margin="0,8,0,0"
-                                          Visibility="{Binding ViewModel.SelectedDocument.SelectedNode.CanUpdateResourceVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Text="固定资源版本" />
-                                            <TextBlock Margin="0,2,8,0"
-                                                       FontFamily="Consolas"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       Text="{Binding ViewModel.SelectedDocument.SelectedNode.ResourceVersionText}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding ViewModel.SelectedDocument.SelectedNode.ResourceVersionText}" />
-                                        </StackPanel>
-                                        <Button Grid.Column="1"
-                                                Padding="8,3"
-                                                VerticalAlignment="Center"
-                                                Command="{Binding ViewModel.UpdateResourceVersionCommand}"
-                                                CommandParameter="{Binding ViewModel.SelectedDocument.SelectedNode}"
-                                                Content="检查更新" />
-                                    </Grid>
-
-                                    <Grid Margin="0,12,0,3">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock VerticalAlignment="Center"
-                                                   Text="参数预设（跨计划复用）"
-                                                   ToolTip="复用相同任务类型和资源的一组参数；节点或分组中的显式设置优先" />
-                                        <Button Grid.Column="1"
-                                                Padding="7,2"
-                                                Command="{Binding ViewModel.RefreshPresetsCommand}"
-                                                Content="刷新" />
-                                    </Grid>
-                                    <ComboBox DisplayMemberPath="DisplayName"
-                                              IsEnabled="{Binding ViewModel.SelectedDocument.CanSelectPreset}"
-                                              ItemsSource="{Binding ViewModel.SelectedDocument.PresetOptions}"
-                                              SelectedItem="{Binding ViewModel.SelectedDocument.SelectedPresetOption, Mode=TwoWay}"
-                                              ToolTip="预设只复用参数，不包含任务结构、顺序或计划引用" />
-
-                                    <TextBlock Margin="0,14,0,3"
-                                               FontWeight="SemiBold"
-                                               Text="{Binding ViewModel.SelectedDocument.ParameterEditorTitle}" />
-                                    <TextBox MinHeight="112"
-                                             AcceptsReturn="True"
-                                             FontFamily="Consolas"
-                                             HorizontalScrollBarVisibility="Auto"
-                                             Text="{Binding ViewModel.SelectedDocument.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             VerticalScrollBarVisibility="Auto" />
-                                    <Button Margin="0,5,0,0"
-                                            HorizontalAlignment="Right"
-                                            Padding="10,4"
-                                            Command="{Binding ViewModel.SelectedDocument.ApplyParametersCommand}"
-                                            Content="应用参数" />
-
-                                    <Expander Margin="0,12,0,0" Header="执行策略">
-                                        <StackPanel>
-                                            <TextBox MinHeight="90"
-                                                     AcceptsReturn="True"
-                                                     FontFamily="Consolas"
-                                                     HorizontalScrollBarVisibility="Auto"
-                                                     Text="{Binding ViewModel.SelectedDocument.PolicyJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     VerticalScrollBarVisibility="Auto" />
-                                            <Button Margin="0,5,0,0"
-                                                    HorizontalAlignment="Right"
-                                                    Padding="10,4"
-                                                    Command="{Binding ViewModel.SelectedDocument.ApplyPolicyCommand}"
-                                                    Content="应用策略" />
-                                        </StackPanel>
-                                    </Expander>
-
-                                    <Expander Margin="0,8,0,0" Header="引用来源">
-                                        <StackPanel>
-                                            <TextBox MinHeight="90"
-                                                     AcceptsReturn="True"
-                                                     FontFamily="Consolas"
-                                                     HorizontalScrollBarVisibility="Auto"
-                                                     Text="{Binding ViewModel.SelectedDocument.SourceJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     VerticalScrollBarVisibility="Auto" />
-                                            <Button Margin="0,5,0,0"
-                                                    HorizontalAlignment="Right"
-                                                    Padding="10,4"
-                                                    Command="{Binding ViewModel.SelectedDocument.ApplySourceCommand}"
-                                                    Content="应用来源" />
-                                        </StackPanel>
-                                    </Expander>
-
-                                    <TextBlock Margin="0,14,0,5" FontWeight="SemiBold" Text="有效参数与来源" />
-                                    <ItemsControl ItemsSource="{Binding ViewModel.SelectedDocument.EffectiveParameters}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Margin="0,0,0,5"
-                                                        Padding="8"
-                                                        Background="{DynamicResource SubtleFillColorSecondaryBrush}"
-                                                        CornerRadius="5">
-                                                    <StackPanel>
-                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                                        <TextBlock Margin="0,2,0,0" FontFamily="Consolas" Text="{Binding Value}" TextWrapping="Wrap" />
-                                                        <TextBlock Margin="0,2,0,0"
-                                                                   FontSize="11"
-                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                   Text="{Binding Source, StringFormat=来源：{0}}"
-                                                                   TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Margin="0,4,0,0"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Text="这里只预览预设、父组覆盖和节点显式参数；能力默认值将在执行器注册阶段接入。"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,10,0,0"
-                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                               Text="{Binding ViewModel.SelectedDocument.EditorMessage}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,5,0,0"
-                                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                               Text="{Binding ViewModel.SelectedDocument.LastSaveError, StringFormat=最近保存失败：{0}}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                            </ScrollViewer>
                         </Grid>
                     </TabItem>
                     <TabItem Header="运行">

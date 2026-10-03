@@ -364,6 +364,23 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
+    /// 在独立弹窗中编辑任意可见任务节点，避免树页面常驻配置侧栏。
+    /// </summary>
+    [RelayCommand]
+    private void EditNodeConfiguration(PuloniaTaskNodeViewModel? node)
+    {
+        if (node is null || node.IsRoot)
+            return;
+        SelectedDocument = node.Document;
+        node.Document.SelectedNode = node;
+        var dialog = new PuloniaTaskNodeSettingsDialog(this)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        dialog.ShowDialog();
+    }
+
+    /// <summary>
     /// 重新读取资源并在用户确认后更新节点固定版本，资源变化不会静默影响运行。
     /// </summary>
     [RelayCommand]
