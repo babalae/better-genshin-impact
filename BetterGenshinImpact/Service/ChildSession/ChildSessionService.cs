@@ -812,43 +812,47 @@ public sealed class ChildSessionService : IDisposable
 
     private void CompleteConnectionFailure(ChildSessionConnectionFailedEventArgs e)
     {
-        _lastConnectionFailure = e;
+        // 统一在这里补充诊断，让「重试耗尽」和「连接超时」两条失败路径给出同样的信息。
+        var diagnosed = new ChildSessionConnectionFailedEventArgs(
+            $"{e.Message}{BuildFailureDiagnosis()}",
+            e.ErrorCode,
+            e.ExtendedErrorCode);
+        _lastConnectionFailure = diagnosed;
         _autoLaunchBetterGiPending = false;
         _initialConnectionRetriesRemaining = 0;
         _connectionAttemptCompletionSource?.TrySetResult(false);
         _logger.LogError(
             "桌面分身 RDP 连接失败：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
-            e.Message,
-            e.ErrorCode,
-            e.ExtendedErrorCode);
-        RefreshState(e.Message);
-        ConnectionFailed?.Invoke(this, e);
+            diagnosed.Message,
+            diagnosed.ErrorCode,
+            diagnosed.ExtendedErrorCode);
+        RefreshState(diagnosed.Message);
+        ConnectionFailed?.Invoke(this, diagnosed);
     }
 
     private ChildSessionConnectionFailedEventArgs CreateConnectionTimeoutFailure()
     {
         var timeoutMessage =
             $"桌面分身连接及登录初始化未能在 {ConnectionTimeout.TotalSeconds:0} 秒内完成。";
-        var diagnosis = BuildFailureDiagnosis();
         var lastDiagnostic =
             _desktopWindow?.RdpHost.LastConnectionDiagnostic
             ?? _lastConnectionFailure;
         if (lastDiagnostic is null)
         {
             return new ChildSessionConnectionFailedEventArgs(
-                $"{timeoutMessage}\n\nRDP ActiveX 未报告更具体的失败原因。{diagnosis}",
+                $"{timeoutMessage}\n\nRDP ActiveX 未报告更具体的失败原因。",
                 ErrorTimeout);
         }
 
         return new ChildSessionConnectionFailedEventArgs(
-            $"{timeoutMessage}\n\nRDP ActiveX 最后报告：\n{lastDiagnostic.Message}{diagnosis}",
+            $"{timeoutMessage}\n\nRDP ActiveX 最后报告：\n{lastDiagnostic.Message}",
             lastDiagnostic.ErrorCode,
             lastDiagnostic.ExtendedErrorCode);
     }
 
     /// <summary>
     /// 连接失败后的补充诊断：区分「系统没有建立会话」和「账号或密码被拒绝」，
-    /// 并附上启动前的环境预检结论。RDP ActiveX 自身只回报「发生内部错误」和断开原因，
+    /// 并附上环境预检结论。RDP ActiveX 自身只回报「发生内部错误」和断开原因，
     /// 单独看这些信息无法定位问题。
     /// </summary>
     private string BuildFailureDiagnosis()
@@ -859,9 +863,8 @@ public sealed class ChildSessionService : IDisposable
         {
             builder.AppendLine().AppendLine();
             builder.Append(
-                "诊断：Windows 自始至终没有建立桌面分身会话"
-                + "（WTSGetChildSessionId 返回 ERROR_NOT_FOUND）。"
-                + "这通常说明系统无法创建 RDP 会话，而不是账号或密码错误。");
+                "诊断：当前系统没有可用的桌面分身会话，说明 Windows 未能建立 RDP 会话。"
+                + "这通常与系统版本或远程桌面配置有关，而不是账号或密码错误。");
         }
 
         if (_environmentIssues.Count > 0)

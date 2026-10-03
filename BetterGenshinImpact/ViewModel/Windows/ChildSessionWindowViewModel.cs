@@ -229,21 +229,19 @@ public partial class ChildSessionWindowViewModel : ViewModel
             }
         }
 
-        if (_childSessionService.ConnectedState != 1)
+        if (_childSessionService.ConnectedState != 1
+            && Execute(_childSessionService.RefreshEnvironmentCheck)
+            && _childSessionService.HasBlockingEnvironmentIssue)
         {
-            _childSessionService.RefreshEnvironmentCheck();
-            if (_childSessionService.HasBlockingEnvironmentIssue)
+            var result = await ThemedMessageBox.WarningAsync(
+                _childSessionService.EnvironmentIssueSummary
+                + "\n\n在这些条件下桌面分身通常无法建立会话。是否仍要继续？",
+                "桌面分身环境检查",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
             {
-                var result = await ThemedMessageBox.WarningAsync(
-                    _childSessionService.EnvironmentIssueSummary
-                    + "\n\n在这些条件下桌面分身通常无法建立会话。是否仍要继续？",
-                    "桌面分身环境检查",
-                    MessageBoxButton.YesNo,
-                    MessageBoxResult.No);
-                if (result != MessageBoxResult.Yes)
-                {
-                    return;
-                }
+                return;
             }
         }
 
