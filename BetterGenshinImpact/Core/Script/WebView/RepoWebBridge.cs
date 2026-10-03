@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
 using System.Net;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.Interface;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -68,6 +69,9 @@ public sealed class RepoWebBridge
     public async Task<string> GetUserConfigJson()
     {
         string userConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "User", "config.json");
+
+        // 保存有防抖，读取文件前先写入尚未落盘的改动
+        App.GetService<IConfigService>()?.Flush();
         
         if (!File.Exists(userConfigPath))
         {

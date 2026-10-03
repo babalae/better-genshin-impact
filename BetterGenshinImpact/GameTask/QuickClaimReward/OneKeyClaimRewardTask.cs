@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Model;
@@ -224,7 +224,7 @@ public class OneKeyClaimRewardTask : Singleton<OneKeyClaimRewardTask>
                 continue;
             }
 
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             Logger.LogInformation("一键领取奖励：检测到“点击空白区域继续”，已按 ESC");
             await Delay(220, ct);
             return;
@@ -260,7 +260,7 @@ public class OneKeyClaimRewardTask : Singleton<OneKeyClaimRewardTask>
         {
             ct.ThrowIfCancellationRequested();
             var scrollAmount = Math.Min(amount, ScrollChunkSize);
-            Simulation.SendInput.Mouse.VerticalScroll(-scrollAmount);
+            InputHub.Foreground.Mouse.VerticalScroll(-scrollAmount);
             amount -= scrollAmount;
         }
     }

@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -21,6 +21,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Windows;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -60,6 +61,13 @@ public class Avatar
     /// 手动配置的技能CD，有它就不使用OCR,小于0为自动
     /// </summary>
     public double ManualSkillCd { get; set; }
+
+    /// <summary>
+    /// 是否启用 E 技能 ONNX 分类识别（<see cref="IsESkillReadyByClassify"/>）。
+    /// YoloSharp 分类器不支持并发调用，仅 AutoCombo 等串行调用方启用；
+    /// 默认 false，<see cref="ReadSkillCdFromScreenshot"/> 回退为纯 OCR。
+    /// </summary>
+    public bool EnableESkillClassify { get; set; }
 
     /// <summary>
     /// 最近一次使用元素战技的时间
@@ -135,7 +143,7 @@ public class Avatar
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+            InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, ct);
             TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
@@ -172,7 +180,7 @@ public class Avatar
                         cts.CancelAfter(15000);
                         // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
                         AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
-                        Simulation.SendInput.Mouse.RightButtonDown();
+                        InputHub.Foreground.Mouse.RightButtonDown();
                         pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
                         Logger.LogInformation("游泳检测：移动结束");
                     }
@@ -194,8 +202,8 @@ public class Avatar
                         cts.Cancel(); // 终止 PathExecutor 内部截屏循环
                         AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
                         AutoFightTask.FightWaypoint = null;
-                        Simulation.SendInput.Mouse.RightButtonUp();
-                        Simulation.ReleaseAllKey();
+                        InputHub.Foreground.Mouse.RightButtonUp();
+                        InputHub.ReleaseAll();
                     }
                 }
 
@@ -284,6 +292,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
+                if (EnableESkillClassify)
+                {
+                    ESkillClassifyViewModel.Instance.Result = null;
+                }
                 return;
             }
 
@@ -359,23 +371,23 @@ public class Avatar
 
     private void SimulateSwitchAction(int index)
     {
-        Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
+        InputHub.Foreground.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
         switch (index)
         {
             case 1:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember1);
                 break;
             case 2:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember2);
                 break;
             case 3:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember3);
                 break;
             case 4:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember4);
                 break;
             case 5:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember5);
                 break;
             default:
                 break;
@@ -390,13 +402,13 @@ public class Avatar
         var direction = UnstuckDirections[UnstuckRandom.Next(4)];
         Logger.LogWarning("切换角色卡住，执行脱困（方向：{Dir}）", direction);
 
-        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        InputHub.Foreground.SimulateAction(GIActions.Jump);
         Sleep(200, ct);
-        Simulation.SendInput.SimulateAction(direction, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(direction, KeyType.KeyDown);
         SimulateSwitchAction(Index);
         Sleep(1000, ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-        Simulation.ReleaseAllKey();
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
+        InputHub.ReleaseAll();
     }
 
     /// <summary>
@@ -519,7 +531,7 @@ public class Avatar
                 return;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
             ms -= 200;
             Sleep(200, Ct);
         }
@@ -539,11 +551,11 @@ public class Avatar
 
         if (hold)
         {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
+            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
         }
         else
         {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
         }
 
         // 0.2 秒内循环检测（分类器优先、确认冷却后才 OCR），直到识别到 CD 或超时
@@ -607,13 +619,26 @@ public class Avatar
     }
 
     /// <summary>
-    /// 从截图中判定 E 技能状态并读取剩余 CD：先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
+    /// 从截图中判定 E 技能状态并读取剩余 CD：<see cref="EnableESkillClassify"/> 启用时
+    /// 先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
     /// 仅在明确判定 Cooldown 时才 OCR 读取具体剩余秒数；就绪返回 0；
+    /// 未启用时 State 恒为 Unknown，仅 OCR 提取 CD 数值；
     /// 未知（置信度不足/角色不匹配）时不 OCR，避免在不确定截图归属时误读并污染记录。
     /// 注意 Cooldown 状态下 OCR 可能读不到数字（<see cref="Cd"/> 为 <c>null</c>），调用方须以 State 为准。
     /// </summary>
     private (SkillCdState State, double? Cd) ReadSkillCdFromScreenshot(ImageRegion imageRegion, bool onlyCode01Ready = true)
     {
+        // 未启用分类识别（默认）：不做状态分类，State 恒为 Unknown，仅 OCR 提取 CD 数
+        if (!EnableESkillClassify)
+        {
+            var ocrCd = ReadSkillCdByOcr(imageRegion);
+            if (ocrCd > 0)
+            {
+                ESkillCdTracker.Record(Name, ocrCd.Value);
+            }
+            return (SkillCdState.Unknown, ocrCd);
+        }
+
         var (State, Code) = IsESkillReadyByClassify(imageRegion, onlyCode01Ready);
         if (State == SkillCdState.Ready)
         {
@@ -688,7 +713,7 @@ public class Avatar
                 }
 
                 // Logger.LogInformation("释放Q");
-                Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
+                InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);
                 Sleep(200, Ct);
 
                 using var region = CaptureToRectArea();
@@ -757,7 +782,8 @@ public class Avatar
     /// </param>
     public (SkillCdState State, string? Code) IsESkillReadyByClassify(ImageRegion imageRegion, bool onlyCode01Ready = true)
     {
-        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ERectForClassify);
+        var eRect1080 = AutoFightAssets.Get(imageRegion).ERectForClassify;
+        using var eRa = imageRegion.DeriveCrop(eRect1080);
         var result = ESkillClassifierLazy.Value.Predictor.Classify(eRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
@@ -809,37 +835,19 @@ public class Avatar
             }
         }
 
-        DrawESkillClassifyResult(imageRegion, classifyResult.State, classifyResult.Code);
-        return classifyResult;
-    }
-
-    /// <summary>
-    /// 在 E 技能图标上方绘制 <see cref="IsESkillReadyByClassify"/> 的识别结果（就绪/冷却/未知 + 编号）。
-    /// 仅在遮罩窗口存在且开启"显示识别结果"时可见（MaskWindow 渲染时统一过滤）。
-    /// 遮罩窗口未初始化（如单元测试环境）时直接跳过，不影响调用方。
-    /// </summary>
-    private void DrawESkillClassifyResult(ImageRegion imageRegion, SkillCdState state, string? code)
-    {
-        if (View.MaskWindow.InstanceNullable() == null)
+        // 识别结果写入 VM，由需要显示的模块（如 AutoComboRunTask）订阅 INPC 变更后绘制（数据与显示解耦）
+        var domainToCaptureFactor = (double)TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / imageRegion.Width;
+        var eRectCapture = new Rect((int)(eRect1080.X * domainToCaptureFactor), (int)(eRect1080.Y * domainToCaptureFactor),
+            (int)(eRect1080.Width * domainToCaptureFactor), (int)(eRect1080.Height * domainToCaptureFactor));
+        ESkillClassifyViewModel.Instance.Result = new ESkillClassifyResult
         {
-            return;
-        }
-
-        var eRect = AutoFightAssets.Get(imageRegion).ERectForClassify;
-        var stateText = state switch
-        {
-            SkillCdState.Ready => "就绪",
-            SkillCdState.Cooldown => "冷却",
-            _ => "未知",
+            State = classifyResult.State,
+            Code = classifyResult.Code,
+            AvatarName = CombatAvatar.Name,
+            ClassifyRect = eRectCapture.ToWindowsRectangle(),
+            TextPosition = new System.Windows.Point(eRectCapture.X, eRectCapture.Y - 24 * domainToCaptureFactor),
         };
-
-        if (!string.IsNullOrEmpty(code))
-        {
-            stateText += $"({code})";
-        }
-
-        View.Drawable.VisionContext.Instance().DrawContent.PutOrRemoveTextList("ESkillClassify",
-            [new View.Drawable.TextDrawable(stateText, new System.Windows.Point(eRect.X, eRect.Y - 24))]);
+        return classifyResult;
     }
 
     // /// <summary>
@@ -869,9 +877,9 @@ public class Avatar
             ms = 200;
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
         Sleep(ms); // 冲刺不能被cts取消
-        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+        InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
     }
 
     public void Walk(string key, int ms)
@@ -904,9 +912,9 @@ public class Avatar
             return;
         }
 
-        Simulation.SendInput.Keyboard.KeyDown(vk);
+        InputHub.Foreground.Keyboard.KeyDown(vk);
         Sleep(ms); // 行走不能被cts取消
-        Simulation.SendInput.Keyboard.KeyUp(vk);
+        InputHub.Foreground.Keyboard.KeyUp(vk);
     }
 
     /// <summary>
@@ -916,7 +924,7 @@ public class Avatar
     /// <param name="pixelDeltaY"></param>
     public void MoveCamera(int pixelDeltaX, int pixelDeltaY)
     {
-        Simulation.SendInput.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
+        InputHub.Foreground.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
     }
 
     /// <summary>
@@ -1127,7 +1135,7 @@ public class Avatar
     /// </summary>
     public void Jump()
     {
-        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        InputHub.Foreground.SimulateAction(GIActions.Jump);
     }
 
     /// <summary>
@@ -1143,9 +1151,9 @@ public class Avatar
 
         if (AvatarSpecialAction.ExecuteSpecializedAction(this, "Charge", Name, new ActionArgs(Ms: ms))) return;
 
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
         Sleep(ms);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
     }
 
     public void MouseDown(string key = "left")
@@ -1153,15 +1161,15 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            Simulation.SendInput.Mouse.LeftButtonDown();
+            InputHub.Foreground.Mouse.LeftButtonDown();
         }
         else if (key == "right")
         {
-            Simulation.SendInput.Mouse.RightButtonDown();
+            InputHub.Foreground.Mouse.RightButtonDown();
         }
         else if (key == "middle")
         {
-            Simulation.SendInput.Mouse.MiddleButtonDown();
+            InputHub.Foreground.Mouse.MiddleButtonDown();
         }
     }
 
@@ -1170,15 +1178,15 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
         }
         else if (key == "right")
         {
-            Simulation.SendInput.Mouse.RightButtonUp();
+            InputHub.Foreground.Mouse.RightButtonUp();
         }
         else if (key == "middle")
         {
-            Simulation.SendInput.Mouse.MiddleButtonUp();
+            InputHub.Foreground.Mouse.MiddleButtonUp();
         }
     }
 
@@ -1187,15 +1195,15 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            Simulation.SendInput.Mouse.LeftButtonClick();
+            InputHub.Foreground.Mouse.LeftButtonClick();
         }
         else if (key == "right")
         {
-            Simulation.SendInput.Mouse.RightButtonClick();
+            InputHub.Foreground.Mouse.RightButtonClick();
         }
         else if (key == "middle")
         {
-            Simulation.SendInput.Mouse.MiddleButtonClick();
+            InputHub.Foreground.Mouse.MiddleButtonClick();
         }
     }
 
@@ -1209,85 +1217,23 @@ public class Avatar
 
     public void Scroll(int scrollAmountInClicks)
     {
-        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
+        InputHub.Foreground.Mouse.VerticalScroll(scrollAmountInClicks);
     }
 
+    // 鼠标键（VK_LBUTTON、VK_RBUTTON、VK_MBUTTON、VK_XBUTTON1、VK_XBUTTON2）由输入通道转成对应的鼠标键
     public void KeyDown(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonDown();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonDown();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonDown();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
-                break;
-            default:
-                Simulation.SendInput.Keyboard.KeyDown(vk);
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyDown(KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key)));
     }
 
     public void KeyUp(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonUp();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonUp();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonUp();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
-                break;
-            default:
-                Simulation.SendInput.Keyboard.KeyUp(vk);
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyUp(KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key)));
     }
 
     public void KeyPress(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonClick();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonClick();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonClick();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
-                break;
-            default:
-                Simulation.SendInput.Keyboard.KeyPress(vk);
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyPress(KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key)));
     }
 
     /// <summary>

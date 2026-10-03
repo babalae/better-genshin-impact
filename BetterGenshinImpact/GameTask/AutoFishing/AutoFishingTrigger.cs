@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
@@ -6,7 +7,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -24,10 +24,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private readonly InputSimulator input = Simulation.SendInput;
+        private IInputChannel input => InputHub.Foreground;
 
         public string Name => "自动钓鱼";
-        public bool IsEnabled { get; set; }
+        public bool IsEnabledByConfig => TaskContext.Instance().Config.AutoFishingConfig.Enabled;
         public int Priority => 15;
 
         /// <summary>
@@ -37,14 +37,29 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         public bool IsExclusive { get; set; }
 
-        private CsTrees.Blackboard.Blackboard blackboard;
+        private CsTrees.Blackboard.Blackboard blackboard = null!;
 
         /// <summary>
-        /// 辣条（误）
+        /// 辣条（误）。每次启用时按当前配置重建
         /// </summary>
-        private Behaviour BehaviourTreeLaTiao { get; set; }
+        private Behaviour BehaviourTreeLaTiao { get; set; } = null!;
 
-        public AutoFishingTrigger()
+        /// <summary>
+        /// 启用时按当前配置建行为树，钓鱼配置的改动在下一次启用时生效
+        /// </summary>
+        public void OnEnabled(object? options)
+        {
+            IsExclusive = false;
+            _prevExecute = DateTime.MinValue;
+            BuildBehaviourTree();
+        }
+
+        public void OnDisabled()
+        {
+            IsExclusive = false;
+        }
+
+        private void BuildBehaviourTree()
         {
             AutoFishingTaskParam autoFishingTaskParam =
                 AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
@@ -70,12 +85,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     .End()
                 .End()
                 .Build();
-        }
-
-        public void Init()
-        {
-            IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
-            IsExclusive = false;
         }
 
         private DateTime _prevExecute = DateTime.MinValue;
@@ -228,7 +237,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", 0, moveY);
-                Simulation.SendInput.Mouse.MoveMouseBy(0, moveY);
+                InputHub.Foreground.Mouse.MoveMouseBy(0, moveY);
                 return (0, minDistance);
             }
 
@@ -248,7 +257,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", moveX, 0);
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                InputHub.Foreground.Mouse.MoveMouseBy(moveX, 0);
                 return (minDistance, 0);
             }
 
@@ -281,7 +290,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", moveX, moveY);
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
+                InputHub.Foreground.Mouse.MoveMouseBy(moveX, moveY);
                 return (dpX, dpY);
             }
 
@@ -311,7 +320,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             autoFishingTrigger.IsExclusive = !imageRegion.Find(RecognitionAssets.Get("AutoFishing", "ExitFishingButton", imageRegion)).IsEmpty();
             if (autoFishingTrigger.IsExclusive)
             {
-                if (autoFishingTrigger.IsEnabled && !prevIsExclusive)
+                if (!prevIsExclusive)
                 {
                     autoFishingTrigger._logger.LogInformation("→ {Text}", "半自动钓鱼，启动！");
                     // _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled.ToChinese());

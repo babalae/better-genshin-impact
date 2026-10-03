@@ -1,11 +1,11 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Input;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -85,7 +85,7 @@ public class CheckRewardsTask
             GetConfirmRa(true,_dailyCommissionRewardsString),
             ()=>
             {
-                Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
+                InputHub.Foreground.SimulateAction(GIActions.OpenAdventurerHandbook);
                 using var screen = CaptureToRectArea();
                 var ra = screen.FindMulti(GetConfirmRa())
                     .FirstOrDefault(btn => Regex.IsMatch(btn.Text.Trim(), $"^(?:{_commissionsButtonString})$", RegexOptions.IgnoreCase));
@@ -185,7 +185,7 @@ public class CheckRewardsTask
                     GetConfirmRa(true, _dailyCommissionRewardsString),
                     () =>
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
+                        InputHub.Foreground.SimulateAction(GIActions.OpenAdventurerHandbook);
                         using var screen = CaptureToRectArea();
                         var ra = screen.FindMulti(GetConfirmRa())
                             .FirstOrDefault(btn => Regex.IsMatch(btn.Text.Trim(), $"^(?:{_commissionsButtonString})$", RegexOptions.IgnoreCase));

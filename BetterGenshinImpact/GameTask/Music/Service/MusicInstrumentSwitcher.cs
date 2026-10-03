@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -40,7 +40,7 @@ public sealed class MusicInstrumentSwitcher : IMusicInstrumentSwitcher
             await new ReturnMainUiTask().Start(cancellationToken);
             await AutoArtifactSalvageTask.OpenInventory(
                 GridScreenName.Gadget,
-                Simulation.SendInput,
+                InputHub.Foreground,
                 _logger,
                 cancellationToken);
 
@@ -77,7 +77,7 @@ public sealed class MusicInstrumentSwitcher : IMusicInstrumentSwitcher
             await new ReturnMainUiTask().Start(cancellationToken);
             _logger.LogInformation("乐器已就绪：{InstrumentName}，即将开始演奏", instrumentName);
             await Delay(1000, cancellationToken);
-            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+            InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
             await Delay(2000, cancellationToken);
             keepInstrumentUiOpen = true;
             return true;

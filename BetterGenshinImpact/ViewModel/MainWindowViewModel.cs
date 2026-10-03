@@ -15,6 +15,7 @@ using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeviceId;
+using Fischless.GameCapture;
 using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -293,6 +294,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 break;
         }
 
+        Wpf.Ui.Violeta.Appearance.SystemMenuThemeManager.Apply(
+            themeType is ThemeType.DarkNone or ThemeType.DarkMica or ThemeType.DarkAcrylic
+                ? Wpf.Ui.Violeta.Appearance.SystemMenuTheme.Dark
+                : Wpf.Ui.Violeta.Appearance.SystemMenuTheme.Light);
+
         // 立即应用主题到当前窗口
         if (Application.Current.MainWindow != null)
         {
@@ -383,6 +389,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 应用上次保存的主题
         ApplyTheme(Config.CommonConfig.CurrentThemeType);
 
+        // 非主实例仅应用自身窗口主题；后续迁移、检查更新等启动操作由主实例统一执行。
+        if (!InstanceBootstrap.Current.Context.IsRoot)
+        {
+            return;
+        }
+
         // 版本是否运行过
         if (Config.CommonConfig.RunForVersion != Global.Version)
         {
@@ -436,7 +448,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         await CheckRedeemCodeFeedsUpdateAsync();
 
         //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
-        if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
+        if (OsVersionHelper.IsWindows11_OrGreater
+            && Config.AutoFixWin11BitBlt
+            && Config.CaptureMode == nameof(CaptureModes.BitBlt))
         {
             BitBltRegistryHelper.SetDirectXUserGlobalSettings();
         }

@@ -520,7 +520,7 @@ public partial class HtmlMaskWindow : Window
             if (string.Equals(uri.AbsoluteUri, _pageUrl, StringComparison.OrdinalIgnoreCase)) return;
 
             // HTTP/HTTPS 请求：与 JS 脚本使用完全一致的权限校验
-            var currentProject = TaskContext.Instance().CurrentScriptProject;
+            var currentProject = RunnerContext.Instance.CurrentScriptProject;
             if (currentProject?.AllowJsHTTP != true)
             {
                 TaskControl.Logger.LogWarning("未启用JS HTTP权限，拦截HTML遮罩网络请求: {Uri}", e.Request.Uri);

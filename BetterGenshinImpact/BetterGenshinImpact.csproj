@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.65.1-alpha.2</Version>
+		<Version>0.66.1-alpha.1</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -38,11 +38,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- 云原神网页版输入 SDK，由 WebView2InputBridge.InstallAsync 读取并注入页面 -->
+		<None Remove="Resources\JavaScript\ys-input-inject.js" />
+		<EmbeddedResource Include="Resources\JavaScript\ys-input-inject.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.24" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.35" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.36" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.27" />
 
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
@@ -76,7 +82,6 @@
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="MimeKit" Version="4.16.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenccNetLib" Version="1.7.0" />
 		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
@@ -102,7 +107,7 @@
 		<PackageReference Include="WPF-UI" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
-		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.3" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.15" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YamlDotNet" Version="16.3.0" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Input;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -62,18 +62,35 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
             // 计算按键位置
             using var gameCaptureRegion = CaptureToRectArea();
 
-            foreach (var keyValuePair in _keyX)
+            if (TaskContext.Instance().Config.AutoMusicGameConfig.UseCapturePipeline)
             {
-                var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
-                // 添加任务
-                taskList.Add(Task.Run(async () => await DoWhitePressWin32(ct, keyValuePair.Key, new Point(x, y)), ct));
+                // 截图管线模式：单采集循环驱动全部键位（替代每键独立 GDI 轮询）
+                // 注意：CaptureToRectArea 返回的 SrcMat 在采集宽度大于 1920 时已归一化为 1920x1080，
+                // 坐标必须停留在 assetScale 缩放空间，不能再用 ConvertPositionToGameCaptureRegion
+                // 换算回原始采集分辨率（否则 2K/4K 下全部越界、按键被跳过）
+                var keys = new List<(User32.VK Key, int X, int Y)>();
+                foreach (var keyValuePair in _keyX)
+                {
+                    keys.Add((keyValuePair.Key, (int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale)));
+                }
+
+                taskList.Add(Task.Run(() => DoWhitePressPipeline(ct, keys), ct));
+            }
+            else
+            {
+                foreach (var keyValuePair in _keyX)
+                {
+                    var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
+                    // 添加任务
+                    taskList.Add(Task.Run(async () => await DoWhitePressWin32(ct, keyValuePair.Key, new Point(x, y)), ct));
+                }
             }
 
             await Task.WhenAll(taskList);
         }
         finally
         {
-            Simulation.ReleaseAllKey();
+            InputHub.ReleaseAll();
             Logger.LogInformation("结束自动演奏");
         }
     }
@@ -109,6 +126,55 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
             // sw.Stop();
             // Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
+        }
+    }
+
+    /// <summary>
+    ///     截图管线模式：单采集循环驱动全部键位。
+    ///     一个线程按固定节奏截图一次，内联检查所有键位的 B 通道并维护
+    ///     各键的按下状态机（最短按压 minHoldMs，防止连点抖动）。
+    /// </summary>
+    private async Task DoWhitePressPipeline(CancellationToken ct,
+        IReadOnlyList<(User32.VK Key, int X, int Y)> keys)
+    {
+        const int minHoldMs = 80;
+        var states = new bool[keys.Count];
+        var pressTicks = new long[keys.Count];
+
+        void SampleKey(int i, (User32.VK Key, int X, int Y) key, Mat mat)
+        {
+            var px = key.X;
+            var py = key.Y;
+            if ((uint)px >= (uint)mat.Width || (uint)py >= (uint)mat.Height) return;
+
+            var b = mat.At<Vec3b>(py, px).Item0;   // BGR 内存序首字节为 B
+            if (states[i])
+            {
+                if (b >= 220 && Environment.TickCount64 - pressTicks[i] >= minHoldMs)
+                {
+                    states[i] = false;
+                    KeyUp(key.Key);
+                }
+            }
+            else if (b < 220)
+            {
+                states[i] = true;
+                pressTicks[i] = Environment.TickCount64;
+                KeyDown(key.Key);
+            }
+        }
+
+        while (!ct.IsCancellationRequested)
+        {
+            await Task.Delay(5, ct);
+
+            using var cap = CaptureToRectArea();
+            if (cap == null || cap.SrcMat == null || cap.SrcMat.Empty()) continue;
+
+            for (var i = 0; i < keys.Count; i++)
+            {
+                SampleKey(i, keys[i], cap.SrcMat);
+            }
         }
     }
 
@@ -229,12 +295,12 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     private void KeyUp(User32.VK key)
     {
-        Simulation.SendInput.Keyboard.KeyUp(key);
+        InputHub.Foreground.Keyboard.KeyUp(key);
     }
 
     private void KeyDown(User32.VK key)
     {
-        Simulation.SendInput.Keyboard.KeyDown(key);
+        InputHub.Foreground.Keyboard.KeyDown(key);
     }
 
     public static void Init()

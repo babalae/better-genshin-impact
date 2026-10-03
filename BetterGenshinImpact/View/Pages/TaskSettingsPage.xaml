@@ -3453,6 +3453,31 @@
                               SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
                               SelectedIndex="0" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 音符检测使用截图管线}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后音符检测走全局截图器（推荐WGCV2）}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoMusicGameConfig.UseCapturePipeline, Mode=TwoWay}" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
         
@@ -3710,6 +3735,125 @@
                                 VerticalContentAlignment="Top"
                                 VerticalScrollBarVisibility="Auto" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        主建树提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="“当前队伍”“元素反应”等小节由程序自动追加，无需填写；留空使用默认正文"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Height="160"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.MainPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        兜底建树提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="“当前队伍”小节由程序自动追加，无需填写；留空使用默认正文"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Height="120"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.FallbackPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16,0,16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <ui:TextBlock FontTypography="Body"
+                                      TextWrapping="Wrap">
+                            角色提示词覆盖
+                        </ui:TextBlock>
+                        <ui:TextBlock Margin="0,4,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="自定义角色的战术描述，未覆盖的角色使用内置描述；删除行即恢复内置描述；如重复只取第一个"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               Margin="12,0,36,0"
+                               VerticalAlignment="Center"
+                               Command="{Binding AddAvatarDescriptionOverrideCommand}"
+                               Content="添加角色" />
+                </Grid>
+                <ItemsControl Margin="16,0,36,16"
+                              ItemsSource="{Binding Config.AutoComboBuildConfig.AvatarDescriptionOverrides}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0"
+                                          VerticalAlignment="Center"
+                                          ItemsSource="{x:Static pages:TaskSettingsPageViewModel.CombatAvatarNameList}"
+                                          SelectedItem="{Binding Name, Mode=TwoWay}" />
+                                <TextBox Grid.Column="1"
+                                         Height="44"
+                                         Margin="8,0,0,0"
+                                         VerticalContentAlignment="Top"
+                                         AcceptsReturn="True"
+                                         Text="{Binding Description, Mode=TwoWay}"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" />
+                                <ui:Button Grid.Column="2"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Command="{Binding DataContext.RemoveAvatarDescriptionOverrideCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                           CommandParameter="{Binding}"
+                                           Content="删除" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </ui:CardExpander>
 

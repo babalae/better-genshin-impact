@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -91,14 +91,14 @@ public class ChooseFOptionTask
                         {
                             ct.ThrowIfCancellationRequested();
                             await Delay(60, ct);
-                            Simulation.SendInput.Keyboard.KeyDown(assets.PickVk);
+                            InputHub.Foreground.Keyboard.KeyDown(assets.PickVk);
                             try
                             {
                                 await Delay(60, ct);
                             }
                             finally
                             {
-                                Simulation.SendInput.Keyboard.KeyUp(assets.PickVk);
+                                InputHub.Foreground.Keyboard.KeyUp(assets.PickVk);
                             }
                             await Delay(60, ct);
                             _logger.LogInformation("F选项选择：已确认并按下 {Key}，选项 {Text}", assets.PickVk, current);
@@ -128,7 +128,7 @@ public class ChooseFOptionTask
 
                     ct.ThrowIfCancellationRequested();
                     await Delay(60, ct);
-                    Simulation.SendInput.Mouse.MoveMouseBy(retryMouseMoveDistance, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(retryMouseMoveDistance, 0);
                     await Delay(60, ct);
                     // 游戏处理输入和截图源刷新都存在延迟，等待稳定后再进行下一次识别。
                     await Delay(200, ct);
@@ -141,7 +141,7 @@ public class ChooseFOptionTask
                     ct.ThrowIfCancellationRequested();
                     // 每一次滚轮输入都保留前后间隔，避免低帧率下连续输入丢失。
                     await Delay(60, ct);
-                    Simulation.SendInput.Mouse.VerticalScroll(Math.Sign(clicks));
+                    InputHub.Foreground.Mouse.VerticalScroll(Math.Sign(clicks));
                     await Delay(60, ct);
                 }
 
@@ -165,14 +165,14 @@ public class ChooseFOptionTask
 
                 ct.ThrowIfCancellationRequested();
                 await Delay(60, ct);
-                Simulation.SendInput.Keyboard.KeyDown(confirmationAssets.PickVk);
+                InputHub.Foreground.Keyboard.KeyDown(confirmationAssets.PickVk);
                 try
                 {
                     await Delay(60, ct);
                 }
                 finally
                 {
-                    Simulation.SendInput.Keyboard.KeyUp(confirmationAssets.PickVk);
+                    InputHub.Foreground.Keyboard.KeyUp(confirmationAssets.PickVk);
                 }
                 await Delay(60, ct);
                 _logger.LogInformation("F选项选择：复核通过，已按下 {Key}，选项 {Text}", confirmationAssets.PickVk, confirmedText);

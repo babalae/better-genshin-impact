@@ -1,6 +1,5 @@
-using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask.Music.Model;
-using Fischless.WindowsInput;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,46 +94,38 @@ public abstract class KeyInputTransportBase : IKeyInputTransport
     }
 }
 
+/// <summary>
+/// 后台模式：走 InputHub.Background，每次调用时取通道
+/// </summary>
 public sealed class PostMessageKeyInputTransport : KeyInputTransportBase
 {
     public override MusicInputMode Mode => MusicInputMode.BackgroundPostMessage;
 
     protected override void SendKeyDown(User32.VK key)
     {
-        TaskContext.Instance().PostMessageSimulator.KeyDownBackground(key);
+        InputHub.Background.Keyboard.KeyDown(key);
     }
 
     protected override void SendKeyUp(User32.VK key)
     {
-        TaskContext.Instance().PostMessageSimulator.KeyUpBackground(key);
+        InputHub.Background.Keyboard.KeyUp(key);
     }
 }
 
+/// <summary>
+/// 前台模式：走 InputHub.Foreground，每次调用时取通道
+/// </summary>
 public sealed class SendInputKeyInputTransport : KeyInputTransportBase
 {
     public override MusicInputMode Mode => MusicInputMode.ForegroundSendInput;
 
     protected override void SendKeyDown(User32.VK key)
     {
-        if (InputBuilder.IsExtendedKey(key))
-        {
-            Simulation.SendInput.Keyboard.KeyDown(false, key);
-        }
-        else
-        {
-            Simulation.SendInput.Keyboard.KeyDown(key);
-        }
+        InputHub.Foreground.Keyboard.KeyDown(key);
     }
 
     protected override void SendKeyUp(User32.VK key)
     {
-        if (InputBuilder.IsExtendedKey(key))
-        {
-            Simulation.SendInput.Keyboard.KeyUp(false, key);
-        }
-        else
-        {
-            Simulation.SendInput.Keyboard.KeyUp(key);
-        }
+        InputHub.Foreground.Keyboard.KeyUp(key);
     }
 }
