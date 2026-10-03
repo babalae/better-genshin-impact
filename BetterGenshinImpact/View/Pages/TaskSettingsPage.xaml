@@ -3621,6 +3621,8 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
+                <!-- 值控件统一固定宽度 300。用 MinWidth/MaxWidth 时宽度会随内容浮动（密钥框被撑到 400、其余停在 300），各行右缘就对不齐了。
+                     这里不用 Style：对 ui: 控件套显式 Style 会跳过隐式样式，本页其余位置也都是直接写 Width。 -->
                 <Grid Margin="16,16,16,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -3643,7 +3645,8 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Width="150"
+                              Width="300"
+                              VerticalAlignment="Top"
                               Margin="0,0,36,0"
                               SelectedValue="{Binding Config.AutoComboBuildConfig.Provider, Mode=TwoWay}"
                               SelectedValuePath="Tag">
@@ -3677,8 +3680,8 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="3"
                                 Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="400"
+                                Width="300"
+                                VerticalAlignment="Top"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.AutoComboBuildConfig.PlanningLlmEndpoint, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
@@ -3691,7 +3694,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -3699,25 +3701,31 @@
                                   TextWrapping="Wrap">
                         LLM模型名
                     </ui:TextBlock>
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              MinWidth="180"
-                              MaxWidth="400"
-                              MinHeight="32"
-                              VerticalContentAlignment="Center"
-                              Margin="0,0,8,0"
-                              IsEditable="True"
-                              IsTextSearchEnabled="True"
-                              ItemsSource="{Binding AutoComboModelNameList}"
-                              Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                              ToolTip="{Binding Config.AutoComboBuildConfig.ModelName}" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="2"
-                               Margin="0,0,36,0"
-                               Content="{i18n:T 拉取模型列表}"
-                               Command="{Binding FetchAutoComboModelListCommand}" />
+                    <!-- 下拉与按钮放在同一个固定宽度的容器里：容器与其余各行的值控件对齐，
+                         内部用 * 吸收按钮宽度的变化，避免按钮文字长度反过来把下拉挤扁。 -->
+                    <Grid Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="300"
+                          VerticalAlignment="Top"
+                          Margin="0,0,36,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0"
+                                  MinHeight="32"
+                                  Margin="0,0,8,0"
+                                  VerticalContentAlignment="Center"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="True"
+                                  ItemsSource="{Binding AutoComboModelNameList}"
+                                  Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  ToolTip="{Binding Config.AutoComboBuildConfig.ModelName}" />
+                        <ui:Button Grid.Column="1"
+                                   Content="{i18n:T 拉取模型列表}"
+                                   Command="{Binding FetchAutoComboModelListCommand}" />
+                    </Grid>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3739,11 +3747,11 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="注意保护好密钥"
                                   TextWrapping="Wrap" />
-                    <ui:PasswordBox Grid.Row="1"
+                    <ui:PasswordBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
-                                    MinWidth="300"
-                                    MaxWidth="400"
+                                    Width="300"
+                                    VerticalAlignment="Top"
                                     Margin="0,0,36,0"
                                     Password="{Binding Config.AutoComboBuildConfig.ApiKey, Mode=TwoWay}" />
                 </Grid>
@@ -3770,10 +3778,10 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="400"
-                                Height="80"
+                                Width="300"
+                                VerticalAlignment="Top"
                                 Margin="0,0,36,0"
+                                Height="80"
                                 Text="{Binding Config.AutoComboBuildConfig.ExtraPrompt, Mode=TwoWay}"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
@@ -3803,10 +3811,10 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="400"
-                                Height="160"
+                                Width="300"
+                                VerticalAlignment="Top"
                                 Margin="0,0,36,0"
+                                Height="160"
                                 Text="{Binding Config.AutoComboBuildConfig.MainPrompt, Mode=TwoWay}"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
@@ -3836,10 +3844,10 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="400"
-                                Height="120"
+                                Width="300"
+                                VerticalAlignment="Top"
                                 Margin="0,0,36,0"
+                                Height="120"
                                 Text="{Binding Config.AutoComboBuildConfig.FallbackPrompt, Mode=TwoWay}"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
