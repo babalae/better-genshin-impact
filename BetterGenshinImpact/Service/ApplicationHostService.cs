@@ -69,10 +69,6 @@ public class ApplicationHostService(
                     .OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
                 break;
 
-            case CommandLineAction.TaskProgress when cmdOptions.GroupNames.Length > 0:
-                _ = serviceProvider.GetRequiredService<ScriptControlViewModel>()
-                    .OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
-                break;
         }
     }
 
@@ -123,16 +119,6 @@ public class ApplicationHostService(
                         {
                             var scheduler = App.GetService<ScriptControlViewModel>();
                             scheduler?.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
-                        }
-                        break;
-
-                    case CommandLineAction.TaskProgress:
-                        // 通过命令行参数启动「任务进度」 => 跳转到调度器配置页。
-                        _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                        if (cmdOptions.GroupNames.Length > 0)
-                        {
-                            var scheduler = App.GetService<ScriptControlViewModel>();
-                            scheduler?.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
                         }
                         break;
 

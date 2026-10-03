@@ -20,7 +20,6 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.Runtime;
-using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -130,10 +129,8 @@ public partial class ScriptService : IScriptService
     /// </summary>
     /// <param name="projectList">需要执行的配置组项目。</param>
     /// <param name="groupName">配置组名称。</param>
-    /// <param name="taskProgress">可选的连续执行进度。</param>
     /// <param name="ct">所属顶层任务的取消令牌。</param>
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName,
-        TaskProgress? taskProgress, CancellationToken ct)
+    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName, CancellationToken ct)
     {
         groupName ??= "默认";
         ct.ThrowIfCancellationRequested();
@@ -180,10 +177,8 @@ public partial class ScriptService : IScriptService
 
 
         var stopwatch = new Stopwatch();
-                int projectIndex = -1;
-                for (int x = 0; x < list.Count; x++)
+                foreach (var project in list)
                 {
-                    var project = list[x];
                     //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
                     List<ScriptGroupProject> exeProjects = [project];
                     RunnerContext.Instance.IsPreExecution = false;
@@ -253,12 +248,6 @@ public partial class ScriptService : IScriptService
                         }
                     }
 
-                    if (!RunnerContext.Instance.IsPreExecution)
-                    {
-                        projectIndex++;
-                    }
-                    
-
                     for (int y = 0; y < exeProjects.Count; y++)
                     {
                         var exeProject = exeProjects[y];
@@ -267,16 +256,6 @@ public partial class ScriptService : IScriptService
                         {
                             RunnerContext.Instance.IsPreExecution = false;
                         }
-                        if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.Next != null)
-                        {
-                            if (taskProgress.Next.Index > projectIndex)
-                            {
-                                continue;
-                            }
-
-                            taskProgress.Next = null;
-                        }
-
                         if (exeProject is { SkipFlag: true })
                         {
                             continue;
@@ -301,17 +280,6 @@ public partial class ScriptService : IScriptService
                         {
                             fisrt = false;
                             Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
-                        }
-
-                        if (!RunnerContext.Instance.IsPreExecution &&taskProgress != null)
-                        {
-                            taskProgress.CurrentScriptGroupProjectInfo = new TaskProgress.ScriptGroupProjectInfo
-                            {
-                                Name = exeProject.Name,
-                                FolderName = exeProject.FolderName, Index = projectIndex,
-                                GroupName = taskProgress?.CurrentScriptGroupName ?? ""
-                            };
-                            TaskProgressManager.SaveTaskProgress(taskProgress);
                         }
 
                         //优先执行的任务，需要计数
@@ -362,10 +330,6 @@ public partial class ScriptService : IScriptService
                             {
                                 _logger.LogDebug(e, "执行脚本时发生异常");
                                 _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
-                                if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.CurrentScriptGroupProjectInfo != null)
-                                {
-                                    taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
-                                }
                             }
                             finally
                             {
@@ -380,47 +344,6 @@ public partial class ScriptService : IScriptService
                             await Task.Delay(1000, ct);
                         }
 
-                        if (!RunnerContext.Instance.IsPreExecution && taskProgress != null)
-                        {
-                            if (taskProgress.CurrentScriptGroupProjectInfo != null)
-                            {
-                                taskProgress.CurrentScriptGroupProjectInfo.TaskEnd = true;
-                                taskProgress.CurrentScriptGroupProjectInfo.EndTime = DateTime.Now;
-                                if (taskProgress.CurrentScriptGroupProjectInfo.Status == 1)
-                                {
-                                    taskProgress.ConsecutiveFailureCount = 0;
-                                    taskProgress.LastSuccessScriptGroupProjectInfo =
-                                        taskProgress.CurrentScriptGroupProjectInfo;
-                                    taskProgress.LastScriptGroupName = taskProgress.CurrentScriptGroupName;
-                                }
-
-                                //累计连续失败次数
-                                if (taskProgress.CurrentScriptGroupProjectInfo.Status == 2)
-                                {
-                                    taskProgress.ConsecutiveFailureCount++;
-                                }
-
-                                taskProgress?.History?.Add(taskProgress.CurrentScriptGroupProjectInfo);
-                                TaskProgressManager.SaveTaskProgress(taskProgress);
-                            }
-
-                            //异常达到一次次数，重启bgi
-                            var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
-                            if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
-                            {
-                                _logger.LogInformation("调度器任务出现未预期的异常，自动重启bgi");
-                                Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
-                                if (autoconfig.RestartGameTogether
-                                    && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled
-                                    && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
-                                {
-                                    SystemControl.CloseGame();
-                                    Thread.Sleep(2000);
-                                }
-
-                                SystemControl.RestartApplication(["--TaskProgress", taskProgress.Name]);
-                            }
-                        }
                     }
                 }
         
@@ -436,11 +359,6 @@ public partial class ScriptService : IScriptService
         if (!fisrt&&!RunnerContext.Instance.IsPreExecution && !ct.IsCancellationRequested)
         {
             Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
-        }
-
-        if (taskProgress != null)
-        {
-            taskProgress.Next = null;
         }
 
     }

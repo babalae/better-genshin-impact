@@ -32,7 +32,7 @@ XAML 里约有 44 处配置绑定使用了 `UpdateSourceTrigger=PropertyChanged`
 `InitEvent()` 手写了 32 行 `PropertyChanged +=`，存在以下遗漏：
 
 - 未订阅的一级配置：`OtherConfig`、`RecordConfig`、`AutoComboBuildConfig`、`AutoGeniusInvokationConfig`、`GetGridIconsConfig`。
-- 所有嵌套对象，例如 `OtherConfig.AutoRestartConfig`、`AutoFightConfig.FinishDetectConfig`、`PathingConditionConfig` 中的 `Condition`、`SkillCdConfig.CustomCdList` 中的规则。
+- 所有嵌套对象，例如 `AutoFightConfig.FinishDetectConfig`、`PathingConditionConfig` 中的 `Condition`、`SkillCdConfig.CustomCdList` 中的规则。
 - 所有 `ObservableCollection` 的增删。
 
 这些改动只有在托盘退出时由 `NotifyIconViewModel.Exit()` 顺带保存。进程被杀、崩溃，或者走 `Environment.Exit` 的重启路径时，改动都会丢失。

@@ -129,7 +129,7 @@ public partial class JsListViewModel : ViewModel
         }
 
         await new TaskRunner().RunThreadAsync(ct =>
-            _scriptService.RunMulti([new ScriptGroupProject(item)], null, null, ct));
+            _scriptService.RunMulti([new ScriptGroupProject(item)], null, ct));
     }
 
     [RelayCommand]

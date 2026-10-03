@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,8 +27,6 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 是否是连续执行配置组的场景
     /// </summary>
     public bool IsContinuousRunGroup { get; set; }
-    
-    public TaskProgress.TaskProgress? taskProgress  { get; set; }
     
     /// <summary>
     /// 暂停逻辑
@@ -146,7 +144,6 @@ public class RunnerContext : Singleton<RunnerContext>
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
         AutoPickTriggerStopCount = 0;
-        taskProgress = null;
         IsPreExecution = false;
     }
 

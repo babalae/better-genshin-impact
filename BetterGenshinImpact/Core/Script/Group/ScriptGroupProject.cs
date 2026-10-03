@@ -252,14 +252,9 @@ public partial class ScriptGroupProject : ObservableObject
 
             
             executionRecord.IsSuccessful = pathingTask.SuccessEnd;
-            OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
             if (!pathingTask.SuccessEnd)
             {
                 TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
-                if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
-                {
-                    throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
-                }
             }
 
             if (task.FarmingInfo.AllowFarmingCount)
@@ -272,17 +267,6 @@ public partial class ScriptGroupProject : ObservableObject
                 {
                     fightCount = task.Positions.Count(pos => pos.Action == ActionEnum.Fight.Code);
                     successFight = pathingTask.SuccessFight >= fightCount;
-                    //判断为锄地脚本
-                    if (task.FarmingInfo.PrimaryTarget!="disable")
-                    {
-
-                        if (autoRestart.Enabled
-                            &&autoRestart.IsFightFailureExceptional
-                            &&!successFight)
-                        {
-                            throw new Exception($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
-                        }
-                    }
                 }
 
                 if (successFight)

@@ -5,7 +5,6 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
-using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -1953,16 +1952,8 @@ public partial class ScriptControlViewModel : ViewModel
         }
 
         RunnerContext.Instance.Reset();
-
-        TaskProgress taskProgress = new()
-        {
-            ScriptGroupNames = [SelectedScriptGroup.Name]
-        };
-        RunnerContext.Instance.taskProgress = taskProgress;
-        taskProgress.CurrentScriptGroupName = SelectedScriptGroup.Name;
-        TaskProgressManager.SaveTaskProgress(taskProgress);
         await new TaskRunner().RunThreadAsync(ct =>
-            _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, taskProgress, ct));
+            _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, ct));
     }
 
     [RelayCommand]
@@ -2088,144 +2079,6 @@ public partial class ScriptControlViewModel : ViewModel
         }
 
         return group.Projects.Select(g => g).ToList();
-    }
-
-    [RelayCommand]
-    public async Task OnContinueMultiScriptGroupAsync()
-    {
-
-        // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
-        var stackPanel = new StackPanel();
-
-
-        // 添加分割线
-        var separator = new Separator
-        {
-            Margin = new Thickness(0, 4, 0, 4)
-        };
-        stackPanel.Children.Add(separator);
-
-        List<TaskProgress> taskProgresses = TaskProgressManager.LoadAllTaskProgress();
-        var checkBox = new ComboBox(); ;
-        stackPanel.Children.Add(checkBox);
-        ObservableCollection<KeyValuePair<string, string>> kvs = new ObservableCollection<KeyValuePair<string, string>>();
-        foreach (var taskProgress in taskProgresses)
-        {
-            var name = taskProgress.Name + "_" + taskProgress.CurrentScriptGroupName + "_";
-            if (taskProgress.Loop)
-            {
-                name += "循环(" + taskProgress.LoopCount + ")_";
-            }
-            if (taskProgress.CurrentScriptGroupProjectInfo != null)
-            {
-                name = name + taskProgress.CurrentScriptGroupProjectInfo.Index + "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
-            }
-            kvs.Add(new KeyValuePair<string, string>(taskProgress.Name, name));
-        }
-
-        checkBox.SelectedValuePath = "Key";
-        checkBox.DisplayMemberPath = "Value";
-        checkBox.ItemsSource = kvs;
-        checkBox.SelectedIndex = 0;
-        //SelectedValuePath="Key"
-        // DisplayMemberPath="Value"
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "选择需要继续执行的进度记录",
-            Content = new ScrollViewer
-            {
-                Content = stackPanel,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Height = 300 // 设置固定高度
-                ,
-                Width = 600
-            },
-            CloseButtonText = "关闭",
-            PrimaryButtonText = "确认执行",
-            Owner = Application.Current.MainWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        };
-        WindowHelper.CenterOnVisibleOwner(uiMessageBox);
-
-        var result = await uiMessageBox.ShowDialogAsync();
-        if (result == MessageBoxResult.Primary)
-        {
-
-            /*var selectedGroups = checkBoxes
-                .Where(kv => kv.Value.IsChecked == true)
-                .Select(kv => kv.Key)
-                .ToList();*/
-            Object val = checkBox.SelectedValue;
-            if (val == null)
-            {
-                return;
-            }
-            await OnContinueTaskProgressAsync(Convert.ToString(val), taskProgresses);
-
-        }
-    }
-
-    public async Task OnContinueTaskProgressAsync(string name, List<TaskProgress>? taskProgresses = null)
-    {
-        if (taskProgresses == null)
-        {
-            taskProgresses = TaskProgressManager.LoadAllTaskProgress();
-        }
-        TaskProgress? taskProgress = null;
-        if (name == "latest")
-        {
-            if (taskProgresses.Count > 0)
-            {
-                taskProgress = taskProgresses[0];
-            }
-        }
-        else
-        {
-            taskProgress = taskProgresses.FirstOrDefault(t => t.Name == name);
-        }
-
-
-
-        if (taskProgress != null)
-        {
-            //await StartGroups(selectedGroups);
-            //taskProgress.Next
-            var sg = ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList();
-            TaskProgressManager.GenerNextProjectInfo(taskProgress, sg);
-            if (taskProgress.Next == null)
-            {
-                _logger.LogWarning("无法定位到下一个要执行的项目：next为空（" + taskProgress.Name + ")");
-            }
-            else
-            {
-                await StartGroups(sg, taskProgress);
-            }
-
-        }
-        else
-        {
-            _logger.LogWarning("无法定位到下一个要执行的项目:taskProgress为空");
-        }
-    }
-
-    public async Task OnStartMultiScriptTaskProgressAsync(params string[] names)
-    {
-        if (ScriptGroups.Count == 0)
-        {
-            ReadScriptGroup();
-        }
-
-        string taskProgressName;
-        if (names == null || names.Length == 0)
-        {
-            taskProgressName = "latest";
-        }
-        else
-        {
-            taskProgressName = names[0];
-        }
-
-        await OnContinueTaskProgressAsync(taskProgressName);
     }
 
     [RelayCommand]
@@ -2355,7 +2208,7 @@ public partial class ScriptControlViewModel : ViewModel
                 );
                 return;
             }
-            await StartGroups(selectedGroups, null, loopCheckBox.IsChecked ?? false);
+            await StartGroups(selectedGroups, loopCheckBox.IsChecked ?? false);
         }
     }
 
@@ -2397,7 +2250,7 @@ public partial class ScriptControlViewModel : ViewModel
     /// <summary>
     /// 在一个独立任务作用域内连续执行选中的配置组。
     /// </summary>
-    public async Task StartGroups(List<ScriptGroup> scriptGroups, TaskProgress? taskProgress = null, bool loop = false)
+    public async Task StartGroups(List<ScriptGroup> scriptGroups, bool loop = false)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
         await new TaskRunner().RunThreadAsync(async ct =>
@@ -2405,7 +2258,7 @@ public partial class ScriptControlViewModel : ViewModel
             RunnerContext.Instance.IsContinuousRunGroup = true;
             try
             {
-                await StartGroupsCore(scriptGroups, taskProgress, loop, ct);
+                await StartGroupsCore(scriptGroups, loop, ct);
             }
             finally
             {
@@ -2417,20 +2270,8 @@ public partial class ScriptControlViewModel : ViewModel
     /// <summary>
     /// 复用同一个顶层取消令牌执行一次或多次配置组循环。
     /// </summary>
-    private async Task StartGroupsCore(List<ScriptGroup> scriptGroups, TaskProgress? taskProgress, bool loop,
-        CancellationToken ct)
+    private async Task StartGroupsCore(List<ScriptGroup> scriptGroups, bool loop, CancellationToken ct)
     {
-        if (taskProgress == null)
-        {
-            taskProgress = new()
-            {
-                ScriptGroupNames = scriptGroups.Select(x => x.Name).ToList()
-                ,
-                Loop = loop
-            };
-        }
-
-        RunnerContext.Instance.taskProgress = taskProgress;
         while (true)
         {
             ct.ThrowIfCancellationRequested();
@@ -2438,35 +2279,14 @@ public partial class ScriptControlViewModel : ViewModel
             foreach (var scriptGroup in sg)
             {
                 ct.ThrowIfCancellationRequested();
-                if (taskProgress.Next != null)
-                {
-                    if (scriptGroup.Name != taskProgress.Next.GroupName)
-                    {
-                        continue;
-                    }
-                }
-                taskProgress.CurrentScriptGroupName = scriptGroup.Name;
-                TaskProgressManager.SaveTaskProgress(taskProgress);
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress, ct);
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, ct);
                 await Task.Delay(2000, ct);
             }
 
-            taskProgress.LoopCount++;
-            if (taskProgress is not { Loop: true })
+            if (!loop)
             {
-                //只有最后一次成功才算
-                if (taskProgress.ConsecutiveFailureCount == 0)
-                {
-                    taskProgress.EndTime = DateTime.Now;
-                    TaskProgressManager.SaveTaskProgress(taskProgress);
-                }
-
                 return;
             }
-
-            taskProgress.LastScriptGroupName = null;
-            taskProgress.LastSuccessScriptGroupProjectInfo = null;
-            taskProgress.Next = null;
         }
     }
 }

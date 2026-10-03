@@ -46,22 +46,21 @@ public class CommandLineOptions
     public string? OneDragonConfigName { get; }
 
     /// <summary>
-    /// --startGroups / --TaskProgress 时传入的组名列表（第 3 个参数起）
+    /// --startGroups 时传入的组名列表（第 3 个参数起）
     /// </summary>
     public string[] GroupNames { get; } = [];
 
     /// <summary>
-    /// 是否有命令行任务参数（startOneDragon / --startGroups / --TaskProgress / start）
+    /// 是否有命令行任务参数（startOneDragon / --startGroups / start）
     /// </summary>
     public bool HasTaskArgs => Action != CommandLineAction.None;
 
     /// <summary>
     /// 是否是需要 StartGameTask 自行处理游戏启动的命令
-    /// （一条龙、配置组、任务进度由各自流程中的 StartGameTask 启动游戏）
+    /// （一条龙、配置组由各自流程中的 StartGameTask 启动游戏）
     /// </summary>
     public bool ShouldDeferGameStart => Action is CommandLineAction.StartOneDragon
-        or CommandLineAction.StartGroups
-        or CommandLineAction.TaskProgress;
+        or CommandLineAction.StartGroups;
 
     private CommandLineOptions(
         CommandLineAction action,
@@ -157,13 +156,6 @@ public class CommandLineOptions
                 groupNames: extra);
         }
 
-        if (arg1.Equals("--TaskProgress", StringComparison.OrdinalIgnoreCase))
-        {
-            return Create(
-                CommandLineAction.TaskProgress,
-                groupNames: extra);
-        }
-
         if (arg1.Contains("start", StringComparison.OrdinalIgnoreCase))
         {
             return Create(CommandLineAction.Start);
@@ -214,6 +206,4 @@ public enum CommandLineAction
     /// <summary>--startGroups — 启动调度组</summary>
     StartGroups,
 
-    /// <summary>--TaskProgress — 启动任务进度</summary>
-    TaskProgress,
 }

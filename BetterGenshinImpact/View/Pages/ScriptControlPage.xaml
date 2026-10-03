@@ -89,22 +89,10 @@
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
                 <Grid Grid.Row="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <ui:Button Grid.Row="0"
-                               Margin="2"
+                    <ui:Button Margin="2"
                                HorizontalAlignment="Stretch"
                                Command="{Binding StartMultiScriptGroupCommand}"
                                Content="{i18n:T 连续执行}" />
-
-                    <ui:Button Grid.Row="1"
-                               Margin="2"
-                               HorizontalAlignment="Stretch"
-                               Command="{Binding ContinueMultiScriptGroupCommand}"
-                               Content="{i18n:T 继续执行}" />
                 </Grid>
             </Grid>
         </Grid>

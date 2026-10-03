@@ -666,7 +666,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath, ct));
                             IScriptService? scriptService = App.GetService<IScriptService>();
                             await scriptService!.RunMulti(
-                                ScriptControlViewModel.GetNextProjects(group), group.Name, null, ct);
+                                ScriptControlViewModel.GetNextProjects(group), group.Name, ct);
                             await Task.Delay(1000, ct);
                         }
                     }
