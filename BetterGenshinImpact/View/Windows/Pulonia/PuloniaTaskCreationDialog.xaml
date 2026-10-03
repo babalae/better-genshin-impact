@@ -17,6 +17,76 @@
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=pulonia:PuloniaTaskCreationDialogViewModel}">
 
+    <ui:FluentWindow.Resources>
+        <!-- 所有能力共用同一份 Schema 字段模板，避免创建弹窗和后续参数编辑出现两套语义。 -->
+        <DataTemplate x:Key="ParameterFieldTemplate" DataType="{x:Type pulonia:PuloniaTaskParameterFieldViewModel}">
+            <StackPanel Margin="0,0,0,14">
+                <TextBlock FontWeight="SemiBold" Text="{Binding DisplayLabel}" />
+                <TextBlock Margin="0,3,0,6"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Text="{Binding Description}"
+                           TextWrapping="Wrap" />
+                <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTextEditor}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <TextBox MinHeight="82"
+                         AcceptsReturn="True"
+                         FontFamily="Consolas"
+                         HorizontalScrollBarVisibility="Auto"
+                         Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         VerticalScrollBarVisibility="Auto">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsJsonEditor}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <ComboBox ItemsSource="{Binding Choices}"
+                          SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
+                    <ComboBox.Style>
+                        <Style TargetType="ComboBox">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsChoiceEditor}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ComboBox.Style>
+                </ComboBox>
+                <ui:ToggleSwitch IsChecked="{Binding BooleanValue, Mode=TwoWay}"
+                                 OnContent="已开启"
+                                 OffContent="已关闭">
+                    <ui:ToggleSwitch.Style>
+                        <Style TargetType="ui:ToggleSwitch">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsBooleanEditor}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:ToggleSwitch.Style>
+                </ui:ToggleSwitch>
+            </StackPanel>
+        </DataTemplate>
+    </ui:FluentWindow.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -339,73 +409,4 @@
         </Border>
     </Grid>
 
-    <ui:FluentWindow.Resources>
-        <!-- 所有能力共用同一份 Schema 字段模板，避免创建弹窗和后续参数编辑出现两套语义。 -->
-        <DataTemplate x:Key="ParameterFieldTemplate" DataType="{x:Type pulonia:PuloniaTaskParameterFieldViewModel}">
-            <StackPanel Margin="0,0,0,14">
-                <TextBlock FontWeight="SemiBold" Text="{Binding DisplayLabel}" />
-                <TextBlock Margin="0,3,0,6"
-                           FontSize="11"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                           Text="{Binding Description}"
-                           TextWrapping="Wrap" />
-                <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <TextBox.Style>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsTextEditor}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBox.Style>
-                </TextBox>
-                <TextBox MinHeight="82"
-                         AcceptsReturn="True"
-                         FontFamily="Consolas"
-                         HorizontalScrollBarVisibility="Auto"
-                         Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         VerticalScrollBarVisibility="Auto">
-                    <TextBox.Style>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsJsonEditor}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBox.Style>
-                </TextBox>
-                <ComboBox ItemsSource="{Binding Choices}"
-                          SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
-                    <ComboBox.Style>
-                        <Style TargetType="ComboBox">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsChoiceEditor}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ComboBox.Style>
-                </ComboBox>
-                <ui:ToggleSwitch IsChecked="{Binding BooleanValue, Mode=TwoWay}"
-                                 OnContent="已开启"
-                                 OffContent="已关闭">
-                    <ui:ToggleSwitch.Style>
-                        <Style TargetType="ui:ToggleSwitch">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsBooleanEditor}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ui:ToggleSwitch.Style>
-                </ui:ToggleSwitch>
-            </StackPanel>
-        </DataTemplate>
-    </ui:FluentWindow.Resources>
 </ui:FluentWindow>
