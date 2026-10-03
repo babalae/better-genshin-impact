@@ -926,6 +926,8 @@
   "每轮讨伐后返回七天神像": "Return to a Statue of The Seven after each hunt",
   "每轮领取后识别奖励名称与数量（图标匹配+OCR双路），任务结束打印汇总": "After each claim, recognize reward names and counts (icon match + OCR) and print a summary at the end",
   "每轮领取后识别奖励名称与数量，任务结束打印汇总": "After each claim, recognize reward names and counts and print a summary at the end",
+  "每轮领取后识别奖励名称与数量（图标匹配+OCR双路），随通知发送明细，任务结束发送汇总": "After each claim, recognize reward names and counts (icon match + OCR), include details in notifications, and send a summary at the end",
+  "每轮领取后识别奖励名称与数量，随通知发送明细，任务结束发送汇总": "After each claim, recognize reward names and counts, include details in notifications, and send a summary at the end",
   "比战斗失败更严格的条件，勾选此项下，追踪文件，如果未执行完，算失败。此项勾选需要自身的追踪任务稳定性高。可以先关观察日志，打开异常情况统计下，有无连续标红超过失败次数的情况，有则不建议勾选。": "Stricter than a combat failure: if enabled, an unfinished tracking file counts as a failure. This needs highly stable tracking tasks. You can leave it off first and check the logs under exception stats for consecutive red marks beyond the failure count. If you see those, do not enable this.",
   "注意:在不支持的执行器上使用会导致异常。默认关闭。": "Note: using this on an unsupported executor will cause errors. Disabled by default.",
   "注意是游戏内你设置的名称": "This is the name you set in-game",
