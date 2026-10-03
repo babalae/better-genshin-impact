@@ -9,11 +9,11 @@
 | 部分 | 处理方式 |
 | --- | --- |
 | `ScriptControlViewModel`、`OneDragonFlowViewModel`、旧配置组/一条龙模型 | 新页面和新模型替代，不继续叠加新需求 |
-| `ScriptService.RunMulti`、`TaskRunner` | 新树引擎接管编排；过渡期仅用于未迁入口，最终不在新调用链里 |
+| `ScriptService.RunMulti`、`TaskRunner` | 保留旧配置组与独立任务的现有执行入口；Pulonia 继续由 `PuloniaTaskService` 执行，不再增加公共执行协调层 |
 | `ISoloTask` 和既有内置任务 | 初期适配成能力，逐项补强类型参数、结果和取消；不能包装 `TaskRunner` 后仍吞掉错误 |
 | `ScriptProject` | 分离资源描述、参数编辑器、脚本执行器；保留引擎与脚本 API 兼容面 |
 | JS `Dispatcher.RunTask`、`Genshin` 等 | 移除 ViewModel 取配置，转向能力注册表和本次上下文；旧名称提供兼容映射 |
-| `TaskContext`、`RunnerContext`、`CancellationContext` | 新代码使用运行作用域上下文；旧任务在串行隔离适配层中渐进迁移，不能假定 AsyncLocal 已解决全部静态共享状态 |
+| `TaskContext`、`RunnerContext`、取消令牌 | 删除全局 `CancellationContext`；普通任务和脚本沿调用链显式传递令牌，Pulonia 每次运行继续拥有自己的 CTS；`TaskStopService` 只转发外部停止信号，不提供令牌 |
 | `GameRuntimeService`、输入框架、截图 Provider | 复用；增加租约/所有权与取消衔接，保留已有线程要求 |
 | `TaskTriggerDispatcher` | 保持截图帧实时辅助职责；与定时/热键请求触发器明确分离，支持动作作用域撤销 |
 | 完成日志、锄地统计、断点记录 | 新账本与节点结果成为依据；旧日志可作历史展示，未经证实不得直接导入为某账号的可靠 CD |

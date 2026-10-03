@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
@@ -38,7 +39,10 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
     private CancellationToken _ct;
 
-    public async void Start()
+    /// <summary>
+    /// 使用调用方令牌启动遗留的自动追踪任务。
+    /// </summary>
+    public async Task Start(CancellationToken ct)
     {
         var hasLock = false;
         try
@@ -54,7 +58,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
             Logger.LogInformation("→ {Text}", "自动追踪，启动！");
 
-            _ct = CancellationContext.Instance.Cts.Token;
+            _ct = ct;
 
             TrackMission();
         }

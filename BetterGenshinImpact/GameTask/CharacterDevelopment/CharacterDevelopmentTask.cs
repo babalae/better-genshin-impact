@@ -88,6 +88,19 @@ internal enum CharacterDevelopmentCategory
 public sealed class CharacterDevelopmentTask
 {
     /// <summary>
+    /// 当前脚本执行的取消令牌。
+    /// </summary>
+    private readonly CancellationToken _ct;
+
+    /// <summary>
+    /// 创建角色养成识别脚本入口。
+    /// </summary>
+    public CharacterDevelopmentTask(CancellationToken ct)
+    {
+        _ct = ct;
+    }
+
+    /// <summary>
     /// 获取单个角色的信息。
     /// </summary>
     /// <param name="characterName">目标角色名或已有别名。</param>
@@ -97,7 +110,7 @@ public sealed class CharacterDevelopmentTask
         var normalizedName = NormalizeCharacterName(characterName);
         var categoryFlags = ParseCategories(categories);
         var results = await new CharacterDevelopmentStateMachineTask([normalizedName], categoryFlags)
-            .Start(CancellationContext.Instance.Cts.Token);
+            .Start(_ct);
         return results.Single();
     }
 
@@ -111,7 +124,7 @@ public sealed class CharacterDevelopmentTask
         var names = ParseCharacterNames(characterNames);
         var categoryFlags = ParseCategories(categories);
         return await new CharacterDevelopmentStateMachineTask(names, categoryFlags)
-            .Start(CancellationContext.Instance.Cts.Token);
+            .Start(_ct);
     }
 
     internal static List<string> ParseCharacterNames(object characterNames)

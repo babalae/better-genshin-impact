@@ -24,12 +24,11 @@ public class MapEditorWebBridge
 
     public async Task RunPathing(string json)
     {
-        await ScriptService.StartGameTask();
-        SystemControl.ActivateWindow();
-        await new TaskRunner().RunThreadAsync(async () =>
+        await new TaskRunner().RunThreadAsync(async ct =>
         {
+            SystemControl.ActivateWindow();
             var task = PathingTask.BuildFromJson(json);
-            var pathExecutor = new PathExecutor(ScriptCancellationContext.Token);
+            var pathExecutor = new PathExecutor(ct);
             pathExecutor.PartyConfig = new PathingPartyConfig { AutoFightEnabled = false };
             await pathExecutor.Pathing(task);
         });

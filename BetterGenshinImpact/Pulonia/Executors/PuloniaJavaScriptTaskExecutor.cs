@@ -74,7 +74,6 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         if (partyConfig.AutoPickEnabled)
             TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
 
-        using var scriptCancellationScope = ScriptCancellationContext.Push(ct);
         var project = new ScriptProject(relativeProjectPath);
         await project.ExecuteAsync(settings, partyConfig, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();

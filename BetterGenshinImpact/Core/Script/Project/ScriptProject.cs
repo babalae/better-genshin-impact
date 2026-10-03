@@ -77,7 +77,12 @@ public class ScriptProject
         return scrollViewer;
     }
 
-    private V8ScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig)
+    /// <summary>
+    /// 为本次脚本执行创建并初始化独立的 V8 引擎。
+    /// </summary>
+    /// <param name="partyConfig">脚本使用的队伍配置。</param>
+    /// <param name="ct">本次脚本执行的取消令牌。</param>
+    private V8ScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig, CancellationToken ct)
     {
         V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
 
@@ -94,33 +99,36 @@ public class ScriptProject
 
         var libraryList = libraries.ToList();
 
-        EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig);
+        EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig, ct);
         return engine;
     }
 
-    public async Task ExecuteAsync(dynamic? context = null, PathingPartyConfig? partyConfig = null,
-        CancellationToken ct = default)
+    /// <summary>
+    /// 使用调用方提供的取消令牌执行当前 JS 项目。
+    /// </summary>
+    public async Task ExecuteAsync(dynamic? context, PathingPartyConfig? partyConfig, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         // 默认值
         GlobalMethod.SetGameMetrics(1920, 1080);
         // 加载代码
         var code = await LoadCode(ct);
-        var engine = BuildScriptEngine(partyConfig);
+        using var engine = BuildScriptEngine(partyConfig, ct);
         using var cancellationRegistration = ct.Register(() => TryInterrupt(engine));
-        ct.ThrowIfCancellationRequested();
-
-        // 使用自定义加载器解析脚本文件
-        var loader = (PackageDocumentLoader)engine.DocumentSettings.Loader;
-
-        if (context != null)
-        {
-            // 写入配置的内容
-            engine.AddHostObject("settings", context);
-        }
 
         try
         {
+            ct.ThrowIfCancellationRequested();
+
+            // 使用自定义加载器解析脚本文件
+            var loader = (PackageDocumentLoader)engine.DocumentSettings.Loader;
+
+            if (context != null)
+            {
+                // 写入配置的内容
+                engine.AddHostObject("settings", context);
+            }
+
             bool useModule = Manifest.Library.Length != 0 ||
                              code.Contains("import ", StringComparison.Ordinal) ||
                              code.Contains("export ", StringComparison.Ordinal);
@@ -153,9 +161,7 @@ public class ScriptProject
         finally
         {
             // 终止代码执行
-            cancellationRegistration.Dispose();
             TryInterrupt(engine);
-            engine.Dispose();
         }
     }
 

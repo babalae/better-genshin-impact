@@ -122,10 +122,12 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         _logger.LogInformation("重放开始：{Name}", name);
         try
         {
-            var s = await File.ReadAllTextAsync(path);
-
             await new TaskRunner()
-                .RunThreadAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
+                .RunThreadAsync(async ct =>
+                {
+                    var script = await File.ReadAllTextAsync(path, ct);
+                    await KeyMouseMacroPlayer.PlayMacro(script, ct);
+                });
         }
         catch (Exception e)
         {

@@ -14,6 +14,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
@@ -192,7 +193,11 @@ public partial class ScriptGroupProject : ObservableObject
         return string.Join("|", Project.Manifest.HttpAllowedUrls);
     }
 
-    public async Task Run()
+    /// <summary>
+    /// 使用所属顶层任务的取消令牌执行当前脚本项目。
+    /// </summary>
+    /// <param name="ct">所属顶层任务的取消令牌。</param>
+    public async Task Run(CancellationToken ct)
     {
         //执行记录
         ExecutionRecord executionRecord = new ExecutionRecord()
@@ -220,23 +225,24 @@ public partial class ScriptGroupProject : ObservableObject
             CleanInvalidSettingsValues();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
-            await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
+            await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig, ct);
         }
         else if (Type == "KeyMouse")
         {
             // 加载并执行
-            var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
-            await KeyMouseMacroPlayer.PlayMacro(json, ScriptCancellationContext.Token, false);
+            var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"), ct);
+            await KeyMouseMacroPlayer.PlayMacro(json, ct, false);
         }
         else if (Type == "Pathing")
         {
             // 加载并执行
+            ct.ThrowIfCancellationRequested();
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
             if (task == null)
             {
                 return;
             }
-            var pathingTask = new PathExecutor(ScriptCancellationContext.Token);
+            var pathingTask = new PathExecutor(ct);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
             if (!pathingTask.PartyConfig.Enabled || pathingTask.PartyConfig.AutoPickEnabled)
             {
@@ -309,7 +315,7 @@ public partial class ScriptGroupProject : ObservableObject
             }
 
             var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
-            await task.Start(ScriptCancellationContext.Token);
+            await task.Start(ct);
         }
 
         if (Type != "Pathing")

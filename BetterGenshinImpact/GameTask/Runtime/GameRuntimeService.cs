@@ -1,7 +1,7 @@
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Input.Backends.Win32;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.Runtime.WebPage;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
@@ -28,6 +28,10 @@ public sealed class GameRuntimeService
     private readonly TaskTriggerDispatcher _dispatcher;
     private readonly IConfigService _configService;
     private readonly ILogger<GameRuntimeService> _logger;
+    /// <summary>
+    /// 把运行环境停止事件转发给当前任务。
+    /// </summary>
+    private readonly TaskStopService _taskStopService;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private Task _stopTask = Task.CompletedTask;
     private long _stopVersion;
@@ -37,11 +41,13 @@ public sealed class GameRuntimeService
         InstanceBootstrap bootstrap,
         TaskTriggerDispatcher dispatcher,
         IConfigService configService,
-        ILogger<GameRuntimeService> logger)
+        ILogger<GameRuntimeService> logger,
+        TaskStopService taskStopService)
     {
         _dispatcher = dispatcher;
         _configService = configService;
         _logger = logger;
+        _taskStopService = taskStopService;
 
         var registered = providers.ToList();
         var expectedKind = bootstrap.Context.InstanceType == BetterGiInstanceType.WebView
@@ -168,7 +174,7 @@ public sealed class GameRuntimeService
         }
 
         Current = null;
-        CancellationContext.Instance.Cancel(); // 取消独立任务的运行
+        _taskStopService.StopAll(TaskStopReason.RuntimeStopped); // 取消依赖当前运行环境的任务
         _dispatcher.Stop();
         ReleaseInputBeforeDetach();
         InputHub.Attach(new Win32InputBackend(IntPtr.Zero));

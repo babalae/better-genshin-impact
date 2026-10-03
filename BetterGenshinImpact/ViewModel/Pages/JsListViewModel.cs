@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -127,7 +128,8 @@ public partial class JsListViewModel : ViewModel
             _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
         }
 
-        await _scriptService.RunMulti([new ScriptGroupProject(item)]);
+        await new TaskRunner().RunThreadAsync(ct =>
+            _scriptService.RunMulti([new ScriptGroupProject(item)], null, null, ct));
     }
 
     [RelayCommand]

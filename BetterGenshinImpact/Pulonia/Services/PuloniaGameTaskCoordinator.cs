@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.View;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -32,7 +33,6 @@ public sealed class PuloniaGameTaskCoordinator
     public async Task<PuloniaGameTaskLease> AcquireAsync(CancellationToken ct)
     {
         await TaskControl.TaskSemaphore.WaitAsync(ct).ConfigureAwait(false);
-        var runner = new TaskRunner();
         try
         {
             var started = await _runtimeService.StartAsync(ct).ConfigureAwait(false);
@@ -40,16 +40,16 @@ public sealed class PuloniaGameTaskCoordinator
                 throw new InvalidOperationException("无法准备游戏运行环境。");
             ct.ThrowIfCancellationRequested();
 
-            // 不重置全局 CancellationContext；Pulonia 节点始终使用自己的运行令牌。
-            runner.Init();
+            // Pulonia 节点始终沿调用链使用本次运行令牌，不创建独立任务执行作用域。
+            BeginTaskState();
             RunnerContext.Instance.Clear();
-            return new PuloniaGameTaskLease(runner);
+            return new PuloniaGameTaskLease();
         }
         catch
         {
             try
             {
-                CleanupTaskState(runner);
+                CleanupTaskState();
             }
             finally
             {
@@ -60,13 +60,25 @@ public sealed class PuloniaGameTaskCoordinator
     }
 
     /// <summary>
+    /// 为 Pulonia 游戏节点进入现有任务模式，但不创建另一个任务执行入口。
+    /// </summary>
+    private static void BeginTaskState()
+    {
+        TaskTriggerDispatcher.Instance().BeginTask();
+        var runtime = TaskContext.Instance().Runtime;
+        runtime?.MaskWindowMapState.Reset();
+        runtime?.MaskWindowDrawingBoard.ClearAll();
+        SystemControl.ActivateWindow();
+    }
+
+    /// <summary>
     /// 即使任务模式清理失败，也继续尝试释放输入并清空临时运行上下文。
     /// </summary>
-    internal static void CleanupTaskState(TaskRunner runner)
+    internal static void CleanupTaskState()
     {
         try
         {
-            runner.End();
+            TaskTriggerDispatcher.InstanceNullable()?.EndTask();
         }
         finally
         {
@@ -76,7 +88,21 @@ public sealed class PuloniaGameTaskCoordinator
             }
             finally
             {
-                RunnerContext.Instance.Clear();
+                try
+                {
+                    TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+                }
+                finally
+                {
+                    try
+                    {
+                        HtmlMaskWindow.CloseAll();
+                    }
+                    finally
+                    {
+                        RunnerContext.Instance.Clear();
+                    }
+                }
             }
         }
     }
@@ -88,21 +114,15 @@ public sealed class PuloniaGameTaskCoordinator
 public sealed class PuloniaGameTaskLease : IDisposable
 {
     /// <summary>
-    /// 复用现有任务模式的清理入口。
-    /// </summary>
-    private readonly TaskRunner _runner;
-
-    /// <summary>
     /// 防止重复释放任务锁。
     /// </summary>
     private int _disposed;
 
     /// <summary>
-    /// 保存已经进入任务模式的运行器。
+    /// 创建已经进入任务模式的游戏节点租约。
     /// </summary>
-    internal PuloniaGameTaskLease(TaskRunner runner)
+    internal PuloniaGameTaskLease()
     {
-        _runner = runner;
     }
 
     /// <summary>
@@ -114,7 +134,7 @@ public sealed class PuloniaGameTaskLease : IDisposable
             return;
         try
         {
-            PuloniaGameTaskCoordinator.CleanupTaskState(_runner);
+            PuloniaGameTaskCoordinator.CleanupTaskState();
         }
         finally
         {

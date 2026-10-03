@@ -23,6 +23,11 @@ public class TaskRunner
 {
     private readonly ILogger<TaskRunner> _logger = App.GetLogger<TaskRunner>();
 
+    /// <summary>
+    /// 将停止按钮、全局热键和运行环境关闭转发到本轮局部 CTS。
+    /// </summary>
+    private readonly TaskStopService _taskStopService = App.GetService<TaskStopService>();
+
     // private readonly DispatcherTimerOperationEnum _timerOperation = DispatcherTimerOperationEnum.None;
 
     private readonly string _name = string.Empty;
@@ -37,42 +42,54 @@ public class TaskRunner
     // }
     
     /// <summary>
-    /// 加锁并独立运行任务
+    /// 加锁并使用本轮独立取消令牌运行任务。
     /// </summary>
-    /// <param name="action"></param>
-    /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
-    /// <param name="clearCancellationContextOnLockFailure">获取信号量锁失败时是否清理 CancellationContext。</param>
-    /// <returns></returns>
-    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false)
+    /// <param name="action">显式接收本轮取消令牌的任务操作。</param>
+    /// <param name="waitForMainUi">启动游戏运行环境后是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="requestToken">调用方附加的取消令牌。</param>
+    public async Task RunCurrentAsync(Func<CancellationToken, Task> action, bool waitForMainUi = true,
+        CancellationToken requestToken = default)
     {
+        ArgumentNullException.ThrowIfNull(action);
+
         // 加锁
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-            if (clearCancellationContextOnLockFailure)
-            {
-                CancellationContext.Instance.Clear();
-            }
             return;
         }
+
+        var runCancellation = requestToken.CanBeCanceled
+            ? CancellationTokenSource.CreateLinkedTokenSource(requestToken)
+            : new CancellationTokenSource();
+        var stopReasonValue = -1;
+        IDisposable? stopRegistration = null;
+        var taskModeInitialized = false;
         try
         {
+            stopRegistration = _taskStopService.Register(reason =>
+            {
+                Interlocked.CompareExchange(ref stopReasonValue, (int)reason, -1);
+                TryCancel(runCancellation);
+            });
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
 
-            // 初始化
+            // 本轮令牌覆盖游戏启动等待、任务模式和全部业务操作。
+            await ScriptService.StartGameTask(runCancellation.Token, waitForMainUi);
+            runCancellation.Token.ThrowIfCancellationRequested();
             Init();
-            if (resetCancellationContext)
-            {
-                CancellationContext.Instance.Set();
-            }
+            taskModeInitialized = true;
             RunnerContext.Instance.Clear();
 
-            await action();
+            await action(runCancellation.Token);
         }
         catch (NormalEndException e)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
+            if (!runCancellation.IsCancellationRequested)
+            {
+                Notify.Event(NotificationEvent.TaskCancel).Success("任务正常结束");
+            }
             _logger.LogInformation("任务中断:{Msg}", e.Message);
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
@@ -82,8 +99,10 @@ public class TaskRunner
         }
         catch (OperationCanceledException)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("任务被手动取消");
-            _logger.LogInformation("任务中断:{Msg}", "任务被取消");
+            var stopReason = Volatile.Read(ref stopReasonValue) >= 0
+                ? ((TaskStopReason)Volatile.Read(ref stopReasonValue)).ToString()
+                : "调用方取消";
+            _logger.LogInformation("任务中断:{Msg}，来源：{Reason}", "任务被取消", stopReason);
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -98,50 +117,88 @@ public class TaskRunner
         }
         finally
         {
-            End();
-            _logger.LogInformation("→ {Text}", _name + "任务结束");
-
-            CancellationContext.Instance.Clear();
-            RunnerContext.Instance.Clear();
-
-            // 释放锁
-            if (hasLock)
+            try
             {
-                TaskSemaphore.Release();
+                if (taskModeInitialized)
+                {
+                    End();
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "清理独立任务模式时发生异常：{Message}", e.Message);
+            }
+            finally
+            {
+                _logger.LogInformation("→ {Text}", _name + "任务结束");
+                try
+                {
+                    RunnerContext.Instance.Clear();
+                }
+                finally
+                {
+                    stopRegistration?.Dispose();
+                    runCancellation.Dispose();
+
+                    // 释放锁
+                    if (hasLock)
+                    {
+                        TaskSemaphore.Release();
+                    }
+                }
             }
         }
     }
 
-    public void FireAndForget(Func<Task> action)
+    /// <summary>
+    /// 在后台启动任务且不等待完成。
+    /// </summary>
+    /// <param name="action">显式接收本轮取消令牌的任务操作。</param>
+    /// <param name="waitForMainUi">是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="requestToken">调用方附加的取消令牌。</param>
+    public void FireAndForget(Func<CancellationToken, Task> action, bool waitForMainUi = true,
+        CancellationToken requestToken = default)
     {
-        Task.Run(() => RunCurrentAsync(action));
+        Task.Run(() => RunCurrentAsync(action, waitForMainUi, requestToken));
     }
 
-    public async Task RunThreadAsync(Func<Task> action)
+    /// <summary>
+    /// 在线程池中运行独立任务。
+    /// </summary>
+    /// <param name="action">显式接收本轮取消令牌的任务操作。</param>
+    /// <param name="waitForMainUi">是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="requestToken">调用方附加的取消令牌。</param>
+    public async Task RunThreadAsync(Func<CancellationToken, Task> action, bool waitForMainUi = true,
+        CancellationToken requestToken = default)
     {
-        await Task.Run(() => RunCurrentAsync(action));
+        await Task.Run(() => RunCurrentAsync(action, waitForMainUi, requestToken));
     }
 
-    public async Task RunSoloTaskAsync(ISoloTask soloTask)
+    /// <summary>
+    /// 使用独立任务入口运行一个 <see cref="ISoloTask"/>。
+    /// </summary>
+    /// <param name="soloTask">需要执行的独立任务。</param>
+    /// <param name="requestToken">调用方附加的取消令牌。</param>
+    public async Task RunSoloTaskAsync(ISoloTask soloTask, CancellationToken requestToken = default)
     {
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
-
-        // 没启动的时候先启动
         bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
                              !soloTask.Name.Contains("幽境危战");
-        await ScriptService.StartGameTask(waitForMainUi);
-        if (CancellationContext.Instance.IsCancellationRequested)
+        await RunThreadAsync(ct => soloTask.Start(ct), waitForMainUi, requestToken);
+    }
+
+    /// <summary>
+    /// 尽力取消本轮 CTS；并发结束导致 CTS 已释放时无需再次处理。
+    /// </summary>
+    private static void TryCancel(CancellationTokenSource cancellation)
+    {
+        try
         {
-            _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
-            CancellationContext.Instance.Clear();
-            return;
+            cancellation.Cancel();
         }
-        
-        await Task.Run(() => RunCurrentAsync(
-            async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
-            resetCancellationContext: false,
-            clearCancellationContextOnLockFailure: true));
+        catch (ObjectDisposedException)
+        {
+            // 任务已完成并进入资源释放阶段，无需重复取消。
+        }
     }
 
     public void Init()

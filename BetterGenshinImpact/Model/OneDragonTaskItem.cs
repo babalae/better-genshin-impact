@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,7 +32,10 @@ public partial class OneDragonTaskItem : ObservableObject
 
     [ObservableProperty] private OneDragonBaseViewModel? _viewModel;
 
-    public Func<Task>? Action { get; private set; }
+    /// <summary>
+    /// 使用一条龙顶层任务令牌执行当前项目。
+    /// </summary>
+    public Func<CancellationToken, Task>? Action { get; private set; }
 
     public OneDragonTaskItem(string name)
     {
@@ -69,18 +73,18 @@ public partial class OneDragonTaskItem : ObservableObject
         switch (Name)
         {
             case "领取邮件":
-                Action = async () =>
+                Action = async ct =>
                 {
-                    await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+                    await new ClaimMailRewardsTask().Start(ct);
                 };
                 break;
             case "合成树脂":
-                Action = async () =>
+                Action = async ct =>
                 {
                     try
                     {
                         await new GoToCraftingBenchTask().GoCraftResin(config.CraftingBenchCountry,
-                            CancellationContext.Instance.Cts.Token);
+                            ct);
                     }
                     catch (Exception e)
                     {
@@ -89,7 +93,7 @@ public partial class OneDragonTaskItem : ObservableObject
                 };
                 break;
             case "自动秘境":
-                Action = async () =>
+                Action = async ct =>
                 {
                     if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
                     {
@@ -120,11 +124,11 @@ public partial class OneDragonTaskItem : ObservableObject
                         DomainName = domainName,
                         SundaySelectedValue = sundaySelectedValue
                     };
-                    await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
+                    await new AutoDomainTask(autoDomainParam).Start(ct);
                 };
                 break;
             case "自动首领讨伐":
-                Action = async () =>
+                Action = async ct =>
                 {
                     var totalRunCountLimited = config.AutoBossSpecifyRunCount && config.AutoBossTotalRunCountLimit > 0;
                     var remainingTotalRunCount = config.AutoBossTotalRunCountLimit - config.AutoBossCompletedRunCount;
@@ -175,11 +179,11 @@ public partial class OneDragonTaskItem : ObservableObject
                     {
                         param.RewardClaimedCallback = () => config.AutoBossCompletedRunCount++;
                     }
-                    await new AutoBossTask(param).Start(CancellationContext.Instance.Cts.Token);
+                    await new AutoBossTask(param).Start(ct);
                 };
                 break;
             case "自动幽境危战":
-                Action = async () =>
+                Action = async ct =>
                 {
                     if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName))
                     {
@@ -195,25 +199,25 @@ public partial class OneDragonTaskItem : ObservableObject
 
                     AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
                     param.SetAutoStygianOnslaughtConfig(TaskContext.Instance().Config.AutoStygianOnslaughtConfig);
-                    await new AutoStygianOnslaughtTask(param, path).Start(CancellationContext.Instance.Cts.Token);
+                    await new AutoStygianOnslaughtTask(param, path).Start(ct);
                 };
                 break;
             case "领取每日奖励":
-                Action = async () =>
+                Action = async ct =>
                 {
                     await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry,
-                        CancellationContext.Instance.Cts.Token, config.DailyRewardPartyName);
-                    await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+                        ct, config.DailyRewardPartyName);
+                    await new ClaimBattlePassRewardsTask().Start(ct);
                 };
                 break;
             case "领取尘歌壶奖励":
-                Action = async () =>
+                Action = async ct =>
                 {
-                    await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token);
+                    await new GoToSereniteaPotTask().Start(ct);
                 };
                 break;
             case "自动地脉花":
-                Action = async () =>
+                Action = async ct =>
                 {
                     if (!config.ShouldRunLeyLineToday())
                     {
@@ -243,7 +247,7 @@ public partial class OneDragonTaskItem : ObservableObject
                         AutoLeyLineOutcropParam param = new AutoLeyLineOutcropParam();
                         param.SetAutoLeyLineOutcropConfig(taskConfig);
                         await new AutoLeyLineOutcropTask(param, config.LeyLineOneDragonMode)
-                            .Start(CancellationContext.Instance.Cts.Token);
+                            .Start(ct);
                     }
                     finally
                     {
@@ -256,7 +260,7 @@ public partial class OneDragonTaskItem : ObservableObject
                 };
                 break;
             default:
-                Action = () => Task.CompletedTask;
+                Action = _ => Task.CompletedTask;
                 break;
         }
     }

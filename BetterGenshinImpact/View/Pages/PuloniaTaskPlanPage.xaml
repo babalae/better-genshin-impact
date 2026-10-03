@@ -354,7 +354,7 @@
                     <TextBlock Margin="4,0,4,8"
                                FontSize="16"
                                FontWeight="SemiBold"
-                               Text="计划（右键管理，可拖拽排序）" />
+                               Text="计划" />
                     <ListBox x:Name="PlanList"
                              Grid.Row="1"
                               Padding="0"
@@ -434,7 +434,7 @@
                                                  <ColumnDefinition Width="105" />
                                                  <ColumnDefinition Width="70" />
                                              </Grid.ColumnDefinitions>
-                                             <TextBlock FontWeight="SemiBold" Text="名称（右键管理）" />
+                                             <TextBlock FontWeight="SemiBold" Text="名称" />
                                              <TextBlock Grid.Column="1" Margin="8,0" FontWeight="SemiBold" Text="类型" />
                                              <TextBlock Grid.Column="2" HorizontalAlignment="Center" FontWeight="SemiBold" Text="启用" />
                                          </Grid>

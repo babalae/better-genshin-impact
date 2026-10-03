@@ -6,6 +6,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -49,6 +50,11 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     private readonly PuloniaGameTaskCoordinator _gameTaskCoordinator;
 
     /// <summary>
+    /// 把运行期间收到的外部停止信号转发到本次 Pulonia 运行。
+    /// </summary>
+    private readonly TaskStopService _taskStopService;
+
+    /// <summary>
     /// 单写入、多调用方提交但只有一个读取者的运行队列。
     /// </summary>
     private readonly Channel<RunState> _queue = Channel.CreateUnbounded<RunState>(new UnboundedChannelOptions
@@ -90,11 +96,13 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// 建立协调器，校验执行器注册并启动不触碰游戏环境的串行消费循环。
     /// </summary>
     public PuloniaTaskService(PuloniaTaskStore store, PuloniaTaskBuilder builder,
-        IEnumerable<IPuloniaTaskExecutor> executors, PuloniaGameTaskCoordinator gameTaskCoordinator)
+        IEnumerable<IPuloniaTaskExecutor> executors, PuloniaGameTaskCoordinator gameTaskCoordinator,
+        TaskStopService taskStopService)
     {
         _store = store;
         _builder = builder;
         _gameTaskCoordinator = gameTaskCoordinator;
+        _taskStopService = taskStopService;
         var executorMap = new Dictionary<string, IPuloniaTaskExecutor>(StringComparer.Ordinal);
         var definitionMap = new Dictionary<string, PuloniaTaskDefinition>(StringComparer.Ordinal);
         foreach (var executor in executors)
@@ -176,6 +184,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     {
         var state = GetState(requestId);
         var completeQueuedCancellation = false;
+        var cancelRunning = false;
         lock (state.SyncRoot)
         {
             if (IsTerminal(state.Status))
@@ -189,14 +198,14 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             }
             else
             {
-                state.Status = PuloniaTaskRunStatus.Cancelling;
-                state.Message = "已请求取消，正在等待当前执行器退出并释放资源。";
-                state.Cancellation.Cancel();
+                cancelRunning = true;
             }
         }
 
         if (completeQueuedCancellation)
             CompleteState(state);
+        else if (cancelRunning)
+            RequestCancellation(state, TaskStopReason.UserRequested);
         else
             RaiseRunChanged(requestId);
         await state.Completion.Task.WaitAsync(ct).ConfigureAwait(false);
@@ -237,6 +246,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         }
         RaiseRunChanged(state.RequestId);
 
+        using var stopRegistration = _taskStopService.Register(reason => RequestCancellation(state, reason));
         using var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(state.Request.TimeoutSeconds));
         using var runCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             state.Cancellation.Token, timeoutCancellation.Token, _shutdown.Token);
@@ -285,6 +295,37 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         {
             CompleteState(state);
         }
+    }
+
+    /// <summary>
+    /// 将外部停止来源记录到运行状态，再取消本次运行拥有的令牌源。
+    /// </summary>
+    private void RequestCancellation(RunState state, TaskStopReason reason)
+    {
+        lock (state.SyncRoot)
+        {
+            if (IsTerminal(state.Status))
+                return;
+
+            state.Status = PuloniaTaskRunStatus.Cancelling;
+            state.Message = reason switch
+            {
+                TaskStopReason.ApplicationShutdown => "应用正在关闭，正在等待当前执行器退出并释放资源。",
+                TaskStopReason.RuntimeStopped => "游戏运行环境已停止，正在等待当前执行器退出并释放资源。",
+                _ => "已请求取消，正在等待当前执行器退出并释放资源。"
+            };
+        }
+
+        try
+        {
+            state.Cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 运行完成与停止信号并发时，令牌源可能已由关闭流程释放。
+        }
+
+        RaiseRunChanged(state.RequestId);
     }
 
     /// <summary>

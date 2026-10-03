@@ -58,6 +58,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly TaskTriggerDispatcher _taskTriggerDispatcher;
+    /// <summary>
+    /// 把热键产生的外部停止信号转发给当前运行。
+    /// </summary>
+    private readonly TaskStopService _taskStopService;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -77,12 +81,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ILogger<HotKeyPageViewModel> logger,
         TaskSettingsPageViewModel taskSettingsPageViewModel,
         RecognitionTemplateEditorService recognitionTemplateEditorService,
-        TaskTriggerDispatcher taskTriggerDispatcher)
+        TaskTriggerDispatcher taskTriggerDispatcher,
+        TaskStopService taskStopService)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
         _taskTriggerDispatcher = taskTriggerDispatcher;
+        _taskStopService = taskStopService;
         // 获取配置
         Config = configService.Get();
 
@@ -403,7 +409,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             (_, _) =>
             {
                 _logger.LogInformation("检测到您配置的停止快捷键{Key}按下，停止当前执行任务", Config.HotKeyConfig.CancelTaskHotkey);
-                CancellationContext.Instance.ManualCancel();
+                _taskStopService.StopAll(TaskStopReason.UserRequested);
             }
         ));
         systemDirectory.Children.Add(new HotKeySettingModel(
@@ -883,7 +889,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // if (pathRecording)
                     // {
                     //     new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
-                    //        .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(pathRecorder._pathingTask));
+                    //        .FireAndForget(async ct => await new PathExecutor(ct).Pathing(pathRecorder._pathingTask));
                     // }
                 }
             ));
@@ -894,7 +900,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     {
         if (asyncRelayCommand.IsRunning)
         {
-            CancellationContext.Instance.Cancel();
+            _taskStopService.StopAll(TaskStopReason.UserRequested);
         }
         else
         {

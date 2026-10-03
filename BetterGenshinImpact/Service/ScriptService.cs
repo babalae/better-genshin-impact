@@ -125,12 +125,18 @@ public partial class ScriptService : IScriptService
     //优先执行的配置组，统计每个project执行次数
     private readonly Dictionary<string, int> _projectExecutionCount = new();
     
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
+    /// <summary>
+    /// 使用调用方提供的取消令牌顺序执行配置组项目。
+    /// </summary>
+    /// <param name="projectList">需要执行的配置组项目。</param>
+    /// <param name="groupName">配置组名称。</param>
+    /// <param name="taskProgress">可选的连续执行进度。</param>
+    /// <param name="ct">所属顶层任务的取消令牌。</param>
+    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName,
+        TaskProgress? taskProgress, CancellationToken ct)
     {
         groupName ??= "默认";
-
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
+        ct.ThrowIfCancellationRequested();
 
         var list = ReloadScriptProjects(projectList);
         
@@ -150,15 +156,6 @@ public partial class ScriptService : IScriptService
         //     hasTimer = HasTimerOperation(codeList);
         // }
 
-        // 没启动时候，启动截图器
-        await StartGameTask();
-        if (CancellationContext.Instance.IsCancellationRequested)
-        {
-            _logger.LogInformation("配置组 {Name} 在启动阶段被取消", groupName);
-            return;
-        }
-        
-        
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
         {
             // if (hasTimer)
@@ -182,10 +179,7 @@ public partial class ScriptService : IScriptService
         }
 
 
-        await new TaskRunner()
-            .RunThreadAsync(async () =>
-            {
-                var stopwatch = new Stopwatch();
+        var stopwatch = new Stopwatch();
                 int projectIndex = -1;
                 for (int x = 0; x < list.Count; x++)
                 {
@@ -294,18 +288,14 @@ public partial class ScriptService : IScriptService
                         }
 
                         //月卡检测
-                        await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
+                        await _blessingOfTheWelkinMoonTask.Start(ct);
                         if (exeProject.Status != "Enabled")
                         {
                             _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", exeProject.Name);
                             continue;
                         }
 
-                        if (CancellationContext.Instance.Cts.IsCancellationRequested)
-                        {
-                            // _logger.LogInformation("执行被取消");
-                            break;
-                        }
+                        ct.ThrowIfCancellationRequested();
 
                         if (fisrt )
                         {
@@ -351,7 +341,7 @@ public partial class ScriptService : IScriptService
                                 stopwatch.Reset();
                                 stopwatch.Start();
 
-                                await ExecuteProject(exeProject);
+                                await ExecuteProject(exeProject, ct);
 
                                 //多次执行时及时中断
                                 if (exeProject.RunNum > 1 && ShouldSkipTask(exeProject))
@@ -387,7 +377,7 @@ public partial class ScriptService : IScriptService
                                 _logger.LogInformation("------------------------------");
                             }
 
-                            await Task.Delay(1000);
+                            await Task.Delay(1000, ct);
                         }
 
                         if (!RunnerContext.Instance.IsPreExecution && taskProgress != null)
@@ -433,7 +423,6 @@ public partial class ScriptService : IScriptService
                         }
                     }
                 }
-            });
         
 
         // 还原定时器
@@ -444,12 +433,9 @@ public partial class ScriptService : IScriptService
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
 
-        if (!fisrt&&!RunnerContext.Instance.IsPreExecution)
+        if (!fisrt&&!RunnerContext.Instance.IsPreExecution && !ct.IsCancellationRequested)
         {
-            if (CancellationContext.Instance.IsManualStop is false)
-            {
-                Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
-            }
+            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
         }
 
         if (taskProgress != null)
@@ -521,7 +507,10 @@ public partial class ScriptService : IScriptService
     //     return jsProjects;
     // }
 
-    private async Task ExecuteProject(ScriptGroupProject project)
+    /// <summary>
+    /// 使用配置组所属顶层任务的令牌执行一个项目。
+    /// </summary>
+    private async Task ExecuteProject(ScriptGroupProject project, CancellationToken ct)
     {
         RunnerContext.Instance.CurrentScriptProject = project;
         if (project.Type == "Javascript")
@@ -536,7 +525,7 @@ public partial class ScriptService : IScriptService
             var hasSettingsBeforeRun = project.JsScriptSettingsObject != null;
             try
             {
-                await project.Run();
+                await project.Run(ct);
             }
             finally
             {
@@ -547,19 +536,19 @@ public partial class ScriptService : IScriptService
         {
             _logger.LogInformation("→ 开始执行键鼠脚本: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
-            await project.Run();
+            await project.Run(ct);
         }
         else if (project.Type == "Pathing")
         {
             _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
-            await project.Run();
+            await project.Run(ct);
         }
         else if (project.Type == "Shell")
         {
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
-            await project.Run();
+            await project.Run(ct);
         }
     }
 
@@ -610,34 +599,36 @@ public partial class ScriptService : IScriptService
     private static partial Regex DispatcherAddTimerRegex();
 
 
-    public static async Task StartGameTask(bool waitForMainUi = true)
+    /// <summary>
+    /// 按需启动游戏运行环境，并使用调用方令牌等待进入可执行任务的游戏界面。
+    /// </summary>
+    /// <param name="ct">当前任务的取消令牌。</param>
+    /// <param name="waitForMainUi">是否等待进入主界面、可关闭界面或秘境界面。</param>
+    public static async Task StartGameTask(CancellationToken ct, bool waitForMainUi = true)
     {
         // 没启动时候，启动截图器
         // 静态方法无法构造注入（调用方包括直接 new 出来的 TaskRunner），这里从容器取服务
         var gameRuntimeService = App.GetService<GameRuntimeService>()!;
         if (!gameRuntimeService.IsRunning)
         {
-            await gameRuntimeService.StartAsync();
+            await gameRuntimeService.StartAsync(ct);
+            ct.ThrowIfCancellationRequested();
 
             if (waitForMainUi)
             {
                 await Task.Run(async () =>
                 {
-                    await Task.Delay(200);
+                    await Task.Delay(200, ct);
                     var first = true;
                     var sw = Stopwatch.StartNew();
                     var loseFocusCount = 0;
                     while (true)
                     {
-                        if (CancellationContext.Instance.IsCancellationRequested)
-                        {
-                            TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");
-                            return;
-                        }
+                        ct.ThrowIfCancellationRequested();
 
                         if (!gameRuntimeService.IsRunning || !TaskContext.Instance().IsInitialized)
                         {
-                            await Task.Delay(500);
+                            await Task.Delay(500, ct);
                             continue;
                         }
 
@@ -654,7 +645,7 @@ public partial class ScriptService : IScriptService
                             TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
                         }
 
-                        await Task.Delay(500);
+                        await Task.Delay(500, ct);
                         if (sw.Elapsed.TotalSeconds >= 30)
                         {
                             //防止自启动游戏后因为一些原因失焦，导致一直卡住
@@ -676,7 +667,7 @@ public partial class ScriptService : IScriptService
 
                         }
                     }
-                });
+                }, ct);
             }
         }
 
@@ -684,7 +675,7 @@ public partial class ScriptService : IScriptService
         var pendingUpdate = ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask;
         if (pendingUpdate != null)
         {
-            await pendingUpdate;
+            await pendingUpdate.WaitAsync(ct);
             ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask = null;
         }
     }

@@ -574,9 +574,6 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
 
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
-
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
 
         // 如果设置了 NextTaskId，从指定任务开始执行
@@ -622,36 +619,32 @@ public partial class OneDragonFlowViewModel : ViewModel
         int enabledoneTaskCount = taskListCopy.Count(t => t.IsEnabled);
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
-        await ScriptService.StartGameTask();
-        if (CancellationContext.Instance.IsCancellationRequested)
+        await new TaskRunner().RunThreadAsync(async ct =>
         {
-            _logger.LogInformation("一条龙在启动阶段被取消");
-            return;
-        }
+            SaveConfig();
+            int enabledTaskCount = taskListCopy.Count(t =>
+                t.IsEnabled && !ScriptGroupsdefault.Any(d => d.Name == t.Name));
+            _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
 
-        SaveConfig();
-        int enabledTaskCount = taskListCopy.Count(t =>
-            t.IsEnabled && !ScriptGroupsdefault.Any(d => d.Name == t.Name));
-        _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
-
-        if (enabledoneTaskCount <= 0)
-        {
-            _logger.LogInformation("没有一条龙任务!");
-        }
-
-        Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
-        foreach (var task in taskListCopy)
-        {
-            if (task is { IsEnabled: true, Action: not null })
+            if (enabledoneTaskCount <= 0)
             {
+                _logger.LogInformation("没有一条龙任务!");
+            }
+
+            Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
+            foreach (var task in taskListCopy)
+            {
+                if (task is not { IsEnabled: true, Action: not null })
+                {
+                    continue;
+                }
+
+                ct.ThrowIfCancellationRequested();
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
-                    await new TaskRunner().RunThreadAsync(async () =>
-                    {
-                        await task.Action();
-                        await Task.Delay(1000);
-                    });
+                    await task.Action(ct);
+                    await Task.Delay(1000, ct);
                 }
                 else
                 {
@@ -668,13 +661,18 @@ public partial class OneDragonFlowViewModel : ViewModel
                         if (SelectedConfig.TaskEnabledList[task.Id])
                         {
                             _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
-                            await Task.Delay(500);
+                            await Task.Delay(500, ct);
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
-                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
+                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath, ct));
                             IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(ScriptControlViewModel.GetNextProjects(group), group.Name);
-                            await Task.Delay(1000);
+                            await scriptService!.RunMulti(
+                                ScriptControlViewModel.GetNextProjects(group), group.Name, null, ct);
+                            await Task.Delay(1000, ct);
                         }
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
                     }
                     catch (Exception e)
                     {
@@ -682,28 +680,12 @@ public partial class OneDragonFlowViewModel : ViewModel
                         Toast.Error("执行配置组任务时失败");
                     }
                 }
-                // 如果任务已经被取消，中断所有任务
-                if (CancellationContext.Instance.Cts.IsCancellationRequested)
-                {
-                    _logger.LogInformation("任务被取消，退出执行");
-                    if (CancellationContext.Instance.IsManualStop is false)
-                    {
-                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
-                    }
-                    return; // 后续的检查任务也不执行
-                }
             }
-        }
 
-        // 检查和最终结束的任务
-        await new TaskRunner().RunThreadAsync(async () =>
-        {
-            await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
-            await Task.Delay(500);
-            if (CancellationContext.Instance.IsManualStop is false)
-            {
-                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
-            }
+            // 检查和最终结束的任务
+            await new CheckRewardsTask().Start(ct);
+            await Task.Delay(500, ct);
+            Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
             _logger.LogInformation("一条龙和配置组任务结束");
 
             // 执行完成后操作

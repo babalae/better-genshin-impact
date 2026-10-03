@@ -210,6 +210,7 @@ public partial class App : Application
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());
                 services.AddSingleton<TaskTriggerDispatcher>();
+                services.AddSingleton<TaskStopService>();
                 // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
                 services.AddSingleton<Win32RuntimeProvider>();
                 services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<Win32RuntimeProvider>());
@@ -371,6 +372,9 @@ public partial class App : Application
         base.OnExit(e);
 
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
+
+        // 先通知当前运行退出，再停止宿主服务，避免任务在依赖项释放后继续执行。
+        _host.Services.GetService<TaskStopService>()?.StopAll(TaskStopReason.ApplicationShutdown);
 
         // 写入防抖窗口内尚未落盘的配置改动
         try

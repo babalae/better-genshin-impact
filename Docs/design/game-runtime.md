@@ -598,7 +598,7 @@ Primary 的首页：截图器启动过程中（`GameRuntimeService.IsStarting`�
 停止（按钮 / Tick 发现 !IsAlive 或截图器停止 / 切换截图模式）
   GameRuntimeService.StopAsync()
     0. 等待 _startLock；停止请求之前排队的 StartAsync 跳过绑定
-    1. CancellationContext.Instance.Cancel()
+    1. TaskStopService.StopAll(RuntimeStopped)      只转发停止信号，各运行取消自己拥有的 CTS
     2. dispatcher.Stop()
     3. InputHub.ReleaseAll()，然后 Attach 未绑定后端     显式释放旧后端输入，再切换
     4. TaskContext.Instance().Bind(null)

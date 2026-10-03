@@ -121,7 +121,7 @@ internal class GoToSereniteaPotTask
             {
                 Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
                 await Task.Delay(1000, ct);
-                await new Core.Script.Dependence.Genshin().SetBigMapZoomLevel(2.5-i*0.2);//尝试缩放地图
+                await new Core.Script.Dependence.Genshin(ct).SetBigMapZoomLevel(2.5-i*0.2);//尝试缩放地图
                 await Task.Delay(1000, ct);
             }
             else

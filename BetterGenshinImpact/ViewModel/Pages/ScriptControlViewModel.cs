@@ -29,6 +29,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -1989,7 +1990,8 @@ public partial class ScriptControlViewModel : ViewModel
         RunnerContext.Instance.taskProgress = taskProgress;
         taskProgress.CurrentScriptGroupName = SelectedScriptGroup.Name;
         TaskProgressManager.SaveTaskProgress(taskProgress);
-        await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, taskProgress);
+        await new TaskRunner().RunThreadAsync(ct =>
+            _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, taskProgress, ct));
     }
 
     [RelayCommand]
@@ -2421,26 +2423,50 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
+    /// <summary>
+    /// 在一个独立任务作用域内连续执行选中的配置组。
+    /// </summary>
     public async Task StartGroups(List<ScriptGroup> scriptGroups, TaskProgress? taskProgress = null, bool loop = false)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
-        try
+        await new TaskRunner().RunThreadAsync(async ct =>
         {
             RunnerContext.Instance.IsContinuousRunGroup = true;
-            if (taskProgress == null)
+            try
             {
-                taskProgress = new()
-                {
-                    ScriptGroupNames = scriptGroups.Select(x => x.Name).ToList()
-                    ,
-                    Loop = loop
-                };
+                await StartGroupsCore(scriptGroups, taskProgress, loop, ct);
             }
+            finally
+            {
+                RunnerContext.Instance.Reset();
+            }
+        });
+    }
 
-            RunnerContext.Instance.taskProgress = taskProgress;
+    /// <summary>
+    /// 复用同一个顶层取消令牌执行一次或多次配置组循环。
+    /// </summary>
+    private async Task StartGroupsCore(List<ScriptGroup> scriptGroups, TaskProgress? taskProgress, bool loop,
+        CancellationToken ct)
+    {
+        if (taskProgress == null)
+        {
+            taskProgress = new()
+            {
+                ScriptGroupNames = scriptGroups.Select(x => x.Name).ToList()
+                ,
+                Loop = loop
+            };
+        }
+
+        RunnerContext.Instance.taskProgress = taskProgress;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
             var sg = GetNextScriptGroups(scriptGroups);
             foreach (var scriptGroup in sg)
             {
+                ct.ThrowIfCancellationRequested();
                 if (taskProgress.Next != null)
                 {
                     if (scriptGroup.Name != taskProgress.Next.GroupName)
@@ -2450,19 +2476,12 @@ public partial class ScriptControlViewModel : ViewModel
                 }
                 taskProgress.CurrentScriptGroupName = scriptGroup.Name;
                 TaskProgressManager.SaveTaskProgress(taskProgress);
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress);
-                await Task.Delay(2000);
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress, ct);
+                await Task.Delay(2000, ct);
             }
 
             taskProgress.LoopCount++;
-            if (taskProgress is { Loop: true })
-            {
-                taskProgress.LastScriptGroupName = null;
-                taskProgress.LastSuccessScriptGroupProjectInfo = null;
-                taskProgress.Next = null;
-                await StartGroups(scriptGroups, taskProgress);
-            }
-            else
+            if (taskProgress is not { Loop: true })
             {
                 //只有最后一次成功才算
                 if (taskProgress.ConsecutiveFailureCount == 0)
@@ -2471,17 +2490,12 @@ public partial class ScriptControlViewModel : ViewModel
                     TaskProgressManager.SaveTaskProgress(taskProgress);
                 }
 
+                return;
             }
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e.Message);
-        }
-        finally
-        {
-            RunnerContext.Instance.Reset();
-        }
 
-
+            taskProgress.LastScriptGroupName = null;
+            taskProgress.LastSuccessScriptGroupProjectInfo = null;
+            taskProgress.Next = null;
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using System.Threading.Tasks;
@@ -14,24 +15,33 @@ public class AutoPathingScript
     private string _rootPath;
     private readonly LimitedFile _autoPathingFile;
 
-    public AutoPathingScript(string rootPath, object? config)
+    /// <summary>
+    /// 当前脚本执行的取消令牌。
+    /// </summary>
+    private readonly CancellationToken _ct;
+
+    /// <summary>
+    /// 创建自动寻路脚本宿主。
+    /// </summary>
+    public AutoPathingScript(string rootPath, object? config, CancellationToken ct)
     {
         _config = config;
         _rootPath = rootPath;
+        _ct = ct;
         _autoPathingFile = new LimitedFile(Global.Absolute(@"User\AutoPathing"));
     }
 
     public async Task<bool> Run(string json)
     {
         var task = PathingTask.BuildFromJson(json);
-        var pathExecutor = new PathExecutor(ScriptCancellationContext.Token);
+        var pathExecutor = new PathExecutor(_ct);
         if (_config != null && _config is PathingPartyConfig patyConfig)
         {
             pathExecutor.PartyConfig = patyConfig;
         }
 
         await pathExecutor.Pathing(task);
-        ScriptCancellationContext.Token.ThrowIfCancellationRequested();
+        _ct.ThrowIfCancellationRequested();
         return pathExecutor.SuccessEnd;
     }
 

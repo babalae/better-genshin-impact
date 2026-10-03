@@ -761,11 +761,11 @@ public partial class MusicPageViewModel : ViewModel
 
         _activePlaybackQueue = queue;
         _sessionTask = new TaskRunner().RunThreadAsync(
-            () => _playbackService.RunPlaylistAsync(
+            ct => _playbackService.RunPlaylistAsync(
                 queue,
                 startIndex,
                 options,
-                CancellationContext.Instance.Cts.Token));
+                ct));
         _ = ObserveSessionAsync(_sessionTask);
     }
 

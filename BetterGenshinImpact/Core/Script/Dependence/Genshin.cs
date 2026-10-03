@@ -6,6 +6,7 @@ using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
+using System.Threading;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
@@ -24,6 +25,19 @@ public class Genshin
 {
     private RECT captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
     private readonly ILogger<Genshin> _logger = App.GetLogger<Genshin>();
+
+    /// <summary>
+    /// 当前脚本执行的取消令牌。
+    /// </summary>
+    private readonly CancellationToken _ct;
+
+    /// <summary>
+    /// 创建原神脚本能力宿主。
+    /// </summary>
+    public Genshin(CancellationToken ct)
+    {
+        _ct = ct;
+    }
 
     /// <summary>
     /// 游戏宽度
@@ -69,17 +83,17 @@ public class Genshin
     /// <returns></returns>
     public async Task Tp(double x, double y)
     {
-        await new TpTask(ScriptCancellationContext.Token).Tp(x, y);
+        await new TpTask(_ct).Tp(x, y);
     }
 
     public async Task Tp(double x, double y, string mapName, bool force)
     {
-        await new TpTask(ScriptCancellationContext.Token).Tp(x, y, mapName, force);
+        await new TpTask(_ct).Tp(x, y, mapName, force);
     }
 
     public async Task Tp(double x, double y, bool force)
     {
-        await new TpTask(ScriptCancellationContext.Token).Tp(x, y, MapTypes.Teyvat.ToString(), force);
+        await new TpTask(_ct).Tp(x, y, MapTypes.Teyvat.ToString(), force);
     }
 
     /// <summary>
@@ -117,7 +131,7 @@ public class Genshin
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null</param>
     public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
-        TpTask tpTask = new TpTask(ScriptCancellationContext.Token);
+        TpTask tpTask = new TpTask(_ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
@@ -134,7 +148,7 @@ public class Genshin
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null。</param>
     public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
     {
-        TpTask tpTask = new TpTask(ScriptCancellationContext.Token);
+        TpTask tpTask = new TpTask(_ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
@@ -152,7 +166,7 @@ public class Genshin
     /// <param name="mapName">指定要移动的大地图</param>
     public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
-        TpTask tpTask = new TpTask(ScriptCancellationContext.Token);
+        TpTask tpTask = new TpTask(_ct);
         await tpTask.CheckInBigMapUi();
         // 切换地区
         if (mapName == MapTypes.Teyvat.ToString())
@@ -174,7 +188,7 @@ public class Genshin
     /// <returns>当前大地图缩放等级，范围1.0-6.0</returns>
     public double GetBigMapZoomLevel()
     {
-        TpTask tpTask = new(ScriptCancellationContext.Token);
+        TpTask tpTask = new(_ct);
         using var capture = CaptureToRectArea();
         return tpTask.GetBigMapZoomLevel(capture);
     }
@@ -192,7 +206,7 @@ public class Genshin
     /// <param name="zoomLevel">目标缩放等级，范围 1.0-6.0</param>
     public async Task SetBigMapZoomLevel(double zoomLevel)
     {
-        TpTask tpTask = new(ScriptCancellationContext.Token);
+        TpTask tpTask = new(_ct);
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
     }
@@ -202,7 +216,7 @@ public class Genshin
     /// </summary>
     public async Task TpToStatueOfTheSeven()
     {
-        TpTask tpTask = new TpTask(ScriptCancellationContext.Token);
+        TpTask tpTask = new TpTask(_ct);
         await tpTask.TpToStatueOfTheSeven();
     }
 
@@ -212,7 +226,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap()
     {
-        TpTask tpTask = new TpTask(ScriptCancellationContext.Token);
+        TpTask tpTask = new TpTask(_ct);
         return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
     }
 
@@ -223,7 +237,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap(string mapName)
     {
-        TpTask tpTask = new TpTask(ScriptCancellationContext.Token);
+        TpTask tpTask = new TpTask(_ct);
         return tpTask.GetPositionFromBigMap(mapName);
     }
 
@@ -304,7 +318,7 @@ public class Genshin
     {
         try
         {
-            return await new SwitchPartyTask().Start(partyName, ScriptCancellationContext.Token);
+            return await new SwitchPartyTask().Start(partyName, _ct);
         }
         catch (PartySetupFailedException)
         {
@@ -342,7 +356,7 @@ public class Genshin
                 slot3,
                 slot4,
                 usePhysicalSlots,
-                ScriptCancellationContext.Token);
+                _ct);
         }
         catch (PartySetupFailedException ex)
         {
@@ -366,7 +380,7 @@ public class Genshin
     /// <returns></returns>
     public async Task BlessingOfTheWelkinMoon()
     {
-        await new BlessingOfTheWelkinMoonTask().Start(ScriptCancellationContext.Token);
+        await new BlessingOfTheWelkinMoonTask().Start(_ct);
     }
 
     /// <summary>
@@ -378,7 +392,7 @@ public class Genshin
     /// <returns></returns>
     public async Task ChooseTalkOption(string option, int skipTimes = 10, bool isOrange = false)
     {
-        await new ChooseTalkOptionTask().SingleSelectText(option, ScriptCancellationContext.Token, skipTimes, isOrange);
+        await new ChooseTalkOptionTask().SingleSelectText(option, _ct, skipTimes, isOrange);
     }
 
     /// <summary>
@@ -387,7 +401,7 @@ public class Genshin
     /// <returns></returns>
     public async Task ClaimBattlePassRewards()
     {
-        await new ClaimBattlePassRewardsTask().DoOnce(ScriptCancellationContext.Token);
+        await new ClaimBattlePassRewardsTask().DoOnce(_ct);
     }
 
     /// <summary>
@@ -396,7 +410,7 @@ public class Genshin
     /// <returns></returns>
     public async Task<bool> ClaimEncounterPointsRewards()
     {
-        return await new ClaimEncounterPointsRewardsTask().DoOnce(ScriptCancellationContext.Token);
+        return await new ClaimEncounterPointsRewardsTask().DoOnce(_ct);
     }
 
     /// <summary>
@@ -404,7 +418,7 @@ public class Genshin
     /// </summary>
     public async Task ClaimMailRewards()
     {
-        await new ClaimMailRewardsTask().DoOnce(ScriptCancellationContext.Token);
+        await new ClaimMailRewardsTask().DoOnce(_ct);
     }
 
     /// <summary>
@@ -412,7 +426,7 @@ public class Genshin
     /// </summary>
     public async Task<bool> ClaimSereniteaPotRewards()
     {
-        return await new GoToSereniteaPotTask().DoOnce(ScriptCancellationContext.Token);
+        return await new GoToSereniteaPotTask().DoOnce(_ct);
     }
 
     /// <summary>
@@ -422,7 +436,7 @@ public class Genshin
     /// <returns></returns>
     public async Task GoToAdventurersGuild(string country)
     {
-        await new GoToAdventurersGuildTask().Start(country, ScriptCancellationContext.Token);
+        await new GoToAdventurersGuildTask().Start(country, _ct);
     }
 
     /// <summary>
@@ -432,7 +446,7 @@ public class Genshin
     /// <returns></returns>
     public async Task GoToCraftingBench(string country)
     {
-        await new GoToCraftingBenchTask().GoToCraftingBench(country, ScriptCancellationContext.Token);
+        await new GoToCraftingBenchTask().GoToCraftingBench(country, _ct);
     }
 
     /// <summary>
@@ -442,7 +456,7 @@ public class Genshin
     /// <returns></returns>
     public async Task GoCraftResin(string country)
     {
-        await new GoToCraftingBenchTask().GoCraftResin(country, ScriptCancellationContext.Token);
+        await new GoToCraftingBenchTask().GoCraftResin(country, _ct);
     }
 
     /// <summary>
@@ -454,7 +468,7 @@ public class Genshin
     /// <returns>合成执行结果。</returns>
     public async Task<CraftMaterialResult> CraftMaterial(string materialName, int quantity, string? materialType = null)
     {
-        return await new CraftMaterialTask(materialName, quantity, materialType).Start(ScriptCancellationContext.Token);
+        return await new CraftMaterialTask(materialName, quantity, materialType).Start(_ct);
     }
 
     /// <summary>
@@ -463,7 +477,7 @@ public class Genshin
     /// <returns></returns>
     public async Task ReturnMainUi()
     {
-        await new ReturnMainUiTask().Start(ScriptCancellationContext.Token);
+        await new ReturnMainUiTask().Start(_ct);
     }
 
     /// <summary>
@@ -480,7 +494,7 @@ public class Genshin
 
         var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
-        await new AutoFishingTask(param).Start(ScriptCancellationContext.Token);
+        await new AutoFishingTask(param).Start(_ct);
     }
 
     /// <summary>
@@ -489,7 +503,7 @@ public class Genshin
     /// <returns></returns>
     public async Task Relogin()
     {
-        await new ExitAndReloginJob().Start(ScriptCancellationContext.Token);
+        await new ExitAndReloginJob().Start(_ct);
     }
     
     /// <summary>
@@ -498,7 +512,7 @@ public class Genshin
     /// <returns></returns>
     public async Task WonderlandCycle()
     {
-        await new EnterAndExitWonderlandJob().Start(ScriptCancellationContext.Token);
+        await new EnterAndExitWonderlandJob().Start(_ct);
     }
 
     /// <summary>
@@ -514,7 +528,7 @@ public class Genshin
             throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (minute < 0 || minute > 59)
             throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
-        await new SetTimeTask().Start(hour, minute, ScriptCancellationContext.Token, skip);
+        await new SetTimeTask().Start(hour, minute, _ct, skip);
     }
     
     /// <summary>
@@ -530,7 +544,7 @@ public class Genshin
             throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (!int.TryParse(minute, out var m) || m < 0 || m > 59)
             throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
-        await new SetTimeTask().Start(h, m, ScriptCancellationContext.Token, skip);
+        await new SetTimeTask().Start(h, m, _ct, skip);
     }
 
     // /// <summary>
@@ -543,6 +557,6 @@ public class Genshin
     //     var actualMine = mineCount ?? 1;
     //     var actualScan = scanRounds ?? (mineCount ?? 5);
     //     if (actualScan < actualMine) actualScan = actualMine;
-    //     await new LinneaMiningTask(actualScan, actualMine).Start(ScriptCancellationContext.Token);
+    //     await new LinneaMiningTask(actualScan, actualMine).Start(_ct);
     // }
 }

@@ -33,22 +33,25 @@ public class EngineExtend
     /// <param name="engine"></param>
     /// <param name="workDir"></param>
     /// <param name="searchPaths"></param>
-    public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths = null, object? config = null)
+    /// <param name="config">当前脚本使用的可选配置。</param>
+    /// <param name="ct">当前脚本执行的取消令牌。</param>
+    public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths, object? config,
+        CancellationToken ct)
     {
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
         // 添加我的自定义实例化对象
-        engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir));
-        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir, config));
-        engine.AddHostObject("genshin", new Dependence.Genshin());
-        engine.AddHostObject("characterDevelopmentTask", new CharacterDevelopmentTask());
+        engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir, ct));
+        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir, config, ct));
+        engine.AddHostObject("genshin", new Dependence.Genshin(ct));
+        engine.AddHostObject("characterDevelopmentTask", new CharacterDevelopmentTask(ct));
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
         engine.AddHostObject("http", new Http()); // 限制文件访问
         engine.AddHostObject("notification", new Notification());
         
         // 任务调度器
-        engine.AddHostObject("dispatcher", new Dispatcher(config));
+        engine.AddHostObject("dispatcher", new Dispatcher(config, ct));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
         engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
@@ -61,7 +64,7 @@ public class EngineExtend
         engine.AddHostType("PostMessage", typeof(Dependence.Simulator.PostMessage));
 
         // 直接添加方法
-        AddAllGlobalMethod(engine);
+        AddAllGlobalMethod(engine, ct);
 
         // 识图模块相关
         engine.AddHostType("Mat", typeof(Mat));
@@ -134,7 +137,10 @@ public class EngineExtend
         }
     }
 
-    public static void AddAllGlobalMethod(IScriptEngine engine)
+    /// <summary>
+    /// 注册兼容现有脚本名称的全局方法，并为异步等待绑定本次脚本令牌。
+    /// </summary>
+    public static void AddAllGlobalMethod(IScriptEngine engine, CancellationToken ct)
     {
         // // 获取GlobalMethod类的所有静态方法
         // var methods = typeof(GlobalMethod).GetMethods(BindingFlags.Static | BindingFlags.Public);
@@ -147,7 +153,8 @@ public class EngineExtend
         // }
 
 #pragma warning disable CS8974 // Converting method group to non-delegate type
-        engine.AddHostObject("sleep", GlobalMethod.Sleep);
+        engine.AddHostObject("sleep", new Func<int, Task>(millisecondsTimeout =>
+            GlobalMethod.Sleep(millisecondsTimeout, ct)));
         engine.AddHostObject("getVersion", GlobalMethod.GetVersion);
         engine.AddHostObject("keyDown", GlobalMethod.KeyDown);
         engine.AddHostObject("keyUp", GlobalMethod.KeyUp);

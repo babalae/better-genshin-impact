@@ -22,6 +22,7 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -53,6 +54,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     private readonly INavigationService _navigationService;
     private readonly TaskTriggerDispatcher _taskDispatcher;
+    /// <summary>
+    /// 把停止按钮产生的外部停止信号转发给当前运行。
+    /// </summary>
+    private readonly TaskStopService _taskStopService;
 
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
@@ -257,11 +262,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
-    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
+        TaskTriggerDispatcher taskTriggerDispatcher, TaskStopService taskStopService)
     {
         Config = configService.Get();
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
+        _taskStopService = taskStopService;
         NormalizeLeyLineOutcropType();
         _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
@@ -365,7 +372,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnStopSoloTask()
     {
-        CancellationContext.Instance.Cancel();
+        _taskStopService.StopAll(TaskStopReason.UserRequested);
         SwitchAutoGeniusInvokationEnabled = false;
         SwitchAutoWoodEnabled = false;
         SwitchAutoDomainEnabled = false;
@@ -726,7 +733,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             _autoComboRunRunning = false;
             _autoComboRunPaused = true;
             SwitchAutoComboRunButtonText = "继续";
-            CancellationContext.Instance.Cancel();
+            _taskStopService.StopAll(TaskStopReason.UserRequested);
             return;
         }
 
