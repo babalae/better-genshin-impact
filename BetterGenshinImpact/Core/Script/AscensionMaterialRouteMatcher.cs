@@ -9,6 +9,7 @@ namespace BetterGenshinImpact.Core.Script;
 /// </summary>
 internal static class AscensionMaterialRouteMatcher
 {
+    /// <summary>Combines acquisition sources for duplicate material names.</summary>
     public static Dictionary<string, HashSet<string>> BuildMaterialSourceCatalog(
         IEnumerable<(string? Name, IEnumerable<string?> Sources)> entries)
     {
@@ -24,6 +25,7 @@ internal static class AscensionMaterialRouteMatcher
                 StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>Finds materials whose names or acquisition sources match a route folder.</summary>
     public static HashSet<string> FindRelatedMaterials(
         string directoryName,
         IEnumerable<string> materials,

@@ -2220,6 +2220,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
+    /// <summary>Imports the paths in a subscription payload, optionally using a specific repository checkout.</summary>
     private async Task ImportScriptFromPathJsonCore(string pathJson, string? repoPathOverride = null, string? repoFolderNameOverride = null)
     {
         var paths = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(pathJson);
@@ -2412,6 +2413,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// 向当前仓库的已订阅路径中追加新路径（自动去重）。
     /// 注意：内部的读-合并-写不是原子操作，调用方应持有 _repoWriteLock 以避免并发丢失更新。
     /// </summary>
+    /// <summary>Adds paths to the subscription list for the selected script repository.</summary>
     private static void AddSubscribedPathsForCurrentRepo(List<string> paths, string? repoFolderName = null)
     {
         repoFolderName ??= GetCurrentRepoFolderName();

@@ -900,16 +900,20 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
+    /// <summary>Represents a character or weapon and its ascension materials from the online catalog.</summary>
     private sealed record AscensionCatalogEntry(string Name, string Kind, string Version, HashSet<string> Materials)
     {
         public string DisplayName => $"{Name}  (v{Version})";
     }
 
+    /// <summary>Translates text used by the ascension route quick-add flow.</summary>
     private static string AscensionText(string text) => BetterGenshinImpact.Service.I18n.I18nService.Instance.Translate(text);
 
+    /// <summary>Parses a catalog version, using zero when the value is invalid.</summary>
     private static System.Version ParseCatalogVersion(string version) =>
         System.Version.TryParse(version, out var parsed) ? parsed : new System.Version(0, 0);
 
+    /// <summary>Orders catalog entries by descending version, then by name.</summary>
     private static IOrderedEnumerable<AscensionCatalogEntry> OrderByNewestVersion(IEnumerable<AscensionCatalogEntry> entries) =>
         entries.OrderByDescending(entry => ParseCatalogVersion(entry.Version))
             .ThenBy(entry => entry.Name, StringComparer.Ordinal);
@@ -918,12 +922,15 @@ public partial class ScriptControlViewModel : ViewModel
     private static readonly HttpClient BiliwikiClient = new() { Timeout = TimeSpan.FromSeconds(8) };
     private const string AscensionCatalogEndpoint = "https://genshin-db-api.vercel.app/api/v5/";
 
+    /// <summary>Opens the character ascension route quick-add flow.</summary>
     [RelayCommand]
     private Task QuickAddCharacterAscensionRoutes() => QuickAddAscensionRoutesAsync("角色");
 
+    /// <summary>Opens the weapon ascension route quick-add flow.</summary>
     [RelayCommand]
     private Task QuickAddWeaponAscensionRoutes() => QuickAddAscensionRoutesAsync("武器");
 
+    /// <summary>Loads catalog data, lets the user choose an entry, and adds matching routes to the selected group.</summary>
     private async Task QuickAddAscensionRoutesAsync(string kind)
     {
         if (SelectedScriptGroup == null)
@@ -1080,6 +1087,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
+    /// <summary>Loads character and weapon names, versions, and ascension materials from Genshin-DB.</summary>
     private static async Task<List<AscensionCatalogEntry>> LoadAscensionCatalogAsync()
     {
         var result = new List<AscensionCatalogEntry>();
@@ -1121,6 +1129,7 @@ public partial class ScriptControlViewModel : ViewModel
         AttributesToSkip = FileAttributes.ReparsePoint,
     };
 
+    /// <summary>Enumerates descendant directories while skipping inaccessible paths and reparse points.</summary>
     private static IEnumerable<string> EnumerateDirectoriesSafely(string root)
     {
         try { return Directory.EnumerateDirectories(root, "*", SafeRecursiveEnumeration).ToArray(); }
@@ -1128,6 +1137,7 @@ public partial class ScriptControlViewModel : ViewModel
         catch (UnauthorizedAccessException) { return []; }
     }
 
+    /// <summary>Enumerates matching descendant files while skipping inaccessible paths and reparse points.</summary>
     private static IEnumerable<string> EnumerateFilesSafely(string root, string pattern)
     {
         try { return Directory.EnumerateFiles(root, pattern, SafeRecursiveEnumeration).ToArray(); }
@@ -1135,6 +1145,7 @@ public partial class ScriptControlViewModel : ViewModel
         catch (UnauthorizedAccessException) { return []; }
     }
 
+    /// <summary>Returns a normalized path, or null when the input is invalid.</summary>
     private static string? TryGetFullPath(string path)
     {
         try { return Path.GetFullPath(path); }
@@ -1143,6 +1154,7 @@ public partial class ScriptControlViewModel : ViewModel
         catch (PathTooLongException) { return null; }
     }
 
+    /// <summary>Counts material names found in Biliwiki's character and weapon ascension indexes.</summary>
     private static async Task<int?> CheckBiliwikiMaterialIndexesAsync(HashSet<string> materials)
     {
         var pages = new[] { "角色突破材料一览", "武器突破材料一览" };
@@ -1173,6 +1185,7 @@ public partial class ScriptControlViewModel : ViewModel
         return materials.Count(material => searchable.Contains(material, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Loads material acquisition sources from the online catalog.</summary>
     private static async Task<Dictionary<string, HashSet<string>>> LoadMaterialSourceCatalogAsync()
     {
         var url = $"{AscensionCatalogEndpoint}materials?query=names&matchCategories=true&verboseCategories=true&resultLanguage=chinese";
@@ -1185,6 +1198,7 @@ public partial class ScriptControlViewModel : ViewModel
                 Sources: (item["sources"] as JArray ?? new JArray()).Values<string>())));
     }
 
+    /// <summary>Builds a searchable picker for the requested character or weapon catalog entries.</summary>
     private static ScrollViewer BuildAscensionCatalogPicker(List<AscensionCatalogEntry> entries, string kind)
     {
         var panel = new System.Windows.Controls.StackPanel();

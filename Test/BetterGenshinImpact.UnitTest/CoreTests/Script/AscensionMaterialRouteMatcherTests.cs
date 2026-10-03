@@ -4,6 +4,7 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.Script;
 
 public class AscensionMaterialRouteMatcherTests
 {
+    /// <summary>Verifies duplicate material names merge their distinct acquisition sources.</summary>
     [Fact]
     public void MergesDuplicateMaterialCatalogNamesAndCombinesSources()
     {
@@ -19,6 +20,7 @@ public class AscensionMaterialRouteMatcherTests
         Assert.Contains("Sold by a merchant", catalog["Vesna's Bloom"]);
     }
 
+    /// <summary>Verifies exact material-folder and enemy-source matches.</summary>
     [Fact]
     public void FindsExactMaterialFolderAndMultipleSourceFolders()
     {
@@ -40,6 +42,7 @@ public class AscensionMaterialRouteMatcherTests
         Assert.Contains("老练的坚齿", enemyDropMatches);
     }
 
+    /// <summary>Verifies broad region names do not match specific source text.</summary>
     [Fact]
     public void DoesNotMatchBroadRegionFolderAgainstSourceText()
     {
@@ -51,6 +54,7 @@ public class AscensionMaterialRouteMatcherTests
         Assert.Empty(AscensionMaterialRouteMatcher.FindRelatedMaterials("纳塔", ["稚嫩的尖齿"], sources));
     }
 
+    /// <summary>Verifies short unrelated folder names do not create false matches.</summary>
     [Fact]
     public void DoesNotMatchShortUnrelatedFolders()
     {
