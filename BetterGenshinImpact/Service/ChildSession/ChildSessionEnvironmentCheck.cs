@@ -26,12 +26,23 @@ internal static class ChildSessionEnvironmentCheck
     private const string TerminalServerRegistryPath =
         @"SYSTEM\CurrentControlSet\Control\Terminal Server";
 
-    /// <summary>DevicePasswordLessBuildVersion 为 2 时，系统仅允许 Windows Hello 登录。</summary>
+    /// <summary>
+    /// 远程桌面开关的组策略路径。该键存在时会覆盖本机设置。
+    /// </summary>
+    private const string TerminalServerPolicyRegistryPath =
+        @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services";
+
+    /// <summary>
+    /// DevicePasswordLessBuildVersion 为 2 时，系统仅允许 Windows Hello 登录。
+    /// 注意：该注册表值未见于微软官方文档，属于社区逆向得出的结论，
+    /// 因此只把 2 判定为「已开启」，其余取值一律视为未开启。
+    /// </summary>
     private const int PasswordLessHelloOnlyValue = 2;
 
     /// <summary>
     /// 家庭版（Core 系列）的 EditionID。
-    /// 官方文档要求桌面分身运行在非家庭版系统上，家庭版无法创建独立 RDP 会话。
+    /// Windows 10/11 上属于家庭版的取值只有这四个，官方文档要求桌面分身运行在非家庭版系统上。
+    /// 注意不能依赖 ProductName：Windows 11 上它仍然写着「Windows 10 Home」。
     /// </summary>
     private static readonly HashSet<string> HomeEditionIds =
         new(StringComparer.OrdinalIgnoreCase)
@@ -40,11 +51,6 @@ internal static class ChildSessionEnvironmentCheck
             "CoreN",
             "CoreSingleLanguage",
             "CoreCountrySpecific",
-            "CoreConnected",
-            "CoreConnectedN",
-            "CoreConnectedSingleLanguage",
-            "CoreConnectedCountrySpecific",
-            "Starter",
         };
 
     /// <summary>问题的严重程度。</summary>
@@ -130,10 +136,21 @@ internal static class ChildSessionEnvironmentCheck
 
     private static void CollectRdpHostIssue(List<Issue> issues)
     {
+        // 组策略中的值会覆盖本机设置，因此优先读取组策略。
         var denyTsConnections = ReadInt(
             RegistryHive.LocalMachine,
-            TerminalServerRegistryPath,
+            TerminalServerPolicyRegistryPath,
             "fDenyTSConnections");
+        var source = "组策略";
+        if (denyTsConnections is null)
+        {
+            denyTsConnections = ReadInt(
+                RegistryHive.LocalMachine,
+                TerminalServerRegistryPath,
+                "fDenyTSConnections");
+            source = "本机设置";
+        }
+
         if (denyTsConnections != 1)
         {
             return;
@@ -142,8 +159,8 @@ internal static class ChildSessionEnvironmentCheck
         issues.Add(new Issue(
             Severity.Warning,
             "远程桌面主机已关闭",
-            "注册表 fDenyTSConnections = 1，本机 RDP 监听器不会启动，桌面分身可能无法建立会话。"
-            + Environment.NewLine
+            $"注册表 fDenyTSConnections = 1（{source}），本机 RDP 监听器不会启动，"
+            + "桌面分身可能无法建立会话。" + Environment.NewLine
             + "可以尝试在管理员权限下执行：" + Environment.NewLine
             + "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' "
             + "-Name fDenyTSConnections -Value 0 -Type DWord" + Environment.NewLine
