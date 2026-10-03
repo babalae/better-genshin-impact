@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -46,6 +48,7 @@ public sealed class ChildSessionService : IDisposable
     private bool _statusTickInProgress;
     private bool _disposed;
     private string? _lastOperationMessage;
+    private IReadOnlyList<ChildSessionEnvironmentCheck.Issue> _environmentIssues = [];
 
     public event EventHandler? StateChanged;
 
@@ -92,6 +95,18 @@ public sealed class ChildSessionService : IDisposable
         return ChildSessionNativeMethods.IsRdpWrapperEnabled();
     }
 
+    /// <summary>
+    /// 最近一次启动前环境预检中，是否存在已知会阻止会话建立的问题。
+    /// </summary>
+    public bool HasBlockingEnvironmentIssue =>
+        ChildSessionEnvironmentCheck.HasBlockingIssue(_environmentIssues);
+
+    /// <summary>
+    /// 最近一次启动前环境预检的结论文本，供界面提示与问题排查使用。
+    /// </summary>
+    public string EnvironmentIssueSummary =>
+        ChildSessionEnvironmentCheck.BuildSummary(_environmentIssues);
+
     public bool HasActiveChildSession()
     {
         if (!_instanceService.Context.IsRoot)
@@ -126,6 +141,7 @@ public sealed class ChildSessionService : IDisposable
     public async Task StartAsync()
     {
         ThrowIfDisposed();
+        RefreshEnvironmentCheck();
         EnsureChildSessionsEnabled();
         RefreshState();
 
@@ -542,6 +558,29 @@ public sealed class ChildSessionService : IDisposable
         return childSessionId.Value;
     }
 
+    /// <summary>
+    /// 收集 Windows 环境结论，供界面在启动前提示用户，也供失败诊断使用。
+    /// 这些检查全部是只读的，不会修改系统设置。
+    /// </summary>
+    public void RefreshEnvironmentCheck()
+    {
+        ThrowIfDisposed();
+        _environmentIssues = ChildSessionEnvironmentCheck.Collect();
+
+        foreach (var issue in _environmentIssues)
+        {
+            var message = $"桌面分身环境预检：{issue.Title}。{issue.Message}";
+            if (issue.Severity == ChildSessionEnvironmentCheck.Severity.Blocking)
+            {
+                _logger.LogWarning("{Message}", message);
+            }
+            else
+            {
+                _logger.LogInformation("{Message}", message);
+            }
+        }
+    }
+
     private void EnsureChildSessionsEnabled()
     {
         if (!ChildSessionNativeMethods.IsChildSessionsEnabled())
@@ -790,20 +829,48 @@ public sealed class ChildSessionService : IDisposable
     {
         var timeoutMessage =
             $"桌面分身连接及登录初始化未能在 {ConnectionTimeout.TotalSeconds:0} 秒内完成。";
+        var diagnosis = BuildFailureDiagnosis();
         var lastDiagnostic =
             _desktopWindow?.RdpHost.LastConnectionDiagnostic
             ?? _lastConnectionFailure;
         if (lastDiagnostic is null)
         {
             return new ChildSessionConnectionFailedEventArgs(
-                $"{timeoutMessage}\n\nRDP ActiveX 未报告更具体的失败原因。",
+                $"{timeoutMessage}\n\nRDP ActiveX 未报告更具体的失败原因。{diagnosis}",
                 ErrorTimeout);
         }
 
         return new ChildSessionConnectionFailedEventArgs(
-            $"{timeoutMessage}\n\nRDP ActiveX 最后报告：\n{lastDiagnostic.Message}",
+            $"{timeoutMessage}\n\nRDP ActiveX 最后报告：\n{lastDiagnostic.Message}{diagnosis}",
             lastDiagnostic.ErrorCode,
             lastDiagnostic.ExtendedErrorCode);
+    }
+
+    /// <summary>
+    /// 连接失败后的补充诊断：区分「系统没有建立会话」和「账号或密码被拒绝」，
+    /// 并附上启动前的环境预检结论。RDP ActiveX 自身只回报「发生内部错误」和断开原因，
+    /// 单独看这些信息无法定位问题。
+    /// </summary>
+    private string BuildFailureDiagnosis()
+    {
+        var builder = new StringBuilder();
+
+        if (ChildSessionNativeMethods.TryGetChildSessionId() is null)
+        {
+            builder.AppendLine().AppendLine();
+            builder.Append(
+                "诊断：Windows 自始至终没有建立桌面分身会话"
+                + "（WTSGetChildSessionId 返回 ERROR_NOT_FOUND）。"
+                + "这通常说明系统无法创建 RDP 会话，而不是账号或密码错误。");
+        }
+
+        if (_environmentIssues.Count > 0)
+        {
+            builder.AppendLine().AppendLine();
+            builder.Append(ChildSessionEnvironmentCheck.BuildSummary(_environmentIssues));
+        }
+
+        return builder.ToString();
     }
 
     private void TryDisconnectRdpHost()

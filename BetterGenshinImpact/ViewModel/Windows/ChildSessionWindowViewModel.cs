@@ -229,6 +229,24 @@ public partial class ChildSessionWindowViewModel : ViewModel
             }
         }
 
+        if (_childSessionService.ConnectedState != 1)
+        {
+            _childSessionService.RefreshEnvironmentCheck();
+            if (_childSessionService.HasBlockingEnvironmentIssue)
+            {
+                var result = await ThemedMessageBox.WarningAsync(
+                    _childSessionService.EnvironmentIssueSummary
+                    + "\n\n在这些条件下桌面分身通常无法建立会话。是否仍要继续？",
+                    "桌面分身环境检查",
+                    MessageBoxButton.YesNo,
+                    MessageBoxResult.No);
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+        }
+
         _startRequested = true;
         IsConnectionPromptVisible = false;
 
