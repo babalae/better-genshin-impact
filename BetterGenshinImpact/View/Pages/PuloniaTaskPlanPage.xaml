@@ -864,7 +864,7 @@
                          Margin="12,0,0,0"
                          IsIndeterminate="True">
                 <ProgressBar.Style>
-                    <Style TargetType="ProgressBar">
+                    <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
                         <Setter Property="Visibility" Value="Collapsed" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding ViewModel.IsBusy}" Value="True">

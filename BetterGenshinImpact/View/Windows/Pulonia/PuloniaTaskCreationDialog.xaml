@@ -29,7 +29,7 @@
                            TextWrapping="Wrap" />
                 <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                     <TextBox.Style>
-                        <Style TargetType="TextBox">
+                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsTextEditor}" Value="True">
@@ -46,7 +46,7 @@
                          Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          VerticalScrollBarVisibility="Auto">
                     <TextBox.Style>
-                        <Style TargetType="TextBox">
+                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsJsonEditor}" Value="True">
@@ -59,7 +59,7 @@
                 <ComboBox ItemsSource="{Binding Choices}"
                           SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
                     <ComboBox.Style>
-                        <Style TargetType="ComboBox">
+                        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsChoiceEditor}" Value="True">
@@ -73,7 +73,7 @@
                                  OnContent="已开启"
                                  OffContent="已关闭">
                     <ui:ToggleSwitch.Style>
-                        <Style TargetType="ui:ToggleSwitch">
+                        <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsBooleanEditor}" Value="True">
@@ -131,7 +131,7 @@
                                   ItemsSource="{Binding AvailableDefinitions}"
                                   SelectedItem="{Binding SelectedDefinition, Mode=TwoWay}">
                             <ComboBox.Style>
-                                <Style TargetType="ComboBox">
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsBuiltinPicker}" Value="True">
@@ -382,7 +382,7 @@
                                  Margin="0,6,18,0"
                                  IsIndeterminate="True">
                         <ProgressBar.Style>
-                            <Style TargetType="ProgressBar">
+                            <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsBusy}" Value="True">
