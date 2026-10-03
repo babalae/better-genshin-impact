@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -15,12 +16,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 public static class PuloniaTaskResourcePreviewLoader
 {
     /// <summary>
-    /// JS README 预览最多读取的字符数。
-    /// </summary>
-    private const int MaxReadmePreviewCharacters = 16000;
-
-    /// <summary>
-    /// 加载一项资源的轻量详情；JS 额外读取清单和有限 README。
+    /// 加载一项资源的轻量详情；JS 只解析清单与设置定义，README 交给原生控件读取。
     /// </summary>
     public static async Task<PuloniaTaskResourcePreview> LoadAsync(PuloniaTaskResourceDescriptor resource,
         string? taskType, CancellationToken ct = default)
@@ -35,45 +31,23 @@ public static class PuloniaTaskResourcePreviewLoader
 
         var manifestPath = Path.Combine(resource.FullPath, "manifest.json");
         var manifest = Manifest.FromJson(await File.ReadAllTextAsync(manifestPath, ct).ConfigureAwait(false));
-        var authors = manifest.Authors.Count == 0
-            ? "未注明"
-            : string.Join("、", manifest.Authors.Select(author => author.Name));
-        var builder = new StringBuilder();
-        builder.AppendLine($"名称：{manifest.Name}");
-        builder.AppendLine($"版本：{manifest.Version}");
-        builder.AppendLine($"作者：{authors}");
-        builder.AppendLine(header);
-        if (!string.IsNullOrWhiteSpace(manifest.Description))
+        IReadOnlyList<SettingItem> settingItems = [];
+        string? settingsError = null;
+        try
         {
-            builder.AppendLine();
-            builder.AppendLine(manifest.Description.Trim());
+            ct.ThrowIfCancellationRequested();
+            settingItems = manifest.LoadSettingItems(resource.FullPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
+                                   or NotSupportedException)
+        {
+            settingsError = "无法解析脚本设置：" + ex.Message;
         }
 
         var readmePath = Path.Combine(resource.FullPath, "README.md");
-        if (File.Exists(readmePath))
-        {
-            builder.AppendLine();
-            builder.AppendLine("README.md");
-            builder.AppendLine("──────────");
-            builder.Append(await ReadTextPreviewAsync(readmePath, MaxReadmePreviewCharacters, ct)
-                .ConfigureAwait(false));
-        }
-        return new PuloniaTaskResourcePreview(builder.ToString().TrimEnd(), manifest.Name);
-    }
-
-    /// <summary>
-    /// 有限读取文本预览，避免超大 README 长期占用界面内存。
-    /// </summary>
-    private static async Task<string> ReadTextPreviewAsync(string path, int maxCharacters, CancellationToken ct)
-    {
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
-            bufferSize: 4096, useAsync: true);
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        var buffer = new char[maxCharacters + 1];
-        var read = await reader.ReadBlockAsync(buffer.AsMemory(0, buffer.Length), ct).ConfigureAwait(false);
-        return read > maxCharacters
-            ? new string(buffer, 0, maxCharacters) + "\n\n……README 预览已截断"
-            : new string(buffer, 0, read);
+        var markdownFilePath = File.Exists(readmePath) ? readmePath : null;
+        var text = markdownFilePath is null ? "该脚本未提供 README.md。" : string.Empty;
+        return new PuloniaTaskResourcePreview(text, manifest.Name, markdownFilePath, settingItems, settingsError);
     }
 
     /// <summary>

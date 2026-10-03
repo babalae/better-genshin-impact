@@ -55,6 +55,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private bool _isTaskNameCustomized;
 
     /// <summary>
+    /// 当前 JS 项目声明的设置文件是否解析失败；失败时不能静默创建缺少设置的任务。
+    /// </summary>
+    private bool _javaScriptSettingsLoadFailed;
+
+    /// <summary>
     /// 用户可选择的能力定义；非内置入口通常只有一项。
     /// </summary>
     public IReadOnlyList<PuloniaTaskDefinition> AvailableDefinitions { get; }
@@ -73,6 +78,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// 当前能力的参数编辑字段。
     /// </summary>
     public ObservableCollection<PuloniaTaskParameterFieldViewModel> ParameterFields { get; } = [];
+
+    /// <summary>
+    /// 当前 JS 项目从 manifest.settings_ui 解析出的自定义设置字段。
+    /// </summary>
+    public ObservableCollection<PuloniaJsScriptSettingFieldViewModel> JavaScriptSettingFields { get; } = [];
 
     /// <summary>
     /// 用户确认后的创建结果；取消或校验失败时为空。
@@ -111,7 +121,42 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// <summary>
     /// 当前能力是否声明了可编辑参数。
     /// </summary>
-    public bool HasParameters => ParameterFields.Count > 0;
+    public bool HasParameters => ParameterFields.Count > 0 || JavaScriptSettingFields.Count > 0;
+
+    /// <summary>
+    /// 当前能力是否使用地图追踪树形资源选择器。
+    /// </summary>
+    public bool IsPathingResourceSelector => SelectedDefinition?.TaskType == "pathing";
+
+    /// <summary>
+    /// 当前能力是否为 JS 脚本。
+    /// </summary>
+    public bool IsJavaScriptTask => SelectedDefinition?.TaskType == "javascript";
+
+    /// <summary>
+    /// 当前 JS 项目是否声明了可展示的自定义设置项。
+    /// </summary>
+    public bool HasJavaScriptSettings => JavaScriptSettingFields.Count > 0;
+
+    /// <summary>
+    /// 当前资源详情区标题；JS 详情只展示 README.md。
+    /// </summary>
+    public string ResourcePreviewTitle => IsJavaScriptTask ? "README.md" : "资源详情";
+
+    /// <summary>
+    /// 当前资源是否可以使用原生 Markdown 控件展示 README.md。
+    /// </summary>
+    public bool ShowMarkdownPreview => IsJavaScriptTask && !string.IsNullOrWhiteSpace(ReadmeFilePath);
+
+    /// <summary>
+    /// 当前资源是否使用普通文本详情或 README 空状态。
+    /// </summary>
+    public bool ShowTextResourcePreview => !ShowMarkdownPreview;
+
+    /// <summary>
+    /// 资源索引或当前选中资源详情是否仍在加载。
+    /// </summary>
+    public bool IsLoading => IsBusy || IsResourceDetailsLoading;
 
     /// <summary>
     /// 当前能力说明。
@@ -165,6 +210,18 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private ObservableCollection<PuloniaTaskResourceDescriptor> _filteredResources = [];
 
     /// <summary>
+    /// 过滤后展示的地图追踪目录树。
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<PuloniaTaskResourceTreeNodeViewModel> _filteredResourceTree = [];
+
+    /// <summary>
+    /// 地图追踪目录树中当前选中的节点。
+    /// </summary>
+    [ObservableProperty]
+    private PuloniaTaskResourceTreeNodeViewModel? _selectedResourceTreeNode;
+
+    /// <summary>
     /// 当前选中的资源。
     /// </summary>
     [ObservableProperty]
@@ -177,6 +234,18 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private string _resourcePreview = "请选择一项资源查看详情。";
 
     /// <summary>
+    /// 当前 JS 项目的 README.md 完整路径。
+    /// </summary>
+    [ObservableProperty]
+    private string? _readmeFilePath;
+
+    /// <summary>
+    /// 当前 JS 项目自定义设置的加载状态或空状态说明。
+    /// </summary>
+    [ObservableProperty]
+    private string _javaScriptSettingsMessage = "请选择一个 JS 项目。";
+
+    /// <summary>
     /// 弹窗底部的加载或校验状态。
     /// </summary>
     [ObservableProperty]
@@ -187,6 +256,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     [ObservableProperty]
     private bool _isBusy;
+
+    /// <summary>
+    /// 是否正在读取当前资源的 README、清单和脚本设置定义。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isResourceDetailsLoading;
 
     /// <summary>
     /// 当前选择的目录添加方式。
@@ -277,6 +352,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     partial void OnSelectedDefinitionChanged(PuloniaTaskDefinition? value)
     {
         ParameterFields.Clear();
+        JavaScriptSettingFields.Clear();
+        ReadmeFilePath = null;
         if (value is not null)
         {
             var properties = value.ParameterSchema["properties"] as JObject ?? new JObject();
@@ -287,6 +364,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 if (property.Value is not JObject fieldSchema)
                     continue;
+                // JS 的 settings 对象由所选项目自己的 settings_ui 表单生成，不显示通用 JSON 编辑框。
+                if (value.TaskType == "javascript" && property.Name == "settings")
+                    continue;
                 var defaultProperty = value.DefaultParameters.Property(property.Name);
                 ParameterFields.Add(new PuloniaTaskParameterFieldViewModel(property.Name, fieldSchema,
                     defaultProperty?.Value, defaultProperty is not null, required.Contains(property.Name)));
@@ -295,6 +375,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         }
         OnPropertyChanged(nameof(RequiresResource));
         OnPropertyChanged(nameof(HasParameters));
+        OnPropertyChanged(nameof(IsPathingResourceSelector));
+        OnPropertyChanged(nameof(IsJavaScriptTask));
+        OnPropertyChanged(nameof(HasJavaScriptSettings));
+        OnPropertyChanged(nameof(ResourcePreviewTitle));
+        OnPropertyChanged(nameof(ShowMarkdownPreview));
+        OnPropertyChanged(nameof(ShowTextResourcePreview));
         OnPropertyChanged(nameof(DefinitionDescription));
         OnPropertyChanged(nameof(ResourceSearchPlaceholder));
     }
@@ -326,14 +412,51 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     {
         OnPropertyChanged(nameof(IsDirectoryImport));
         var generation = ++_previewGeneration;
+        ReadmeFilePath = null;
+        JavaScriptSettingFields.Clear();
+        _javaScriptSettingsLoadFailed = false;
+        JavaScriptSettingsMessage = IsJavaScriptTask ? "正在读取脚本设置…" : string.Empty;
+        OnPropertyChanged(nameof(HasParameters));
+        OnPropertyChanged(nameof(HasJavaScriptSettings));
         if (value is null)
         {
+            IsResourceDetailsLoading = false;
             ResourcePreview = _allResources.Count == 0 ? "没有可预览的资源。" : "请选择一项资源查看详情。";
+            if (IsJavaScriptTask)
+                JavaScriptSettingsMessage = "请选择一个 JS 项目。";
             return;
         }
 
         SetSuggestedName(value.DisplayName);
         _ = LoadResourcePreviewAsync(value, generation);
+    }
+
+    /// <summary>
+    /// 树中选择变化后同步当前资源，后续预览和创建逻辑仍只处理统一资源描述。
+    /// </summary>
+    partial void OnSelectedResourceTreeNodeChanged(PuloniaTaskResourceTreeNodeViewModel? value)
+    {
+        if (IsPathingResourceSelector)
+            SelectedResource = value?.Resource;
+    }
+
+    /// <summary>
+    /// 资源索引加载状态变化后刷新统一加载状态。
+    /// </summary>
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsLoading));
+
+    /// <summary>
+    /// 资源详情加载状态变化后刷新统一加载状态。
+    /// </summary>
+    partial void OnIsResourceDetailsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsLoading));
+
+    /// <summary>
+    /// README 文件变化后切换原生 Markdown 预览和普通文本空状态。
+    /// </summary>
+    partial void OnReadmeFilePathChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowMarkdownPreview));
+        OnPropertyChanged(nameof(ShowTextResourcePreview));
     }
 
     /// <summary>
@@ -349,7 +472,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private async Task ConfirmAsync()
     {
         Result = null;
-        if (IsBusy)
+        if (IsLoading)
         {
             StatusMessage = "资源仍在加载，请稍候。";
             return;
@@ -368,6 +491,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         if (RequiresResource && SelectedResource is null)
         {
             StatusMessage = "请先选择要执行的资源。";
+            return;
+        }
+        if (SelectedDefinition.TaskType == "javascript" && _javaScriptSettingsLoadFailed)
+        {
+            StatusMessage = "脚本设置文件解析失败，请修复脚本配置或选择其他脚本。";
             return;
         }
         if (SelectedResource is { } resource
@@ -391,6 +519,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 var value = field.BuildValue();
                 if (field.ShouldPersist(value))
                     overrides[field.Name] = value;
+            }
+            if (SelectedDefinition.TaskType == "javascript")
+            {
+                var scriptSettings = BuildJavaScriptSettings();
+                if (scriptSettings.Count > 0)
+                    overrides["settings"] = scriptSettings;
             }
 
             var effectiveParameters = (JObject)SelectedDefinition.DefaultParameters.DeepClone();
@@ -446,6 +580,20 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private void ApplyResourceFilter()
     {
         var keyword = SearchText.Trim();
+        if (IsPathingResourceSelector)
+        {
+            var selectedRelativePath = SelectedResource?.RelativePath;
+            FilteredResources = [];
+            FilteredResourceTree = BuildPathingResourceTree(keyword);
+            var selectedNode = FindTreeNode(FilteredResourceTree, selectedRelativePath);
+            SelectedResourceTreeNode = selectedNode;
+            if (selectedNode is null)
+                SelectedResource = null;
+            return;
+        }
+
+        SelectedResourceTreeNode = null;
+        FilteredResourceTree = [];
         var matches = string.IsNullOrWhiteSpace(keyword)
             ? _allResources
             : _allResources.Where(resource => resource.SearchText.Contains(keyword,
@@ -477,10 +625,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     }
 
     /// <summary>
-    /// 加载当前选择的轻量详情；JS 额外按需读取清单和有限 README 预览。
+    /// 加载当前选择的轻量详情；JS 只读取清单、设置定义和 README 路径。
     /// </summary>
     private async Task LoadResourcePreviewAsync(PuloniaTaskResourceDescriptor resource, int generation)
     {
+        IsResourceDetailsLoading = true;
         ResourcePreview = "正在读取资源详情…";
         var taskType = SelectedDefinition?.TaskType;
         try
@@ -489,14 +638,149 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             if (generation != _previewGeneration)
                 return;
             ResourcePreview = preview.Text;
+            ReadmeFilePath = preview.MarkdownFilePath;
+            foreach (var item in preview.JavaScriptSettingItems)
+                JavaScriptSettingFields.Add(new PuloniaJsScriptSettingFieldViewModel(item));
+            JavaScriptSettingsMessage = preview.JavaScriptSettingsError
+                                        ?? (JavaScriptSettingFields.Count == 0
+                                            ? "此脚本未提供自定义设置。"
+                                            : string.Empty);
+            _javaScriptSettingsLoadFailed = !string.IsNullOrWhiteSpace(preview.JavaScriptSettingsError);
+            OnPropertyChanged(nameof(HasParameters));
+            OnPropertyChanged(nameof(HasJavaScriptSettings));
             if (!string.IsNullOrWhiteSpace(preview.SuggestedName))
                 SetSuggestedName(preview.SuggestedName);
         }
         catch (Exception ex)
         {
             if (generation == _previewGeneration)
+            {
                 ResourcePreview = "无法读取资源详情：" + ex.Message;
+                JavaScriptSettingsMessage = IsJavaScriptTask ? "无法读取脚本设置。" : string.Empty;
+                _javaScriptSettingsLoadFailed = IsJavaScriptTask;
+            }
         }
+        finally
+        {
+            if (generation == _previewGeneration)
+                IsResourceDetailsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 将脚本专用表单汇总为执行器读取的 settings JSON 对象。
+    /// </summary>
+    private JObject BuildJavaScriptSettings()
+    {
+        var settings = new JObject();
+        foreach (var field in JavaScriptSettingFields)
+        {
+            if (!field.IsSupported)
+                throw new FormatException($"脚本设置“{field.Label}”使用了不支持的类型：{field.Type}。");
+            var value = field.BuildValue();
+            if (value is not null)
+                settings[field.Name] = value;
+        }
+        return settings;
+    }
+
+    /// <summary>
+    /// 从轻量资源索引建立地图追踪目录树，并在搜索时保留命中项的祖先链。
+    /// </summary>
+    private ObservableCollection<PuloniaTaskResourceTreeNodeViewModel> BuildPathingResourceTree(string keyword)
+    {
+        var childrenByParent = new Dictionary<string, List<PuloniaTaskResourceDescriptor>>(
+            StringComparer.OrdinalIgnoreCase);
+        var roots = new List<PuloniaTaskResourceDescriptor>();
+        foreach (var resource in _allResources)
+        {
+            if (resource.IsRootDirectory)
+            {
+                roots.Add(resource);
+                continue;
+            }
+
+            var normalizedPath = NormalizeRelativePath(resource.RelativePath);
+            var separatorIndex = normalizedPath.LastIndexOf('/');
+            var parentPath = separatorIndex < 0 ? "." : normalizedPath[..separatorIndex];
+            if (!childrenByParent.TryGetValue(parentPath, out var children))
+            {
+                children = [];
+                childrenByParent[parentPath] = children;
+            }
+            children.Add(resource);
+        }
+
+        var result = new ObservableCollection<PuloniaTaskResourceTreeNodeViewModel>();
+        foreach (var root in roots)
+        {
+            var node = BuildFilteredTreeNode(root, childrenByParent, keyword, includeCompleteSubtree: false);
+            if (node is not null)
+                result.Add(node);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 递归建立一个筛选后的树节点；目录自身命中时展示其完整子树。
+    /// </summary>
+    private static PuloniaTaskResourceTreeNodeViewModel? BuildFilteredTreeNode(
+        PuloniaTaskResourceDescriptor resource,
+        IReadOnlyDictionary<string, List<PuloniaTaskResourceDescriptor>> childrenByParent,
+        string keyword, bool includeCompleteSubtree)
+    {
+        var currentMatches = string.IsNullOrWhiteSpace(keyword)
+                             || resource.SearchText.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var includeAllChildren = includeCompleteSubtree || currentMatches;
+        var childNodes = new List<PuloniaTaskResourceTreeNodeViewModel>();
+        var relativePath = NormalizeRelativePath(resource.RelativePath);
+        if (childrenByParent.TryGetValue(relativePath, out var children))
+        {
+            foreach (var child in children.OrderByDescending(item => item.IsDirectory)
+                         .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+            {
+                var childNode = BuildFilteredTreeNode(child, childrenByParent, keyword, includeAllChildren);
+                if (childNode is not null)
+                    childNodes.Add(childNode);
+            }
+        }
+
+        if (!includeCompleteSubtree && !currentMatches && childNodes.Count == 0)
+            return null;
+        var node = new PuloniaTaskResourceTreeNodeViewModel(resource,
+            resource.IsRootDirectory || !string.IsNullOrWhiteSpace(keyword));
+        foreach (var childNode in childNodes)
+            node.Children.Add(childNode);
+        return node;
+    }
+
+    /// <summary>
+    /// 在当前筛选树中按相对路径恢复选择。
+    /// </summary>
+    private static PuloniaTaskResourceTreeNodeViewModel? FindTreeNode(
+        IEnumerable<PuloniaTaskResourceTreeNodeViewModel> nodes, string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return null;
+        foreach (var node in nodes)
+        {
+            if (string.Equals(node.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase))
+                return node;
+            var child = FindTreeNode(node.Children, relativePath);
+            if (child is not null)
+                return child;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 将资源相对路径统一为树索引使用的正斜杠形式。
+    /// </summary>
+    private static string NormalizeRelativePath(string path)
+    {
+        if (path == ".")
+            return path;
+        return path.Replace('\\', '/').Trim('/');
     }
 
     /// <summary>

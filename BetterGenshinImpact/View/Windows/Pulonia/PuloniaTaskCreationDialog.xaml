@@ -3,13 +3,17 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+                 xmlns:markdown="clr-namespace:BetterGenshinImpact.View.Controls.Markdown"
                  xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Pulonia"
                  Title="{Binding WindowTitle}"
-                 Width="880"
-                 Height="680"
-                 MinWidth="720"
-                 MinHeight="560"
+                 Width="1000"
+                 Height="740"
+                 MinWidth="800"
+                 MinHeight="620"
                  WindowStartupLocation="CenterOwner"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
@@ -83,6 +87,118 @@
                         </Style>
                     </ui:ToggleSwitch.Style>
                 </ui:ToggleSwitch>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- JS 自定义设置沿用现有 settings_ui 支持的六类字段，不回退到原始 JSON 输入。 -->
+        <DataTemplate x:Key="JavaScriptSettingFieldTemplate"
+                      DataType="{x:Type pulonia:PuloniaJsScriptSettingFieldViewModel}">
+            <StackPanel Margin="0,0,0,12">
+                <TextBlock Margin="0,0,0,5"
+                           FontWeight="SemiBold"
+                           Text="{Binding Label}"
+                           TextWrapping="Wrap" />
+                <Separator>
+                    <Separator.Style>
+                        <Style TargetType="Separator">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Separator.Style>
+                </Separator>
+                <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTextInput}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <ComboBox ItemsSource="{Binding Options}"
+                          SelectedItem="{Binding SelectedValue, Mode=TwoWay}">
+                    <ComboBox.Style>
+                        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSelect}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ComboBox.Style>
+                </ComboBox>
+                <ui:ToggleSwitch IsChecked="{Binding BooleanValue, Mode=TwoWay}"
+                                 OnContent="已开启"
+                                 OffContent="已关闭">
+                    <ui:ToggleSwitch.Style>
+                        <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCheckbox}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:ToggleSwitch.Style>
+                </ui:ToggleSwitch>
+                <ItemsControl ItemsSource="{Binding MultiOptions}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMultiCheckbox}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Margin="0,0,14,7"
+                                      Content="{Binding Value}"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <controls:CascadeSelector CascadeOptions="{Binding CascadeOptions}"
+                                          SelectedValue="{Binding SelectedValue, Mode=TwoWay}">
+                    <controls:CascadeSelector.Style>
+                        <Style TargetType="controls:CascadeSelector">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCascadeSelect}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </controls:CascadeSelector.Style>
+                </controls:CascadeSelector>
+                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           Text="{Binding Type, StringFormat=不支持的脚本设置类型：{0}}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSupported}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </DataTemplate>
     </ui:FluentWindow.Resources>
@@ -196,37 +312,115 @@
                             <ui:Button Command="{Binding RefreshResourcesCommand}"
                                        Content="刷新" />
                         </StackPanel>
-                        <ListBox Grid.Row="2"
-                                 Margin="0,8,0,0"
-                                 Padding="0"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 ItemsSource="{Binding FilteredResources}"
-                                 SelectedItem="{Binding SelectedResource, Mode=TwoWay}"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 VirtualizingPanel.IsVirtualizing="True"
-                                 VirtualizingPanel.VirtualizationMode="Recycling">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid MinHeight="48" Margin="4">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <TextBlock FontWeight="SemiBold"
-                                                   Text="{Binding DisplayName}"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Grid.Row="1"
-                                                   Margin="0,3,0,0"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   Text="{Binding RelativePath}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   ToolTip="{Binding RelativePath}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <Grid Grid.Row="2" Margin="0,8,0,0">
+                            <!-- 地图追踪保留 d-v3 易理解的目录层级，同时用 Behavior 维持 MVVM 选中状态。 -->
+                            <TreeView Padding="0"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      ItemsSource="{Binding FilteredResourceTree}"
+                                      ScrollViewer.CanContentScroll="True"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling">
+                                <TreeView.Style>
+                                    <Style TargetType="TreeView">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPathingResourceSelector}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TreeView.Style>
+                                <i:Interaction.Behaviors>
+                                    <behavior:TreeViewSelectedItemBehavior SelectedItem="{Binding SelectedResourceTreeNode, Mode=TwoWay}" />
+                                </i:Interaction.Behaviors>
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                        <Setter Property="ToolTip" Value="{Binding RelativePath}" />
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                        <Grid MinHeight="30" Margin="2,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:SymbolIcon Margin="0,0,7,0" Symbol="Folder24">
+                                                <ui:SymbolIcon.Style>
+                                                    <Style TargetType="ui:SymbolIcon">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:SymbolIcon.Style>
+                                            </ui:SymbolIcon>
+                                            <ui:SymbolIcon Margin="0,0,7,0" Symbol="Document24">
+                                                <ui:SymbolIcon.Style>
+                                                    <Style TargetType="ui:SymbolIcon">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:SymbolIcon.Style>
+                                            </ui:SymbolIcon>
+                                            <TextBlock Grid.Column="1"
+                                                       VerticalAlignment="Center"
+                                                       Text="{Binding DisplayName}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Grid>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+
+                            <ListBox Padding="0"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ItemsSource="{Binding FilteredResources}"
+                                     SelectedItem="{Binding SelectedResource, Mode=TwoWay}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                <ListBox.Style>
+                                    <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPathingResourceSelector}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListBox.Style>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid MinHeight="48" Margin="4">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock FontWeight="SemiBold"
+                                                       Text="{Binding DisplayName}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Row="1"
+                                                       Margin="0,3,0,0"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       Text="{Binding RelativePath}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding RelativePath}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
                     </Grid>
                 </Border>
 
@@ -248,7 +442,7 @@
                             </Grid.RowDefinitions>
                             <TextBlock Margin="0,0,0,8"
                                        FontWeight="SemiBold"
-                                       Text="资源详情" />
+                                       Text="{Binding ResourcePreviewTitle}" />
                             <TextBox Grid.Row="1"
                                      Padding="0"
                                      AcceptsReturn="True"
@@ -256,9 +450,36 @@
                                      BorderThickness="0"
                                      FontFamily="Consolas"
                                      IsReadOnly="True"
-                                     Text="{Binding ResourcePreview}"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto" />
+                                      Text="{Binding ResourcePreview}"
+                                      TextWrapping="Wrap"
+                                      VerticalScrollBarVisibility="Auto">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowTextResourcePreview}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                            <markdown:MarkdownView Grid.Row="1"
+                                                   Background="Transparent"
+                                                   FilePath="{Binding ReadmeFilePath}"
+                                                   LinkNavigationMode="SystemDefault"
+                                                   PresentationDelay="0:0:0.15">
+                                <markdown:MarkdownView.Style>
+                                    <Style TargetType="markdown:MarkdownView">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowMarkdownPreview}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </markdown:MarkdownView.Style>
+                            </markdown:MarkdownView>
                         </Grid>
                     </Border>
                     <Border Grid.Row="2"
@@ -302,6 +523,31 @@
                                                   IsChecked="{Binding IncludeSubdirectories, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Border>
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsJavaScriptTask}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Margin="0,0,0,8"
+                                               FontWeight="SemiBold"
+                                               Text="脚本自定义设置" />
+                                    <ItemsControl ItemsSource="{Binding JavaScriptSettingFields}"
+                                                  ItemTemplate="{StaticResource JavaScriptSettingFieldTemplate}" />
+                                    <TextBlock Margin="0,0,0,10"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding JavaScriptSettingsMessage}"
+                                               TextWrapping="Wrap" />
+                                    <Separator Margin="0,0,0,12" />
+                                    <TextBlock Margin="0,0,0,10"
+                                               FontWeight="SemiBold"
+                                               Text="通用运行选项" />
+                                </StackPanel>
                                 <ItemsControl ItemsSource="{Binding ParameterFields}"
                                               ItemTemplate="{StaticResource ParameterFieldTemplate}" />
                                 <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -387,7 +633,7 @@
                             <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                    <DataTrigger Binding="{Binding IsLoading}" Value="True">
                                         <Setter Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                 </Style.Triggers>
