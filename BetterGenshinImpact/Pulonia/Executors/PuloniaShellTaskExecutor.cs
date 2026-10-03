@@ -24,6 +24,8 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "shell",
+        DisplayName = "Shell",
+        Description = "启动一个独立进程；命令、参数和工作目录会在创建前完成校验。",
         DefaultParameters = new JObject
         {
             ["file_name"] = "cmd.exe",

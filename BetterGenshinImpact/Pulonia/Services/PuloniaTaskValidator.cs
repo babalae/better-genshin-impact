@@ -318,11 +318,18 @@ public static class PuloniaTaskValidator
         ValidatePolicy(task.Policy, location);
         if (task.PresetId is not null)
             ValidateId(task.PresetId, location + "/preset_id");
+        if (task.ResourceVersion is not null
+            && (task.TaskType is not ("javascript" or "pathing" or "keymouse")
+                || !Regex.IsMatch(task.ResourceVersion, "^[0-9a-f]{64}\\z")))
+            throw new PuloniaTaskValidationException(location,
+                "只有资源任务可以保存 64 位小写 SHA-256 资源版本。");
 
         if (task.TaskType == "group")
         {
-            if (task.Parameters.Count != 0 || task.PresetId is not null || task.Path is not null)
-                throw new PuloniaTaskValidationException(location, "分组使用 parameter_overrides 提供公共参数，不使用叶子参数、预设或 path。");
+            if (task.Parameters.Count != 0 || task.PresetId is not null || task.Path is not null
+                || task.ResourceVersion is not null)
+                throw new PuloniaTaskValidationException(location,
+                    "分组使用 parameter_overrides 提供公共参数，不使用叶子参数、预设、path 或资源版本。");
         }
         else if (task.ParameterOverrides.Count != 0)
             throw new PuloniaTaskValidationException(location, "公共参数只能配置在 group 节点。");
@@ -351,6 +358,8 @@ public static class PuloniaTaskValidator
             {
                 if (string.IsNullOrWhiteSpace(source.Path) || source.TaskType is not ("pathing" or "keymouse") || source.PlanId is not null)
                     throw new PuloniaTaskValidationException(location, "目录引用需指定 pathing/keymouse 类型和非空路径。");
+                if (source.Version is not null && !Regex.IsMatch(source.Version, "^[0-9a-f]{64}\\z"))
+                    throw new PuloniaTaskValidationException(location, "目录引用版本必须是 64 位小写 SHA-256。");
             }
             else
                 throw new PuloniaTaskValidationException(location, "来源 kind 与节点类型不匹配。");

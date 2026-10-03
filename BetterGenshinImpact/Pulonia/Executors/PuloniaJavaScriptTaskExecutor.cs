@@ -22,6 +22,8 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "javascript",
+        DisplayName = "JS 脚本",
+        Description = "选择已经安装的 JS 项目，并配置脚本设置与队伍选项。",
         RequiresGameSession = true,
         ResourceBaseDirectory = Global.ScriptPath(),
         DefaultParameters = new JObject

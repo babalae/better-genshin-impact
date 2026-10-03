@@ -20,6 +20,8 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "pathing",
+        DisplayName = "地图追踪",
+        Description = "选择本地路线文件，并配置队伍、自动拾取与自动战斗选项。",
         RequiresGameSession = true,
         ResourceBaseDirectory = MapPathingViewModel.PathJsonPath,
         DefaultParameters = new JObject

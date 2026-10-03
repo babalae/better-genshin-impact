@@ -18,6 +18,8 @@ public sealed class PuloniaKeyMouseTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "keymouse",
+        DisplayName = "录制回放",
+        Description = "选择本地键鼠录制文件，并配置是否按录制延时回放。",
         RequiresGameSession = true,
         ResourceBaseDirectory = Global.Absolute(@"User\KeyMouseScript"),
         DefaultParameters = new JObject { ["with_delay"] = false },

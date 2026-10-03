@@ -9,6 +9,16 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskDefinition
 {
     /// <summary>
+    /// 面向用户展示的能力名称。
+    /// </summary>
+    public string DisplayName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// 面向用户展示的能力用途说明。
+    /// </summary>
+    public string Description { get; init; } = string.Empty;
+
+    /// <summary>
     /// 此能力执行前是否必须准备游戏会话并独占任务输入。
     /// </summary>
     public bool RequiresGameSession { get; init; }

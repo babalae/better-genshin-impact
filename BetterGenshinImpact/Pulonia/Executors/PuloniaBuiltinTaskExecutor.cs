@@ -16,14 +16,16 @@ public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
     /// <inheritdoc />
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } =
     [
-        BuildEmptyDefinition("builtin.return_main_ui"),
-        BuildEmptyDefinition("builtin.claim_mail"),
-        BuildEmptyDefinition("builtin.claim_battle_pass"),
-        BuildEmptyDefinition("builtin.claim_encounter_points"),
-        BuildEmptyDefinition("builtin.serenitea_pot_rewards"),
+        BuildEmptyDefinition("builtin.return_main_ui", "返回主界面"),
+        BuildEmptyDefinition("builtin.claim_mail", "领取邮件"),
+        BuildEmptyDefinition("builtin.claim_battle_pass", "领取纪行"),
+        BuildEmptyDefinition("builtin.claim_encounter_points", "领取历练点"),
+        BuildEmptyDefinition("builtin.serenitea_pot_rewards", "领取尘歌壶奖励"),
         new PuloniaTaskDefinition
         {
             TaskType = "builtin.daily_rewards",
+            DisplayName = "领取每日奖励",
+            Description = "领取历练点奖励、冒险家协会每日委托奖励与纪行奖励。",
             RequiresGameSession = true,
             DefaultParameters = new JObject
             {
@@ -50,6 +52,8 @@ public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
         new PuloniaTaskDefinition
         {
             TaskType = "builtin.craft_condensed_resin",
+            DisplayName = "合成浓缩树脂",
+            Description = "前往所选国家的合成台并执行浓缩树脂合成流程。",
             RequiresGameSession = true,
             DefaultParameters = new JObject { ["country"] = "蒙德" },
             ParameterSchema = new JObject
@@ -123,9 +127,11 @@ public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
     /// <summary>
     /// 建立无参数、但仍需游戏会话和输入所有权的内置能力定义。
     /// </summary>
-    private static PuloniaTaskDefinition BuildEmptyDefinition(string taskType) => new()
+    private static PuloniaTaskDefinition BuildEmptyDefinition(string taskType, string displayName) => new()
     {
         TaskType = taskType,
+        DisplayName = displayName,
+        Description = $"执行内置任务“{displayName}”。",
         RequiresGameSession = true,
         DefaultParameters = new JObject(),
         ParameterSchema = new JObject

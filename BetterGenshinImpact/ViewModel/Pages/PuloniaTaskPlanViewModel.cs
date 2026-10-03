@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using System.Windows.Controls;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.View.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -40,6 +42,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 统一的任务提交、状态查询和取消服务。
     /// </summary>
     private readonly IPuloniaTaskService _taskService;
+
+    /// <summary>
+    /// 任务创建弹窗与任务库共用的轻量资源索引。
+    /// </summary>
+    private readonly PuloniaTaskResourceCatalog _resourceCatalog;
 
     /// <summary>
     /// 当前从存储加载的共享预设。
@@ -92,21 +99,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// <summary>
     /// 首版树编辑器允许直接新增的叶子任务类型。
     /// </summary>
-    public IReadOnlyList<PuloniaTaskTypeOption> TaskTypes { get; } =
-    [
-        new("builtin.return_main_ui", "返回主界面"),
-        new("builtin.claim_mail", "领取邮件"),
-        new("builtin.claim_battle_pass", "领取纪行"),
-        new("builtin.claim_encounter_points", "领取历练点"),
-        new("builtin.daily_rewards", "领取每日奖励"),
-        new("builtin.craft_condensed_resin", "合成浓缩树脂"),
-        new("builtin.serenitea_pot_rewards", "领取尘歌壶奖励"),
-        new("pathing", "地图追踪"),
-        new("javascript", "JS 脚本"),
-        new("keymouse", "录制回放"),
-        new("shell", "Shell"),
-        new("csharp", "进程内 C#")
-    ];
+    public IReadOnlyList<PuloniaTaskTypeOption> TaskTypes { get; }
 
     /// <summary>
     /// 剪贴板是否已有可粘贴子树。
@@ -122,11 +115,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 建立任务计划页面视图模型。
     /// </summary>
     public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
-        IPuloniaTaskService taskService)
+        IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog)
     {
         _store = store;
         _clipboard = clipboard;
         _taskService = taskService;
+        _resourceCatalog = resourceCatalog;
+        TaskTypes = taskService.Definitions
+            .Select(definition => new PuloniaTaskTypeOption(definition.TaskType,
+                string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.TaskType : definition.DisplayName))
+            .ToList();
         _taskService.RunChanged += OnRunChanged;
     }
 
@@ -300,8 +298,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
             return;
-        document.InsertNode(new PuloniaTask { Name = "新分组", TaskType = "group" }, parent, index);
-        StatusMessage = "已添加分组。";
+        var name = PromptDialog.Prompt("请先填写分组名称；取消不会创建占位节点。", "添加分组", "新分组").Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+        document.InsertNode(new PuloniaTask { Name = name, TaskType = "group" }, parent, index);
+        StatusMessage = $"已添加分组“{name}”。";
     }
 
     /// <summary>
@@ -309,19 +310,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     [RelayCommand]
     private void AddBuiltinTask(PuloniaTaskNodeViewModel? targetNode)
-    {
-        var builtinTypes = TaskTypes.Where(option => option.TaskType.StartsWith("builtin.", StringComparison.Ordinal)).ToList();
-        var selector = new ComboBox
-        {
-            DisplayMemberPath = nameof(PuloniaTaskTypeOption.DisplayName),
-            ItemsSource = builtinTypes,
-            SelectedIndex = 0,
-            MinWidth = 280
-        };
-        var dialog = new PromptDialog("选择要添加的内置任务。", "添加内置任务", selector, null);
-        if (dialog.ShowDialog() == true && selector.SelectedItem is PuloniaTaskTypeOption selectedType)
-            AddTask(targetNode, selectedType.TaskType);
-    }
+        => AddTask(targetNode, "builtin");
 
     /// <summary>
     /// 在指定节点位置新增地图追踪任务。
@@ -363,19 +352,108 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void AddTask(PuloniaTaskNodeViewModel? targetNode, string taskType)
     {
-        var selectedTaskType = TaskTypes.FirstOrDefault(option => option.TaskType == taskType);
-        if (selectedTaskType is null
+        if (targetNode is null)
+            return;
+        var creation = PuloniaTaskCreationDialog.Show(_taskService.Definitions, _resourceCatalog, taskType,
+            owner: Application.Current.MainWindow);
+        if (creation is null
             || !TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
             return;
-        var task = new PuloniaTask
-        {
-            Name = "新" + selectedTaskType.DisplayName,
-            TaskType = selectedTaskType.TaskType,
-            Path = selectedTaskType.TaskType is "pathing" or "javascript" or "keymouse" ? "未配置" : null
-        };
-        document.InsertNode(task, parent, index);
-        StatusMessage = $"已添加{selectedTaskType.DisplayName}节点。";
+        document.InsertNode(creation.Task, parent, index);
+        StatusMessage = $"已添加任务“{creation.Task.Name}”；资源与运行设置已在创建前确认。";
     }
+
+    /// <summary>
+    /// 把任务库已经确认的完整节点原子追加到指定计划根级。
+    /// </summary>
+    public void InsertCreatedTask(PuloniaTaskPlanDocumentViewModel document, PuloniaTask task)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(task);
+        if (!Documents.Contains(document))
+            throw new InvalidOperationException("目标计划不属于当前编辑会话。");
+        SelectedDocument = document;
+        document.InsertNode(task, document.RootNode, document.RootNode.Children.Count);
+        StatusMessage = $"已从任务库添加“{task.Name}”。";
+    }
+
+    /// <summary>
+    /// 重新读取资源并在用户确认后更新节点固定版本，资源变化不会静默影响运行。
+    /// </summary>
+    [RelayCommand]
+    private async Task UpdateResourceVersionAsync(PuloniaTaskNodeViewModel? node)
+    {
+        if (node is null || !node.CanUpdateResourceVersion)
+            return;
+        try
+        {
+            var model = node.Model;
+            string newVersion;
+            string? oldVersion;
+            if (model is { TaskType: "group", Source: { Kind: "directory" } source })
+            {
+                if (string.IsNullOrWhiteSpace(source.Path) || source.Path.Contains('{') || source.Path.Contains('}'))
+                    throw new InvalidOperationException("当前目录引用使用未解析路径变量，不能在编辑器中直接更新版本。");
+                var directory = Path.GetFullPath(source.Path);
+                var files = await _resourceCatalog.GetDirectoryFilesAsync(directory, "*.json", source.Recursive);
+                if (files.Count == 0)
+                    throw new InvalidOperationException("引用目录中已经没有可运行的 JSON 资源，不能更新为空版本。");
+                newVersion = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(directory, files);
+                oldVersion = source.Version;
+            }
+            else
+            {
+                var definition = _taskService.Definitions.FirstOrDefault(item => item.TaskType == model.TaskType)
+                                 ?? throw new InvalidOperationException($"没有注册任务类型 {model.TaskType}。");
+                if (string.IsNullOrWhiteSpace(model.Path) || string.IsNullOrWhiteSpace(definition.ResourceBaseDirectory))
+                    throw new InvalidOperationException("当前节点没有可解析的资源路径。");
+                var path = Path.GetFullPath(model.Path, Path.GetFullPath(definition.ResourceBaseDirectory));
+                if (model.TaskType == "javascript")
+                {
+                    var files = await _resourceCatalog.GetDirectoryFilesAsync(path, "*", recursive: true);
+                    newVersion = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(path, files);
+                }
+                else
+                {
+                    newVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(path);
+                }
+                oldVersion = model.ResourceVersion;
+            }
+
+            if (oldVersion == newVersion)
+            {
+                StatusMessage = $"“{node.Name}”的资源版本没有变化。";
+                return;
+            }
+            var result = await ThemedMessageBox.ShowAsync(
+                $"资源“{node.Name}”已经变化。\n\n原版本：{AbbreviateVersion(oldVersion)}\n新版本：{AbbreviateVersion(newVersion)}\n\n确认后只更新后续运行使用的固定版本，历史运行快照不变。",
+                "确认资源版本更新", MessageBoxButton.YesNo,
+                ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            node.Document.ApplyMutation(() =>
+            {
+                if (model.Source?.Kind == "directory")
+                    model.Source.Version = newVersion;
+                else
+                    model.ResourceVersion = newVersion;
+            }, node);
+            node.NotifyResourceVersionChanged();
+            StatusMessage = $"已更新“{node.Name}”的固定资源版本。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            StatusMessage = "更新资源版本失败：" + ex.Message;
+            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法更新资源版本");
+        }
+    }
+
+    /// <summary>
+    /// 缩短资源版本用于确认提示，完整值仍保存在计划 JSON 中。
+    /// </summary>
+    private static string AbbreviateVersion(string? version)
+        => string.IsNullOrWhiteSpace(version) ? "未固定" : version[..Math.Min(12, version.Length)] + "…";
 
     /// <summary>
     /// 新增对其他计划的引用节点，不复制目标计划内容。

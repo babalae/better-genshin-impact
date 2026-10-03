@@ -12,6 +12,11 @@ namespace BetterGenshinImpact.Pulonia.Services;
 public interface IPuloniaTaskService
 {
     /// <summary>
+    /// 当前进程已经注册的任务能力说明，供任务创建和参数编辑界面复用。
+    /// </summary>
+    IReadOnlyList<PuloniaTaskDefinition> Definitions { get; }
+
+    /// <summary>
     /// 任一运行状态变化后触发；订阅方应再读取不可变状态视图。
     /// </summary>
     event EventHandler<PuloniaTaskRunChangedEventArgs>? RunChanged;

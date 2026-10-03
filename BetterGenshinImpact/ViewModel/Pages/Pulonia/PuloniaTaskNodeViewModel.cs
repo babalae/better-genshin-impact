@@ -77,6 +77,26 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     };
 
     /// <summary>
+    /// 当前节点是否可以从磁盘重新确认并固定资源版本。
+    /// </summary>
+    public bool CanUpdateResourceVersion => _model.TaskType is "pathing" or "javascript" or "keymouse"
+                                            || _model is { TaskType: "group", Source.Kind: "directory" };
+
+    /// <summary>
+    /// 当前固定的资源版本摘要。
+    /// </summary>
+    public string ResourceVersionText
+    {
+        get
+        {
+            var version = _model.Source?.Kind == "directory"
+                ? _model.Source.Version
+                : _model.ResourceVersion;
+            return string.IsNullOrWhiteSpace(version) ? "未固定" : version;
+        }
+    }
+
+    /// <summary>
     /// 节点名称；失焦提交时作为一次可撤销编辑。
     /// </summary>
     public string Name
@@ -105,6 +125,15 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
             OnPropertyChanged();
             _document.RefreshSelectedEditor();
         }
+    }
+
+    /// <summary>
+    /// 资源版本更新后通知侧栏和命令状态重新读取。
+    /// </summary>
+    internal void NotifyResourceVersionChanged()
+    {
+        OnPropertyChanged(nameof(ResourceVersionText));
+        OnPropertyChanged(nameof(CanUpdateResourceVersion));
     }
 
     /// <summary>

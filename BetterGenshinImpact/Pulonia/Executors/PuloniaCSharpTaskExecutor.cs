@@ -20,6 +20,8 @@ public sealed class PuloniaCSharpTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "csharp",
+        DisplayName = "进程内 C#",
+        Description = "调用显式注册的进程内 C# 操作，不通过反射猜测方法。",
         DefaultParameters = new JObject
         {
             ["operation"] = "sample.sum",

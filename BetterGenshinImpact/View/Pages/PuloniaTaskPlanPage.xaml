@@ -282,6 +282,10 @@
                         <MenuItem Header="启用全部子任务"
                                   Command="{Binding EnableAllChildrenCommand}"
                                   IsEnabled="{Binding HasChildren}" />
+                        <MenuItem Header="确认并更新资源版本…"
+                                  Command="{Binding Data.ViewModel.UpdateResourceVersionCommand, Source={StaticResource PageBindingProxy}}"
+                                  CommandParameter="{Binding}"
+                                  IsEnabled="{Binding CanUpdateResourceVersion}" />
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Grid>
@@ -330,7 +334,7 @@
                 <TextBlock FontSize="26" FontWeight="SemiBold" Text="任务计划" />
                 <TextBlock Margin="0,4,0,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="编辑内容会自动保存；本阶段不会启动游戏或执行任务。" />
+                           Text="编辑内容会自动保存；右键任务树可添加并完整配置任务，运行页可执行当前计划。" />
             </StackPanel>
         </Grid>
 
@@ -571,6 +575,30 @@
                                     <TextBlock Margin="0,12,0,3" Text="资源定位" />
                                     <TextBox IsEnabled="{Binding ViewModel.SelectedDocument.CanEditPath}"
                                              Text="{Binding ViewModel.SelectedDocument.SelectedNode.Path, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                                    <Grid Margin="0,8,0,0"
+                                          Visibility="{Binding ViewModel.SelectedDocument.SelectedNode.CanUpdateResourceVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock FontWeight="SemiBold" Text="固定资源版本" />
+                                            <TextBlock Margin="0,2,8,0"
+                                                       FontFamily="Consolas"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       Text="{Binding ViewModel.SelectedDocument.SelectedNode.ResourceVersionText}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding ViewModel.SelectedDocument.SelectedNode.ResourceVersionText}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Padding="8,3"
+                                                VerticalAlignment="Center"
+                                                Command="{Binding ViewModel.UpdateResourceVersionCommand}"
+                                                CommandParameter="{Binding ViewModel.SelectedDocument.SelectedNode}"
+                                                Content="检查更新" />
+                                    </Grid>
 
                                     <Grid Margin="0,12,0,3">
                                         <Grid.ColumnDefinitions>

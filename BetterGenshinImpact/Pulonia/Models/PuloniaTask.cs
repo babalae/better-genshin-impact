@@ -35,6 +35,12 @@ public sealed class PuloniaTask
     public string? Path { get; set; }
 
     /// <summary>
+    /// 创建或显式更新时固定的资源内容指纹；资源发生变化时拒绝静默执行。
+    /// </summary>
+    [JsonProperty("resource_version")]
+    public string? ResourceVersion { get; set; }
+
+    /// <summary>
     /// 节点自身开关；关闭父组不修改子节点开关。
     /// </summary>
     [JsonProperty("is_enabled")]

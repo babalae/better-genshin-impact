@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -163,7 +162,7 @@ public sealed class PuloniaTaskBuilder
                             manifest.Append(relative).Append('\0').Append(prepared.ResourceVersion).Append('\n');
                     }
                 }
-                version = HashText(manifest.ToString());
+                version = PuloniaTaskResourceFingerprint.ComputeTextVersion(manifest.ToString());
                 if (directory.Version is not null && directory.Version != version)
                     throw new PuloniaTaskValidationException(address, "引用目录内容与固定版本不一致，请确认新内容后更新计划。");
             }
@@ -237,6 +236,9 @@ public sealed class PuloniaTaskBuilder
                 {
                     throw new PuloniaTaskValidationException(address, $"无法读取能力资源 {path}：{ex.Message}", ex);
                 }
+                if (task.ResourceVersion is not null && task.ResourceVersion != version)
+                    throw new PuloniaTaskValidationException(address,
+                        "资源内容与任务创建时固定的版本不一致，请在任务库中确认更新后再运行。");
             }
         }
 
@@ -391,7 +393,7 @@ public sealed class PuloniaTaskBuilder
             var hash = await HashFileAsync(context, file, address).ConfigureAwait(false);
             manifest.Append(NormalizeRelativePath(path, file)).Append('\0').Append(hash).Append('\n');
         }
-        return HashText(manifest.ToString());
+        return PuloniaTaskResourceFingerprint.ComputeTextVersion(manifest.ToString());
     }
 
     /// <summary>
@@ -404,9 +406,8 @@ public sealed class PuloniaTaskBuilder
             return cached;
         if (context.ResourceHashes.Count >= context.Options.MaxNodes)
             throw new PuloniaTaskValidationException(address, "本次资源文件总数超过限制。");
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, context.Cancellation).ConfigureAwait(false)).ToLowerInvariant();
+        var hash = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(path, context.Cancellation)
+            .ConfigureAwait(false);
         context.ResourceHashes.Add(path, hash);
         return hash;
     }
@@ -414,12 +415,13 @@ public sealed class PuloniaTaskBuilder
     /// <summary>
     /// 统一相对路径分隔符，用于身份及清单指纹。
     /// </summary>
-    private static string NormalizeRelativePath(string directory, string file) => System.IO.Path.GetRelativePath(directory, file).Replace('\\', '/');
+    private static string NormalizeRelativePath(string directory, string file)
+        => PuloniaTaskResourceFingerprint.NormalizeRelativePath(directory, file);
 
     /// <summary>
     /// 生成稳定的文本 SHA-256。
     /// </summary>
-    private static string HashText(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+    private static string HashText(string value) => PuloniaTaskResourceFingerprint.ComputeTextVersion(value);
 
     /// <summary>
     /// 仅属于一次准备的缓存与预算，不跨运行共享可变状态。

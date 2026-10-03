@@ -40,6 +40,9 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// </summary>
     private readonly IReadOnlyDictionary<string, PuloniaTaskDefinition> _definitions;
 
+    /// <inheritdoc />
+    public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; }
+
     /// <summary>
     /// 游戏型节点的会话与输入所有权协调器。
     /// </summary>
@@ -105,6 +108,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         }
         _executors = executorMap;
         _definitions = definitionMap;
+        Definitions = definitionMap.Values.ToList().AsReadOnly();
         _worker = ProcessQueueAsync();
     }
 
