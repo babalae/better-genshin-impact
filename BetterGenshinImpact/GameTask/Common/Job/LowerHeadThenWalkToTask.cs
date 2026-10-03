@@ -49,10 +49,11 @@ public class LowerHeadThenWalkToTask
         using var initialCapture = CaptureToRectArea();
         if (initialCapture.Find(_trackPoint).IsEmpty())
         {
-            // 第一次未识别到：等待7秒后重试。
-            // 游戏内持续无操作约5秒后会自动缩放视角，被遮挡（如战斗准备交互框）的追踪点图标可能露出，故给一次重试机会
-            Logger.LogInformation("未找到追踪点，等待7秒后重试");
-            await Delay(7000, ct);
+            // 第一次未识别到：低头转动一次视角后重试。
+            // 被遮挡（如战斗准备交互框）的追踪点图标在视角变动后可能露出，主动低头转动比等待自动缩放更省时
+            Logger.LogInformation("未找到追踪点，低头转动视角后重试");
+            InputHub.Foreground.Mouse.MoveMouseBy(0, 800); // 低头（保证俯视角）
+            await Delay(500, ct);
 
             using var retryCapture = CaptureToRectArea();
             if (retryCapture.Find(_trackPoint).IsEmpty())
