@@ -443,6 +443,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _bitmap = TaskControl.CaptureGameImageNoRetry(TaskContext.Instance().Runtime?.Capture);
             if (_bitmap == null)
             {
+                var gameCapture = TaskTriggerDispatcher.Instance().GameCapture;
+                if (gameCapture == null || !gameCapture.IsCapturing)
+                {
+                    // 截图器被停止后（如启动停止 BetterGI），按取消处理
+                    throw new OperationCanceledException("截图器已停止");
+                }
+
                 _logger.LogWarning("截图失败");
                 return Status.Failure;
             }

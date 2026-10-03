@@ -18,4 +18,11 @@ public partial class AutoComboTreeViewModel : ObservableObject
     /// <summary>最新一次渲染的兜底攻击行为树 ASCII（建树预览或运行期 Tick 路径），无内容时为 null</summary>
     [ObservableProperty]
     private string? _latestFallbackTreeAscii;
+
+    /// <summary>清空全部树预览</summary>
+    public void Clear()
+    {
+        LatestTreeAscii = null;
+        LatestFallbackTreeAscii = null;
+    }
 }
