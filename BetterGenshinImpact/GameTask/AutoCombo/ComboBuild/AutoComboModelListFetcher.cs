@@ -67,7 +67,7 @@ public static class AutoComboModelListFetcher
         // OpenAI 兼容端点不返回 has_more，会被当作只有一页。
         for (var page = 0; page < MaxModelListPages; page++)
         {
-            var body = await GetAsync(uri, normalized, apiKey, ct);
+            var (effectiveUri, body) = await GetAsync(uri, normalized, apiKey, ct);
             var (pageIds, hasMore, lastId) = ParseModelPage(body);
 
             foreach (var id in pageIds)
@@ -93,18 +93,20 @@ public static class AutoComboModelListFetcher
                 throw new Exception("服务返回 has_more=true 但未给出 last_id，无法继续取下一页");
             }
 
-            uri = AppendAfterId(uri, lastId);
+            // 以实际生效的地址为基准翻页：重定向可能改写地址，甚至把查询串整个丢掉
+            uri = BuildPageUri(effectiveUri, normalized, lastId);
         }
 
         throw new Exception($"模型列表分页超过 {MaxModelListPages} 页仍未取完，已停止");
     }
 
     /// <summary>
-    /// 发一次 GET 并返回响应正文。
+    /// 发一次 GET，返回响应正文与**实际生效的地址**。
     /// 自动重定向是关的，这里自行跟随同源跳转（最多 <see cref="MaxSameAuthorityRedirects"/> 次），
     /// 跨源一律拒绝：那等于把 x-api-key 交给另一台服务器。
+    /// 必须把最终地址交回调用方：否则分页游标会拼在重定向前的地址上，被服务端再次丢掉。
     /// </summary>
-    private static async Task<string> GetAsync(Uri uri, string provider, string apiKey, CancellationToken ct)
+    private static async Task<(Uri EffectiveUri, string Body)> GetAsync(Uri uri, string provider, string apiKey, CancellationToken ct)
     {
         for (var redirects = 0; ; redirects++)
         {
@@ -124,7 +126,7 @@ public static class AutoComboModelListFetcher
                 throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}：{Summarize(body)}");
             }
 
-            return body;
+            return (uri, body);
         }
     }
 
@@ -221,14 +223,37 @@ public static class AutoComboModelListFetcher
         return (ids, root["has_more"]?.Value<bool>() ?? false, root["last_id"]?.Value<string>());
     }
 
-    /// <summary>把分页游标追加到查询串上，保留地址里已有的参数（如 limit）。</summary>
-    private static Uri AppendAfterId(Uri uri, string afterId)
+    /// <summary>
+    /// 以实际生效的地址为基准拼下一页的地址。
+    /// 游标是替换而不是追加：若在上一页地址上直接追加，翻到第三页会出现两个 after_id。
+    /// 重定向可能把整个查询串丢掉，所以 limit 也在这里重新补上。
+    /// </summary>
+    private static Uri BuildPageUri(Uri effectiveUri, string provider, string cursor)
     {
-        var builder = new UriBuilder(uri);
-        var query = builder.Query.TrimStart('?');
-        builder.Query = string.IsNullOrEmpty(query)
-            ? $"after_id={Uri.EscapeDataString(afterId)}"
-            : $"{query}&after_id={Uri.EscapeDataString(afterId)}";
+        var isAnthropic = provider == AutoComboLlmProvider.Anthropic;
+        var builder = new UriBuilder(effectiveUri);
+        var kept = new List<string>();
+
+        // 保留地址里原有的其他查询参数，只替换我们自己管的这两个
+        foreach (var pair in builder.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var key = pair.Split('=', 2)[0];
+            if (key.Equals("after_id", StringComparison.OrdinalIgnoreCase)
+                || (isAnthropic && key.Equals("limit", StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            kept.Add(pair);
+        }
+
+        if (isAnthropic)
+        {
+            kept.Add($"limit={AnthropicModelListPageSize}");
+        }
+
+        kept.Add($"after_id={Uri.EscapeDataString(cursor)}");
+        builder.Query = string.Join('&', kept);
         return builder.Uri;
     }
 
