@@ -27,8 +27,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
+using System.Net.Http;
 using System.Linq;
 using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -896,6 +898,327 @@ public partial class ScriptControlViewModel : ViewModel
             Toast.Error($"加载地图追踪任务失败: {ex.Message}");
             _logger.LogError(ex, "加载地图追踪任务时发生错误");
         }
+    }
+
+    private sealed record AscensionCatalogEntry(string Name, string Kind, string Version, HashSet<string> Materials)
+    {
+        public string DisplayName => $"{Name}  (v{Version})";
+    }
+
+    private static string AscensionText(string text) => BetterGenshinImpact.Service.I18n.I18nService.Instance.Translate(text);
+
+    private static System.Version ParseCatalogVersion(string version) =>
+        System.Version.TryParse(version, out var parsed) ? parsed : new System.Version(0, 0);
+
+    private static IOrderedEnumerable<AscensionCatalogEntry> OrderByNewestVersion(IEnumerable<AscensionCatalogEntry> entries) =>
+        entries.OrderByDescending(entry => ParseCatalogVersion(entry.Version))
+            .ThenBy(entry => entry.Name, StringComparer.Ordinal);
+
+    private static readonly HttpClient AscensionCatalogClient = new() { Timeout = TimeSpan.FromSeconds(45) };
+    private static readonly HttpClient BiliwikiClient = new() { Timeout = TimeSpan.FromSeconds(8) };
+    private const string AscensionCatalogEndpoint = "https://genshin-db-api.vercel.app/api/v5/";
+
+    [RelayCommand]
+    private Task QuickAddCharacterAscensionRoutes() => QuickAddAscensionRoutesAsync("角色");
+
+    [RelayCommand]
+    private Task QuickAddWeaponAscensionRoutes() => QuickAddAscensionRoutesAsync("武器");
+
+    private async Task QuickAddAscensionRoutesAsync(string kind)
+    {
+        if (SelectedScriptGroup == null)
+        {
+            Toast.Warning(AscensionText("请先选择一个调度器配置组"));
+            return;
+        }
+
+        try
+        {
+            Toast.Information(AscensionText("正在从在线资料加载角色、武器及突破材料..."));
+            var entries = await Task.Run(LoadAscensionCatalogAsync);
+            var picker = BuildAscensionCatalogPicker(entries, kind);
+            var result = PromptDialog.Prompt(
+                string.Format(AscensionText("搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。"), AscensionText(kind == "角色" ? "角色材料" : "武器材料")),
+                AscensionText(kind == "角色" ? "快速添加角色材料路线" : "快速添加武器材料路线"),
+                picker,
+                new Size(650, 520));
+
+            if (string.IsNullOrEmpty(result)) return;
+
+            var selected = (AscensionCatalogEntry?)((ComboBox)((System.Windows.Controls.StackPanel)picker.Content).Tag).SelectedItem;
+            if (selected == null)
+            {
+                Toast.Warning(AscensionText("请选择一个项目"));
+                return;
+            }
+
+            var materials = selected.Materials;
+            if (materials.Count == 0)
+            {
+                Toast.Warning(AscensionText("在线资料没有返回所选项目的突破材料"));
+                return;
+            }
+
+            var materialSources = await Task.Run(LoadMaterialSourceCatalogAsync);
+            Toast.Information(AscensionText("正在同步 GitHub 脚本仓库..."));
+            var githubRepoUrl = ScriptRepoUpdater.RepoChannels["GitHub"];
+            var (scriptRepoPath, _) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(githubRepoUrl, null);
+            var localRoot = MapPathingViewModel.PathJsonPath;
+            var repoRoot = Path.Combine(scriptRepoPath, "repo", "pathing");
+            var repositoryPathRoot = Path.Combine(scriptRepoPath, "pathing");
+            if (!Directory.Exists(repoRoot) && Directory.Exists(repositoryPathRoot)) repoRoot = repositoryPathRoot;
+            var localRootPrefix = Path.GetFullPath(localRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var repoRootPrefix = Path.GetFullPath(repoRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            var routeDirectories = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var root in new[] { localRoot, repoRoot }.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                foreach (var directory in EnumerateDirectoriesSafely(root))
+                {
+                    var directoryName = Path.GetFileName(directory);
+                    var relatedMaterials = AscensionMaterialRouteMatcher.FindRelatedMaterials(directoryName, materials, materialSources);
+                    if (relatedMaterials.Count > 0) routeDirectories[directory] = relatedMaterials;
+                }
+            }
+
+            var repositoryDirectories = routeDirectories.Keys
+                .Where(path => path.StartsWith(repoRootPrefix, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (repositoryDirectories.Count > 0)
+            {
+                var subscriptionPaths = repositoryDirectories
+                    .Select(path => Path.GetRelativePath(Path.GetDirectoryName(repoRoot)!, path).Replace('\\', '/'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                var existingMaterialFolders = repositoryDirectories
+                    .Select(path => Path.Combine(localRoot, Path.GetRelativePath(repoRoot, path)))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count(Directory.Exists);
+                var confirmImport = existingMaterialFolders == 0;
+                if (!confirmImport)
+                {
+                    confirmImport = await ThemedMessageBox.QuestionAsync(
+                        string.Format(AscensionText("订阅并导入仓库中的 {0} 个材料路线文件夹？\n其中 {1} 个材料文件夹已存在本地，导入会用仓库版本替换这些文件夹。"), subscriptionPaths.Count, existingMaterialFolders),
+                        AscensionText("确认订阅材料路线")) == System.Windows.MessageBoxResult.Yes;
+                }
+                if (confirmImport)
+                {
+                    await ScriptRepoUpdater.Instance.ImportScriptFromRepoPathJson(JsonSerializer.Serialize(subscriptionPaths), scriptRepoPath);
+                    if (Directory.Exists(localRoot))
+                    {
+                        foreach (var directory in EnumerateDirectoriesSafely(localRoot))
+                        {
+                            var directoryName = Path.GetFileName(directory);
+                            var relatedMaterials = AscensionMaterialRouteMatcher.FindRelatedMaterials(directoryName, materials, materialSources);
+                            if (relatedMaterials.Count > 0) routeDirectories[directory] = relatedMaterials;
+                        }
+                    }
+                }
+            }
+
+            var resolvedRoutes = new List<(string Path, string Name, string Material)>();
+            var candidateFiles = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var materialDirectory in routeDirectories
+                         .Where(item => item.Key.StartsWith(localRootPrefix, StringComparison.OrdinalIgnoreCase))
+                         .ToList())
+            {
+                foreach (var path in EnumerateFilesSafely(materialDirectory.Key, "*.json"))
+                {
+                    if (!candidateFiles.TryGetValue(path, out var relatedMaterials))
+                        candidateFiles[path] = relatedMaterials = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    relatedMaterials.UnionWith(materialDirectory.Value);
+                }
+            }
+            foreach (var candidate in candidateFiles)
+            {
+                try
+                {
+                    var task = PathingTask.BuildFromFilePath(candidate.Key);
+                    if (task == null) continue;
+                    foreach (var material in candidate.Value)
+                        resolvedRoutes.Add((candidate.Key, task.Info.Name, material));
+                }
+                catch { /* Ignore malformed or unsupported local route files. */ }
+            }
+
+            var existing = SelectedScriptGroup.Projects
+                .Where(p => p.Type == "Pathing")
+                .Select(p => Path.Combine(localRoot, p.FolderName, p.Name))
+                .Select(TryGetFullPath)
+                .Where(path => path != null)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var added = 0;
+            foreach (var route in resolvedRoutes)
+            {
+                var fullPath = TryGetFullPath(route.Path);
+                if (fullPath == null || !File.Exists(fullPath) || !existing.Add(fullPath)) continue;
+                var info = new FileInfo(fullPath);
+                var relativeFolder = Path.GetRelativePath(localRoot, info.Directory!.FullName);
+                SelectedScriptGroup.AddProject(ScriptGroupProject.BuildPathingProject(info.Name, relativeFolder));
+                added++;
+            }
+
+            WriteScriptGroup(SelectedScriptGroup);
+            var foundMaterials = resolvedRoutes.Select(x => x.Material).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = materials.Except(foundMaterials, StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+            var detail = string.Format(AscensionText("所选项目 {0} 个，材料 {1} 种；新增路线 {2} 条。"), 1, materials.Count, added);
+            if (missing.Count > 0)
+            {
+                var preview = string.Join("、", missing.Take(12));
+                detail += "\n" + string.Format(AscensionText("未找到路线的材料 {0} 种：{1}{2}"), missing.Count, preview, missing.Count > 12 ? "…" : "");
+            }
+            var biliwikiMatchCount = await CheckBiliwikiMaterialIndexesAsync(materials);
+            detail += biliwikiMatchCount.HasValue
+                ? "\n" + string.Format(AscensionText("材料来自 Genshin-DB 在线目录；Biliwiki 突破材料索引中找到 {0}/{1} 个材料名称。"), biliwikiMatchCount, materials.Count)
+                : "\n" + AscensionText("材料来自 Genshin-DB 在线目录；Biliwiki 索引暂时无法访问，未完成交叉核对。");
+            await ThemedMessageBox.InformationAsync(detail, AscensionText("快速添加材料路线"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "快速添加{Kind}材料路线失败", kind);
+            Toast.Error(string.Format(AscensionText("快速添加材料路线失败：{0}"), ex.Message));
+        }
+    }
+
+    private static async Task<List<AscensionCatalogEntry>> LoadAscensionCatalogAsync()
+    {
+        var result = new List<AscensionCatalogEntry>();
+        foreach (var (endpoint, kind) in new[] { ("characters", "角色"), ("weapons", "武器") })
+        {
+            var url = $"{AscensionCatalogEndpoint}{endpoint}?query=names&matchCategories=true&verboseCategories=true&resultLanguage=chinese";
+            using var response = await AscensionCatalogClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            var json = JArray.Parse(await response.Content.ReadAsStringAsync());
+            foreach (var item in json.OfType<JObject>())
+            {
+                var name = item.Value<string>("name");
+                var costs = item["costs"] as JObject;
+                if (string.IsNullOrWhiteSpace(name) || costs == null) continue;
+                var materials = costs.Properties()
+                    .Where(p => p.Name.StartsWith("ascend", StringComparison.OrdinalIgnoreCase))
+                    .SelectMany(p => p.Value is JArray array ? array.OfType<JObject>() : [])
+                    .Select(cost => cost.Value<string>("name"))
+                    .Where(material => !string.IsNullOrWhiteSpace(material))
+                    .Select(material => material!)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                result.Add(new AscensionCatalogEntry(name, kind, item.Value<string>("version") ?? "0.0", materials));
+            }
+        }
+        return result
+            .GroupBy(entry => (Kind: entry.Kind.ToUpperInvariant(), Name: entry.Name.ToUpperInvariant()))
+            .Select(group => new AscensionCatalogEntry(
+                group.First().Name,
+                group.First().Kind,
+                group.Select(entry => entry.Version).OrderByDescending(ParseCatalogVersion).First(),
+                group.SelectMany(entry => entry.Materials).ToHashSet(StringComparer.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private static readonly EnumerationOptions SafeRecursiveEnumeration = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+    };
+
+    private static IEnumerable<string> EnumerateDirectoriesSafely(string root)
+    {
+        try { return Directory.EnumerateDirectories(root, "*", SafeRecursiveEnumeration).ToArray(); }
+        catch (IOException) { return []; }
+        catch (UnauthorizedAccessException) { return []; }
+    }
+
+    private static IEnumerable<string> EnumerateFilesSafely(string root, string pattern)
+    {
+        try { return Directory.EnumerateFiles(root, pattern, SafeRecursiveEnumeration).ToArray(); }
+        catch (IOException) { return []; }
+        catch (UnauthorizedAccessException) { return []; }
+    }
+
+    private static string? TryGetFullPath(string path)
+    {
+        try { return Path.GetFullPath(path); }
+        catch (ArgumentException) { return null; }
+        catch (NotSupportedException) { return null; }
+        catch (PathTooLongException) { return null; }
+    }
+
+    private static async Task<int?> CheckBiliwikiMaterialIndexesAsync(HashSet<string> materials)
+    {
+        var pages = new[] { "角色突破材料一览", "武器突破材料一览" };
+        var requests = pages.Select(async page =>
+        {
+            try
+            {
+                var url = "https://wiki.biligame.com/ys/api.php?action=parse&page="
+                          + Uri.EscapeDataString(page) + "&prop=wikitext&format=json";
+                using var response = await BiliwikiClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode) return null;
+                using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                return document.RootElement.TryGetProperty("parse", out var parsed)
+                       && parsed.TryGetProperty("wikitext", out var wikitext)
+                       && wikitext.TryGetProperty("*", out var source)
+                    ? source.GetString()
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
+        });
+
+        var sources = await Task.WhenAll(requests);
+        if (sources.All(string.IsNullOrWhiteSpace)) return null;
+        var searchable = string.Join("\n", sources.Where(source => !string.IsNullOrWhiteSpace(source)));
+        return materials.Count(material => searchable.Contains(material, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static async Task<Dictionary<string, HashSet<string>>> LoadMaterialSourceCatalogAsync()
+    {
+        var url = $"{AscensionCatalogEndpoint}materials?query=names&matchCategories=true&verboseCategories=true&resultLanguage=chinese";
+        using var response = await AscensionCatalogClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        var json = JArray.Parse(await response.Content.ReadAsStringAsync());
+        return AscensionMaterialRouteMatcher.BuildMaterialSourceCatalog(json.OfType<JObject>()
+            .Select(item => (
+                Name: item.Value<string>("name"),
+                Sources: (item["sources"] as JArray ?? new JArray()).Values<string>())));
+    }
+
+    private static ScrollViewer BuildAscensionCatalogPicker(List<AscensionCatalogEntry> entries, string kind)
+    {
+        var panel = new System.Windows.Controls.StackPanel();
+
+        var search = new System.Windows.Controls.TextBox { Margin = new Thickness(0, 0, 0, 6), MinWidth = 580 };
+        search.ToolTip = AscensionText(kind == "角色" ? "搜索角色名称" : "搜索武器名称");
+        var picker = new ComboBox
+        {
+            MinWidth = 580,
+            IsTextSearchEnabled = true,
+            MaxDropDownHeight = 360,
+            DisplayMemberPath = nameof(AscensionCatalogEntry.DisplayName),
+        };
+
+        void RefreshItems()
+        {
+            var query = search.Text.Trim();
+            picker.ItemsSource = OrderByNewestVersion(entries.Where(entry => entry.Kind == kind
+                && entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase))).ToList();
+            picker.SelectedItem = null;
+        }
+        search.TextChanged += (_, _) => RefreshItems();
+
+        RefreshItems();
+        panel.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = AscensionText(kind == "角色" ? "角色材料" : "武器材料"),
+            Margin = new Thickness(0, 4, 0, 4),
+            FontWeight = FontWeights.SemiBold,
+        });
+        panel.Children.Add(search);
+        panel.Children.Add(picker);
+        panel.Tag = picker;
+        return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
 
     // 添加防抖计时器字段
