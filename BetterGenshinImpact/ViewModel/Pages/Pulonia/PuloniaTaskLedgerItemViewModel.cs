@@ -1,11 +1,12 @@
 using BetterGenshinImpact.Pulonia.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
 /// <summary>
 /// 把当前 CD 与额度账本项整理为运行页可直接展示的只读条目。
 /// </summary>
-public sealed class PuloniaTaskLedgerItemViewModel
+public sealed class PuloniaTaskLedgerItemViewModel : ObservableObject
 {
     /// <summary>
     /// 原始账本项。

@@ -115,17 +115,18 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 建立任务计划页面视图模型。
     /// </summary>
     public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
-        IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog)
+        IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog,
+        PuloniaTaskHistoryViewModel history)
     {
         _store = store;
         _clipboard = clipboard;
         _taskService = taskService;
         _resourceCatalog = resourceCatalog;
+        History = history;
         TaskTypes = taskService.Definitions
             .Select(definition => new PuloniaTaskTypeOption(definition.TaskType,
                 string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.TaskType : definition.DisplayName))
             .ToList();
-        _taskService.RunChanged += OnRunChanged;
     }
 
     /// <summary>
@@ -134,7 +135,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     public override async Task OnNavigatedToAsync()
     {
         await InitializeAsync();
+        History.PlanFilterId = SelectedDocument?.Id;
+        History.OnlyCurrentPlan = true;
+        await History.RefreshAsync();
     }
+
+    /// <summary>
+    /// Loaded 行为同样设置当前计划范围，兼容导航缓存重新进入页面。
+    /// </summary>
+    [RelayCommand]
+    private Task OpenPageAsync() => OnNavigatedToAsync();
 
     /// <summary>
     /// 首次加载存储内容；空存储会建立一个等待自动保存的新计划。
@@ -158,7 +168,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             _isInitialized = true;
             if (SelectedDocument.IsDirty)
                 ScheduleAutoSave(SelectedDocument);
-            await RefreshRunsAsync();
+            await History.RefreshAsync();
             StatusMessage = _taskService.RecoveryNotice is null
                 ? $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。"
                 : _taskService.RecoveryNotice;
@@ -635,6 +645,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         PuloniaTaskPlanDocumentViewModel? newValue)
     {
         RefreshReferencePlans();
+        History.PlanFilterId = newValue?.Id;
         NotifyCommandStates();
     }
 
@@ -903,9 +914,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CanAddPlanReference));
         OnPropertyChanged(nameof(CanRunPlan));
-        OnPropertyChanged(nameof(CanCancelRun));
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
         RunPlanCommand.NotifyCanExecuteChanged();
-        CancelRunCommand.NotifyCanExecuteChanged();
     }
 }

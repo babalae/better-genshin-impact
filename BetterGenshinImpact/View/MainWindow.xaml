@@ -105,6 +105,14 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <ui:NavigationViewItem Content="{i18n:T 执行记录}"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:PuloniaTaskHistoryPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="History24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
                 <!--<ui:NavigationViewItemSeparator />-->
 
                 <ui:NavigationViewItem Content="{i18n:T 一条龙}"

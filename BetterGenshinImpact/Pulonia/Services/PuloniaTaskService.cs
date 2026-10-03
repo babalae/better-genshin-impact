@@ -755,7 +755,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 await PersistOperationIntentAsync(state, task, rules, nodeCancellation.Token).ConfigureAwait(false);
                 var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
                     task.TaskAddress, (completionEvent, token) =>
-                        ReportCompletionEventAsync(state, task, rules, completionEvent, token));
+                        ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
                 using var gameTaskLease = _definitions[task.TaskType].RequiresGameSession
                     ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
                     : null;
@@ -898,7 +898,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// <summary>
     /// 将执行器确认事件、证据、额度变化和节点意图结算为一次状态文件更新。
     /// </summary>
-    private async Task ReportCompletionEventAsync(RunState state, PuloniaTaskPreparedTask task,
+    private async Task ReportCompletionEventAsync(RunState state, PuloniaTaskPreparedTask task, int attempt,
         IReadOnlyList<PuloniaTaskAvailabilityRule> rules, PuloniaTaskCompletionEvent completionEvent,
         CancellationToken ct)
     {
@@ -912,8 +912,10 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             : completionEvent.EventKey.Trim();
         if (eventKey.Length > 256)
             throw new PuloniaTaskValidationException(task.TaskAddress, "完成事件键不能超过 256 个字符。");
-        var entry = PuloniaTaskAvailability.CreateLedgerEntry(state.Request, rule, completionEvent,
-            eventKey, state.RunId, task.TaskAddress);
+        // 执行器仍持有证据对象；提交前固定副本，防止后续修改污染已经确认的事实。
+        var entry = PuloniaTaskJson.Read<PuloniaTaskLedgerEntry>(PuloniaTaskJson.Write(
+            PuloniaTaskAvailability.CreateLedgerEntry(state.Request, rule, completionEvent,
+                eventKey, state.RunId, task.TaskAddress)));
 
         using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         await _stateGate.WaitAsync(cleanup.Token).ConfigureAwait(false);
@@ -945,6 +947,14 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             var active = candidate.ActiveRun;
             if (active is null || active.RunId != state.RunId || active.OperationIntent is null)
                 throw new PuloniaTaskValidationException(task.TaskAddress, "耐久状态中的活动运行或操作意图已变化。");
+            // 与账本在同一次原子写盘中留存运行内事实，异常退出也不会丢失已确认的副作用。
+            var confirmedEffect = new PuloniaTaskConfirmedEffect
+            {
+                TaskAddress = task.TaskAddress,
+                Attempt = attempt,
+                Entry = entry
+            };
+            active.ConfirmedEffects.Add(confirmedEffect);
             active.OperationIntent.RuleIds.RemoveAll(item => item == rule.RuleId);
             active.OperationIntent.Reservations.RemoveAll(item => item.RuleId == rule.RuleId);
             if (active.OperationIntent.RuleIds.Count == 0)
@@ -953,12 +963,16 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             await _store.SaveStateAsync(candidate, cleanup.Token).ConfigureAwait(false);
             _persistentState = candidate;
             lock (state.SyncRoot)
+            {
+                state.ConfirmedEffects.Add(confirmedEffect);
                 state.OperationIntent = active.OperationIntent;
+            }
         }
         finally
         {
             _stateGate.Release();
         }
+        RaiseRunChanged(state.RequestId);
     }
 
     /// <summary>
@@ -1137,7 +1151,11 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 _stateGate.Release();
             }
 
-            state.IsHistorical = true;
+            lock (state.SyncRoot)
+            {
+                state.IsHistorical = true;
+                view = state.CreateViewWithoutLock();
+            }
             lock (_runsGate)
                 _historyByRunId[record.RunId] = record;
         }
@@ -1357,6 +1375,11 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         public List<PuloniaTaskNodeResult> NodeResults { get; } = [];
 
         /// <summary>
+        /// 每次节点尝试已落盘的确认事件，随运行写入不可变历史。
+        /// </summary>
+        public List<PuloniaTaskConfirmedEffect> ConfirmedEffects { get; } = [];
+
+        /// <summary>
         /// 续跑时无需再次执行的节点地址。
         /// </summary>
         public HashSet<string> CompletedTaskAddresses { get; } = new(StringComparer.Ordinal);
@@ -1461,6 +1484,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 IsHistorical = isHistorical
             };
             state.NodeResults.AddRange(record.NodeResults);
+            state.ConfirmedEffects.AddRange(record.ConfirmedEffects);
             state.HasFinalFailure = state.NodeResults.Any(item => item.Status is PuloniaTaskNodeStatus.Failed
                 or PuloniaTaskNodeStatus.TimedOut or PuloniaTaskNodeStatus.NeedsAttention);
             if (isHistorical)
@@ -1489,6 +1513,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                     StartedAt = StartedAt,
                     FinishedAt = FinishedAt,
                     NodeResults = NodeResults.ToList(),
+                    ConfirmedEffects = ConfirmedEffects.ToList(),
                     CompletedTaskAddresses = CompletedTaskAddresses.ToList(),
                     ResumeFromTaskAddress = ResumeFromTaskAddress,
                     ResumedFromRunId = ResumedFromRunId,
@@ -1513,7 +1538,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             => new(RequestId, RunId, Request.PlanId, PlanName, Request.Source, Status, CurrentTaskAddress,
                 Message, SubmittedAt, StartedAt, FinishedAt, SnapshotJson, NodeResults,
                 Request.AccountId, Request.WorldOwnerAccountId, ResumedFromRunId, ResumeFromTaskAddress,
-                IsHistorical, OperationIntent is not null);
+                IsHistorical, OperationIntent is not null, ConfirmedEffects);
 
         /// <summary>
         /// 判断本运行是否已经进入最终状态。

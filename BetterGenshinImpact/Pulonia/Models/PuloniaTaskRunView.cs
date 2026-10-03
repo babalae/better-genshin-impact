@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using BetterGenshinImpact.Pulonia.Services;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -76,6 +77,11 @@ public sealed class PuloniaTaskRunView
     public IReadOnlyList<PuloniaTaskNodeResult> NodeResults { get; }
 
     /// <summary>
+    /// 本次运行逐次确认的副作用，包括执行器随后异常或进程中断前已提交的事实。
+    /// </summary>
+    public IReadOnlyList<PuloniaTaskConfirmedEffect> ConfirmedEffects { get; }
+
+    /// <summary>
     /// 本次运行使用的账号资料 ID。
     /// </summary>
     public string? AccountId { get; }
@@ -112,7 +118,8 @@ public sealed class PuloniaTaskRunView
         PuloniaTaskRunStatus status, string? currentTaskAddress, string message, DateTimeOffset submittedAt,
         DateTimeOffset? startedAt, DateTimeOffset? finishedAt, string snapshotJson,
         IEnumerable<PuloniaTaskNodeResult> nodeResults, string? accountId, string? worldOwnerAccountId,
-        Guid? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation)
+        Guid? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation,
+        IEnumerable<PuloniaTaskConfirmedEffect>? confirmedEffects = null)
     {
         RequestId = requestId;
         RunId = runId;
@@ -133,5 +140,7 @@ public sealed class PuloniaTaskRunView
         ResumeFromTaskAddress = resumeFromTaskAddress;
         IsHistorical = isHistorical;
         HasUncertainOperation = hasUncertainOperation;
+        ConfirmedEffects = new ReadOnlyCollection<PuloniaTaskConfirmedEffect>((confirmedEffects ?? [])
+            .Select(item => PuloniaTaskJson.Read<PuloniaTaskConfirmedEffect>(PuloniaTaskJson.Write(item))).ToArray());
     }
 }

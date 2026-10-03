@@ -82,6 +82,12 @@ public sealed class PuloniaTaskRunRecord
     public List<PuloniaTaskNodeResult> NodeResults { get; set; } = [];
 
     /// <summary>
+    /// 已确认的副作用；旧历史未提供此字段时保持空集合，不凭执行状态补造事件。
+    /// </summary>
+    [JsonProperty("confirmed_effects", Required = Required.DisallowNull)]
+    public List<PuloniaTaskConfirmedEffect> ConfirmedEffects { get; set; } = [];
+
+    /// <summary>
     /// 本次运行执行前已经确认完成、因续跑而跳过的地址。
     /// </summary>
     [JsonProperty("completed_task_addresses", Required = Required.DisallowNull)]

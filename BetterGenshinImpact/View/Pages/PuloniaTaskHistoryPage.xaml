@@ -1,0 +1,25 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.PuloniaTaskHistoryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+    <Grid Margin="16,12,16,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,14">
+            <TextBlock FontSize="26" FontWeight="SemiBold" Text="执行记录" />
+            <TextBlock Margin="0,4,0,0" Text="查看 Pulonia 任务计划的跨重启历史、节点尝试和真实证据。记录仅保存于本机。"
+                       TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+        <controls:PuloniaTaskHistoryView Grid.Row="1" DataContext="{Binding ViewModel}" />
+    </Grid>
+</UserControl>

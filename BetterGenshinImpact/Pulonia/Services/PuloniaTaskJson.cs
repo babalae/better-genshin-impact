@@ -152,11 +152,23 @@ public static class PuloniaTaskJson
         if (record.RequestId == Guid.Empty || record.RunId == Guid.Empty || record.Request is null
             || string.IsNullOrWhiteSpace(record.PlanName) || string.IsNullOrWhiteSpace(record.SnapshotJson)
             || string.IsNullOrWhiteSpace(record.Message) || record.NodeResults is null
-            || record.CompletedTaskAddresses is null)
+            || record.CompletedTaskAddresses is null || record.ConfirmedEffects is null)
             throw new PuloniaTaskValidationException(path, "运行记录必要字段缺失。");
         PuloniaTaskValidator.ValidateId(record.Request.PlanId, path + "/plan_id");
         if (record.Request.ParameterOverrides is null)
             throw new PuloniaTaskValidationException(path, "运行请求参数覆盖不能为空。");
+        var eventKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var effect in record.ConfirmedEffects)
+        {
+            // 新字段可缺省以兼容旧历史，但已保存的确认事实不能缺失身份或证据。
+            if (effect is null || string.IsNullOrWhiteSpace(effect.TaskAddress) || effect.Attempt <= 0
+                || effect.Entry is null || string.IsNullOrWhiteSpace(effect.Entry.EventKey)
+                || string.IsNullOrWhiteSpace(effect.Entry.EffectKey) || string.IsNullOrWhiteSpace(effect.Entry.ScopeKey)
+                || effect.Entry.Units <= 0 || effect.Entry.Evidence is null
+                || effect.Entry.TaskRunId != $"{record.RunId:N}:{effect.TaskAddress}"
+                || !eventKeys.Add(effect.Entry.EventKey))
+                throw new PuloniaTaskValidationException(path, "运行确认事件身份、额度或证据无效。");
+        }
     }
 
     /// <summary>
