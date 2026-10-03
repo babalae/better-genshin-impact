@@ -130,7 +130,7 @@ public partial class PuloniaTaskLibraryViewModel : ViewModel
     /// 页面状态摘要。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = string.Empty;
+    private string _statusMessage = "正在准备任务库…";
 
     /// <summary>
     /// 建立任务库页面视图模型。
@@ -148,8 +148,19 @@ public partial class PuloniaTaskLibraryViewModel : ViewModel
     /// <summary>
     /// 页面首次导航时建立资源索引并准备目标计划列表。
     /// </summary>
-    public override async Task OnNavigatedToAsync()
+    public override Task OnNavigatedToAsync()
     {
+        return InitializeAsync();
+    }
+
+    /// <summary>
+    /// 首次显示页面时建立资源索引并准备目标计划列表，后续显示复用已有索引。
+    /// </summary>
+    [RelayCommand]
+    private async Task InitializeAsync()
+    {
+        if (_isInitialized || IsBusy)
+            return;
         await _taskPlanViewModel.OnNavigatedToAsync();
         SelectedTargetPlan ??= _taskPlanViewModel.SelectedDocument;
         if (!_isInitialized)
