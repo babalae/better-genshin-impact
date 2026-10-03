@@ -22,6 +22,9 @@ public static class AutoComboModelListFetcher
     /// <summary>错误提示里回显的响应正文上限，避免把整段响应贴进 UI。</summary>
     private const int MaxEchoLength = 300;
 
+    /// <summary>同源重定向的最大跟随次数，避免服务端构造重定向环。</summary>
+    private const int MaxSameAuthorityRedirects = 3;
+
     /// <summary>
     /// 拉取模型列表专用的 HttpClient：不跟随重定向。
     ///
@@ -50,36 +53,53 @@ public static class AutoComboModelListFetcher
             throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址除外）");
         }
 
-        var request = normalized == AutoComboLlmProvider.Anthropic
-            ? BuildAnthropicRequest(endpoint, apiKey)
-            : BuildOpenAiCompatibleRequest(endpoint!, apiKey);
-
-        using var response = await HttpClient.SendAsync(request, ct);
-        var body = await response.Content.ReadAsStringAsync(ct);
-
-        // 上面关掉了自动重定向，所以 3xx 会走到这里：给出可执行的提示，而不是让用户对着一个空的 302 发愣
-        if ((int)response.StatusCode is >= 300 and < 400)
+        var uri = BuildModelListUri(normalized, endpoint);
+        for (var redirects = 0; ; redirects++)
         {
-            throw new Exception(
-                $"服务返回了重定向（HTTP {(int)response.StatusCode} → {response.Headers.Location}）。" +
-                "为避免密钥被转发到其他地址，这里不会自动跟随；请把服务地址直接填写为重定向后的地址。");
-        }
+            using var request = BuildRequest(normalized, uri, apiKey);
+            using var response = await HttpClient.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}：{Summarize(body)}");
-        }
+            // 自动重定向是关的，3xx 会落到这里：同源跳转自己跟，跨源一律拒绝
+            if ((int)response.StatusCode is >= 300 and < 400)
+            {
+                uri = ResolveRedirect(uri, response, redirects);
+                continue;
+            }
 
-        return ParseModelIds(body);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}：{Summarize(body)}");
+            }
+
+            return ParseModelIds(body);
+        }
     }
 
     /// <summary>
-    /// OpenAI 兼容端点：模型列表与对话接口同层级（端点通常已含 /v1，这里只追加 /models）。
+    /// 拼出模型列表请求地址。
+    /// OpenAI 兼容端点通常已含 /v1，这里只追加 /models；Anthropic 的列表固定在服务根地址下的 /v1/models。
     /// </summary>
-    private static HttpRequestMessage BuildOpenAiCompatibleRequest(Uri endpoint, string apiKey)
+    private static Uri BuildModelListUri(string provider, Uri? endpoint)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{endpoint.ToString().TrimEnd('/')}/models");
-        if (!string.IsNullOrWhiteSpace(apiKey))
+        return provider == AutoComboLlmProvider.Anthropic
+            ? new Uri($"{AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint)}/v1/models")
+            : new Uri($"{endpoint!.ToString().TrimEnd('/')}/models");
+    }
+
+    /// <summary>
+    /// 构造带鉴权头的 GET 请求。
+    /// 跟随重定向后要用新地址重建，所以这里每次循环都重新构造，不能复用同一个 HttpRequestMessage。
+    /// </summary>
+    private static HttpRequestMessage BuildRequest(string provider, Uri uri, string apiKey)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        if (provider == AutoComboLlmProvider.Anthropic)
+        {
+            request.Headers.TryAddWithoutValidation("x-api-key", apiKey);
+            request.Headers.TryAddWithoutValidation("anthropic-version", AnthropicApiVersion);
+        }
+        else if (!string.IsNullOrWhiteSpace(apiKey))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         }
@@ -88,15 +108,33 @@ public static class AutoComboModelListFetcher
     }
 
     /// <summary>
-    /// Anthropic：模型列表在服务根地址下的 /v1/models，鉴权用 x-api-key。
+    /// 计算可安全跟随的重定向目标。只有协议、主机、端口三者都一致才跟：
+    /// 跨源跳转等于把 x-api-key 交给另一台服务器，那不是用户配置的那台。
     /// </summary>
-    private static HttpRequestMessage BuildAnthropicRequest(Uri? endpoint, string apiKey)
+    private static Uri ResolveRedirect(Uri current, HttpResponseMessage response, int redirects)
     {
-        var baseUrl = AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint);
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/v1/models");
-        request.Headers.TryAddWithoutValidation("x-api-key", apiKey);
-        request.Headers.TryAddWithoutValidation("anthropic-version", AnthropicApiVersion);
-        return request;
+        var status = (int)response.StatusCode;
+        var location = response.Headers.Location;
+
+        if (redirects >= MaxSameAuthorityRedirects)
+        {
+            throw new Exception($"服务连续重定向超过 {MaxSameAuthorityRedirects} 次（最后一次 HTTP {status} → {location}），已停止");
+        }
+
+        if (location is null)
+        {
+            throw new Exception($"服务返回 HTTP {status} 但未给出 Location，无法继续");
+        }
+
+        var target = location.IsAbsoluteUri ? location : new Uri(current, location);
+        if (current.Scheme != target.Scheme || current.Host != target.Host || current.Port != target.Port)
+        {
+            throw new Exception(
+                $"服务返回了跨域重定向（HTTP {status} → {target}）。为避免密钥被转发到其他地址，这里不会跟随；" +
+                "请确认「LLM服务地址」填写的是该服务的地址。");
+        }
+
+        return target;
     }
 
     /// <summary>
