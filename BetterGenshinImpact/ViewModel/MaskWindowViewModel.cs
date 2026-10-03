@@ -420,9 +420,10 @@ namespace BetterGenshinImpact.ViewModel
         private void RecalculateScaleTo1080PRatio()
         {
             var gameScreenRect = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-            if (gameScreenRect.Width > 0)
+            if (gameScreenRect.Width > 0 && gameScreenRect.Height > 0)
             {
-                ScaleTo1080PRatio = gameScreenRect.Width / 1920d;
+                // 取宽高缩放比中的较小值，与 SystemInfo.ScaleTo1080PRatio / GameCaptureRegion.DeriveTo1080P 保持一致
+                ScaleTo1080PRatio = Math.Min(gameScreenRect.Width / 1920d, gameScreenRect.Height / 1080d);
             }
         }
 
