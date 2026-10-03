@@ -44,7 +44,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private readonly IPuloniaTaskService _taskService;
 
     /// <summary>
-    /// 任务创建弹窗与任务库共用的轻量资源索引。
+    /// 任务创建弹窗使用的轻量资源索引。
     /// </summary>
     private readonly PuloniaTaskResourceCatalog _resourceCatalog;
 
@@ -361,20 +361,6 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             return;
         document.InsertNode(creation.Task, parent, index);
         StatusMessage = $"已添加任务“{creation.Task.Name}”；资源与运行设置已在创建前确认。";
-    }
-
-    /// <summary>
-    /// 把任务库已经确认的完整节点原子追加到指定计划根级。
-    /// </summary>
-    public void InsertCreatedTask(PuloniaTaskPlanDocumentViewModel document, PuloniaTask task)
-    {
-        ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(task);
-        if (!Documents.Contains(document))
-            throw new InvalidOperationException("目标计划不属于当前编辑会话。");
-        SelectedDocument = document;
-        document.InsertNode(task, document.RootNode, document.RootNode.Children.Count);
-        StatusMessage = $"已从任务库添加“{task.Name}”。";
     }
 
     /// <summary>

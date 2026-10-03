@@ -238,7 +238,7 @@ public sealed class PuloniaTaskBuilder
                 }
                 if (task.ResourceVersion is not null && task.ResourceVersion != version)
                     throw new PuloniaTaskValidationException(address,
-                        "资源内容与任务创建时固定的版本不一致，请在任务库中确认更新后再运行。");
+                        "资源内容与任务创建时固定的版本不一致，请在任务计划中确认更新后再运行。");
             }
         }
 

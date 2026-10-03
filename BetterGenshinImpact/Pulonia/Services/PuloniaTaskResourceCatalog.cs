@@ -9,7 +9,7 @@ using BetterGenshinImpact.Pulonia.Models;
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
-/// 为任务库和创建弹窗维护按能力分类的轻量本地资源索引。
+/// 为任务创建弹窗维护按能力分类的轻量本地资源索引。
 /// </summary>
 public sealed class PuloniaTaskResourceCatalog
 {

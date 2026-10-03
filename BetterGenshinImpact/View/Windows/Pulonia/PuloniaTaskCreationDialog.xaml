@@ -178,23 +178,25 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        PlaceholderText="{Binding ResourceSearchPlaceholder}"
-                                        ClearButtonEnabled="True"
-                                        Icon="{ui:SymbolIcon Search24}" />
-                            <ui:Button Grid.Column="1"
-                                       Margin="6,0,0,0"
-                                       Command="{Binding RefreshResourcesCommand}"
+                        <ui:TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="{Binding ResourceSearchPlaceholder}"
+                                    ClearButtonEnabled="True"
+                                    Icon="{ui:SymbolIcon Search24}" />
+                        <!-- 资源获取保留在新增流程内；仓库关闭后只刷新当前类型，避免进入页面时全量扫描。 -->
+                        <StackPanel Grid.Row="1"
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal">
+                            <ui:Button Margin="0,0,6,0"
+                                       Command="{Binding OpenResourceRepositoryCommand}"
+                                       Content="获取更多资源" />
+                            <ui:Button Command="{Binding RefreshResourcesCommand}"
                                        Content="刷新" />
-                        </Grid>
-                        <ListBox Grid.Row="1"
+                        </StackPanel>
+                        <ListBox Grid.Row="2"
                                  Margin="0,8,0,0"
                                  Padding="0"
                                  Background="Transparent"

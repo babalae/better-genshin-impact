@@ -3,7 +3,7 @@ using System;
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 任务库轻量索引中的一项本地能力资源，不包含路线正文或脚本运行时对象。
+/// 任务创建资源索引中的一项本地能力资源，不包含路线正文或脚本运行时对象。
 /// </summary>
 public sealed class PuloniaTaskResourceDescriptor
 {

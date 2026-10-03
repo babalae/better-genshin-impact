@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -24,19 +25,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private readonly string _creationTaskType;
 
     /// <summary>
-    /// 创建弹窗与任务库共用的轻量资源索引。
+    /// 创建弹窗按当前任务类型使用的轻量资源索引。
     /// </summary>
     private readonly PuloniaTaskResourceCatalog _resourceCatalog;
-
-    /// <summary>
-    /// 从任务库进入时希望优先选中的资源标识。
-    /// </summary>
-    private readonly string? _initialResourceId;
-
-    /// <summary>
-    /// 初始资源选择是否已经应用。
-    /// </summary>
-    private bool _hasAppliedInitialResource;
 
     /// <summary>
     /// 尚未过滤的本地资源索引。
@@ -213,11 +204,10 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// 使用当前已注册能力建立任务创建视图模型。
     /// </summary>
     public PuloniaTaskCreationDialogViewModel(IReadOnlyList<PuloniaTaskDefinition> definitions,
-        PuloniaTaskResourceCatalog resourceCatalog, string creationTaskType, string? initialResourceId = null)
+        PuloniaTaskResourceCatalog resourceCatalog, string creationTaskType)
     {
         _creationTaskType = creationTaskType;
         _resourceCatalog = resourceCatalog;
-        _initialResourceId = initialResourceId;
         AvailableDefinitions = definitions
             .Where(definition => creationTaskType == "builtin"
                 ? definition.TaskType.StartsWith("builtin.", StringComparison.Ordinal)
@@ -268,7 +258,16 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     [RelayCommand]
     private async Task RefreshResourcesAsync()
     {
-        _hasAppliedInitialResource = true;
+        await InitializeAsync(forceRefresh: true);
+    }
+
+    /// <summary>
+    /// 打开现有脚本仓库获取更多资源，并在仓库关闭后刷新当前类型清单。
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenResourceRepositoryAsync()
+    {
+        ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
         await InitializeAsync(forceRefresh: true);
     }
 
@@ -452,11 +451,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             : _allResources.Where(resource => resource.SearchText.Contains(keyword,
                 StringComparison.OrdinalIgnoreCase)).ToList();
         FilteredResources = new ObservableCollection<PuloniaTaskResourceDescriptor>(matches);
-        SelectedResource = !_hasAppliedInitialResource && !string.IsNullOrWhiteSpace(_initialResourceId)
-            ? FilteredResources.FirstOrDefault(resource => resource.RelativePath == _initialResourceId)
-              ?? FilteredResources.FirstOrDefault()
-            : FilteredResources.FirstOrDefault();
-        _hasAppliedInitialResource = true;
+        SelectedResource = FilteredResources.FirstOrDefault();
     }
 
     /// <summary>

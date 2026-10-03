@@ -105,14 +105,6 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="{i18n:T 任务库}"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:PuloniaTaskLibraryPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="BookOpen24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-
                 <!--<ui:NavigationViewItemSeparator />-->
 
                 <ui:NavigationViewItem Content="{i18n:T 一条龙}"

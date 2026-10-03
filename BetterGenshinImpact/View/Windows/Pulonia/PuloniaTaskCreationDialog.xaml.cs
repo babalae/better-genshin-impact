@@ -27,10 +27,9 @@ public partial class PuloniaTaskCreationDialog : FluentWindow
     /// 使用当前能力定义和指定创建入口建立弹窗。
     /// </summary>
     public PuloniaTaskCreationDialog(IReadOnlyList<PuloniaTaskDefinition> definitions,
-        PuloniaTaskResourceCatalog resourceCatalog, string creationTaskType, string? initialResourceId = null)
+        PuloniaTaskResourceCatalog resourceCatalog, string creationTaskType)
     {
-        ViewModel = new PuloniaTaskCreationDialogViewModel(definitions, resourceCatalog, creationTaskType,
-            initialResourceId);
+        ViewModel = new PuloniaTaskCreationDialogViewModel(definitions, resourceCatalog, creationTaskType);
         DataContext = ViewModel;
         InitializeComponent();
         ViewModel.RequestClose += OnRequestClose;
@@ -42,10 +41,9 @@ public partial class PuloniaTaskCreationDialog : FluentWindow
     /// 以模态方式显示创建弹窗，仅在确认成功后返回完整结果。
     /// </summary>
     public static PuloniaTaskCreationResult? Show(IReadOnlyList<PuloniaTaskDefinition> definitions,
-        PuloniaTaskResourceCatalog resourceCatalog, string creationTaskType, string? initialResourceId = null,
-        Window? owner = null)
+        PuloniaTaskResourceCatalog resourceCatalog, string creationTaskType, Window? owner = null)
     {
-        var dialog = new PuloniaTaskCreationDialog(definitions, resourceCatalog, creationTaskType, initialResourceId)
+        var dialog = new PuloniaTaskCreationDialog(definitions, resourceCatalog, creationTaskType)
         {
             Owner = owner ?? Application.Current.MainWindow
         };

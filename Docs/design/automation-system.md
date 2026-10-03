@@ -18,7 +18,7 @@
 | [执行、恢复与 API](pulonia/execution.md) | 串行执行、资源生命周期、取消、异常恢复、续跑和 C#/JS 接口 |
 | [触发、托管与多账号](pulonia/scheduling-and-managed.md) | 定时/热键/空闲、自动启动、目标规划、账号切换 |
 | [结果、CD 与文件存储](pulonia/results-and-storage.md) | 成功证据、周期额度、去重、JSON 状态与故障恢复、依赖选择 |
-| [界面与任务库](pulonia/user-interface.md) | 新菜单、树表、简洁视图、配置编辑、搜索和整目录添加 |
+| [界面与新增任务](pulonia/user-interface.md) | 新菜单、树表、简洁视图、配置编辑、资源搜索和整目录添加 |
 | [重构与迁移](pulonia/migration.md) | 旧代码解耦、d-v3 复用、数据导入、旧入口替代边界 |
 | [开发与逐步验收计划](pulonia/development-plan.md) | 每一步的交付物、用户验收重点、验收记录和关键场景 |
 

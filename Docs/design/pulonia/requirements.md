@@ -48,6 +48,6 @@ US-01—11 依据本次讨论整理，US-12 来自社区反馈。保留用户目
 | US-07 异常恢复 | [执行](execution.md) | 4 取消边界、8 有界恢复 |
 | US-08 快捷触发 | [调度](scheduling-and-managed.md) | 7 任意计划/子树热键 |
 | US-09 设置一致 | [配置模型](task-model.md)、[界面](user-interface.md) | 2 参数与继承、9 一条龙视图 |
-| US-10 查找添加 | [界面与任务库](user-interface.md) | 5 索引与目录添加 |
+| US-10 查找添加 | [界面与新增任务](user-interface.md) | 5 按需索引与目录添加 |
 | US-11 多账号 | [托管与账号](scheduling-and-managed.md)、[结果与存储](results-and-storage.md) | 1 预留身份、6 隔离账本、10 顺序切号 |
 | US-12 编辑保留 | [界面](user-interface.md)、[存储](results-and-storage.md) | 2 参数保真复制、撤销与保存反馈 |

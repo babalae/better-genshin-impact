@@ -169,7 +169,6 @@ public partial class App : Application
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
                 services.AddView<PuloniaTaskPlanPage, PuloniaTaskPlanViewModel>();
-                services.AddView<PuloniaTaskLibraryPage, PuloniaTaskLibraryViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
                 services.AddSingleton<IBannerImageService, BannerImageService>();
