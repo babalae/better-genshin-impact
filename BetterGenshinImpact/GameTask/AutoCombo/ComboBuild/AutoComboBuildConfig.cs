@@ -9,7 +9,15 @@ namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 public partial class AutoComboBuildConfig : ObservableObject
 {
     /// <summary>
-    /// 决策模型的 OpenAI 兼容端点
+    /// 建树使用的 LLM 服务商，取值见 <see cref="AutoComboLlmProvider"/>。
+    /// 旧配置没有这个字段，反序列化后保持默认值，仍按 OpenAI 兼容端点处理。
+    /// </summary>
+    [ObservableProperty]
+    private string _provider = AutoComboLlmProvider.Default;
+
+    /// <summary>
+    /// 决策模型的服务地址。
+    /// OpenAI 兼容端点必填；Anthropic 可留空，留空时使用官方地址（不含 /v1）。
     /// </summary>
     [ObservableProperty]
     private string _planningLlmEndpoint = "";

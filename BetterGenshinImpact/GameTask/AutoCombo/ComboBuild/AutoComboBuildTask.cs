@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.ViewModel.Windows;
+using Anthropic;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
 using CsTrees.MEAI;
@@ -30,6 +31,20 @@ public class AutoComboBuildTask : ISoloTask
 
     /// <summary>FunctionInvokingChatClient 单次 GetResponseAsync 允许的最大工具调用循环轮数</summary>
     private const int MaxToolCallIterations = 128;
+
+    /// <summary>
+    /// Anthropic 请求的默认最大输出 token 数。
+    /// Anthropic SDK 自身的默认值是 1024，对逐节点建树的多轮工具调用偏小；
+    /// 且开启思考（thinking）时思考内容同样计入 max_tokens，过小会直接把这一轮截断。
+    /// </summary>
+    private const int AnthropicDefaultMaxOutputTokens = 8192;
+
+    /// <summary>
+    /// Anthropic 官方生产环境地址，服务地址留空时使用。
+    /// 这里不沿用 SDK 的 ANTHROPIC_BASE_URL 环境变量回退：否则用户机器上的环境变量会在界面上看不出来的情况下
+    /// 决定密钥发往哪个地址。
+    /// </summary>
+    private const string AnthropicDefaultBaseUrl = "https://api.anthropic.com";
 
     public async Task Start(CancellationToken ct)
     {
@@ -257,46 +272,25 @@ public class AutoComboBuildTask : ISoloTask
     /// </summary>
     private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, IBuildToolsState buildTools, AutoComboBuildBuilder? mainBuilder, AutoComboBuildFallbackBuilder? fallbackBuilder = null)
     {
-        if (string.IsNullOrWhiteSpace(config.PlanningLlmEndpoint) ||
-            string.IsNullOrWhiteSpace(config.ModelName))
+        var provider = AutoComboLlmProvider.Normalize(config.Provider);
+
+        if (string.IsNullOrWhiteSpace(config.ModelName))
         {
-            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 服务地址和模型名");
+            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 模型名");
         }
 
-        Uri endpoint;
-        try
-        {
-            endpoint = new Uri(config.PlanningLlmEndpoint.Trim());
-        }
-        catch (UriFormatException e)
-        {
-            throw new Exception($"LLM 服务地址无效：{config.PlanningLlmEndpoint}", e);
-        }
+        // OpenAI 兼容端点必须由用户提供；Anthropic 允许留空，由 SDK 使用官方地址
+        var endpoint = ResolveEndpoint(config.PlanningLlmEndpoint, provider, out var isLoopback);
 
-        // 密钥通过 Authorization 头随每个请求发送，非 HTTPS 传输时会在网络中明文暴露；仅豁免本机回环地址（本地中转/本地模型）
-        var isLoopback = endpoint.Host is "localhost" or "127.0.0.1" or "::1" || endpoint.Host.StartsWith("[::1]");
-        if (endpoint.Scheme != Uri.UriSchemeHttps && !isLoopback)
-        {
-            throw new Exception($"LLM 服务地址必须使用 HTTPS（否则密钥将明文传输），本机回环地址除外：{config.PlanningLlmEndpoint}");
-        }
-
-        // 本机回环地址（本地模型/本地中转通常不校验密钥）允许密钥为空，其余地址必须配置
+        // 密钥随每个请求发送，非 HTTPS 传输时会在网络中明文暴露；仅豁免本机回环地址（本地中转/本地模型）
         if (string.IsNullOrWhiteSpace(config.ApiKey) && !isLoopback)
         {
             throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址除外）");
         }
 
-        // 在 HTTP 传输层前注入原生 JSON 请求/响应日志，用于查验最终发送给 API 及 API 返回的原始内容
-        var openAiOptions = new OpenAIClientOptions
-        {
-            Endpoint = endpoint,
-            NetworkTimeout = TimeSpan.FromMinutes(10),
-        };
-
-        // 密钥为空时传占位符：OpenAI 客户端拒绝空密钥，而本地服务不校验该头的值
-        var apiKey = string.IsNullOrWhiteSpace(config.ApiKey) ? "missing-api-key" : config.ApiKey;
-        var openAiClient = new OpenAIClient(new ApiKeyCredential(apiKey), openAiOptions);
-        IChatClient client = openAiClient.GetChatClient(config.ModelName).AsIChatClient();
+        IChatClient client = provider == AutoComboLlmProvider.Anthropic
+            ? CreateAnthropicChatClient(config, endpoint)
+            : CreateOpenAiCompatibleChatClient(config, endpoint!);
 
         // CsTrees.MEAI 自带 tree 字段裁剪装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗
         client = new CompactResultChatClient(client);
@@ -323,5 +317,81 @@ public class AutoComboBuildTask : ISoloTask
 
         // 截断检查装饰：LLM 因上下文耗尽或达到 max_tokens 被截断时（finish_reason=length）显式报错
         return new LengthCutoffCheckChatClient(client, logger);
+    }
+
+    /// <summary>
+    /// 解析并校验服务地址。
+    /// OpenAI 兼容端点必填；Anthropic 允许留空（返回 null，由 SDK 使用官方地址）。
+    /// 地址非 HTTPS 且不是本机回环时直接报错：密钥会随每个请求明文发出。
+    /// </summary>
+    private static Uri? ResolveEndpoint(string endpointText, string provider, out bool isLoopback)
+    {
+        isLoopback = false;
+        if (string.IsNullOrWhiteSpace(endpointText))
+        {
+            if (provider == AutoComboLlmProvider.OpenAiCompatible)
+            {
+                throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 服务地址");
+            }
+
+            return null;
+        }
+
+        Uri endpoint;
+        try
+        {
+            endpoint = new Uri(endpointText.Trim());
+        }
+        catch (UriFormatException e)
+        {
+            throw new Exception($"LLM 服务地址无效：{endpointText}", e);
+        }
+
+        isLoopback = endpoint.Host is "localhost" or "127.0.0.1" or "::1" || endpoint.Host.StartsWith("[::1]");
+        if (endpoint.Scheme != Uri.UriSchemeHttps && !isLoopback)
+        {
+            throw new Exception($"LLM 服务地址必须使用 HTTPS（否则密钥将明文传输），本机回环地址除外：{endpointText}");
+        }
+
+        return endpoint;
+    }
+
+    /// <summary>
+    /// 创建 OpenAI 兼容端点的 IChatClient。
+    /// </summary>
+    private static IChatClient CreateOpenAiCompatibleChatClient(AutoComboBuildConfig config, Uri endpoint)
+    {
+        // 在 HTTP 传输层前注入原生 JSON 请求/响应日志，用于查验最终发送给 API 及 API 返回的原始内容
+        var openAiOptions = new OpenAIClientOptions
+        {
+            Endpoint = endpoint,
+            NetworkTimeout = TimeSpan.FromMinutes(10),
+        };
+
+        // 密钥为空时传占位符：OpenAI 客户端拒绝空密钥，而本地服务不校验该头的值
+        var apiKey = string.IsNullOrWhiteSpace(config.ApiKey) ? "missing-api-key" : config.ApiKey;
+        var openAiClient = new OpenAIClient(new ApiKeyCredential(apiKey), openAiOptions);
+        return openAiClient.GetChatClient(config.ModelName).AsIChatClient();
+    }
+
+    /// <summary>
+    /// 创建 Anthropic 官方 Messages API 的 IChatClient。
+    /// 返回的客户端会把 stop_reason 映射到 ChatFinishReason（max_tokens → Length），
+    /// 因此外层的截断检查装饰对两个服务商同样生效。
+    /// </summary>
+    private static IChatClient CreateAnthropicChatClient(AutoComboBuildConfig config, Uri? endpoint)
+    {
+        var anthropicClient = new AnthropicClient
+        {
+            ApiKey = config.ApiKey,
+
+            // 地址留空时回落到官方地址；填写时去掉结尾斜杠，避免与 SDK 自行拼接的 /v1/messages 组成双斜杠
+            // （此处应填服务根地址，不含 /v1）
+            BaseUrl = endpoint is null
+                ? AnthropicDefaultBaseUrl
+                : $"{endpoint.Scheme}://{endpoint.Authority}{endpoint.AbsolutePath.TrimEnd('/')}",
+        };
+
+        return anthropicClient.AsIChatClient(config.ModelName, AnthropicDefaultMaxOutputTokens);
     }
 }

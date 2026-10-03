@@ -11,6 +11,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:autofight="clr-namespace:BetterGenshinImpact.GameTask.AutoFight"
+      xmlns:combobuild="clr-namespace:BetterGenshinImpact.GameTask.AutoCombo.ComboBuild"
       xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:sys="clr-namespace:System;assembly=mscorlib"
@@ -3620,6 +3621,38 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
+                <Grid Margin="16,16,16,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap"
+                                  Text="{i18n:T LLM服务商}" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap"
+                                  Text="{i18n:T OpenAI 兼容可填任意兼容服务或本机模型；Anthropic 使用官方 Messages API 且服务地址可留空}" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="150"
+                              Margin="0,0,36,0"
+                              SelectedValue="{Binding Config.AutoComboBuildConfig.Provider, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.OpenAiCompatible}"
+                                      Content="{i18n:T OpenAI 兼容}" />
+                        <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.Anthropic}"
+                                      Content="Anthropic" />
+                    </ComboBox>
+                </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -3639,7 +3672,7 @@
                     <ui:TextBlock Grid.Row="2"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外"
+                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外；Anthropic 可留空使用官方地址，填写时不要带 /v1"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="3"
