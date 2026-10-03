@@ -851,9 +851,8 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 连接失败后的补充诊断：区分「系统没有建立会话」和「账号或密码被拒绝」，
-    /// 并附上环境预检结论。RDP ActiveX 自身只回报「发生内部错误」和断开原因，
-    /// 单独看这些信息无法定位问题。
+    /// 连接失败后的补充诊断：报告是否存在桌面分身会话，并附上环境预检结论。
+    /// RDP ActiveX 自身只回报「发生内部错误」和断开原因，单独看这些信息无法定位问题。
     /// </summary>
     private string BuildFailureDiagnosis()
     {
@@ -863,8 +862,9 @@ public sealed class ChildSessionService : IDisposable
         {
             builder.AppendLine().AppendLine();
             builder.Append(
-                "诊断：当前系统没有可用的桌面分身会话，说明 Windows 未能建立 RDP 会话。"
-                + "这通常与系统版本或远程桌面配置有关，而不是账号或密码错误。");
+                "诊断：当前没有可用的桌面分身会话，说明 Windows 未能建立 RDP 会话。"
+                + "该状态本身无法确定原因——系统无法创建会话与凭据未通过验证都会得到这个结果，"
+                + "请结合上面的 RDP ActiveX 错误信息一并判断。");
         }
 
         if (_environmentIssues.Count > 0)

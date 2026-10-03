@@ -115,6 +115,9 @@ internal static class ChildSessionEnvironmentCheck
         return builder.ToString();
     }
 
+    /// <summary>
+    /// 检查系统版本是否为家庭版。
+    /// </summary>
     private static void CollectEditionIssue(List<Issue> issues)
     {
         var editionId = ReadString(RegistryHive.LocalMachine, CurrentVersionRegistryPath, "EditionID");
@@ -135,6 +138,9 @@ internal static class ChildSessionEnvironmentCheck
             + "或改用 RDP Wrapper 实现本地远程多用户。"));
     }
 
+    /// <summary>
+    /// 检查远程桌面主机是否被关闭。组策略中的值会覆盖本机设置，因此优先读取组策略。
+    /// </summary>
     private static void CollectRdpHostIssue(List<Issue> issues)
     {
         // 组策略中的值会覆盖本机设置，因此优先读取组策略。
@@ -170,6 +176,9 @@ internal static class ChildSessionEnvironmentCheck
             + suggestion));
     }
 
+    /// <summary>
+    /// 检查是否开启了「仅允许 Windows Hello 登录」，该限制会让密码验证必然失败。
+    /// </summary>
     private static void CollectPasswordLessIssue(List<Issue> issues)
     {
         var passwordLessVersion = ReadInt(
@@ -190,6 +199,9 @@ internal static class ChildSessionEnvironmentCheck
             + "可在「设置 - 帐户 - 登录选项」中关闭该选项，然后注销并重新登录（部分情况需要重启系统）。"));
     }
 
+    /// <summary>
+    /// 读取注册表字符串值。键或值不存在、无权限时返回 null。
+    /// </summary>
     private static string? ReadString(RegistryHive hive, string path, string name)
     {
         try
@@ -206,6 +218,9 @@ internal static class ChildSessionEnvironmentCheck
         }
     }
 
+    /// <summary>
+    /// 读取注册表 DWORD 值。键或值不存在、类型不符、无权限时返回 null。
+    /// </summary>
     private static int? ReadInt(RegistryHive hive, string path, string name)
     {
         try
