@@ -12,12 +12,19 @@ namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 /// <summary>
 /// 拉取所选服务商的可用模型列表，供设置页下拉选择。只读查询，不修改任何配置。
 ///
-/// 两个服务商的列表接口都返回 <c>{"data":[{"id":"..."}]}</c>，因此共用同一套解析。
+/// 两个服务商的列表接口都返回 <c>{"data":[{"id":"..."}]}</c>，因此共用同一套解析；
+/// Anthropic 额外带 <c>has_more</c> / <c>last_id</c> 分页字段，需要逐页取完。
 /// </summary>
 public static class AutoComboModelListFetcher
 {
     /// <summary>Anthropic 要求显式携带版本头。</summary>
     private const string AnthropicApiVersion = "2023-06-01";
+
+    /// <summary>Anthropic 列表接口的每页条数上限（接口文档：取值 1~1000，默认为 20）。</summary>
+    private const int AnthropicModelListPageSize = 1000;
+
+    /// <summary>分页的最大页数，避免服务端始终返回 has_more=true 时无限翻页。</summary>
+    private const int MaxModelListPages = 5;
 
     /// <summary>错误提示里回显的响应正文上限，避免把整段响应贴进 UI。</summary>
     private const int MaxEchoLength = 300;
@@ -54,9 +61,54 @@ public static class AutoComboModelListFetcher
         }
 
         var uri = BuildModelListUri(normalized, endpoint);
+        var ids = new List<string>();
+
+        // 地址里已经把 limit 设到上限，正常情况下第一页就取完；这里再按 last_id 兜底翻页。
+        // OpenAI 兼容端点不返回 has_more，会被当作只有一页。
+        for (var page = 0; page < MaxModelListPages; page++)
+        {
+            var body = await GetAsync(uri, normalized, apiKey, ct);
+            var (pageIds, hasMore, lastId) = ParseModelPage(body);
+
+            foreach (var id in pageIds)
+            {
+                if (!ids.Contains(id))
+                {
+                    ids.Add(id);
+                }
+            }
+
+            if (!hasMore)
+            {
+                if (ids.Count == 0)
+                {
+                    throw new Exception("服务返回的模型列表为空");
+                }
+
+                return ids;
+            }
+
+            if (string.IsNullOrWhiteSpace(lastId))
+            {
+                throw new Exception("服务返回 has_more=true 但未给出 last_id，无法继续取下一页");
+            }
+
+            uri = AppendAfterId(uri, lastId);
+        }
+
+        throw new Exception($"模型列表分页超过 {MaxModelListPages} 页仍未取完，已停止");
+    }
+
+    /// <summary>
+    /// 发一次 GET 并返回响应正文。
+    /// 自动重定向是关的，这里自行跟随同源跳转（最多 <see cref="MaxSameAuthorityRedirects"/> 次），
+    /// 跨源一律拒绝：那等于把 x-api-key 交给另一台服务器。
+    /// </summary>
+    private static async Task<string> GetAsync(Uri uri, string provider, string apiKey, CancellationToken ct)
+    {
         for (var redirects = 0; ; redirects++)
         {
-            using var request = BuildRequest(normalized, uri, apiKey);
+            using var request = BuildRequest(provider, uri, apiKey);
             using var response = await HttpClient.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
 
@@ -72,7 +124,7 @@ public static class AutoComboModelListFetcher
                 throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}：{Summarize(body)}");
             }
 
-            return ParseModelIds(body);
+            return body;
         }
     }
 
@@ -83,7 +135,7 @@ public static class AutoComboModelListFetcher
     private static Uri BuildModelListUri(string provider, Uri? endpoint)
     {
         return provider == AutoComboLlmProvider.Anthropic
-            ? new Uri($"{AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint)}/v1/models")
+            ? new Uri($"{AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint)}/v1/models?limit={AnthropicModelListPageSize}")
             : new Uri($"{endpoint!.ToString().TrimEnd('/')}/models");
     }
 
@@ -138,15 +190,15 @@ public static class AutoComboModelListFetcher
     }
 
     /// <summary>
-    /// 解析 <c>{"data":[{"id":"..."}]}</c> 形式的响应，按出现顺序返回去重后的模型名。
-    /// 空列表或结构不符时抛错，交由调用方提示。
+    /// 解析一页列表响应：<c>{"data":[{"id":"..."}],"has_more":bool,"last_id":"..."}</c>。
+    /// OpenAI 兼容端点不返回 has_more / last_id，取默认值即可（视为只有一页）。
     /// </summary>
-    private static List<string> ParseModelIds(string body)
+    private static (List<string> Ids, bool HasMore, string? LastId) ParseModelPage(string body)
     {
-        JToken? data;
+        JObject root;
         try
         {
-            data = JObject.Parse(body)["data"];
+            root = JObject.Parse(body);
         }
         catch (Exception e) when (e is JsonException or ArgumentException)
         {
@@ -154,24 +206,30 @@ public static class AutoComboModelListFetcher
         }
 
         var ids = new List<string>();
-        if (data is JArray array)
+        if (root["data"] is JArray array)
         {
             foreach (var item in array)
             {
                 var id = item["id"]?.Value<string>();
-                if (!string.IsNullOrWhiteSpace(id) && !ids.Contains(id))
+                if (!string.IsNullOrWhiteSpace(id))
                 {
                     ids.Add(id);
                 }
             }
         }
 
-        if (ids.Count == 0)
-        {
-            throw new Exception("服务返回的模型列表为空");
-        }
+        return (ids, root["has_more"]?.Value<bool>() ?? false, root["last_id"]?.Value<string>());
+    }
 
-        return ids;
+    /// <summary>把分页游标追加到查询串上，保留地址里已有的参数（如 limit）。</summary>
+    private static Uri AppendAfterId(Uri uri, string afterId)
+    {
+        var builder = new UriBuilder(uri);
+        var query = builder.Query.TrimStart('?');
+        builder.Query = string.IsNullOrEmpty(query)
+            ? $"after_id={Uri.EscapeDataString(afterId)}"
+            : $"{query}&after_id={Uri.EscapeDataString(afterId)}";
+        return builder.Uri;
     }
 
     /// <summary>把响应正文压成单行并截断，用于错误提示。</summary>
