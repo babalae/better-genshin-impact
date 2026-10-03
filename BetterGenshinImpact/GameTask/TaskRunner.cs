@@ -41,19 +41,26 @@ public class TaskRunner
     /// <summary>
     /// 加锁并独立运行任务
     /// </summary>
-    /// <param name="action"></param>
+    /// <param name="action">要执行的任务。</param>
     /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
-    /// <param name="lockAlreadyAcquired">调用方是否已经取得任务锁。</param>
-    /// <returns></returns>
-    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool lockAlreadyAcquired = false)
+    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true)
     {
-        // 加锁
-        var hasLock = lockAlreadyAcquired || await TaskSemaphore.WaitAsync(0);
-        if (!hasLock)
+        if (!await TaskSemaphore.WaitAsync(0))
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
             return;
         }
+
+        await RunCurrentWithLockAsync(action, resetCancellationContext);
+    }
+
+    /// <summary>
+    /// 执行调用方已持有任务锁的任务，并在结束时释放该锁。
+    /// </summary>
+    /// <param name="action">要执行的任务。</param>
+    /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
+    private async Task RunCurrentWithLockAsync(Func<Task> action, bool resetCancellationContext)
+    {
         try
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
@@ -102,11 +109,8 @@ public class TaskRunner
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
 
-            // 释放锁
-            if (hasLock)
-            {
-                TaskSemaphore.Release();
-            }
+            // 释放调用方已取得的锁。
+            TaskSemaphore.Release();
         }
     }
 
@@ -120,6 +124,10 @@ public class TaskRunner
         await Task.Run(() => RunCurrentAsync(action));
     }
 
+    /// <summary>
+    /// 启动并运行独立任务；启动期间持有任务锁，避免重复请求替换活动任务的取消上下文。
+    /// </summary>
+    /// <param name="soloTask">要启动的独立任务。</param>
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
         // 先占用任务锁，再重建全局取消上下文。否则重复启动请求会替换正在运行任务的
@@ -148,10 +156,9 @@ public class TaskRunner
             }
 
             lockTransferred = true;
-            await Task.Run(() => RunCurrentAsync(
+            await Task.Run(() => RunCurrentWithLockAsync(
                 async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
-                resetCancellationContext: false,
-                lockAlreadyAcquired: true));
+                resetCancellationContext: false));
         }
         finally
         {
