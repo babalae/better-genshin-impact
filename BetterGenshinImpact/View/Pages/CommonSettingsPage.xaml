@@ -1956,7 +1956,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 开启后，当每日（4点开始）统计锄地超过上限（需脚本支持，勾选允许锄地统计标志，或通过追踪文件目录的控制文件，来记录各追踪文件数据），会跳过接下来的锄地任务。}"
+                                          Text="{i18n:T 开启后，当每日（4点开始）统计锄地超过上限（需脚本支持并勾选允许锄地统计标志），会跳过接下来的锄地任务。}"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"

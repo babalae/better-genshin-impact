@@ -245,7 +245,6 @@
                                 <MenuItem Header="{i18n:T 打开脚本仓库}" Command="{Binding OpenLocalScriptRepoCommand}" />
                                 <MenuItem Header="{i18n:T 根据文件夹更新}" Command="{Binding UpdateTasksCommand}" />
                                 <MenuItem Header="{i18n:T 任务倒序排列}" Command="{Binding ReverseTaskOrderCommand}" />
-                                <MenuItem Header="{i18n:T 导出根据控制文件修改任务}" Command="{Binding ExportMergerJsonsCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
